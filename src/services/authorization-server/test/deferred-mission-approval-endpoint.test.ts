@@ -56,6 +56,14 @@ let clockMs = Date.now();
 const now = () => new Date(clockMs);
 
 const READ = ["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"];
+/** The shipped ledger resource, inside the shipped `service_owned` source's ceiling. */
+const LEDGER = "http://localhost:4406/mcp";
+const ledgerEntry = () => ({
+  type: "mission_resource_access",
+  resource: LEDGER,
+  actions: ["ledger:vendor.read"],
+  constraints: { vendors: ["acme"] },
+});
 const readEntry = (actions: string[] = READ) => ({
   type: "mission_resource_access",
   resource: RESOURCE,
@@ -70,7 +78,7 @@ const rootDoc = (over: Partial<GovernedPolicyRoot> = {}): GovernedPolicyRoot => 
   rules: { max_entries: 3 },
   recency: { ceilings: { default: 30 * 86400 }, clock_skew_s: 60 },
   classification: {
-    standard: [...READ, "payments:payment.schedule", "payments:payment.schedule.cancel"],
+    standard: [...READ, "payments:payment.schedule", "payments:payment.schedule.cancel", "ledger:vendor.read"],
     irreversible_action: ["payments:payment.execute"],
     external_commitment: ["payments:remittance.send"],
   },
@@ -475,6 +483,49 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     expect(r.body.error).toBe("access_denied");
     expect(missionCount()).toBe(before);
     expect(as.missionApprovalDeferrals?.state(deferralCode)).toBe("denied");
+  });
+
+  it("delivers the token for the resource the submission selected", async () => {
+    useRoot(rootDoc({ authority_ceiling: [readEntry(), ledgerEntry()] as never }));
+    const both = {
+      intent: { target_resources: [RESOURCE, LEDGER] },
+      authorizationDetails: [readEntry(["payments:invoice.read"]), ledgerEntry()],
+    };
+    const audienceOf = (body: Record<string, unknown>) => decodeJwt(body.access_token as string).aud;
+    const keys = await newKeys();
+
+    // The PAR selects the ledger: the delivered token is for the ledger.
+    const toLedger = await poll(await openDeferral(keys, { ...both, extra: { resource: LEDGER } }), keys);
+    expect(toLedger.status, JSON.stringify(toLedger.body)).toBe(200);
+    const resources = (toLedger.body.authorization_details as Array<{ resource: string }>).map((e) => e.resource);
+    expect(resources).toEqual(expect.arrayContaining([RESOURCE, LEDGER]));
+    expect(audienceOf(toLedger.body)).toBe(LEDGER);
+
+    // Selecting payments, or nothing, gives the payments audience.
+    const toPayments = await poll(await openDeferral(keys, { ...both, extra: { resource: RESOURCE } }), keys);
+    expect(audienceOf(toPayments.body)).toBe(RESOURCE);
+    const unselected = await poll(await openDeferral(keys, both), keys);
+    expect(audienceOf(unselected.body)).toBe(
+      (unselected.body.authorization_details as Array<{ resource: string }>)[0]?.resource,
+    );
+
+    // A synchronous approval of the same submission is audienced the same way.
+    const direct = await frontChannel({ ...both, completionMode: null, extra: { resource: LEDGER } });
+    const uid = direct.interaction.split("/interaction/")[1] as string;
+    let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { ...trustedApprovalHeaders("dana", {}, WORKLOAD), cookie: direct.cookie, "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve" }),
+    });
+    let location = res.headers.get("location") ?? "";
+    while (location.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: direct.cookie } });
+      location = res.headers.get("location") ?? "";
+    }
+    const issued = await redeem(new URL(location).searchParams.get("code") as string, keys);
+    expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+    expect(audienceOf(issued.body)).toBe(LEDGER);
   });
 
   it("keeps an approval deliverable when saving its token fails, then delivers exactly one token", async () => {

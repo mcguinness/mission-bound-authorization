@@ -38045,6 +38045,36 @@
    "notes": "#1300 review (D474)."
   },
   {
+   "id": "deferred-approval.deferral.timing-only-resource",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "Deferral changes only the timing of the approval event.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token a resolved deferral delivers is audienced to the resource the submission selected with its resource indicator, as a synchronous approval of the same submission would issue it",
+    "local": "The PAR's single `resource` value is carried through the pending-request code and the pending approval to the delivery, and the witness shows a synchronous approval of the same submission audienced the same way. With none (or several), the deferred token is audienced to the first entry of the effective set; the direct path instead audiences such a request to the provider's default resource (the issuer), which this assembly's scope projection refuses. The token's authorization_details are the whole effective set on both paths."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474)."
+  },
+  {
    "id": "deferred-approval.deferral.code-binding",
    "spec": "draft-mcguinness-oauth-mission-approval.md",
    "anchor": "front-channel",

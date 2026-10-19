@@ -119,7 +119,7 @@ export type MissionApprovalPoll =
    * sent only when that confirms) or, on a failure before the response,
    * {@link MissionApprovalDeferralStore.releaseDelivery}.
    */
-  | { mission: MissionRecord; delivery: string };
+  | { mission: MissionRecord; delivery: string; resource?: string };
 
 /** What settling a delivery claim found. */
 export type DeliveryConfirmation = "confirmed" | "cancelled" | "superseded";
@@ -134,6 +134,7 @@ export const DELIVERY_CLAIM_STALE_S = 30;
 const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [
   ["delivery_claim", "TEXT"],
   ["delivery_claimed_at", "INTEGER"],
+  ["resource", "TEXT"],
 ];
 
 function migrate(db: Database): void {
@@ -171,6 +172,7 @@ interface Row {
   last_polled_at: number | null;
   delivery_claim: string | null;
   delivery_claimed_at: number | null;
+  resource: string | null;
 }
 
 /** A refusal the activation checks raise (as opposed to a fault of the issuer). */
@@ -227,7 +229,14 @@ export class MissionApprovalDeferralStore {
    * that submitted it and to its possession key. Nothing here names an
    * approval basis or a policy: the client selects none.
    */
-  open(input: { intent: MissionIntent; proposedAuthority?: AuthorityEntry[]; clientId: string; jkt: string }): DeferralPending {
+  open(input: {
+    intent: MissionIntent;
+    proposedAuthority?: AuthorityEntry[];
+    clientId: string;
+    jkt: string;
+    /** The resource the submission selected with its resource indicator: the delivered token's audience. */
+    resource?: string;
+  }): DeferralPending {
     const code = `mdfr_${randomBytes(18).toString("base64url")}`;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
     const nowMs = this.now().getTime();
@@ -240,8 +249,8 @@ export class MissionApprovalDeferralStore {
       this.db
         .prepare(
           `INSERT INTO mission_approval_deferrals (deferral_code, state, client_id, jkt, intent_json, proposal_json,
-             approval_event_id, created_at)
-           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?)`,
+             approval_event_id, created_at, resource)
+           VALUES (?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           code,
@@ -251,6 +260,7 @@ export class MissionApprovalDeferralStore {
           proposal ? JSON.stringify(proposal) : null,
           `ape_${randomBytes(16).toString("base64url")}`,
           nowMs,
+          input.resource ?? null,
         );
     });
     return { error: "authorization_pending", deferral_code: code, expires_in: this.lifetimeMs() / 1000, interval: DEFERRAL_INTERVAL };
@@ -543,7 +553,7 @@ export class MissionApprovalDeferralStore {
                AND (delivery_claim IS NULL OR delivery_claimed_at <= ?)`,
           )
           .run(delivery, nowMs, code, nowMs - DELIVERY_CLAIM_STALE_S * 1000).changes;
-        if (claimed === 1) return { mission, delivery };
+        if (claimed === 1) return { mission, delivery, ...(row.resource ? { resource: row.resource } : {}) };
         const current = this.row(code) as Row;
         // A cancellation that won the race delivers nothing either.
         if (current.resolution_reason === "cancelled") return { error: "access_denied" };

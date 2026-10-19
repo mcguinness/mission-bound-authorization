@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS mission_deferred_authorization_codes (
 ) STRICT;
 `;
 
+/** Columns added after the table first existed: added in place, so an earlier database opens. */
+const ADDED_COLUMNS: ReadonlyArray<[string, string]> = [["resource", "TEXT"]];
+
 interface StagedCode {
   code: string;
   client_id: string;
@@ -93,6 +96,8 @@ interface StagedCode {
   dpop_jkt: string | null;
   intent_json: string;
   proposal_json: string | null;
+  /** The single `resource` the request selected, or null. */
+  resource: string | null;
   expires_at: number;
   deferral_code: string | null;
 }
@@ -112,6 +117,14 @@ class CodeAlreadyRedeemed extends Error {}
 export class DeferredAuthorizationCodes {
   constructor(private readonly store: MissionApprovalDeferralStore) {
     store.db.exec(SCHEMA);
+    const columns = new Set(
+      (store.db.prepare("PRAGMA table_info(mission_deferred_authorization_codes)").all() as Array<{ name: string }>).map(
+        (c) => c.name,
+      ),
+    );
+    for (const [column, type] of ADDED_COLUMNS) {
+      if (!columns.has(column)) store.db.exec(`ALTER TABLE mission_deferred_authorization_codes ADD COLUMN ${column} ${type}`);
+    }
   }
 
   stage(row: Omit<StagedCode, "deferral_code">, nowMs: number): void {
@@ -120,8 +133,8 @@ export class DeferredAuthorizationCodes {
     this.store.db
       .prepare(
         `INSERT INTO mission_deferred_authorization_codes (code, client_id, redirect_uri, code_challenge, dpop_jkt,
-           intent_json, proposal_json, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           intent_json, proposal_json, resource, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         row.code,
@@ -131,6 +144,7 @@ export class DeferredAuthorizationCodes {
         row.dpop_jkt,
         row.intent_json,
         row.proposal_json,
+        row.resource,
         row.expires_at,
       );
   }
@@ -152,6 +166,7 @@ export class DeferredAuthorizationCodes {
         ...(staged.proposal_json ? { proposedAuthority: JSON.parse(staged.proposal_json) as AuthorityEntry[] } : {}),
         clientId: staged.client_id,
         jkt,
+        ...(staged.resource ? { resource: staged.resource } : {}),
       });
       const claimed = this.store.db
         .prepare(
@@ -228,6 +243,11 @@ export async function completeDeferredAuthorization(
       dpop_jkt: typeof params.dpop_jkt === "string" ? params.dpop_jkt : null,
       intent_json: JSON.stringify(intent),
       proposal_json: proposal?.length ? JSON.stringify(proposal) : null,
+      // The audience the request selected (RFC 8707), validated by the
+      // provider at PAR. With several, or none, the delivery uses the first
+      // entry's resource; the provider's own default when a request names
+      // none (the issuer) selects nothing.
+      resource: typeof params.resource === "string" && params.resource !== opts.issuer ? params.resource : null,
       expires_at: nowMs + DEFERRED_CODE_TTL_S * 1000,
     },
     nowMs,
@@ -405,7 +425,7 @@ export async function pollMissionApprovalDeferral(
   // poll delivers; a claim another poll settled first sends nothing.
   let body: Record<string, unknown>;
   try {
-    body = await mintMissionToken(opts, provider, ctx, r.mission, verified.proof.jkt);
+    body = await mintMissionToken(opts, provider, ctx, r.mission, verified.proof.jkt, r.resource);
   } catch (e) {
     store.releaseDelivery(code, r.delivery);
     throw e;
@@ -425,7 +445,10 @@ export async function pollMissionApprovalDeferral(
  * bound on first delivery (compare-and-set, so one grant however many polls
  * race). The token carries the Mission's effective Authority Set, is bound to
  * the poll's DPoP key, and never outlives the Mission; the response carries
- * `mission_id` and `mission_expires_at` from the committed record.
+ * `mission_id` and `mission_expires_at` from the committed record. Its
+ * audience is the resource the submission selected, as the authorization
+ * code of a synchronous approval would carry it; with none, the first entry's
+ * resource, as on the direct path.
  */
 async function mintMissionToken(
   opts: AdapterOptions,
@@ -433,6 +456,7 @@ async function mintMissionToken(
   ctx: KoaContextWithOIDC,
   mission: MissionRecord,
   jkt: string,
+  requestedResource: string | undefined,
 ): Promise<Record<string, unknown>> {
   const { kernel } = opts;
   const record = kernel.get(mission.id) as MissionRecord;
@@ -445,7 +469,7 @@ async function mintMissionToken(
     for (const entry of effective) (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);
     grantId = kernel.bindFirstGrant(record.id, await grant.save());
   }
-  const resource = effective[0]?.resource ?? opts.issuer;
+  const resource = requestedResource ?? effective[0]?.resource ?? opts.issuer;
   const info = resourceServerInfoFor(resource, opts.accessTokenTTL ?? 300);
   info.accessTokenTTL = Math.min(
     info.accessTokenTTL,
