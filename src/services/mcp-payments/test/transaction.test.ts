@@ -72,12 +72,17 @@ const VIEW: MissionView = {
   client_id: "ap-agent",
 };
 
+/** A second Mission with the same authority, for the settlement-identity witness (#1270). */
+const VIEW_B: MissionView = { ...VIEW, id: "msn_m5b", authority_hash: "sha-256:m5bhash" };
+
 /** @spec runtime#state-freshness: a synchronous live read, freshness-stamped
  *  at this read (Finding 1), under the published `pep` placement. */
-const loadView = (ref: { id: string; issuer: string }) =>
-  ref.id === VIEW.id && ref.issuer === VIEW.issuer
-    ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+const loadView = (ref: { id: string; issuer: string }) => {
+  const view = [VIEW, VIEW_B].find((v) => v.id === ref.id && v.issuer === ref.issuer);
+  return view
+    ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
+};
 /**
  * @spec RFC 9449 — the presenter's REAL key. A transaction credential is only
  * ever accepted with a proof of possession bound to this request, so the
@@ -130,6 +135,13 @@ const TOKEN: TokenFacts = {
   },
   cnfJkt: HOLDER_JKT,
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
+};
+
+/** The same subject and client acting under the second Mission (#1270). */
+const TOKEN_B: TokenFacts = {
+  ...TOKEN,
+  mission: { id: "msn_m5b", issuer: "https://as.test", authority_hash: "sha-256:m5bhash" },
+  missionClaim: { ...TOKEN.missionClaim, id: "msn_m5b", authority_hash: "sha-256:m5bhash" },
 };
 
 /** @spec txn-authorization#resource-challenge — the client signal that gates a challenge. */
@@ -386,6 +398,60 @@ d("M5 transaction-assurance tier", () => {
     // The earlier COMPLETED record is untouched: a rejected replay records its
     // own disposition and never rewrites the one that executed.
     expect(executions[0]?.content.execution_id).not.toBe(executions[1]?.content.execution_id);
+  });
+
+  it("a second Mission cannot settle an invoice another Mission settled: refused already_settled with no effect (@spec runtime#security-considerations, #1270)", async () => {
+    const { server, connectors, evidence } = build();
+    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+
+    // Another Mission, another operation key, another caller key: the same
+    // business event, so the ledger refuses it.
+    const second = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN_B);
+    expect(second.ok).toBe(false);
+    expect(second.refusal_reason).toBe("already_settled");
+    expect(connectors.ledgerEntries()).toHaveLength(1);
+    expect(connectors.ledgerEntries("msn_m5b")).toHaveLength(0);
+
+    const executionsB = evidence.forMission("msn_m5b").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executionsB.map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["suppressed", "https://payments.demo/execution-errors/already_settled"],
+    ]);
+    // The first Mission's effect still reconciles cleanly.
+    expect(reconcile("msn_m5", evidence, connectors).ok).toBe(true);
+  });
+
+  it("the same Mission cannot settle an invoice twice after the record changes: a new key and digest are refused already_settled (#1270)", async () => {
+    const { server, connectors, payments, evidence } = build();
+    const first = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
+    expect(first.ok, JSON.stringify(first)).toBe(true);
+
+    // The invoice record moves (a new version and amount), so the effective
+    // parameters, the parameter digest and the operation key all differ.
+    payments.bumpInvoiceAmount("inv-1", "130.00");
+    const second = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
+    expect(second.ok).toBe(false);
+    expect(second.refusal_reason).toBe("already_settled");
+    expect(connectors.ledgerEntries("msn_m5")).toHaveLength(1);
+    expect(connectors.ledgerEntries("msn_m5")[0]?.amount).toBe("125.00");
+    const executions = evidence.forMission("msn_m5").filter((e): e is ExecutionEvidence => e.kind === "execution");
+    expect(executions.map((e) => [e.content.outcome, e.content.error])).toEqual([
+      ["completed", undefined],
+      ["suppressed", "https://payments.demo/execution-errors/already_settled"],
+    ]);
+  });
+
+  it("check_transfer reports a settled invoice as not feasible (#1270)", async () => {
+    const { server } = build();
+    const before = await server.callReadTool("check_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(before.ok, JSON.stringify(before)).toBe(true);
+    expect((before.result as { feasible: boolean }).feasible).toBe(true);
+
+    const paid = await server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
+    expect(paid.ok, JSON.stringify(paid)).toBe(true);
+    const after = await server.callReadTool("check_transfer", { invoice_id: "inv-1" }, TOKEN);
+    expect(after.ok, JSON.stringify(after)).toBe(true);
+    expect((after.result as { feasible: boolean }).feasible).toBe(false);
   });
 
   it("the SAME evaluation identifier presented again is refused as permit_consumed, and the completed record stands", async () => {

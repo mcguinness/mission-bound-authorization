@@ -16713,7 +16713,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v4, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v5, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429) and names the wire's settlement identity (#1270); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -20567,6 +20567,47 @@
     }
    ],
    "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax."
+  },
+  {
+   "id": "runtime.security.business-event-resource-deduplicates",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "security-considerations",
+   "text": "Where an event must take effect once, the Operation Profile names the parameters that identify it, and the resource deduplicates on them.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "for an event that must take effect once, a second request carrying out the same event under another operation key, Mission or caller key produces no second effect at the resource",
+    "local": "payments-runtime-profile-v5 names the invoice as execute_wire_transfer's settlement identity. The ledger connector refuses a wire for a settled invoice with no effect (`already_settled`); the PEP records Execution Evidence `suppressed` with `https://payments.demo/execution-errors/already_settled`. A retry under the same operation key stays deduped."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/settlement-identity.test.ts",
+     "name": "settlement identity (@spec runtime#security-considerations, operation-profile-payments-v1) > refuses a second wire for a settled invoice under another operation key and Mission, with no effect",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > a second Mission cannot settle an invoice another Mission settled: refused already_settled with no effect (@spec runtime#security-considerations, #1270)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > the same Mission cannot settle an invoice twice after the record changes: a new key and digest are refused already_settled (#1270)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1270: the operation key covers the Mission and the record versions, so before v5 two Missions, or one Mission after an invoice change, could each settle one invoice. The live witnesses need OpenFGA."
   },
   {
    "id": "runtime.idempotency.retransmission-returns-prior-decision",
