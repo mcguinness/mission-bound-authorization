@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-19T17:53:49Z
-Source repository commit: 2782881f8c64fd5e87bc3ca12b32550ca844d308
+Generated: 2026-10-19T18:02:36Z
+Source repository commit: ec2068d78496e4fca3e1b0f48e7017ea27955062
 Member count: 7
 
 Reading order:
@@ -22147,7 +22147,7 @@ Appendix B.  Policy View Worked Example
        },
        "artifact": {
          "digest":
-           "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tX",
+           "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tU",
          "encoding": "application/vnd.example.policy-engine+bin"
        }
      }
@@ -23314,7 +23314,7 @@ Table of Contents
          "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
        "policy_version": "deploy-policy:v17",
        "policy_view_id":
-         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
      },
      "subject": {
        "type": "user",
@@ -24049,7 +24049,7 @@ Table of Contents
      },
      "policy": {
        "pdp_policy_view":
-         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+         "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s",
        "mission_policy_version": "deploy-policy:v17"
      },
      "executor": {
@@ -26378,7 +26378,7 @@ Table of Contents
          "issuer": "https://as.example.com",
          "policy_version": "deploy-policy:v17",
          "policy_view_id":
-           "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+           "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
        },
        "mission_state_observation": {
          "state": "active",
