@@ -213,5 +213,18 @@ the claim domain keeps each claim under the scope it was made in.
 - **One process.** "Together" means one declaration and one clock; a
   multi-process deployment relies on synchronized clocks at `effective_at`.
 
-Witnesses: `services/pdp/test/enforcement-boundary.test.ts` and
-`services/mcp-payments/test/boundary-identifier.test.ts`.
+The stack registers the payments operation target with the remote PDP
+apart from the boundary (`operationTargets`), so a change of boundary
+identifier leaves the target in scope. `composeStack` takes the statement
+as an option, and one value feeds the boundary context, the claim domain,
+the reconciler and the published statement.
+
+Witnesses: `services/pdp/test/enforcement-boundary.test.ts`,
+`services/pdp/test/boundary-history-template.test.ts`,
+`services/mcp-payments/test/boundary-identifier.test.ts` (the payments
+server, PEP, PDP with its claim domain, evidence store, a published key
+set and settlement), and `demo/test/boundary-cutover-stack.test.ts` (the
+same change through `composeStack`, co-resident and over a remote hop).
+Not witnessed: the late reconciliation record's `audience`
+(`claim-reconciliation.ts`) and the PDP's Refusal Record scope function
+after a change.

@@ -40,6 +40,7 @@ import {
   loadRuntimePosture,
   openIdempotencyClaimDomain,
   RUNTIME_POSTURE,
+  type RuntimePosture,
   stalenessBound,
   stateSourcePlacement,
   deriveJoinDelegation,
@@ -333,6 +334,16 @@ export async function composeStack(opts: {
    * (`signingKeysFromEnv`).
    */
   signingKeys?: SigningKeySource;
+  /**
+   * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
+   * Scope Statement this stack runs under, validated by `loadRuntimePosture`.
+   * Absent: the published one (`config/enforcement-scope.json`). One value
+   * feeds the boundary context, the PDP's claim domain, the reconciler and
+   * the statement the resource publishes, so a declared change reaches every
+   * consumer together. A test supplies a statement that declares a change of
+   * boundary identifier.
+   */
+  statement?: RuntimePosture;
   /**
    * TEST FIXTURE ONLY (D332); `pnpm as-native` never sets it. Under the
    * `as-native` target, also enable `dev-token` and dev ordinary issuance, so
@@ -753,7 +764,8 @@ export async function composeStack(opts: {
   // it, and the PDP's Decision Evidence and Refusal Records and the PEP's own
   // records sign only for a boundary it authorizes their emitter for, so all
   // of them switch together at a declared cutover.
-  const boundary = paymentsBoundaryContext();
+  const statement = opts.statement ?? RUNTIME_POSTURE;
+  const boundary = paymentsBoundaryContext(statement);
   const pdpBoundary = (): string | undefined => {
     const established = boundary.establish();
     return established.ok ? established.boundary : undefined;
@@ -782,8 +794,8 @@ export async function composeStack(opts: {
   );
   const pdpClaims = openIdempotencyClaimDomain({
     file: claimsFile,
-    owner: RUNTIME_POSTURE.pdps[0] as string,
-    statement: RUNTIME_POSTURE,
+    owner: statement.pdps[0] as string,
+    statement,
     settlementKeys: buildBoundaryEvidenceKeyResolver(boundary.declaration, settlementKeys),
     onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
   });
@@ -850,7 +862,7 @@ export async function composeStack(opts: {
   mkdirSync(dirname(writeReservationsFile), { recursive: true });
   const writeReservations = openWriteReservationStore({
     file: writeReservationsFile,
-    owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string,
+    owner: statement.mediated_scope.pep_locations[0] as string,
   });
   // @spec runtime-evidence#execution-evidence-object (Retention),
   // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
@@ -1037,7 +1049,7 @@ export async function composeStack(opts: {
   const runtimeDecisionPolicy = {
     requiresActionApproval: (action: string) => action === "payments:remittance.send",
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
-    stateSourcePlacement: stateSourcePlacement(RUNTIME_POSTURE),
+    stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {
       delegates: Object.fromEntries(Object.entries(MAS_JOIN.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
     },
@@ -1060,6 +1072,12 @@ export async function composeStack(opts: {
     // reconciliation are scoped to the boundary in force too, never to a
     // configured audience a cutover would leave behind.
     claimAudience: pdpBoundary,
+    // @spec resource-access#resource-matching (#1276, D457), runtime#boundary-
+    // identifier-change (#853 review): the one target the payments operation
+    // contracts establish, the service CANONICAL_RESOURCE names, registered
+    // apart from the boundary: a change of boundary identifier does not move
+    // the operation target, so it stays in scope across the cutover.
+    operationTargets: [CANONICAL_RESOURCE],
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
@@ -1082,7 +1100,7 @@ export async function composeStack(opts: {
       };
     },
   });
-  const enforcementScopeStatement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: decisionChannel.remoteDecisionChannels });
+  const enforcementScopeStatement = loadRuntimePosture({ ...statement, remote_decision_channels: decisionChannel.remoteDecisionChannels });
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
@@ -1145,7 +1163,7 @@ export async function composeStack(opts: {
   // own claim channel, redemption store, connectors, evidence and
   // reservations. Constructed here and not started: see `DemoStack.reconciler`.
   const reconciler = new OutcomeReconciler({
-    statement: RUNTIME_POSTURE,
+    statement,
     component: pepId,
     claims: decisionChannel.claims,
     evidence,
