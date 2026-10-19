@@ -348,7 +348,6 @@ describe("a new Mission submission reaches its own approval despite prior browse
     expect(refused.description).toMatch(/high-risk-authority floor/);
     expect(as.kernel.allMissions()).toHaveLength(missions);
   });
-
 });
 
 describe("a request carrying no mission_intent never reuses a Mission-bound grant (@spec mission#grant-binding-resolution, #1259)", () => {
@@ -360,7 +359,7 @@ describe("a request carrying no mission_intent never reuses a Mission-bound gran
   async function expectRefusedWithoutEffect(
     run: () => Promise<Outcome>,
     expected: { error: string },
-    earlier: { firstMission: string; grantId: string; jar: Jar },
+    earlier: { firstMission: string; grantId: string },
   ): Promise<Outcome> {
     const missions = as.kernel.allMissions().length;
     const counted = derivations(earlier.firstMission);
