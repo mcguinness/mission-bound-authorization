@@ -1161,7 +1161,12 @@ semantics are defined by Mission-Bound Authorization for OAuth 2.0.<a href="#sec
             <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-terminology" class="internal xref">Conventions and Terminology</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
-            <p id="section-toc.1-1.3.1" class="keepWithNext"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-establishing-validated-cred" class="internal xref">Establishing Validated Credential Context</a></p>
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-establishing-validated-cred" class="internal xref">Establishing Validated Credential Context</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1" class="keepWithNext"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-boundary-and-audience" class="internal xref">Boundary and Audience</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-runtime-input-mapping" class="internal xref">Runtime Input Mapping</a></p>
@@ -1348,7 +1353,8 @@ client, actor, or confirmation-key values as decision inputs, the PEP
 resource and request, including its audience and, for a
 sender-constrained token, proof of possession of the confirmation key.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The issuance profile defines that validation for both of its token
-forms; this document adds no validation step of its own:<a href="#section-3-2" class="pilcrow">¶</a></p>
+forms; this document adds only the audience rule of
+<a href="#boundary-audience" class="auto internal xref">Section 3.1</a>:<a href="#section-3-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3-3.1">
           <p id="section-3-3.1.1">A JWT access token is validated under the issuance profile's
@@ -1425,6 +1431,59 @@ requires Mission-bound tokens: a resource that advertises
 <code>mission</code> claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Protected Resource Metadata"), whatever reference the deployment could
 establish externally.<a href="#section-3-8" class="pilcrow">¶</a></p>
+<div id="boundary-audience">
+<section id="section-3.1">
+        <h3 id="name-boundary-and-audience">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-boundary-and-audience" class="section-name selfRef">Boundary and Audience</a>
+        </h3>
+<p id="section-3.1-1">On this profile, the runtime core's boundary identifier
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Enforcement
+Boundary Identifier") is the resource identifier of the protected
+resource the PEP guards (<span><a href="https://rfc-editor.org/rfc/rfc9728#section-1.2" class="relref">Section 1.2</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>), spelled exactly
+as its protected resource metadata <code>resource</code> value
+(<span><a href="https://rfc-editor.org/rfc/rfc9728#section-2" class="relref">Section 2</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>); the Enforcement Scope Statement declares
+the boundary by that string. Trusted static configuration <span class="bcp14">MAY</span> supply
+the value. A PEP that retrieves the metadata validates it under
+<span><a href="https://rfc-editor.org/rfc/rfc9728#section-3.3" class="relref">Section 3.3</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> and compares identifiers as
+<span><a href="https://rfc-editor.org/rfc/rfc9728#section-6" class="relref">Section 6</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> requires.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">The PEP establishes the boundary before it reads <code>aud</code>, then checks
+that <code>aud</code> names it; this is how the resource server determines the
+identifier it expects for itself (<span><a href="https://rfc-editor.org/rfc/rfc9068#section-4" class="relref">Section 4</a> of [<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>). <code>aud</code>, in
+a validated JWT or an introspection response, is a string or an array
+of strings (<span><a href="https://rfc-editor.org/rfc/rfc7519#section-4.1.3" class="relref">Section 4.1.3</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>), and the issuance profile
+lets it name a resource server, API, or security domain
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission-Bound Access
+Tokens"). An <code>aud</code> value names the boundary when it equals the
+boundary identifier or is an audience alias for it. An audience alias
+is trusted deployment configuration, scoped to one validated issuer
+and token profile, that maps an <code>aud</code> value to exactly one protected
+resource identifier; several aliases <span class="bcp14">MAY</span> map to one boundary. The PEP
+<span class="bcp14">MUST NOT</span> accept an alias mapping that the request or the token
+supplies.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">The PEP <span class="bcp14">MUST</span> refuse, as a token-validation failure before any PDP
+decision (<a href="#token-validation" class="auto internal xref">Section 3</a>), a token whose <code>aud</code> is absent or
+malformed or names the boundary neither directly nor through an
+alias, and a token whose issuer and token profile have an alias that
+maps to more than one protected resource. For an array, the PEP
+checks that at least one member names the boundary. It <span class="bcp14">MUST NOT</span>
+select a boundary from <code>aud</code>: not the first member, not a
+serialization of the array, and not whichever member an alias maps
+first. Member order and duplicate members that name the same
+boundary do not change the result. A member that names another
+recipient does not authorize this boundary and does not by itself
+invalidate the token. A token profile whose audience rule is
+stricter, for example one that requires a single audience, keeps that
+rule.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.1-4">The decision, the permit binding, and the evidence carry the boundary
+identifier, never an <code>aud</code> value or an alias. Across a boundary
+identifier change (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
+"Changing a Boundary Identifier"), the new statement version declares
+the aliases per issuer and token profile. A token whose <code>aud</code> names
+the old identifier stays acceptable through a declared alias, under
+its unchanged validation and lifetime, and the alias never rewrites an
+entry's <code>resource</code>.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="claims-mapping">
@@ -1435,9 +1494,12 @@ establish externally.<a href="#section-3-8" class="pilcrow">¶</a></p>
 <p id="section-4-1">The runtime core states its decision inputs, permit binding, and
 required evidence fields as abstract roles
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This section is their
-complete, normative realization on this profile. Each value is read
-from the validated credential context (<a href="#token-validation" class="auto internal xref">Section 3</a>): a JWT
-claim, or the introspection response member of the same name.<a href="#section-4-1" class="pilcrow">¶</a></p>
+complete, normative realization on this profile. Each value is an
+established runtime input: a credential-derived value is read from the
+validated credential context (<a href="#token-validation" class="auto internal xref">Section 3</a>), as a JWT claim or
+the introspection response member of the same name, and the boundary
+identifier comes from the PEP's trusted routing or configuration
+(<a href="#boundary-audience" class="auto internal xref">Section 3.1</a>).<a href="#section-4-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
         <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>
@@ -1482,8 +1544,8 @@ claim, or the introspection response member of the same name.<a href="#section-4
               <code>cnf</code>, verified during validation (<a href="#token-validation" class="auto internal xref">Section 3</a>)</td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Credential audience or protected resource</td>
-            <td class="text-left" rowspan="1" colspan="1">The protected resource the PEP guards; validation has established that <code>aud</code> names it</td>
+            <td class="text-left" rowspan="1" colspan="1">Boundary identifier</td>
+            <td class="text-left" rowspan="1" colspan="1">The resource identifier of the protected resource the PEP guards, which <code>aud</code> names directly or through an alias (<a href="#boundary-audience" class="auto internal xref">Section 3.1</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Authority entry</td>
@@ -1528,10 +1590,14 @@ malformed; when an <code>act</code> claim is present, the PDP <span class="bcp14
 <code>client_id</code> alone as the immediate actor.<a href="#section-4-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-4.2">
-          <p id="section-4-4.2.1"><code>aud</code> and the protected resource. Validation establishes that <code>aud</code>
-names the protected resource the PEP guards; the decision, the
-permit binding, and the evidence then identify that protected
-resource, the target of the action.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
+          <p id="section-4-4.2.1"><code>aud</code> and the boundary identifier. Validation establishes that
+<code>aud</code> names the boundary (<a href="#boundary-audience" class="auto internal xref">Section 3.1</a>); the decision, the
+permit binding, and the evidence carry the boundary identifier. It
+is not the action's target: the request's transport URL, the
+Resource-policy <code>type</code> and <code>id</code>, and the operation target an entry
+is matched against (<a href="#authorization-details-mapping" class="auto internal xref">Section 5.1</a>) are distinct
+values, and an alias never rewrites an entry's <code>resource</code> or makes
+it match another target.<a href="#section-4-4.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-4.3">
           <p id="section-4-4.3.1">The credential authority and the current effective authority. The
@@ -1902,10 +1968,16 @@ credentials this profile validates. A PDP that accepts an access token
 directly, rather than the minimum credential-derived claims a PEP needs
 to convey, <span class="bcp14">MUST</span> treat it as a credential, protect it against
 disclosure, and <span class="bcp14">MUST NOT</span> use it outside the declared enforcement scope.<a href="#section-8-1" class="pilcrow">¶</a></p>
-<p id="section-8-2">Evaluating an action against the approved Authority Set in place of
+<p id="section-8-2">Selecting the boundary from <code>aud</code>, rather than checking <code>aud</code> against
+a boundary established from routing or configuration, would let a
+token with several audiences choose where it is evaluated, and let
+the order of its members change the permit binding and the evidence.
+An alias taken from the request, or one alias naming two resources,
+does the same; <a href="#boundary-audience" class="auto internal xref">Section 3.1</a> refuses both.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<p id="section-8-3">Evaluating an action against the approved Authority Set in place of
 the credential authority would let a narrowed token act with its Mission's
 broader authority, undoing the narrowing the issuance profile applied;
-<a href="#authorization-details-mapping" class="auto internal xref">Section 5.1</a> requires both bounds for that reason.<a href="#section-8-2" class="pilcrow">¶</a></p>
+<a href="#authorization-details-mapping" class="auto internal xref">Section 5.1</a> requires both bounds for that reason.<a href="#section-8-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -2007,6 +2079,10 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
         <dd>
 <span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750">https://www.rfc-editor.org/rfc/rfc6750</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC7519">[RFC7519]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">N. Sakimura</span>, <span class="refTitle">"JSON Web Token (JWT)"</span>, <span class="seriesInfo">RFC 7519</span>, <span class="seriesInfo">DOI 10.17487/RFC7519</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7519">https://www.rfc-editor.org/rfc/rfc7519</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC7662">[RFC7662]</dt>
         <dd>
 <span class="refAuthor">Richer, J., Ed.</span>, <span class="refTitle">"OAuth 2.0 Token Introspection"</span>, <span class="seriesInfo">RFC 7662</span>, <span class="seriesInfo">DOI 10.17487/RFC7662</span>, <time datetime="2015-10" class="refDate">October 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7662">https://www.rfc-editor.org/rfc/rfc7662</a>&gt;</span>. </dd>
@@ -2081,25 +2157,38 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Credential Authority and Current Effective Authority: a
+          <p id="appendix-A-2.1.1">Boundary and Audience: the runtime core's boundary identifier is the
+protected resource's resource identifier, spelled as its RFC 9728
+<code>resource</code> value, which trusted static configuration can supply.
+<code>aud</code>, a string or an array, names it directly or through an
+audience alias, trusted configuration scoped to the validated
+issuer and token profile; an array is checked for membership, never
+by order. An absent, malformed, or nonmatching audience, or an
+ambiguous alias, is refused before any decision, and a stricter
+token profile keeps its rule. The input mapping names the boundary
+identifier and no longer calls the protected resource the target of
+the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Credential Authority and Current Effective Authority: a
 <code>mission_resource_access</code> entry's <code>resource</code> matches the operation
 target the PEP establishes from its trusted operation contract,
 under Resource Access's Resource Matching rules; the token's
-audience remains a separate check (#1276).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Runtime Input Mapping and Mission State Sources: a state source
-reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
-and the Status List cannot provide the termination reason or its
-references (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+audience remains a separate check (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Establishing Validated Credential Context: the OAuth realization of
+          <p id="appendix-A-2.3.1">Runtime Input Mapping and Mission State Sources: a state source
+reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
+and the Status List cannot provide the termination reason or its
+references (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Establishing Validated Credential Context: the OAuth realization of
 the runtime core's sender-constraint requirement for high-consequence
 actions: the <code>cnf</code> binding of the validated credential context (a
 JWT's claim, or an opaque token's introspection response), with a
 proof the PEP verified; a context with no binding is a bearer token.
-Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

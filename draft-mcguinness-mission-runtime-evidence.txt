@@ -428,12 +428,14 @@ Table of Contents
       This is retrospective evidence, never a substitute for the live
       permit condition or the PEP's comparison at use.
 
-   audience:  REQUIRED.  A string.  The audience or protected-resource
-      identifier of the enforcement boundary, as the PDP established it,
-      which a permit binds ([I-D.draft-mcguinness-mission-runtime],
-      Section "Permit Binding"), as carried by the deployment's
-      decision-API binding (for example, the AuthZEN profile's decision-
-      API request's audience member,
+   audience:  REQUIRED.  A string.  The boundary identifier of the
+      enforcement boundary the decision was requested for
+      ([I-D.draft-mcguinness-mission-runtime], Section "Enforcement
+      Boundary Identifier"), byte for byte as the permit binds it
+      ([I-D.draft-mcguinness-mission-runtime], Section "Permit
+      Binding"), as received from a PEP authorized for that boundary and
+      carried by the deployment's decision-API binding (for example, the
+      AuthZEN profile's decision-API request's audience member,
       [I-D.draft-mcguinness-mission-authzen]).
 
    mission_state_version:  OPTIONAL.  An integer.  The Mission
@@ -637,8 +639,14 @@ Table of Contents
    refusal_id:  REQUIRED.  A string.  Unique refusal identifier.  ABNF:
       1*64( ALPHA / DIGIT / "-" / "_" ).  At least 128 bits of entropy.
 
-   audience:  REQUIRED.  A string.  The audience or protected-resource
-      identifier, as the refusing component established it.
+   audience:  REQUIRED.  A string.  The boundary identifier of the
+      enforcement boundary the refused request is for
+      ([I-D.draft-mcguinness-mission-runtime], Section "Enforcement
+      Boundary Identifier"), which the refusing component establishes
+      without a permit: a PEP from its trusted routing or configuration,
+      a PDP from the request of a PEP authorized for that boundary.  A
+      component that cannot establish the boundary emits no Refusal
+      Record.
 
    action:  REQUIRED.  An object.  The requested action descriptor, as
       the refusing component established it.
@@ -871,13 +879,28 @@ Table of Contents
    A verifier MUST confirm that the signing key selected by the JWS kid
    is the published key of the component named in the record's emitter
    member, and that this key is bound to the enforcement scope and
-   audience the record serves: the record's own audience member, present
-   directly on Decision Evidence, Execution Evidence, and Refusal
-   Records alike (for Decision Evidence, mirroring the decision-API
-   request's audience member, [I-D.draft-mcguinness-mission-authzen]).
-   A verifier MUST reject a record whose signing key is not published
-   for that scope, so one component's key cannot sign evidence for a
-   resource, audience, or scope it does not serve.
+   audience the record serves: the boundary identifier in the record's
+   own audience member ([I-D.draft-mcguinness-mission-runtime],
+   Section "Enforcement Boundary Identifier"), present directly on
+   Decision Evidence, Execution Evidence, and Refusal Records alike (for
+   Decision Evidence, mirroring the decision-API request's audience
+   member, [I-D.draft-mcguinness-mission-authzen]).  A verifier MUST
+   reject a record whose signing key is not published for that scope, so
+   one component's key cannot sign evidence for a resource, audience, or
+   scope it does not serve.
+
+   Key authorization comes from the Enforcement Scope Statement versions
+   the deployment has declared ([I-D.draft-mcguinness-mission-runtime],
+   Section "Changing a Boundary Identifier").  A verifier MUST verify a
+   record's unchanged signed bytes under the version that authorizes the
+   key the kid selects for the record's audience value.  Neither
+   evaluated_at nor the verifier's own clock selects that version; where
+   the declared versions do not determine one boundary and key
+   authorization for that pair, verification fails.  A record verified
+   under an earlier version is historical evidence of its original
+   operation, never a permit, and correlating it with records under a
+   later identifier through the declared mapping changes neither its
+   bytes nor any key's authorization.
 
    Where the selected signing key is identified as compromised by the
    deployment-defined key-status mechanism, the verifier MUST apply the
@@ -1019,7 +1042,8 @@ Table of Contents
 
    *  action: REQUIRED.  The refused action's name.
 
-   *  audience: REQUIRED.  The audience the refusing component enforces.
+   *  audience: REQUIRED.  The boundary identifier the refusing
+      component established.
 
    *  mission_id: the established Mission identifier, present exactly
       when the record carries mission.
@@ -1081,9 +1105,13 @@ Table of Contents
    mission_id:  REQUIRED.  A string.  The Mission id, mirrored from the
       linked Decision Evidence for join-key convenience.
 
-   audience:  REQUIRED.  A string.  The audience the linked Decision
-      Evidence recorded, mirrored for join-key convenience and so a
-      verifier's key-to-audience binding (Section 4.3) has its input.
+   audience:  REQUIRED.  A string.  The boundary identifier the linked
+      Decision Evidence recorded, byte for byte, mirrored for join-key
+      convenience and so a verifier's key-to-boundary binding
+      (Section 4.3) has its input.  An outcome for an operation admitted
+      before a boundary identifier change keeps the original identifier
+      ([I-D.draft-mcguinness-mission-runtime], Section "Changing a
+      Boundary Identifier").
 
    authorized_parameter_digest:  CONDITIONAL.  A string.  REQUIRED when
       the linked Decision Evidence carries parameter_digest; MUST equal
@@ -2262,7 +2290,10 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]) extends to evidence signing
    keys: a retired signing key MUST remain resolvable in the published
    key set for at least the evidence retention window, so records signed
-   before a rotation stay verifiable after it.  The key's compromise
+   before a rotation stay verifiable after it.  A superseded Enforcement
+   Scope Statement version and its key authorizations remain available
+   for the same window ([I-D.draft-mcguinness-mission-runtime],
+   Section "Changing a Boundary Identifier").  The key's compromise
    status, and the authenticated compromise boundary, come from the
    deployment-defined key-status mechanism.  Once the signing key is
    identified as compromised, the compromise-boundary rule applies.
@@ -2798,6 +2829,17 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Decision Evidence, Refusal Record, and Execution Evidence: the
+      audience member carries the runtime profile's boundary identifier,
+      byte for byte; a component that cannot establish the boundary
+      emits no Refusal Record.  The evidence key is bound to that
+      identifier under the declared Enforcement Scope Statement
+      versions, and a record from before a boundary identifier change
+      verifies with its bytes unchanged under the version that
+      authorizes its key for its audience, failing when the versions do
+      not determine one; it is historical evidence, never a permit
+      (#853).
 
    *  Refusal Record and Execution Evidence: target_unresolvable also
       covers a PEP that cannot establish one unambiguous operation

@@ -902,8 +902,13 @@ Table of Contents
 6.9.  Audience and Mission State Observation
 
    audience:  REQUIRED.  A string.  Carried at
-      resource.properties.audience (Section 6).  The PEP's audience or
-      protected-resource identifier.
+      resource.properties.audience (Section 6).  The boundary identifier
+      of the enforcement boundary the PEP established for the request,
+      byte for byte ([I-D.draft-mcguinness-mission-runtime],
+      Section "Enforcement Boundary Identifier"); on OAuth, the
+      protected resource's identifier, never an aud value or alias
+      ([I-D.draft-mcguinness-mission-runtime-oauth]).  Entries are
+      matched against operation_target, never this member (Section 6).
 
    mission_state_observation:  CONDITIONAL.  An object, carried at
       context.mission_state_observation.  REQUIRED where the
@@ -1116,16 +1121,17 @@ Table of Contents
       parameters.  This is what an idempotency key identifies one
       execution of.
 
-   Authorization binding:  The subject, the actor, the operation target,
-      credential-derived facts, the Mission reference, the authority and
-      view identity, the approval, and every policy-relevant context
-      input, including taint, the Mission history reference, the
-      capability source, and any extension member a companion profile
-      adds.  This is what a permit is bound to.  A new companion context
-      member is part of the authorization binding by default; a
-      companion narrows it only by amending this enumeration.  It
-      excludes only the request's volatile machinery: the
-      supported_obligations declaration and transport metadata.
+   Authorization binding:  The subject, the actor, the audience
+      (Section 6.9), the operation target, credential-derived facts, the
+      Mission reference, the authority and view identity, the approval,
+      and every policy-relevant context input, including taint, the
+      Mission history reference, the capability source, and any
+      extension member a companion profile adds.  This is what a permit
+      is bound to.  A new companion context member is part of the
+      authorization binding by default; a companion narrows it only by
+      amending this enumeration.  It excludes only the request's
+      volatile machinery: the supported_obligations declaration and
+      transport metadata.
 
    Cache key:  The authorization binding plus the explicit state
       generation the decision consulted (the PDP's tracked
@@ -3373,6 +3379,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  resource.properties.audience carries the runtime profile's
+      boundary identifier, the boundary the PEP established, byte for
+      byte: on OAuth, the protected resource's identifier, never an aud
+      value or alias.  The authorization binding, and so the cache key,
+      names it.  Operation-target matching is unchanged (#853).
 
    *  resource.properties.operation_target carries the operation target
       the PEP establishes from its trusted operation contract.  The PDP

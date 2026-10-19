@@ -1281,22 +1281,30 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
                 <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-enforcement-scope-and-confo" class="internal xref">Enforcement Scope and Conformance</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-action-classification" class="internal xref">Action Classification</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-enforcement-boundary-identi" class="internal xref">Enforcement Boundary Identifier</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3.2.1">
+                    <p id="section-toc.1-1.5.2.3.2.1.1"><a href="#section-5.3.1" class="auto internal xref">5.3.1</a>.  <a href="#name-changing-a-boundary-identif" class="internal xref">Changing a Boundary Identifier</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
-                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-action-bound-approval" class="internal xref">Action-Bound Approval</a></p>
+                <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-action-classification" class="internal xref">Action Classification</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
-                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-pep-placement" class="internal xref">PEP Placement</a></p>
+                <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-action-bound-approval" class="internal xref">Action-Bound Approval</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.6">
-                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-credential-custody-and-medi" class="internal xref">Credential Custody and Mediated Execution</a></p>
+                <p id="section-toc.1-1.5.2.6.1"><a href="#section-5.6" class="auto internal xref">5.6</a>.  <a href="#name-pep-placement" class="internal xref">PEP Placement</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.7">
-                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-agent-isolated-evidence-emi" class="internal xref">Agent-Isolated Evidence Emission</a></p>
+                <p id="section-toc.1-1.5.2.7.1"><a href="#section-5.7" class="auto internal xref">5.7</a>.  <a href="#name-credential-custody-and-medi" class="internal xref">Credential Custody and Mediated Execution</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.8">
-                <p id="section-toc.1-1.5.2.8.1"><a href="#section-5.8" class="auto internal xref">5.8</a>.  <a href="#name-least-exposure" class="internal xref">Least Exposure</a></p>
+                <p id="section-toc.1-1.5.2.8.1"><a href="#section-5.8" class="auto internal xref">5.8</a>.  <a href="#name-agent-isolated-evidence-emi" class="internal xref">Agent-Isolated Evidence Emission</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.9">
+                <p id="section-toc.1-1.5.2.9.1"><a href="#section-5.9" class="auto internal xref">5.9</a>.  <a href="#name-least-exposure" class="internal xref">Least Exposure</a></p>
 </li>
             </ul>
 </li>
@@ -1605,7 +1613,7 @@ where deployed (<a href="#metering" class="auto internal xref">Section 10</a>,
 <span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). The PEP is whatever component can
 actually prevent the action: a resource server, an MCP server, an
 egress proxy, a workflow engine, or the orchestrator itself
-(<a href="#pep-placement" class="auto internal xref">Section 5.5</a>). The PDP's placement is a deployment choice
+(<a href="#pep-placement" class="auto internal xref">Section 5.6</a>). The PDP's placement is a deployment choice
 (<a href="#decision" class="auto internal xref">Section 7</a>). A deployment whose acting tokens carry no <code>mission</code>
 claim can still bind each decision to a Mission: the Mission
 Substrate (<a href="#mission-substrate" class="auto internal xref">Section 4</a>) admits an externally established
@@ -1633,7 +1641,7 @@ possession alone never suffices (<a href="#decision" class="auto internal xref">
           <dd style="margin-left: 1.5em" id="section-2.2-2.4">
             <p id="section-2.2-2.4.1">The PEP sits where the action can still be stopped; a check
 further upstream does not survive what happens after it
-(<a href="#pep-placement" class="auto internal xref">Section 5.5</a>).<a href="#section-2.2-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#pep-placement" class="auto internal xref">Section 5.6</a>).<a href="#section-2.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-2.2-2.5">
@@ -1679,13 +1687,13 @@ a governance operation, never a runtime one (<a href="#decision" class="auto int
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-2.2-3">For the high-consequence classes (<a href="#classification" class="auto internal xref">Section 5.3</a>) the profile
+<p id="section-2.2-3">For the high-consequence classes (<a href="#classification" class="auto internal xref">Section 5.4</a>) the profile
 goes further: the acting credential is sender-constrained with a
-verified proof of possession (<a href="#custody" class="auto internal xref">Section 5.6</a>), action-bound approval
-re-consents the concrete parameters (<a href="#action-approval" class="auto internal xref">Section 5.4</a>), and
+verified proof of possession (<a href="#custody" class="auto internal xref">Section 5.7</a>), action-bound approval
+re-consents the concrete parameters (<a href="#action-approval" class="auto internal xref">Section 5.5</a>), and
 mediated custody keeps the
 credential's sender-constraint key in the enforcing component rather
-than the agent (<a href="#custody" class="auto internal xref">Section 5.6</a>). Those mechanisms compose into the two
+than the agent (<a href="#custody" class="auto internal xref">Section 5.7</a>). Those mechanisms compose into the two
 named claims of <a href="#named-claims" class="auto internal xref">Section 9.5</a>, agent-compromise-resistant
 enforcement and trifecta containment: the bar a deployment meets
 before representing itself as resistant to a compromised or injected
@@ -2046,7 +2054,7 @@ composition, which this profile does not define.<a href="#section-2.6-2.9.1" cla
 </li>
         </ul>
 <p id="section-2.6-3">An approval produced by the governance workflow returns as decision
-input on a fresh evaluation (<a href="#action-approval" class="auto internal xref">Section 5.4</a>), never as output
+input on a fresh evaluation (<a href="#action-approval" class="auto internal xref">Section 5.5</a>), never as output
 state. The AuthZEN profile maps this output onto its response
 context, the obligations profile, and ARAP (<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-2.6-3" class="pilcrow">¶</a></p>
 </section>
@@ -2368,7 +2376,7 @@ optional fields, and set-like array handling before canonicalization.<a href="#s
             <p id="section-2.9-2.2.1">the credential issuer, when available;<a href="#section-2.9-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.9-2.3">
-            <p id="section-2.9-2.3.1">the credential audience or protected resource;<a href="#section-2.9-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-2.9-2.3.1">the boundary identifier (<a href="#boundary-identifier" class="auto internal xref">Section 5.3</a>);<a href="#section-2.9-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.9-2.4">
             <p id="section-2.9-2.4.1">the authenticated subject identifier;<a href="#section-2.9-2.4.1" class="pilcrow">¶</a></p>
@@ -2537,7 +2545,7 @@ refusal.<a href="#section-2.11-1" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">Refuse before runtime Mission evaluation</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">A high-consequence action whose acting credential carries no verified sender-constraint binding (<a href="#custody" class="auto internal xref">Section 5.6</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">A high-consequence action whose acting credential carries no verified sender-constraint binding (<a href="#custody" class="auto internal xref">Section 5.7</a>)</td>
               <td class="text-left" rowspan="1" colspan="1">Refuse</td>
             </tr>
             <tr>
@@ -2562,7 +2570,7 @@ refusal.<a href="#section-2.11-1" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">A required evidence record cannot be signed or emitted for a consequential decision or refusal</td>
-              <td class="text-left" rowspan="1" colspan="1">Fail closed, or durably commit the record for signing and publication under a declared recovery bound (<a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 5.7</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">Fail closed, or durably commit the record for signing and publication under a declared recovery bound (<a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 5.8</a>)</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Mission not <code>active</code>
@@ -2635,12 +2643,15 @@ refusal.<a href="#section-2.11-1" class="pilcrow">¶</a></p>
 from <a href="#failure-modes" class="auto internal xref">Section 2.11</a>;<a href="#section-2.12-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.12-2.2">
-            <p id="section-2.12-2.2.1">the request time (RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>); and<a href="#section-2.12-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-2.12-2.2.1">the boundary identifier (<a href="#boundary-identifier" class="auto internal xref">Section 5.3</a>);<a href="#section-2.12-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.12-2.3">
-            <p id="section-2.12-2.3.1">the <code>parameter_digest</code> for parameter-bound classes, or a digest of
+            <p id="section-2.12-2.3.1">the request time (RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span>); and<a href="#section-2.12-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-2.12-2.4">
+            <p id="section-2.12-2.4.1">the <code>parameter_digest</code> for parameter-bound classes, or a digest of
 the evaluation request otherwise, over the input the runtime evidence
-companion defines (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-2.12-2.3.1" class="pilcrow">¶</a></p>
+companion defines (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-2.12-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-2.12-3">A record <span class="bcp14">MUST</span> also contain the following fields when they are available
@@ -2655,8 +2666,7 @@ source its credential profile names
 sources);<a href="#section-2.12-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.12-4.2">
-            <p id="section-2.12-4.2.1">the credential issuer and audience or protected-resource identifier
-when available;<a href="#section-2.12-4.2.1" class="pilcrow">¶</a></p>
+            <p id="section-2.12-4.2.1">the credential issuer when available;<a href="#section-2.12-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-2.12-4.3">
             <p id="section-2.12-4.3.1">the authenticated subject identifier, the client identity, a
@@ -2756,14 +2766,14 @@ upper bound and does not override Resource policy.<a href="#section-3-3.8.1" cla
 <dt id="section-3-3.9">Consequential action:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.10">
           <p id="section-3-3.10.1">An action that has external visibility or effect and so <span class="bcp14">MUST</span> be
-evaluated before it runs (<a href="#classification" class="auto internal xref">Section 5.3</a>).<a href="#section-3-3.10.1" class="pilcrow">¶</a></p>
+evaluated before it runs (<a href="#classification" class="auto internal xref">Section 5.4</a>).<a href="#section-3-3.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-3.11">High-consequence classes:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.12">
           <p id="section-3-3.12.1">The irreversible action, external commitment, and privileged
 administration classes, to which this profile's strictest
-requirements attach (<a href="#classification" class="auto internal xref">Section 5.3</a>).<a href="#section-3-3.12.1" class="pilcrow">¶</a></p>
+requirements attach (<a href="#classification" class="auto internal xref">Section 5.4</a>).<a href="#section-3-3.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-3.13">Decision:</dt>
@@ -2812,42 +2822,49 @@ evidence mechanisms for which a deployment claims conformance to this
 profile.<a href="#section-3-3.22.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-3-3.23">Operation Profile:</dt>
+<dt id="section-3-3.23">Boundary identifier:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.24">
-          <p id="section-3-3.24.1">The per-operation statement of normalization and binding rules a
-deployment publishes; defined in full in <a href="#parameter-binding" class="auto internal xref">Section 8</a>.<a href="#section-3-3.24.1" class="pilcrow">¶</a></p>
+          <p id="section-3-3.24.1">The one identifier of an enforcement boundary, which every decision,
+permit, and record for that boundary carries
+(<a href="#boundary-identifier" class="auto internal xref">Section 5.3</a>).<a href="#section-3-3.24.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-3-3.25">Resource Server runtime profile:</dt>
+<dt id="section-3-3.25">Operation Profile:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.26">
-          <p id="section-3-3.26.1">A deployment's resource server-facing conformance statement for this
+          <p id="section-3-3.26.1">The per-operation statement of normalization and binding rules a
+deployment publishes; defined in full in <a href="#parameter-binding" class="auto internal xref">Section 8</a>.<a href="#section-3-3.26.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.27">Resource Server runtime profile:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.28">
+          <p id="section-3-3.28.1">A deployment's resource server-facing conformance statement for this
 profile. It defines which protected resources and operations the
 resource server enforces, where the PEP sits, how local Resource
 policy composes with Mission authority, and which Operation Profiles
-apply.<a href="#section-3-3.26.1" class="pilcrow">¶</a></p>
+apply.<a href="#section-3-3.28.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-3-3.27">Mission state source:</dt>
-        <dd style="margin-left: 1.5em" id="section-3-3.28">
-          <p id="section-3-3.28.1">A deployment-trusted source from which the PDP establishes the
-Mission lifecycle state or the freshness of that state
-(<a href="#state-freshness" class="auto internal xref">Section 2.5</a>).<a href="#section-3-3.28.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-3-3.29">Mission-bound credential:</dt>
+<dt id="section-3-3.29">Mission state source:</dt>
         <dd style="margin-left: 1.5em" id="section-3-3.30">
-          <p id="section-3-3.30.1">A credential issued or derived under a Mission, carrying an
+          <p id="section-3-3.30.1">A deployment-trusted source from which the PDP establishes the
+Mission lifecycle state or the freshness of that state
+(<a href="#state-freshness" class="auto internal xref">Section 2.5</a>).<a href="#section-3-3.30.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-3.31">Mission-bound credential:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.32">
+          <p id="section-3-3.32.1">A credential issued or derived under a Mission, carrying an
 authority entry and a Mission reference or the means to establish
 one (<a href="#mission-binding" class="auto internal xref">Section 2.3</a>). The OAuth realization is an access token
 carrying <code>authorization_details</code> and a <code>mission</code> claim
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3-3.30.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3-3.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-3-3.31">Credential profile:</dt>
-        <dd style="margin-left: 1.5em" id="section-3-3.32">
-          <p id="section-3-3.32.1">A companion that realizes this document's roles, decision inputs,
+<dt id="section-3-3.33">Credential profile:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-3.34">
+          <p id="section-3-3.34.1">A companion that realizes this document's roles, decision inputs,
 and state sources for one credential type. The OAuth 2.0 one is
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>.<a href="#section-3-3.32.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>.<a href="#section-3-3.34.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3104,7 +3121,7 @@ declaration requirement to the baseline statement, rather than adding a
 universal item every deployment carries whether or not it claims the
 extension: the per-class Evaluation-Context Binding declaration
 (<a href="#evaluation-context-binding" class="auto internal xref">Section 9.1</a>); the credential custody mode for a
-mediated class (<a href="#custody" class="auto internal xref">Section 5.6</a>); the transaction-assurance tier's Exact
+mediated class (<a href="#custody" class="auto internal xref">Section 5.7</a>); the transaction-assurance tier's Exact
 idempotency-claim domain per mediated action class or idempotency scope
 (<a href="#idempotency" class="auto internal xref">Section 9.3</a>); the runtime enforcement evidence mechanism,
 retention window, and the locations of the deployment-published
@@ -3112,7 +3129,7 @@ evidence signing key sets (the runtime evidence companion's PDP and
 PEP key sets, <span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>, resolve
 here), together with the agent-isolated evidence-emission condition's
 per-emitter declaration where that condition is claimed
-(<a href="#evidence" class="auto internal xref">Section 11</a>, <a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 5.7</a>); the per-row EAT
+(<a href="#evidence" class="auto internal xref">Section 11</a>, <a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 5.8</a>); the per-row EAT
 evidence selections a High-Assurance Agent claim rests on
 (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#trifecta-containment" class="auto internal xref">Section 9.5.2</a>); and the
 reconciliation window, responsible component, and alerting obligation
@@ -3189,15 +3206,126 @@ operational policy, resource-server metadata defined elsewhere, or a
 contractual profile.<a href="#section-5.2-15" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="classification">
+<div id="boundary-identifier">
 <section id="section-5.3">
-        <h3 id="name-action-classification">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-action-classification" class="section-name selfRef">Action Classification</a>
+        <h3 id="name-enforcement-boundary-identi">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-enforcement-boundary-identi" class="section-name selfRef">Enforcement Boundary Identifier</a>
         </h3>
-<p id="section-5.3-1">The boundary between consequential and non-consequential actions is
+<p id="section-5.3-1">Each <code>mediated</code> resource entry of the Enforcement Scope Statement
+(<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>) is an <strong>enforcement boundary</strong>, and its
+resource string is that boundary's one <strong>boundary identifier</strong>.
+Reconstructed and unrecorded entries are not enforcement boundaries.
+A PEP can serve several boundaries, each with its own identifier. The
+credential profile fixes which value a boundary's identifier takes;
+the OAuth realization is the protected resource's identifier
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>, Section "Boundary
+and Audience").<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<p id="section-5.3-2">The PEP <span class="bcp14">MUST</span> establish the boundary a request is for from its trusted
+routing or configuration, independently of the credential's audience
+values, their order, and the Authority Set entries. The credential
+profile's audience check then validates the credential against that
+boundary; it never selects the boundary. A PDP <span class="bcp14">MUST</span> accept a boundary
+identifier only from a PEP authorized for that boundary
+(<a href="#decision-channel" class="auto internal xref">Section 2.4</a>).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+<p id="section-5.3-3">The decision inputs, the permit binding (<a href="#permit-binding" class="auto internal xref">Section 2.9</a>) and any
+permit cache, Decision Evidence, Execution Evidence, pre-decision
+Refusal Records, and evidence-key authorization
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>) <span class="bcp14">MUST</span> use that same
+identifier, byte for byte. A denial establishes it without a permit.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
+<p id="section-5.3-4">A PEP that cannot establish the boundary <span class="bcp14">MUST</span> refuse the request and
+<span class="bcp14">MUST NOT</span> supply a boundary identifier taken from the credential, a
+default, or a guess. That refusal lies outside every declared scope:
+the deployment can log it by its own means, but <span class="bcp14">MUST NOT</span> emit it as a
+runtime enforcement evidence record (<a href="#evidence" class="auto internal xref">Section 11</a>), every form of
+which names a boundary.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
+<p id="section-5.3-5">The boundary identifier is distinct from the request's transport URL,
+the Resource-policy object identity, and the operation target an
+authority-entry match uses (<a href="#input-authority" class="auto internal xref">Section 2.7.1</a>); none substitutes for
+another.<a href="#section-5.3-5" class="pilcrow">¶</a></p>
+<div id="boundary-identifier-change">
+<section id="section-5.3.1">
+          <h4 id="name-changing-a-boundary-identif">
+<a href="#section-5.3.1" class="section-number selfRef">5.3.1. </a><a href="#name-changing-a-boundary-identif" class="section-name selfRef">Changing a Boundary Identifier</a>
+          </h4>
+<p id="section-5.3.1-1">A deployment that changes a boundary's identifier <span class="bcp14">MUST</span> publish a new
+version of its Enforcement Scope Statement naming the old and new
+identifiers, the credential profile's audience aliases for each,
+scoped as that profile requires
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>), the evidence
+signing keys authorized for each, and the effective cutover. Each
+PEP, PDP, and evidence verifier for the boundary <span class="bcp14">MUST</span> obtain that
+version from a source it trusts for the deployment's statements. The
+deployment <span class="bcp14">MUST</span> retain each earlier version, with its key
+authorizations, for as long as evidence produced under it must
+verify.<a href="#section-5.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.3.1-2">The deployment <span class="bcp14">MUST</span> complete the cutover in this order:<a href="#section-5.3.1-2" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.3.1-3">
+<li id="section-5.3.1-3.1">
+              <p id="section-5.3.1-3.1.1">Every consumer of the identifier (PDPs, permit caches, and
+evidence verifiers) accepts the new version.<a href="#section-5.3.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-5.3.1-3.2">
+              <p id="section-5.3.1-3.2.1">Admission under the old identifier stops, and each in-flight
+operation is drained, or refused or restarted under the new
+identifier.<a href="#section-5.3.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-5.3.1-3.3">
+              <p id="section-5.3.1-3.3.1">Every permit and permit-cache entry bound to the old identifier is
+invalidated, including those for cacheable reads and for later
+phases of a compound action (<a href="#compound-actions" class="auto internal xref">Section 2.10</a>).<a href="#section-5.3.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li id="section-5.3.1-3.4">
+              <p id="section-5.3.1-3.4.1">Every producer for the boundary switches together. New decisions,
+permits, and evidence then carry only the new identifier; no
+component chooses between the two, and no permit comparison
+accepts both.<a href="#section-5.3.1-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ol>
+<p id="section-5.3.1-4">Evidence produced before the cutover keeps its meaning:<a href="#section-5.3.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-5.3.1-5.1">
+              <p id="section-5.3.1-5.1.1">Evidence delivered after the cutover for an operation admitted
+before it keeps that operation's facts and old identifier. It is
+verified as historical evidence, never accepted as a permit.<a href="#section-5.3.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-5.3.1-5.2">
+              <p id="section-5.3.1-5.2.1">No signed record is rewritten. A verifier verifies each record
+under the statement version whose identifier and key authorization
+it was produced under, and fails verification when the declared
+versions do not determine that version
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>, Section
+"Integrity").<a href="#section-5.3.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-5.3.1-5.3">
+              <p id="section-5.3.1-5.3.1">Correlating records across versions through the declared old and
+new identifiers happens after verification and <span class="bcp14">MUST NOT</span> change a
+signed payload or extend a key's authorization to another boundary.<a href="#section-5.3.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-5.3.1-6">A credential that names the old identifier through a declared alias
+stays usable under its unchanged validation and lifetime. The alias
+map never rewrites an approved entry's <code>resource</code> or a commitment
+over it. Where an entry cannot keep its original operation-target
+authority under the new identifier, the deployment <span class="bcp14">MUST</span> refuse the
+action or obtain explicit reauthorization through the normal Mission
+creation or derivation path, and <span class="bcp14">MUST NOT</span> rewrite an existing approval
+or integrity preimage.<a href="#section-5.3.1-6" class="pilcrow">¶</a></p>
+<p id="section-5.3.1-7">The cutover uses the statement's versions and the records' existing
+authenticated content; it adds no record member, credential claim, or
+credential type.<a href="#section-5.3.1-7" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="classification">
+<section id="section-5.4">
+        <h3 id="name-action-classification">
+<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-action-classification" class="section-name selfRef">Action Classification</a>
+        </h3>
+<p id="section-5.4-1">The boundary between consequential and non-consequential actions is
 deployment policy, bounded by the classification floor below. This
 document defines a default classification a deployment <span class="bcp14">SHOULD</span> adopt,
-and a floor it <span class="bcp14">MUST</span> observe.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+and a floor it <span class="bcp14">MUST</span> observe.<a href="#section-5.4-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-5">
           <caption><a href="#table-5" class="selfRef">Table 5</a></caption>
 <thead>
@@ -3262,7 +3390,7 @@ and a floor it <span class="bcp14">MUST</span> observe.<a href="#section-5.3-1" 
             </tr>
           </tbody>
         </table>
-<p id="section-5.3-3">The table's per-class requirements (the PDP gate and parameter
+<p id="section-5.4-3">The table's per-class requirements (the PDP gate and parameter
 binding) are requirements for an action <strong>once it is assigned to that
 class</strong>. Assigning an action to a class is deployment policy, bounded
 by the floor below and by any Resource-policy minimum
@@ -3274,8 +3402,8 @@ need not be classified a consequential read, and is then not
 separately PDP-gated by this profile. A deployment <span class="bcp14">MUST NOT</span>, however,
 use classification to evade the floor or a Resource-policy minimum, and
 once an action is a consequential write or higher it <span class="bcp14">MUST</span> be gated and
-bound as the table requires.<a href="#section-5.3-3" class="pilcrow">¶</a></p>
-<p id="section-5.3-4">One predicate cuts across the classes. An <strong>external-communication
+bound as the table requires.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
+<p id="section-5.4-4">One predicate cuts across the classes. An <strong>external-communication
 action</strong> is a consequential action, of any class, whose effect
 carries data to a recipient outside the deployment's trust boundary
 (sending a message or mail, posting to an external service,
@@ -3284,35 +3412,35 @@ property, not a sixth class: an external-communication action keeps
 its class and that class's requirements, and rules stated over
 "external-communication and external-commitment actions" (the taint
 rule, trifecta containment, egress metering) apply to any action
-satisfying the predicate or classified <code>external_commitment</code>.<a href="#section-5.3-4" class="pilcrow">¶</a></p>
-<p id="section-5.3-5">The three highest classes are defined by predicates; the table's
-examples illustrate them:<a href="#section-5.3-5" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5.3-6">
-          <dt id="section-5.3-6.1">Irreversible action:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.3-6.2">
-            <p id="section-5.3-6.2.1">the action's effect cannot be reversed by the same authority within
-the deployment's own systems.<a href="#section-5.3-6.2.1" class="pilcrow">¶</a></p>
+satisfying the predicate or classified <code>external_commitment</code>.<a href="#section-5.4-4" class="pilcrow">¶</a></p>
+<p id="section-5.4-5">The three highest classes are defined by predicates; the table's
+examples illustrate them:<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-5.4-6">
+          <dt id="section-5.4-6.1">Irreversible action:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.4-6.2">
+            <p id="section-5.4-6.2.1">the action's effect cannot be reversed by the same authority within
+the deployment's own systems.<a href="#section-5.4-6.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.3-6.3">External commitment:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.3-6.4">
-            <p id="section-5.3-6.4.1">the action creates an obligation or communication binding the
-Subject to a party outside the deployment.<a href="#section-5.3-6.4.1" class="pilcrow">¶</a></p>
+<dt id="section-5.4-6.3">External commitment:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.4-6.4">
+            <p id="section-5.4-6.4.1">the action creates an obligation or communication binding the
+Subject to a party outside the deployment.<a href="#section-5.4-6.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-5.3-6.5">Privileged administration:</dt>
-          <dd style="margin-left: 1.5em" id="section-5.3-6.6">
-            <p id="section-5.3-6.6.1">the action changes who holds authority or how authority is
-evaluated.<a href="#section-5.3-6.6.1" class="pilcrow">¶</a></p>
+<dt id="section-5.4-6.5">Privileged administration:</dt>
+          <dd style="margin-left: 1.5em" id="section-5.4-6.6">
+            <p id="section-5.4-6.6.1">the action changes who holds authority or how authority is
+evaluated.<a href="#section-5.4-6.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-5.3-7">Classification remains deployment-scoped: each deployment applies the
+<p id="section-5.4-7">Classification remains deployment-scoped: each deployment applies the
 predicates to its own actions and systems. The predicates make the
 resulting classifications comparable across deployments and auditable:
 an assignment is justified by whether its predicate holds, not by
-resemblance to the examples.<a href="#section-5.3-7" class="pilcrow">¶</a></p>
-<p id="section-5.3-8">Some operations have no fixed class: a shell, a generic HTTP
+resemblance to the examples.<a href="#section-5.4-7" class="pilcrow">¶</a></p>
+<p id="section-5.4-8">Some operations have no fixed class: a shell, a generic HTTP
 client, a code interpreter, any operation whose consequence depends
 on its arguments. Such an argument-dependent operation is classified
 per invocation, from its normalized parameters, by a classifier the
@@ -3321,52 +3449,52 @@ deployment declares in its Enforcement Scope Statement
 affirmatively place <span class="bcp14">MUST</span> be treated as the widest class the
 operation can reach, and the floor below applies to the classifier's
 assignments as to any other: a class the deployment cannot justify
-by its predicate is not a basis to leave the invocation ungated.<a href="#section-5.3-8" class="pilcrow">¶</a></p>
-<p id="section-5.3-9"><strong>Classification floor.</strong> Four rules bound classification:<a href="#section-5.3-9" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.3-10">
-<li id="section-5.3-10.1">
-            <p id="section-5.3-10.1.1">Actions in the <strong>irreversible</strong>, <strong>external commitment</strong>, and
+by its predicate is not a basis to leave the invocation ungated.<a href="#section-5.4-8" class="pilcrow">¶</a></p>
+<p id="section-5.4-9"><strong>Classification floor.</strong> Four rules bound classification:<a href="#section-5.4-9" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.4-10">
+<li id="section-5.4-10.1">
+            <p id="section-5.4-10.1.1">Actions in the <strong>irreversible</strong>, <strong>external commitment</strong>, and
 <strong>privileged administration</strong> classes <span class="bcp14">MUST</span> be treated as
-consequential and gated.<a href="#section-5.3-10.1.1" class="pilcrow">¶</a></p>
+consequential and gated.<a href="#section-5.4-10.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.3-10.2">
-            <p id="section-5.3-10.2.1">A Mission's <code>purpose</code>, or deployment policy, <span class="bcp14">MAY</span> raise an action
+          <li id="section-5.4-10.2">
+            <p id="section-5.4-10.2.1">A Mission's <code>purpose</code>, or deployment policy, <span class="bcp14">MAY</span> raise an action
 to a stricter class. The <code>purpose</code> consulted is the approved
 Mission's, from its Mission state or a validated projection of it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), never a value the request
-asserts.<a href="#section-5.3-10.2.1" class="pilcrow">¶</a></p>
+asserts.<a href="#section-5.4-10.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.3-10.3">
-            <p id="section-5.3-10.3.1">A Mission's <code>purpose</code> or deployment policy <span class="bcp14">MUST NOT</span> lower an
+          <li id="section-5.4-10.3">
+            <p id="section-5.4-10.3.1">A Mission's <code>purpose</code> or deployment policy <span class="bcp14">MUST NOT</span> lower an
 action below any minimum classification the Resource policy
 (<a href="#decision" class="auto internal xref">Section 7</a>) sets for it, including a floor the resource owner
 publishes through its own metadata mechanism (the OAuth binding's
 realization, <code>mission_action_class_floors</code> in OAuth protected
 resource metadata, is defined by
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>).<a href="#section-5.3-10.3.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>).<a href="#section-5.4-10.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.3-10.4">
-            <p id="section-5.3-10.4.1">In any case, a Mission's <code>purpose</code> or deployment policy <span class="bcp14">MUST NOT</span>
+          <li id="section-5.4-10.4">
+            <p id="section-5.4-10.4.1">In any case, a Mission's <code>purpose</code> or deployment policy <span class="bcp14">MUST NOT</span>
 classify an irreversible, external-commitment, or
-privileged-administration action as non-consequential.<a href="#section-5.3-10.4.1" class="pilcrow">¶</a></p>
+privileged-administration action as non-consequential.<a href="#section-5.4-10.4.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.3-11">The three classes of the first rule are the <strong>high-consequence
+<p id="section-5.4-11">The three classes of the first rule are the <strong>high-consequence
 classes</strong>, to which this profile's strictest requirements attach
-(action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.4</a>), mediated custody
-(<a href="#custody" class="auto internal xref">Section 5.6</a>), active-state freshness (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>), and
+(action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.5</a>), mediated custody
+(<a href="#custody" class="auto internal xref">Section 5.7</a>), active-state freshness (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>), and
 execution-outcome evidence (<a href="#evidence" class="auto internal xref">Section 11</a>), each as specified in its
 own section). A deployment that leaves such an action ungated does
 not enforce this profile for that action's class
-(<a href="#pep-placement" class="auto internal xref">Section 5.5</a>).<a href="#section-5.3-11" class="pilcrow">¶</a></p>
+(<a href="#pep-placement" class="auto internal xref">Section 5.6</a>).<a href="#section-5.4-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="action-approval">
-<section id="section-5.4">
+<section id="section-5.5">
         <h3 id="name-action-bound-approval">
-<a href="#section-5.4" class="section-number selfRef">5.4. </a><a href="#name-action-bound-approval" class="section-name selfRef">Action-Bound Approval</a>
+<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-action-bound-approval" class="section-name selfRef">Action-Bound Approval</a>
         </h3>
-<p id="section-5.4-1">The Mission's approval event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
+<p id="section-5.5-1">The Mission's approval event (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>)
 consents to the task and its authority bound; it does not consent to a
 specific action's concrete parameters at the point of use. For the
 highest-consequence classes, a deployment can require a second,
@@ -3377,63 +3505,63 @@ approval for the actions whose consequence genuinely warrants a human
 pause: applied broadly it trains the Approver to rubber-stamp, and a
 rubber-stamped approval binds like a considered one (the
 consent-fatigue residual of
-<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-5.4-1" class="pilcrow">¶</a></p>
-<p id="section-5.4-2">An action-bound approval is a governed approval bound to the action:
+<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.5-2">An action-bound approval is a governed approval bound to the action:
 it is obtained from an independent Approver or
 policy authority, never self-issued by the agent or asserted from the
 agent's own context, and its rendered disclosure <span class="bcp14">MAY</span> be committed as
 Consent Evidence (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>)
 bound to the action parameters. It composes with, and does not replace,
 <span>[<a href="#RFC9470" class="cite xref">RFC9470</a>]</span> step-up authentication, which strengthens the actor's
-authentication context rather than approving a specific action.<a href="#section-5.4-2" class="pilcrow">¶</a></p>
-<p id="section-5.4-3">Five rules govern the approval's enforcement:<a href="#section-5.4-3" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-5.4-4">
-<li id="section-5.4-4.1">
-            <p id="section-5.4-4.1.1">A PEP <span class="bcp14">MUST</span> refuse an action for which the applicable entry's
+authentication context rather than approving a specific action.<a href="#section-5.5-2" class="pilcrow">¶</a></p>
+<p id="section-5.5-3">Five rules govern the approval's enforcement:<a href="#section-5.5-3" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-5.5-4">
+<li id="section-5.5-4.1">
+            <p id="section-5.5-4.1.1">A PEP <span class="bcp14">MUST</span> refuse an action for which the applicable entry's
 <code>constraints.requires_action_approval</code> is <code>true</code>, or deployment
 policy or Resource policy otherwise requires an action-bound
 approval, and for which a valid fresh approval bound to the
 action's parameters is not present. Absent a usable approval
-mechanism, the action fails closed.<a href="#section-5.4-4.1.1" class="pilcrow">¶</a></p>
+mechanism, the action fails closed.<a href="#section-5.5-4.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.4-4.2">
-            <p id="section-5.4-4.2.1">An action-bound approval <span class="bcp14">MUST</span> carry a maximum age, bounded by a
+          <li id="section-5.5-4.2">
+            <p id="section-5.5-4.2.1">An action-bound approval <span class="bcp14">MUST</span> carry a maximum age, bounded by a
 value the deployment set publishes, and <span class="bcp14">MAY</span> additionally carry an
 absolute <code>approved_until</code> expiry (the AuthZEN profile surfaces ARAP's
 approval expiry there, <a href="#authzen" class="auto internal xref">Section 15</a>). The approval is fresh only before
 the earlier of <code>approved_at</code> plus the maximum age and any
 <code>approved_until</code>; past that bound the approval is not fresh and the PEP
-<span class="bcp14">MUST</span> refuse.<a href="#section-5.4-4.2.1" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST</span> refuse.<a href="#section-5.5-4.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.4-4.3">
-            <p id="section-5.4-4.3.1">A deployment <span class="bcp14">SHOULD</span> require an action-bound approval for the
+          <li id="section-5.5-4.3">
+            <p id="section-5.5-4.3.1">A deployment <span class="bcp14">SHOULD</span> require an action-bound approval for the
 high-consequence classes, where a token-lifetime-wide standing
-authority is least appropriate.<a href="#section-5.4-4.3.1" class="pilcrow">¶</a></p>
+authority is least appropriate.<a href="#section-5.5-4.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.4-4.4">
-            <p id="section-5.4-4.4.1">Because the approval is bound to the concrete parameters, it <span class="bcp14">MUST</span>
+          <li id="section-5.5-4.4">
+            <p id="section-5.5-4.4.1">Because the approval is bound to the concrete parameters, it <span class="bcp14">MUST</span>
 be reverified under the time-of-check to time-of-use rules of
 <a href="#parameter-binding" class="auto internal xref">Section 8</a>. A parameter change after approval
-invalidates it.<a href="#section-5.4-4.4.1" class="pilcrow">¶</a></p>
+invalidates it.<a href="#section-5.5-4.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-5.4-4.5">
-            <p id="section-5.4-4.5.1">The surface that resolves an action-bound approval <span class="bcp14">MUST NOT</span> be invocable
+          <li id="section-5.5-4.5">
+            <p id="section-5.5-4.5.1">The surface that resolves an action-bound approval <span class="bcp14">MUST NOT</span> be invocable
 from the agent's tool plane or from any channel the agent drives. The
 resolving principal's identity and achieved authentication context <span class="bcp14">MUST</span> be
 established by the resolution surface itself, never taken from caller input.
 An approval resolved through a surface that fails either rule <span class="bcp14">MUST NOT</span>
-satisfy this section's gate, and the PEP <span class="bcp14">MUST</span> refuse the action.<a href="#section-5.4-4.5.1" class="pilcrow">¶</a></p>
+satisfy this section's gate, and the PEP <span class="bcp14">MUST</span> refuse the action.<a href="#section-5.5-4.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-5.4-5">An agent <span class="bcp14">MAY</span> observe an approval's state, and a status poll is often
+<p id="section-5.5-5">An agent <span class="bcp14">MAY</span> observe an approval's state, and a status poll is often
 necessary for it to decide whether to proceed; it <span class="bcp14">MAY</span> request an independent
 approval; it <span class="bcp14">MUST NOT</span> be able to resolve one. Observable, not invokable, is
 the distinction: whoever nominally holds the resolving credential, the
-resolution path is not among the agent's tools.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
-<p id="section-5.4-6">The permit lease does not substitute for the maximum-age bound: a
+resolution path is not among the agent's tools.<a href="#section-5.5-5" class="pilcrow">¶</a></p>
+<p id="section-5.5-6">The permit lease does not substitute for the maximum-age bound: a
 permit's validity window (<a href="#parameter-binding" class="auto internal xref">Section 8</a>) bounds the permit,
-not the age of the approval it relied on.<a href="#section-5.4-6" class="pilcrow">¶</a></p>
-<p id="section-5.4-7">This profile does not define the wire workflow that obtains the
+not the age of the approval it relied on.<a href="#section-5.5-6" class="pilcrow">¶</a></p>
+<p id="section-5.5-7">This profile does not define the wire workflow that obtains the
 approval. A decision-API binding <span class="bcp14">MAY</span> route the requiring denial through
 a standardized access-request and approval workflow and carry the
 resulting approval back as decision input; the AuthZEN profile composes
@@ -3443,8 +3571,8 @@ bearer grant: the runtime decision of <a href="#decision" class="auto internal x
 authoritative, and a persisted grant beyond the single action is a
 governance state change the fresh decision observes (a Mission
 expansion, a role or relationship grant, or another authority
-update), never a property of the approval itself.<a href="#section-5.4-7" class="pilcrow">¶</a></p>
-<p id="section-5.4-8">Two proposed OAuth-native transports are converging on this same
+update), never a property of the approval itself.<a href="#section-5.5-7" class="pilcrow">¶</a></p>
+<p id="section-5.5-8">Two proposed OAuth-native transports are converging on this same
 per-action moment, and both compose here rather than compete. The
 transaction authorization challenge
 (<span>[<a href="#I-D.draft-rosomakho-oauth-txn-challenge" class="cite xref">I-D.draft-rosomakho-oauth-txn-challenge</a>]</span>) has the protected
@@ -3466,79 +3594,79 @@ point evaluates against the Authority Set, and its
 consent-by-prior-grant case is exactly a reference to the Mission's
 committed anchors. In both compositions the durable record this
 family defines is what makes the per-action artifact accountable to
-an approved task rather than to policy alone.<a href="#section-5.4-8" class="pilcrow">¶</a></p>
+an approved task rather than to policy alone.<a href="#section-5.5-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pep-placement">
-<section id="section-5.5">
+<section id="section-5.6">
         <h3 id="name-pep-placement">
-<a href="#section-5.5" class="section-number selfRef">5.5. </a><a href="#name-pep-placement" class="section-name selfRef">PEP Placement</a>
+<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-pep-placement" class="section-name selfRef">PEP Placement</a>
         </h3>
-<p id="section-5.5-1">Enforcement only works at the component that can actually stop the
-action. A deployment claiming this profile <span class="bcp14">MUST</span> observe these rules:<a href="#section-5.5-1" class="pilcrow">¶</a></p>
+<p id="section-5.6-1">Enforcement only works at the component that can actually stop the
+action. A deployment claiming this profile <span class="bcp14">MUST</span> observe these rules:<a href="#section-5.6-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.5-2.1">
-            <p id="section-5.5-2.1.1">The PEP <span class="bcp14">MUST</span> sit at the last controllable boundary before the
+<li class="normal" id="section-5.6-2.1">
+            <p id="section-5.6-2.1.1">The PEP <span class="bcp14">MUST</span> sit at the last controllable boundary before the
 action. A permit checked further upstream does not survive
-parameter changes, retries, or routing that happen after the check.<a href="#section-5.5-2.1.1" class="pilcrow">¶</a></p>
+parameter changes, retries, or routing that happen after the check.<a href="#section-5.6-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.5-2.2">
-            <p id="section-5.5-2.2.1">A credential-issuance decision does not replace execution-time
+          <li class="normal" id="section-5.6-2.2">
+            <p id="section-5.6-2.2.1">A credential-issuance decision does not replace execution-time
 authorization. A resource server that only validates credentials
 cannot claim runtime enforcement; the issuance gate is governance, the
-runtime gate is enforcement.<a href="#section-5.5-2.2.1" class="pilcrow">¶</a></p>
+runtime gate is enforcement.<a href="#section-5.6-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.5-2.3">
-            <p id="section-5.5-2.3.1">A tool-catalog filter does not replace per-call authorization.
+          <li class="normal" id="section-5.6-2.3">
+            <p id="section-5.6-2.3.1">A tool-catalog filter does not replace per-call authorization.
 Filtering a tool list by the caller's authority is exposure
 control; every consequential tool call <span class="bcp14">MUST</span> still pass the runtime
-gate.<a href="#section-5.5-2.3.1" class="pilcrow">¶</a></p>
+gate.<a href="#section-5.6-2.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.5-2.4">
-            <p id="section-5.5-2.4.1">An orchestrator's internal check does not replace a resource
-server's PEP. Defense in depth is permitted; substitution is not.<a href="#section-5.5-2.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.6-2.4">
+            <p id="section-5.6-2.4.1">An orchestrator's internal check does not replace a resource
+server's PEP. Defense in depth is permitted; substitution is not.<a href="#section-5.6-2.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.5-2.5">
-            <p id="section-5.5-2.5.1">If no PEP can prevent the action for a given class, the deployment
+          <li class="normal" id="section-5.6-2.5">
+            <p id="section-5.6-2.5.1">If no PEP can prevent the action for a given class, the deployment
 <span class="bcp14">MUST NOT</span> claim runtime enforcement for that class, and <span class="bcp14">MUST</span> name the
-action classes and execution paths it does mediate.<a href="#section-5.5-2.5.1" class="pilcrow">¶</a></p>
+action classes and execution paths it does mediate.<a href="#section-5.6-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.5-3">The boundary varies by action: an OAuth-protected API call is gated at
+<p id="section-5.6-3">The boundary varies by action: an OAuth-protected API call is gated at
 the resource server; a consequential MCP <code>tools/call</code> at the MCP
 server; a local tool invocation, file write, or payment at the
 orchestrator or whatever component drives the call; external egress at
 an egress proxy. Where an action can be reached by an unmediated path
 (a debug shell, an unsanctioned egress route, a direct connector), the
-profile is not enforced for the classes that path reaches.<a href="#section-5.5-3" class="pilcrow">¶</a></p>
+profile is not enforced for the classes that path reaches.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="custody">
-<section id="section-5.6">
+<section id="section-5.7">
         <h3 id="name-credential-custody-and-medi">
-<a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-credential-custody-and-medi" class="section-name selfRef">Credential Custody and Mediated Execution</a>
+<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-credential-custody-and-medi" class="section-name selfRef">Credential Custody and Mediated Execution</a>
         </h3>
-<p id="section-5.6-1">In an agentic deployment the agent component is itself part of the
+<p id="section-5.7-1">In an agentic deployment the agent component is itself part of the
 attack surface: it may be prompt-injected or compromised. The issuance
 and runtime gates do not make the agent trustworthy; they bound what it
 can do. A deployment lowers that bound further by not letting the agent
-hold the authority whose misuse is unacceptable.<a href="#section-5.6-1" class="pilcrow">¶</a></p>
-<p id="section-5.6-2">Whoever holds the private key a sender-constrained credential's
+hold the authority whose misuse is unacceptable.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
+<p id="section-5.7-2">Whoever holds the private key a sender-constrained credential's
 confirmation binds can present the credential. <strong>Mediated execution</strong> is
 a PEP placement that uses this: for the action classes a deployment
 mediates, the sender-constraint private key is held by the PEP that sits
-at the last controllable boundary (<a href="#pep-placement" class="auto internal xref">Section 5.5</a>), not by the agent
+at the last controllable boundary (<a href="#pep-placement" class="auto internal xref">Section 5.6</a>), not by the agent
 component. The agent therefore cannot present the Mission-bound
 credential directly; to act, it asks the mediating PEP, which runs the
-decision of <a href="#decision" class="auto internal xref">Section 7</a> and only then uses the key.<a href="#section-5.6-2" class="pilcrow">¶</a></p>
-<p id="section-5.6-3">No new token type, credential handle, or wire protocol is
+decision of <a href="#decision" class="auto internal xref">Section 7</a> and only then uses the key.<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+<p id="section-5.7-3">No new token type, credential handle, or wire protocol is
 introduced: this is a custody and placement property of the existing
 sender-constraint key. The mediating PEP is a co-trusted process in the
 agent's own trust domain, not a delegate: the credential is unchanged,
 the agent remains the principal of record (its client identity still
 attributes the action to it), and no actor-delegation chain entry is
-added.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-5.6-4">
+added.<a href="#section-5.7-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5.7-4">
 <pre>
  Agent                Mediating PEP              Resource
    |                  (holds the key)               |
@@ -3549,15 +3677,15 @@ added.<a href="#section-5.6-3" class="pilcrow">¶</a></p>
    |&lt;---- result -----|                             |
    |                                                |
    |     X - - - - - - unmediated path absent - - -&gt;|
-</pre><a href="#section-5.6-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.7-4" class="pilcrow">¶</a>
 </div>
-<p id="section-5.6-5">For any action class a deployment mediates, the acting credential <span class="bcp14">MUST</span>
+<p id="section-5.7-5">For any action class a deployment mediates, the acting credential <span class="bcp14">MUST</span>
 be sender-constrained: a bearer token is incompatible with mediated
 custody, because a bearer token can be presented by whoever holds it,
 including the agent, so the mediating PEP could not be the sole holder
-of the authority.<a href="#section-5.6-5" class="pilcrow">¶</a></p>
-<p id="section-5.6-6">Independently of mediation, the acting credential for an action in a
-high-consequence class (<a href="#classification" class="auto internal xref">Section 5.3</a>) <span class="bcp14">MUST</span> be sender-constrained,
+of the authority.<a href="#section-5.7-5" class="pilcrow">¶</a></p>
+<p id="section-5.7-6">Independently of mediation, the acting credential for an action in a
+high-consequence class (<a href="#classification" class="auto internal xref">Section 5.4</a>) <span class="bcp14">MUST</span> be sender-constrained,
 whether the Mission reference is credential-carried or externally
 established (<a href="#mission-binding" class="auto internal xref">Section 2.3</a>). The PEP <span class="bcp14">MUST NOT</span> supply a
 confirmation key as a decision input unless it verified the binding
@@ -3568,99 +3696,99 @@ credential profile defines the binding and its proof
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span> for OAuth).
 Sender-constraint makes a stolen credential unusable on its own; it
 does not protect against compromise of the bound key or of a component
-that can use it.<a href="#section-5.6-6" class="pilcrow">¶</a></p>
-<p id="section-5.6-7">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
+that can use it.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
+<p id="section-5.7-7">For an action class it mediates, a deployment <span class="bcp14">SHOULD</span> hold the
 sender-constraint private key for the Mission-bound credential in the
 mediating PEP rather than in the agent component, and <span class="bcp14">SHOULD</span> do so for
 the irreversible-action, external-commitment, and
-privileged-administration classes.<a href="#section-5.6-7" class="pilcrow">¶</a></p>
-<p id="section-5.6-8">Two properties follow:<a href="#section-5.6-8" class="pilcrow">¶</a></p>
+privileged-administration classes.<a href="#section-5.7-7" class="pilcrow">¶</a></p>
+<p id="section-5.7-8">Two properties follow:<a href="#section-5.7-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.6-9.1">
-            <p id="section-5.6-9.1.1">a credential exfiltrated from a compromised agent is
-unusable without the key; and<a href="#section-5.6-9.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.7-9.1">
+            <p id="section-5.7-9.1.1">a credential exfiltrated from a compromised agent is
+unusable without the key; and<a href="#section-5.7-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.6-9.2">
-            <p id="section-5.6-9.2.1">a compromised agent cannot reach a
+          <li class="normal" id="section-5.7-9.2">
+            <p id="section-5.7-9.2.1">a compromised agent cannot reach a
 mediated action without passing the per-action check, because it never
-holds a usable credential for that class.<a href="#section-5.6-9.2.1" class="pilcrow">¶</a></p>
+holds a usable credential for that class.<a href="#section-5.7-9.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.6-10">Mediated execution depends on
+<p id="section-5.7-10">Mediated execution depends on
 the agent having no unmediated path to the resource; a Mission-aware
 harness establishes that execution environment
-(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5.6-10" class="pilcrow">¶</a></p>
-<p id="section-5.6-11">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>).<a href="#section-5.7-10" class="pilcrow">¶</a></p>
+<p id="section-5.7-11">Mediated custody's realizable form today is <strong>gateway custody</strong>: a
 server-side gateway, an LLM gateway, an MCP gateway, or an egress
 proxy, holds the sender-constraint key and the Mission-bound credentials,
 and the agent receives no bearer credential at all. That shape is the
 claim's home: the custody properties above belong to a deployment
 built this way, and a developer laptop with a shell is outside them
-by construction, not by configuration.<a href="#section-5.6-11" class="pilcrow">¶</a></p>
-<p id="section-5.6-12">Where the deployment attributes presentations to client instances
+by construction, not by configuration.<a href="#section-5.7-11" class="pilcrow">¶</a></p>
+<p id="section-5.7-12">Where the deployment attributes presentations to client instances
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>), the
 sender-constraint key is instance-specific: that profile attributes a
 presentation to an instance only under a key unique to it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, Section 7.3).
-Mediated custody composes with that rule in either of two shapes:<a href="#section-5.6-12" class="pilcrow">¶</a></p>
+Mediated custody composes with that rule in either of two shapes:<a href="#section-5.7-12" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.6-13.1">
-            <p id="section-5.6-13.1.1">the mediating PEP holds
+<li class="normal" id="section-5.7-13.1">
+            <p id="section-5.7-13.1.1">the mediating PEP holds
 per-instance keys, taking custody of each instance's key rather than
-one shared key; or<a href="#section-5.6-13.1.1" class="pilcrow">¶</a></p>
+one shared key; or<a href="#section-5.7-13.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.6-13.2">
-            <p id="section-5.6-13.2.1">the mediating PEP is itself the attested instance that obtained the
+          <li class="normal" id="section-5.7-13.2">
+            <p id="section-5.7-13.2.1">the mediating PEP is itself the attested instance that obtained the
 token, presenting its own Client Attestation and holding the instance
-key.<a href="#section-5.6-13.2.1" class="pilcrow">¶</a></p>
+key.<a href="#section-5.7-13.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.6-14">In both shapes that profile's instance-unique key and this section's
-custody rules are satisfied together.<a href="#section-5.6-14" class="pilcrow">¶</a></p>
-<p id="section-5.6-15">Attestation-based client authentication and SPIFFE
+<p id="section-5.7-14">In both shapes that profile's instance-unique key and this section's
+custody rules are satisfied together.<a href="#section-5.7-14" class="pilcrow">¶</a></p>
+<p id="section-5.7-15">Attestation-based client authentication and SPIFFE
 (<span>[<a href="#I-D.draft-ietf-oauth-attestation-based-client-auth" class="cite xref">I-D.draft-ietf-oauth-attestation-based-client-auth</a>]</span>,
 <span>[<a href="#I-D.draft-ietf-oauth-spiffe-client-auth" class="cite xref">I-D.draft-ietf-oauth-spiffe-client-auth</a>]</span>) can supply the
 client-instance authentication and workload credentials beneath this
 custody layer; they do not define the Mission actor, delegation,
-intent, lifecycle, or evidence semantics.<a href="#section-5.6-15" class="pilcrow">¶</a></p>
-<p id="section-5.6-16">This narrows, and does not eliminate, the compromised-agent exposure.
+intent, lifecycle, or evidence semantics.<a href="#section-5.7-15" class="pilcrow">¶</a></p>
+<p id="section-5.7-16">This narrows, and does not eliminate, the compromised-agent exposure.
 The mediating PEP becomes a trusted component whose compromise is
 out of scope here (<a href="#security-considerations" class="auto internal xref">Section 17</a>); a compromised agent can
 still request mediated actions, which are gated, and can still misuse
 any low-consequence authority it legitimately holds directly. The aim is
 that the agent is structurally unable to take a high-consequence action
-unilaterally, not that the agent is trusted.<a href="#section-5.6-16" class="pilcrow">¶</a></p>
-<p id="section-5.6-17">The set of action classes a deployment mediates is the load-bearing
+unilaterally, not that the agent is trusted.<a href="#section-5.7-16" class="pilcrow">¶</a></p>
+<p id="section-5.7-17">The set of action classes a deployment mediates is the load-bearing
 parameter here: a deployment that mediates nothing gains nothing from
 this section, however it labels itself. A deployment that relies on this
 profile to protect against agent compromise therefore <span class="bcp14">MUST</span> include the
 high-consequence classes in its mediated set; the protection is only as
-broad as that set.<a href="#section-5.6-17" class="pilcrow">¶</a></p>
-<p id="section-5.6-18">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
+broad as that set.<a href="#section-5.7-17" class="pilcrow">¶</a></p>
+<p id="section-5.7-18">Custody has a lifecycle. A deployment <span class="bcp14">SHOULD</span> prefer per-class
 credentials with distinct sender-constraint keys over sharing one key
 across mediating PEPs, so that compromise of one mediating PEP does not
 expose the authority of another. On compromise of a mediating PEP's
 key, the deployment revokes the affected credentials and re-derives. A
 sender-constraint private key is never published; rotation is
 re-derivation with a new sender-constraint binding plus revocation or
-expiry of the credentials bound to the old key.<a href="#section-5.6-18" class="pilcrow">¶</a></p>
-<p id="section-5.6-19">The Enforcement Scope Statement
+expiry of the credentials bound to the old key.<a href="#section-5.7-18" class="pilcrow">¶</a></p>
+<p id="section-5.7-19">The Enforcement Scope Statement
 <span class="bcp14">SHOULD</span> state the custody replica topology (a shared HSM-held key
 versus per-replica keys): replicating one sender-constraint key across
-a PEP fleet widens the exposure custody exists to shrink.<a href="#section-5.6-19" class="pilcrow">¶</a></p>
-<p id="section-5.6-20">Mediated execution also places a controllable chokepoint on the
+a PEP fleet widens the exposure custody exists to shrink.<a href="#section-5.7-19" class="pilcrow">¶</a></p>
+<p id="section-5.7-20">Mediated execution also places a controllable chokepoint on the
 egress path itself: content-level controls this profile does not
 define (data-loss prevention, redaction, payload policy) compose
 naturally at the mediating PEP, the one component that sees the full
-payload after the decision and before presentation.<a href="#section-5.6-20" class="pilcrow">¶</a></p>
+payload after the decision and before presentation.<a href="#section-5.7-20" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="agent-isolated-evidence-emission">
-<section id="section-5.7">
+<section id="section-5.8">
         <h3 id="name-agent-isolated-evidence-emi">
-<a href="#section-5.7" class="section-number selfRef">5.7. </a><a href="#name-agent-isolated-evidence-emi" class="section-name selfRef">Agent-Isolated Evidence Emission</a>
+<a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-agent-isolated-evidence-emi" class="section-name selfRef">Agent-Isolated Evidence Emission</a>
         </h3>
-<p id="section-5.7-1">An evidence-signing key is not an authorization credential, and its
+<p id="section-5.8-1">An evidence-signing key is not an authorization credential, and its
 signature <span class="bcp14">MUST NOT</span> be accepted as a grant or as widening the
 Authority Set. Its compromise corrupts the record plane and, where
 signed history is a decision input (<a href="#input-history" class="auto internal xref">Section 2.7.8</a>), can also
@@ -3671,44 +3799,44 @@ the property that the agent cannot emit records under an emitter's
 identity has an owner here, as a standalone condition a deployment
 claims per emitter and scope. No named claim of this document includes it; a composition
 that wants both prevention and post-compromise evidence assurance
-names it explicitly alongside the claims of <a href="#named-claims" class="auto internal xref">Section 9.5</a>.<a href="#section-5.7-1" class="pilcrow">¶</a></p>
-<p id="section-5.7-2">A deployment claims the <strong>agent-isolated evidence-emission
+names it explicitly alongside the claims of <a href="#named-claims" class="auto internal xref">Section 9.5</a>.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
+<p id="section-5.8-2">A deployment claims the <strong>agent-isolated evidence-emission
 condition</strong> for a named emitter (a PDP, a mediating or executing
 PEP, or a companion-defined executor-side emitter) and scope only
-when all of the following hold:<a href="#section-5.7-2" class="pilcrow">¶</a></p>
+when all of the following hold:<a href="#section-5.8-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.7-3.1">
-            <p id="section-5.7-3.1.1">the evidence-signing private key is generated inside the declared
+<li class="normal" id="section-5.8-3.1">
+            <p id="section-5.8-3.1.1">the evidence-signing private key is generated inside the declared
 trusted holder boundary, or imported through a trusted procedure
 in which the agent never possesses plaintext key material, and is
 non-exportable to, and inaccessible from, the agent component,
 with that property preserved across rotation, backup, replication,
-restore, and migration;<a href="#section-5.7-3.1.1" class="pilcrow">¶</a></p>
+restore, and migration;<a href="#section-5.8-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.7-3.2">
-            <p id="section-5.7-3.2.1">only an authenticated identity for the named emitter's trusted
-emission path can invoke the signing operation;<a href="#section-5.7-3.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.8-3.2">
+            <p id="section-5.8-3.2.1">only an authenticated identity for the named emitter's trusted
+emission path can invoke the signing operation;<a href="#section-5.8-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.7-3.3">
-            <p id="section-5.7-3.3.1">the agent cannot submit a complete evidence object, or an
-arbitrary digest, for signature;<a href="#section-5.7-3.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.8-3.3">
+            <p id="section-5.8-3.3.1">the agent cannot submit a complete evidence object, or an
+arbitrary digest, for signature;<a href="#section-5.8-3.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.7-3.4">
-            <p id="section-5.7-3.4.1">the trusted emission path constructs the record from its
+          <li class="normal" id="section-5.8-3.4">
+            <p id="section-5.8-3.4.1">the trusted emission path constructs the record from its
 authoritative decision, refusal, or execution state and from
 request inputs it independently validates and normalizes; the
 caller cannot supply the completed record or directly assert the
 emitter identity or role, the decision or outcome, the protected
 record type, the sequence position, the evaluation or execution
 identifiers, or the authoritative interpretation of the Mission,
-scope, audience, and digests; and<a href="#section-5.7-3.4.1" class="pilcrow">¶</a></p>
+scope, audience, and digests; and<a href="#section-5.8-3.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.7-3.5">
-            <p id="section-5.7-3.5.1">a signing result cannot be relabeled or reused for another
-emitter, role, scope, audience, or evidence type.<a href="#section-5.7-3.5.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.8-3.5">
+            <p id="section-5.8-3.5.1">a signing result cannot be relabeled or reused for another
+emitter, role, scope, audience, or evidence type.<a href="#section-5.8-3.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.7-4">The load-bearing property is the authenticated
+<p id="section-5.8-4">The load-bearing property is the authenticated
 construction-and-signing path, not the storage technology: an HSM or
 KMS whose API the agent can invoke over arbitrary bytes is a signing
 oracle, a separate process the agent controls is not isolated, and
@@ -3717,28 +3845,28 @@ control boundary is real. A signing service <span class="bcp14">MAY</span> accep
 rather than the record, only over an authenticated channel from the
 trusted emission path with the record type and protected scope bound
 to the request; the signer is not required to parse the record
-schema.<a href="#section-5.7-4" class="pilcrow">¶</a></p>
-<p id="section-5.7-5">The condition bounds forgery, not activity: the agent can still
+schema.<a href="#section-5.8-4" class="pilcrow">¶</a></p>
+<p id="section-5.8-5">The condition bounds forgery, not activity: the agent can still
 trigger real decisions and effects that cause the emitter to create
 its own records of them; it cannot invent or alter a record under
 the emitter's identity. The condition establishes neither the truth of
 an emitter's assertion nor the completeness or ordering of the
 evidence stream; those remain the concern of reconciliation,
 sequence-gap detection, and the transparency mechanisms
-(<a href="#evidence" class="auto internal xref">Section 11</a>, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-5.7-5" class="pilcrow">¶</a></p>
-<p id="section-5.7-6"><strong>Agent-invokable approval resolution</strong> can leave evidence-emission isolation
+(<a href="#evidence" class="auto internal xref">Section 11</a>, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>).<a href="#section-5.8-5" class="pilcrow">¶</a></p>
+<p id="section-5.8-6"><strong>Agent-invokable approval resolution</strong> can leave evidence-emission isolation
 intact while defeating the approval gate. An isolated emitter can faithfully
 record a decision whose approval input the agent supplied by invoking a
 resolution surface, even when the nominal Approver is a distinct principal.
 Emission-path validation alone does not establish independent resolution;
-the approval-resolution boundary in <a href="#action-approval" class="auto internal xref">Section 5.4</a> supplies that rule.<a href="#section-5.7-6" class="pilcrow">¶</a></p>
-<p id="section-5.7-7">Key separation is not part of this condition: an evidence-signing
+the approval-resolution boundary in <a href="#action-approval" class="auto internal xref">Section 5.5</a> supplies that rule.<a href="#section-5.8-6" class="pilcrow">¶</a></p>
+<p id="section-5.8-7">Key separation is not part of this condition: an evidence-signing
 key <span class="bcp14">SHOULD</span> be cryptographically distinct from every
 sender-constraint, token-issuance, approval, and other
 authority-bearing key; a composing profile <span class="bcp14">MAY</span> require that
 separation; and isolation of one key plane <span class="bcp14">MUST NOT</span> be inferred from
-separation or custody of another.<a href="#section-5.7-7" class="pilcrow">¶</a></p>
-<p id="section-5.7-8">A deployment <span class="bcp14">SHOULD</span> satisfy this condition for every emitter whose
+separation or custody of another.<a href="#section-5.8-7" class="pilcrow">¶</a></p>
+<p id="section-5.8-8">A deployment <span class="bcp14">SHOULD</span> satisfy this condition for every emitter whose
 records cover the high-consequence classes. Signer unavailability
 <span class="bcp14">MUST NOT</span> fall back to an agent-held key, to an unsigned record
 represented as verified, or to an unconstrained signing path, and it
@@ -3751,8 +3879,8 @@ not conforming for the affected decision or refusal and <span class="bcp14">MUST
 represent the condition as continuously satisfied. An execution
 outcome discovered after its effect is durably queued and
 reconciled, never synthesized or silently omitted
-(<a href="#failure-modes" class="auto internal xref">Section 2.11</a>).<a href="#section-5.7-8" class="pilcrow">¶</a></p>
-<p id="section-5.7-9">On a declared compromise of an evidence-signing key, the runtime
+(<a href="#failure-modes" class="auto internal xref">Section 2.11</a>).<a href="#section-5.8-8" class="pilcrow">¶</a></p>
+<p id="section-5.8-9">On a declared compromise of an evidence-signing key, the runtime
 evidence companion's key-set lifecycle applies
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). The declared
 boundary is deployment-declared semantics and does not by itself
@@ -3763,8 +3891,8 @@ existence proof (a trusted timestamp, a transparency inclusion, or a
 Receipt, <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>); even then the
 proof establishes existence before the declared boundary, not that
 the key or emitter was uncompromised earlier, and not that the
-assertion is true.<a href="#section-5.7-9" class="pilcrow">¶</a></p>
-<p id="section-5.7-10">The Enforcement Scope Statement declaration for this condition is
+assertion is true.<a href="#section-5.8-9" class="pilcrow">¶</a></p>
+<p id="section-5.8-10">The Enforcement Scope Statement declaration for this condition is
 per covered emitter, together with its key set and custody policy
 (optionally naming <code>kid</code> coverage): the emitter identity and role,
 the holder's trust boundary, the authorized invocation path, the
@@ -3781,32 +3909,32 @@ a named claim that composes this condition, the attested or audited
 material covers the workload identity, the signer policy, and the
 trusted emission path, not merely the private key's location, and
 the weakest self-declared or organizationally audited term is named
-plainly, as <a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a> does for path scope.<a href="#section-5.7-10" class="pilcrow">¶</a></p>
+plainly, as <a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a> does for path scope.<a href="#section-5.8-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="least-exposure">
-<section id="section-5.8">
+<section id="section-5.9">
         <h3 id="name-least-exposure">
-<a href="#section-5.8" class="section-number selfRef">5.8. </a><a href="#name-least-exposure" class="section-name selfRef">Least Exposure</a>
+<a href="#section-5.9" class="section-number selfRef">5.9. </a><a href="#name-least-exposure" class="section-name selfRef">Least Exposure</a>
         </h3>
-<p id="section-5.8-1">A Mission bounds exposure as well as authority. An
+<p id="section-5.9-1">A Mission bounds exposure as well as authority. An
 agent exceeds the Mission envelope by invoking an action outside the
 Authority Set, but also by being exposed to inputs the approved task
 does not need: tools, data, memories, prompts, schemas, credentials,
 or downstream responses. Authority bounds what execution can do;
 exposure bounds what reasoning can see, and unnecessary context is
-the raw material of prompt injection and within-scope laundering.<a href="#section-5.8-1" class="pilcrow">¶</a></p>
-<p id="section-5.8-2">A Mission-aware runtime <span class="bcp14">SHOULD</span> minimize exposure of prompts,
+the raw material of prompt injection and within-scope laundering.<a href="#section-5.9-1" class="pilcrow">¶</a></p>
+<p id="section-5.9-2">A Mission-aware runtime <span class="bcp14">SHOULD</span> minimize exposure of prompts,
 retrieved documents, memory, tool catalogs, schemas, credentials, and
 downstream responses to what the active Mission needs. Where mediated
 custody is the deployment's declared control for an action class
-(<a href="#custody" class="auto internal xref">Section 5.6</a>), credential material and the sender-constraint private
+(<a href="#custody" class="auto internal xref">Section 5.7</a>), credential material and the sender-constraint private
 key <span class="bcp14">MUST NOT</span> be exposed to the agent component: exposure reduces
-mediation to advice.<a href="#section-5.8-2" class="pilcrow">¶</a></p>
-<p id="section-5.8-3">Least exposure narrows what injection can read and what within-scope
+mediation to advice.<a href="#section-5.9-2" class="pilcrow">¶</a></p>
+<p id="section-5.9-3">Least exposure narrows what injection can read and what within-scope
 laundering can draw from; it is not information-flow control, and an
-exposure filter, like a tool-catalog filter (<a href="#classification" class="auto internal xref">Section 5.3</a>),
-never replaces per-action authorization.<a href="#section-5.8-3" class="pilcrow">¶</a></p>
+exposure filter, like a tool-catalog filter (<a href="#classification" class="auto internal xref">Section 5.4</a>),
+never replaces per-action authorization.<a href="#section-5.9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3838,7 +3966,7 @@ server <span class="bcp14">MAY</span> instead carry the full statement as a sepa
 <li class="normal" id="section-6-3.1">
           <p id="section-6-3.1.1">the endpoint families, methods, tools, or operation identifiers in
 scope, and the minimum action class for each, including any Resource
-policy floor above the default classification (<a href="#classification" class="auto internal xref">Section 5.3</a>);<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
+policy floor above the default classification (<a href="#classification" class="auto internal xref">Section 5.4</a>);<a href="#section-6-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-3.2">
           <p id="section-6-3.2.1">the PEP location that can prevent each operation and any known
@@ -3906,7 +4034,7 @@ decision; <a href="#decision-inputs" class="auto internal xref">Section 2.7</a> 
 attempted action.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">A deny need not end the task, however: a decision-API binding <span class="bcp14">MAY</span>
 mark a denial requestable and route it through an access-request and
-approval workflow (<a href="#action-approval" class="auto internal xref">Section 5.4</a>, <a href="#authzen" class="auto internal xref">Section 15</a>). An approved
+approval workflow (<a href="#action-approval" class="auto internal xref">Section 5.5</a>, <a href="#authzen" class="auto internal xref">Section 15</a>). An approved
 request completes in one of two ways. An in-authority approval gate
 is satisfied by the approval attribute alone on the fresh decision;
 nothing persists beyond it. Missing authority is realized as a
@@ -3946,7 +4074,7 @@ current Effective Authority Set (<a href="#input-authority" class="auto internal
 every applicable cumulative-consumption or stateful operational gate
 (<a href="#metering" class="auto internal xref">Section 10</a>); and <span class="bcp14">MUST</span> require a valid fresh action-bound approval
 whenever the applicable entry or applicable policy requires one
-(<a href="#action-approval" class="auto internal xref">Section 5.4</a>). Each gate is independently necessary and none
+(<a href="#action-approval" class="auto internal xref">Section 5.5</a>). Each gate is independently necessary and none
 grants, widens, or restores another.<a href="#section-7-7" class="pilcrow">¶</a></p>
 <div id="policy-view">
 <section id="section-7.1">
@@ -4074,7 +4202,7 @@ record is ordinary deployment policy, not a Mission check.<a href="#section-7.2-
             <p id="section-7.2-2.2.1"><strong>Composition.</strong> The verdict enters the decision as Resource
 policy, carried as deployment-defined context. It can deny, or
 route the action to the existing affordances: an action-bound
-human approval (<a href="#action-approval" class="auto internal xref">Section 5.4</a>, the decision API binding's
+human approval (<a href="#action-approval" class="auto internal xref">Section 5.5</a>, the decision API binding's
 <code>approval_required</code>) or an authentication step-up, which the
 decision API binding carries as an obligation on the permit
 (<a href="#authzen" class="auto internal xref">Section 15</a>). It <span class="bcp14">MUST NOT</span> widen authority and
@@ -4538,7 +4666,7 @@ retransmission returns the prior decision, and a completed operation's
 result is replayed by the resource, not re-executed. An intentional
 re-execution of the same normalized action is a new operation under a
 new idempotency key, never a retry under the consumed one, and an
-action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.4</a>) authorizes that new
+action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.5</a>) authorizes that new
 operation as such, never re-execution under the consumed key.<a href="#section-9.3-10" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.3-11.1">
@@ -4642,12 +4770,12 @@ section records each condition's base-profile level.<a href="#section-9.5.1-1" c
 <li class="normal" id="section-9.5.1-2.1">
               <p id="section-9.5.1-2.1.1">the sender-constraint private key is held by the mediating PEP, not
 by the agent component, gateway custody being the realizable shape
-(<a href="#custody" class="auto internal xref">Section 5.6</a>), and is generated in the mediating PEP or its HSM and
+(<a href="#custody" class="auto internal xref">Section 5.7</a>), and is generated in the mediating PEP or its HSM and
 never transferred from the agent;<a href="#section-9.5.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-9.5.1-2.2">
               <p id="section-9.5.1-2.2.1">each such action requires an action-bound approval
-(<a href="#action-approval" class="auto internal xref">Section 5.4</a>);<a href="#section-9.5.1-2.2.1" class="pilcrow">¶</a></p>
+(<a href="#action-approval" class="auto internal xref">Section 5.5</a>);<a href="#section-9.5.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-9.5.1-2.3">
               <p id="section-9.5.1-2.3.1">the disclosure rendered to the Approver for an action-bound approval
@@ -4655,7 +4783,7 @@ is derived from the bound normalized parameters by a component
 isolated from the agent (the approval service or the mediating PEP),
 never composed by the agent, and the rendering <span class="bcp14">SHOULD</span> be committed
 as Consent Evidence, raising the base profile's <span class="bcp14">MAY</span>
-(<a href="#action-approval" class="auto internal xref">Section 5.4</a>); and<a href="#section-9.5.1-2.3.1" class="pilcrow">¶</a></p>
+(<a href="#action-approval" class="auto internal xref">Section 5.5</a>); and<a href="#section-9.5.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-9.5.1-2.4">
               <p id="section-9.5.1-2.4.1">the Mission state source for those classes is an active freshness
@@ -4683,7 +4811,7 @@ states that plainly rather than implying a stronger term.<a href="#section-9.5.1
 batch through one approval that binds an enumerated list of parameter
 digests, each consumed single-use, so the human pause stays meaningful
 at volume rather than degrading into per-action rubber-stamping
-(<a href="#action-approval" class="auto internal xref">Section 5.4</a>).<a href="#section-9.5.1-4" class="pilcrow">¶</a></p>
+(<a href="#action-approval" class="auto internal xref">Section 5.5</a>).<a href="#section-9.5.1-4" class="pilcrow">¶</a></p>
 <p id="section-9.5.1-5">A deployment that leaves any of the four conditions unmet, or whose
 Enforcement Scope Statement does not declare the path scope, <span class="bcp14">MUST NOT</span>
 claim agent-compromise-resistant enforcement; it may still claim base
@@ -4715,7 +4843,7 @@ column records the level each condition has outside this claim:<a href="#section
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">Custody in the mediating PEP</td>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <span class="bcp14">SHOULD</span> (<a href="#custody" class="auto internal xref">Section 5.6</a>)</td>
+                  <span class="bcp14">SHOULD</span> (<a href="#custody" class="auto internal xref">Section 5.7</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">Key exfiltration</td>
               </tr>
               <tr>
@@ -4726,7 +4854,7 @@ column records the level each condition has outside this claim:<a href="#section
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">Action-bound approval</td>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <span class="bcp14">SHOULD</span> (<a href="#action-approval" class="auto internal xref">Section 5.4</a>)</td>
+                  <span class="bcp14">SHOULD</span> (<a href="#action-approval" class="auto internal xref">Section 5.5</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">Unattended high-consequence action</td>
               </tr>
               <tr>
@@ -4767,10 +4895,10 @@ when all of the following hold, each <span class="bcp14">MUST</span> under this 
 of its base-profile level:<a href="#section-9.5.2-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9.5.2-3.1">
-              <p id="section-9.5.2-3.1.1"><strong>Private-data exposure.</strong> Least exposure (<a href="#least-exposure" class="auto internal xref">Section 5.8</a>) is
+              <p id="section-9.5.2-3.1.1"><strong>Private-data exposure.</strong> Least exposure (<a href="#least-exposure" class="auto internal xref">Section 5.9</a>) is
 applied: the context surfaced to the agent is scoped to the active
 Mission, and credential material stays out of the agent for every
-mediated class (<a href="#custody" class="auto internal xref">Section 5.6</a>).<a href="#section-9.5.2-3.1.1" class="pilcrow">¶</a></p>
+mediated class (<a href="#custody" class="auto internal xref">Section 5.7</a>).<a href="#section-9.5.2-3.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-9.5.2-3.2">
               <p id="section-9.5.2-3.2.1"><strong>Untrusted content.</strong> A taint policy for untrusted content, as the
@@ -4780,7 +4908,7 @@ egress rule is enforced, not advisory: a consequential
 external-communication or external-commitment action whose bound
 parameters derive from tainted content (or, under session-level
 taint, any such action in a tainted session) obtains a fresh
-action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.4</a>) or is refused. The
+action-bound approval (<a href="#action-approval" class="auto internal xref">Section 5.5</a>) or is refused. The
 harness profile's pre-consented egress carve-out applies: a send to
 a destination the Approver concretely named at approval is not
 human-gated on taint grounds alone, and for content-derived
@@ -4796,7 +4924,7 @@ which.<a href="#section-9.5.2-3.2.1" class="pilcrow">¶</a></p>
 external-commitment classes are mediated: no unmediated path, the
 scope statement's egress-channel enumeration covers them
 (<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), and the
-sender-constraint keys are held by the mediating PEP (<a href="#custody" class="auto internal xref">Section 5.6</a>).<a href="#section-9.5.2-3.3.1" class="pilcrow">¶</a></p>
+sender-constraint keys are held by the mediating PEP (<a href="#custody" class="auto internal xref">Section 5.7</a>).<a href="#section-9.5.2-3.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 <p id="section-9.5.2-4">The claim is published with the enforcement-scope conformance
@@ -4832,7 +4960,7 @@ the evidence is missing.<a href="#section-9.5.2-6" class="pilcrow">¶</a></p>
             <tbody>
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <code>key_custody</code>: the sender-constraint key is held and generated in the mediating PEP, never transferred to the agent (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#custody" class="auto internal xref">Section 5.6</a>)</td>
+                  <code>key_custody</code>: the sender-constraint key is held and generated in the mediating PEP, never transferred to the agent (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#custody" class="auto internal xref">Section 5.7</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">EAT (<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>)</td>
                 <td class="text-left" rowspan="1" colspan="1">The mediating PEP's key-holding component</td>
                 <td class="text-left" rowspan="1" colspan="1">The relying party, against the attester identity and appraisal policy the Enforcement Scope Statement selects for this row</td>
@@ -4841,7 +4969,7 @@ the evidence is missing.<a href="#section-9.5.2-6" class="pilcrow">¶</a></p>
               </tr>
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <code>isolation_boundary</code>: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#trifecta-containment" class="auto internal xref">Section 9.5.2</a>, <a href="#custody" class="auto internal xref">Section 5.6</a>)</td>
+                  <code>isolation_boundary</code>: the execution environment separates the agent component from the mediating PEP, approval service, and rendering component, and credential material stays out of the agent (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#trifecta-containment" class="auto internal xref">Section 9.5.2</a>, <a href="#custody" class="auto internal xref">Section 5.7</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">EAT (<span>[<a href="#RFC9711" class="cite xref">RFC9711</a>]</span>)</td>
                 <td class="text-left" rowspan="1" colspan="1">The boundary between the agent component and each isolated component</td>
                 <td class="text-left" rowspan="1" colspan="1">The relying party, against the attester identity and appraisal policy the statement selects for this row</td>
@@ -4859,7 +4987,7 @@ the evidence is missing.<a href="#section-9.5.2-6" class="pilcrow">¶</a></p>
               </tr>
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <code>approval_policy</code>: each action in the claimed classes requires action-bound approval (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#action-approval" class="auto internal xref">Section 5.4</a>)</td>
+                  <code>approval_policy</code>: each action in the claimed classes requires action-bound approval (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#action-approval" class="auto internal xref">Section 5.5</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">Signed configuration, or independent service evidence from the approval service</td>
                 <td class="text-left" rowspan="1" colspan="1">The approval service's enforcement over the classes claimed</td>
                 <td class="text-left" rowspan="1" colspan="1">The auditor reading the configuration, against the approval service's operator key</td>
@@ -4868,7 +4996,7 @@ the evidence is missing.<a href="#section-9.5.2-6" class="pilcrow">¶</a></p>
               </tr>
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <code>rendering_independence</code>: the disclosure is derived from the bound normalized parameters, never composed by the agent (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#action-approval" class="auto internal xref">Section 5.4</a>)</td>
+                  <code>rendering_independence</code>: the disclosure is derived from the bound normalized parameters, never composed by the agent (<a href="#compromise-resistant" class="auto internal xref">Section 9.5.1</a>, <a href="#action-approval" class="auto internal xref">Section 5.5</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">Independent service evidence, the committed Consent Evidence where available</td>
                 <td class="text-left" rowspan="1" colspan="1">The rendering component's output for the action-bound approval claimed</td>
                 <td class="text-left" rowspan="1" colspan="1">The party evaluating the evidence, against the rendering component's or Consent Evidence signer's key</td>
@@ -4895,7 +5023,7 @@ the evidence is missing.<a href="#section-9.5.2-6" class="pilcrow">¶</a></p>
               </tr>
               <tr>
                 <td class="text-left" rowspan="1" colspan="1">
-                  <code>least_exposure</code>: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission (<a href="#trifecta-containment" class="auto internal xref">Section 9.5.2</a>, <a href="#least-exposure" class="auto internal xref">Section 5.8</a>)</td>
+                  <code>least_exposure</code>: the context surfaced to the agent (prompts, retrieved documents, memory, tool catalogs, schemas, and downstream responses) is scoped to the active Mission (<a href="#trifecta-containment" class="auto internal xref">Section 9.5.2</a>, <a href="#least-exposure" class="auto internal xref">Section 5.9</a>)</td>
                 <td class="text-left" rowspan="1" colspan="1">Signed configuration naming the exposure-scoping rule for the classes claimed, and negative tests demonstrating out-of-Mission context is withheld</td>
                 <td class="text-left" rowspan="1" colspan="1">The exposure-scoping rule's coverage over the classes claimed</td>
                 <td class="text-left" rowspan="1" colspan="1">The auditor reading the configuration, against the deployment's operator key</td>
@@ -4971,9 +5099,11 @@ whether before a PDP decision (for example, credential-validation
 failure or PDP unreachability) or after a PDP permit (for example, a
 <code>parameter_digest</code> mismatch), <span class="bcp14">MUST</span> likewise produce a runtime
 enforcement evidence record with the available fields and the failure
-condition. This document fixes the minimum record content and local
-integrity requirements; the concrete record schemas, canonical byte
-representation, and integrity envelope, together with the Mission
+condition. A refusal for which no enforcement boundary is established
+produces none (<a href="#boundary-identifier" class="auto internal xref">Section 5.3</a>). This document fixes the
+minimum record content and local integrity requirements; the concrete
+record schemas, canonical byte representation, and integrity
+envelope, together with the Mission
 Receipt's portable schema (<a href="#mission-receipt" class="auto internal xref">Section 11.2</a>), are defined by Mission
 Runtime Evidence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-11-1" class="pilcrow">¶</a></p>
 <p id="section-11-2">A record captures decision inputs, the applicable policy and
@@ -5061,7 +5191,7 @@ project the policy decision (the decision identifier and result), the
 policy state it was decided under (the PDP's policy-view version and the
 Mission's <code>policy_version</code>), the executor (the authenticated actor and
 any actor-delegation chain), the custody boundary (whether a mediating
-PEP held the credential, <a href="#custody" class="auto internal xref">Section 5.6</a>, carried as a profiled issuer
+PEP held the credential, <a href="#custody" class="auto internal xref">Section 5.7</a>, carried as a profiled issuer
 assertion), the downstream target (the resource and audience), the
 outcome, the timestamps, and, where a deployment chains receipts, the
 digest of a predecessor Mission Receipt. The portable schema, receipt
@@ -5199,7 +5329,7 @@ above; a deployment's Enforcement Scope Statement
 (<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>) names which it enforces and which paths it
 excludes.<a href="#section-12-3" class="pilcrow">¶</a></p>
 <p id="section-12-4">The agent-isolated evidence-emission condition
-(<a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 5.7</a>) has its own observable form; a
+(<a href="#agent-isolated-evidence-emission" class="auto internal xref">Section 5.8</a>) has its own observable form; a
 deployment claiming it <span class="bcp14">SHOULD</span> demonstrate, per covered emitter:<a href="#section-12-4" class="pilcrow">¶</a></p>
 <table class="center" id="table-10">
         <caption><a href="#table-10" class="selfRef">Table 10</a></caption>
@@ -5354,7 +5484,7 @@ action class (<a href="#failure-modes" class="auto internal xref">Section 2.11</
 work and nothing else.<a href="#section-13-3" class="pilcrow">¶</a></p>
 <p id="section-13-4"><strong>Decision latency is budgeted by class.</strong> The synchronous cost of
 this profile is confined to the actions whose consequences warrant
-it. Classification (<a href="#classification" class="auto internal xref">Section 5.3</a>) is the first lever: only
+it. Classification (<a href="#classification" class="auto internal xref">Section 5.4</a>) is the first lever: only
 consequential actions need a permit, and only the high-consequence
 classes must hold a synchronous gate. For the rest of the governed
 surface the common-case decision is local: a PDP embedded in or
@@ -5406,7 +5536,7 @@ authority to an ordinary Mission permit.<a href="#section-14-1" class="pilcrow">
         <h3 id="name-outage-blast-radius">
 <a href="#section-14.1" class="section-number selfRef">14.1. </a><a href="#name-outage-blast-radius" class="section-name selfRef">Outage Blast Radius</a>
         </h3>
-<p id="section-14.1-1">The primary axis is action class, as in <a href="#classification" class="auto internal xref">Section 5.3</a> and
+<p id="section-14.1-1">The primary axis is action class, as in <a href="#classification" class="auto internal xref">Section 5.4</a> and
 <a href="#failure-modes" class="auto internal xref">Section 2.11</a>. The security model's Revocation-to-Action Latency table
 describes a different axis: what a committed revocation stops
 (<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>).<a href="#section-14.1-1" class="pilcrow">¶</a></p>
@@ -5540,8 +5670,8 @@ deployment that uses a different decision API <span class="bcp14">MUST</span> sp
 binding in the same way.<a href="#section-15-1" class="pilcrow">¶</a></p>
 <p id="section-15-2">This document defines no binding of its own. Keeping the binding in a
 separate specification preserves substrate-independence: the enforcement
-contract, action classification (<a href="#classification" class="auto internal xref">Section 5.3</a>), PEP placement
-(<a href="#pep-placement" class="auto internal xref">Section 5.5</a>), parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 8</a>),
+contract, action classification (<a href="#classification" class="auto internal xref">Section 5.4</a>), PEP placement
+(<a href="#pep-placement" class="auto internal xref">Section 5.6</a>), parameter binding (<a href="#parameter-binding" class="auto internal xref">Section 8</a>),
 the consumption-bound failure posture (<a href="#metering" class="auto internal xref">Section 10</a>), and runtime
 enforcement evidence
 (<a href="#evidence" class="auto internal xref">Section 11</a>) are the substance, and they do not depend on the decision
@@ -5640,7 +5770,7 @@ quarantine pattern, <span>[<a href="#I-D.draft-mcguinness-mission-architecture" 
 egress-channel enumeration (<a href="#trifecta-containment" class="auto internal xref">Section 9.5.2</a>), volume bounds
 and exclusivity (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>), and
 action-bound re-consent for the highest classes
-(<a href="#action-approval" class="auto internal xref">Section 5.4</a>). A deployment that additionally runs a content
+(<a href="#action-approval" class="auto internal xref">Section 5.5</a>). A deployment that additionally runs a content
 evaluator (data-loss prevention, an LLM-based content policy)
 composes it as Resource policy at the PDP: the verdict enters the
 decision as deployment-defined context, only ever narrows, and its
@@ -5661,7 +5791,7 @@ decisions are future work (<a href="#deferred" class="auto internal xref">Sectio
         </h3>
 <p id="section-17.2-1">The strongest decision logic is void if the PEP is not at the last
 controllable boundary, or if an unmediated path can reach the action
-(<a href="#pep-placement" class="auto internal xref">Section 5.5</a>). A deployment's claim is only as strong as the set
+(<a href="#pep-placement" class="auto internal xref">Section 5.6</a>). A deployment's claim is only as strong as the set
 of execution paths it actually mediates, and that set is the
 Enforcement Scope Statement's mediated-paths declaration
 (<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>).<a href="#section-17.2-1" class="pilcrow">¶</a></p>
@@ -5676,11 +5806,11 @@ Enforcement Scope Statement's mediated-paths declaration
 to prevent that. It constrains what an injected agent can do by gating
 the external-communication leg: external communication is a consequential
 action, so every attempt is checked against the Authority Set, bound to
-parameters, metered, and (with mediated execution, <a href="#custody" class="auto internal xref">Section 5.6</a>) made
+parameters, metered, and (with mediated execution, <a href="#custody" class="auto internal xref">Section 5.7</a>) made
 unreachable to an agent that does not hold the egress credential. This
 is the architectural defense, gate the exfiltration against an authority
 the injection cannot widen, rather than make the agent injection-proof.
-Least exposure (<a href="#least-exposure" class="auto internal xref">Section 5.8</a>) is the input-side complement: it
+Least exposure (<a href="#least-exposure" class="auto internal xref">Section 5.9</a>) is the input-side complement: it
 shrinks what an injected agent can read and what within-scope
 laundering can draw from, without changing the limits below.<a href="#section-17.3-1" class="pilcrow">¶</a></p>
 <p id="section-17.3-2">Two limits are inherent and a deployment <span class="bcp14">MUST NOT</span> overstate the
@@ -5689,7 +5819,7 @@ every exfiltration channel an agent runtime offers (DNS, logs, error
 strings, a write to a store another process reads) is a channel that
 must be mediated, and this profile gates the channels routed through a
 PEP but cannot prove a deployment enumerated them all (the Achilles'
-heel of <a href="#pep-placement" class="auto internal xref">Section 5.5</a>). Second, this profile provides no
+heel of <a href="#pep-placement" class="auto internal xref">Section 5.6</a>). Second, this profile provides no
 information-flow control: it evaluates each action in isolation against
 authority over resources and actions, so a sequence of
 individually-authorized steps can compose into an exfiltration no single
@@ -5711,7 +5841,7 @@ is not information-flow control.<a href="#section-17.3-2" class="pilcrow">¶</a>
         </h3>
 <p id="section-17.4-1">Inspection-based runtime defenses for agentic systems share this
 profile's premise that the agent application is part of the attack
-surface (<a href="#custody" class="auto internal xref">Section 5.6</a>), and combine deterministic checks over the message
+surface (<a href="#custody" class="auto internal xref">Section 5.7</a>), and combine deterministic checks over the message
 flow with semantic checks over the agent's intent. This profile is the
 authority half of that picture; it composes with, but does not replace,
 an inspection layer.<a href="#section-17.4-1" class="pilcrow">¶</a></p>
@@ -5731,7 +5861,7 @@ result a tool returns as the application relays it back to the agent's
 model, so an application can still falsify what the model sees; and it
 does not by itself establish that an executed action reflects the
 model's own decision rather than an application substitution. Mediated
-execution (<a href="#custody" class="auto internal xref">Section 5.6</a>) bounds the second case, since an action outside
+execution (<a href="#custody" class="auto internal xref">Section 5.7</a>) bounds the second case, since an action outside
 the Authority Set is refused however it arose, but it does not bind the
 executed action to the model's decision; a deployment that can establish
 that correspondence <span class="bcp14">SHOULD</span>. Both sit at the semantic and grounding
@@ -5756,7 +5886,7 @@ load-bearing for high-consequence authority.<a href="#section-17.4-4" class="pil
 <a href="#section-17.5" class="section-number selfRef">17.5. </a><a href="#name-classification-integrity" class="section-name selfRef">Classification Integrity</a>
         </h3>
 <p id="section-17.5-1">Because "consequential" is partly deployment-defined, the
-classification floor of <a href="#classification" class="auto internal xref">Section 5.3</a> is load-bearing: a
+classification floor of <a href="#classification" class="auto internal xref">Section 5.4</a> is load-bearing: a
 deployment cannot evade enforcement by classifying a high-consequence
 action as non-consequential. A <code>purpose</code> may raise a class but never lower it
 below the resource owner's floor.<a href="#section-17.5-1" class="pilcrow">¶</a></p>
@@ -5850,16 +5980,18 @@ within the bound but adds no capacity
 <a href="#section-17.10" class="section-number selfRef">17.10. </a><a href="#name-confused-deputy-across-reso" class="section-name selfRef">Confused Deputy Across Resources</a>
         </h3>
 <p id="section-17.10-1">The permit binding of <a href="#permit-binding" class="auto internal xref">Section 2.9</a> ties a decision to the
-Mission, the credential audience or protected resource, the subject,
-the client identity, the actor context, the action, and the resource
-it evaluated. It follows that a PDP
-decision for one protected resource, audience, tenant, or operation is
+Mission, the boundary identifier (<a href="#boundary-identifier" class="auto internal xref">Section 5.3</a>), the
+subject, the client identity, the actor context, the action, and the
+resource it evaluated. It follows that a PDP
+decision for one enforcement boundary, tenant, or operation is
 not reusable at another: the executing PEP, which reverifies those
 bindings before acting (<a href="#parameter-binding" class="auto internal xref">Section 8</a>), refuses a permit whose
 bindings do not match the boundary at which it is presented. A
 deployment <span class="bcp14">MUST NOT</span> relax those bindings in a way that would let a
 permit cross a resource, audience, tenant, or operation boundary it
-was not issued for.<a href="#section-17.10-1" class="pilcrow">¶</a></p>
+was not issued for. Because the PEP establishes the boundary
+independently of the credential's audience order, a credential that
+names several recipients cannot choose the boundary that evaluates it.<a href="#section-17.10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-channel-and-credential-disclosure">
@@ -6278,46 +6410,61 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">Execution-Outcome Evidence: reconciliation records an outcome only
-from an effect the resource attributes to the action through an
-identifier recorded with it, never from resource state alone; the
-Resource Server runtime profile names that identifier (#1271).<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.1.1">Enforcement Boundary Identifier: each mediated resource entry of the
+Enforcement Scope Statement is an enforcement boundary with one
+identifier, which the PEP establishes from trusted routing or
+configuration, never from the credential's audience order or its
+entries. Decision inputs, permits and permit caches, the three
+evidence forms, and evidence-key authorization use it byte for
+byte, and Permit Binding, Required Decision Evidence, and Confused
+Deputy name it in place of "the credential audience or protected
+resource". A request whose boundary cannot be established is
+refused, with no record naming a boundary. Changing a Boundary
+Identifier defines the versioned statement, the ordered cutover,
+historical verification, and that aliases never rewrite approved
+entries (#853).<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">Permit Binding: the permit binds the operation target an
-authority-entry match uses, and the OAuth realization of a
-<code>mission_resource_access</code> entry matches its <code>resource</code> against that
-target (#1276).<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.2.1">Execution-Outcome Evidence: reconciliation records an outcome only
+from an effect the resource attributes to the action through an
+identifier recorded with it, never from resource state alone; the
+Resource Server runtime profile names that identifier (#1271).<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">Mission Binding Establishment: names the AAuth realization of a
+          <p id="appendix-D-2.3.1">Permit Binding: the permit binds the operation target an
+authority-entry match uses, and the OAuth realization of a
+<code>mission_resource_access</code> entry matches its <code>resource</code> against that
+target (#1276).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.4">
+          <p id="appendix-D-2.4.1">Mission Binding Establishment: names the AAuth realization of a
 credential-carried Mission reference beside the OAuth one, limited
 to the access paths where the AAuth binding supplies
 Credential-Bound, and no longer says AAuth reference propagation
 supplies an externally established reference: the AAuth binding
-defines no join (#1169).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">Time: a Mission state source reports an expired Mission as
-<code>terminated</code> with reason <code>expired</code>; the refusal on it is unchanged
-(#705).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+defines no join (#1169).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">Action Classification: the <code>purpose</code> that may raise a class is the
+          <p id="appendix-D-2.5.1">Time: a Mission state source reports an expired Mission as
+<code>terminated</code> with reason <code>expired</code>; the refusal on it is unchanged
+(#705).<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.6">
+          <p id="appendix-D-2.6.1">Action Classification: the <code>purpose</code> that may raise a class is the
 approved Mission's, from its Mission state or a validated
 projection, never a value the request asserts. The semantic
 intent-alignment signal's bound cites the issuance profile's
 treatment of <code>purpose</code> as restrictive outside its configured-mapping
 lookup rather than as inert. The rule 2 statement adds a
-requirement; the signal's requirement is unchanged (#1102).<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.6">
-          <p id="appendix-D-2.6.1">The <code>rendering_independence</code> assurance row names the action-bound
-approval it is evaluated per; "approval event" is reserved for the
-Mission's creation (#1120).<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
+requirement; the signal's requirement is unchanged (#1102).<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.7">
-          <p id="appendix-D-2.7.1">Mission State and Freshness states credential expiry and the
+          <p id="appendix-D-2.7.1">The <code>rendering_independence</code> assurance row names the action-bound
+approval it is evaluated per; "approval event" is reserved for the
+Mission's creation (#1120).<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.8">
+          <p id="appendix-D-2.8.1">Mission State and Freshness states credential expiry and the
 state-gated refresh cycle as one Credential-lifetime freshness
 source below the high-consequence floor, conforming only where every
 issuance, refresh, and exchange path checks Mission state within the
@@ -6326,76 +6473,76 @@ from an earlier observation adds that observation's age, and the
 latency statements for paths outside PDP gating carry the same sum.
 No BCP 14 sentence changed; the stated conformance condition,
 previously gated derivation and refresh, now covers every issuance,
-refresh, and exchange path and has its own ledger row.<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.8">
-          <p id="appendix-D-2.8.1">Evaluation-Context Binding no longer speaks of "Runtime-Enforced
-conformance": a level is guidance, never a conformance class. No
-requirement changed.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+refresh, and exchange path and has its own ledger row.<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.9">
-          <p id="appendix-D-2.9.1">Idempotency defines the Exact and Bounded-consistency enforcement
-profiles for its own claim, so the idempotency requirements no longer
-depend on the experimental metering companion, which is cited only as
-applying the same profiles to its counters.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.9.1">Evaluation-Context Binding no longer speaks of "Runtime-Enforced
+conformance": a level is guidance, never a conformance class. No
+requirement changed.<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.10">
-          <p id="appendix-D-2.10.1">Credential Custody: the acting credential for a high-consequence
+          <p id="appendix-D-2.10.1">Idempotency defines the Exact and Bounded-consistency enforcement
+profiles for its own claim, so the idempotency requirements no longer
+depend on the experimental metering companion, which is cited only as
+applying the same profiles to its counters.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.11">
+          <p id="appendix-D-2.11.1">Credential Custody: the acting credential for a high-consequence
 action is sender-constrained in either Mission-establishment mode.
 The PEP supplies a confirmation key only from a binding it verified
 with a current proof of possession, and the PDP denies a
 high-consequence action without one. Enforcement Invariants and
-Failure Modes point to the rule.<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.11">
-          <p id="appendix-D-2.11.1">Out of Scope lists cross-PDP history composition other than through
-the deployment's evidence store or registered transparency records,
-matching History. No requirement changed.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
+Failure Modes point to the rule.<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.12">
-          <p id="appendix-D-2.12.1">Authority input: for every issuer-held narrowing mechanism the
-deployment runs, the PDP establishes current effective authority from
-a source reporting it and refuses when it cannot; the PDP refuses an
-action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.12.1">Out of Scope lists cross-PDP history composition other than through
+the deployment's evidence store or registered transparency records,
+matching History. No requirement changed.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.13">
-          <p id="appendix-D-2.13.1">A materialized policy view is one way to evaluate the authority
+          <p id="appendix-D-2.13.1">Authority input: for every issuer-held narrowing mechanism the
+deployment runs, the PDP establishes current effective authority from
+a source reporting it and refuses when it cannot; the PDP refuses an
+action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.14">
+          <p id="appendix-D-2.14.1">A materialized policy view is one way to evaluate the authority
 input, not the only one: the Materialized Policy View section
 governs a PDP that uses one, and the authority input requires
 whatever the PDP evaluates to be no broader than the current
 effective authority and bound to the Mission, with mutable state
 from a state source; the policy-view version names whichever basis
-the PDP evaluated.<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.14">
-          <p id="appendix-D-2.14.1">The Operation Profile's items are grouped as the operation's binding
-and its declarations, with no change to any requirement or to which
-operations it applies to; a declaration is stated even where the
-answer is no.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
+the PDP evaluated.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.15">
-          <p id="appendix-D-2.15.1">The record minimum's evaluation request digest is over the input
-the runtime evidence companion defines (#971).<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.15.1">The Operation Profile's items are grouped as the operation's binding
+and its declarations, with no change to any requirement or to which
+operations it applies to; a declaration is stated even where the
+answer is no.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.16">
-          <p id="appendix-D-2.16.1">Security Considerations notes that an idempotency key identifies a
-request, not the business event it carries out, and that the
-Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.16.1">The record minimum's evaluation request digest is over the input
+the runtime evidence companion defines (#971).<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.17">
-          <p id="appendix-D-2.17.1">The Enforcement Scope Statement is what a deployment adopting the
-Runtime-Enforced bundle publishes, not what earns the level; the
-level stays guidance, matching the architecture's assurance levels,
-and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.17.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.17.1">Security Considerations notes that an idempotency key identifies a
+request, not the business event it carries out, and that the
+Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.17.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.18">
-          <p id="appendix-D-2.18.1">The Introduction states this profile as the per-action decision for
-the action classes it covers, composed over the issuance profile's
-bounds, and Deployment Considerations names introspection as a
-cutoff on the issuance-only path.<a href="#appendix-D-2.18.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.18.1">The Enforcement Scope Statement is what a deployment adopting the
+Runtime-Enforced bundle publishes, not what earns the level; the
+level stays guidance, matching the architecture's assurance levels,
+and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.18.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.19">
-          <p id="appendix-D-2.19.1">Client-instance references follow their successors:
+          <p id="appendix-D-2.19.1">The Introduction states this profile as the per-action decision for
+the action classes it covers, composed over the issuance profile's
+bounds, and Deployment Considerations names introspection as a
+cutoff on the issuance-only path.<a href="#appendix-D-2.19.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.20">
+          <p id="appendix-D-2.20.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6403,37 +6550,37 @@ cited. Attester-verified
 context is instance identity that grants no authority, custody's
 per-instance key follows the successor's instance-unique key for
 attribution, and EAT evidence is no longer tied to a carrier
-profile. No requirement changed.<a href="#appendix-D-2.19.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.20">
-          <p id="appendix-D-2.20.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
-and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.20.1" class="pilcrow">¶</a></p>
+profile. No requirement changed.<a href="#appendix-D-2.20.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.21">
-          <p id="appendix-D-2.21.1">Defined compound-action phases, one Decision per consequential
+          <p id="appendix-D-2.21.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+and its negative-conformance case (#759). Observing or requesting an
+independent approval is distinct from resolving it.<a href="#appendix-D-2.21.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.22">
+          <p id="appendix-D-2.22.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.21.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.22">
-          <p id="appendix-D-2.22.1">Added per-entry perimeter dispositions inside the existing
-mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.22.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.22.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.23">
-          <p id="appendix-D-2.23.1">Operational Considerations added (#310): a dependency-conditional outage
+          <p id="appendix-D-2.23.1">Added per-entry perimeter dispositions inside the existing
+mediated-scope declaration, its compatibility rule, and the
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.23.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.24">
+          <p id="appendix-D-2.24.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.23.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.24.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.24">
-          <p id="appendix-D-2.24.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.25">
+          <p id="appendix-D-2.25.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6441,7 +6588,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.24.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.25.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
