@@ -887,6 +887,12 @@
      "name": "compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the fresh commit decision mission_inactive when the Mission is revoked after a permitted preflight and prepare, and no wire exists (#253)",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ]
   },
@@ -3753,6 +3759,12 @@
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > admits an activator holding none of the ceiling's operational permissions (activation is not possession)",
      "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)",
+     "level": "cross-component",
      "surface": "derivation"
     }
    ]
@@ -15401,6 +15413,12 @@
      "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the narrower transaction token for any other tool, a read or a wire, before a decision and with no effect (#253)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ]
   },
@@ -21208,6 +21226,12 @@
      "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the next read mission_inactive once the Mission is revoked at the advertised lifecycle endpoint, with the PDP's deny Decision Evidence and no effect (#253)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
    "notes": "Both disagreement directions under the PDP role (#1004): the PDP's active view against a PEP-supplied revoked state, and the PDP's revoked view against a PEP-supplied active state, each deny mission_inactive; an unrecognized PEP-supplied value (case, whitespace, an unknown state) is non-active. This PDP always holds its own view (the loaded view's state)."
@@ -26804,6 +26828,12 @@
      "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
      "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission",
      "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)",
+     "level": "cross-component",
      "surface": "evidence-emission"
     }
    ],
