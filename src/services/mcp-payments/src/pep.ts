@@ -177,6 +177,23 @@ export interface CommonTokenFacts {
    * Absent for every ordinary Mission-bound credential.
    */
   txn?: TxnCredential;
+  /**
+   * @spec runtime-oauth#token-validation, runtime#boundary-identifier-change
+   * (#853, D487): the enforcement boundary, and the statement version that
+   * declared it, this credential's `aud` was validated against. Every server
+   * validator sets it ({@link ValidatedBoundary}). The PEP refuses the request
+   * when the boundary or version it establishes for the decision is not this
+   * one, so a cutover between validation and decision never moves a
+   * credential into a boundary that did not accept it. Absent only on facts a
+   * caller assembled without a server validator.
+   */
+  validatedBoundary?: ValidatedBoundary;
+}
+
+/** The boundary and statement version a credential's audience was validated against. */
+export interface ValidatedBoundary {
+  boundary: string;
+  version: string;
 }
 
 /** A credential carrying the `mission` claim: the ordinary, pre-#557 shape. */
@@ -531,10 +548,15 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // decided before a declared cutover, a cacheable read's or one phase of a
     // multi-phase operation included, is unusable after it: the in-flight
     // operation is refused and restarts under the new boundary, never carried
-    // across. The disposition keeps the permit's original `audience`.
+    // across. The disposition keeps the permit's original `audience`. The
+    // statement version is compared too: the permit's credential was
+    // validated under that version's audience rule, which a later version can
+    // narrow while keeping the identifier.
     name: "enforcement_boundary",
     failure: (attempt, { boundary }) =>
-      boundary.ok && boundary.boundary === attempt.audience ? undefined : BOUNDARY_CUTOVER_ERROR,
+      boundary.ok && boundary.boundary === attempt.audience && boundary.version === attempt.boundaryVersion
+        ? undefined
+        : BOUNDARY_CUTOVER_ERROR,
   },
   {
     // @spec runtime#compound-actions — "The executing PEP MUST compare the
@@ -1000,6 +1022,14 @@ export interface ExecutionAttempt {
    */
   audience: string;
   /**
+   * @spec runtime#boundary-identifier-change (#853, D487): the statement
+   * version that declared {@link audience} when the permit was decided, and
+   * against which the request's credential was validated. The
+   * `enforcement_boundary` use check refuses the permit once another version
+   * is in force.
+   */
+  boundaryVersion: string;
+  /**
    * @spec resource-access#resource-matching (#1276, D457): the operation
    * target the permit was decided on, exactly as this PEP sent it in
    * `resource.properties.operation_target`. The `operation_target` use check
@@ -1094,7 +1124,8 @@ export type PepRefusalDiagnostic =
   | "decision_evidence_unverifiable"
   | "channel_failure"
   | "pdp_unreachable"
-  | "unresolvable_recipients";
+  | "unresolvable_recipients"
+  | "credential_boundary_changed";
 
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
@@ -1150,6 +1181,12 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   // The recipients the operation addresses cannot be resolved from the
   // resource's own routing records (#1266): its target does not resolve.
   unresolvable_recipients: "target_unresolvable",
+  // @spec runtime-oauth#token-validation, runtime#boundary-identifier-change
+  // (#853, D487): the credential's `aud` was validated against a boundary or
+  // statement version other than the one this request is decided at (a
+  // cutover fell between validation and decision). It is not validated for
+  // the established boundary: a token-validation failure there.
+  credential_boundary_changed: "token_invalid",
 });
 
 /** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
@@ -1295,6 +1332,31 @@ export class Pep {
   }
 
   /**
+   * @spec runtime#runtime-conformance, runtime-oauth#token-validation,
+   * runtime#boundary-identifier-change (#853, D487): the boundary this
+   * request is decided at, established now, and held to the boundary the
+   * credential was validated against. A boundary that cannot be established
+   * refuses with no record. A credential validated against another boundary
+   * or statement version (a cutover fell between validation and this point)
+   * is refused `credential_boundary_changed`, recorded at the boundary
+   * established now: it is never relabeled into a boundary that did not
+   * accept it. The caller retries, and its credential is validated afresh.
+   */
+  private async requestBoundary(
+    token: TokenFacts,
+    action: string,
+  ): Promise<{ ok: true; boundary: string; version: string } | { ok: false; refusal_reason: string }> {
+    const established = this.boundary();
+    if (!established.ok) return { ok: false, refusal_reason: BOUNDARY_UNRESOLVABLE };
+    const validated = token.validatedBoundary;
+    if (validated !== undefined && (validated.boundary !== established.boundary || validated.version !== established.version)) {
+      await this.recordRefusal(established.boundary, token, "credential_boundary_changed", action);
+      return { ok: false, refusal_reason: "credential_boundary_changed" };
+    }
+    return established;
+  }
+
+  /**
    * @spec runtime#compound-actions — "The PEP derives the crossing's phase
    * from its trusted Operation Profile". Every read of a crossing's action,
    * class and phase goes through here, and the profile is resolved on each
@@ -1349,8 +1411,8 @@ export class Pep {
     if (!mapping) return { ok: true, args };
     // @spec runtime#runtime-conformance (#853, D487): no boundary, no record:
     // a Refusal Record REQUIRES an `audience`, and none is invented.
-    const established = this.boundary();
-    if (!established.ok) return { ok: false, refusal_reason: BOUNDARY_UNRESOLVABLE };
+    const established = await this.requestBoundary(token, mapping.action);
+    if (!established.ok) return { ok: false, refusal_reason: established.refusal_reason };
     const boundary = established.boundary;
     let inputSchema: unknown;
     try {
@@ -1406,10 +1468,10 @@ export class Pep {
     // input, binding and record of this request uses this one value. A
     // boundary that cannot be established refuses with no Refusal Record:
     // the record REQUIRES an `audience`, and none is invented.
-    const establishedBoundary = this.boundary();
-    if (!establishedBoundary.ok) return { permitted: false, refusal_reason: BOUNDARY_UNRESOLVABLE };
-    const boundary = establishedBoundary.boundary;
     const mapping = this.toolAction(tool);
+    const establishedBoundary = await this.requestBoundary(token, mapping?.action ?? tool);
+    if (!establishedBoundary.ok) return { permitted: false, refusal_reason: establishedBoundary.refusal_reason };
+    const { boundary, version: boundaryVersion } = establishedBoundary;
     if (!mapping) return await this.refuse(boundary, token, "unknown_tool", tool);
 
     let view: MissionView;
@@ -2116,6 +2178,7 @@ export class Pep {
         ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
       },
       audience: boundary,
+      boundaryVersion,
       operationTarget,
       action: mapping.action,
       tool,

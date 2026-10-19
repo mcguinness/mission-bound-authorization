@@ -46,6 +46,7 @@ export {
   type CommonTokenFacts,
   type MissionBoundTokenFacts,
   type OrdinaryTokenFacts,
+  type ValidatedBoundary,
   type TxnCredential,
   type EnforceResult,
   type ExecutionAttempt,

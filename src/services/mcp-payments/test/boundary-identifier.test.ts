@@ -39,7 +39,7 @@ import {
   verifyEvidenceEnvelope,
 } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
-import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   type ActionMapping,
@@ -51,6 +51,7 @@ import {
   createMediatedClient,
   credentialAuthorityFrom,
   type DecisionEvidence,
+  dpopProofFor,
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
@@ -135,6 +136,39 @@ const CHANGE: EnforcementBoundaries = {
       ],
       replaces: [{ boundary: CANONICAL_RESOURCE, previous_version: "payments-boundary-v1", previous_boundary: LEGACY }],
     },
+  ],
+};
+
+/** One identifier across two versions; the later one withdraws the audience alias the earlier one declared. */
+const NARROWED: EnforcementBoundaries = {
+  versions: [
+    {
+      version: "payments-alias-v1",
+      effective_at: "1970-01-01T00:00:00Z",
+      boundaries: [
+        {
+          boundary: CANONICAL_RESOURCE,
+          pep_locations: ["mcp-payments-pep"],
+          audience_aliases: [{ issuer: ISSUER, token_profile: "at+jwt", alias: ALIAS }],
+          evidence_keys: PEP_KEYS,
+        },
+      ],
+    },
+    {
+      version: "payments-alias-v2",
+      effective_at: "2026-06-01T00:00:00Z",
+      boundaries: [{ boundary: CANONICAL_RESOURCE, pep_locations: ["mcp-payments-pep"], evidence_keys: PEP_KEYS }],
+    },
+  ],
+};
+
+/** {@link CHANGE} with no alias for the old identifier in the new version. */
+const CHANGE_WITHOUT_ALIAS: EnforcementBoundaries = {
+  versions: [
+    CHANGE.versions[0] as EnforcementBoundaries["versions"][number],
+    { ...(CHANGE.versions[1] as EnforcementBoundaries["versions"][number]), boundaries: [
+      { boundary: CANONICAL_RESOURCE, pep_locations: ["mcp-payments-pep"], audience_aliases: [], evidence_keys: PEP_KEYS },
+    ] },
   ],
 };
 
@@ -668,5 +702,103 @@ describe("a declared change of boundary identifier (@spec runtime#boundary-ident
     } finally {
       await channel.close();
     }
+  });
+});
+
+describe("a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853)", () => {
+  it("refuses a credential validated at the old boundary when the cutover falls after validation, through the mediated MCP path, and records the refusal at the new boundary", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(CHANGE_WITHOUT_ALIAS), () => new Date(nowMs));
+    const x = buildPep(d, "mcp-payments-pep");
+    const token = await mint(LEGACY);
+    // The cutover falls in the interval after validation resolves and before the PEP decides.
+    const validate = x.server.validateCredential.bind(x.server);
+    let validated: TokenFacts | undefined;
+    x.server.validateCredential = async (...args) => {
+      validated = await validate(...args);
+      nowMs = CUTOVER_MS + 1000;
+      return validated;
+    };
+    const result = await call(x, "get_invoice", { invoice_id: "inv-1" }, token);
+    expect(validated?.validatedBoundary).toEqual({ boundary: LEGACY, version: "payments-boundary-v1" });
+    expect(result).toMatchObject({ ok: false, refusal_reason: "credential_boundary_changed" });
+    // No decision was requested; the refusal is a token-validation failure recorded at the boundary in force.
+    expect(x.decided).toHaveLength(0);
+    expect(refusals(x).map((r) => [r.audience, r.denial_reason])).toEqual([[CANONICAL_RESOURCE, "token_invalid"]]);
+    for (const r of refusals(x)) expect(await verifyEvidenceEnvelope(r, REFUSAL_RECORD_MEDIA_TYPE, d.resolver)).toEqual({ valid: true });
+    // Validated afresh, the same token is refused: the new version accepts no alias for it.
+    await expect(x.server.validateMissionToken(token)).rejects.toThrow(new TokenAudienceError("audience_mismatch"));
+  });
+
+  it("refuses stale credential facts at intake and at the decision, and admits the retry validated afresh through the declared alias", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(CHANGE), () => new Date(nowMs));
+    const x = buildPep(d, "mcp-payments-pep");
+    const token = await mint(LEGACY);
+    const stale = await x.server.validateMissionToken(token);
+    nowMs = CUTOVER_MS + 1000;
+    expect(await x.pep.intake("get_invoice", { invoice_id: "inv-1" }, stale)).toEqual({
+      ok: false,
+      refusal_reason: "credential_boundary_changed",
+    });
+    expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, stale)).toEqual({
+      permitted: false,
+      refusal_reason: "credential_boundary_changed",
+    });
+    expect(x.decided).toHaveLength(0);
+    const fresh = await x.server.validateMissionToken(token);
+    expect(fresh.validatedBoundary).toEqual({ boundary: CANONICAL_RESOURCE, version: "payments-boundary-v2" });
+    expect((await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, fresh)).permitted).toBe(true);
+    expect(x.decided.map((r) => r.resource.properties.audience)).toEqual([CANONICAL_RESOURCE]);
+  });
+
+  it("refuses the stale credential and its permit when a later version keeps the identifier but withdraws the alias it was validated through", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(NARROWED), () => new Date(nowMs));
+    const x = buildPep(d, "mcp-payments-pep");
+    const token = await mint(ALIAS);
+    const facts = await x.server.validateMissionToken(token);
+    expect(facts.validatedBoundary).toEqual({ boundary: CANONICAL_RESOURCE, version: "payments-alias-v1" });
+    const permit = await x.pep.enforce("hold_transfer", { invoice_id: "inv-1" }, facts);
+    expect(permit.permitted).toBe(true);
+    nowMs = CUTOVER_MS + 1000;
+    // The identifier is unchanged; the version the credential and the permit rest on is not.
+    expect(x.pep.boundary()).toEqual({ ok: true, boundary: CANONICAL_RESOURCE, version: "payments-alias-v2" });
+    expect(await x.pep.verifyPermitAtUse(permit.attempt as NonNullable<typeof permit.attempt>)).toMatchObject({
+      ok: false,
+      error: BOUNDARY_CUTOVER_ERROR,
+    });
+    expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, facts)).toEqual({
+      permitted: false,
+      refusal_reason: "credential_boundary_changed",
+    });
+    await expect(x.server.validateMissionToken(token)).rejects.toThrow(new TokenAudienceError("audience_mismatch"));
+  });
+
+  it("every server validator carries the boundary and statement version it validated aud against", async () => {
+    let nowMs = CUTOVER_MS + 1000;
+    const d = deployment(statementWith(CHANGE), () => new Date(nowMs));
+    const x = buildPep(d, "mcp-payments-pep");
+    const expected = { boundary: CANONICAL_RESOURCE, version: "payments-boundary-v2" };
+    const token = await mint(LEGACY);
+    expect((await x.server.validateMissionToken(token)).validatedBoundary).toEqual(expected);
+    expect((await x.server.validateCredential(token)).validatedBoundary).toEqual(expected);
+    // The DPoP-bound HTTP classes: a Mission-bound token, and an ordinary one on a gateway route.
+    const dpopKeys = await generateKeyPair("ES256", { extractable: true });
+    const jkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
+    const htu = `${CANONICAL_RESOURCE}`;
+    const bound = await mint(LEGACY, CANONICAL_RESOURCE, { cnf: { jkt } });
+    const viaHttp = await x.server.validateToken(bound, await dpopProofFor(dpopKeys, htu, "POST", bound), htu, "POST");
+    expect(viaHttp.validatedBoundary).toEqual(expected);
+    const ordinary = await mint(LEGACY, CANONICAL_RESOURCE, { cnf: { jkt }, mission: undefined, authorization_details: undefined });
+    const joined = await x.server.validateGatewayCredential(
+      ordinary,
+      { proof: await dpopProofFor(dpopKeys, htu, "POST", ordinary), htu, htm: "POST" },
+      true,
+    );
+    expect(joined.mission).toBeUndefined();
+    expect(joined.validatedBoundary).toEqual(expected);
+    nowMs = CUTOVER_MS - 1000;
+    expect((await x.server.validateMissionToken(token)).validatedBoundary).toEqual({ boundary: LEGACY, version: "payments-boundary-v1" });
   });
 });

@@ -58,6 +58,7 @@ import {
   paymentsBoundaryContext,
   type MissionReference,
   type OrdinaryTokenFacts,
+  type ValidatedBoundary,
   type Pep,
   recipientParams,
   type RequestSignals,
@@ -561,10 +562,16 @@ export class McpPaymentsServer {
    * array, by membership) must name it directly or through an alias the
    * declaration scopes to this verified issuer and this credential's `typ`
    * media type. `aud` never selects the boundary.
+   *
+   * Returns the boundary and statement version it validated against, which
+   * the caller carries on the credential's facts (`validatedBoundary`): the
+   * PEP decides only at that boundary and version, and refuses the request
+   * when a cutover moved either before the decision.
    */
-  private requireAudience(payload: JWTPayload, typ: unknown, issuer: string): void {
+  private requireAudience(payload: JWTPayload, typ: unknown, issuer: string): ValidatedBoundary {
     const checked = this.validateAudience(payload.aud, { issuer, tokenProfile: mediaTypeOf(typ) ?? "" });
     if (!checked.ok) throw new TokenAudienceError(checked.reason);
+    return { boundary: checked.boundary, version: checked.version };
   }
 
   /**
@@ -636,18 +643,18 @@ export class McpPaymentsServer {
     dpopProof: string,
     htu: string,
     htm: string,
-  ): Promise<{ payload: JWTPayload; typ: unknown; cnfJkt: string }> {
+  ): Promise<{ payload: JWTPayload; typ: unknown; cnfJkt: string; validated: ValidatedBoundary }> {
     refuseTransactionToken(accessToken);
     const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
     });
-    this.requireAudience(payload, protectedHeader.typ, this.deps.issuer);
+    const validated = this.requireAudience(payload, protectedHeader.typ, this.deps.issuer);
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
     // Verify the DPoP proof and bind it to the token's cnf.jkt AND to the token
     // itself (`ath`), under the same verifier the transaction path uses.
     await this.verifyPresentation(accessToken, cnf.jkt, { proof: dpopProof, htu, htm });
-    return { payload, typ: protectedHeader.typ, cnfJkt: cnf.jkt };
+    return { payload, typ: protectedHeader.typ, cnfJkt: cnf.jkt, validated };
   }
 
   /**
@@ -659,7 +666,7 @@ export class McpPaymentsServer {
    * never a credential silently demoted to the ordinary class. A proof of
    * possession is not part of this: each transport verifies its own.
    */
-  private missionBoundFactsFrom(payload: JWTPayload, typ: unknown): MissionBoundTokenFacts {
+  private missionBoundFactsFrom(payload: JWTPayload, typ: unknown, validated: ValidatedBoundary): MissionBoundTokenFacts {
     // @spec cross-domain#mission-subject — readTxnMissionClaim (inside the
     // profile) validates the REQUIRED invariants and, when present, the
     // closed {iss, sub} shape of the origin principal; a present-but-malformed
@@ -691,6 +698,7 @@ export class McpPaymentsServer {
       ...(payload.identity_continuation_handle
         ? { identityContinuationHandle: payload.identity_continuation_handle as string }
         : {}),
+      validatedBoundary: validated,
     };
   }
 
@@ -700,7 +708,7 @@ export class McpPaymentsServer {
    * verbatim: it is rule 8 bound 1's input, the authority the acting
    * credential holds as issued.
    */
-  private ordinaryFactsFrom(payload: JWTPayload, cnfJkt: string): OrdinaryTokenFacts {
+  private ordinaryFactsFrom(payload: JWTPayload, cnfJkt: string, validated: ValidatedBoundary): OrdinaryTokenFacts {
     return {
       sub: payload.sub as string,
       clientId: payload.client_id as string,
@@ -712,6 +720,7 @@ export class McpPaymentsServer {
       cnfJkt,
       ...(typeof payload.scope === "string" ? { scope: payload.scope } : {}),
       ...(payload.jti ? { jti: payload.jti as string } : {}),
+      validatedBoundary: validated,
     };
   }
 
@@ -720,8 +729,8 @@ export class McpPaymentsServer {
    * @spec mission#rs-enforcement: enforce from the token (cnf, mission claim).
    */
   async validateToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<MissionBoundTokenFacts> {
-    const { payload, typ } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
-    return this.missionBoundFactsFrom(payload, typ);
+    const { payload, typ, validated } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
+    return this.missionBoundFactsFrom(payload, typ, validated);
   }
 
   /**
@@ -746,8 +755,8 @@ export class McpPaymentsServer {
    * -- those stay Mission-bound-only.
    */
   async validateOrdinaryToken(accessToken: string, dpopProof: string, htu: string, htm: string): Promise<OrdinaryTokenFacts> {
-    const { payload, cnfJkt } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
-    return this.ordinaryFactsFrom(payload, cnfJkt);
+    const { payload, cnfJkt, validated } = await this.verifyDpopBoundToken(accessToken, dpopProof, htu, htm);
+    return this.ordinaryFactsFrom(payload, cnfJkt, validated);
   }
 
   /**
@@ -776,10 +785,10 @@ export class McpPaymentsServer {
     pop: DpopPresentation,
     admitsOrdinary: boolean,
   ): Promise<TokenFacts> {
-    const { payload, typ, cnfJkt } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
-    if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, typ);
+    const { payload, typ, cnfJkt, validated } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
+    if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, typ, validated);
     if (!admitsOrdinary) throw new Error("token missing mission claim");
-    return this.ordinaryFactsFrom(payload, cnfJkt);
+    return this.ordinaryFactsFrom(payload, cnfJkt, validated);
   }
 
   /**
@@ -798,10 +807,10 @@ export class McpPaymentsServer {
     const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
     });
-    this.requireAudience(payload, protectedHeader.typ, this.deps.issuer);
+    const validated = this.requireAudience(payload, protectedHeader.typ, this.deps.issuer);
     // The same claim profile as the HTTP path; no proof is claimed, because
     // this transport delivers none (the documented limitation above).
-    const facts = this.missionBoundFactsFrom(payload, protectedHeader.typ);
+    const facts = this.missionBoundFactsFrom(payload, protectedHeader.typ, validated);
     return {
       ...facts,
       ...(payload.client_instance_id ? { clientInstanceId: payload.client_instance_id as string } : {}),
@@ -885,9 +894,8 @@ export class McpPaymentsServer {
     // runtime-oauth#boundary-audience, #853, D487), and is a SINGLETON: a
     // list is not this profile, which keeps its rule, stricter than the
     // access token's membership rule.
-    if (!this.validateAudience(payload.aud, { issuer: this.deps.asIssuer, tokenProfile: MISSION_TXN_TOKEN_TYP }).ok) {
-      return { ok: false, refusal_reason: "txn_invalid" };
-    }
+    const audience = this.validateAudience(payload.aud, { issuer: this.deps.asIssuer, tokenProfile: MISSION_TXN_TOKEN_TYP });
+    if (!audience.ok) return { ok: false, refusal_reason: "txn_invalid" };
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (
       typeof payload.aud !== "string" ||
@@ -975,6 +983,7 @@ export class McpPaymentsServer {
         credentialAuthority,
         jti: payload.jti,
         txn,
+        validatedBoundary: { boundary: audience.boundary, version: audience.version },
       },
     };
   }
@@ -1014,7 +1023,7 @@ export class McpPaymentsServer {
       issuer: this.deps.issuer,
       algorithms: ["ES256"],
     });
-    this.requireAudience(rootPayload, rootHeader.typ, this.deps.issuer);
+    const validated = this.requireAudience(rootPayload, rootHeader.typ, this.deps.issuer);
     const root = readAttenuationRootClaims(rootHeader.typ, rootPayload, Math.floor(Date.now() / 1000));
     const rootMission = root.mission;
     if (rootPayload.iss !== rootMission.issuer) throw new Error("attenuation root iss != mission.issuer");
@@ -1080,6 +1089,7 @@ export class McpPaymentsServer {
       ...(missionClaim ? { missionClaim } : {}),
       cnfJkt: leafCnf,
       credentialAuthority,
+      validatedBoundary: validated,
     };
   }
 

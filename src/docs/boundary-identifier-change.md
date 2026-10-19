@@ -49,6 +49,15 @@ whose boundary changes with no `replaces` record.
   nonmatching audiences refuse, and so does every token of an issuer and
   profile whose aliases map one value to two boundaries. Other members of
   an array are ignored. The transaction token keeps its singleton rule.
+- The validated facts carry the boundary and statement version `aud` was
+  validated against (`validatedBoundary`). Before any decision work, at
+  intake and again at the decision, the PEP refuses
+  `credential_boundary_changed` when the boundary or version it
+  establishes differs: a cutover fell between validation and decision.
+  The refusal is a token-validation failure at the boundary in force, so
+  it is recorded there (`token_invalid`); the credential is never moved
+  into a boundary that did not accept it, and the client's retry is
+  validated afresh.
 - `resource.properties.audience`, the permit's attempt, every Refusal
   Record, Decision Evidence and Execution Evidence carry the boundary,
   never an `aud` value or alias. The audience is in the PDP's
@@ -84,9 +93,11 @@ URL or the Resource-policy object.
    and are re-provisioned for the new boundary.
 2. **Stop old admissions.** At `effective_at` every PEP establishes the new
    boundary. The reference refuses in-flight operations rather than
-   draining them: the `enforcement_boundary` permit-use check suppresses a
-   permit decided under the old boundary with `kill_switch`, and the
-   client retries under the new one. To drain instead, stop routing new
+   draining them: a request whose credential was validated under the old
+   version is refused `credential_boundary_changed`, and the
+   `enforcement_boundary` permit-use check suppresses a permit decided
+   under the old boundary or version with `kill_switch`. The client
+   retries under the new one. To drain instead, stop routing new
    requests to the boundary before `effective_at` and wait for in-flight
    operations to finish.
 3. **Invalidate old permits and caches.** The same check refuses every held
