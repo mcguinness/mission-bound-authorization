@@ -1205,6 +1205,13 @@ the authorization binding.
 
 ## Worked PDP request
 
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+The AuthZEN `resource` object's `type` and `id` name the object for
+Resource-policy evaluation, not the operation target.
+
 The `policy_view_id` values in this document's examples
 (`sha-256:kP3xR9sQ...`) differ from the runtime profile's worked
 materialized-view value (`sha-256:kFxuopgt...`): the two manifests

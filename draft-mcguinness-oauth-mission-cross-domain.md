@@ -1375,6 +1375,11 @@ is behind the Resource AS `ras.partner.example.com`, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.
 
+In the examples in this document, the partner ERP's operation contract
+identifies `https://erp.partner.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 ## Stage 2: Cross-Domain Projection via ID-JAG (Between Domains)
 
 The agent needs the partner ERP, behind the Resource AS

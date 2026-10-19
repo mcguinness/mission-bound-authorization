@@ -78,6 +78,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC7942:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -1118,6 +1126,11 @@ one request member and one evidence member:
 : REQUIRED for a duration-metered action, otherwise absent. A string
   containing an ISO 8601 duration (the `duration` rule in Appendix A of
   {{RFC3339}}): the PEP's measured duration for the executed action.
+
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
 
 A renewal repeats the evaluation-request envelope for the same
 activity and adds `context.prior_evaluation_id`. Here a long-running,

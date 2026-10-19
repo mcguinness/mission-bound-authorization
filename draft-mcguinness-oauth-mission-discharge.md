@@ -1036,6 +1036,11 @@ commit.
 
 ## Worked Example {#example}
 
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 A Mission for `alice` reconciles Q3 payables. Its Authority Set has two
 entries: a read over the ledger, and a write to post journal entries,
 bounded to under 500 USD and discharged when the Q3 close is finalized:

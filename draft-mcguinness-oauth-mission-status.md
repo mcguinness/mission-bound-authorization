@@ -530,6 +530,11 @@ dedicated Mission Status operation therefore uses a new media type and a
 JWS, not {{RFC9701}} (see {{rfc-9701-vs-media-type}}). Implementations
 MUST NOT use {{RFC9701}} for the dedicated Mission Status operation.
 
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.
 
