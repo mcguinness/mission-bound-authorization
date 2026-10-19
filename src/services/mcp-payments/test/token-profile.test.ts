@@ -353,9 +353,16 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
     expect((await attempt(bound, "lookup_vendor", { vendor_id: "acme" })).decided).toHaveLength(1);
     refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "globex" }), { type: "vendor", id: "globex" });
     // The target comes from store state, never the argument: a vendor id the
-    // store does not hold resolves to no vendor, which a vendor-bound
-    // credential never covers, even one that lists that id.
-    refusedBeforePdp(await attempt(bound, "lookup_vendor", { vendor_id: "initech" }), { type: "server", id: CANONICAL_RESOURCE });
+    // store does not hold is refused unknown_vendor before the credential
+    // bound and any PDP request (#1251, D484), even under a credential that
+    // lists that id. The signed record names no target it could not resolve.
+    const unknown = await attempt(bound, "lookup_vendor", { vendor_id: "initech" });
+    expect(unknown.result).toEqual({ permitted: false, refusal_reason: "unknown_vendor" });
+    expect(unknown.decided).toHaveLength(0);
+    const refusals = unknown.evidence.all().filter((e) => e.kind === "refusal");
+    expect(refusals).toHaveLength(1);
+    expect(refusals[0]?.content).toMatchObject({ denial_reason: "target_unresolvable" });
+    expect((refusals[0]?.content as { resource?: unknown }).resource).toBeUndefined();
   });
 
   it("forwards a credential's approval requirement to the PDP, which decides it (D312)", async () => {
