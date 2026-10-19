@@ -42,6 +42,12 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
    * equal to `audience`.
    */
   operationTargets?: readonly string[];
+  /**
+   * @spec runtime#boundary-identifier (#853, D487): the boundaries the remote
+   * server authorizes this PEP for, read on every request (for example from
+   * the declared boundary context). Absent, `[audience]`.
+   */
+  scopes?: () => readonly string[];
   getOptions:(request: EvaluationRequest) => DecisionOptions | Promise<DecisionOptions>;
   timeoutMs?: number;
   pepEpoch?: string;
@@ -72,7 +78,7 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   const server = await createPdpHttpServer({
     peps: new Map([[
       config.pepId,
-      { secret, scopes: [config.audience], ...(config.operationTargets ? { operationTargets: config.operationTargets } : {}) },
+      { secret, scopes: config.scopes ?? [config.audience], ...(config.operationTargets ? { operationTargets: config.operationTargets } : {}) },
     ]]),
     getOptions: config.getOptions,
     // The server binds the authenticated requester and its consumption-status

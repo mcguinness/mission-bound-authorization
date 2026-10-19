@@ -48,6 +48,7 @@ import {
 } from "@mission/pdp";
 import {
   ActorRecords,
+  boundaryEvidenceAuthorization,
   buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
@@ -69,6 +70,7 @@ import {
   type MissionReference,
   OutcomeReconciler,
   PaymentsStore,
+  paymentsBoundaryContext,
   Pep,
   type PepDeps,
   type ReceiptIssuerScope,
@@ -730,6 +732,16 @@ export async function composeStack(opts: {
   // `decide`. This wiring, and the PEP it wires, hold the decision function
   // and the published verification material, and nothing that can emit.
   const evidenceKeys = createEphemeralEvidenceKeys();
+  // @spec runtime#runtime-conformance (#853, D487): the one declared boundary
+  // context every producer here reads: the PEP establishes its boundary from
+  // it, and the PDP's Decision Evidence and Refusal Records and the PEP's own
+  // records sign only for a boundary it authorizes their emitter for, so all
+  // of them switch together at a declared cutover.
+  const boundary = paymentsBoundaryContext();
+  const pdpBoundary = (): string | undefined => {
+    const established = boundary.establish();
+    return established.ok ? established.boundary : undefined;
+  };
   // @spec runtime#idempotency (#917, D223): the PDP's Exact claim domain, a
   // durable single-writer SQLite file named in configuration and owned by the
   // statement's one PDP. It verifies settlement against exactly the
@@ -764,6 +776,8 @@ export async function composeStack(opts: {
       verificationKey: decisionEvidenceKeys.publicKey,
       emitterId: CANONICAL_RESOURCE,
       audience: CANONICAL_RESOURCE,
+      authorizesAudience: (audience) =>
+        boundary.authorizesEvidence({ audience, kid: decisionEvidenceKey.kid, emitter: CANONICAL_RESOURCE, role: "pdp" }, "current"),
     },
     claims: pdpClaims,
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
@@ -775,7 +789,7 @@ export async function composeStack(opts: {
     refusals: createPdpRefusalRecorder({
       signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
       emitterId: CANONICAL_RESOURCE,
-      scope: CANONICAL_RESOURCE,
+      scope: (requested) => (requested !== undefined && requested === pdpBoundary() ? requested : undefined),
       retain: (record) => {
         const missionId = "unknown";
         evidenceRetention.retain({
@@ -835,6 +849,7 @@ export async function composeStack(opts: {
       { ...decisionPoint.evidenceVerification, role: "pdp" },
     ]),
     evidenceRetention,
+    boundaryEvidenceAuthorization(boundary),
   );
   // @spec runtime#runtime-conformance — the deployment's own receipt-issuer
   // designation, over the key sets above and the locations its own statement
@@ -959,6 +974,13 @@ export async function composeStack(opts: {
   const pepId = "mcp-payments-pep";
   const decisionChannel = await createDecisionChannel(decisionPoint, {
     mode, pepId, audience: CANONICAL_RESOURCE,
+    // @spec runtime#boundary-identifier (#853, D487): the PDP accepts a
+    // boundary identifier only from a PEP authorized for it, read from the
+    // version in force on every request.
+    scopes: () => {
+      const established = pdpBoundary();
+      return established !== undefined ? [established] : [];
+    },
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
@@ -986,6 +1008,7 @@ export async function composeStack(opts: {
   const pep = new Pep({
     payments,
     evidence,
+    boundary,
     decide: decisionChannel.decide,
     claims: decisionChannel.claims,
     fga,

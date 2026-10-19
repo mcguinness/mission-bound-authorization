@@ -12,6 +12,7 @@ import {
   credentialEntriesFromAatTools,
   type DpopProofReplay,
   isIdempotencyKey,
+  mediaTypeOf,
   MISSION_TXN_TOKEN_TYP,
   missionInvariantsEqual,
   newDpopProofReplay,
@@ -29,6 +30,8 @@ import {
 } from "jose";
 import type { ActObject } from "@mission/actor-chain";
 import {
+  type AudienceContext,
+  type AudienceValidation,
   executionLeaseMaxSeconds,
   executionLeaseMs,
   loadRuntimePosture,
@@ -52,6 +55,7 @@ import {
   type LoadedView,
   loadCheckedView,
   type MissionBoundTokenFacts,
+  paymentsBoundaryContext,
   type MissionReference,
   type OrdinaryTokenFacts,
   type Pep,
@@ -90,6 +94,19 @@ function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_
     ...(typeof payload.iss === "string" ? { issuer: payload.iss } : {}),
     ...(typeof payload.exp === "number" ? { expires_at: new Date(payload.exp * 1000).toISOString() } : {}),
   };
+}
+
+/**
+ * @spec runtime-oauth#token-validation (#853, D487): a verified credential
+ * whose `aud` does not name the enforcement boundary the PEP establishes, or
+ * a boundary that cannot be established. Refused before any claim becomes a
+ * decision input.
+ */
+export class TokenAudienceError extends Error {
+  constructor(readonly reason: string) {
+    super(`token audience refused: ${reason}`);
+    this.name = "TokenAudienceError";
+  }
 }
 
 /**
@@ -537,6 +554,28 @@ export class McpPaymentsServer {
     });
   }
 
+  /**
+   * @spec runtime-oauth#token-validation (#853, D487): the audience check
+   * every credential class runs after its signature and issuer verify. The
+   * PEP establishes the boundary from its declaration; `aud` (a string or an
+   * array, by membership) must name it directly or through an alias the
+   * declaration scopes to this verified issuer and this credential's `typ`
+   * media type. `aud` never selects the boundary.
+   */
+  private requireAudience(payload: JWTPayload, typ: unknown, issuer: string): void {
+    const checked = this.validateAudience(payload.aud, { issuer, tokenProfile: mediaTypeOf(typ) ?? "" });
+    if (!checked.ok) throw new TokenAudienceError(checked.reason);
+  }
+
+  /**
+   * The PEP's own audience rule, over the boundary context it establishes
+   * its boundary from. A server assembled with no PEP (token validation
+   * alone) reads the published statement's context instead.
+   */
+  private validateAudience(aud: unknown, context: AudienceContext): AudienceValidation {
+    return this.deps.pep ? this.deps.pep.validateAudience(aud, context) : paymentsBoundaryContext().validateAudience(aud, context);
+  }
+
   /** RFC 9728 Protected Resource Metadata. */
   protectedResourceMetadata(): Record<string, unknown> {
     const txn = this.deps.txnChallenge;
@@ -601,8 +640,8 @@ export class McpPaymentsServer {
     refuseTransactionToken(accessToken);
     const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
-      audience: CANONICAL_RESOURCE,
     });
+    this.requireAudience(payload, protectedHeader.typ, this.deps.issuer);
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (!cnf?.jkt) throw new Error("token missing cnf.jkt");
     // Verify the DPoP proof and bind it to the token's cnf.jkt AND to the token
@@ -758,8 +797,8 @@ export class McpPaymentsServer {
     refuseTransactionToken(accessToken);
     const { payload, protectedHeader } = await jwtVerify(accessToken, this.resolveAccessKey, {
       issuer: this.deps.issuer,
-      audience: CANONICAL_RESOURCE,
     });
+    this.requireAudience(payload, protectedHeader.typ, this.deps.issuer);
     // The same claim profile as the HTTP path; no proof is claimed, because
     // this transport delivers none (the documented limitation above).
     const facts = this.missionBoundFactsFrom(payload, protectedHeader.typ);
@@ -837,13 +876,20 @@ export class McpPaymentsServer {
       // federation metadata (this JWKS), never through the request.
       ({ payload } = (await jwtVerify(txnToken, this.resolveTxnKey, {
         issuer: this.deps.asIssuer,
-        audience: CANONICAL_RESOURCE,
         typ: MISSION_TXN_TOKEN_TYP,
       })) as { payload: Record<string, unknown> });
     } catch {
       return { ok: false, refusal_reason: "txn_invalid" };
     }
-    // `aud` is a SINGLETON, exactly this resource; a list is not this profile.
+    // `aud` is a SINGLETON naming this resource's enforcement boundary; a list
+    // is not this profile, which stays stricter than the access token's
+    // membership rule (@spec runtime-oauth#token-validation, #853, D487).
+    if (
+      typeof payload.aud !== "string" ||
+      !this.validateAudience(payload.aud, { issuer: this.deps.asIssuer, tokenProfile: MISSION_TXN_TOKEN_TYP }).ok
+    ) {
+      return { ok: false, refusal_reason: "txn_invalid" };
+    }
     const cnf = payload.cnf as { jkt?: string } | undefined;
     if (
       typeof payload.aud !== "string" ||
@@ -968,9 +1014,9 @@ export class McpPaymentsServer {
     // iss == mission.issuer.
     const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveRootKey, {
       issuer: this.deps.issuer,
-      audience: CANONICAL_RESOURCE,
       algorithms: ["ES256"],
     });
+    this.requireAudience(rootPayload, rootHeader.typ, this.deps.issuer);
     const root = readAttenuationRootClaims(rootHeader.typ, rootPayload, Math.floor(Date.now() / 1000));
     const rootMission = root.mission;
     if (rootPayload.iss !== rootMission.issuer) throw new Error("attenuation root iss != mission.issuer");
@@ -1841,7 +1887,9 @@ export class McpPaymentsServer {
       execution_id: attempt.executionId,
       evaluation_id: permitId,
       mission_id: resolvedMission.id,
-      audience: CANONICAL_RESOURCE,
+      // @spec runtime#permit-binding (#853, D487): the boundary the permit
+      // was decided at, as every disposition record of it carries.
+      audience: attempt.audience,
       authorized_parameter_digest: digest,
       effective_parameter_digest: digest,
       outcome: "completed",

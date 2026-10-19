@@ -29,6 +29,7 @@ import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   type DecisionEvidenceObject,
+  type EnforcementBoundaryContext,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   type EvidenceEmitterRef,
   type EvidenceEnvelope,
@@ -667,6 +668,38 @@ export interface EvidenceSigningKey {
 export type EvidenceSigningConfig = Partial<Record<"pep" | "executor" | "receipt_issuer", EvidenceSigningKey>>;
 
 /**
+ * @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
+ * emission side of evidence-key authorization. Before {@link EvidenceStore}
+ * signs a Refusal Record or an Execution Evidence Object it asks whether its
+ * emitter, in that role, may sign for the record's `audience`; a `false`
+ * refuses the record with nothing signed, sequenced or retained, so one
+ * component's key never signs for a boundary it does not serve.
+ */
+export type EvidenceBoundaryAuthorization = (input: {
+  kind: "refusal" | "execution";
+  audience: string;
+  kid: string;
+  emitterId: string;
+  role: "pep" | "executor";
+}) => boolean;
+
+/**
+ * The reference's authorization over a declared boundary context. A Refusal
+ * Record is new evidence about the current request, so the active version
+ * must authorize the emitter for its `audience`. An Execution Evidence Object
+ * disposes of a permit and keeps that permit's boundary, which a retained
+ * version may authorize: a late or post-cutover disposition keeps its
+ * original identifier and is never relabeled.
+ */
+export function boundaryEvidenceAuthorization(
+  context: Pick<EnforcementBoundaryContext, "authorizesEvidence">,
+  clock: () => Date = () => new Date(),
+): EvidenceBoundaryAuthorization {
+  return ({ kind, audience, kid, emitterId, role }) =>
+    context.authorizesEvidence({ audience, kid, emitter: emitterId, role }, kind === "refusal" ? "current" : "historical", clock());
+}
+
+/**
  * @spec runtime-evidence#execution-evidence-object (Retention), issue #594
  * (W4-8): the durable retention backend {@link EvidenceStore} writes through,
  * implemented by `evidence-retention.ts`'s `EvidenceRetentionStore`.
@@ -866,11 +899,15 @@ export class EvidenceStore {
    * Decision Evidence the PDP emitted ({@link EvidenceStore.retainDecision}).
    * Absent, no Decision Evidence can be verified, so none is retained and
    * the caller fails closed on the result.
+   * @param boundaryAuthorization (#853, D487) the emission-side key-to-boundary
+   * check {@link recordRefusal} and {@link recordExecution} run before
+   * signing. Absent, this store signs for any `audience` its caller names.
    */
   constructor(
     private readonly signer?: EvidenceSigningConfig,
     private readonly resolveDecisionEvidenceKey?: EvidenceKeyResolver,
     private readonly retention?: EvidenceRetentionBackend,
+    private readonly boundaryAuthorization?: EvidenceBoundaryAuthorization,
   ) {
     // Startup recovery (#594 W4-8): a store over a durable backend comes up
     // holding what the previous process retained, so a record inside the
@@ -1019,6 +1056,25 @@ export class EvidenceStore {
     return { retained: true, record: row };
   }
 
+  /**
+   * @spec runtime-evidence#decision-evidence-integrity (#853, D487): refuse,
+   * before anything is signed, a record whose `audience` this emitter's key
+   * is not authorized for.
+   */
+  private requireBoundaryAuthorization(
+    kind: "refusal" | "execution",
+    audience: string,
+    kid: string,
+    emitterId: string,
+    role: "pep" | "executor",
+  ): void {
+    if (this.boundaryAuthorization && !this.boundaryAuthorization({ kind, audience, kid, emitterId, role })) {
+      throw new Error(
+        `EvidenceStore: key "${kid}" of emitter "${emitterId}" (${role}) is not authorized to sign a ${kind} record for audience "${audience}"`,
+      );
+    }
+  }
+
   /** @spec runtime-evidence#pre-decision-refusal: sign and retain a Refusal Record. */
   async recordRefusal(
     emitterId: string,
@@ -1026,6 +1082,7 @@ export class EvidenceStore {
     input: RefusalRecordInput,
   ): Promise<RefusalRecord> {
     const signer = this.requireSigner(role);
+    this.requireBoundaryAuthorization("refusal", input.audience, signer.kid, emitterId, "pep");
     // #1148, D379: a value outside the role's closed set is refused before
     // anything is signed, sequenced or retained.
     if (!isRefusalDenialReason(role, input.denial_reason)) {
@@ -1123,6 +1180,7 @@ export class EvidenceStore {
     input: ExecutionEvidenceInput,
   ): Promise<ExecutionEvidence> {
     const signer = this.requireSigner(role === "executor" ? "executor" : "pep");
+    this.requireBoundaryAuthorization("execution", input.audience, signer.kid, emitterId, role);
     const identity = input.execution_id;
     if (identity === undefined) {
       return this.signAndRetainExecution(emitterId, role, signer, input);

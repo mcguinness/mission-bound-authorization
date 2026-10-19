@@ -9,6 +9,8 @@ export {
   type ListEffectiveParams,
 } from "./effective-params.js";
 export {
+  boundaryEvidenceAuthorization,
+  type EvidenceBoundaryAuthorization,
   EvidenceStore,
   type Evidence,
   type EvidenceInput,
@@ -59,6 +61,10 @@ export {
   buildInsufficientAuthorization,
   type InsufficientAuthorization,
   CANONICAL_RESOURCE,
+  BOUNDARY_CUTOVER_ERROR,
+  BOUNDARY_UNRESOLVABLE,
+  PAYMENTS_PEP_LOCATION,
+  paymentsBoundaryContext,
   TOOL_BASE,
   TOOL_ACTIONS,
   type ActionMapping,
@@ -68,6 +74,7 @@ export {
   dispatchPathFor,
   McpPaymentsServer,
   REVERSIBLE_WRITE_REFUSAL_ERRORS,
+  TokenAudienceError,
   REVERSIBLE_WRITE_TOOLS,
   type ReversibleWriteFailpoints,
   TOOLS,
