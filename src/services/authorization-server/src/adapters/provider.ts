@@ -5402,10 +5402,23 @@ async function decide(
   });
 }
 
+/**
+ * D284, #1328: this deployment's fixed approval wording for a per-action
+ * limit. `max_amount` is the one per-action spending limit this AS supports,
+ * and no aggregate cap exists, so an Approver consenting to it is told that
+ * it applies to each action and that nothing caps the Mission's total.
+ */
+const PER_ACTION_LIMIT_NOTICE =
+  "These limits apply to each action. This approval does not impose a total spending cap across the Mission.";
+
+function carriesPerActionLimit(authority: readonly AuthorityEntry[]): boolean {
+  return authority.some((entry) => entry.constraints?.max_amount !== undefined);
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
-  authority: unknown,
+  authority: readonly AuthorityEntry[],
   proposal?: unknown,
   provenance?: unknown[],
   authoritySource?: AuthoritySource,
@@ -5461,6 +5474,12 @@ function renderApprovalPage(
 <label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
 `
     : "";
+  // D284, #1328: shown under the derived authority whenever an entry the
+  // approval grants carries a per-action limit, and never otherwise.
+  const limitNotice = carriesPerActionLimit(authority)
+    ? `<p class="per-action-limits">${escapeHtml(PER_ACTION_LIMIT_NOTICE)}</p>
+`
+    : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
 ${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
@@ -5468,7 +5487,7 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${limitNotice}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 ${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }
