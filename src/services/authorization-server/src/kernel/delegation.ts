@@ -91,6 +91,13 @@ export function constructDelegatedIssuance(input: {
    * for act-chain-only construction (the current behaviour, unchanged).
    */
   authoritySet?: AuthorityEntry[];
+  /**
+   * @spec mission#delegation-constraints (D198, #869): the delegation depth of
+   * the token being issued, from the AS's own issuance accounting, never from
+   * the nesting of a presented `act`. Undefined is unknown depth: with an
+   * Authority Set supplied, every entry narrows out and the issuance refuses.
+   */
+  accountedDepth?: number;
 }): DelegatedIssuance {
   const maxDepth = input.maxDepth ?? DEFAULT_MAX_DEPTH;
 
@@ -121,11 +128,18 @@ export function constructDelegatedIssuance(input: {
     );
   }
 
-  // @spec draft-mcguinness-oauth-mission#per-entry-enforcement — when the
+  // @spec draft-mcguinness-oauth-mission#per-entry-enforcement: when the
   // delegating Authority Set is supplied, apply the core allowed_delegates gate at
-  // the resulting delegation depth (flat.length: the token being issued).
+  // the accounted depth of the token being issued (D198). The chain length
+  // above is a structural cap only, never the authorization depth.
   let delegatedAuthority: AuthorityEntry[] | undefined;
   if (input.authoritySet) {
+    if (input.accountedDepth === undefined) {
+      throw new InstanceAssertionError(
+        "invalid_target",
+        "the delegation depth of the token being issued cannot be established, so no entry can be delegated",
+      );
+    }
     const delegate: DelegateCandidate = {
       // The `{ "sub": ... }` matcher is a CLIENT IDENTIFIER in the issuing AS's
       // namespace: the authenticated client, NOT the agent_instance_id act-chain
@@ -134,7 +148,7 @@ export function constructDelegatedIssuance(input: {
       sub: input.instance.clientId,
       assertedProfile: input.instance.subProfile,
     };
-    delegatedAuthority = gateDelegableAuthority(input.authoritySet, delegate, flat.length);
+    delegatedAuthority = gateDelegableAuthority(input.authoritySet, delegate, input.accountedDepth);
     // @spec draft-mcguinness-oauth-mission#empty-result — narrowing to no entries
     // MUST refuse with invalid_target rather than issue a token with empty
     // authority; the subject grant itself remains valid for other exchanges.

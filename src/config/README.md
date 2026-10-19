@@ -30,6 +30,27 @@ floor until the demo server's `POST /bff/approver/login` records a new one.
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next approval decision; Missions already approved are unaffected.
 
+## `delegation.json`
+
+The clients a same-Mission delegation may designate (`@spec
+mission#designation`, #869, D449). A designation names its client in `aud`,
+so the binding forbids designating a client whose identifier any resource
+server accepts as an audience for this AS's tokens, aliases included, and
+refuses a client for which the AS cannot establish that separation. Listing
+a client in `designable_clients` is this deployment's statement that no
+resource server accepts its identifier as an audience; the AS also refuses a
+listed client whose identifier is a configured resource audience, a
+registered resource server's accepted audience or alias, or one of the
+Mission's own resources. The shipped list names the invoice-extraction
+sub-agent. Delegation itself is opt-in and off in both baselines.
+
+- **Owner.** The deployment's security owner, with each resource server's
+  operator for the audiences it accepts.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, an empty identifier and a duplicate.
+- **Updating.** Edit, review, and restart the AS. A change applies to the
+  next designation.
+
 ## `scope-projection.json`
 
 The trusted scope-projection mapping (`@spec mission#scope-projection`, step

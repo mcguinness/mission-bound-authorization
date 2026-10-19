@@ -18,6 +18,12 @@
 export type ProviderCapability =
   /** RFC 8693 exchange with `request_refresh_token` (async-delegation). */
   | "async-delegation"
+  /**
+   * @spec mission#delegation, mission#designation (#869, D449): same-Mission
+   * delegation by designation, the core's optional Delegation capability
+   * (ledger `core.delegation`). Opt-in: off unless a set names it.
+   */
+  | "delegation"
   /** Child creation (exchange to a JWT grant) and the child's RFC 7523 jwt-bearer redemption. */
   | "child-delegation"
   /** ICA subject token to a continuation ID-JAG (cross-domain projection). */
@@ -87,13 +93,17 @@ export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
   "expansion",
   // @spec mission-template#dispatch-handoff: the handoff exchange.
   "templates",
+  // @spec mission#delegation: designation and its redemption (opt-in).
+  "delegation",
 ];
 
 /**
- * The experimental capabilities no default enables (D412: nothing
- * default-on): each is on only where a capability set names it.
+ * The capabilities no default enables (D412: nothing default-on): each is on
+ * only where a capability set names it. Device authorization is experimental;
+ * delegation is the core's optional Delegation capability, which neither
+ * baseline elects (D415, D449).
  */
-export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = ["device-authorization"];
+export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = ["device-authorization", "delegation"];
 
 /**
  * Whether `capability` is enabled. An absent set enables everything but the

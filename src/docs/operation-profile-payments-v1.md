@@ -1,14 +1,14 @@
-# payments-runtime-profile-v5
+# payments-runtime-profile-v6
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v5`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v6`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
-- **v5** (#1266, D457): the resource enforces the Mission Resource Access
+- **v6** (#1266, D457): the resource enforces the Mission Resource Access
   Common Constraints listed under "Constraint enforcement: Common
   Constraints" below against facts it reads from its own records, carries
   those facts on the decision request, and advertises exactly the enforced
@@ -18,6 +18,12 @@ The file name is the document's stable name and does not carry the version.
   remittance routing; for a vendor whose record names its own routing the
   effective parameters gain `recipients`, so that operation's
   `parameter_digest` binds them. Every other digest is unchanged.
+
+- **v5** (#1270): names the settlement identity of `execute_wire_transfer`,
+  the invoice. The ledger settles each invoice once and refuses a later
+  wire for it, under any Mission, operation key or caller key, with no
+  effect (`already_settled`); `check_transfer` reports a settled invoice
+  as not feasible. Decision bytes are unchanged from v4.
 
 - **v4** (#828, D429): the Resource policy also evaluates the
   authenticated client, which must hold `authorized_client` on every
@@ -109,8 +115,9 @@ matched Mission entry (the PDP) and on the credential's own entries (the
 PEP before any decision, and the PDP), against facts the PEP reads from
 the payments store, never from tool arguments. A fact the store does not
 hold refuses, as does a malformed constraint value. The Authorization
-Server refuses every other Common Constraint at intake, configuration load
-and derivation, and the PDP refuses a matched entry that carries one.
+Server refuses every other constraints key (a Common Constraint registered
+later, or an unknown key) at intake, configuration load and derivation,
+and the PDP refuses a matched entry that carries one.
 
 | Key | Authoritative fact | Decision request member | Targets without the fact |
 |---|---|---|---|
@@ -348,6 +355,40 @@ fresh Decision; a different operation under the same key is refused
   instance-profiled leaf with no client) is refused `actor_unkeyable`
   before any effect, recorded as
   `https://payments.demo/execution-errors/actor_unkeyable`.
+
+## Settlement identity
+
+An idempotency key, and the operation key above, identifies one request,
+not the business event it carries out (runtime § security
+considerations). `execute_wire_transfer` settles an invoice, and the
+invoice (`invoice_id`) is its settlement identity:
+
+- The ledger connector settles each invoice at most once. A wire under the
+  same operation key is a retry and returns the original result
+  (`deduped`). A wire for an invoice another operation already settled is
+  refused with no effect, whatever Mission, operation key, record version
+  or caller `idempotency_key` it arrives under. The check and the ledger
+  insert are one step at the commit point, and a unique settlement index
+  holds the invariant.
+- The refusal is affirmative non-execution: Execution Evidence `outcome`
+  `suppressed` with the collision-resistant `error`
+  `https://payments.demo/execution-errors/already_settled`, and the
+  caller-visible diagnostic `already_settled`. No money moved, so nothing
+  stays charged.
+- `check_transfer` reports a settled invoice as not feasible.
+- Outcome reconciliation attributes a ledger entry to an action only
+  through the identifiers recorded with it, the permit (evaluation)
+  identifier and the operation key. An entry for the same invoice under
+  another permit is that operation's effect, never this action's outcome.
+
+Residuals:
+
+- `send_remittance_email` keeps operation-key deduplication only: a
+  second remittance notice for one invoice is an external commitment but
+  moves no money.
+- An invoice amended after settlement (a larger amount) is refused as
+  already settled; paying the difference is a new business event that
+  needs its own identity and is left to operator handling.
 
 ## Permits, leases, commit point (D28/D36/D29/D39)
 

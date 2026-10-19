@@ -362,6 +362,36 @@ describe("the issuance-only launcher refuses every excluded path (#873)", () => 
     expectUnsupportedGrant(r);
   });
 
+  it("same-Mission delegation (a designation and its redemption) is refused unsupported_grant_type (@spec mission#delegation, D449)", async () => {
+    expect(ISSUANCE_ONLY_CAPABILITIES.has("delegation")).toBe(false);
+    const designation = await token(
+      asUrl,
+      deployment.as,
+      {
+        grant_type: TE,
+        subject_token: base.accessToken,
+        subject_token_type: AT_TYPE,
+        requested_token_type: AT_TYPE,
+        audience: "subagent-invoice-extractor",
+      },
+      base.keys,
+    );
+    expectUnsupportedGrant(designation);
+    const redemption = await token(
+      asUrl,
+      deployment.as,
+      {
+        grant_type: TE,
+        subject_token: base.accessToken,
+        subject_token_type: AT_TYPE,
+        requested_token_type: AT_TYPE,
+        resource: PLAIN_RS_AUDIENCE,
+      },
+      base.keys,
+    );
+    expectUnsupportedGrant(redemption);
+  });
+
   it("the AROP deferred grant is refused unsupported_grant_type", async () => {
     const r = await token(asUrl, deployment.as, { grant_type: DEFERRED, deferral_code: "x" });
     expectUnsupportedGrant(r);
