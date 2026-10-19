@@ -29,6 +29,8 @@ import { compareInstants, type Instant, parseRfc3339Instant } from "./rfc3339-in
 export interface ConstraintFacts {
   /** The RFC 3339 issuance instant of the resource the operation acts on, from the resource's own record. */
   resourceIssuedAt?: string;
+  /** The tenant that owns the resource the operation acts on, from the resource's own record. */
+  tenant?: string;
 }
 
 /** One Common Constraint's definition. */
@@ -69,9 +71,23 @@ const RESOURCE_ISSUED_BEFORE: Semantics = {
   },
 };
 
+/**
+ * `tenant`: the resource belongs to the named tenant. Exact string
+ * comparison (no case folding or other normalization), so two spellings that
+ * differ in any way are different tenants.
+ */
+const TENANT: Semantics = {
+  valid: (v) => typeof v === "string" && v.length > 0,
+  noBroader: (c, r) => c === r,
+  // The common value when equal; differing tenants have no intersection.
+  intersect: (a, b) => (a === b ? a : undefined),
+  satisfied: (v, facts) => typeof facts.tenant === "string" && facts.tenant === v,
+};
+
 const SEMANTICS = {
   resource_issued_after: RESOURCE_ISSUED_AFTER,
   resource_issued_before: RESOURCE_ISSUED_BEFORE,
+  tenant: TENANT,
 } as const satisfies Record<string, Semantics>;
 
 /** A Common Constraint key whose semantics this module defines. */

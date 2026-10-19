@@ -535,7 +535,13 @@ export class McpPaymentsServer {
       mission_bound_authorization_required: true,
       // @spec resource-access#protected-resource-metadata (#1266): only keys
       // this resource enforces against its own authoritative facts.
-      mission_constraints_supported: ["max_amount", "vendors", "resource_issued_after", "resource_issued_before"],
+      mission_constraints_supported: [
+        "max_amount",
+        "vendors",
+        "resource_issued_after",
+        "resource_issued_before",
+        "tenant",
+      ],
       // Deployment-local publication, not a new protocol baseline member.
       enforcement_scope_statement: this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,
       // @spec txn-authorization#two-phase-expiry — key discovery rides the

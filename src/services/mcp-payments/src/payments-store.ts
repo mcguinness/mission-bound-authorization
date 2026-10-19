@@ -12,6 +12,7 @@ CREATE TABLE vendors (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   status TEXT NOT NULL,
+  tenant TEXT,
   version INTEGER NOT NULL DEFAULT 1
 ) STRICT;
 CREATE TABLE invoices (
@@ -38,6 +39,13 @@ export interface Vendor {
   id: string;
   name: string;
   status: string;
+  /**
+   * @spec resource-access#initial-common-constraints (#1266): the tenant that
+   * owns this vendor and, through it, the vendor's invoices, as this service
+   * recorded it. The authoritative fact the `tenant` bound reads; absent
+   * (`null`) when the record names none, which satisfies no tenant bound.
+   */
+  tenant?: string | null;
   version: number;
 }
 export interface Invoice {
@@ -64,8 +72,8 @@ export class PaymentsStore {
   }
 
   seed(vendors: Omit<Vendor, "version">[], invoices: Omit<Invoice, "version">[]): void {
-    const v = this.db.prepare("INSERT INTO vendors (id, name, status) VALUES (?, ?, ?)");
-    for (const x of vendors) v.run(x.id, x.name, x.status);
+    const v = this.db.prepare("INSERT INTO vendors (id, name, status, tenant) VALUES (?, ?, ?, ?)");
+    for (const x of vendors) v.run(x.id, x.name, x.status, x.tenant ?? null);
     const i = this.db.prepare(
       "INSERT INTO invoices (id, vendor_id, amount, currency, payee_account, status, issued_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     );
@@ -96,6 +104,11 @@ export class PaymentsStore {
   /** Change an invoice's recorded issuance instant (test hook for a changed authoritative fact: bumps version). */
   setInvoiceIssuedAt(id: string, issuedAt: string | null): void {
     this.db.prepare("UPDATE invoices SET issued_at = ?, version = version + 1 WHERE id = ?").run(issuedAt, id);
+  }
+
+  /** Change the tenant a vendor's record names (test hook for a changed authoritative fact: bumps version). */
+  setVendorTenant(id: string, tenant: string | null): void {
+    this.db.prepare("UPDATE vendors SET tenant = ?, version = version + 1 WHERE id = ?").run(tenant, id);
   }
 
   /** Mutate an invoice (test hook for TOCTOU: bumps version). */

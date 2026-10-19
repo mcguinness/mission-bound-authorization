@@ -160,6 +160,53 @@ describe("projections that cannot carry the bound refuse it (@spec resource-acce
   });
 });
 
+describe("derivation, projection and intake over tenant (@spec resource-access#initial-common-constraints)", () => {
+  it("a proposal omitting the ceiling's tenant derives with it, and one naming it derives unchanged", () => {
+    expect(deriveAuthoritySet(intent, policy([entry({ tenant: "acme" })]), [entry()])).toEqual([
+      entry({ tenant: "acme" }),
+    ]);
+    expect(deriveAuthoritySet(intent, policy([entry({ tenant: "acme" })]), [entry({ tenant: "acme" })])).toEqual([
+      entry({ tenant: "acme" }),
+    ]);
+  });
+
+  it("refuses a proposal naming another tenant, or the same name in another case, never omitting it", () => {
+    for (const other of ["globex", "Acme"]) {
+      const e = refusal(() =>
+        deriveAuthoritySet(intent, policy([entry({ tenant: "acme" })]), [entry({ tenant: other })]),
+      );
+      expect(e.code, other).toBe("invalid_authorization_details");
+      expect(e.message, other).toMatch(/tenant values have no intersection/);
+    }
+  });
+
+  it("projection keeps the shared tenant and drops a fragment whose tenants differ", () => {
+    expect(projectThroughEffective([entry()], [entry({ tenant: "acme" })])).toEqual([entry({ tenant: "acme" })]);
+    expect(projectThroughEffective([entry({ tenant: "globex" })], [entry({ tenant: "acme" })])).toEqual([]);
+  });
+
+  it("intake refuses an empty or non-string tenant", () => {
+    for (const bad of ["", 42, ["acme"]]) {
+      const e = refusal(() =>
+        validateAuthorityProposal(
+          JSON.stringify([{ type: "mission_resource_access", resource: R, actions: ["invoices.read"], constraints: { tenant: bad } }]),
+          [R],
+        ),
+      );
+      expect(e.code, JSON.stringify(bad)).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("scope projection and the attenuation root mapping refuse a tenant-bound entry", () => {
+    const mapping = {
+      rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
+      mandatory_controls: {},
+    };
+    expect(scopeValueSafeForEntry(mapping, entry({ tenant: "acme" }))).toBe(false);
+    expect(() => mapAuthorityToTools([entry({ tenant: "acme" })])).toThrow(/unknown constraint 'tenant'/);
+  });
+});
+
 describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;

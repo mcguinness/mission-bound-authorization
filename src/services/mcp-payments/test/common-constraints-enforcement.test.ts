@@ -15,6 +15,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { IMPLEMENTED_COMMON_CONSTRAINTS } from "@mission/core";
 import { describe, expect, it } from "vitest";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
@@ -58,8 +59,14 @@ interface Harness {
 function harness(opts: { mission?: Record<string, unknown>; credential?: Record<string, unknown> }): Harness {
   const payments = new PaymentsStore();
   payments.seed(
-    [{ id: "acme", name: "Acme", status: "approved" }],
     [
+      { id: "acme", name: "Acme", status: "approved", tenant: "payments-demo" },
+      { id: "globex", name: "Globex", status: "approved", tenant: "other-tenant" },
+      { id: "initech", name: "Initech", status: "approved" },
+    ],
+    [
+      { id: "inv-globex", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable" },
+      { id: "inv-initech", vendor_id: "initech", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable" },
       { id: "inv-q3", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-08-15T09:30:00Z" },
       { id: "inv-early", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-06-30T23:59:59Z" },
       { id: "inv-late", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-10-01T00:00:00Z" },
@@ -232,6 +239,65 @@ describe("the payments resource enforces resource_issued_after and resource_issu
   });
 });
 
+describe("the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement)", () => {
+  const TENANT = { tenant: "payments-demo" };
+
+  it("permits an invoice and a vendor whose records name the bound's tenant, carrying the store's fact", async () => {
+    const h = harness({ mission: TENANT });
+    const invoice = await read(h, "inv-q3");
+    expect(invoice.ok, JSON.stringify(invoice)).toBe(true);
+    expect((h.lastResource()?.properties as Record<string, unknown>).tenant).toBe("payments-demo");
+    const vendor = await h.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, h.token);
+    expect(vendor.ok, JSON.stringify(vendor)).toBe(true);
+  });
+
+  it("refuses an invoice and a vendor of another tenant", async () => {
+    const h = harness({ mission: TENANT });
+    const invoice = await read(h, "inv-globex");
+    expect(invoice.ok).toBe(false);
+    expect(invoice.denial_reason).toBe("parameter_violation");
+    const vendor = await h.server.callReadTool("lookup_vendor", { vendor_id: "globex" }, h.token);
+    expect(vendor.ok).toBe(false);
+    expect(vendor.denial_reason).toBe("parameter_violation");
+  });
+
+  it("refuses a resource whose record names no tenant (missing fact), and a collection read", async () => {
+    const h = harness({ mission: TENANT });
+    expect((await read(h, "inv-initech")).denial_reason).toBe("parameter_violation");
+    expect((await h.server.callReadTool("lookup_vendor", { vendor_id: "initech" }, h.token)).ok).toBe(false);
+    expect((await h.server.callReadTool("list_invoices", { vendor_id: "acme" }, h.token)).ok).toBe(false);
+  });
+
+  it("a client-supplied tenant cannot establish the fact: the argument is refused at intake", async () => {
+    const h = harness({ mission: TENANT });
+    const res = await h.server.callReadTool("get_invoice", { invoice_id: "inv-globex", tenant: "payments-demo" }, h.token);
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("invalid_request");
+    expect(h.decisions()).toBe(0);
+  });
+
+  it("refuses a write whose vendor's tenant changed between decision and execution", async () => {
+    const h = harness({ mission: TENANT });
+    const res = await h.server.callWriteTool(
+      "schedule_payment",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` },
+      h.token,
+      () => h.payments.setVendorTenant("acme", "other-tenant"),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("parameter_mismatch");
+  });
+
+  it("a credential bound to a tenant is refused at the PEP, before any decision, for another tenant's invoice", async () => {
+    const h = harness({ credential: TENANT });
+    const res = await read(h, "inv-globex");
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(h.decisions()).toBe(0);
+    expect((await read(h, "inv-q3")).ok).toBe(true);
+  });
+});
+
 describe("the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses an operation whose matched Mission entry carries a constraints key the resource does not understand", async () => {
     const h = harness({ mission: { x_region: "eu" } });
@@ -243,12 +309,15 @@ describe("the payments resource fails closed on a constraint it does not enforce
 });
 
 describe("protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata)", () => {
-  it("advertises the issuance bounds beside max_amount and vendors, and no Common Constraint it does not enforce", () => {
+  it("advertises exactly max_amount, vendors and the Common Constraints it enforces, and no other", () => {
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
-    expect(supported).toEqual(expect.arrayContaining(["resource_issued_after", "resource_issued_before"]));
-    for (const unenforced of ["tenant", "recipient_domain", "time_window", "data_classification", "allowed_tools"]) {
-      expect(supported, unenforced).not.toContain(unenforced);
-    }
+    expect([...supported].sort()).toEqual(
+      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant"].sort(),
+    );
+    // The supported set the Authorization Server admits is the one this resource enforces.
+    expect([...supported].sort()).toEqual(
+      ["max_amount", "vendors", ...IMPLEMENTED_COMMON_CONSTRAINTS].sort(),
+    );
   });
 });

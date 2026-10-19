@@ -347,3 +347,51 @@ describe("the supported set, the config and wire validators, and the credential 
     expect(credentialAuthorityPermits(authority, target)).toBe(false);
   });
 });
+
+describe("tenant (@spec resource-access#initial-common-constraints)", () => {
+  it("subset: no broader only when equal, compared as exact strings", () => {
+    expect(commonConstraintsNoBroader({ tenant: "acme" }, { tenant: "acme" })).toBe(true);
+    expect(commonConstraintsNoBroader({ tenant: "globex" }, { tenant: "acme" })).toBe(false);
+    expect(commonConstraintsNoBroader({ tenant: "Acme" }, { tenant: "acme" })).toBe(false);
+    expect(commonConstraintsNoBroader({ tenant: "acme " }, { tenant: "acme" })).toBe(false);
+    expect(commonConstraintsNoBroader({}, { tenant: "acme" })).toBe(false);
+    expect(commonConstraintsNoBroader({ tenant: "acme" }, {})).toBe(true);
+  });
+
+  it("intersection: the common value when equal, otherwise no intersection", () => {
+    expect(intersectCommonConstraints({ tenant: "acme" }, { tenant: "acme" })).toEqual({
+      ok: true,
+      values: { tenant: "acme" },
+    });
+    expect(intersectCommonConstraints({ tenant: "acme" }, undefined)).toEqual({
+      ok: true,
+      values: { tenant: "acme" },
+    });
+    expect(intersectCommonConstraints({ tenant: "acme" }, { tenant: "globex" }).ok).toBe(false);
+    expect(intersectCommonConstraints({ tenant: "acme" }, { tenant: "ACME" }).ok).toBe(false);
+  });
+
+  it("enforcement: the resource's own tenant must equal the bound; an absent tenant refuses", () => {
+    expect(commonConstraintGates({ tenant: "acme" }, { tenant: "acme" })).toEqual({
+      satisfied: true,
+      evaluated: ["tenant"],
+    });
+    expect(commonConstraintGates({ tenant: "acme" }, { tenant: "globex" }).satisfied).toBe(false);
+    expect(commonConstraintGates({ tenant: "acme" }, { tenant: "ACME" }).satisfied).toBe(false);
+    expect(commonConstraintGates({ tenant: "acme" }, {}).satisfied).toBe(false);
+  });
+
+  it("value syntax: a non-empty string; the validators and the credential reader agree", () => {
+    expect(SUPPORTED_CONSTRAINT_KEYS).toContain("tenant");
+    expect(isAuthorityEntry(entry({ tenant: "acme" }))).toBe(true);
+    for (const bad of ["", 7, ["acme"], null]) {
+      expect(isAuthorityEntry(entry({ tenant: bad })), JSON.stringify(bad)).toBe(false);
+      expect(() => parseCredentialAuthority([entry({ tenant: bad })]), JSON.stringify(bad)).toThrow(
+        CredentialAuthorityError,
+      );
+    }
+    expect(parseCredentialAuthority([entry({ tenant: "acme" })])[0]?.constraints).toEqual({
+      tenant: "acme",
+    });
+  });
+});

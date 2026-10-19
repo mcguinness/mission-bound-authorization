@@ -39,6 +39,7 @@ export interface CredentialAuthorityEntry {
     /** @spec resource-access#initial-common-constraints (#1266), read through common-constraints.ts. */
     resource_issued_after?: string;
     resource_issued_before?: string;
+    tenant?: string;
   };
 }
 

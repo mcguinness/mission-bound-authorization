@@ -23,6 +23,7 @@ const hoisted = await vi.hoisted(async () => {
   const CEILING_CONSTRAINTS = {
     resource_issued_after: "2026-07-01T00:00:00Z",
     resource_issued_before: "2026-09-30T23:59:59Z",
+    tenant: "payments-demo",
   };
   const dir = mkdtempSync(join(tmpdir(), "mission-config-1266-"));
   cpSync(fileURLToPath(new URL("../../../config", import.meta.url)), dir, { recursive: true });
@@ -237,14 +238,15 @@ afterAll(async () => {
   rmSync(hoisted.dir, { recursive: true, force: true });
 });
 
-describe("resource_issued_after and resource_issued_before survive every issuance path (@spec resource-access#common-constraints)", () => {
+describe("the implemented Common Constraints survive every issuance path (@spec resource-access#common-constraints)", () => {
   // The proposal narrows the after-bound (in another offset) and omits the
   // before-bound, which the derived entry inherits from the ceiling.
   const NARROWED = { resource_issued_after: "2026-08-01T00:00:00+02:00" };
+  // Every other ceiling key is inherited unchanged.
   const DERIVED = {
     vendors: ["acme"],
+    ...hoisted.CEILING_CONSTRAINTS,
     resource_issued_after: "2026-08-01T00:00:00+02:00",
-    resource_issued_before: hoisted.CEILING_CONSTRAINTS.resource_issued_before,
   };
   let issued: { at: string; rt: string; keys: Keys; missionId: string };
 
@@ -330,6 +332,41 @@ describe("derivation and intake over resource_issued_after and resource_issued_b
 
   it("PAR refuses a malformed bound invalid_authorization_details", async () => {
     const res = await push(read({ resource_issued_before: "2026-09-30" }));
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("invalid_authorization_details");
+  });
+});
+
+describe("tenant at the endpoints (@spec resource-access#initial-common-constraints)", () => {
+  const TENANT = hoisted.CEILING_CONSTRAINTS.tenant;
+
+  it("a proposal naming another tenant is refused at the approval decision, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    for (const other of ["globex-holdings", TENANT.toUpperCase()]) {
+      const redirect = await approve(read({ tenant: other }));
+      expect(redirect.searchParams.get("error"), other).toBe("invalid_authorization_details");
+      expect(redirect.searchParams.get("error_description"), other).toMatch(/tenant values have no intersection/);
+    }
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a Token Exchange that drops the tenant or names another is refused invalid_authorization_details", async () => {
+    const issued = await issue(read({ tenant: TENANT }));
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    expect(constraintsOf(claims(issued.at).authorization_details)).toEqual([derived]);
+    const { tenant: _dropped, ...dropped } = derived;
+    for (const requested of [dropped, { ...derived, tenant: "globex-holdings" }]) {
+      const res = await exchange(issued.at, issued.keys, read(requested));
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
+    const same = await exchange(issued.at, issued.keys, read(derived));
+    expect(same.status, JSON.stringify(same.body)).toBe(200);
+    expect(constraintsOf(claims(same.body.access_token as string).authorization_details)).toEqual([derived]);
+  });
+
+  it("PAR refuses an empty tenant invalid_authorization_details", async () => {
+    const res = await push(read({ tenant: "" }));
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_authorization_details");
   });

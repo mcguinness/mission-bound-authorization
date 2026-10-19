@@ -12,9 +12,9 @@ The file name is the document's stable name and does not carry the version.
   Common Constraints listed under "Constraint enforcement: Common
   Constraints" below against facts it reads from its own records, carries
   those facts on the decision request, and advertises exactly the enforced
-  keys in `mission_constraints_supported`. Decision requests for an
-  invoice target gain `resource.properties.issued_at` when the invoice
-  record carries one; `parameter_digest` bytes are unchanged.
+  keys in `mission_constraints_supported`. Decision requests gain the
+  `resource.properties` facts the table lists, where the store's record
+  carries them; `parameter_digest` bytes are unchanged.
 
 - **v4** (#828, D429): the Resource policy also evaluates the
   authenticated client, which must hold `authorized_client` on every
@@ -112,10 +112,11 @@ and derivation, and the PDP refuses a matched entry that carries one.
 | Key | Authoritative fact | Decision request member | Targets without the fact |
 |---|---|---|---|
 | `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
+| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
 
-A change to an invoice record between the decision and a write's
-execution changes its version, which `parameter_digest` binds, so the
-write refuses `parameter_mismatch`. Refusals are `parameter_violation`
+A change to an invoice or vendor record between the decision and a
+write's execution changes its version, which `parameter_digest` binds, so
+the write refuses `parameter_mismatch`. Refusals are `parameter_violation`
 on the Mission bound and `out_of_authority` at the PEP's credential
 bound.
 

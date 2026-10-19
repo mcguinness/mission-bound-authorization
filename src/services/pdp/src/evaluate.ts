@@ -169,6 +169,13 @@ export interface EvaluationRequest {
        * an absent value satisfies neither.
        */
       issued_at?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the tenant
+       * that owns the one object the action targets, read by the PEP from the
+       * resource's own record, never from the request. The `tenant` bound
+       * reads it, and an absent value never satisfies it.
+       */
+      tenant?: string;
     };
   };
   action: {
@@ -1313,6 +1320,7 @@ async function evaluateInner(
     ...(typeof req.resource.properties?.issued_at === "string"
       ? { resourceIssuedAt: req.resource.properties.issued_at }
       : {}),
+    ...(typeof req.resource.properties?.tenant === "string" ? { tenant: req.resource.properties.tenant } : {}),
   };
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (

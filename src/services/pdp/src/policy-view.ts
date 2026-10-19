@@ -68,6 +68,7 @@ export interface AuthorityEntry {
      */
     resource_issued_after?: string;
     resource_issued_before?: string;
+    tenant?: string;
   };
   /**
    * @spec authority-server#mission-join rule 5 (#557) — this entry's

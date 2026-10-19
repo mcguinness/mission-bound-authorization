@@ -1093,7 +1093,7 @@ interface RefusalEstablished {
 type TargetObject = {
   type: string;
   id: string;
-  properties?: { vendor_id?: string; vendor_ids?: string[]; issued_at?: string };
+  properties?: { vendor_id?: string; vendor_ids?: string[]; issued_at?: string; tenant?: string };
 };
 
 export class Pep {
@@ -1341,15 +1341,25 @@ export class Pep {
     let listVendorScope: string[] | undefined;
     let targetVendorId: string | undefined;
     if (mapping.targetsVendor && args.vendor_id !== undefined) {
-      targetVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
+      const targetVendor = this.deps.payments.getVendor(String(args.vendor_id));
+      targetVendorId = targetVendor?.id;
       // @spec authzen#context-credential, authzen#runtime-denial-classification
       // (D324): the target is the vendor the store resolved, never the
       // argument, and it rides the request so the credential bound and the
       // Mission's vendor constraint both evaluate the target this PEP
       // established. A vendor read is a read of that vendor object; one the
       // store does not hold keeps the server resource and names no vendor.
+      // @spec resource-access#initial-common-constraints (#1266): the
+      // vendor record's own tenant, the ownership fact a `tenant` bound reads.
       if (targetVendorId !== undefined) {
-        resourceObj = { type: "vendor", id: targetVendorId, properties: { vendor_id: targetVendorId } };
+        resourceObj = {
+          type: "vendor",
+          id: targetVendorId,
+          properties: {
+            vendor_id: targetVendorId,
+            ...(typeof targetVendor?.tenant === "string" ? { tenant: targetVendor.tenant } : {}),
+          },
+        };
       }
     }
     if (mapping.needsInvoice) {
@@ -1375,6 +1385,9 @@ export class Pep {
         properties: {
           vendor_id: vendor.id,
           ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
+          // The tenant that owns the invoice is its vendor's, from the vendor
+          // record, whose version the parameter digest also binds.
+          ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
         },
       };
     } else if (mapping.bindsVendorScope) {
@@ -1477,6 +1490,7 @@ export class Pep {
         ...(resourceObj.properties?.issued_at !== undefined
           ? { resourceIssuedAt: resourceObj.properties.issued_at }
           : {}),
+        ...(resourceObj.properties?.tenant !== undefined ? { tenant: resourceObj.properties.tenant } : {}),
       },
     };
     if (token.mission !== undefined) {

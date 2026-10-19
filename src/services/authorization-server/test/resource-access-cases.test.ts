@@ -33,6 +33,7 @@ const IMPLEMENTED = new Set([
   "constraint.requires_action_approval",
   "constraint.resource_issued_after",
   "constraint.resource_issued_before",
+  "constraint.tenant",
   "refusal.unsupported-input",
   "delegate-matcher",
 ]);

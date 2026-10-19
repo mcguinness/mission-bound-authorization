@@ -151,6 +151,35 @@ describe("PDP enforces resource_issued_after and resource_issued_before on the c
   });
 });
 
+describe("PDP enforces tenant on the Mission and credential bounds (@spec resource-access#rs-enforcement)", () => {
+  const TENANT = { tenant: "payments-demo" };
+
+  it("permits the bound's tenant and refuses another, compared as exact strings", async () => {
+    expect((await decide(view(TENANT), { tenant: "payments-demo" })).permit).toBe(true);
+    for (const other of ["other-tenant", "Payments-Demo", "payments-demo "]) {
+      expect(await decide(view(TENANT), { tenant: other }), other).toMatchObject({
+        permit: false,
+        reason: "parameter_violation",
+      });
+    }
+  });
+
+  it("refuses when the PEP established no tenant", async () => {
+    expect(await decide(view(TENANT), {})).toMatchObject({ permit: false, reason: "parameter_violation" });
+  });
+
+  it("a credential bound to a tenant is enforced at its own tenant under an unbounded Mission", async () => {
+    const credential = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: [ACTION], constraints: TENANT },
+    ];
+    expect((await decide(view(), { tenant: "payments-demo" }, credential)).permit).toBe(true);
+    expect(await decide(view(), { tenant: "other-tenant" }, credential)).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+});
+
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({

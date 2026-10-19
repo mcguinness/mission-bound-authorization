@@ -120,6 +120,11 @@ export interface AuthorityEntry {
      * only to resources issued at or before this RFC 3339 instant.
      */
     resource_issued_before?: string;
+    /**
+     * @spec resource-access#initial-common-constraints — the action applies
+     * only to resources of the named tenant (exact string comparison).
+     */
+    tenant?: string;
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

@@ -198,7 +198,7 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
 
   it("malformed or unsupported grant authority refuses rather than minting verbatim", async () => {
     const server = await ras();
-    for (const authority of [{}, [], [{ ...delegated, actions: "invoices.read" }], [{ ...delegated, constraints: { tenant: "unknown-constraint" } }]]) {
+    for (const authority of [{}, [], [{ ...delegated, actions: "invoices.read" }], [{ ...delegated, constraints: { x_region: "unknown-constraint" } }]]) {
       await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
     }
   });
