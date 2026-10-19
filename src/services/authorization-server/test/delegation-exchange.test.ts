@@ -9,7 +9,7 @@ import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixtu
 import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -23,7 +23,12 @@ import {
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { audienceCollision, resourceAudiences } from "../src/adapters/audience-separation.js";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
-import { ALL_PROVIDER_CAPABILITIES, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import {
+  ALL_PROVIDER_CAPABILITIES,
+  buildAuthorizationServer,
+  type BuiltAs,
+  type DelegationPolicyRequest,
+} from "../src/index.js";
 import { TokenIssuanceStore } from "../src/kernel/token-issuance-store.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
@@ -329,6 +334,25 @@ const onMapping = structuredClone(SCOPE_PROJECTION) as typeof SCOPE_PROJECTION;
 let on: Harness;
 let off: Harness;
 let only: Harness;
+/** A deployment whose payments ceiling defers delegate eligibility to policy (#1275). */
+let deferring: Harness;
+/** A deployment whose Effective Authority Set comes from an injected source, which carries no approved-entry origin (#1275). */
+let injected: Harness;
+
+/**
+ * @spec resource-access#delegate-eligibility (#1275): the shipped ceiling with
+ * the payments entries' `allowed_delegates` removed, so their delegate
+ * eligibility defers to the delegation-authorization policy.
+ */
+const DEFERRING_CEILING = DERIVATION_POLICY.ceiling.map((e) => {
+  if (e.resource !== RESOURCE || !e.delegation) return e;
+  const { allowed_delegates: _list, ...delegation } = e.delegation;
+  return { ...e, delegation };
+});
+/** The clients the deferring deployment's policy permits, set per test. */
+const policyPermits = new Set<string>();
+/** Every question the deferring deployment's policy is asked, in order. */
+const policyAsked: DelegationPolicyRequest[] = [];
 
 beforeAll(async () => {
   secondKeys = await generateKeyPair("ES256", { extractable: true });
@@ -351,9 +375,32 @@ beforeAll(async () => {
       audiences: { ...SCOPE_PROJECTION.audiences, [RESOURCE]: { ...(SCOPE_PROJECTION.audiences[RESOURCE] as object), mission_aware: false } },
     },
   });
+  // Delegation on, under a ceiling deferring payments eligibility to a policy
+  // this test installs and controls.
+  deferring = await harness(14873, {
+    capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+    derivationPolicy: { ...DERIVATION_POLICY, ceiling: DEFERRING_CEILING },
+    authoritySources: {
+      ...AUTHORITY_SOURCES,
+      entries: AUTHORITY_SOURCES.entries.map((e) => (e.id === "acme-people" ? { ...e, ceiling: DEFERRING_CEILING } : e)),
+    },
+    delegationPolicy: (request: DelegationPolicyRequest) => {
+      policyAsked.push(request);
+      return policyPermits.has(request.delegate.sub);
+    },
+  });
+  // Delegation on, the shipped ceiling, and the Effective Authority Set read
+  // through an injected source: equal entries, but not the Mission Record's own.
+  injected = await harness(14874, {
+    capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+    authoritySource: {
+      effectiveAuthoritySet: (record: Parameters<BuiltAs["kernel"]["effectiveAuthoritySet"]>[0]) =>
+        structuredClone(injected.as.kernel.effectiveAuthoritySet(record)),
+    },
+  });
 });
 afterAll(() => {
-  for (const h of [on, off, only]) h?.server.close();
+  for (const h of [on, off, only, deferring, injected]) h?.server.close();
 });
 
 describe("delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation)", () => {
@@ -997,5 +1044,117 @@ describe("runtime enablement is opt-in (@spec mission#conformance, D449)", () =>
     const designation = await designate(only, accessToken, SUBAGENT);
     expect(designation.status, JSON.stringify(designation.body)).toBe(200);
     expect(designation.body.token_type).toBe("N_A");
+  });
+});
+
+/**
+ * @spec resource-access#delegate-eligibility, resource-access#subset (#1275,
+ * D457): the payments ceiling entry carries `delegation` without
+ * `allowed_delegates`, so an approved entry derived from it inherits the
+ * authorization server's policy decision, and the list the agent's proposal
+ * adds (naming the sub-agent) only restricts it. The sub-agent and the second
+ * delegate are independently controlled clients; the policy is the test's,
+ * permitting exactly `policyPermits`.
+ */
+describe("delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275)", () => {
+  /** The agent's proposal: the read entry with a list naming only the sub-agent. */
+  const listedForSubagent = () => [
+    { ...delegable(), delegation: { max_depth: 2, allowed_delegates: [{ sub: SUBAGENT }] } },
+  ];
+  const reset = () => {
+    policyPermits.clear();
+    policyAsked.length = 0;
+  };
+
+  it("the approved entry keeps the proposal's list and retains its policy origin with the Mission", async () => {
+    reset();
+    const { missionId } = await baseMission(deferring, listedForSubagent());
+    const record = deferring.as.kernel.get(missionId);
+    expect(record?.authority_set[0]?.delegation?.allowed_delegates).toEqual([{ sub: SUBAGENT }]);
+    expect(record?.eligibility_provenance).toEqual(["policy"]);
+  });
+
+  it("policy denies, list permits: designating the client the list names is refused invalid_target, counting nothing", async () => {
+    reset();
+    const { missionId, accessToken } = await baseMission(deferring, listedForSubagent());
+    policyPermits.add(SECOND);
+    const before = derivations(deferring, missionId);
+    const res = await designate(deferring, accessToken, SUBAGENT);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(derivations(deferring, missionId)).toBe(before);
+    expect(policyAsked.at(-1)).toMatchObject({ delegate: { sub: SUBAGENT }, depth: 1, mission: { id: missionId } });
+  });
+
+  it("policy permits, list omits: designating a client the policy permits but the list omits is refused invalid_target", async () => {
+    reset();
+    const { missionId, accessToken } = await baseMission(deferring, listedForSubagent());
+    policyPermits.add(SECOND);
+    const before = derivations(deferring, missionId);
+    const res = await designate(deferring, accessToken, SECOND);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(derivations(deferring, missionId)).toBe(before);
+  });
+
+  it("policy and list both permit: the designation and the delegated token are issued, the approved list intact, the policy asked at each step", async () => {
+    reset();
+    const { accessToken } = await baseMission(deferring, listedForSubagent());
+    policyPermits.add(SUBAGENT);
+    const designation = await designate(deferring, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const delegated = await redeem(deferring, designation.body.access_token as string);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    const t = decodeJwt(delegated.body.access_token as string) as { authorization_details: Body[] };
+    expect(t.authorization_details[0]?.delegation).toMatchObject({ allowed_delegates: [{ sub: SUBAGENT }] });
+    // Asked at the designation and again at the redemption, for the sub-agent at depth 1.
+    expect(policyAsked.map((r) => [r.delegate.sub, r.depth])).toEqual([
+      [SUBAGENT, 1],
+      [SUBAGENT, 1],
+    ]);
+  });
+
+  it("a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing", async () => {
+    reset();
+    const { missionId, accessToken } = await baseMission(deferring, listedForSubagent());
+    policyPermits.add(SUBAGENT);
+    const designation = await designate(deferring, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    // The policy now denies the sub-agent: the designation's earlier permit is not reused.
+    policyPermits.delete(SUBAGENT);
+    const before = derivations(deferring, missionId);
+    const refused = await redeem(deferring, designation.body.access_token as string);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_target");
+    expect(derivations(deferring, missionId)).toBe(before);
+    // Permitted again, the same designation redeems.
+    policyPermits.add(SUBAGENT);
+    const redeemed = await redeem(deferring, designation.body.access_token as string);
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+  });
+
+  it("an entry the AS cannot resolve to an approved Mission Record entry narrows out: under an injected source carrying no origin, a designation its list permits is refused invalid_target", async () => {
+    const { missionId, accessToken } = await baseMission(injected);
+    const before = derivations(injected, missionId);
+    // The shipped list admits the sub-agent; only the unresolvable origin refuses.
+    const res = await designate(injected, accessToken, SUBAGENT);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(derivations(injected, missionId)).toBe(before);
+    // The same designation on the local kernel's own set is issued.
+    const local = await designate(on, (await baseMission(on)).accessToken, SUBAGENT);
+    expect(local.status, JSON.stringify(local.body)).toBe(200);
+  });
+
+  it("an entry whose retained provenance is gone narrows out at redemption although its list and the policy permit", async () => {
+    reset();
+    const { missionId, accessToken } = await baseMission(deferring, listedForSubagent());
+    policyPermits.add(SUBAGENT);
+    const designation = await designate(deferring, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    deferring.as.kernel.db.prepare("UPDATE missions SET eligibility_provenance_json = NULL WHERE id = ?").run(missionId);
+    const res = await redeem(deferring, designation.body.access_token as string);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
   });
 });

@@ -39,15 +39,14 @@ import {
 } from "../kernel/continuation-assertion.js";
 import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel/continuation-store.js";
 import {
-  audienceScopedAuthority,
   ID_JAG_TOKEN_TYPE,
   AuthorityNarrowedToEmptyError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
 } from "../kernel/cross-domain.js";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
-import { gateDelegableAuthority } from "../kernel/delegation.js";
 import {
+  refusedMemberInRequest,
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
@@ -224,22 +223,19 @@ function refuseContinuationGate(
 }
 
 /**
- * @spec id-continuation-assertion — the continuation grant's authority, from
- * the audience-scoped Effective Authority Set: the entries this delegate may
- * carry (`delegationGate`, mission#delegation-constraints), narrowed to the
- * requested resources when any are named (ICA -02 5.5.3 rule 7: the issued
- * ID-JAG carries the values "that express the granted authority"). With no
- * `resource`, every entry the delegate may carry. The rule-7 pre-check and
- * the post-gate filter in issueCrossDomainGrant apply this same function.
+ * @spec id-continuation-assertion: the continuation grant's authority is the
+ * entries this delegate may carry from the audience-scoped Effective Authority
+ * Set (the delegation gate, mission#delegation-constraints), narrowed by this
+ * filter to the requested resources when any are named (ICA -02 5.5.3 rule 7:
+ * the issued ID-JAG carries the values "that express the granted authority").
+ * With no `resource`, every entry the delegate may carry. The rule-7
+ * pre-check and the post-gate filter in issueCrossDomainGrant apply this same
+ * function to the gate's result.
  */
-export function continuationAuthorityFilter(
-  delegationGate: (entries: AuthorityEntry[]) => AuthorityEntry[],
+export function continuationResourceFilter(
   resources: readonly string[],
 ): (entries: AuthorityEntry[]) => AuthorityEntry[] {
-  return (entries) => {
-    const delegable = delegationGate(entries);
-    return resources.length === 0 ? delegable : delegable.filter((e) => resources.includes(e.resource));
-  };
+  return (entries) => (resources.length === 0 ? entries : entries.filter((e) => resources.includes(e.resource)));
 }
 
 /** @spec RFC 9449 Section 4.3 — the proof's clock-skew allowance, one value for every verifier (`@mission/core`). */
@@ -686,7 +682,13 @@ export async function handleTokenExchangeGrant(
     return;
   }
   const effective = opts.kernel.effectiveAuthoritySet(record);
-  const audienceScoped = audienceScopedAuthority(effective, resourceToAs, audience);
+  // The audience-scoped effective entries, each with the approved record
+  // entry it was computed from (resolved by the delegation gate below).
+  const audienceCandidates = opts.kernel.effectiveDelegationCandidates(
+    record,
+    (e) => resourceToAs(e.resource) === audience,
+  );
+  const audienceScoped = audienceCandidates.map((c) => c.entry);
   if (effective.length > 0 && audienceScoped.length === 0) {
     txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
     return;
@@ -709,20 +711,27 @@ export async function handleTokenExchangeGrant(
   // further merged entry adds 1. At depth 0 the grant goes to the approved
   // agent itself and nothing narrows. Otherwise an audience-scoped entry is
   // carried only if its delegation policy permits this delegate at that
-  // depth (gateDelegableAuthority; no `delegation` member is non-delegable),
+  // depth (kernel.delegableEntries; no `delegation` member is non-delegable),
   // and an empty result is invalid_target. This is distinct from the ICA
   // actor-lineage depth bound (ICA -02 6.3), a tenant policy this deployment
   // does not set. The delegate is the authenticated client, its `sub_profile`
   // the one the AS asserts for it (kernel.actorProfile), as on the child and
   // carryover paths.
+  // @spec resource-access#delegate-eligibility (#1275): each entry is
+  // evaluated against the approved entry it was computed from and the
+  // provenance retained with the Mission, never against a presented token:
+  // where that entry's eligibility defers to policy, the current
+  // delegation-authorization policy AND every retained list must permit.
   const missionDelegationDepth = flattenActChain(onwardAct).length - 1;
   const delegate: DelegateCandidate = {
     sub: client.clientId,
     assertedProfile: opts.kernel.actorProfile(client.clientId),
   };
-  const delegationGate = (entries: AuthorityEntry[]): AuthorityEntry[] =>
-    missionDelegationDepth === 0 ? entries : gateDelegableAuthority(entries, delegate, missionDelegationDepth);
-  const delegable = delegationGate(audienceScoped);
+  const delegation =
+    missionDelegationDepth === 0 ? undefined : { delegate, depth: missionDelegationDepth };
+  const delegable = delegation
+    ? opts.kernel.delegableEntries(record, audienceCandidates, delegate, missionDelegationDepth)
+    : audienceScoped;
   if (effective.length > 0 && delegable.length === 0) {
     txError(
       ctx,
@@ -745,9 +754,9 @@ export async function handleTokenExchangeGrant(
     return;
   }
   // The grant's authority: the entries this delegate may carry, narrowed to
-  // the requested resources (continuationAuthorityFilter).
-  const grantAuthority = continuationAuthorityFilter(delegationGate, resources);
-  const grantable = grantAuthority(audienceScoped);
+  // the requested resources (continuationResourceFilter).
+  const resourceFilter = continuationResourceFilter(resources);
+  const grantable = resourceFilter(delegable);
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the grant's authority:
   // the Mission's Effective Authority Set for this audience, as this delegate
@@ -818,10 +827,12 @@ export async function handleTokenExchangeGrant(
       ...(requestedDetails !== undefined
         ? { requestedAuthority: requestedDetails as unknown as AuthorityEntry[] }
         : {}),
-      // The same filter (delegation gate, then the requested resources),
-      // applied again once the gate admits, so a state change since the
-      // rule-7 check cannot widen the grant.
-      authorityFilter: grantAuthority,
+      // The same narrowing (the delegation gate, then the requested
+      // resources), applied again once the gate admits, so a state or policy
+      // change since the rule-7 check cannot widen the grant: the policy is
+      // asked again there, never answered from this pre-check.
+      ...(delegation ? { delegation } : {}),
+      authorityFilter: resourceFilter,
       // Everything validation and the gate admitted: reserve the ICA, then
       // record the child hop (bound to the SAME anchor/Mission, linked to the
       // prior). @spec id-continuation-assertion — the (iss, jti) reservation
@@ -1109,6 +1120,15 @@ export async function handleAsyncDelegationExchange(
     }
     if (!Array.isArray(requested)) {
       throw new errors.InvalidRequest("authorization_details must be a JSON array");
+    }
+    // @spec resource-access#entry-validation (#1278, D457): the confinement
+    // below projects each requested entry, rebuilding it without `locations`,
+    // so an entry of this type carrying it is refused before the idempotency
+    // lookup and before any family opens.
+    const refusedMember = refusedMemberInRequest(requested);
+    if (refusedMember) {
+      txError(ctx, 400, "invalid_authorization_details", refusedMember);
+      return;
     }
     requestedSubset = requested as AuthorityEntry[];
   }

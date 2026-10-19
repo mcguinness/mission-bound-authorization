@@ -233,6 +233,25 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     expect(body.template_id).toMatch(/^tmpl_/);
   });
 
+  // @spec resource-access#entry-validation (#1278, D457): a template ceiling
+  // entry carrying `locations` is refused at consent, naming the entry, rather
+  // than stored and refused only when a dispatch derives from it.
+  it("refuses a template whose ceiling entry carries locations, naming the entry, and creates no template", async () => {
+    for (const locations of [[], null]) {
+      const body = readOnlyTemplateBody();
+      const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) => (i === 0 ? { ...e, locations } : e));
+      const res = await createTemplateAdmin({ ...body, ceiling });
+      const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+      expect(res.status, JSON.stringify(out)).toBe(400);
+      expect(out.error).toBe("invalid_request");
+      expect(out.error_description).toBe(
+        "ceiling[0] carries locations, which the mission_resource_access type does not use",
+      );
+      expect(out.template_id).toBeUndefined();
+      expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+    }
+  });
+
   it("rejects an absent or wrong x-service-token with 401", async () => {
     const absent = await createTemplateAdmin(readOnlyTemplateBody(), null);
     expect(absent.status).toBe(401);

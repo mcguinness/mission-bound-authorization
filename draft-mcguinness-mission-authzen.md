@@ -1306,7 +1306,7 @@ Authorization: ...
       "issuer": "https://as.example.com",
       "policy_version": "deploy-policy:v17",
       "policy_view_id":
-        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+        "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
     },
     "mission_state_observation": {
       "state": "active",

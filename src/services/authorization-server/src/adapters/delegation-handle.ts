@@ -16,6 +16,11 @@
  * token's own authority, and rule 3 makes it a derivation gated on `active`,
  * counted once here, as the Dispatch Handoff's redemption that mints a
  * dispatched Agent's handle is (dispatch-handoff.ts).
+ *
+ * @spec mission-template#dispatch-handoff (#1195, D387, D390): a Dispatcher
+ * that is its instance's selected Agent skips the handoff and obtains its
+ * handle here. Its instance token was issued to it and it is the recorded
+ * client_id, so the checks below admit it, and no other client, unchanged.
  */
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";

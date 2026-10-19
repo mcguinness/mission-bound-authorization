@@ -60,7 +60,8 @@ import {
   type CapabilitySourceResolver,
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
-import { deriveAuthoritySet, isSubsetSet } from "./derive.js";
+import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
+import { inheritOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -68,6 +69,7 @@ import type {
   ApprovalBasisGovernedPolicy,
   AuthorityEntry,
   AuthoritySourceType,
+  IntentSubmissionEvidenceFact,
   MissionIntent,
   MissionRecord,
 } from "./types.js";
@@ -814,6 +816,13 @@ export interface GovernedActivationInput {
   clientId: string;
   /** Model outputs gathered for this activation: recorded inputs only. */
   modelOutputs?: readonly RecordedModelOutput[];
+  /**
+   * @spec mission#intent-submission-evidence, mission#submission-processing
+   * (step 8): the Intent Submission Evidence facts the issuer verified for
+   * this activation, recorded on the Mission as `submission_evidence`
+   * (provenance outside every anchor), as a direct approval records them.
+   */
+  submissionEvidence?: readonly IntentSubmissionEvidenceFact[];
 }
 
 export interface GovernedActivation {
@@ -936,6 +945,11 @@ interface PreparedActivation {
   proposal?: AuthorityEntry[];
   /** The set bounded by the deployment policy, the root ceiling, and the source. */
   bounded: AuthorityEntry[];
+  /**
+   * @spec resource-access#delegate-eligibility: each bounded entry's
+   * eligibility origin from both derivations, index-aligned with `bounded`.
+   */
+  boundedProvenance: RetainedOrigin[];
   intentHash: string;
   boundedHash: string;
 }
@@ -979,7 +993,8 @@ function prepareGovernedActivation(
 
   // Step 5.
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  const derived = kernel.derive(input.intent, proposal);
+  const first = kernel.deriveWithProvenance(input.intent, proposal);
+  const derived = first.entries;
   // Step 7 classifies the whole derived Mission from trusted, complete
   // classification: every action proposed or derived must be one the root
   // classifies, so no unknown action reaches the activation as low-risk.
@@ -991,12 +1006,16 @@ function prepareGovernedActivation(
     );
   }
   let bounded: AuthorityEntry[];
+  // @spec resource-access#delegate-eligibility: the root-ceiling derivation
+  // keeps the policy derivation's origins and adds the root ceiling's.
+  let boundedProvenance: RetainedOrigin[];
   try {
-    bounded = deriveAuthoritySet(
+    ({ entries: bounded, provenance: boundedProvenance } = deriveAuthoritySetWithProvenance(
       input.intent,
       { policy_version: consent.root.version, ceiling: root.authority_ceiling },
       derived,
-    );
+      first.provenance,
+    ));
   } catch (e) {
     if (e instanceof IntentError) {
       throw new GovernedPolicyError("out_of_root_ceiling", `the proposal yields no authority within root ${consent.root.id}`);
@@ -1016,6 +1035,7 @@ function prepareGovernedActivation(
     resolvedSource,
     ...(proposal ? { proposal } : {}),
     bounded,
+    boundedProvenance,
     intentHash: intentHash(issuer, input.intent as never),
     boundedHash: authorityHash(issuer, bounded as never),
   };
@@ -1095,6 +1115,14 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
   // it rather than resolving again.
   const capability = recordingResolution(kernel.authoritySourceOptions().capabilityResolver);
   const final = resolveFreshCapabilitySources(decision.authority, capability.resolver);
+  // @spec resource-access#delegate-eligibility: the deciding policy may narrow
+  // the bounded set, so each final entry keeps the origin of every bounded
+  // entry it falls within.
+  const finalProvenance = inheritOrigins(
+    final,
+    final.map((): RetainedOrigin => "list"),
+    bounded.map((entry, i) => ({ entry, origin: prepared.boundedProvenance[i] ?? null })),
+  );
   const expiresAt = kernel.resolveEffectiveExpiry({
     requested: input.intent.expires_at,
     createdAt,
@@ -1152,6 +1180,7 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     intent: input.intent,
     ...(proposal ? { proposed_authority: proposal } : {}),
     authority_set: final,
+    eligibility_provenance: finalProvenance,
     intent_hash: iHash,
     ...(proposal ? { proposal_hash: proposalHash(issuer, proposal as never) } : {}),
     authority_hash: aHash,
@@ -1165,6 +1194,7 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
     expires_at: expiresAt,
     version: 1,
     derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+    ...(input.submissionEvidence?.length ? { submission_evidence: [...input.submissionEvidence] } : {}),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

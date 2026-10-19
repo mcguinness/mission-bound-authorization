@@ -204,7 +204,7 @@ authorizes for audit or local verification, while the token's
 
 1. The agent proposes that as a **Mission Intent**, with candidate
    `authorization_details` for the accounting and payments APIs.
-2. The Mission Issuer derives a bounded Authority Set; the user
+2. The Mission Issuer derives a bounded Authority Set; the Approver
    approves; Mission `M1` is `active`, all three anchors committed
    (`intent_hash` over the task, `proposal_hash` over what the agent
    asked for, `authority_hash` over what was granted).

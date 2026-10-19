@@ -14,11 +14,13 @@ import {
   isValidAmount,
   isSubsetEntry,
   isSubsetSet,
+  refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
 } from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
 import { unionConditions } from "./discharge.js";
+import { ceilingOrigin, combineOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } from "./types.js";
 
@@ -61,6 +63,26 @@ function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `resource_match ${JSON.stringify(match)} is not supported; this authorization server implements exact resource matching only`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec resource-access#entry-validation (#1278, D457): this type does not
+ * use the RFC 9396 common `locations` field, and `intersect` rebuilds each
+ * entry member by member, so an admitted `locations` would vanish from the
+ * derived entry. An entry carrying it, whatever its value, is refused here,
+ * over the full ceiling and proposal, so a programmatic caller that bypasses
+ * intake and the config loader cannot have it silently dropped.
+ */
+function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    const member = refusedEntryMember(entry);
+    if (member !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry carries ${member}, which the mission_resource_access type does not use; refusing rather than silently dropping it`,
       );
     }
   }
@@ -243,6 +265,38 @@ export function deriveAuthoritySet(
   policy: DerivationPolicy,
   proposal?: readonly AuthorityEntry[],
 ): AuthorityEntry[] {
+  return deriveAuthoritySetWithProvenance(intent, policy, proposal).entries;
+}
+
+/**
+ * A derived Authority Set and, index-aligned with it, each entry's delegate
+ * eligibility origin (@spec resource-access#delegate-eligibility).
+ */
+export interface DerivedAuthority {
+  entries: AuthorityEntry[];
+  provenance: RetainedOrigin[];
+}
+
+/**
+ * {@link deriveAuthoritySet}, also recording each derived entry's eligibility
+ * origin from the ceiling entry it was intersected with (@spec
+ * resource-access#delegate-eligibility, #1275): `policy` where that ceiling
+ * entry's `delegation` carries no `allowed_delegates`, even when the proposal
+ * added a list, which the derived entry keeps as a restriction. The entries
+ * are exactly deriveAuthoritySet's.
+ *
+ * `proposalProvenance`, index-aligned with `proposal`, is given when the
+ * proposal is itself an already-derived set re-derived under a further
+ * ceiling (a template's or a governed root's): each derived entry then keeps
+ * its proposal entry's origin as well ({@link combineOrigins}), so a second
+ * derivation never drops an obligation the first one recorded.
+ */
+export function deriveAuthoritySetWithProvenance(
+  intent: MissionIntent,
+  policy: DerivationPolicy,
+  proposal?: readonly AuthorityEntry[],
+  proposalProvenance?: readonly RetainedOrigin[],
+): DerivedAuthority {
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
   // unsupported `constraints` key BEFORE the resource/action filtering below
@@ -255,6 +309,8 @@ export function deriveAuthoritySet(
   if (proposal) assertSupportedConstraints(proposal);
   assertExactResourceMatch(policy.ceiling);
   if (proposal) assertExactResourceMatch(proposal);
+  assertNoRefusedMembers(policy.ceiling);
+  if (proposal) assertNoRefusedMembers(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
@@ -296,15 +352,25 @@ export function deriveAuthoritySet(
   // sole "ceiling" it fans across, so `intersect(entry, entry)` reconstructs
   // the entry unchanged rather than pairing it with its siblings.
   const derived: AuthorityEntry[] = [];
-  for (const proposal of proposals) {
+  const provenance: RetainedOrigin[] = [];
+  proposals.forEach((proposal, p) => {
     const matchingCeilings = hasProposal
       ? policy.ceiling.filter((c) => c.resource === proposal.resource)
       : [proposal];
+    // An already-derived proposal entry contributes the origin it carries; a
+    // client proposal contributes none of its own.
+    const inherited: RetainedOrigin =
+      hasProposal && proposalProvenance ? (proposalProvenance[p] ?? null) : "list";
     for (const ceiling of matchingCeilings) {
       const entry = intersect(proposal, ceiling);
-      if (entry) derived.push(entry);
+      if (!entry) continue;
+      derived.push(entry);
+      // @spec resource-access#delegate-eligibility: the origin is recorded
+      // here, from the exact ceiling entry this one was derived from, and
+      // retained with the Mission, never inferred later from the entry's list.
+      provenance.push(combineOrigins(ceilingOrigin(ceiling), inherited));
     }
-  }
+  });
   if (derived.length === 0) {
     // @spec mission#error-mapping: a submitted RAR proposal that derives
     // nothing is invalid_authorization_details (an actual proposal was
@@ -318,7 +384,7 @@ export function deriveAuthoritySet(
         : "Intent yields no valid Authority Set under configured-mapping policy",
     );
   }
-  return derived;
+  return { entries: derived, provenance };
 }
 
 /**
@@ -490,6 +556,12 @@ function minNum(a: number | undefined, b: number | undefined): number | undefine
  * vendors an empty intersection does NOT kill the entry: delegation is a policy
  * on an otherwise-valid entry, so an empty delegate list just means "delegable
  * to nobody", never "the authority is void".
+ *
+ * Structural only. A list taken where the ceiling has none restricts the
+ * delegation-authorization policy decision that ceiling defers to and never
+ * replaces it: the caller records the entry's `policy` origin
+ * ({@link deriveAuthoritySetWithProvenance}), and eligibility is decided at
+ * each delegated issuance (@spec resource-access#delegate-eligibility, #1275).
  */
 function narrowMatchers(
   proposal: DelegateMatcher[] | undefined,
