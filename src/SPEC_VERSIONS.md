@@ -149,8 +149,9 @@ this matrix and the `@spec` tags to the affected code and tests.
   as an unknown code (`invalid_grant`, §5.5.1, §5.6), before redeem. Two
   local choices: DPoP is required at initiation, as the poll requires it
   (§10.1 lets a `private_key_jwt` client omit it); and a key mismatch answers
-  `invalid_grant` like the Mission approval and expansion deferrals on the
-  same grant, not §10.1's `invalid_dpop_proof`. Selecting the Mission from a
+  `invalid_grant`, as the Mission approval deferral on the same grant and the
+  expansion deferral (polled on Token Exchange) do, not §10.1's
+  `invalid_dpop_proof`. Selecting the Mission from a
   client-supplied `mission_id` still departs from `mission#grant-binding`.
 - Deferred Mission Approval (#1185) carries `completion_mode=deferred` as DTR
   `-00` does: the pre-token hint on PAR and the opt-in on the
