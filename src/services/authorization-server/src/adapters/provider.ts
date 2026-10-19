@@ -1412,7 +1412,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       ? projectThroughEffective(requested, granted)
       : [];
     if (narrowed.length === 0) {
-      throw new InvalidAuthorizationDetails("requested authorization_details exceed the authority of the grant");
+      throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return narrowed;
   }

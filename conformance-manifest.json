@@ -39435,7 +39435,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh, authorization code exchange or Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
+    "normative": "a refresh or authorization code exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
     "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
    },
    "level": "endpoint",
@@ -39470,15 +39470,9 @@
      "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
      "level": "endpoint",
      "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "the presented token's own authority bounds the family (@spec mission#self-exchange rule 2, #825 PR 2c) > refuses a request beyond the presented token's authority, though the Mission allows it",
-     "level": "endpoint",
-     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses; dropping the async-delegation exchange's presented-token check fails its witness."
+   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. A Token Exchange naming authority beyond the Mission is refused by the async-delegation exchange's own check, which no test cited here witnesses."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
