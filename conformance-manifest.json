@@ -19,8 +19,8 @@
     "content_sha256": "3d0b6ce4af7bb061e0a4acf7497ab123f4c96b36bc6b90204ffe265f11c3c04c"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
-    "content_sha256": "89bf3dedc4144bf5aee77e79b8a2dc1a35c03a3ba1bf2a4f4170a52386c49310"
+    "revision": "08ba15677e6340ae24dfb497773a9a52531bf6f3",
+    "content_sha256": "1dec5e87be0167bf2b8429c77813cf9e431472621a1690c05e787766a8fe783f"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
@@ -19842,6 +19842,36 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "runtime.evidence.reconciliation-attribution-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "the component MUST NOT record an outcome from resource state that the resource does not attribute to the action through an identifier recorded with the effect",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an effect the resource records against another action (another permit or operation) does not settle this action's outcome; with no attributable effect, the outcome stays undetermined and no outcome record is written for it",
+    "local": "the claim reconciler's ledger step resolves an effect only through Connectors.committedFor(evaluationId), the permit recorded with the ledger entry; another operation's wire for the same invoice leaves the redeemed permit's claim open, and no Execution Evidence is recorded for its evaluation."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > resource state alone settles nothing: another operation's wire for the same invoice leaves a redeemed permit's outcome open, with no evidence recorded for it (@spec runtime#evidence, #1271)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1271: before this rule, 'matching evidence' did not say what a match is, so an observation of resource state could be read as this action's outcome."
   },
   {
    "id": "runtime.evidence.claim-persistence-and-no-new-effect-post-termination",
