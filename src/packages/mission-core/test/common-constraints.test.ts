@@ -24,6 +24,7 @@ import {
   parseCredentialAuthority,
   parseRfc3339Instant,
   SUPPORTED_CONSTRAINT_KEYS,
+  timeWindowEndMs,
 } from "../src/index.js";
 
 const R = "https://payments.example/mcp";
@@ -393,5 +394,143 @@ describe("tenant (@spec resource-access#initial-common-constraints)", () => {
     expect(parseCredentialAuthority([entry({ tenant: "acme" })])[0]?.constraints).toEqual({
       tenant: "acme",
     });
+  });
+});
+
+describe("time_window (@spec resource-access#initial-common-constraints)", () => {
+  const JUL = { not_before: "2026-07-01T00:00:00Z", not_after: "2026-07-31T23:59:59Z" };
+  const ms = (s: string) => Date.parse(s);
+
+  it("subset: within the reference; an absent candidate bound is unbounded, so broader", () => {
+    const ref = {
+      time_window: { not_before: "2026-06-01T00:00:00Z", not_after: "2026-08-31T00:00:00Z" },
+    };
+    expect(commonConstraintsNoBroader({ time_window: JUL }, ref)).toBe(true);
+    expect(
+      commonConstraintsNoBroader(
+        { time_window: { ...JUL, not_after: "2026-09-30T00:00:00Z" } },
+        ref,
+      ),
+    ).toBe(false);
+    expect(
+      commonConstraintsNoBroader(
+        { time_window: { ...JUL, not_before: "2026-05-31T23:59:59Z" } },
+        ref,
+      ),
+    ).toBe(false);
+    expect(commonConstraintsNoBroader({ time_window: { not_before: JUL.not_before } }, ref)).toBe(
+      false,
+    );
+    expect(commonConstraintsNoBroader({ time_window: { not_after: JUL.not_after } }, ref)).toBe(
+      false,
+    );
+    expect(commonConstraintsNoBroader({}, ref)).toBe(false);
+    // A one-sided reference bounds only its side.
+    expect(
+      commonConstraintsNoBroader(
+        { time_window: JUL },
+        { time_window: { not_before: "2026-01-01T00:00:00Z" } },
+      ),
+    ).toBe(true);
+  });
+
+  it("subset compares instants in value space, across offsets", () => {
+    expect(
+      commonConstraintsNoBroader(
+        { time_window: { not_before: "2026-07-01T02:00:00+02:00" } },
+        { time_window: { not_before: "2026-07-01T00:00:00Z" } },
+      ),
+    ).toBe(true);
+    expect(
+      commonConstraintsNoBroader(
+        { time_window: { not_before: "2026-07-01T01:59:59+02:00" } },
+        { time_window: { not_before: "2026-07-01T00:00:00Z" } },
+      ),
+    ).toBe(false);
+  });
+
+  it("intersection: the overlap, the later not_before and the earlier not_after", () => {
+    expect(
+      intersectCommonConstraints(
+        { time_window: { not_before: "2026-07-01T00:00:00Z", not_after: "2026-12-31T00:00:00Z" } },
+        { time_window: { not_before: "2026-01-01T00:00:00Z", not_after: "2026-07-31T23:59:59Z" } },
+      ),
+    ).toEqual({ ok: true, values: { time_window: JUL } });
+    expect(
+      intersectCommonConstraints(
+        { time_window: { not_before: JUL.not_before } },
+        { time_window: { not_after: JUL.not_after } },
+      ),
+    ).toEqual({ ok: true, values: { time_window: JUL } });
+    expect(intersectCommonConstraints({ time_window: JUL }, undefined)).toEqual({
+      ok: true,
+      values: { time_window: JUL },
+    });
+  });
+
+  it("intersection: an empty overlap fails the combination; a single shared instant does not", () => {
+    expect(
+      intersectCommonConstraints(
+        { time_window: { not_before: "2026-08-01T00:00:00Z" } },
+        { time_window: { not_after: "2026-07-31T23:59:59Z" } },
+      ).ok,
+    ).toBe(false);
+    expect(
+      intersectCommonConstraints(
+        { time_window: { not_before: "2026-07-31T23:59:59Z" } },
+        { time_window: { not_after: "2026-08-01T01:59:59+02:00" } },
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("enforcement: the current trusted time must lie within the window, both bounds inclusive", () => {
+    const gate = (now?: number) =>
+      commonConstraintGates({ time_window: JUL }, now === undefined ? {} : { now });
+    expect(gate(ms("2026-07-15T12:00:00Z"))).toEqual({
+      satisfied: true,
+      evaluated: ["time_window"],
+    });
+    expect(gate(ms(JUL.not_before)).satisfied).toBe(true);
+    expect(gate(ms(JUL.not_after)).satisfied).toBe(true);
+    expect(gate(ms(JUL.not_before) - 1).satisfied).toBe(false);
+    expect(gate(ms(JUL.not_after) + 1).satisfied).toBe(false);
+  });
+
+  it("enforcement: an absent or unusable clock reading refuses", () => {
+    expect(commonConstraintGates({ time_window: JUL }, {}).satisfied).toBe(false);
+    expect(commonConstraintGates({ time_window: JUL }, { now: Number.NaN }).satisfied).toBe(false);
+  });
+
+  it("value syntax: an object with one or both RFC 3339 bounds and nothing else", () => {
+    expect(SUPPORTED_CONSTRAINT_KEYS).toContain("time_window");
+    for (const good of [JUL, { not_before: JUL.not_before }, { not_after: JUL.not_after }]) {
+      expect(isAuthorityEntry(entry({ time_window: good })), JSON.stringify(good)).toBe(true);
+    }
+    for (const bad of [
+      {},
+      { not_before: "2026-07-01" },
+      { ...JUL, tz: "UTC" },
+      "2026-07-01T00:00:00Z",
+      [JUL],
+      null,
+    ]) {
+      expect(isAuthorityEntry(entry({ time_window: bad })), JSON.stringify(bad)).toBe(false);
+      expect(
+        () => parseCredentialAuthority([entry({ time_window: bad })]),
+        JSON.stringify(bad),
+      ).toThrow(CredentialAuthorityError);
+    }
+    expect(parseCredentialAuthority([entry({ time_window: JUL })])[0]?.constraints).toEqual({
+      time_window: JUL,
+    });
+  });
+
+  it("the window's end, floored to the millisecond, bounds a permit; an open-ended window sets none", () => {
+    expect(timeWindowEndMs({ time_window: JUL })).toBe(ms(JUL.not_after));
+    expect(timeWindowEndMs({ time_window: { not_after: "2026-07-31T23:59:59.9999Z" } })).toBe(
+      ms("2026-07-31T23:59:59.999Z"),
+    );
+    expect(timeWindowEndMs({ time_window: { not_before: JUL.not_before } })).toBeUndefined();
+    expect(timeWindowEndMs({ tenant: "acme" })).toBeUndefined();
   });
 });

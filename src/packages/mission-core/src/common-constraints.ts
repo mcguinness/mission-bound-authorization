@@ -18,7 +18,13 @@
  */
 
 import type { JsonValue } from "./canonicalize.js";
-import { compareInstants, type Instant, parseRfc3339Instant } from "./rfc3339-instant.js";
+import {
+  compareInstants,
+  type Instant,
+  instantFloorMs,
+  instantFromMs,
+  parseRfc3339Instant,
+} from "./rfc3339-instant.js";
 
 /**
  * The facts a resource server establishes for itself, from its own trusted
@@ -31,6 +37,11 @@ export interface ConstraintFacts {
   resourceIssuedAt?: string;
   /** The tenant that owns the resource the operation acts on, from the resource's own record. */
   tenant?: string;
+  /**
+   * The current time of the evaluating component's trusted clock, epoch
+   * milliseconds, read at the point of use. Never a time the request states.
+   */
+  now?: number;
 }
 
 /** One Common Constraint's definition. */
@@ -84,10 +95,84 @@ const TENANT: Semantics = {
   satisfied: (v, facts) => typeof facts.tenant === "string" && facts.tenant === v,
 };
 
+type Window = { not_before?: string; not_after?: string };
+const WINDOW_MEMBERS = new Set(["not_before", "not_after"]);
+
+/** The later of two instant strings, or the one present; an equal instant keeps `a`. */
+function later(a: string | undefined, b: string | undefined): string | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return compareInstants(instant(a), instant(b)) >= 0 ? a : b;
+}
+
+/** The earlier of two instant strings, or the one present; an equal instant keeps `a`. */
+function earlier(a: string | undefined, b: string | undefined): string | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return compareInstants(instant(a), instant(b)) <= 0 ? a : b;
+}
+
+/**
+ * `time_window`: the action may be exercised only within the window,
+ * evaluated at the point of use against a trusted clock. Both bounds are
+ * inclusive; an absent bound is unbounded on its side, so a candidate that
+ * omits a bound its reference carries is broader. A window whose
+ * `not_before` is later than its `not_after` admits no instant.
+ */
+const TIME_WINDOW: Semantics = {
+  valid: (v) => {
+    if (v === null || typeof v !== "object" || Array.isArray(v)) return false;
+    const keys = Object.keys(v);
+    if (keys.length === 0 || keys.some((k) => !WINDOW_MEMBERS.has(k))) return false;
+    return keys.every((k) => parseRfc3339Instant((v as Record<string, unknown>)[k]) !== undefined);
+  },
+  noBroader: (c, r) => {
+    const cw = c as Window;
+    const rw = r as Window;
+    if (rw.not_before !== undefined) {
+      if (cw.not_before === undefined) return false;
+      if (compareInstants(instant(cw.not_before), instant(rw.not_before)) < 0) return false;
+    }
+    if (rw.not_after !== undefined) {
+      if (cw.not_after === undefined) return false;
+      if (compareInstants(instant(cw.not_after), instant(rw.not_after)) > 0) return false;
+    }
+    return true;
+  },
+  // The overlap: the later not_before and the earlier not_after. An empty
+  // overlap has no intersection.
+  intersect: (a, b) => {
+    const aw = a as Window;
+    const bw = b as Window;
+    const notBefore = later(aw.not_before, bw.not_before);
+    const notAfter = earlier(aw.not_after, bw.not_after);
+    if (
+      notBefore !== undefined &&
+      notAfter !== undefined &&
+      compareInstants(instant(notBefore), instant(notAfter)) > 0
+    ) {
+      return undefined;
+    }
+    return {
+      ...(notBefore !== undefined ? { not_before: notBefore } : {}),
+      ...(notAfter !== undefined ? { not_after: notAfter } : {}),
+    };
+  },
+  satisfied: (v, facts) => {
+    if (typeof facts.now !== "number" || !Number.isFinite(facts.now)) return false;
+    const now = instantFromMs(facts.now);
+    const w = v as Window;
+    if (w.not_before !== undefined && compareInstants(now, instant(w.not_before)) < 0) return false;
+    if (w.not_after !== undefined && compareInstants(now, instant(w.not_after)) > 0) return false;
+    return true;
+  },
+};
+
 const SEMANTICS = {
   resource_issued_after: RESOURCE_ISSUED_AFTER,
   resource_issued_before: RESOURCE_ISSUED_BEFORE,
   tenant: TENANT,
+  time_window: TIME_WINDOW,
 } as const satisfies Record<string, Semantics>;
 
 /** A Common Constraint key whose semantics this module defines. */
@@ -219,4 +304,19 @@ export function commonConstraintGates(
     if (!s.valid(v) || !s.satisfied(v as JsonValue, facts)) return { satisfied: false, evaluated };
   }
   return { satisfied: true, evaluated };
+}
+
+/**
+ * @spec resource-access#initial-common-constraints (`time_window`, "evaluated
+ * at the point of use"): the last epoch millisecond at or before an entry's
+ * `time_window.not_after`, or `undefined` when the entry carries no upper
+ * bound. A permit issued under the entry is valid no later than this, so a
+ * permit relied on later, a retransmitted one or an execution lease derived
+ * from it, cannot carry authority past the window.
+ */
+export function timeWindowEndMs(constraints: Constraints): number | undefined {
+  const w = constraints?.time_window;
+  if (w === undefined || !TIME_WINDOW.valid(w)) return undefined;
+  const notAfter = (w as Window).not_after;
+  return notAfter === undefined ? undefined : instantFloorMs(instant(notAfter));
 }

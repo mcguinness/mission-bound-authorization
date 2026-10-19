@@ -106,6 +106,7 @@ export {
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
   isImplementedCommonConstraint,
+  timeWindowEndMs,
   validCommonConstraint,
 } from "./common-constraints.js";
 export {

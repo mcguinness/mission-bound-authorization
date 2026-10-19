@@ -333,13 +333,13 @@ describe("derivation (@spec mission#authorization-derivation)", () => {
           type: "mission_resource_access",
           resource: RESOURCE,
           actions: ["payments:invoice.read"],
-          constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } },
+          constraints: { allowed_tools: ["query_invoices"] },
         },
       ],
     };
     const mapped = validateMissionIntent(intent());
     expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(IntentError);
-    expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(/time_window/);
+    expect(() => deriveAuthoritySet(mapped, withUnimplemented as never, undefined)).toThrow(/allowed_tools/);
   });
 
   // @spec mission#authorization-derivation (#743, review #745 P2) — the P2

@@ -92,6 +92,16 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
         resource_issued_before: { type: "string", format: "date-time" },
         // Exact string comparison against the resource's own tenant record.
         tenant: { type: "string", minLength: 1 },
+        // At least one bound; an absent bound is unbounded on its side.
+        time_window: {
+          type: "object",
+          properties: {
+            not_before: { type: "string", format: "date-time" },
+            not_after: { type: "string", format: "date-time" },
+          },
+          minProperties: 1,
+          additionalProperties: false,
+        },
       },
       // @spec mission#derivation-policy (issue #784) — CLOSED to
       // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,

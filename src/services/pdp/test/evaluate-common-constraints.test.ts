@@ -180,6 +180,59 @@ describe("PDP enforces tenant on the Mission and credential bounds (@spec resour
   });
 });
 
+describe("PDP enforces time_window at the decision and bounds the permit by it (@spec resource-access#initial-common-constraints)", () => {
+  const at = (offsetSeconds: number) => new Date(NOW.getTime() + offsetSeconds * 1000).toISOString();
+  const validUntil = async (v: MissionView, credential?: unknown[]) => {
+    const d = await evaluate(request({}, credential), opts(v));
+    expect(d.decision, JSON.stringify(d.context)).toBe(true);
+    return Date.parse((d.context.conditions as { valid_until: string }).valid_until);
+  };
+
+  it("permits within the window, both bounds inclusive, and refuses before it opens or after it closes", async () => {
+    expect((await decide(view({ time_window: { not_before: at(-60), not_after: at(60) } }), {})).permit).toBe(true);
+    expect((await decide(view({ time_window: { not_before: at(0) } }), {})).permit).toBe(true);
+    expect(await decide(view({ time_window: { not_before: at(1) } }), {})).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+    expect(await decide(view({ time_window: { not_after: at(-1) } }), {})).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+
+  it("a window that closes at the decision instant leaves no permit, refused as the window's, not the state's", async () => {
+    expect(await decide(view({ time_window: { not_after: at(0) } }), {})).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+
+  it("caps the permit's valid_until at the matched entry's window end", async () => {
+    const unbounded = await validUntil(view());
+    expect(unbounded).toBeGreaterThan(NOW.getTime() + 30_000);
+    expect(await validUntil(view({ time_window: { not_after: at(30) } }))).toBe(NOW.getTime() + 30_000);
+    // A window ending after the permit's own lifetime does not extend it.
+    expect(await validUntil(view({ time_window: { not_after: at(86_400) } }))).toBe(unbounded);
+  });
+
+  it("caps the permit at the credential's window when every covering credential entry carries one", async () => {
+    const windowed = (seconds: number) => ({
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: [ACTION],
+      constraints: { time_window: { not_after: at(seconds) } },
+    });
+    const unbounded = await validUntil(view());
+    expect(await validUntil(view(), [windowed(20)])).toBe(NOW.getTime() + 20_000);
+    // Alternatives: the permit rests on whichever covering entry lasts longest.
+    expect(await validUntil(view(), [windowed(20), windowed(40)])).toBe(NOW.getTime() + 40_000);
+    const open = { type: "mission_resource_access", resource: RESOURCE, actions: [ACTION] };
+    expect(await validUntil(view(), [windowed(20), open])).toBe(unbounded);
+    expect(await decide(view(), {}, [windowed(-5)])).toMatchObject({ permit: false, reason: "parameter_violation" });
+  });
+});
+
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({

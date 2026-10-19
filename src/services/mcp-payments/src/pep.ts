@@ -1491,6 +1491,10 @@ export class Pep {
           ? { resourceIssuedAt: resourceObj.properties.issued_at }
           : {}),
         ...(resourceObj.properties?.tenant !== undefined ? { tenant: resourceObj.properties.tenant } : {}),
+        // `time_window` reads this PEP's own clock, at this check; every
+        // later use is held to the permit's `valid_until`, which the PDP caps
+        // at the window's end (PERMIT_USE_CHECKS).
+        now: this.now().getTime(),
       },
     };
     if (token.mission !== undefined) {

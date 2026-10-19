@@ -113,6 +113,15 @@ and derivation, and the PDP refuses a matched entry that carries one.
 |---|---|---|---|
 | `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
 | `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
+| `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
+
+`time_window` is also enforced after the decision: the PDP caps the
+permit's `valid_until` at the matched entry's `not_after` (and, for the
+credential bound, at the latest `not_after` among the covering credential
+entries when each carries one), so every later use the PEP checks
+(`PERMIT_USE_CHECKS`), a retransmitted permit and an execution lease
+derived from the permit all end with the window. A window that closes at
+the decision instant refuses `parameter_violation`.
 
 A change to an invoice or vendor record between the decision and a
 write's execution changes its version, which `parameter_digest` binds, so

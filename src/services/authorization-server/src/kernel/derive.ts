@@ -32,12 +32,12 @@ import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } fr
  * and PAR intake (`authorization-details-metadata.ts`, `intent.ts`), so the
  * three admission boundaries cannot drift apart (issue #784). This spans both
  * a specification-defined Common Constraint this engine does not implement
- * narrowing for (e.g. `time_window`, `tenant`: registered by the core
- * ({{common-constraints}}) but not accepted here) and any other unregistered
- * key (registration is not the test; support is). Silently dropping the key
- * (the prior behavior: `intersect` below rebuilds only its four known
- * members) would widen effective authority: the entry's narrowing intent
- * would vanish from the derived entry with no trace.
+ * narrowing for (one registered by Mission Resource Access but outside
+ * `IMPLEMENTED_COMMON_CONSTRAINTS`, #1266) and any other unregistered key
+ * (registration is not the test; support is). Silently dropping the key
+ * (the prior behavior: `intersect` below rebuilt only its known members)
+ * would widen effective authority: the entry's narrowing intent would vanish
+ * from the derived entry with no trace.
  *
  * Called over the FULL `policy.ceiling` array and the FULL submitted
  * `proposal` array, before any resource/action filtering narrows either down

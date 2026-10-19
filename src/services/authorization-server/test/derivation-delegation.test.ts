@@ -341,16 +341,16 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
     };
     const proposal = [
       entry({
-        constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+        constraints: { allowed_tools: ["query_invoices"] } as never,
       }),
     ];
     expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(IntentError);
-    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/time_window/);
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/allowed_tools/);
   });
 
   it("refuses when the CEILING carries an unimplemented registered constraint (never silently vanishes)", () => {
     const ceilingEntry = entry({
-      constraints: { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never,
+      constraints: { allowed_tools: ["query_invoices"] } as never,
     });
     const policy = { policy_version: "t", ceiling: [ceilingEntry] };
     const intent: MissionIntent = {
@@ -359,7 +359,7 @@ describe("intersect fails closed on a registered-but-unimplemented Common Constr
       expires_at: EXP,
     };
     const proposal = [entry()];
-    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/time_window/);
+    expect(() => deriveAuthoritySet(intent, policy, proposal)).toThrow(/allowed_tools/);
   });
 
   it("max_amount and vendors (implemented Common/deployment-defined constraints) still narrow normally", () => {

@@ -207,6 +207,61 @@ describe("derivation, projection and intake over tenant (@spec resource-access#i
   });
 });
 
+describe("derivation, projection and intake over time_window (@spec resource-access#initial-common-constraints)", () => {
+  const H2 = { not_before: "2026-07-01T00:00:00Z", not_after: "2026-12-31T23:59:59Z" };
+
+  it("a proposal omitting the ceiling's window inherits it; one narrowing it derives the overlap", () => {
+    expect(deriveAuthoritySet(intent, policy([entry({ time_window: H2 })]), [entry()])).toEqual([
+      entry({ time_window: H2 }),
+    ]);
+    expect(
+      deriveAuthoritySet(intent, policy([entry({ time_window: H2 })]), [
+        entry({ time_window: { not_before: "2026-01-01T00:00:00Z", not_after: "2026-09-30T00:00:00Z" } }),
+      ]),
+    ).toEqual([entry({ time_window: { not_before: H2.not_before, not_after: "2026-09-30T00:00:00Z" } })]);
+  });
+
+  it("refuses a proposal whose window does not overlap the ceiling's, never omitting it", () => {
+    const e = refusal(() =>
+      deriveAuthoritySet(intent, policy([entry({ time_window: H2 })]), [
+        entry({ time_window: { not_before: "2027-01-01T00:00:00Z" } }),
+      ]),
+    );
+    expect(e.code).toBe("invalid_authorization_details");
+    expect(e.message).toMatch(/time_window values have no intersection/);
+  });
+
+  it("projection takes the overlap and drops a fragment whose windows do not overlap", () => {
+    expect(
+      projectThroughEffective([entry({ time_window: { not_after: "2026-09-30T00:00:00Z" } })], [entry({ time_window: H2 })]),
+    ).toEqual([entry({ time_window: { not_before: H2.not_before, not_after: "2026-09-30T00:00:00Z" } })]);
+    expect(
+      projectThroughEffective([entry({ time_window: { not_before: "2027-01-01T00:00:00Z" } })], [entry({ time_window: H2 })]),
+    ).toEqual([]);
+  });
+
+  it("intake refuses an empty window, an unknown member, or a malformed bound", () => {
+    for (const bad of [{}, { ...H2, zone: "UTC" }, { not_after: "2026-12-31" }]) {
+      const e = refusal(() =>
+        validateAuthorityProposal(
+          JSON.stringify([{ type: "mission_resource_access", resource: R, actions: ["invoices.read"], constraints: { time_window: bad } }]),
+          [R],
+        ),
+      );
+      expect(e.code, JSON.stringify(bad)).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("scope projection and the attenuation root mapping refuse a windowed entry", () => {
+    const mapping = {
+      rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
+      mandatory_controls: {},
+    };
+    expect(scopeValueSafeForEntry(mapping, entry({ time_window: H2 }))).toBe(false);
+    expect(() => mapAuthorityToTools([entry({ time_window: H2 })])).toThrow(/unknown constraint 'time_window'/);
+  });
+});
+
 describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;

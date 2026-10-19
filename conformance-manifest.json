@@ -34456,6 +34456,131 @@
    "notes": "#1266 slice 2. The omission test's ceiling carries the tenant too, so it witnesses inheritance. Proved by mutation: an intersection that keeps one operand fails the refusal test, and derivation dropping the intersected keys fails the omission test."
   },
   {
+   "id": "resource-access.common-constraints.time-window-enforced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "The action may be exercised only within the window, evaluated at the point of use.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an operation outside the window by the current trusted time is refused, and a permit obtained inside the window is not relied on after it closes, by a later use or a long-running phase",
+    "local": "the PDP caps the permit's valid_until at the window's end and the PEP checks valid_until at every use; a closed window refuses parameter_violation at the decision and permit_expired at use"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > refuses before the window opens and after it closes, with no result",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > refuses at use a permit relied on after the window closed, though the permit's own lifetime had not ended",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > refuses a long-running commit whose window closed before the commit, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > a credential window that has closed is refused at the PEP, before any decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > a credential window bounds the permit when the Mission carries none",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1266 slice 3. Proved by mutation: removing the permit cap fails the use-time and commit tests; disabling the PEP's use-time valid_until check fails the use-time test; ignoring the window start fails the decision test; ignoring the window end at both the gate and the cap fails it (either alone still refuses, since the cap ends the permit at the window's end); dropping the credential cap fails the credential test."
+  },
+  {
+   "id": "resource-access.common-constraints.time-window-subset",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Subset: no broader when the candidate window lies within the reference window, an absent candidate bound counting as unbounded and therefore broader than any present reference bound.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived window that drops a reference bound or extends past it is refused; one within it is issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "time_window at the endpoints (@spec resource-access#initial-common-constraints) > a Token Exchange that drops a window bound or extends it is refused; one that narrows it is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1266 slice 3. Cases cc-time_window-* run through the reader. Proved by mutation: counting a dropped not_after as no broader, and admitting an extended not_after, each fail the test."
+  },
+  {
+   "id": "resource-access.common-constraints.time-window-intersection",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Intersection: the overlap (the later `not_before`, the earlier `not_after`); an empty overlap has no intersection and the combination fails.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "derivation takes the overlap of the proposal's and the ceiling's windows and refuses a proposal whose window does not overlap the ceiling's",
+    "local": "refused invalid_authorization_details at the approval decision, creating no Mission; refresh and introspection carry the derived overlap"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "time_window at the endpoints (@spec resource-access#initial-common-constraints) > a proposal narrowing the window derives the overlap, and refresh and introspection carry it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "time_window at the endpoints (@spec resource-access#initial-common-constraints) > a proposal whose window does not overlap the ceiling's is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1266 slice 3. Case der-10 (the supported counterpart of der-06) runs through the reader. Proved by mutation: keeping an empty overlap fails the refusal test."
+  },
+  {
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
@@ -35221,9 +35346,22 @@
     "normative": "time_window bounds compare as UTC instants, so offsets and trailing subsecond zeros do not change the result"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 11. time_window is not implemented (#1266); cases cc-time_window-* skipped."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "time_window at the endpoints (@spec resource-access#initial-common-constraints) > a Token Exchange compares window bounds as UTC instants: the same end in another offset is no broader",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/common-constraints.test.ts",
+     "name": "time_window (@spec resource-access#initial-common-constraints) > subset compares instants in value space, across offsets",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1266 slice 3. Cases cc-time_window-* run through the reader. Proved by mutation: comparing the window end as text fails the endpoint test."
   },
   {
    "id": "resource-access.value-space.issuance-instants",

@@ -24,6 +24,7 @@ const hoisted = await vi.hoisted(async () => {
     resource_issued_after: "2026-07-01T00:00:00Z",
     resource_issued_before: "2026-09-30T23:59:59Z",
     tenant: "payments-demo",
+    time_window: { not_before: "2026-01-01T00:00:00Z", not_after: "2027-12-31T23:59:59Z" },
   };
   const dir = mkdtempSync(join(tmpdir(), "mission-config-1266-"));
   cpSync(fileURLToPath(new URL("../../../config", import.meta.url)), dir, { recursive: true });
@@ -369,5 +370,68 @@ describe("tenant at the endpoints (@spec resource-access#initial-common-constrai
     const res = await push(read({ tenant: "" }));
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_authorization_details");
+  });
+});
+
+describe("time_window at the endpoints (@spec resource-access#initial-common-constraints)", () => {
+  const WINDOW = hoisted.CEILING_CONSTRAINTS.time_window;
+
+  it("a proposal narrowing the window derives the overlap, and refresh and introspection carry it", async () => {
+    const narrowed = { not_before: "2026-10-01T02:00:00+02:00", not_after: "2028-06-30T00:00:00Z" };
+    const issued = await issue(read({ time_window: narrowed }));
+    const derived = {
+      vendors: ["acme"],
+      ...hoisted.CEILING_CONSTRAINTS,
+      time_window: { not_before: narrowed.not_before, not_after: WINDOW.not_after },
+    };
+    expect(constraintsOf(claims(issued.at).authorization_details)).toEqual([derived]);
+    const refreshed = await token(
+      { grant_type: "refresh_token", refresh_token: issued.rt, resource: RESOURCE },
+      issued.keys,
+    );
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(constraintsOf(claims(refreshed.body.access_token as string).authorization_details)).toEqual([derived]);
+    expect(constraintsOf((await introspect(issued.at)).authorization_details)).toEqual([derived]);
+  });
+
+  it("a proposal whose window does not overlap the ceiling's is refused at the approval decision, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    const redirect = await approve(read({ time_window: { not_before: "2028-01-01T00:00:00Z" } }));
+    expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
+    expect(redirect.searchParams.get("error_description")).toMatch(/time_window values have no intersection/);
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a Token Exchange that drops a window bound or extends it is refused; one that narrows it is issued", async () => {
+    const issued = await issue(read());
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    for (const time_window of [
+      { not_before: WINDOW.not_before },
+      { not_after: WINDOW.not_after },
+      { ...WINDOW, not_after: "2028-01-01T00:00:00Z" },
+    ]) {
+      const res = await exchange(issued.at, issued.keys, read({ ...derived, time_window }));
+      expect(res.status, JSON.stringify(time_window)).toBe(400);
+      expect(res.body.error, JSON.stringify(time_window)).toBe("invalid_authorization_details");
+    }
+    const narrower = { ...derived, time_window: { ...WINDOW, not_after: "2027-06-30T00:00:00Z" } };
+    const ok = await exchange(issued.at, issued.keys, read(narrower));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([narrower]);
+  });
+
+  it("a Token Exchange compares window bounds as UTC instants: the same end in another offset is no broader", async () => {
+    const issued = await issue(read());
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    // 2028-01-01T00:59:59+01:00 is the ceiling's own 2027-12-31T23:59:59Z,
+    // though its text sorts later.
+    const sameEnd = { ...derived, time_window: { ...WINDOW, not_after: "2028-01-01T00:59:59+01:00" } };
+    const res = await exchange(issued.at, issued.keys, read(sameEnd));
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    // One second later in the same offset is broader.
+    const later = { ...derived, time_window: { ...WINDOW, not_after: "2028-01-01T01:00:00+01:00" } };
+    const refused = await exchange(issued.at, issued.keys, read(later));
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("invalid_authorization_details");
   });
 });

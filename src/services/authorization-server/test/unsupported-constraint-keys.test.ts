@@ -30,7 +30,7 @@
  * the cases below exercise the loaders themselves, and (in the last describe
  * block) `deriveAuthoritySet` directly, with no `as never` cast anywhere in
  * that block. Both a wholly unregistered key and a registered-but-unimplemented
- * one (e.g. `time_window`) are covered at every boundary: registration in the
+ * one (e.g. `allowed_tools`) are covered at every boundary: registration in the
  * Common Constraints registry is not itself support, and an unregistered,
  * deployment-defined key carries the same obligation as a registered one.
  */
@@ -94,7 +94,7 @@ describe("typed config loaders refuse an unsupported constraint key at load (#78
         if (entry) {
           entry.constraints = {
             ...entry.constraints,
-            time_window: { not_before: "2026-01-01T00:00:00Z" },
+            allowed_tools: ["query_invoices"],
           };
         }
       });
@@ -123,7 +123,7 @@ describe("typed config loaders refuse an unsupported constraint key at load (#78
         if (entry) {
           entry.constraints = {
             ...entry.constraints,
-            time_window: { not_before: "2026-01-01T00:00:00Z" },
+            allowed_tools: ["query_invoices"],
           };
         }
       });
@@ -165,14 +165,14 @@ describe("PAR intake refuses an unsupported constraint key (#784)", () => {
   it("refuses invalid_authorization_details for a registered-but-unimplemented Common Constraint key", () => {
     try {
       validateAuthorityProposal(
-        proposal(["payments:invoice.list"], { time_window: { not_before: "2026-01-01T00:00:00Z" } }),
+        proposal(["payments:invoice.list"], { allowed_tools: ["query_invoices"] }),
         [RESOURCE],
       );
       expect.unreachable("a registered-but-unimplemented key must be refused, not silently dropped");
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
       expect((e as IntentError).code).toBe("invalid_authorization_details");
-      expect((e as IntentError).message).toMatch(/time_window/);
+      expect((e as IntentError).message).toMatch(/allowed_tools/);
     }
   });
 
@@ -217,7 +217,7 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
   });
 
   it("configured-mapping mode refuses a registered-but-unimplemented Common Constraint key on a directly-supplied ceiling entry", () => {
-    const constraints = { time_window: { not_before: "2026-01-01T00:00:00Z" } };
+    const constraints = { allowed_tools: ["query_invoices"] };
     const ceiling: AuthorityEntry[] = [
       { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints },
     ];
@@ -227,7 +227,7 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
       expect((e as IntentError).code).toBe("invalid_authorization_details");
-      expect((e as IntentError).message).toMatch(/time_window/);
+      expect((e as IntentError).message).toMatch(/allowed_tools/);
     }
   });
 
@@ -291,7 +291,7 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
   // prior code ran there, while the FIRST ceiling entry still lets derivation
   // succeed. Only validating the full ceiling array up front catches it.
   it("submitted-proposal mode refuses a registered-but-unimplemented key on a ceiling entry no submitted action overlaps, even though another same-resource entry derives fine", () => {
-    const timeWindow = { time_window: { not_before: "2026-01-01T00:00:00Z" } };
+    const allowedTools = { allowed_tools: ["query_invoices"] };
     const ceiling: AuthorityEntry[] = [
       {
         type: "mission_resource_access",
@@ -303,7 +303,7 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:payment.execute"],
-        constraints: timeWindow,
+        constraints: allowedTools,
       },
     ];
     const proposal: AuthorityEntry[] = [
@@ -319,7 +319,7 @@ describe("direct derivation (deriveAuthoritySet) refuses an unsupported constrai
       expect.unreachable("a registered-but-unimplemented key must refuse even on an action-filtered-out ceiling entry");
     } catch (e) {
       expect(e).toBeInstanceOf(IntentError);
-      expect((e as IntentError).message).toMatch(/time_window/);
+      expect((e as IntentError).message).toMatch(/allowed_tools/);
     }
   });
 });

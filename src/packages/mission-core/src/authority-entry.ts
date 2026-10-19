@@ -125,6 +125,12 @@ export interface AuthorityEntry {
      * only to resources of the named tenant (exact string comparison).
      */
     tenant?: string;
+    /**
+     * @spec resource-access#initial-common-constraints — the action may be
+     * exercised only within the window, evaluated at the point of use; an
+     * absent bound is unbounded on its side.
+     */
+    time_window?: { not_before?: string; not_after?: string };
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

@@ -541,6 +541,7 @@ export class McpPaymentsServer {
         "resource_issued_after",
         "resource_issued_before",
         "tenant",
+        "time_window",
       ],
       // Deployment-local publication, not a new protocol baseline member.
       enforcement_scope_statement: this.deps.enforcementScopeStatement ?? RUNTIME_POSTURE,

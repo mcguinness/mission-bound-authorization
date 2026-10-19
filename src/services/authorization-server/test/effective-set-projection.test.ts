@@ -129,7 +129,7 @@ describe("projectThroughEffective: entry-wise intersection (@spec issuance-grant
   });
 
   it("drops the fragment for a constraint key this projection cannot intersect, on EITHER side", () => {
-    const unprojectable = { time_window: { not_before: "2026-01-01T00:00:00Z" } } as never;
+    const unprojectable = { allowed_tools: ["query_invoices"] } as never;
     expect(project([entry()], [entry({ constraints: unprojectable })])).toEqual([]);
     expect(project([entry({ constraints: unprojectable })], [entry()])).toEqual([]);
   });

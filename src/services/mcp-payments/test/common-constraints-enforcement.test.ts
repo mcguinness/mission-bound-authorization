@@ -21,6 +21,7 @@ import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import {
   CANONICAL_RESOURCE,
+  Connectors,
   createEphemeralEvidenceKeys,
   credentialAuthorityFrom,
   EvidenceStore,
@@ -30,6 +31,7 @@ import {
   Pep,
   TOOLS,
   type TokenFacts,
+  TransactionEngine,
 } from "../src/index.js";
 
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
@@ -48,6 +50,11 @@ interface Harness {
   lastResource: () => Record<string, unknown> | undefined;
   /** Whether the PEP asked the PDP for a decision at all on the last call. */
   decisions: () => number;
+  connectors: Connectors;
+  /** The permit conditions of the last decision. */
+  lastConditions: () => Record<string, unknown> | undefined;
+  /** Advance the one clock the PEP, the PDP and the connectors read. */
+  advance: (ms: number) => void;
 }
 
 /**
@@ -56,7 +63,17 @@ interface Harness {
  * for a credential covering every action with no restriction (so a test
  * reaches the Mission bound alone).
  */
-function harness(opts: { mission?: Record<string, unknown>; credential?: Record<string, unknown> }): Harness {
+function harness(opts: {
+  mission?: Record<string, unknown>;
+  credential?: Record<string, unknown>;
+  /** The clock's starting instant (default: now). */
+  startMs?: number;
+  /** Run after each decision, before the permit is admitted. */
+  afterDecision?: (h: Harness) => void;
+}): Harness {
+  let clockMs = opts.startMs ?? Date.now();
+  const clock = () => new Date(clockMs);
+  let self: Harness;
   const payments = new PaymentsStore();
   payments.seed(
     [
@@ -93,17 +110,23 @@ function harness(opts: { mission?: Record<string, unknown>; credential?: Record<
   };
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === MISSION && ref.issuer === ISSUER
-      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: clock().toISOString() } }
       : undefined;
   let resource: Record<string, unknown> | undefined;
+  let conditions: Record<string, unknown> | undefined;
   let decisions = 0;
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+  const connectors = new Connectors(clock);
   const pep = new Pep({
     decide: async (req, options) => {
       decisions++;
       resource = req.resource as unknown as Record<string, unknown>;
-      return EVIDENCE_KEYS.decide(req, options);
+      const decision = await EVIDENCE_KEYS.decide(req, options);
+      conditions = decision.context.conditions as Record<string, unknown> | undefined;
+      return decision;
     },
+    observe: () => opts.afterDecision?.(self),
+    now: clock,
     payments,
     evidence,
     fga: alwaysAllowFga,
@@ -119,6 +142,7 @@ function harness(opts: { mission?: Record<string, unknown>; credential?: Record<
     keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+    transaction: { engine: new TransactionEngine("epoch-1266", clock), connectors, evidence },
   });
   const token: TokenFacts = {
     sub: "alice",
@@ -134,7 +158,19 @@ function harness(opts: { mission?: Record<string, unknown>; credential?: Record<
       },
     ]),
   };
-  return { server, payments, token, lastResource: () => resource, decisions: () => decisions };
+  self = {
+    server,
+    payments,
+    token,
+    connectors,
+    lastResource: () => resource,
+    lastConditions: () => conditions,
+    decisions: () => decisions,
+    advance: (ms) => {
+      clockMs += ms;
+    },
+  };
+  return self;
 }
 
 const read = (h: Harness, invoiceId: string) => h.server.callReadTool("get_invoice", { invoice_id: invoiceId }, h.token);
@@ -298,6 +334,83 @@ describe("the payments resource enforces tenant against its own ownership record
   });
 });
 
+describe("the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints)", () => {
+  const START = Date.parse("2026-10-18T12:00:00Z");
+  const at = (seconds: number) => new Date(START + seconds * 1000).toISOString();
+  const transfer = (h: Harness, beforeCommit?: () => void) =>
+    h.server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` },
+      h.token,
+      beforeCommit,
+    );
+
+  it("permits within the window and binds the permit's valid_until to the window's end", async () => {
+    const h = harness({ mission: { time_window: { not_before: at(-3600), not_after: at(30) } }, startMs: START });
+    const res = await read(h, "inv-q3");
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(Date.parse(h.lastConditions()?.valid_until as string)).toBe(START + 30_000);
+  });
+
+  it("refuses before the window opens and after it closes, with no result", async () => {
+    for (const window of [{ not_before: at(60) }, { not_after: at(-1) }]) {
+      const h = harness({ mission: { time_window: window }, startMs: START });
+      const res = await read(h, "inv-q3");
+      expect(res.ok, JSON.stringify(window)).toBe(false);
+      expect(res.denial_reason, JSON.stringify(window)).toBe("parameter_violation");
+      expect(res.result).toBeUndefined();
+    }
+  });
+
+  it("refuses at use a permit relied on after the window closed, though the permit's own lifetime had not ended", async () => {
+    const h = harness({
+      mission: { time_window: { not_after: at(30) } },
+      startMs: START,
+      afterDecision: (self) => self.advance(31_000),
+    });
+    const res = await read(h, "inv-q3");
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("permit_expired");
+    expect(res.result).toBeUndefined();
+  });
+
+  it("refuses a long-running commit whose window closed before the commit, with no effect", async () => {
+    // Inside the irreversible class's 30-second state bound, so only the
+    // window can end the permit before the commit.
+    const h = harness({ mission: { time_window: { not_after: at(10) } }, startMs: START });
+    const res = await transfer(h, () => h.advance(15_000));
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("permit_expired");
+    expect(h.connectors.ledgerEntries(MISSION)).toHaveLength(0);
+  });
+
+  it("the same commit inside the window executes (positive control)", async () => {
+    const h = harness({ mission: { time_window: { not_after: at(10) } }, startMs: START });
+    const res = await transfer(h, () => h.advance(5_000));
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(h.connectors.ledgerEntries(MISSION)).toHaveLength(1);
+  });
+
+  it("a credential window that has closed is refused at the PEP, before any decision", async () => {
+    const h = harness({ credential: { time_window: { not_after: at(-1) } }, startMs: START });
+    const res = await read(h, "inv-q3");
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(h.decisions()).toBe(0);
+  });
+
+  it("a credential window bounds the permit when the Mission carries none", async () => {
+    const h = harness({
+      credential: { time_window: { not_after: at(30) } },
+      startMs: START,
+      afterDecision: (self) => self.advance(31_000),
+    });
+    const res = await read(h, "inv-q3");
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("permit_expired");
+  });
+});
+
 describe("the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses an operation whose matched Mission entry carries a constraints key the resource does not understand", async () => {
     const h = harness({ mission: { x_region: "eu" } });
@@ -313,7 +426,7 @@ describe("protected resource metadata names only enforced constraint keys (@spec
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant"].sort(),
+      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window"].sort(),
     );
     // The supported set the Authorization Server admits is the one this resource enforces.
     expect([...supported].sort()).toEqual(

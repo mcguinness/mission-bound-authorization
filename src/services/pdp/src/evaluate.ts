@@ -39,6 +39,7 @@ import {
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
   SUPPORTED_CONSTRAINT_KEYS,
+  timeWindowEndMs,
 } from "@mission/core";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
@@ -1321,6 +1322,10 @@ async function evaluateInner(
       ? { resourceIssuedAt: req.resource.properties.issued_at }
       : {}),
     ...(typeof req.resource.properties?.tenant === "string" ? { tenant: req.resource.properties.tenant } : {}),
+    // `time_window` reads this PDP's own clock at the decision, never a
+    // request member; the permit's `valid_until` carries the window's end to
+    // every later use (step 8a's ceiling).
+    now: now().getTime(),
   };
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
@@ -1656,6 +1661,18 @@ async function evaluateInner(
   // ceiling here, measured from the same decision instant, so the permit
   // never outlives the window the published retention was validated against.
   const decisionNowMs = now().getTime();
+  const windowCeilings: Array<{ name: string; atMs: number }> = [];
+  const missionWindowEnd = timeWindowEndMs(entry.constraints);
+  if (missionWindowEnd !== undefined) {
+    windowCeilings.push({ name: "mission_time_window_not_after", atMs: missionWindowEnd });
+  }
+  const credentialWindowEnds = credentialCandidates.map((c) => timeWindowEndMs(c.constraints));
+  if (credentialWindowEnds.length > 0 && credentialWindowEnds.every((end) => end !== undefined)) {
+    windowCeilings.push({
+      name: "credential_time_window_not_after",
+      atMs: Math.max(...(credentialWindowEnds as number[])),
+    });
+  }
   const reversibleWriteMaxSeconds = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "")
     ? undefined
     : (
@@ -1674,9 +1691,20 @@ async function evaluateInner(
         : []),
       // #1049 review P2-a: a verified status response's signed state ceiling.
       ...(signedFreshUntilMs !== undefined ? [{ name: "signed_state_fresh_until", atMs: signedFreshUntilMs }] : []),
+      // @spec resource-access#initial-common-constraints (`time_window`,
+      // #1266): the permit expires no later than the matched entry's window,
+      // so neither a retained permit nor an execution lease derived from it
+      // reaches past the window's end. The credential bound rests on any one
+      // satisfying candidate, so its ceiling is the latest of their window
+      // ends, and none when one of them carries no end.
+      ...windowCeilings,
     ],
   });
-  if (deadline.kind === "elapsed") return deny("stale_state");
+  if (deadline.kind === "elapsed") {
+    // A window that closes at the decision instant leaves no time to rely on
+    // the permit: the window refuses it, not the state view.
+    return deny(deadline.source.endsWith("time_window_not_after") ? "parameter_violation" : "stale_state");
+  }
   const validUntil = deadline.validUntil;
   // @spec runtime#classification: the high-consequence classes are
   // irreversible_action, external_commitment, and privileged_administration

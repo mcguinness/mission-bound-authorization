@@ -273,7 +273,7 @@ describe("credential facts the PDP cannot use refuse credential_invalid (@spec a
 
   it.each([
     ["an entry type it does not understand", [{ type: "other", resource: RESOURCE, actions: ["payments:invoice.read"] }]],
-    ["a constraint it cannot enforce", [entry(["payments:invoice.read"], { time_window: "9-5" })]],
+    ["a constraint it cannot enforce", [entry(["payments:invoice.read"], { office_hours: "9-5" })]],
     ["a malformed amount cap", [entry(["payments:invoice.read"], { max_amount: { amount: "ten", currency: "USD" } })]],
     ["a non-array value", { type: "mission_resource_access" }],
     ["an empty discharge condition list", [entry(["payments:invoice.read"], { terminal_when: [] })]],
