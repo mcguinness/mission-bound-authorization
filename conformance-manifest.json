@@ -42212,7 +42212,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a client not authorized for the parent is refused before the creation_request_id lookup, even when it holds the parent token and its key: no child, reservation or child grant is created",
-    "local": "the reference AS authorizes only the parent's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. The check precedes the lookup, so another client's retained completed operation is refused rather than recovered, and a child grant issued before the check expires within its 300 s lifetime (MAX_CHILD_GRANT_LIFETIME_S); the child record names no creating client, so redemption does not re-check it (#1326). Partial: the actor_token arm is not exercised."
+    "local": "the reference AS authorizes only the parent's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. The check precedes the lookup, so another client's retained completed operation is refused rather than recovered. A child another client created before the check could still derive credentials: its grant redeems, and a refresh family opened from it outlives the grant. So building the AS revokes every non-terminal child whose retained creation operation names a client other than its parent's (revokeChildrenCreatedByAnotherClient), and issuance gating then refuses the grant and every credential derived from it. The child record names no creating client, so a child whose creation operation was purged before the fix cannot be identified (#1326). Partial: the actor_token arm is not exercised."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -42227,6 +42227,18 @@
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
      "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > a retained child-creation operation another client recorded is refused before recovery, minting no fresh child grant",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326) > the remediation revokes the children another client created before the check, refusing a retained grant and a refresh family opened from one; a child the parent's own client created keeps refreshing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-remediation-restart.test.ts",
+     "name": "child remediation at build (@spec child-delegation#request-processing step 4, #1326) > building the AS revokes a retained child another client created, and leaves the parent's own child active",
+     "level": "cross-component",
      "surface": "token-endpoint"
     }
    ]

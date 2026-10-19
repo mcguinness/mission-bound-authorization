@@ -348,6 +348,21 @@ export class CreationIdempotencyStore {
     };
   }
 
+  /**
+   * @spec child-delegation#request-processing step 4 (#1326): every retained,
+   * completed child creation, with the client that requested it. The child
+   * record names no creating client, so this is the only stored link from a
+   * child to the client that created it; an operation purged here is gone.
+   */
+  retainedChildCreations(): Array<{ clientId: string; parentId: string; childId: string }> {
+    const rows = this.db
+      .prepare(
+        "SELECT client_id, source_mission_id, mission_id FROM creation_idempotency WHERE op = 'child-creation' AND state = 'completed' AND mission_id IS NOT NULL",
+      )
+      .all() as Array<{ client_id: string; source_mission_id: string; mission_id: string }>;
+    return rows.map((r) => ({ clientId: r.client_id, parentId: r.source_mission_id, childId: r.mission_id }));
+  }
+
   /** Bare INSERT (state as given); the caller controls the transaction. An
    *  expired tombstone under the same key is purged first (reuse after the
    *  horizon is out of contract, so the identifier is simply free again). */

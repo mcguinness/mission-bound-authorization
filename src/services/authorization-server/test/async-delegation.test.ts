@@ -46,7 +46,12 @@ import {
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE, ACCESS_TOKEN_TOKEN_TYPE, JWT_TOKEN_TYPE, presentedTokenAuthority } from "../src/adapters/continuation-grant.js";
-import { buildAuthorizationServer, type BuiltAs, SourceUnavailableError } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type BuiltAs,
+  revokeChildrenCreatedByAnotherClient,
+  SourceUnavailableError,
+} from "../src/index.js";
 import { GateError } from "../src/kernel/kernel.js";
 import {
   BARE_REFUSAL_MEMBERS,
@@ -3024,12 +3029,17 @@ describe("mission_error on the async-delegation exchange's explicit lifecycle re
 describe("child creation acting-agent authorization (@spec child-delegation#request-processing step 4, #1326)", () => {
   type Refusal = { error?: string; error_description?: string; mission_error?: string; mission_id?: string; access_token?: string };
 
-  /** The child-creation exchange presenting `subjectToken` under `actingDpop`, authenticated as `actingAs` (default ap-agent). */
+  /**
+   * The child-creation exchange presenting `subjectToken` under `actingDpop`,
+   * authenticated as `actingAs` (default ap-agent), naming `childActor` as the
+   * child's actor.
+   */
   async function createChildAs(
     subjectToken: string,
     parentId: string,
     creationRequestId: string,
     actingAs?: ActingClient,
+    childActor = "subagent-invoice-extractor",
   ): Promise<Response> {
     const params: Record<string, string> = {
       grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
@@ -3042,7 +3052,7 @@ describe("child creation acting-agent authorization (@spec child-delegation#requ
         intent: { goal: "Extract Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP },
       }),
       authorization_details: JSON.stringify(confinedAuthority()),
-      child_actor: JSON.stringify({ sub: "subagent-invoice-extractor", sub_profile: "ai_agent" }),
+      child_actor: JSON.stringify({ sub: childActor, sub_profile: "ai_agent" }),
     };
     const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
       fetch(`${ISSUER}/token`, {
@@ -3108,5 +3118,68 @@ describe("child creation acting-agent authorization (@spec child-delegation#requ
     expect(body.error_description).toContain("not authorized to create a child");
     expect(body.access_token).toBeUndefined();
     expect(body.mission_id).toBeUndefined();
+  });
+
+  it("the remediation revokes the children another client created before the check, refusing a retained grant and a refresh family opened from one; a child the parent's own client created keeps refreshing", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    /** A child of the parent, created by `creator`, whose actor is the token-exchange-capable child client. */
+    const create = async (creator?: ActingClient): Promise<{ id: string; grant: string }> => {
+      const res = await createChildAs(baseAccessToken, missionId, crypto.randomUUID(), creator, EXCHANGER_CLIENT_ID);
+      const body = (await res.json()) as { access_token: string; mission_id: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      return { id: body.mission_id, grant: body.access_token };
+    };
+    /** The child redeems its grant as itself and opens a refresh family from its own access token. */
+    const openFamily = async (grant: string): Promise<string> => {
+      const redeemed = await childRedeem(grant, "exchanger");
+      const redeemedBody = (await redeemed.json()) as { access_token: string };
+      expect(redeemed.status, JSON.stringify(redeemedBody)).toBe(200);
+      const family = await asyncDelegate(redeemedBody.access_token, { actingAs: "exchanger" });
+      const familyBody = (await family.json()) as { refresh_token: string };
+      expect(family.status, JSON.stringify(familyBody)).toBe(200);
+      return familyBody.refresh_token;
+    };
+
+    const own = await create();
+    const ownFamily = await openFamily(own.grant);
+    // Seeded as children created before the check existed: while the parent
+    // briefly names the unrelated client as its own, that client creates two.
+    const setClient = (clientId: string) =>
+      as.kernel.db.prepare("UPDATE missions SET client_id = ? WHERE id = ?").run(clientId, missionId);
+    setClient(EXCHANGER_CLIENT_ID);
+    let redeemedChild: { id: string; grant: string };
+    let heldChild: { id: string; grant: string };
+    try {
+      redeemedChild = await create("exchanger");
+      heldChild = await create("exchanger");
+    } finally {
+      setClient("ap-agent");
+    }
+    const unauthorizedFamily = await openFamily(redeemedChild.grant);
+
+    const revoked = revokeChildrenCreatedByAnotherClient(as.kernel, as.creationIdempotency);
+    expect(revoked).toEqual(expect.arrayContaining([redeemedChild.id, heldChild.id]));
+    expect(revoked).not.toContain(own.id);
+    await as.kernel.drainLifecycleOutbox();
+    for (const { id } of [redeemedChild, heldChild]) {
+      expect(as.kernel.get(id)?.termination?.reason).toBe("revoked");
+    }
+
+    // The family opened from the unauthorized child, and its retained grant, are refused.
+    const refreshed = await refreshFamily(unauthorizedFamily, actingDpop, "exchanger");
+    const refreshedBody = (await refreshed.json()) as Refusal;
+    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(400);
+    expect(refreshedBody.error).toBe("invalid_grant");
+    expect(refreshedBody.access_token).toBeUndefined();
+    const held = await childRedeem(heldChild.grant, "exchanger");
+    const heldBody = (await held.json()) as Refusal;
+    expect(held.status, JSON.stringify(heldBody)).toBe(400);
+    expect(heldBody.access_token).toBeUndefined();
+
+    // The parent's own child is untouched, and a second run revokes nothing.
+    expect(as.kernel.get(own.id)?.state).toBe("active");
+    const ownRefreshed = await refreshFamily(ownFamily, actingDpop, "exchanger");
+    expect(ownRefreshed.status, JSON.stringify(await ownRefreshed.clone().json())).toBe(200);
+    expect(revokeChildrenCreatedByAnotherClient(as.kernel, as.creationIdempotency)).toEqual([]);
   });
 });

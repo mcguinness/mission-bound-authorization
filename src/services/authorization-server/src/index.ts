@@ -49,6 +49,7 @@ import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
+import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
@@ -391,6 +392,7 @@ export {
   createChildMission,
   childMissionClaim,
   childEvidenceBytes,
+  revokeChildrenCreatedByAnotherClient,
   ChildDelegationError,
   CHILD_EVIDENCE_MEDIA_TYPE,
   MAX_CHILD_DEPTH,
@@ -1583,6 +1585,13 @@ export async function buildAuthorizationServer(opts: {
   // on the in-memory default; the `store.file` opt-in is what makes it
   // observable across a restart.
   await kernel.recoverAtBoot();
+  // @spec child-delegation#request-processing step 4 (#1326): revoke any child
+  // that a client other than its parent's own created before the step-4 check
+  // existed, while its creation operation is retained, then deliver the
+  // revocations' durable effects (family grants) before serving a request.
+  if (revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency).length > 0) {
+    await kernel.drainLifecycleOutbox();
+  }
   // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
   // persisted schedule, delivering any whose deadline passed while the
   // process was down, before this assembly serves a request.
