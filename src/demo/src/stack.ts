@@ -29,6 +29,7 @@ import {
 import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
+  buildBoundaryEvidenceKeyResolver,
   createDecisionPoint,
   createDecisionChannel,
   createPdpRefusalRecorder,
@@ -841,12 +842,19 @@ export async function composeStack(opts: {
       publicKey: await exportJWK(key.publicKey as Parameters<typeof exportJWK>[0]),
     });
   }
+  // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
+  // PEP verifies the PDP's Decision Evidence under the declared statement
+  // versions, by the record's (audience, kid) pair, against exactly what the
+  // decision point publishes for the records it emits.
   const evidence = new EvidenceStore(
     evidenceKeys.signing,
-    buildEvidenceKeyResolver([
-      ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
-      // Exactly what the decision point publishes for the records it emits.
-      { ...decisionPoint.evidenceVerification, role: "pdp" },
+    buildBoundaryEvidenceKeyResolver(boundary.declaration, [
+      {
+        kid: decisionPoint.evidenceVerification.kid,
+        publicKey: decisionPoint.evidenceVerification.publicKey,
+        emitterId: decisionPoint.evidenceVerification.emitterId,
+        role: "pdp",
+      },
     ]),
     evidenceRetention,
     boundaryEvidenceAuthorization(boundary),

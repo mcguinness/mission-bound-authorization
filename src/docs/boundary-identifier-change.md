@@ -75,10 +75,13 @@ URL or the Resource-policy object.
    profile that still mints it, the evidence keys authorized for the new
    boundary, a `replaces` record, and an `effective_at` ahead of now. Keep
    every earlier version for as long as its evidence must verify. Load the
-   statement into every consumer before `effective_at`: the PEP's boundary
-   context, the PDP's emitter authorization and PEP scope registration,
-   the evidence store's authorization and every verifier. Each now verifies
-   records of either version.
+   statement into every consumer before `effective_at`. In the assembled
+   stack (`demo/src/stack.ts`) one boundary context feeds the PEP, the
+   PDP's emitter authorization, its Refusal Record scope and its PEP scope
+   registration, the evidence store's signing authorization and its
+   Decision Evidence verifier, which then verifies records of either
+   version. The consumers listed under Bounds bind a key to one audience
+   and are re-provisioned for the new boundary.
 2. **Stop old admissions.** At `effective_at` every PEP establishes the new
    boundary. The reference refuses in-flight operations rather than
    draining them: the `enforcement_boundary` permit-use check suppresses a
@@ -115,6 +118,11 @@ authority takes a new approval through Mission creation or derivation.
   before it lands in a new scope, in both the PDP claim domain and the
   PEP's write reservations (each P7D). Schedule the change so that no such
   retry falls inside the horizon, or refuse those retries operationally.
+- **Static key bindings.** The PDP claim domain's settlement resolver and
+  the key set published at `EVIDENCE_KEY_SET_LOCATION` bind each key to the
+  shipped `audience` and do not read the statement's versions; a change
+  re-provisions both for the new boundary, keeping the old bindings for as
+  long as old evidence must verify.
 - **Remote claim channel.** Settlement and reconciliation requests carry
   the channel's configured `audience`, not the version in force.
 - **Gate refusals.** A token refused at the HTTP gate answers 401 and, as
