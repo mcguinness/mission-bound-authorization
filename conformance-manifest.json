@@ -18571,7 +18571,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test."
+   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test. #1276: the resource item includes the operation target an authority-entry match uses; no test establishes that a permit binds the target."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -20806,10 +20806,10 @@
    "tests": []
   },
   {
-   "id": "authzen.pdp-request.audience-match-mandatory",
+   "id": "authzen.pdp-request.operation-target-match",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
-   "text": "A PDP MUST perform the entry match against `resource.properties.audience`; matching it against `resource.type` or `resource.id` is non-conforming and will diverge across deployments.",
+   "text": "A PDP MUST match each such entry's `resource` against that target under {{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section \"Resource Matching\", in the credential's authority ({{context-credential}}), in the current effective authority ({{I-D.draft-mcguinness-mission-runtime}}), and in any other `mission_resource_access` authority bound it applies.",
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
@@ -20821,24 +20821,35 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "the PDP matches the approved Authority Set entry's resource against resource.properties.audience, never against the AuthZEN resource object's type/id identity"
+    "normative": "for every mission_resource_access entry in the credential authority, the current effective authority and any other mission_resource_access bound, the PDP matches the entry's resource against resource.properties.operation_target with the Resource Access matcher (exact character for character, prefix at a path-segment boundary after comparison normalization); a request whose target is outside every entry of a bound is denied even when its audience equals the entry's resource"
    },
    "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > matches the approved entry's resource against resource.properties.audience, with no context.audience and a resource id that names an object",
-     "level": "endpoint",
-     "surface": "decision-request"
-    },
-    {
-     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
-     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.audience > never matches on the resource object's id or type: an id naming the entry's resource under another audience is out_of_authority",
-     "level": "endpoint",
-     "surface": "decision-request"
-    }
-   ]
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457) replaces authzen.pdp-request.audience-match-mandatory, which required the entry match against resource.properties.audience and was tested on the reference PDP's audience match. Those tests witness the retired operand, so they are not cited here. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness."
+  },
+  {
+   "id": "authzen.pdp-request.no-audience-or-object-identity-match",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-request",
+   "text": "A PDP MUST NOT match an entry against `resource.properties.audience`, `resource.type` or `resource.id`, or substitute any of them for the operation target.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose resource equals the request's audience, resource.type or resource.id, but does not match its operation_target, authorizes nothing; a request without operation_target is never matched through audience, type or id instead"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457). The reference PDP still matches entries on resource.properties.audience, which this row forbids; the earlier type/id test expects an out_of_authority denial for a request that now lacks a required operation_target, so it is not a witness. #1276's implementation step owns the witness."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -26403,7 +26414,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve, or the PEP cannot establish one unambiguous operation target for the request), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -26415,7 +26426,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -26505,7 +26516,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance."
+   "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",

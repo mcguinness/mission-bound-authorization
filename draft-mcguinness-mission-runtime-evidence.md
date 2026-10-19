@@ -708,7 +708,9 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   required input schema, including an unknown or authoritative member,
   a missing required member, a wrong type, or a pattern failure),
   `target_unresolvable` (the request names a target object the
-  enforcement surface cannot resolve), `capability_source_unresolvable`
+  enforcement surface cannot resolve, or the PEP cannot establish one
+  unambiguous operation target for the request),
+  `capability_source_unresolvable`
   (the capability definition the PEP must present could not be
   resolved),
   `decision_evidence_unverifiable` (the Decision Evidence for a permit
@@ -718,7 +720,10 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   has the PEP supply state, and it cannot establish it). For a PDP
   refusal of an in-scope request that reaches it without the Mission
   decision context a runtime enforcement scope requires,
-  `mission_context_missing`. These name pre-evaluation conditions,
+  `mission_context_missing`; for one whose operation target is absent,
+  malformed, or outside the enforcement scope the requesting PEP is
+  authorized for ({{I-D.draft-mcguinness-mission-authzen}}),
+  `operation_target_invalid`. These name pre-evaluation conditions,
   PEP-side or PDP-side, and are disjoint from the runtime profile's
   PDP denial reasons for an evaluated decision (for example, as
   carried by the AuthZEN profile,
@@ -1203,7 +1208,8 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   permit bound), `phase_mismatch` (the permit's phase differs from the
   executing crossing, is missing or malformed where required, or
   cannot be established at use), `target_drift` (a declared bound
-  evaluation context differs or cannot be established at use),
+  evaluation context, or the operation target the permit was
+  evaluated for, differs or cannot be established at use),
   `permit_expired` (the permit's validity window had passed at
   execution), `permit_consumed` (re-presentation of an
   already-consumed single-use evaluation identifier),
@@ -2564,6 +2570,13 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record and Execution Evidence: `target_unresolvable` also
+  covers a PEP that cannot establish one unambiguous operation target;
+  a PDP refuses a request whose operation target is absent, malformed
+  or outside the requesting PEP's enforcement scope with
+  `operation_target_invalid`; and `target_drift` also covers an
+  operation target that differs from the evaluated one, or cannot be
+  established, at use (#1276).
 - Cross-Entry Correspondence (informative) describes how the records
   support comparing the outcomes of two Authority Set entries: each
   leg is bound to one approved reference, each leg's evidence leads
