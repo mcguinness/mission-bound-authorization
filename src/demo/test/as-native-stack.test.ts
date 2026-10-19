@@ -231,8 +231,6 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
   let missionId: string;
   /** A remittance Mission's token, under its own DPoP key: a second holder. */
   let remit: IssuedMission;
-  /** The transaction token `remittanceApproval` redeemed: one action, narrower than its Mission. */
-  let txnCredential: string | undefined;
   const decisions: { audience: string; permit: boolean }[] = [];
   const asUrl = `http://localhost:${opts.asPort}`;
 
@@ -504,6 +502,73 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       );
       expectAbsent(meta, "revocation_endpoint");
     },
+  };
+
+  /**
+   * @spec txn-authorization#resource-challenge, txn-authorization#challenge-redemption:
+   * a fresh, unconsumed transaction token for `send_remittance_email` on
+   * `args`, under the remittance Mission's key.
+   */
+  const redeemRemittanceChallenge = async (args: Record<string, unknown>): Promise<{ challenge: string; txnToken: string }> => {
+    const as = authServer();
+    // 1. The gated tool over the endpoint, with the base token and the
+    //    client's Accept-Txn-Challenge signal: denied, with a challenge.
+    const agent = await createHttpMediatedClient(CANONICAL_RESOURCE, remit.accessToken, remit.dpopKeys, {
+      "accept-txn-challenge": "?1",
+    });
+    let challenge: string;
+    try {
+      const challenged = await agent.client.callTool("send_remittance_email", args);
+      expect(challenged.ok).toBe(false);
+      expect(challenged.denial_reason).toBe("action_approval_required");
+      expect(challenged.error).toBe("transaction_authorization_required");
+      challenge = challenged.transaction_challenge as string;
+      expect(challenge).toBeTruthy();
+    } finally {
+      await agent.close();
+    }
+    // 2. The transaction endpoint, discovered from AS metadata: the client
+    //    authenticates, presents the challenge once with its Mission-bound
+    //    token as the subject token, and proves the challenge's cnf key.
+    const meta = (await (await fetch(`${as.asUrl}/.well-known/openid-configuration`)).json()) as Record<string, string>;
+    const txnEndpoint = meta.transaction_authorization_endpoint as string;
+    const assertion = await clientAssertionSigner(as.asUrl, as.agentClientJwk);
+    const postTxn = async (payload: Record<string, string>) => {
+      const res = await fetch(txnEndpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          dpop: await dpopProofFor(remit.dpopKeys, txnEndpoint, "POST"),
+        },
+        body: new URLSearchParams({
+          client_id: "ap-agent",
+          client_assertion: await assertion(),
+          client_assertion_type: CLIENT_ASSERTION_TYPE,
+          ...payload,
+        }).toString(),
+      });
+      return { status: res.status, body: (await res.json()) as Record<string, string> };
+    };
+    const admitted = await postTxn({
+      transaction_challenge: challenge,
+      subject_token: remit.accessToken,
+      subject_token_type: AT_TYPE,
+    });
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const handle = admitted.body.transaction_authorization_id as string;
+    expect(handle).toBeTruthy();
+    const pending = await postTxn({ transaction_authorization_id: handle });
+    expect(pending.body.error).toBe("authorization_pending");
+
+    // 3. Bob approves the task the AS opened on the in-process approval service.
+    const task = stack.ars.pending()[0];
+    if (!task) throw new Error("the transaction endpoint opened no approval task");
+    await stack.ars.adjudicate(task.id, "approve", "bob");
+    const granted = await postTxn({ transaction_authorization_id: handle });
+    expect(granted.status, JSON.stringify(granted.body)).toBe(200);
+    expect(granted.body.token_type).toBe("DPoP");
+    const txnToken = granted.body.access_token as string;
+    return { challenge, txnToken };
   };
 
   return {
@@ -800,29 +865,15 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     },
 
     async remittanceApproval(): Promise<void> {
-      const as = authServer();
       const remitMissionId = missionIdOf(remit.accessToken);
       const executions = () => stack.evidence.forMission(remitMissionId).filter((e) => e.kind === "execution");
       // @spec runtime#idempotency (#917): one intended execution, one key: the
       // challenged attempt and its retry under the transaction token carry the same.
       const args = { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` };
 
-      // 1. The gated tool over the endpoint, with the base token and the
-      //    client's Accept-Txn-Challenge signal: denied, with a challenge.
-      const agent = await createHttpMediatedClient(CANONICAL_RESOURCE, remit.accessToken, remit.dpopKeys, {
-        "accept-txn-challenge": "?1",
-      });
-      let challenge: string;
-      try {
-        const challenged = await agent.client.callTool("send_remittance_email", args);
-        expect(challenged.ok).toBe(false);
-        expect(challenged.denial_reason).toBe("action_approval_required");
-        expect(challenged.error).toBe("transaction_authorization_required");
-        challenge = challenged.transaction_challenge as string;
-        expect(challenge).toBeTruthy();
-      } finally {
-        await agent.close();
-      }
+      // 1 to 3. The challenge over the endpoint, its redemption at the
+      //    transaction endpoint, and Bob's approval of the task it opens.
+      const { challenge, txnToken } = await redeemRemittanceChallenge(args);
       const challengeClaims = decodeJwt(challenge);
       expect(challengeClaims.iss).toBe(CANONICAL_RESOURCE);
       expect((challengeClaims.cnf as { jkt: string }).jkt).toBe(remit.dpopJkt);
@@ -833,49 +884,6 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
       expect(operation[0]?.actions).toEqual(["payments:remittance.send"]);
       expect(operation[0]).not.toHaveProperty("join_delegation");
       expect(executions()).toHaveLength(0);
-
-      // 2. The transaction endpoint, discovered from AS metadata: the client
-      //    authenticates, presents the challenge once with its Mission-bound
-      //    token as the subject token, and proves the challenge's cnf key.
-      const meta = (await (await fetch(`${as.asUrl}/.well-known/openid-configuration`)).json()) as Record<string, string>;
-      const txnEndpoint = meta.transaction_authorization_endpoint as string;
-      const assertion = await clientAssertionSigner(as.asUrl, as.agentClientJwk);
-      const postTxn = async (payload: Record<string, string>) => {
-        const res = await fetch(txnEndpoint, {
-          method: "POST",
-          headers: {
-            "content-type": "application/x-www-form-urlencoded",
-            dpop: await dpopProofFor(remit.dpopKeys, txnEndpoint, "POST"),
-          },
-          body: new URLSearchParams({
-            client_id: "ap-agent",
-            client_assertion: await assertion(),
-            client_assertion_type: CLIENT_ASSERTION_TYPE,
-            ...payload,
-          }).toString(),
-        });
-        return { status: res.status, body: (await res.json()) as Record<string, string> };
-      };
-      const admitted = await postTxn({
-        transaction_challenge: challenge,
-        subject_token: remit.accessToken,
-        subject_token_type: AT_TYPE,
-      });
-      expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
-      const handle = admitted.body.transaction_authorization_id as string;
-      expect(handle).toBeTruthy();
-      const pending = await postTxn({ transaction_authorization_id: handle });
-      expect(pending.body.error).toBe("authorization_pending");
-
-      // 3. Bob approves the task the AS opened on the in-process approval service.
-      const task = stack.ars.pending()[0];
-      if (!task) throw new Error("the transaction endpoint opened no approval task");
-      await stack.ars.adjudicate(task.id, "approve", "bob");
-      const granted = await postTxn({ transaction_authorization_id: handle });
-      expect(granted.status, JSON.stringify(granted.body)).toBe(200);
-      expect(granted.body.token_type).toBe("DPoP");
-      const txnToken = granted.body.access_token as string;
-      txnCredential = txnToken;
 
       // 4. The retry over the endpoint, the transaction token its only
       //    credential and DPoP-bound to the same key: executed exactly once.
@@ -897,9 +905,12 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
     // the one credential this target issues narrower than its Mission. Presented
     // for any other tool, it is refused before a decision, and nothing executes.
     async narrowedTransactionToken(): Promise<void> {
-      if (!txnCredential) throw new Error("runs after remittanceApproval, which redeems the transaction token");
+      // A token of its own and never presented for its operation: a consumed
+      // token is refused as a replay whatever operation it is presented for,
+      // which would hide a broken operation match.
+      const { txnToken } = await redeemRemittanceChallenge({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
       const before = snapshot();
-      const holder = await createHttpMediatedClient(CANONICAL_RESOURCE, txnCredential, remit.dpopKeys);
+      const holder = await createHttpMediatedClient(CANONICAL_RESOURCE, txnToken, remit.dpopKeys);
       try {
         const read = await holder.client.callTool("get_invoice", { invoice_id: "inv-1" });
         expect(read.ok).toBe(false);
@@ -907,6 +918,7 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         expect(read.result).toBeUndefined();
         const wire = await holder.client.callTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
         expect(wire.ok).toBe(false);
+        expect(wire.refusal_reason, JSON.stringify(wire)).toBe("txn_action_mismatch");
         expect(wire.result).toBeUndefined();
       } finally {
         await holder.close();
@@ -1514,7 +1526,7 @@ dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315
   it("denies send_remittance_email with a transaction challenge, redeems the approval at the AS transaction endpoint, and executes the retry under the transaction token exactly once", async () => {
     await live.remittanceApproval();
   });
-  it("refuses the narrower transaction token for any other tool, a read or a wire, before a decision and with no effect (#253)", async () => {
+  it("refuses an unconsumed transaction token for any other tool, a read or a wire, as txn_action_mismatch, before a decision and with no effect (#253)", async () => {
     await live.narrowedTransactionToken();
   });
   it("refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)", async () => {

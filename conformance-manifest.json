@@ -15416,7 +15416,7 @@
     },
     {
      "file": "src/demo/test/as-native-stack.test.ts",
-     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the narrower transaction token for any other tool, a read or a wire, before a decision and with no effect (#253)",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an unconsumed transaction token for any other tool, a read or a wire, as txn_action_mismatch, before a decision and with no effect (#253)",
      "level": "cross-component",
      "surface": "verification"
     }
