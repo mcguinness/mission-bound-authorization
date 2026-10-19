@@ -153,34 +153,33 @@ informative:
 
 --- abstract
 
-An agent that dispatches work at machine speed cannot pause for a fresh
-human approval at every run, and a standing Mission broad enough to
-cover every run over-provisions authority the agent holds the whole
-time. This document defines an experimental option between those two:
-the Mission Template. A human consents once to a task template, a
-ceiling of resources, actions, and constraints, a dispatch policy, and
-a set of bounds. Each dispatch then instantiates an ordinary Mission
-from the template by policy, at machine speed, with no fresh human
-approval. The instance is an ordinary Mission: it is bounded by its own
-freshly derived Authority Set, is independently gated and revocable,
-and never exceeds the template ceiling. High-consequence authority
-classes are never dispatched by policy: they stay on a fresh human
-decision. Consent is given once, to the ceiling; dispatch draws within
-it deterministically.
+An agent that runs a recurring task at machine speed cannot pause for
+a fresh human approval at every run, and a standing Mission broad
+enough to cover every run gives the agent that full breadth the whole
+time. This document defines an experimental option between the two:
+the Mission Template. A human consents once to a template: a ceiling
+of resources, actions, and constraints, a dispatch policy, and a set
+of bounds. Each run is then a Dispatch: the Mission Issuer
+instantiates an ordinary Mission from the template by policy, with no
+fresh human approval, and the instance is handed to its agent, which
+works it with ordinary Mission-bound tokens. Each instance is bounded
+by its own freshly derived Authority Set, is independently gated and
+revocable, and never exceeds the template ceiling. High-consequence
+authority classes are never dispatched by policy: they stay on a
+fresh human decision. Consent is given once, to the ceiling; dispatch
+draws within it deterministically.
 
 --- middle
 
 # Introduction
 
-An agent that runs a recurring task dispatches it many times: once per
-ticket, per document, per scheduled window. Mission-Bound Authorization
-for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance
-profile") commits a Mission's authority at a human approval event. A
-fresh human approval at every dispatch does not scale to machine
-speed, and the alternative, a single standing Mission broad enough to
-cover every dispatch, over-provisions: the agent holds the full breadth
-the whole time, and a fresh approval per run is what the deployment was
-trying to avoid.
+A recurring task runs many times: once per ticket, per document, per
+scheduled window. Mission-Bound Authorization for OAuth 2.0
+{{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
+commits a Mission's authority at a human approval event. A fresh human
+approval at every run does not scale to machine speed. The
+alternative, a single standing Mission broad enough to cover every
+run, over-provisions: the agent holds the full breadth the whole time.
 
 This document defines an experimental third option: the Mission
 Template. A human consents once to a template, which fixes a ceiling of
@@ -188,26 +187,28 @@ resources, actions, and constraints, names a dispatch policy, and
 publishes a set of bounds. Each **dispatch** then instantiates an
 ordinary Mission from the template by that policy, at machine speed,
 with no fresh human approval. Consent is given once, to the ceiling;
-each instance draws within it deterministically.
+each instance draws within it deterministically. The agent never holds
+the template: it receives each dispatched instance and works it as it
+works any Mission ({{overview}}).
 
-This concretizes the blessed semantics the architecture's Approve verb
-states: a deterministic, versioned policy can approve at machine speed
-within a ceiling a human consented to, because the policy approves the
-instance and a human approved the policy, with a policy version keeping
-that chain re-checkable ({{I-D.draft-mcguinness-mission-architecture}}).
-The accountable principal for every dispatched Mission is the human who
+This follows the architecture's Approve verb: a deterministic,
+versioned policy can approve at machine speed within a ceiling a human
+consented to, because the policy approves the instance and a human
+approved the policy, with a policy version keeping that chain
+re-checkable ({{I-D.draft-mcguinness-mission-architecture}}). The
+accountable principal for every dispatched Mission is the human who
 approved the template. The high-consequence classes stay on a fresh
 human decision, exactly as that verb requires
 ({{prohibited-classes}}).
 
 This document is optional and experimental: adopt it for evaluation,
-not as a stable interface. It removes the per-dispatch human from a
-consented template, which is a high-consequence capability. This
-document therefore conditions the capability on the ceiling, the
-bounds, the prohibited-class rule, and the audit linkage it requires,
-and an ordinary human-approved Mission ({{I-D.draft-mcguinness-oauth-mission}})
-remains the better fit where each run can carry its own approval. No
-Standards-Track document depends on this one.
+not as a stable interface. Removing the per-dispatch human from a
+consented template is a high-consequence capability, so this document
+conditions it on the ceiling, the bounds, the prohibited-class rule,
+and the audit linkage it requires. An ordinary human-approved Mission
+({{I-D.draft-mcguinness-oauth-mission}}) remains the better fit where
+each run can carry its own approval. No Standards-Track document
+depends on this one.
 
 A Mission Issuer that does not implement this document creates every
 Mission through a fresh human approval and is a fully conforming
@@ -249,20 +250,6 @@ high-consequence classes back for a human. Where progressive draws a
 successor within one chain, a template dispatches independent
 instances.
 
-Terminology disambiguation:
-: The Consent Evidence profile
-  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) already uses
-  `template_id` and `template_version` to name a **disclosure-rendering
-  template**, the presentation template a Consent Disclosure object was
-  rendered from. The **Mission Template** of this document is a
-  different object on a different surface: a consented ceiling and
-  dispatch policy that instances are minted from, not a rendering of a
-  disclosure. The two never share a member. Where this document commits
-  a Mission Template's disclosure under Consent Evidence, that
-  disclosure carries the Consent Evidence profile's `template_id` and
-  `template_version` for its own rendering template, which are unrelated
-  to the Mission Template being disclosed.
-
 # Conventions and Terminology {#conventions-and-terminology}
 
 {::boilerplate bcp14-tagged}
@@ -293,6 +280,15 @@ Dispatch:
   by policy, at machine speed, with no fresh human approval
   ({{dispatch}}).
 
+Instance:
+: A Mission dispatched from a Mission Template, also called a
+  dispatched Mission. It is an ordinary Mission
+  ({{instance-composition}}).
+
+Dispatch Handoff:
+: The exchange that conveys an instance from its Dispatcher to its
+  selected Agent ({{dispatch-handoff}}).
+
 Dispatcher:
 : The authenticated principal that requests a Dispatch. A Dispatcher is
   not an Approver: it triggers instantiation within a template a human
@@ -311,6 +307,122 @@ Mission Deployment Profile:
   ({{I-D.draft-mcguinness-mission-architecture}}). The bounds, the
   action-class mapping, and the review cadence this document requires a
   deployment to publish are published there.
+
+The Consent Evidence profile
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) already uses
+`template_id` and `template_version` to name a **disclosure-rendering
+template**, the presentation template a Consent Disclosure object was
+rendered from. The **Mission Template** of this document is a
+different object on a different surface: a consented ceiling and
+dispatch policy that instances are minted from, not a rendering of a
+disclosure. The two never share a member. Where this document commits
+a Mission Template's disclosure under Consent Evidence, that
+disclosure carries the Consent Evidence profile's `template_id` and
+`template_version` for its own rendering template, which are unrelated
+to the Mission Template being disclosed.
+
+# Template Overview {#overview}
+
+This section is non-normative. It shows the roles, the messages from
+consent to work, and what an agent sees, using one example scenario
+that later sections continue.
+
+## Roles {#roles}
+
+| Role | Part in a template's life |
+|---|---|
+| Approver | The human who consents to the template, and re-consents at each review ({{template-consent}}). The accountable principal for every instance. |
+| Mission Issuer | Holds the template and its retained consent record, adjudicates each Dispatch, and issues the instance's tokens. |
+| Dispatcher | A client in `allowed_dispatchers`, such as a scheduler or an orchestrator. It requests a Dispatch; it is not an Approver and never chooses the instance's Subject or Agent. |
+| Agent | A client in `allowed_recipients` `agents`, selected by the Dispatch Policy. It receives the instance and does the work. |
+| Resource server | Enforces the instance's tokens as it enforces any Mission-bound token ({{conformance}}). |
+
+## From consent to work {#flow}
+
+1. **Consent, once.** The Approver consents to the template at the
+   Mission Issuer, which commits it under `template_hash`
+   ({{template-consent}}, {{template-hash}}).
+2. **Dispatch, per run.** The Dispatcher sends a token request with
+   the Dispatch grant type, naming the template and carrying the run's
+   dispatch intent ({{grant-type}}). The Mission Issuer adjudicates it
+   against the template ({{dispatch}}), commits an ordinary Mission,
+   the instance, selects its Agent, and returns the instance's access
+   token to the Dispatcher, bound to the Dispatcher's key.
+3. **Handoff.** The Dispatcher exchanges that access token for a
+   handoff grant naming the selected Agent as its only redeemer, and
+   passes the grant to the Agent ({{dispatch-handoff}}) over a channel
+   this document does not define, such as a job queue.
+4. **Redemption.** The Agent redeems the handoff grant, authenticating
+   as itself and proving its own key, and receives its delegation
+   handle for the instance ({{handoff-redemption}}).
+5. **Work.** The Agent presents the handle in the continuation
+   profile's async delegation exchange
+   ({{I-D.draft-mcguinness-oauth-mission-continuation}}), receiving
+   access tokens for the instance's resources and a refresh-token
+   family, and calls resource servers with those tokens.
+6. **End.** The instance ends at its own clamped `expires_at` or on
+   revocation, like any Mission. The template stops dispatching when
+   it is revoked or expires ({{template-lifecycle}}), and pauses once
+   its most recent approval is older than `review_cadence`, until a
+   human re-consents ({{template-consent}}).
+
+~~~
+Approver   Dispatcher        Mission Issuer          Agent    Resource
+   |            |                   |                  |       Server
+   |-(1) consent to the template -->|                  |          |
+   |            |                   |                  |          |
+   |            |--(2) Dispatch --->|                  |          |
+   |            |<-- instance token-|                  |          |
+   |            |--(3) handoff ---->|                  |          |
+   |            |<-- handoff grant -|                  |          |
+   |            |------- handoff grant --------------->|          |
+   |            |                   |<-(4) redeem -----|          |
+   |            |                   |--- handle ------>|          |
+   |            |                   |<-(5) async ------|          |
+   |            |                   |    delegation    |          |
+   |            |                   |--- tokens ------>|          |
+   |            |                   |                  |-- call ->|
+~~~
+
+## How an agent uses a template {#agent-view}
+
+The Agent never holds, presents, or names the template. It works with
+an instance, an ordinary Mission with its own identifier, Authority
+Set, and `expires_at`. The `template` member on its tokens records
+where the instance came from; it grants nothing ({{template-member}}).
+
+An Agent obtains an instance in one of two ways:
+
+- **From a separate Dispatcher.** The Dispatcher dispatches and hands
+  the instance off, and the Agent redeems the handoff grant (steps 3
+  and 4 above).
+- **As its own Dispatcher.** An Agent that is both an allowed
+  Dispatcher and the instance's selected Agent dispatches, already
+  holds the instance's access token bound to its own key, and obtains
+  its delegation handle through the continuation profile's handle
+  exchange instead of a handoff ({{dispatcher-as-agent}}).
+
+Either way, the instance's authority is at most the Template Ceiling,
+narrowed by the run's dispatch intent and any proposal, and never
+includes a prohibited class ({{prohibited-classes}}). Authority beyond
+the ceiling takes a fresh human decision: a human-approved expansion
+of the instance, which leaves the template behind, or a new template
+consent ({{instance-composition}}). Each run is a separate instance,
+and `max_active` bounds how many are `active` at once.
+
+## Example scenario {#example-scenario}
+
+The examples in this document follow one scenario. `alice`
+(`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`) consents once to
+a template for nightly invoice reconciliation at
+`https://erp.example.com`: read invoices, and post journal-entry
+adjustments under $500. Each night the ERP's scheduler, the client
+`erp-scheduler`, dispatches an instance for the previous day's
+invoices, and the reconciliation agent, the client `s6BhdRkqt3`, works
+it. The Mission Issuer is `https://as.example.com`. The deployment's
+Mission Deployment Profile maps `invoices.read` to the consequential
+read class and `journal-entries.write` to the reversible consequential
+write class, so neither is prohibited ({{prohibited-classes}}).
 
 # The Mission Template {#the-mission-template}
 
@@ -363,22 +475,25 @@ A Mission Template is a consented object with these members:
   dispatched from this template may be created for, with two members,
   each a non-empty array: `subjects`, each an object with `iss` and
   `sub` identifying a Subject as the issuance profile's `subject` does,
-  and `agents`, each a `client_id` string. The Mission Issuer
-  establishes the instance's Subject as the issuance profile requires,
-  never from Dispatcher input
+  and `agents`, each a `client_id` string.
+
+  The Mission Issuer establishes the instance's Subject as the
+  issuance profile requires, never from Dispatcher input
   ({{I-D.draft-mcguinness-oauth-mission}}). It selects the instance's
   Agent (the instance's `client_id`) from `agents` under the Dispatch
   Policy, never from Dispatcher input: with one listed Agent, that
   Agent; with several, the Agent the Dispatch Policy's selection rule
   names. `agents` bounds the selection and is not a selection rule;
-  its order carries no meaning. The Mission Issuer refuses a Dispatch
-  for which no Agent is selected, whose established Subject does not
-  equal an entry of `subjects` in both `iss` and `sub`, or whose Agent
-  is not an entry of `agents`, so a template cannot mint a Mission for
-  a party the human did not consent to. The two lists are independent:
-  any listed Agent may serve any listed Subject, subject to the other
-  Dispatch checks ({{dispatch}}); a deployment that needs restricted
-  pairings uses separate templates.
+  its order carries no meaning.
+
+  The Mission Issuer refuses a Dispatch for which no Agent is selected,
+  whose established Subject does not equal an entry of `subjects` in
+  both `iss` and `sub`, or whose Agent is not an entry of `agents`, so
+  a template cannot mint a Mission for a party the human did not
+  consent to. The two lists are independent: any listed Agent may
+  serve any listed Subject, subject to the other Dispatch checks
+  ({{dispatch}}); a deployment that needs restricted pairings uses
+  separate templates.
 
 `instance_lifetime`:
 : REQUIRED. A positive integer number of seconds. The per-instance
@@ -417,6 +532,51 @@ prohibited-class rule needs ({{prohibited-classes}}), MUST be published
 in the Mission Deployment Profile
 ({{I-D.draft-mcguinness-mission-architecture}}).
 
+The following is the example scenario's template
+({{example-scenario}}), version `3`, as `alice` consents to it:
+
+~~~ json
+{
+  "id": "tmpl_DW1W29qP9RJRbsGyRGa9oJ2u",
+  "issuer": "https://as.example.com",
+  "template_version": "3",
+  "ceiling": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"] },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" } } }
+  ],
+  "dispatch_policy": {
+    "id": "nightly-reconciliation-dispatch",
+    "version": "4",
+    "digest": "sha-256:7irh90epn3d1Nn07PQhhOxwh3j4Mq5EI0_x4w12VDlk"
+  },
+  "allowed_dispatchers": ["erp-scheduler"],
+  "allowed_recipients": {
+    "subjects": [
+      { "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR" }
+    ],
+    "agents": ["s6BhdRkqt3"]
+  },
+  "instance_lifetime": 28800,
+  "max_active": 2,
+  "dispatch_rate": { "limit": 2, "window": 86400 },
+  "expires_at": "2027-03-31T23:59:59Z",
+  "review_cadence": 7776000
+}
+~~~
+
+Each instance lives at most eight hours, at most two are `active` at
+once, at most two are committed in any 24 hours, and dispatch pauses
+90 days after the most recent approval. The `dispatch_policy` digest
+is illustrative: it commits a policy snapshot this example does not
+show.
+
 ## Template integrity anchor {#template-hash}
 
 The consented Mission Template is committed by a `template_hash`,
@@ -429,7 +589,9 @@ computed with the issuance profile's integrity-anchor envelope
   canonicalization.
 
 It is an envelope anchor under the issuance profile's commitment
-mechanisms, which this document imports normatively.
+mechanisms, which this document imports normatively. For the example
+template ({{the-mission-template}}), `template_hash` is
+`sha-256:sAW-wLGtkDjse3U_XfPYZz-WnqC5uBP64ZYlGqCDxz4`.
 
 `template_hash` is to the template what `authority_hash` is to a
 Mission's Authority Set: the anchor over the consented object. It plays
@@ -547,6 +709,155 @@ there is no pending human step to wait for. A deployment that needs a
 human in the loop for a given run does not dispatch it; it creates an
 ordinary Mission through a fresh approval.
 
+## Dispatch request and response {#grant-type}
+
+This document binds Dispatch to the token endpoint through a
+dedicated grant type, adding no new endpoint. A Dispatcher requests an
+instance with:
+
+`grant_type`:
+: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-dispatch`.
+
+`template_id`:
+: REQUIRED. The Mission Template's `id` ({{the-mission-template}}).
+
+`mission_intent`:
+: REQUIRED. The dispatch submission, in the issuance profile's
+  Mission Intent Submission envelope shape
+  ({{I-D.draft-mcguinness-oauth-mission}}): its `intent` is the
+  dispatch intent from which the instance Authority Set is derived
+  ({{dispatch}}), and its OPTIONAL `evidence` array carries Intent
+  Submission Evidence under that profile's dispatch, refusal, and
+  never-authority rules and those of
+  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}.
+
+`authorization_details`:
+: OPTIONAL. The Dispatcher's authority proposal: the standard
+  {{RFC9396}} parameter carried on the same token request, itself
+  ordinary {{RFC9396}} token-request usage. This parameter is this
+  grant's proposal carriage, replacing the issuance profile's
+  PAR-only carriage rule; that profile's validation, derivation,
+  recording, and hashing semantics apply unchanged
+  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
+  authority: it bounds the derivation of step 4 of {{dispatch}} in
+  narrowing mode, and the double intersection of step 5 applies to
+  the result unchanged, so a proposal narrows the instance and never
+  widens it beyond the Template Ceiling. Absent a proposal, the
+  instance derives from the dispatch intent alone. An instance
+  created from a Dispatch carrying one records `proposed_authority`
+  and `proposal_hash`.
+
+`dispatch_event_id`:
+: REQUIRED. The dispatch event identifier that makes the Dispatch
+  idempotent ({{dispatch}}). A redemption bearing an identifier the
+  Mission Issuer has already committed MUST return the previously
+  committed instance and MUST NOT derive a second Mission.
+
+The Dispatcher authenticates at the token endpoint with its own client
+credential; the Mission Issuer authorizes it against the template's
+`allowed_dispatchers` as step 2 of {{dispatch}} requires. The request
+names no Agent. The Mission Issuer selects the instance's Agent
+({{the-mission-template}}), and that selection is separate from the
+Dispatcher's authentication and from the presenter binding of the
+returned access token, which is sender-constrained to the
+Dispatcher's key. This grant
+performs exactly one derivation per `dispatch_event_id`: the
+adjudication order of {{dispatch}} runs once for a new identifier, and
+a repeated identifier is gated to the previously committed instance
+rather than a fresh derivation. This is the single gated derivation
+the Dispatch performs per dispatch event; a Dispatch Handoff's
+redemption ({{dispatch-handoff}}) is a further derivation.
+
+On success the Mission Issuer responds with an access token bound to
+the instance, sender-constrained to the Dispatcher's key:
+
+`access_token`:
+: REQUIRED. A Mission-bound access token for the dispatched instance.
+
+`token_type`:
+: REQUIRED. The token type of the issued access token, reflecting the
+  sender-constraining mechanism in use (`DPoP` where the deployment
+  uses DPoP).
+
+`expires_in`:
+: REQUIRED. The access token's lifetime in seconds.
+
+`mission_id`:
+: REQUIRED. The dispatched Mission's identifier.
+
+`mission_expires_at`:
+: REQUIRED. The instance's effective Mission expiry, the issuance
+  profile's common Mission-creating response member
+  ({{I-D.draft-mcguinness-oauth-mission}}). `expires_in` above
+  describes only the access token.
+
+`authorization_details`:
+: REQUIRED. The instance's committed Authority Set.
+
+A Dispatch refused under {{dispatch}} or {{prohibited-classes}} carries
+the OAuth `error` member together with `mission_denial_reason`
+({{denial-reasons}}), exactly as any other adjudication denial in this
+family.
+
+The following is an example of the scenario's nightly Dispatch
+({{example-scenario}}). `erp-scheduler` proves its DPoP key; its
+client authentication is omitted, and extra line breaks are for
+display only:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Amission-dispatch&
+template_id=tmpl_DW1W29qP9RJRbsGyRGa9oJ2u&
+mission_intent=%7B%22intent%22%3A%7B...%7D%7D&
+dispatch_event_id=5533f92b-fbe9-57c6-aa3f-f628b711f316
+~~~
+
+The `mission_intent` value, before form encoding, names one night's
+run:
+
+~~~ json
+{
+  "intent": {
+    "goal":
+      "Reconcile 2026-11-03 invoices; post adjustments under $500.",
+    "target_resources": ["https://erp.example.com"],
+    "expires_at": "2026-11-04T12:00:00Z"
+  }
+}
+~~~
+
+The Mission Issuer commits the instance at `2026-11-04T02:00:07Z` and
+selects `s6BhdRkqt3`, the template's only Agent. The instance's expiry
+is that instant plus `instance_lifetime`, earlier than both the
+requested `expires_at` and the template's own. The response carries
+an access token bound to `erp-scheduler`'s key:
+
+~~~ json
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "mission_id": "msn_lDL9bWUSlLGl_dxI_WL_nwrTZPlm0RtA",
+  "mission_expires_at": "2026-11-04T10:00:07Z",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"] },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" } } }
+  ]
+}
+~~~
+
+## Adjudication {#dispatch-adjudication}
+
 The Mission Issuer adjudicates a Dispatch in this order:
 
 1. **Authenticate the Dispatcher.** Resolve and authenticate the
@@ -592,26 +903,32 @@ The Mission Issuer adjudicates a Dispatch in this order:
 
    - `approval_basis` is the authorization basis the issuance profile
      defines ({{I-D.draft-mcguinness-oauth-mission}}), with `type:
-     "template"`: `consent_principal` is the template's human
-     approver, the accountable principal; the Dispatcher is not the
-     approver. `activation` carries the template's `id` (as
-     `template_id`, the same value the Dispatch grant names
-     {{grant-type}}), `template_version`, and `template_hash` (the
-     `template` lineage member's fields, {{template-member}}), plus
-     this Dispatch's `dispatch_event_id`; `activation_actor` is the
-     Dispatcher, distinct from `consent_principal` and never the
-     instance's adjudicator ({{I-D.draft-mcguinness-oauth-mission}},
-     Section "Role Mapping");
-     `root_commitment` is `template_hash`; and `approved_at` (the
-     issuance profile's standing-consent requirement) is the instant
-     the consenting human approved this exact `template_version`,
-     read from the Mission Issuer's retained template record at
-     Dispatch, never from the Dispatch request. The `template` lineage member
-     ({{template-member}}), present on every dispatched Mission and
-     absent on an ordinarily approved one, remains the claim-carried
-     record of which template and Dispatch Policy adjudicated the
-     instance; `approval_basis` is the structured authorization-basis
-     record, and the two are consistent by construction;
+     "template"` and:
+
+     - `consent_principal`: the template's human approver, the
+       accountable principal; the Dispatcher is not the approver;
+     - `activation`: the template's `id` (as `template_id`, the same
+       value the Dispatch grant names, {{grant-type}}),
+       `template_version`, and `template_hash` (the `template` lineage
+       member's fields, {{template-member}}), plus this Dispatch's
+       `dispatch_event_id`;
+     - `activation_actor`: the Dispatcher, distinct from
+       `consent_principal` and never the instance's adjudicator
+       ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role
+       Mapping");
+     - `root_commitment`: `template_hash`; and
+     - `approved_at` (the issuance profile's standing-consent
+       requirement): the instant the consenting human approved this
+       exact `template_version`, read from the Mission Issuer's
+       retained template record at Dispatch, never from the Dispatch
+       request.
+
+     The `template` lineage member ({{template-member}}), present on
+     every dispatched Mission and absent on an ordinarily approved one,
+     remains the claim-carried record of which template and Dispatch
+     Policy adjudicated the instance; `approval_basis` is the
+     structured authorization-basis record, and the two are consistent
+     by construction;
    - `approval_event_id` identifies this Dispatch, never the template's
      approval: a unique value the Mission Issuer allocates when it
      creates the Dispatch's `(authenticated client, dispatch_event_id)`
@@ -657,6 +974,45 @@ The Mission Issuer MUST make the step 8 check, and verify that the
 effective `expires_at` is strictly later than the committed
 `created_at`, atomically with the commit, against the source as it
 stands at that commit; on failure no Mission is created.
+
+The scenario's instance record ({{example-scenario}}) carries, among
+its other members:
+
+~~~ json
+{
+  "subject": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_basis": {
+    "type": "template",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "activation": {
+      "template_id": "tmpl_DW1W29qP9RJRbsGyRGa9oJ2u",
+      "template_version": "3",
+      "template_hash":
+        "sha-256:sAW-wLGtkDjse3U_XfPYZz-WnqC5uBP64ZYlGqCDxz4",
+      "dispatch_event_id": "5533f92b-fbe9-57c6-aa3f-f628b711f316"
+    },
+    "activation_actor": { "iss": "https://as.example.com",
+      "sub": "erp-scheduler" },
+    "adjudication": { "kind": "policy",
+      "policy": { "id": "nightly-reconciliation-dispatch",
+        "version": "4" } },
+    "root_commitment":
+      "sha-256:sAW-wLGtkDjse3U_XfPYZz-WnqC5uBP64ZYlGqCDxz4",
+    "approved_at": "2026-11-01T16:20:00Z"
+  },
+  "approval_event_id": "ape_PF71gvedJVYvGQCqIX3C",
+  "client_id": "s6BhdRkqt3",
+  "created_at": "2026-11-04T02:00:07Z",
+  "expires_at": "2026-11-04T10:00:07Z"
+}
+~~~
+
+`alice` is both the Subject and the accountable principal;
+`erp-scheduler` triggered the instance and `s6BhdRkqt3` is its Agent.
+
+## Idempotency and recovery {#dispatch-idempotency}
 
 A Dispatch MUST be idempotent per `dispatch_event_id`. The Dispatcher
 supplies a `dispatch_event_id` with the request, adopting the
@@ -757,97 +1113,33 @@ instance's authority comes only from its own `authority_hash`. The
 `template` member exists so the dispatch is re-checkable in audit
 ({{audit-linkage}}).
 
-## Grant Type {#grant-type}
+The scenario's instance ({{example-scenario}}) carries this `mission`
+claim on every token issued for it:
 
-This document binds Dispatch to the token endpoint through a
-dedicated grant type, adding no new endpoint. A Dispatcher requests an
-instance with:
+~~~ json
+{
+  "mission": {
+    "id": "msn_lDL9bWUSlLGl_dxI_WL_nwrTZPlm0RtA",
+    "issuer": "https://as.example.com",
+    "expires_at": "2026-11-04T10:00:07Z",
+    "template": {
+      "id": "tmpl_DW1W29qP9RJRbsGyRGa9oJ2u",
+      "issuer": "https://as.example.com",
+      "template_version": "3",
+      "template_hash":
+        "sha-256:sAW-wLGtkDjse3U_XfPYZz-WnqC5uBP64ZYlGqCDxz4",
+      "dispatch_policy": {
+        "id": "nightly-reconciliation-dispatch",
+        "version": "4",
+        "digest":
+          "sha-256:7irh90epn3d1Nn07PQhhOxwh3j4Mq5EI0_x4w12VDlk"
+      }
+    }
+  }
+}
+~~~
 
-`grant_type`:
-: REQUIRED. `urn:ietf:params:oauth:grant-type:mission-dispatch`.
-
-`template_id`:
-: REQUIRED. The Mission Template's `id` ({{the-mission-template}}).
-
-`mission_intent`:
-: REQUIRED. The dispatch submission, in the issuance profile's
-  Mission Intent Submission envelope shape
-  ({{I-D.draft-mcguinness-oauth-mission}}): its `intent` is the
-  dispatch intent from which the instance Authority Set is derived
-  ({{dispatch}}), and its OPTIONAL `evidence` array carries Intent
-  Submission Evidence under that profile's dispatch, refusal, and
-  never-authority rules and those of
-  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}.
-
-`authorization_details`:
-: OPTIONAL. The Dispatcher's authority proposal: the standard
-  {{RFC9396}} parameter carried on the same token request, itself
-  ordinary {{RFC9396}} token-request usage. This parameter is this
-  grant's proposal carriage, replacing the issuance profile's
-  PAR-only carriage rule; that profile's validation, derivation,
-  recording, and hashing semantics apply unchanged
-  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
-  authority: it bounds the derivation of step 4 of {{dispatch}} in
-  narrowing mode, and the double intersection of step 5 applies to
-  the result unchanged, so a proposal narrows the instance and never
-  widens it beyond the Template Ceiling. Absent a proposal, the
-  instance derives from the dispatch intent alone. An instance
-  created from a Dispatch carrying one records `proposed_authority`
-  and `proposal_hash`.
-
-`dispatch_event_id`:
-: REQUIRED. The dispatch event identifier that makes the Dispatch
-  idempotent ({{dispatch}}). A redemption bearing an identifier the
-  Mission Issuer has already committed MUST return the previously
-  committed instance and MUST NOT derive a second Mission.
-
-The Dispatcher authenticates at the token endpoint with its own client
-credential; the Mission Issuer authorizes it against the template's
-`allowed_dispatchers` as step 2 of {{dispatch}} requires. The request
-names no Agent. The Mission Issuer selects the instance's Agent
-({{the-mission-template}}), and that selection is separate from the
-Dispatcher's authentication and from the presenter binding of the
-returned access token, which is sender-constrained to the
-Dispatcher's key. This grant
-performs exactly one derivation per `dispatch_event_id`: the
-adjudication order of {{dispatch}} runs once for a new identifier, and
-a repeated identifier is gated to the previously committed instance
-rather than a fresh derivation. This is the single gated derivation
-the Dispatch performs per dispatch event; a Dispatch Handoff's
-redemption ({{dispatch-handoff}}) is a further derivation.
-
-On success the Mission Issuer responds with an access token bound to
-the instance, sender-constrained to the Dispatcher's key:
-
-`access_token`:
-: REQUIRED. A Mission-bound access token for the dispatched instance.
-
-`token_type`:
-: REQUIRED. The token type of the issued access token, reflecting the
-  sender-constraining mechanism in use (`DPoP` where the deployment
-  uses DPoP).
-
-`expires_in`:
-: REQUIRED. The access token's lifetime in seconds.
-
-`mission_id`:
-: REQUIRED. The dispatched Mission's identifier.
-
-`mission_expires_at`:
-: REQUIRED. The instance's effective Mission expiry, the issuance
-  profile's common Mission-creating response member
-  ({{I-D.draft-mcguinness-oauth-mission}}). `expires_in` above
-  describes only the access token.
-
-`authorization_details`:
-: REQUIRED. The instance's committed Authority Set.
-
-A Dispatch refused under {{dispatch}} or {{prohibited-classes}} carries
-the OAuth `error` member together with `mission_denial_reason`
-({{denial-reasons}}), exactly as any other adjudication denial in this
-family.
-
-## Dispatch Handoff {#dispatch-handoff}
+# Dispatch Handoff {#dispatch-handoff}
 
 A dispatched instance's approved agent is its selected Agent
 ({{the-mission-template}}), but the Dispatch returns the instance's
@@ -857,6 +1149,8 @@ Agent: the Dispatcher exchanges that token for a handoff grant naming
 the Agent as its only redeemer, and the Agent redeems the grant for a
 token of its own. The handoff uses the token endpoint and existing
 grant types; it adds one token request parameter.
+
+## Handoff request {#handoff-request}
 
 The Dispatcher requests a handoff with a Token Exchange ({{RFC8693}})
 whose `subject_token` is the instance's access token
@@ -899,6 +1193,27 @@ is refused with `invalid_request` ({{Section 2.2.2 of RFC8693}}),
 carrying the `mission_error` member
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
+In the example scenario ({{example-scenario}}), `erp-scheduler`
+requests the handoff of its instance, proving the key its access
+token is bound to. Its client authentication is omitted, and extra
+line breaks are for display only:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
+subject_token=<the%20instance%27s%20access%20token>&
+subject_token_type=
+  urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
+requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Ajwt&
+mission_dispatch_handoff=true
+~~~
+
+## The handoff grant {#handoff-grant}
+
 On success the response carries the handoff grant as `access_token`,
 with `issued_token_type` `urn:ietf:params:oauth:token-type:jwt` and
 `token_type` `N_A` ({{RFC8693}}). The handoff grant is a JWT the
@@ -909,6 +1224,48 @@ instance's Subject, `mission` is the instance's `mission` claim,
 `authorization_details` is the handed-off authority, and `jti`, `iat`
 and `exp` bound it. Its lifetime is short and never outlasts the
 instance's `expires_at`.
+
+The scenario's handoff response is:
+
+~~~ json
+{
+  "access_token":
+    "eyJ0eXAiOiJtaXNzaW9uLWRpc3BhdGNoLWhhbmRvZmYrand0Iiwi...",
+  "issued_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_type": "N_A",
+  "expires_in": 120
+}
+~~~
+
+The grant's claims, with its `mission` claim (the one shown in
+{{template-member}}) omitted, are:
+
+~~~ json
+{
+  "iss": "https://as.example.com",
+  "aud": "https://as.example.com/token",
+  "client_id": "s6BhdRkqt3",
+  "sub": "user_3p2q8mN1a0kV7tR",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"] },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" } } }
+  ],
+  "jti": "hgr_wMP7JCeZbsxcV1vV1SXJ",
+  "iat": 1793757610,
+  "exp": 1793757730
+}
+~~~
+
+`erp-scheduler` cannot redeem the grant itself: only `s6BhdRkqt3`,
+authenticated as itself, can.
+
+## Redemption {#handoff-redemption}
 
 The Agent redeems the handoff grant with the JWT bearer authorization
 grant ({{RFC7523}}), authenticating as itself and presenting a DPoP
@@ -935,6 +1292,61 @@ on the continuation profile's async delegation transport
 is a derivation from the instance, gated and counted as the issuance
 profile requires ({{I-D.draft-mcguinness-oauth-mission}}).
 
+In the scenario, `s6BhdRkqt3` redeems the grant under its own DPoP
+key. Its client authentication is omitted:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&
+assertion=eyJ0eXAiOiJtaXNzaW9uLWRpc3BhdGNoLWhhbmRvZmYrand0Iiwi...
+~~~
+
+The response's `access_token` is the Agent's delegation handle. An
+excerpt of its claims, other members omitted:
+
+~~~ json
+{
+  "aud": "s6BhdRkqt3",
+  "client_id": "s6BhdRkqt3",
+  "cnf": { "jkt": "hCXQ4ox8s33bY6PtWhuLMbn89LsBt8tpwnjKP0IS-yI" },
+  "mission": {
+    "id": "msn_lDL9bWUSlLGl_dxI_WL_nwrTZPlm0RtA",
+    "issuer": "https://as.example.com"
+  }
+}
+~~~
+
+The Agent then presents the handle as the `subject_token` of the
+continuation profile's async delegation exchange
+({{I-D.draft-mcguinness-oauth-mission-continuation}}), proving the
+same key:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
+subject_token=<the%20delegation%20handle>&
+subject_token_type=
+  urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
+resource=https%3A%2F%2Ferp.example.com&
+request_refresh_token=true&
+creation_request_id=7cdd0cf2-01ac-5239-b300-70ec9a30c1bc
+~~~
+
+The response carries an access token for `https://erp.example.com`
+and the first refresh token of a family that ends no later than the
+instance's `expires_at`. The Agent calls the ERP with those tokens and
+refreshes within the family, as for any Mission.
+
+## When the Dispatcher is the Agent {#dispatcher-as-agent}
+
 A Dispatcher that is itself the selected Agent (the same authenticated
 client) already holds the instance's access token, bound to its own
 key, and skips the handoff. It obtains its delegation handle through
@@ -959,11 +1371,11 @@ class is within the Template Ceiling:
   ({{I-D.draft-mcguinness-mission-runtime}}); or
 - cross-domain authority.
 
-Progressive holds back this same set from its own policy adjudication
-({{I-D.draft-mcguinness-oauth-mission-progressive}}), applied here to
-dispatch. To make the rule testable, a deployment MUST publish in the
-Mission Deployment Profile a mapping from its action identifiers to
-the runtime profile's action classes
+Progressive holds back the same set from its own policy adjudication
+({{I-D.draft-mcguinness-oauth-mission-progressive}}); this document
+applies it to dispatch. To make the rule testable, a deployment MUST
+publish in the Mission Deployment Profile a mapping from its action
+identifiers to the runtime profile's action classes
 ({{I-D.draft-mcguinness-mission-runtime}}), or an equivalent declared
 classification.
 
@@ -972,7 +1384,7 @@ The issuance profile's fourth high-risk class, a consumption bound
 instance draws down its own bound, so dispatch multiplies the bound
 by `max_active` and `dispatch_rate`; the template consent renders the
 bound with those limits, so the Approver consents to that product
-({{I-D.draft-mcguinness-mission-metering}}). The template's
+({{I-D.draft-mcguinness-mission-metering}}). An instance's `template`
 `approval_basis` already
 carries the trace the issuance profile's approval-authentication floor
 requires for that class, through `consent_principal` and
@@ -982,7 +1394,7 @@ consent-integrity rule ({{I-D.draft-mcguinness-mission-metering}}).
 
 Where a deployment adopts Approval Governance
 ({{I-D.draft-mcguinness-mission-approval-governance}}) and records a
-Governance Record for a dispatched instance, the template's
+Governance Record for a dispatched instance, the instance's `template`
 `approval_basis` satisfies that profile's accountable-approver rule
 directly, through the same `consent_principal`, `root_commitment`,
 and `approved_at` this document already requires: no assertion is
@@ -1037,6 +1449,23 @@ established for adjudication denials
 A consumer that does not implement this document treats any of these
 values as it treats any unrecognized reason code: the Dispatch stays
 denied, with no further semantics.
+
+For example, a Dispatch in the scenario ({{example-scenario}}) whose
+proposal names only `vendors.update` at `https://erp.example.com`, an
+action the deployment's derivation policy permits but no ceiling entry
+grants, leaves nothing after the double intersection (step 5 of
+{{dispatch}}) and is refused, here with `invalid_request`:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_request",
+  "mission_denial_reason": "out_of_template_ceiling"
+}
+~~~
 
 # Instance Composition {#instance-composition}
 
@@ -1120,7 +1549,7 @@ document adds the dispatch surface.
   (`instance_lifetime`, `max_active`, `dispatch_rate`) cap breadth and
   rate, not duration; the `review_cadence` ({{template-consent}}) is the
   temporal bound, and dispatch stops past it until a human re-consents.
-  The tells of decay are checkable from the dispatch record: reviews
+  The signs of decay are checkable from the dispatch record: reviews
   that never narrow the ceiling, ceilings that only grow, and a
   `dispatch_rate` raised without a task that needs it. A review that
   cannot cite the cycle it renews has not reviewed it.
@@ -1271,10 +1700,10 @@ IANA is also requested to register one media type per {{RFC6838}}:
 `dispatch_event_id` is a distinct name from the expansion profile's
 `creation_request_id` ({{I-D.draft-mcguinness-oauth-mission-expansion}}),
 even though it plays the identifier-and-reservation-key role that
-parameter's registration defines: it is already load-bearing as the
-`template` lineage member's field and in `approval_basis.activation`
-({{dispatch}}), and in the Dispatch grant-type parameter list
-({{grant-type}}), so this document keeps the name rather than
+parameter's registration defines: it is already load-bearing in
+`approval_basis.activation` ({{dispatch}}) and in the Dispatch
+grant-type parameter list ({{grant-type}}), so this document keeps
+the name rather than
 reusing the expansion profile's own registered parameter under
 `op: dispatch`.
 
@@ -1304,6 +1733,15 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial: a non-normative Template Overview (roles, the flow from
+  consent to work, how an agent uses a template) and examples that
+  follow one nightly-reconciliation scenario through the template,
+  Dispatch, instance record, `mission` claim, handoff, redemption,
+  and a denial. Dispatch is organized as request and response,
+  adjudication, and idempotency and recovery; the Dispatch Handoff is
+  its own section; the disclosure-rendering note moves to
+  Terminology, which defines Instance and Dispatch Handoff (#1176).
 
 - A Dispatcher that is itself the selected Agent skips the Dispatch
   Handoff and obtains its delegation handle through the continuation
