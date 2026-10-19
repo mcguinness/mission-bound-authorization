@@ -318,6 +318,10 @@ invoice (`invoice_id`) is its settlement identity:
   caller-visible diagnostic `already_settled`. No money moved, so nothing
   stays charged.
 - `check_transfer` reports a settled invoice as not feasible.
+- Outcome reconciliation attributes a ledger entry to an action only
+  through the identifiers recorded with it, the permit (evaluation)
+  identifier and the operation key. An entry for the same invoice under
+  another permit is that operation's effect, never this action's outcome.
 
 Residuals:
 
