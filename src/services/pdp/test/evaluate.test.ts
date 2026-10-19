@@ -82,7 +82,7 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => {
   const built: EvaluationRequest = {
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:invoice.read" },
     context: {
       mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
@@ -263,7 +263,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
   // subset-required's notes for why this scenario is no longer cited there.
   it("vendor outside the constraint -> deny parameter_violation (entry matched, constraint fails)", async () => {
     const dec = await evaluate(
-      req({ resource: { type: "invoice", id: "inv-3", properties: { audience: RESOURCE, vendor_id: "globex" } } }),
+      req({ resource: { type: "invoice", id: "inv-3", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "globex" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);
@@ -336,9 +336,9 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
     expect(dec.decision, JSON.stringify(dec.context)).toBe(true);
   });
 
-  it("wrong audience -> deny out_of_authority (entry matched on resource.properties.audience)", async () => {
+  it("a target no entry names -> deny out_of_authority (entry matched on resource.properties.operation_target, #1276)", async () => {
     const dec = await evaluate(
-      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: "http://other/mcp", vendor_id: "acme" } } }),
+      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: "http://other/mcp", operation_target: "http://other/mcp", vendor_id: "acme" } } }),
       opts(view()),
     );
     expect(dec.decision).toBe(false);

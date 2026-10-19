@@ -189,6 +189,19 @@ export {
   parseMissionReferenceField,
 } from "./mission-reference.js";
 export {
+  ENFORCED_RESOURCE_MATCHES,
+  entryMatchesTarget,
+  establishOperationTarget,
+  isOperationTarget,
+  matchResource,
+  type OperationContract,
+  type OperationTargetRefusal,
+  type OperationTargetResolution,
+  type ResourceMatch,
+  resolveOperationTarget,
+  type ServiceLevelContract,
+} from "./operation-target.js";
+export {
   type EntitlementAuthorityEntry,
   type EntitlementObservation,
   type EntitlementResolver,

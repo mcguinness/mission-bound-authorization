@@ -31,6 +31,8 @@ export function testAttempt(input: {
     evaluationId,
     mission: input.mission,
     audience: CANONICAL_RESOURCE,
+    // The payments service-level operation contract's target (#1276).
+    operationTarget: CANONICAL_RESOURCE,
     action: input.action,
     ...(input.authorizedParameterDigest !== undefined
       ? { authorizedParameterDigest: input.authorizedParameterDigest }

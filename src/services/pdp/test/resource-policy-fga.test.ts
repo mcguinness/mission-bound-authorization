@@ -80,7 +80,7 @@ const context = (over: Partial<EvaluationRequest["context"]> = {}): EvaluationRe
 const payReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest =>
   withCredential({
     subject: { id: "alice", properties: { iss } },
-    resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
+    resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: vendorId } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
     context: context({ action_class: "irreversible_action", parameter_digest: `sha-256:pd-${invoiceId}`, amount: { amount: "125.00", currency: "USD" } }),
   });
@@ -88,7 +88,7 @@ const payReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRe
 const readReq = (invoiceId: string, vendorId: string, iss = ISSUER, clientId = "ap-agent"): EvaluationRequest =>
   withCredential({
     subject: { id: "alice", properties: { iss } },
-    resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, vendor_id: vendorId } },
+    resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: vendorId } },
     action: { name: "payments:invoice.read" },
     context: context({ action_class: "consequential_read", actor: { client_id: clientId } }),
   });
@@ -96,7 +96,7 @@ const readReq = (invoiceId: string, vendorId: string, iss = ISSUER, clientId = "
 const listReq = (vendorIds: string[]): EvaluationRequest =>
   withCredential({
     subject: { id: "alice", properties: { iss: ISSUER } },
-    resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: RESOURCE, vendor_id: vendorIds[0] as string, vendor_ids: vendorIds } },
+    resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: vendorIds[0] as string, vendor_ids: vendorIds } },
     action: { name: "payments:invoice.list" },
     context: context({ action_class: "consequential_read" }),
   });
