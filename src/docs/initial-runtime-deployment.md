@@ -403,7 +403,7 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Token authority (D411) and Resource policy (#828 closed, D436) are met for this target. High-risk approval rests on the upstream Approver login (#1320, D496), witnessed on the assembled target (§11, §12).
+- Token authority (D411) and Resource policy (#828 closed, D436) are met for this target. High-risk approval rests on the upstream Approver login (#1320, D496), witnessed on the assembled target (§11, §12); the owner records #253's high-risk approval gate.
 - Blocking acceptance item 1: approval text stating that each limit applies per action and that the approval imposes no total spending cap, with a rendered-page test (D284, #1328); and a witness of the Mission-bound `unknown_mission` refusal (#1329).
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance stays with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
@@ -480,7 +480,8 @@ lifecycle vectors at `7d91c7d4`, against CI's pinned OpenFGA image.
 
 Both required gates are met for this target: token authority (D411) and
 Resource policy (#828, D436). High-risk approval rests on the upstream
-Approver login (#1320, D496), witnessed on the assembled path below.
+Approver login (#1320, D496), witnessed on the assembled path below; the
+owner records that gate.
 
 | Vector | Existing witness | Gap |
 |---|---|---|
@@ -619,7 +620,8 @@ At each approval the Approver logs in through an upstream OpenID Provider
 that the launcher starts on a port of its own (`demo/src/approver-idp.ts`,
 #1320, D496). The approval surface sends the Approver's user agent there
 with an authorization code request (PKCE `S256`, `state`, `nonce`,
-`prompt=login`, `acr_values=mfa`), bound to that user agent by a cookie.
+`prompt=login`, `acr_values=mfa`), bound to that user agent by a cookie of
+its own for each login, so several logins can be in flight in one browser.
 The provider checks Bob's password and then a one-time code it sends to his
 enrolled device, and asserts `acr` `mfa` only when both succeed (`pwd`
 for the password alone), with the `auth_time` of that login. The AS
@@ -631,8 +633,10 @@ and `auth_time`, which the floor evaluates unchanged at the decision
 (`services/authorization-server/src/adapters/approver-login.ts`). A login
 that fails any check records nothing, so no decision can rest on it. Bob's
 password and device exist only in the in-process console, generated at each
-boot; a deployment substitutes its own provider and identity mapping, and
-the AS side is unchanged:
+boot. The device is an in-process stand-in: it shows the reference
+authentication exchange, and it is not evidence of an independently
+deployed possession factor. A deployment substitutes its own provider and
+identity mapping, and the AS side is unchanged:
 `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)`,
 `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)`,
 `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)`,
@@ -648,10 +652,13 @@ nothing here rests on it.
 It mints no ordinary token. It prints the issuer, the AS capability set, the
 signing-key source, the resource audience, the PDP mode and the approver
 login provider, and needs only `pnpm setup` and `docker compose up -d`
-(OpenFGA). Shutdown and a failed startup close the provider's listener too:
+(OpenFGA). Shutdown and a failed startup, a bind or the AS's construction,
+close the provider's listener too:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode`
 and
-`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS port or the declared audience's port is taken, and keeps no port, store file or kernel file open`.
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS port or the declared audience's port is taken, and keeps no port, store file or kernel file open`
+and
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the upstream Approver login provider's included (#1320)`.
 
 Its configuration is the OpenFGA connection, the Resource-policy store, the
 PDP mode, the signing-key source and the kernel's file from the environment,
@@ -745,12 +752,14 @@ which maps the overlay's obligations to their hooks in the port's eight
 columns. The acceptance pack (step 3) runs on `pnpm as-native`, and §10 maps
 each of its vectors to a witness or an owner. Open before #253 closes:
 
-1. **Approval wording:** visible per-action text on the approval page and a
+1. **High-risk approval:** witnessed through the upstream Approver login
+   (#1320, §11); the owner records the gate.
+2. **Approval wording:** visible per-action text on the approval page and a
    rendered-page test (D284, #1328).
-2. **Mission-bound `unknown_mission`:** a witness of the refusal before any
+3. **Mission-bound `unknown_mission`:** a witness of the refusal before any
    decision (#1329).
-3. **Revoke during issuance:** #250.
-4. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+4. **Revoke during issuance:** #250.
+5. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
 Disclosed residuals that make no claim: the launcher wrappers' tests (#1330)

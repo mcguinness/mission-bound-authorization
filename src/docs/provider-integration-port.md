@@ -143,7 +143,8 @@ the store.
   (`services/authorization-server/src/adapters/approver-login.ts`): `GET
   /interaction/{uid}/approver-login` starts an authorization code request to
   the configured OpenID Provider (PKCE `S256`, `state`, `nonce`,
-  `prompt=login`, `acr_values`), bound to the user agent by a cookie, and
+  `prompt=login`, `acr_values`), bound to the user agent by a cookie of its
+  own for each login, and
   `GET /approver-login/callback` takes the response once, in that user
   agent, with the provider's `iss` (RFC 9207). It exchanges the code,
   validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7: the
@@ -205,11 +206,14 @@ the store.
   - `> refuses an expired ID Token, and one issued longer ago than the login accepts, recording no login`
   - `> refuses an ID Token without acr or auth_time, recording no login`
   - `> refuses an authorization response that names another issuer (RFC 9207), recording no login`
+  - `> completes two logins started one after the other in one browser that delivers cookies by path, and each approval decides (RFC 6265 Section 5.1.4)`
   - `> completes a login only in the user agent that started it, and only once`
 - **Tests (the reference provider, `demo/test/approver-idp.test.ts`):**
   `the reference upstream OpenID Provider authenticates the Approver (@spec mission#approval-authentication, #1320, D496)`, every case: `mfa` only after the password and the one-time
   code, `pwd` for the password alone, and no login from a wrong password or
-  code or a code presented twice.
+  code or a code presented twice. The device is an in-process stand-in: these
+  tests show the reference authentication exchange, not an independently
+  deployed possession factor.
 - **Tests (assembled, `demo/test/as-native-stack.test.ts`, also in its
   [FGA] block):**
   - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)`

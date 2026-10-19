@@ -18,7 +18,7 @@ high-risk actions, matching the payments Operation Profile. The approval
 interaction and an Expansion deferral approval both apply it. On the
 as-native target (`pnpm as-native`) the Approver logs in at each approval
 through an upstream OpenID Provider that checks a password and a one-time
-code, and the floor evaluates the `acr` and `auth_time` of the ID Token the
+code (sent to an in-process stand-in for the Approver's device), and the floor evaluates the `acr` and `auth_time` of the ID Token the
 AS validates (#1320). The shared demo's approval console presents a login
 recorded once (simulated; that composition has no Approver identity
 provider) and never at an approval, so it ages out of the floor until the

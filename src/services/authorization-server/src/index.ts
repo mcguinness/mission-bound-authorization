@@ -42,6 +42,7 @@ export {
   APPROVER_LOGIN_CALLBACK_PATH,
   APPROVER_LOGIN_COOKIE,
   ApproverLoginError,
+  loginCookieName,
   ApproverLoginRelyingParty,
   type ApproverIdentityMapping,
   type ApproverLoginOptions,

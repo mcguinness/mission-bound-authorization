@@ -469,6 +469,24 @@ export async function composeStack(opts: {
     // can be baked into the URI the resource publishes and the AS resolves.
     const txnTopo = TOPOLOGY.txnChallenge.payments;
     metadataServer = await startResourceMetadataServer(() => paymentsServerRef);
+    // A failed construction releases every listener it already opened (the
+    // discovery listener and, under `as-native`, the upstream Approver login
+    // provider) and, with a kernel file, the kernel (#250): the caller never
+    // receives the stack that would close them (#1320).
+    let approverIdp: ApproverIdp | undefined;
+    const releaseConstruction = async (built?: { kernel: MissionKernel }): Promise<void> => {
+      await metadataServer?.close();
+      await approverIdp?.close();
+      if (opts.kernelStore) built?.kernel.close();
+    };
+    const constructing = async <T>(step: () => T | Promise<T>): Promise<T> => {
+      try {
+        return await step();
+      } catch (err) {
+        await releaseConstruction();
+        throw err;
+      }
+    };
     txnChallengePublication = {
       jwksUri: `${metadataServer.origin}${txnTopo.jwksPath}`,
       jwksPath: txnTopo.jwksPath,
@@ -493,13 +511,14 @@ export async function composeStack(opts: {
     // password and device are generated at this boot and held only by the
     // trusted console.
     const approverUsername = USERS.find((u) => u.sub === "bob")?.email ?? "bob";
-    let approverIdp: ApproverIdp | undefined;
     if (asNative) {
-      approverIdp = await startApproverIdp({
-        redirectUri: `${asUrl}${APPROVER_LOGIN_CALLBACK_PATH}`,
-        accounts: [{ sub: "idp-bob", username: approverUsername }],
-        ...(opts.approverIdpPort !== undefined ? { port: opts.approverIdpPort } : {}),
-      });
+      approverIdp = await constructing(() =>
+        startApproverIdp({
+          redirectUri: `${asUrl}${APPROVER_LOGIN_CALLBACK_PATH}`,
+          accounts: [{ sub: "idp-bob", username: approverUsername }],
+          ...(opts.approverIdpPort !== undefined ? { port: opts.approverIdpPort } : {}),
+        }),
+      );
     }
     const approverAccount = approverIdp?.accounts.get(approverUsername);
     // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
@@ -511,9 +530,10 @@ export async function composeStack(opts: {
         ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
         : AS_NATIVE_CAPABILITIES
       : undefined;
-    const lifecycleConsole = await newLifecycleConsole();
-    if (opts.kernelStore) mkdirSync(dirname(opts.kernelStore.file), { recursive: true });
-    const as = await buildAuthorizationServer({
+    const lifecycleConsole = await constructing(() => newLifecycleConsole());
+    const kernelStore = opts.kernelStore;
+    if (kernelStore) await constructing(() => mkdirSync(dirname(kernelStore.file), { recursive: true }));
+    const as = await constructing(() => buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
       approvalSessions,
@@ -596,21 +616,18 @@ export async function composeStack(opts: {
           return { decision: "permit" };
         },
       },
-    });
+    }));
     const asServer = as.provider.listen(asPort);
-    // A port already in use refuses startup here, with the discovery
-    // listener released, rather than surfacing as an unhandled error event.
-    // @spec #250: a kernel kept in a file is released too; the caller never
-    // receives the stack that would close it.
+    // A port already in use refuses startup here, releasing what construction
+    // opened, rather than surfacing as an unhandled error event. @spec #250:
+    // a kernel kept in a file is released too.
     try {
       await new Promise<void>((resolve, reject) => {
         asServer.once("listening", () => resolve());
         asServer.once("error", reject);
       });
     } catch (err) {
-      await metadataServer.close();
-      await approverIdp?.close();
-      if (opts.kernelStore) as.kernel.close();
+      await releaseConstruction(as);
       throw err;
     }
     kernel = as.kernel;

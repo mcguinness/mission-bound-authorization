@@ -21,7 +21,7 @@ import type { AddressInfo } from "node:net";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { APPROVER_LOGIN_COOKIE, ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, loginCookieName } from "../src/index.js";
 import type { AuthorityEntry } from "../src/kernel/types.js";
 
 const PORT = 14921;
@@ -168,6 +168,40 @@ const keep = (jar: Jar, res: Response) => {
     const eq = (pair as string).indexOf("=");
     jar.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
   }
+};
+
+/**
+ * A browser's cookie store with path matching (RFC 6265 Sections 5.1.4 and
+ * 5.3): each cookie keeps its `Path` (the request's default path when the
+ * attribute is absent), and a request carries only the cookies whose path
+ * matches its own. A cookie is keyed by its name and path, so two cookies of
+ * one name on different paths coexist, as in a browser.
+ */
+type PathJar = Map<string, { name: string; value: string; path: string }>;
+const defaultPath = (requestPath: string): string => {
+  const slash = requestPath.lastIndexOf("/");
+  return slash <= 0 ? "/" : requestPath.slice(0, slash);
+};
+const pathMatches = (requestPath: string, cookiePath: string): boolean =>
+  requestPath === cookiePath ||
+  (requestPath.startsWith(cookiePath) && (cookiePath.endsWith("/") || requestPath[cookiePath.length] === "/"));
+const storeByPath = (jar: PathJar, url: string, res: Response): void => {
+  const requestPath = new URL(url).pathname;
+  for (const line of res.headers.getSetCookie()) {
+    const [pair, ...attrs] = line.split(";").map((x) => x.trim());
+    const eq = (pair as string).indexOf("=");
+    const declared = attrs.find((a) => /^path=/i.test(a))?.slice(5);
+    const path = declared?.startsWith("/") ? declared : defaultPath(requestPath);
+    const name = (pair as string).slice(0, eq);
+    jar.set(`${name} ${path}`, { name, value: (pair as string).slice(eq + 1), path });
+  }
+};
+const cookiesFor = (jar: PathJar, url: string): string => {
+  const requestPath = new URL(url).pathname;
+  return [...jar]
+    .filter(([, c]) => pathMatches(requestPath, c.path))
+    .map(([, c]) => `${c.name}=${c.value}`)
+    .join("; ");
 };
 
 /** The agent's PAR and authorization request: an approval interaction and its user agent's cookies. */
@@ -420,15 +454,62 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
     }
   });
 
+  it("completes two logins started one after the other in one browser that delivers cookies by path, and each approval decides (RFC 6265 Section 5.1.4)", async () => {
+    op.shape = (b) => ({ claims: b });
+    const first = await pendingApproval(REMIT);
+    const second = await pendingApproval(REMIT);
+    const browser: PathJar = new Map();
+    const get = async (url: string) => {
+      const res = await fetch(url, { redirect: "manual", headers: { cookie: cookiesFor(browser, url) } });
+      storeByPath(browser, url, res);
+      return res;
+    };
+    /** Start a login at the AS and pass the provider's authorization endpoint: the callback URL it returns to. */
+    const start = async (uid: string): Promise<string> => {
+      const started = await get(`${ISSUER}/interaction/${uid}/approver-login?subject=alice`);
+      expect(started.status).toBe(303);
+      const auth = await fetch(started.headers.get("location") as string, { redirect: "manual" });
+      return auth.headers.get("location") as string;
+    };
+    const firstCallback = await start(first.uid);
+    const secondCallback = await start(second.uid);
+    // Each login's binding goes only to the callback, and the two do not collide.
+    const bindings = [...browser.values()].filter((c) => c.name.startsWith("mission_approver_login_"));
+    expect(bindings).toHaveLength(2);
+    for (const c of bindings) expect(c.path).toBe("/approver-login/callback");
+    const login = async (callback: string) => {
+      const res = await get(callback);
+      const text = await res.text();
+      return { status: res.status, text, csrf: /name="mission-approval-csrf" content="([^"]+)"/.exec(text)?.[1] };
+    };
+    const secondLogin = await login(secondCallback);
+    expect(secondLogin.status, secondLogin.text).toBe(200);
+    const firstLogin = await login(firstCallback);
+    expect(firstLogin.status, firstLogin.text).toBe(200);
+    // Each approval session is scoped to its own interaction, and decides it.
+    for (const [pending, session] of [
+      [first, firstLogin],
+      [second, secondLogin],
+    ] as const) {
+      const url = `${ISSUER}/interaction/${pending.uid}/decide`;
+      const approverCookies = cookiesFor(browser, url);
+      expect(approverCookies.split("; ").filter((c) => c.startsWith("mission_approver_session="))).toHaveLength(1);
+      const approver: Jar = new Map(approverCookies.split("; ").map((c) => [c.slice(0, c.indexOf("=")), c.slice(c.indexOf("=") + 1)]));
+      const decision = await decide(pending.uid, pending.jar, approver, session.csrf);
+      expect(decision.code, decision.description).toBeTruthy();
+    }
+  });
+
   it("completes a login only in the user agent that started it, and only once", async () => {
     op.shape = (b) => ({ claims: b });
     const { uid, jar } = await pendingApproval(REMIT);
     const approver: Jar = new Map();
     let res = await fetch(`${ISSUER}/interaction/${uid}/approver-login?subject=alice`, { redirect: "manual" });
     keep(approver, res);
-    expect(approver.get(APPROVER_LOGIN_COOKIE)).toMatch(/^[A-Za-z0-9_-]{43}$/);
     res = await fetch(res.headers.get("location") as string, { redirect: "manual" });
     const callback = res.headers.get("location") as string;
+    const state = new URL(callback).searchParams.get("state") as string;
+    expect(approver.get(loginCookieName(state))).toMatch(/^[A-Za-z0-9_-]{43}$/);
     // Another user agent, holding no binding, cannot complete it.
     const elsewhere = await complete(callback, new Map());
     expect(elsewhere.status).toBe(401);

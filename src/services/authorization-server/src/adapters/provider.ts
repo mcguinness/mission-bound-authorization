@@ -3252,7 +3252,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = { error: "invalid_request", error_description: "no approval interaction to log in for" };
         return;
       }
-      const started = await opts.approverLogin.start(uid, subject, ctx.get("cookie"));
+      const started = await opts.approverLogin.start(uid, subject);
       ctx.res.setHeader("set-cookie", started.cookie);
       ctx.set("cache-control", "no-store");
       ctx.set("location", started.location);

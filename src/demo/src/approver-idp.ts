@@ -15,7 +15,9 @@
  * The device is a test-only channel: {@link CodeDevice} receives each code
  * the provider sends, as a phone would. Whoever holds the account's password
  * and its device is the Approver; the in-process approval console holds
- * Bob's, generated at each boot and never configured.
+ * Bob's, generated at each boot and never configured. It shows the reference
+ * authentication exchange; it is not evidence of an independently deployed
+ * possession factor.
  *
  * A deployment substitutes its own provider. The authorization server's side
  * (`approver-login.ts`) is unchanged by that substitution.

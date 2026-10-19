@@ -6,8 +6,9 @@
  * The Approver's user agent starts the login for one approval interaction.
  * This AS sends it to the provider with an authorization code request
  * (PKCE `S256`, `state`, `nonce`, `prompt=login`), bound to that user agent
- * by a cookie. At the callback it exchanges the code at the provider's token
- * endpoint and validates the ID Token as OpenID Connect Core 1.0 Section
+ * by a cookie of its own. At the callback it exchanges the code at the
+ * provider's token endpoint and validates the ID Token as OpenID Connect
+ * Core 1.0 Section
  * 3.1.3.7 requires: the signature against the provider's published keys
  * under the registered algorithm, `iss` exactly the provider's issuer, `aud`
  * exactly this client, `azp` if present, `exp`, `iat` and `nonce`. It then
@@ -26,7 +27,12 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createRemoteJWKSet, errors as joseErrors, jwtVerify, type JWTPayload } from "jose";
 import type { ApprovalPrincipal } from "./approval-resolution.js";
 
-/** The user-agent binding cookie for started logins. */
+/**
+ * The prefix of each started login's user-agent binding cookie. Every login
+ * has a cookie of its own, named from its `state` ({@link loginCookieName})
+ * and scoped to the callback, so logins in flight in one user agent never
+ * replace one another's binding.
+ */
 export const APPROVER_LOGIN_COOKIE = "mission_approver_login";
 /** The redirect URI path this AS registers at the provider. */
 export const APPROVER_LOGIN_CALLBACK_PATH = "/approver-login/callback";
@@ -83,7 +89,10 @@ interface StartedLogin {
 }
 
 const random = (): string => randomBytes(32).toString("base64url");
-const BINDING_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+/** The binding cookie's name for the login that sent `state`. */
+export const loginCookieName = (state: string): string =>
+  `${APPROVER_LOGIN_COOKIE}_${createHash("sha256").update(state).digest("base64url").slice(0, 22)}`;
 
 const sameSecret = (a: string, b: string): boolean => {
   const x = Buffer.from(a);
@@ -151,16 +160,16 @@ export class ApproverLoginRelyingParty {
   /**
    * Start a login for approval interaction `uid`, with the Subject the
    * Approver selects for an approval on another principal's behalf. Returns
-   * the provider's authorization URL and the user-agent binding cookie (an
-   * existing binding in `cookieHeader` is reused, so one user agent can have
-   * several logins in flight).
+   * the provider's authorization URL and this login's own user-agent binding
+   * cookie, which only the callback receives and which lives no longer than
+   * the login may take.
    */
-  async start(uid: string, subject: string | undefined, cookieHeader: string): Promise<{ location: string; cookie: string }> {
+  async start(uid: string, subject: string | undefined): Promise<{ location: string; cookie: string }> {
     const meta = await this.providerMetadata();
     const now = this.now();
     for (const [state, login] of this.started) if (login.expires <= now) this.started.delete(state);
-    const presented = cookieValue(cookieHeader, APPROVER_LOGIN_COOKIE);
-    const binding = presented && BINDING_PATTERN.test(presented) ? presented : random();
+    const lifetime = this.opts.loginLifetimeSeconds ?? 300;
+    const binding = random();
     const state = random();
     const nonce = random();
     const verifier = random();
@@ -170,7 +179,7 @@ export class ApproverLoginRelyingParty {
       nonce,
       verifier,
       binding,
-      expires: now + (this.opts.loginLifetimeSeconds ?? 300) * 1000,
+      expires: now + lifetime * 1000,
     });
     const url = new URL(meta.authorization_endpoint);
     const params: Record<string, string> = {
@@ -189,7 +198,7 @@ export class ApproverLoginRelyingParty {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     return {
       location: url.toString(),
-      cookie: `${APPROVER_LOGIN_COOKIE}=${binding}; Path=${APPROVER_LOGIN_CALLBACK_PATH}; HttpOnly; SameSite=Lax`,
+      cookie: `${loginCookieName(state)}=${binding}; Path=${APPROVER_LOGIN_CALLBACK_PATH}; Max-Age=${lifetime}; HttpOnly; SameSite=Lax`,
     };
   }
 
@@ -209,7 +218,7 @@ export class ApproverLoginRelyingParty {
     if (!state || !login) throw new ApproverLoginError("the login response names no login this server started");
     this.started.delete(state);
     if (login.expires <= this.now()) throw new ApproverLoginError("the login took too long; start it again");
-    const binding = cookieValue(cookieHeader, APPROVER_LOGIN_COOKIE);
+    const binding = cookieValue(cookieHeader, loginCookieName(state));
     if (!binding || !sameSecret(binding, login.binding)) {
       throw new ApproverLoginError("the login returned to a user agent other than the one that started it");
     }

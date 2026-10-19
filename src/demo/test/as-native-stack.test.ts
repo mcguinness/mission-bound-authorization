@@ -28,7 +28,7 @@ import { mkdtempSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createRequire } from "node:module";
-import { connect, createServer } from "node:net";
+import { connect, createServer, Server as NetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -1601,6 +1601,31 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       expect(kernelClose).toHaveBeenCalledTimes(3);
     } finally {
       kernelClose.mockRestore();
+    }
+  });
+
+  it("refuses startup when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the upstream Approver login provider's included (#1320)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "as-native-build-"));
+    // Every listener this composition opens, whatever its port.
+    const opened = new Set<NetServer>();
+    const listen = NetServer.prototype.listen;
+    const listening = vi.spyOn(NetServer.prototype, "listen").mockImplementation(function (this: NetServer, ...args: unknown[]) {
+      opened.add(this);
+      return listen.apply(this, args as never);
+    } as never);
+    try {
+      await expect(
+        launchAsNative({ ...launchOptions(), kernelStore: { file: dir }, approverIdpPort: LAUNCH_IDP_PORT }),
+      ).rejects.toThrow(/unable to open database/);
+      // The discovery listener and the provider were open when the build failed.
+      expect(opened.size).toBeGreaterThanOrEqual(2);
+      for (const server of opened) expect(server.listening).toBe(false);
+      expect(await accepts(`http://127.0.0.1:${LAUNCH_IDP_PORT}`)).toBe(false);
+    } finally {
+      listening.mockRestore();
+      await Promise.all(
+        [...opened].filter((server) => server.listening).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))),
+      );
     }
   });
 
