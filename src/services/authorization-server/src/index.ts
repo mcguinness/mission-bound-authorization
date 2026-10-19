@@ -1228,9 +1228,9 @@ export async function buildAuthorizationServer(opts: {
   //
   // `capture` runs inside the commit transaction and SNAPSHOTS the family grant
   // identifiers, so the delivery is payload-only: a retry after a restart
-  // revokes exactly the grants the transition owed, not whatever the rebuilt
-  // in-memory family projection happens to hold. Cascade re-enters per
-  // descendant commit, so a child's own family gets its own row.
+  // revokes exactly the grants the transition owed, not whatever the family
+  // table holds when the retry runs. Cascade re-enters per descendant commit,
+  // so a child's own family gets its own row.
   kernel.registerDurableSubscriber<{ grants: string[] }>({
     id: "delegation-family-grant-revoke",
     capture: (commit) => {
