@@ -7,6 +7,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
+import { APPROVER_LOGIN_CALLBACK_PATH, ApproverLoginError, type ApproverLoginRelyingParty } from "./approver-login.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
@@ -570,6 +571,12 @@ export interface AdapterOptions {
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
+  /**
+   * @spec mission#approval-authentication (#1320, D496): the approval
+   * surface's login as an OpenID Connect relying party to an upstream
+   * provider. Its validated ID Token records the login in `approvalSessions`.
+   */
+  approverLogin?: ApproverLoginRelyingParty;
   approverApprovesFor: Map<string, Set<string>>;
   knownSubjects: Set<string>;
   /**
@@ -3237,6 +3244,51 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       );
       return;
     }
+    // @spec mission#approval-authentication (#1320, D496): the Approver's
+    // login for one approval interaction, through the upstream provider. The
+    // Approver's user agent starts it, naming the Subject it selects for an
+    // approval on another principal's behalf; the selection takes effect only
+    // with the login the provider authenticates, and `decide()` still checks
+    // that this Approver approves for that Subject.
+    const loginStartMatch = ctx.path.match(/^\/interaction\/([^/]+)\/approver-login$/);
+    if (loginStartMatch && ctx.method === "GET" && opts.approverLogin && opts.approvalSessions) {
+      const uid = loginStartMatch[1] as string;
+      const subject = ctx.query.subject;
+      if (!(await provider.Interaction.find(uid)) || (subject !== undefined && (typeof subject !== "string" || subject.length === 0))) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "no approval interaction to log in for" };
+        return;
+      }
+      const started = await opts.approverLogin.start(uid, subject);
+      ctx.res.setHeader("set-cookie", started.cookie);
+      ctx.set("cache-control", "no-store");
+      ctx.set("location", started.location);
+      ctx.status = 303;
+      ctx.body = "";
+      return;
+    }
+    // The provider's authorization response. A refused login records nothing,
+    // so the interaction stays pending and no decision can rest on it.
+    if (ctx.path === APPROVER_LOGIN_CALLBACK_PATH && ctx.method === "GET" && opts.approverLogin && opts.approvalSessions) {
+      let completed: Awaited<ReturnType<ApproverLoginRelyingParty["complete"]>>;
+      try {
+        completed = await opts.approverLogin.complete(ctx.query, ctx.get("cookie"));
+      } catch (e) {
+        if (!(e instanceof ApproverLoginError)) throw e;
+        ctx.status = 401;
+        ctx.set("cache-control", "no-store");
+        ctx.body = { error: "access_denied", error_description: e.message };
+        return;
+      }
+      const { uid, principal } = completed;
+      const session = opts.approvalSessions.establish(uid, principal);
+      ctx.res.setHeader("set-cookie", `${session.cookie}; Path=/interaction/${uid}; HttpOnly; SameSite=Lax`);
+      ctx.set("cache-control", "no-store");
+      ctx.set("content-type", "text/html; charset=utf-8");
+      ctx.status = 200;
+      ctx.body = `<!doctype html><html><head><meta charset="utf-8"><meta name="mission-approval-csrf" content="${session.csrf}"><title>Signed in</title></head><body><p>Signed in. <a href="/interaction/${encodeURIComponent(uid)}">Continue to the approval</a>.</p></body></html>`;
+      return;
+    }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
     if (decideMatch && ctx.method === "POST") {
       const body = await readJsonBody(ctx.req);
@@ -5409,10 +5461,23 @@ async function decide(
   });
 }
 
+/**
+ * D284, #1328: this deployment's fixed approval wording for a per-action
+ * limit. `max_amount` is the one per-action spending limit this AS supports,
+ * and no aggregate cap exists, so an Approver consenting to it is told that
+ * it applies to each action and that nothing caps the Mission's total.
+ */
+const PER_ACTION_LIMIT_NOTICE =
+  "These limits apply to each action. This approval does not impose a total spending cap across the Mission.";
+
+function carriesPerActionLimit(authority: readonly AuthorityEntry[]): boolean {
+  return authority.some((entry) => entry.constraints?.max_amount !== undefined);
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
-  authority: unknown,
+  authority: readonly AuthorityEntry[],
   proposal?: unknown,
   provenance?: unknown[],
   authoritySource?: AuthoritySource,
@@ -5468,6 +5533,12 @@ function renderApprovalPage(
 <label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
 `
     : "";
+  // D284, #1328: shown under the derived authority whenever an entry the
+  // approval grants carries a per-action limit, and never otherwise.
+  const limitNotice = carriesPerActionLimit(authority)
+    ? `<p class="per-action-limits">${escapeHtml(PER_ACTION_LIMIT_NOTICE)}</p>
+`
+    : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
 ${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
@@ -5475,7 +5546,7 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${limitNotice}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 ${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }

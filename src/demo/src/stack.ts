@@ -9,6 +9,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
+  APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
   buildAuthorizationServer,
@@ -89,7 +90,8 @@ import { signStatement, TransparencyService, type Receipt, type SignedStatement 
 import { ConsoleBff } from "@mission/console-bff";
 import type { AccessRequestService } from "@mission/access-request";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "./resource-policy-store.js";
-import { type ApprovalConsole, type ApproverLogin, recordApproverLogin } from "./approval-console.js";
+import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
+import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
@@ -125,12 +127,25 @@ export interface AuthServerExtras {
   approverServiceToken: string;
   /**
    * @spec mission#approval-authentication (#826, D425) — the trusted
-   * console's Approver on the browser approval surface: Bob, logging in with
-   * `mfa` at each approval. A high-risk approval needs it, because the
-   * published approval-authentication floor accepts no headless approval
-   * service's registration. Trusted console/driver only, like the token.
+   * console's Approver on the browser approval surface: Bob. A high-risk
+   * approval needs it, because the published approval-authentication floor
+   * accepts no headless approval service's registration. Under the
+   * `as-native` target Bob logs in at each approval through the upstream
+   * provider (#1320, D496: his password and the one-time code his device
+   * receives), and the AS records the context of the ID Token it validates;
+   * the shared composition presents the recorded, simulated login
+   * ({@link DemoStack.approverLogin}). Trusted console/driver only, like the
+   * token.
    */
-  approverConsole: ApprovalConsole;
+  approverConsole: ApprovalConsole | UpstreamApprovalConsole;
+  /**
+   * @spec mission#approval-authentication (#1320, D496): the upstream
+   * OpenID Provider the `as-native` target's approval surface logs its
+   * Approver in through: its issuer and every login it completed, with the
+   * factors it verified and the `acr` it asserted. Absent on the shared
+   * composition.
+   */
+  approverProvider?: { issuer: string; logins: readonly CompletedLogin[] };
   /**
    * @spec status#lifecycle-authorization: the dedicated lifecycle console's
    * private-key-JWT credential at the advertised Mission Lifecycle endpoint. It
@@ -184,9 +199,11 @@ export interface DemoStack {
   /**
    * @spec mission#approval-authentication (#826, D425) — the console
    * Approver's recorded login (Bob, `mfa`, recorded when the stack is
-   * composed). The AS's approval console presents it, and the demo's direct
-   * kernel approvals check the floor against it. Simulated (no Approver
-   * identity provider); `logInAgain` records a new one.
+   * composed). The shared composition's approval console presents it, and
+   * the demo's direct kernel approvals check the floor against it. Simulated
+   * (that composition has no Approver identity provider); `logInAgain`
+   * records a new one. The `as-native` target's console does not use it: its
+   * Approver logs in through the upstream provider at each approval (#1320).
    */
   approverLogin: ApproverLogin;
   fga: Fga;
@@ -293,6 +310,12 @@ export async function composeStack(opts: {
    */
   withAuthServer?: boolean;
   asPort?: number;
+  /**
+   * @spec mission#approval-authentication (#1320): the port of the upstream
+   * Approver login provider the `as-native` target starts. Default: any free
+   * port, which the launcher prints.
+   */
+  approverIdpPort?: number;
   /** Default co-resident; MISSION_PDP_MODE=remote selects a real loopback hop. */
   pdpMode?: "co-resident" | "remote";
   /**
@@ -447,6 +470,24 @@ export async function composeStack(opts: {
     // can be baked into the URI the resource publishes and the AS resolves.
     const txnTopo = TOPOLOGY.txnChallenge.payments;
     metadataServer = await startResourceMetadataServer(() => paymentsServerRef);
+    // A failed construction releases every listener it already opened (the
+    // discovery listener and, under `as-native`, the upstream Approver login
+    // provider) and, with a kernel file, the kernel (#250): the caller never
+    // receives the stack that would close them (#1320).
+    let approverIdp: ApproverIdp | undefined;
+    const releaseConstruction = async (built?: { kernel: MissionKernel }): Promise<void> => {
+      await metadataServer?.close();
+      await approverIdp?.close();
+      if (opts.kernelStore) built?.kernel.close();
+    };
+    const constructing = async <T>(step: () => T | Promise<T>): Promise<T> => {
+      try {
+        return await step();
+      } catch (err) {
+        await releaseConstruction();
+        throw err;
+      }
+    };
     txnChallengePublication = {
       jwksUri: `${metadataServer.origin}${txnTopo.jwksPath}`,
       jwksPath: txnTopo.jwksPath,
@@ -464,6 +505,23 @@ export async function composeStack(opts: {
     ]);
     const approverServiceToken = crypto.randomUUID();
     const approvalSessions = new ApprovalSessionStore();
+    // @spec mission#approval-authentication (#1320, D496): the as-native
+    // target's Approver logs in through an upstream OpenID Provider, a party
+    // of its own on its own port. Its account for Bob has a subject of its
+    // own, mapped here, issuer-qualified, to the local Approver `bob`; Bob's
+    // password and device are generated at this boot and held only by the
+    // trusted console.
+    const approverUsername = USERS.find((u) => u.sub === "bob")?.email ?? "bob";
+    if (asNative) {
+      approverIdp = await constructing(() =>
+        startApproverIdp({
+          redirectUri: `${asUrl}${APPROVER_LOGIN_CALLBACK_PATH}`,
+          accounts: [{ sub: "idp-bob", username: approverUsername }],
+          ...(opts.approverIdpPort !== undefined ? { port: opts.approverIdpPort } : {}),
+        }),
+      );
+    }
+    const approverAccount = approverIdp?.accounts.get(approverUsername);
     // D332: the as-native target's AS runs exactly AS_NATIVE_CAPABILITIES,
     // plus `dev-token` only under the test fixture. The shared demo passes no
     // set, which is the full reference assembly.
@@ -473,12 +531,25 @@ export async function composeStack(opts: {
         ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
         : AS_NATIVE_CAPABILITIES
       : undefined;
-    const lifecycleConsole = await newLifecycleConsole();
-    if (opts.kernelStore) mkdirSync(dirname(opts.kernelStore.file), { recursive: true });
-    const as = await buildAuthorizationServer({
+    const lifecycleConsole = await constructing(() => newLifecycleConsole());
+    const kernelStore = opts.kernelStore;
+    if (kernelStore) await constructing(() => mkdirSync(dirname(kernelStore.file), { recursive: true }));
+    const as = await constructing(() => buildAuthorizationServer({
       issuer: asUrl,
       allowHeadlessAdjudication: true,
       approvalSessions,
+      ...(approverIdp
+        ? {
+            approverLogin: {
+              issuer: approverIdp.issuer,
+              clientId: approverIdp.client.clientId,
+              clientSecret: approverIdp.client.clientSecret,
+              idTokenSigningAlgs: ["ES256"],
+              identities: [{ iss: approverIdp.issuer, sub: "idp-bob", approver: "bob" }],
+              acrValues: ["mfa"],
+            },
+          }
+        : {}),
       // @spec status#lifecycle-authorization: one dedicated lifecycle console
       // holds the lifecycle grant; no other client does.
       lifecycleClients: [lifecycleConsole.registration],
@@ -546,20 +617,18 @@ export async function composeStack(opts: {
           return { decision: "permit" };
         },
       },
-    });
+    }));
     const asServer = as.provider.listen(asPort);
-    // A port already in use refuses startup here, with the discovery
-    // listener released, rather than surfacing as an unhandled error event.
-    // @spec #250: a kernel kept in a file is released too; the caller never
-    // receives the stack that would close it.
+    // A port already in use refuses startup here, releasing what construction
+    // opened, rather than surfacing as an unhandled error event. @spec #250:
+    // a kernel kept in a file is released too.
     try {
       await new Promise<void>((resolve, reject) => {
         asServer.once("listening", () => resolve());
         asServer.once("error", reject);
       });
     } catch (err) {
-      await metadataServer.close();
-      if (opts.kernelStore) as.kernel.close();
+      await releaseConstruction(as);
       throw err;
     }
     kernel = as.kernel;
@@ -673,7 +742,10 @@ export async function composeStack(opts: {
       agentClientJwk: as.agentClientJwk,
       childClientJwk: as.childClientJwk,
       approverServiceToken,
-      approverConsole: { sessions: approvalSessions, login: approverLogin },
+      approverConsole: approverAccount
+        ? { upstream: { account: approverAccount, secondFactor: "code" } }
+        : { sessions: approvalSessions, login: approverLogin },
+      ...(approverIdp ? { approverProvider: { issuer: approverIdp.issuer, logins: approverIdp.logins } } : {}),
       lifecycleConsole: lifecycleConsole.credentials,
       deferrals: as.deferrals,
       ras,
@@ -703,6 +775,7 @@ export async function composeStack(opts: {
         await Promise.all([
           new Promise<void>((resolve) => asServer.close(() => resolve())),
           metadataServer?.close(),
+          approverIdp?.close(),
         ]);
       },
       ...(as.capabilities ? { capabilities: as.capabilities } : {}),

@@ -19,7 +19,8 @@ Every behavioral statement is true of the reference implementation read at
 origin/main `e9001b2f`, and each statement about the as-native target and its
 launcher (#1105), or naming a later merged issue (such as #1103 or #1104), at
 `583e3806`, each naming #828 at `e3f4e789`, and §11 and the signing-key and
-restart statements (#1299, #1307) at `73a2e86b`. Each cites the function
+restart statements (#1299, #1307) at `73a2e86b`, and each naming #1320 at
+`aebaa812`. Each cites the function
 (`file:line`, read at `04b11481`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
@@ -80,7 +81,7 @@ acceptance item witnessed (D436).
 
 | Dimension | Adopted (D284, D293) | Reference at `e9001b2f` (citations read at `04b11481`) | Status | Gap owner |
 |---|---|---|---|---|
-| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `pnpm as-native` (§12) runs `composeStack({ target: "as-native" })` (`demo/src/stack.ts:280`): the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:416-418`) with the D332 capability set below, the PEP `mcp-payments-pep` (`stack.ts:959-961`) served over HTTP MCP at the resource audience `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:82`), the PDP (`stack.ts:761`), OpenFGA, and the in-process approval service: `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience`. The AS JWKS is fetched once at assembly (`stack.ts:545`) | Partial | JWKS reload: #831 |
+| Topology | One configured issuer and trust domain; trusted Approver resolver, PEP, PDP and Resource; no implied federation | One process. `pnpm as-native` (§12) runs `composeStack({ target: "as-native" })` (`demo/src/stack.ts:280`): the AS on 4400 (issuer `http://localhost:4400`, `stack.ts:416-418`) with the D332 capability set below, the PEP `mcp-payments-pep` (`stack.ts:959-961`) served over HTTP MCP at the resource audience `http://localhost:4403/mcp` (`services/mcp-payments/src/pep.ts:82`), the PDP (`stack.ts:761`), OpenFGA, the in-process approval service and the upstream Approver login provider on its own port (#1320, §12): `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > mounts no MAS join route and serves the HTTP MCP endpoint at exactly the declared resource audience`. The AS JWKS is fetched once at assembly (`stack.ts:545`) | Partial | JWKS reload: #831 |
 | Binding | OAuth Mission-bound issuance, Runtime OAuth and AuthZEN; MAS join only in its separately declared path | Runtime OAuth credential validation over HTTP MCP, with a DPoP proof verified on every request, and the AuthZEN request (§4, §5). The in-process mediated channel is outside this target (D315). The PDP is a direct call by default with no PEP authentication (`services/pdp/src/decision-channel.ts:63-68`); `MISSION_PDP_MODE=remote` adds a loopback HTTP hop keyed by a per-boot secret that is never configured, so it cannot cross processes as shipped (`decision-channel.ts:71-76`). `config/mas-join.json` names the payments resource governed, and the shared demo mounts a MAS join route there; the target mounts none, and a configuration that would mount one fails startup: `the as-native target excludes the MAS join route at startup (D315) > fails startup, before connecting to anything, when the payments resource is configured governed` | HTTP entry point only (D315) | #818 owns MAS; #956 Q2 its declaration in the shared demo |
 | Operations | Enumerated payments operations, authority types, classes, phases and parameter binding; refuse outside the allowlist | Nine tools, all classed (§3). An unknown tool is refused `unknown_tool` before any PDP call (`pep.ts:1315`). Arguments outside a tool's served schema are refused `invalid_request` before any PDP call (§3) | Partial | None open: `hold_transfer`'s control is implemented (§3); #1106 is closed |
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:918-925`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
@@ -402,8 +403,7 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Blocking high-risk approval acceptance: a reference upstream login integration whose provider authenticates the Approver and establishes the claimed strength (#1320, option A); the demo console's login is simulated (D438). Token authority (D411) and Resource policy (#828 closed, D436) are met for this target.
-- Blocking acceptance item 1: approval text stating that each limit applies per action and that the approval imposes no total spending cap, with a rendered-page test (D284, #1328). The Mission-bound `unknown_mission` refusal is witnessed below the stack (§11, #1329).
+- Token authority (D411) and Resource policy (#828 closed, D436) are met for this target. High-risk approval rests on the upstream Approver login (#1320, D496), witnessed on the assembled target (§11, §12); the owner records #253's high-risk approval gate.
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance stays with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
 - Separated deployment only: #1101 (state source under D293).
@@ -478,8 +478,9 @@ The request-time vectors are witnessed in that block at `9255239c`, and the
 lifecycle vectors at `7d91c7d4`, against CI's pinned OpenFGA image.
 
 Both required gates are met for this target: token authority (D411) and
-Resource policy (#828, D436). High-risk approval acceptance still waits on a
-deployment login integration (D438, #1320).
+Resource policy (#828, D436). High-risk approval rests on the upstream
+Approver login (#1320, D496), witnessed on the assembled path below; the
+owner records that gate.
 
 | Vector | Existing witness | Gap |
 |---|---|---|
@@ -493,7 +494,7 @@ deployment login integration (D438, #1320).
 | Phase mismatch | `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting check_transfer's preflight permit` | |
 | Failed commit predicate with the permit retained | none | applies only to a connector that claims a commit-point predicate; none does at this revision (#817), so the guarantee stays excluded (§8) |
 | Bob for Alice, with and without `openid` | `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > refuses openid invalid_scope when the Approver is not the Subject, leaving no Mission, grant, code or session for the Subject` and `Approver and Subject stay separate identities (@spec mission#approval-authentication, #826) > approves for another principal without openid: the token and introspection carry the Subject, the record the Approver, and the provider account and session the Approver`; on the assembled path, without `openid`: [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)`; with `openid`, PAR refuses `invalid_scope` because OIDC is off on this target: [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses every optional AS capability outside the D332 set with its standard error: one probe for each of the 15, and no Mission touched` | |
-| High-risk approval below the published floor | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` and `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session` | |
+| High-risk approval below the published floor | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` and `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session`; on the assembled path, through the upstream Approver login (#1320): [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)`, [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)` and [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)`, and the admitted case [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)` | |
 | Revoke during issuance | none on this surface | #250 |
 | Restart and uncertain recovery | the unit-level witnesses in §7; on the assembled path: [FGA] `the as-native target restarted on the same store files against a live OpenFGA (@spec runtime#idempotency, #253) > reopens the PEP's write reservations: a key scheduled before the restart is still recorded completed after it, and the restarted target schedules afresh (co-resident)` | the PDP claim bound across a restart stays at the unit level: a prior process's unsettled claims close indeterminate with an operator alert, a stated bound (§7) |
 | Emission failure | the six #1104 tests in §6; on the assembled path: [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > reports a completed record that cannot be written as an emission_failed gap, not a refusal: the effect stands once, nothing records it completed, and the same transaction token executes nothing again (#253)` | settlement from the connector ledger waits on the permit and lease, so it stays witnessed below the stack (§6) |
@@ -508,7 +509,10 @@ correct surface and role.
 #253 Sketch step 5, reviewed at origin/main `73a2e86b`: one row per claim
 this contract makes for the target (§1, §2, §8) and per overlay obligation of
 [provider-integration-port.md](provider-integration-port.md) §5. Each cited
-test exists at that revision; the sections named hold the full witness lists.
+test exists at that revision, except the approval-wording row's, which #1328
+added, and the high-risk approval row, re-reviewed for #1320 at `aebaa812`,
+whose witnesses exist from that commit; the sections named hold the full
+witness lists.
 Status:
 
 - `witnessed`: on the assembled target, `composeStack({ target: "as-native" })`
@@ -529,7 +533,7 @@ Status:
 | Per-action `max_amount`, exact decimal (§3) | `PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > an amount exactly at the cap permits (the comparison is <=, not <)` and [FGA] `M4 core enforcement tier > over-cap invoice denied parameter_violation` | witnessed below the stack | none: no §10 vector |
 | Per-action `vendors` (§8) | [FGA] `M4 core enforcement tier > vendor outside constraint denied parameter_violation` | witnessed below the stack | none: no §10 vector |
 | No aggregate cap: an Intent member the issuer does not implement, such as `max_budget`, is refused (§8) | `intent validation (@spec mission#submission-via-par) > rejects unknown top-level members (closed top level)`, with another member | excluded (D284) | #816, parked |
-| Approval promises only the per-action limits (D284 ruling 2) | `end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only`, on the default assembly: the page shows the derived authority as JSON; see below | open: per-entry JSON does not meet D284 (D496) | #1328 |
+| Approval promises only the per-action limits (D284 ruling 2) | `approval page per-action limit wording (D284, #1328) > states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount` and `approval page per-action limit wording (D284, #1328) > does not state the per-action limit wording when no derived entry carries max_amount`, on the default assembly; see below | witnessed below the stack | none: no §10 vector |
 | The local committed read per decision (D293): a revoked Mission refuses the next decision (§4) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the next read mission_inactive once the Mission is revoked at the advertised lifecycle endpoint, with the PDP's deny Decision Evidence and no effect (#253)` | witnessed | a separated source: #1101 |
 | A fresh decision at each commit phase (§4) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the fresh commit decision mission_inactive when the Mission is revoked after a permitted preflight and prepare, and no wire exists (#253)` | witnessed | none |
 | Per-class staleness, skew, permit and execution-lease bounds (§4) | `a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound` and [FGA] `M5 transaction-assurance tier > an expired execution lease is refused as permit_expired, not as a parameter mismatch` | witnessed below the stack | none: the target has no controllable clock (§10) |
@@ -542,7 +546,7 @@ Status:
 | Each gate is independently necessary (§5) | `runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority, the Mission's contextual check and Resource policy all permit` | witnessed below the stack | none |
 | Action-bound approval for `send_remittance_email`, redeemed at the AS transaction endpoint (§3) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > denies send_remittance_email with a transaction challenge, redeems the approval at the AS transaction endpoint, and executes the retry under the transaction token exactly once` | witnessed | none |
 | Delegated approval (acceptance item 2): Bob approves for Alice, and the Approver and the Subject stay distinct (§10) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)` | witnessed | none. With `openid` the target refuses `invalid_scope`, because OIDC is off (§2, §10); the case needs neither OIDC nor agent-to-agent delegation enabled |
-| High-risk approval rests on the published authentication floor (D425) | `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa` | open: the floor is witnessed below the stack; the target's Approver login is simulated (D438, §12) | #1320: a reference upstream login integration whose provider authenticates the Approver and establishes the claimed strength (option A); open until its assembled positive and negative witnesses pass |
+| High-risk approval rests on the published authentication floor (D425), over an Approver authentication the AS verifies (#1320, D496) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)`, [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)`, [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)` and [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)`; the same in `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315)`; the ID Token checks and the mapping below the stack (`the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496)`, every case) and the provider's own authentication (`the reference upstream OpenID Provider authenticates the Approver (@spec mission#approval-authentication, #1320, D496)`, every case) | witnessed | none: a deployment substitutes its own provider and identity mapping (§12) |
 | The operation allowlist: an unknown tool refuses before any PDP call (§3) | `intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > the signed Refusal Record names request_invalid for arguments outside the schema, request_unsupported for an unknown tool and capability_source_unresolvable for an unreadable schema, each with no PDP call and no effect` | witnessed below the stack | none |
 | Intake: arguments outside the closed schema refuse `invalid_request` before any PDP call (§3) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)` | witnessed | none |
 | Parameter digest and phase binding at use (§3) | [FGA] `M5 transaction-assurance tier > TOCTOU in the decision->commit window refuses before the connector commits` and `compound-action phases (@spec runtime#compound-actions) > refuses a commit presenting prepare's permit, zero connector effects` | witnessed below the stack | none |
@@ -565,24 +569,24 @@ Status:
 | Context-drift vectors, conditional (§8) | none | excluded | #773 |
 | The launcher wrappers: the dev-CA check, argument and signal forwarding and exit status of `scripts/as-native.mjs`, and `pnpm resource-policy`'s wrapper (§12) | none | excluded: no wrapper-coverage claim; a disclosed operational residual | #1330 |
 
-Counts: 14 `witnessed`, 14 `witnessed below the stack`, 4 `stated bound`,
-9 `excluded`, 3 `open`. Each open row has an owner: #1320, #1328 and #250.
+Counts: 15 `witnessed`, 15 `witnessed below the stack`, 4 `stated bound`,
+9 `excluded`, 1 `open`. The open row's owner is #250.
 
 **Approval wording (D284 ruling 2).** The approval page shows the derived
 Authority Set as JSON under "Derived authority (what approval grants)"
 (`renderApprovalPage`,
-`services/authorization-server/src/adapters/provider.ts:5395-5464`). Its
-only amount and vendor limits are each entry's `max_amount` and `vendors`,
-which the PDP enforces per action (§3), and the Intent's closed top level
-admits no aggregate member (`TOP_LEVEL`,
+`services/authorization-server/src/adapters/provider.ts`). Its only amount
+and vendor limits are each entry's `max_amount` and `vendors`, which the PDP
+enforces per action (§3), and the Intent's closed top level admits no
+aggregate member (`TOP_LEVEL`,
 `services/authorization-server/src/kernel/intent.ts:49-57`). The page grants
-no aggregate cap. It carries no text saying that each limit applies per
-action and that no total is enforced, and no test asserts what it says about
-limits. This contract states the boundary (§1, §8). Per-entry JSON does not
-meet D284's requirement that approval text make the boundary explicit
-(D496): the page needs visible text, such as "These limits apply to each
-action. This approval does not impose a total spending cap across the
-Mission.", and a rendered-page test (#1328).
+no aggregate cap. Where an entry it grants carries `max_amount`, the page
+states beneath the derived authority: "These limits apply to each action.
+This approval does not impose a total spending cap across the Mission."
+(D496, #1328). A Mission with no `max_amount` entry, such as a read Mission
+whose entries carry only `vendors`, shows no such text. Both cases are
+tested on the rendered page of the default assembly (the row above); this
+target's AS serves the same page, and no assembled test renders it.
 
 **Inherited from #873.** #253 inherits the floor's limits (D408, D417).
 Each obligation is resolved under the floor's own contract,
@@ -610,16 +614,51 @@ at `http://localhost:4403/mcp`, the PDP, OpenFGA and the in-process approval
 service, with no MAS join route. That service approves on the AS's browser
 approval surface, because the published approval-authentication floor
 (D425, `config/approval-floor.json`) refuses a headless approval of payment
-execution or remittance. It presents a login recorded once when the stack is
-composed (Bob, `mfa`) and never records one at an approval, so 300 seconds
-after that login a high-risk approval refuses until the Approver logs in
-again. The login is simulated: the demo has no Approver identity provider,
-so no person authenticated. #253's high-risk approval acceptance therefore
-does not rest on it, and that gate stays unmet until a deployment's login
-integration supplies the achieved context (#1320). It mints no ordinary token. It prints the
-issuer, the AS capability set, the signing-key source, the resource audience
-and the PDP mode, and needs only `pnpm setup` and `docker compose up -d`
-(OpenFGA).
+execution or remittance.
+
+At each approval the Approver logs in through an upstream OpenID Provider
+that the launcher starts on a port of its own (`demo/src/approver-idp.ts`,
+#1320, D496). The approval surface sends the Approver's user agent there
+with an authorization code request (PKCE `S256`, `state`, `nonce`,
+`prompt=login`, `acr_values=mfa`), bound to that user agent by a cookie of
+its own for each login, so several logins can be in flight in one browser.
+The provider checks Bob's password and then a one-time code it sends to his
+enrolled device, and asserts `acr` `mfa` only when both succeed (`pwd`
+for the password alone), with the `auth_time` of that login. The AS
+exchanges the code, validates the ID Token (OpenID Connect Core 1.0 Section
+3.1.3.7: the signature against the provider's JWKS, `iss`, `aud`, `azp`,
+`exp`, `iat` and `nonce`), maps the issuer-qualified identity
+(`iss` and `sub`) to its Approver `bob`, and records the token's `acr`
+and `auth_time`, which the floor evaluates unchanged at the decision
+(`services/authorization-server/src/adapters/approver-login.ts`). A login
+that fails any check records nothing, so no decision can rest on it. Bob's
+password and device exist only in the in-process console, generated at each
+boot. The device is an in-process stand-in: it shows the reference
+authentication exchange, and it is not evidence of an independently
+deployed possession factor. A deployment substitutes its own provider and
+identity mapping, and the AS side is unchanged:
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)`,
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)`,
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)`,
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)`
+and
+`the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > admits a low-risk approval after a password-only login at the upstream provider: the floor does not apply (#1320)`.
+The provider's authentication is witnessed on its own
+(`the reference upstream OpenID Provider authenticates the Approver (@spec mission#approval-authentication, #1320, D496)`, every case), and so is each ID Token check and the mapping
+(`the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496)`, every case). The shared demo composition (`pnpm demo:serve`,
+`pnpm exhibit`) keeps its simulated recorded login (`recordApproverLogin`);
+nothing here rests on it.
+
+It mints no ordinary token. It prints the issuer, the AS capability set, the
+signing-key source, the resource audience, the PDP mode and the approver
+login provider, and needs only `pnpm setup` and `docker compose up -d`
+(OpenFGA). Shutdown and a failed startup, a bind or the AS's construction,
+close the provider's listener too:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode`
+and
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS port or the declared audience's port is taken, and keeps no port, store file or kernel file open`
+and
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the upstream Approver login provider's included (#1320)`.
 
 Its configuration is the OpenFGA connection, the Resource-policy store, the
 PDP mode, the signing-key source and the kernel's file from the environment,
@@ -656,7 +695,7 @@ closes every listener and both store files and exits 0. The launcher refuses
 any composition but the target, the minting fixture included:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > composes exactly the target from its own configuration: the D332 capability set, no dev ordinary issuance, no MAS join route and no test fixture`,
 `the as-native launcher in process, OpenFGA client stubbed (D332) > refuses an unusable configuration by name, before anything connects`,
-`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS port or the declared audience's port is taken, and keeps no port or store file`
+`the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS port or the declared audience's port is taken, and keeps no port, store file or kernel file open`
 and
 `the as-native launcher in process, OpenFGA client stubbed (D332) > closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode`.
 The server entry also runs as its own process against a stand-in OpenFGA:
@@ -713,15 +752,10 @@ which maps the overlay's obligations to their hooks in the port's eight
 columns. The acceptance pack (step 3) runs on `pnpm as-native`, and §10 maps
 each of its vectors to a witness or an owner. Open before #253 closes:
 
-1. **High-risk approval:** a reference upstream login integration whose
-   provider authenticates the Approver and establishes the claimed strength,
-   with assembled positive and negative witnesses (#1320).
-2. **Approval wording:** visible per-action text on the approval page and a
-   rendered-page test (D284, #1328).
-3. **Mission-bound `unknown_mission`:** a witness of the refusal before any
-   decision (#1329).
-4. **Revoke during issuance:** #250.
-5. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+1. **High-risk approval:** witnessed through the upstream Approver login
+   (#1320, §11); the owner records the gate.
+2. **Revoke during issuance:** #250.
+3. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
 Disclosed residuals that make no claim: the launcher wrappers' tests (#1330)

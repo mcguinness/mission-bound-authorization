@@ -1,5 +1,6 @@
 /** Trusted exhibit/console driver. Never imported by the agent OAuth helper. */
 import { APPROVAL_SUBJECT_HEADER, type ApprovalSessionStore } from "@mission/authorization-server";
+import type { ApproverAccount } from "./approver-idp.js";
 import { jarClosures, redeemMissionApproval, submitMissionApproval, type CookieJar, type IssueOpts, type SubmittedApproval } from "./oauth-client.js";
 
 /** The console Approver's recorded login: who, the `acr` that login achieved, and when it happened. */
@@ -11,12 +12,13 @@ export interface ApproverLogin {
 
 /**
  * Record a login by the console's Approver, at the moment the login happens
- * (#826, D425). The demo has no Approver identity provider, so this stands in
- * for a deployment's login integration: it records the `acr` the demo
- * configures and the current time. It is called at a login (stack
- * composition, or the demo server's explicit login route), never at an
- * approval. The login is simulated, so it is not evidence that a person
- * authenticated, and #253's high-risk approval acceptance does not rest on it.
+ * (#826, D425). The shared demo composition has no Approver identity
+ * provider, so this stands in for a deployment's login integration: it
+ * records the `acr` the demo configures and the current time. It is called
+ * at a login (stack composition, or the demo server's explicit login route),
+ * never at an approval. The login is simulated, so it is not evidence that a
+ * person authenticated. The as-native target logs its Approver in through an
+ * upstream provider instead ({@link UpstreamApprovalConsole}, #1320).
  */
 export function recordApproverLogin(approver: { sub: string; acr: string }, at = Math.floor(Date.now() / 1000)): ApproverLogin {
   return { sub: approver.sub, acr: approver.acr, auth_time: at };
@@ -41,8 +43,86 @@ export interface ApprovalConsole {
   login: ApproverLogin;
 }
 
-/** How the console authenticates: a browser login, or a headless approval service token. */
-export type ApproverCredential = ApprovalConsole | string;
+/**
+ * @spec mission#approval-authentication (#1320, D496): the console's
+ * Approver logging in, in the Approver's own user agent, through the AS's
+ * approval surface to the upstream OpenID Provider (`approver-idp.ts`), at
+ * each approval: the account's password, then the one-time code its
+ * enrolled device receives, or no second factor (`secondFactor: "skip"`,
+ * which the provider asserts as a password-only login). The AS records the
+ * `acr` and `auth_time` of the ID Token it validates; nothing here supplies
+ * them.
+ */
+export interface UpstreamApprovalConsole {
+  upstream: { account: ApproverAccount; secondFactor: "code" | "skip" };
+}
+
+/** How the console authenticates: a recorded or upstream browser login, or a headless approval service token. */
+export type ApproverCredential = ApprovalConsole | UpstreamApprovalConsole | string;
+
+/**
+ * The Approver's login for approval interaction `uid` through the upstream
+ * provider, selecting `subject` (`null`: a self-approval). Two user-agent
+ * cookie jars, one per origin, as a browser keeps them. Returns the approval
+ * session's cookie and its CSRF secret, from the AS's callback page.
+ */
+export async function logInUpstream(
+  asUrl: string,
+  uid: string,
+  approver: UpstreamApprovalConsole,
+  subject: string | null,
+): Promise<{ cookie: string; csrf: string }> {
+  const { account, secondFactor } = approver.upstream;
+  const asJar: CookieJar = new Map();
+  const idpJar: CookieJar = new Map();
+  const at = jarClosures(asJar);
+  const idp = jarClosures(idpJar);
+  const query = subject !== null ? `?${new URLSearchParams({ subject })}` : "";
+  let res = await fetch(`${asUrl}/interaction/${uid}/approver-login${query}`, {
+    redirect: "manual",
+    headers: { cookie: at.cookieHeader() },
+  });
+  if (res.status !== 303) throw new Error(`approver login did not start: ${res.status} ${await res.text()}`);
+  at.storeCookies(res);
+  const authorize = new URL(res.headers.get("location") as string);
+  const origin = authorize.origin;
+  // The provider's authorization endpoint sends the user agent to its login.
+  res = await fetch(authorize, { redirect: "manual", headers: { cookie: idp.cookieHeader() } });
+  idp.storeCookies(res);
+  const loginPage = new URL(res.headers.get("location") ?? "", origin);
+  const form = (step: string, body: Record<string, string>) =>
+    fetch(new URL(`${loginPage.pathname}/${step}`, origin), {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded", cookie: idp.cookieHeader() },
+      body: new URLSearchParams(body).toString(),
+    });
+  res = await form("password", { username: account.username, password: account.password });
+  if (res.status !== 200) throw new Error(`approver login refused the password: ${res.status}`);
+  if (secondFactor === "code") {
+    const code = account.device.latest();
+    if (!code) throw new Error("the approver's device received no code");
+    res = await form("code", { code });
+  } else {
+    res = await form("skip", {});
+  }
+  idp.storeCookies(res);
+  let location = res.headers.get("location");
+  while (location && new URL(location, origin).origin === origin) {
+    res = await fetch(new URL(location, origin), { redirect: "manual", headers: { cookie: idp.cookieHeader() } });
+    idp.storeCookies(res);
+    location = res.headers.get("location");
+  }
+  if (!location || new URL(location).origin !== new URL(asUrl).origin) throw new Error("approver login did not return to the AS");
+  res = await fetch(location, { redirect: "manual", headers: { cookie: at.cookieHeader() } });
+  at.storeCookies(res);
+  const page = await res.text();
+  if (res.status !== 200) throw new Error(`approver login refused: ${res.status} ${page}`);
+  const csrf = /name="mission-approval-csrf" content="([^"]+)"/.exec(page)?.[1];
+  const session = asJar.get("mission_approver_session");
+  if (!csrf || !session) throw new Error("approver login established no approval session");
+  return { cookie: `mission_approver_session=${session}`, csrf };
+}
 
 /**
  * The trusted console resolves an approval. `subject` is the Subject the
@@ -55,6 +135,10 @@ export async function resolveMissionApproval(asUrl: string, approver: ApproverCr
   let identity: Record<string, string>;
   if (typeof approver === "string") {
     identity = { cookie: cookieHeader(), "x-service-token": approver, ...(subject !== null ? { [APPROVAL_SUBJECT_HEADER]: subject } : {}) };
+  } else if ("upstream" in approver) {
+    const login = await logInUpstream(asUrl, pending.uid, approver, subject);
+    const interaction = cookieHeader();
+    identity = { cookie: interaction ? `${interaction}; ${login.cookie}` : login.cookie, "x-csrf-token": login.csrf };
   } else {
     const login = approver.sessions.establish(pending.uid, {
       sub: approver.login.sub,
