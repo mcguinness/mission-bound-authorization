@@ -15,6 +15,7 @@ import {
   type AuthorityEntry,
   GateError,
   issueCrossDomainGrant,
+  resolveDestinationClientId,
   MissionKernel,
   validateMissionIntent,
 } from "@mission/authorization-server";
@@ -25,12 +26,19 @@ import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-s
 const AS_ISS = "https://as.test";
 const RAS_ISS = "https://ras.ledgercloud.test";
 // @spec cross-domain#validation-at-resource-as (S-12): the RAS's own client
-// registration, distinct from the grant's own client_id ("ap-agent", the
-// origin agent). Two distinct destination clients so a test can prove
+// registrations. Two distinct destination clients so a test can prove
 // neither's key nor identifier leaks onto the other's minted token.
 const RAS_LOCAL_CLIENT_ID = "ledgercloud-ras-redeemer";
 const RAS_LOCAL_CLIENT_ID_2 = "ledgercloud-ras-second-client";
 const RESOURCE_TO_AS = (r: string) => (r === SAAS_RESOURCE ? RAS_ISS : AS_ISS);
+// @spec cross-domain#pre-established-trust, #cross-domain-grant (#1166, D510):
+// the originating AS's destination-scoped mapping. Each home client maps to
+// its own registration at the RAS, and the grant names that registration.
+const CROSS_DOMAIN_CLIENTS = [
+  { targetAs: RAS_ISS, clientId: "ap-agent", destinationClientId: RAS_LOCAL_CLIENT_ID },
+  { targetAs: RAS_ISS, clientId: "ap-agent-2", destinationClientId: RAS_LOCAL_CLIENT_ID_2 },
+];
+const AGENT_AT_RAS = resolveDestinationClientId(CROSS_DOMAIN_CLIENTS, "ap-agent", RAS_ISS);
 
 // Policy ceiling includes the SaaS resource with the journal-write action.
 const POLICY = {
@@ -139,14 +147,15 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
 
-    // ID-JAG §3.1: the grant carries client_id (the acting client at the RAS).
+    // ID-JAG -04 §3.1 (#1166, D510): the grant's client_id is the agent's
+    // registration at the RAS, resolved from the destination-scoped mapping.
     const grantClaims = JSON.parse(Buffer.from(grant.split(".")[1] as string, "base64url").toString());
-    expect(grantClaims.client_id).toBe("ap-agent");
+    expect(grantClaims.client_id).toBe(RAS_LOCAL_CLIENT_ID);
 
     const { access_token } = await ras.redeem(grant, agentJkt);
     const res = await saas.callTool(
@@ -165,7 +174,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -201,7 +210,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: unregisteredJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -217,7 +226,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant: grantA } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: missionA.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -225,7 +234,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant: grantB } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: missionB.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: resolveDestinationClientId(CROSS_DOMAIN_CLIENTS, "ap-agent-2", RAS_ISS),
       cnfJkt: secondAgentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -247,7 +256,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -260,7 +269,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -274,7 +283,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
       issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
         missionId: mission.id,
         targetAs: RAS_ISS,
-        clientId: "ap-agent",
+        clientId: AGENT_AT_RAS,
         cnfJkt: agentJkt,
         resourceToAs: RESOURCE_TO_AS,
       }),
@@ -286,7 +295,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -320,7 +329,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: narrow.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -342,7 +351,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId: mission.id,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
@@ -400,7 +409,7 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
       const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
         missionId: mission.id,
         targetAs: RAS_ISS,
-        clientId: "ap-agent",
+        clientId: AGENT_AT_RAS,
         cnfJkt: agentJkt,
         resourceToAs: RESOURCE_TO_AS,
       });

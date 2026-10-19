@@ -202,6 +202,34 @@ export interface TxnChallengeTopology {
 }
 
 /** The full deployment topology (issuers, ports, ttls, keys, resources). */
+/** One entry of {@link Topology.crossDomainClients}. */
+export interface CrossDomainClientRegistration {
+  /** The target Resource AS's issuer identifier. */
+  targetAs: string;
+  /** The requesting client's identifier at this (the originating) AS. */
+  clientId: string;
+  /** That client's registration at the target Resource AS. */
+  destinationClientId: string;
+}
+
+function reqCrossDomainClients(
+  file: string,
+  obj: Record<string, unknown>,
+  key: string,
+  ctx: string,
+): CrossDomainClientRegistration[] {
+  const v = obj[key];
+  if (!Array.isArray(v)) throw new ConfigError(file, `${ctx}.${key} must be an array`);
+  return v.map((raw, i) => {
+    const entry = asObject(file, raw, `${ctx}.${key}[${i}]`);
+    return {
+      targetAs: reqString(file, entry, "targetAs", `${ctx}.${key}[${i}]`),
+      clientId: reqString(file, entry, "clientId", `${ctx}.${key}[${i}]`),
+      destinationClientId: reqString(file, entry, "destinationClientId", `${ctx}.${key}[${i}]`),
+    };
+  });
+}
+
 export interface Topology {
   resources: { payments: string; saas: string; hrFiles: string; plainRs: string };
   txnChallenge: { payments: TxnChallengeTopology };
@@ -222,6 +250,14 @@ export interface Topology {
    * client-registration model; this is that registration's one entry.
    */
   rasLocalClientId: string;
+  /**
+   * @spec cross-domain#pre-established-trust, #cross-domain-grant (#1166,
+   * D510) — the originating AS's destination-scoped mapping from each client
+   * that may request a projection to its registration at each target Resource
+   * AS (ID-JAG -04 Section 5). A list, not a map, so an ambiguous mapping (two
+   * entries for one client and target) is representable and refused.
+   */
+  crossDomainClients: CrossDomainClientRegistration[];
   keys: {
     asToken: TopologyKey;
     asStatus: TopologyKey;
@@ -342,6 +378,7 @@ function loadTopology(): Topology {
     },
     devServiceToken: reqString(file, root, "devServiceToken", "topology"),
     rasLocalClientId: reqString(file, root, "rasLocalClientId", "topology"),
+    crossDomainClients: reqCrossDomainClients(file, root, "crossDomainClients", "topology"),
     keys: {
       asToken: reqKey(file, keys, "asToken", "keys"),
       asStatus: reqKey(file, keys, "asStatus", "keys"),
