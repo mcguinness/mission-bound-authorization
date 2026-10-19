@@ -170,6 +170,30 @@ describe("state-change behavior (@spec orchestration#state-change-behavior)", ()
     });
   });
 
+  it("an unknown step never runs its post-completion behavior: a compensate plan routes to human review (§ in-flight)", () => {
+    const res = onMissionStateChange({
+      state: "terminated",
+      termination: { reason: "revoked", terminated_at: "2026-11-02T08:15:00Z", version: 7 },
+      stale: false,
+      steps: [
+        {
+          step_id: "s1",
+          reversibility: "reversible_write",
+          outcome: "unknown",
+          pre_start_behavior: "suppress",
+          in_flight_behavior: "cancel_if_possible",
+          post_completion_behavior: "compensate",
+        },
+      ],
+    });
+    // Post-completion runs for the sequence, but never for an unknown step.
+    expect(res.runs_post_completion).toBe(true);
+    const s1 = res.steps[0];
+    expect(s1?.orchestration_decision).toBe("human_review");
+    expect(s1?.orchestration_decision).not.toBe("compensate");
+    expect(s1?.requires_human_review).toBe(true);
+  });
+
   it("4: staleness alone runs items 1,2,3,5 and skips post-completion (item 4)", () => {
     const res = onMissionStateChange({
       state: "active",
