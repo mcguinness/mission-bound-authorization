@@ -37851,7 +37851,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "until the approval decision, neither the front channel's authorization code nor the deferral code creates a Mission or yields a token",
-    "local": "The front channel issues a pending-request code (prefix mdac_) and creates no provider grant or session; redeemed without deferred in completion_mode it yields no token (invalid_request)."
+    "local": "The front channel issues a pending-request code (prefix mdac_) and creates no provider grant or session. Redeemed without deferred in completion_mode it yields no token (invalid_request); redeemed with it, it yields only the deferred response."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -37910,7 +37910,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "the approval decision and the active Mission's creation commit together: a committed decision leaves an active Mission, and a decision whose commit fails leaves none",
-    "local": "The only approval decision this assembly makes is a governed_policy completion (no human review surface is served); it commits the Mission, the signed record and the recorded inputs in one transaction."
+    "local": "The only approval decision this assembly's wire path makes is a governed_policy completion, which commits the Mission, the signed record and the recorded inputs in one transaction. The human path (MissionApprovalDeferralStore.approveDirect) exists in the kernel but no review surface wires it."
    },
    "level": "endpoint",
    "coverage": "tested",
