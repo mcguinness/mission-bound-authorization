@@ -2078,7 +2078,9 @@ enforcement surface implements no such action), <code>request_invalid</code>
 required input schema, including an unknown or authoritative member,
 a missing required member, a wrong type, or a pattern failure),
 <code>target_unresolvable</code> (the request names a target object the
-enforcement surface cannot resolve), <code>capability_source_unresolvable</code>
+enforcement surface cannot resolve, or the PEP cannot establish one
+unambiguous operation target for the request),
+<code>capability_source_unresolvable</code>
 (the capability definition the PEP must present could not be
 resolved),
 <code>decision_evidence_unverifiable</code> (the Decision Evidence for a permit
@@ -2088,7 +2090,10 @@ obtained), <code>channel_failure</code>, <code>pdp_unreachable</code>, or
 has the PEP supply state, and it cannot establish it). For a PDP
 refusal of an in-scope request that reaches it without the Mission
 decision context a runtime enforcement scope requires,
-<code>mission_context_missing</code>. These name pre-evaluation conditions,
+<code>mission_context_missing</code>; for one whose operation target is absent,
+malformed, or outside the enforcement scope the requesting PEP is
+authorized for (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
+<code>operation_target_invalid</code>. These name pre-evaluation conditions,
 PEP-side or PDP-side, and are disjoint from the runtime profile's
 PDP denial reasons for an evaluated decision (for example, as
 carried by the AuthZEN profile,
@@ -2419,7 +2424,7 @@ envelopes with unsupported formats.<a href="#section-4.3-12" class="pilcrow">¶<
       "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
     "policy_version": "deploy-policy:v17",
     "policy_view_id":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
   },
   "subject": {
     "type": "user",
@@ -2674,7 +2679,8 @@ executing PEP found the effective parameters differ from those the
 permit bound), <code>phase_mismatch</code> (the permit's phase differs from the
 executing crossing, is missing or malformed where required, or
 cannot be established at use), <code>target_drift</code> (a declared bound
-evaluation context differs or cannot be established at use),
+evaluation context, or the operation target the permit was
+evaluated for, differs or cannot be established at use),
 <code>permit_expired</code> (the permit's validity window had passed at
 execution), <code>permit_consumed</code> (re-presentation of an
 already-consumed single-use evaluation identifier),
@@ -3410,7 +3416,7 @@ the execution reference:<a href="#section-6.7-1" class="pilcrow">¶</a></p>
   },
   "policy": {
     "pdp_policy_view":
-      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t",
+      "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s",
     "mission_policy_version": "deploy-policy:v17"
   },
   "executor": {
@@ -4751,56 +4757,65 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Cross-Entry Correspondence (informative) describes how the records
+          <p id="appendix-A-2.1.1">Refusal Record and Execution Evidence: <code>target_unresolvable</code> also
+covers a PEP that cannot establish one unambiguous operation target;
+a PDP refuses a request whose operation target is absent, malformed
+or outside the requesting PEP's enforcement scope with
+<code>operation_target_invalid</code>; and <code>target_drift</code> also covers an
+operation target that differs from the evaluated one, or cannot be
+established, at use (#1276).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Cross-Entry Correspondence (informative) describes how the records
 support comparing the outcomes of two Authority Set entries: each
 leg is bound to one approved reference, each leg's evidence leads
 to its entry, and a party the deployment defines compares them,
 with an inconclusive result when a required record is missing. It
 states what the records cannot detect and that history does not
 establish a reservation's current validity, and relates the records
-to the Action Evidence Boundary (#1019).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+to the Action Evidence Boundary (#1019).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Terminology: a Mission reference (<code>id</code>, <code>issuer</code>) is a binding's
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Terminology: a Mission reference (<code>id</code>, <code>issuer</code>) is a binding's
 Mission Reference identifier and Controller namespace in that
 binding's representation, with the OAuth realization unchanged; the
 records' Mission reference members and their presence rules are
-unchanged (#1169).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
-member, registered and owned by the AuthZEN profile: the authority
-bound that decided an <code>out_of_authority</code> or <code>parameter_violation</code>
-deny (#825).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+unchanged (#1169).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
-the PEP established the action, and the supplied arguments fail its
-required input schema. <code>request_unsupported</code> keeps its meaning, an
-action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.4.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
+member, registered and owned by the AuthZEN profile: the authority
+bound that decided an <code>out_of_authority</code> or <code>parameter_violation</code>
+deny (#825).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
+          <p id="appendix-A-2.5.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
+the PEP established the action, and the supplied arguments fail its
+required input schema. <code>request_unsupported</code> keeps its meaning, an
+action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
 registered and owned by the Mission Authority Server: the
 joined-view commitment of a decision reached over a successful
 Mission Join (#972 item 27a). The list of commonly carried
-coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
 PDP evaluates through a materialized policy view; a PDP that
 evaluates the Mission's recorded authority directly omits it and
 records <code>authority_hash</code> and the new <code>pdp_policy_version</code>, following
 the runtime profile's two evaluation paths; the Mission Receipt's
-<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1"><code>evaluation_request_digest</code> covers the evaluation request as the
 decision-API profile defines it or, for a Refusal Record emitted
 before any request, a defined pre-request input; the Refusal Record
 member <code>request_digest_input</code> names which. The digest is no longer
 described as privacy-preserving: it commits to its input and does
-not hide an input a party can guess (#971).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+not hide an input a party can guess (#971).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1603,9 +1603,15 @@ connection whose SHA-256 thumbprint matches the <code>x5t#S256</code> value.<a h
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-4-4">The following is an example of a decoded grant payload; the
-<code>authority_hash</code> value is illustrative:<a href="#section-4-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4-5">
+<p id="section-4-4">In the examples in this document, the invoice API's operation contract
+identifies the collection <code>https://api.example.com/invoices</code> as the
+operation target for invoice reads
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). The entries
+carry no <code>resource_match</code>, so they are <code>exact</code> and cover only
+operations whose target is that collection.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The following is an example of a decoded grant payload; the
+<code>authority_hash</code> value is illustrative:<a href="#section-4-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4-6">
 <pre>
 {
   "iss": "https://mas.example.com",
@@ -1619,7 +1625,7 @@ connection whose SHA-256 thumbprint matches the <code>x5t#S256</code> value.<a h
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr",
+      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo",
     "expires_at": "2026-12-31T23:59:59Z"
   },
   "authorization_details": [
@@ -1633,7 +1639,7 @@ connection whose SHA-256 thumbprint matches the <code>x5t#S256</code> value.<a h
     }
   ]
 }
-</pre><a href="#section-4-5" class="pilcrow">¶</a>
+</pre><a href="#section-4-6" class="pilcrow">¶</a>
 </div>
 <div id="mission-claim">
 <section id="section-4.1">
@@ -2974,6 +2980,10 @@ Mission Issuance Grant parameter in Pushed Authorization Requests<a href="#secti
 <dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8628">[RFC8628]</dt>
         <dd>

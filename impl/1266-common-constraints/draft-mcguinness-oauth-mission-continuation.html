@@ -1559,7 +1559,10 @@ current effective authority. The exchange is a no-actor self-exchange
 under the issuance profile's Self-Exchange Down-Scoping rules
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A dispatched Mission's
 selected Agent instead redeems the Template profile's Dispatch Handoff
-for its handle (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
+for its handle (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>),
+unless it is also the Dispatcher (the same authenticated client),
+which obtains its handle through this exchange from the instance's
+access token.<a href="#section-6.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.2-4">This is the "scheduled continuation roots in durable
 authorization" case: the Mission is that durable authorization. Successive
 refreshes within one family are one delegation and are not counted again
@@ -1894,6 +1897,11 @@ key is proved at the exchange, as Section 4.3 of the async delegation
 draft requires, replacing the re-binding to the acting key. An agent
 obtains its handle with a no-actor self-exchange naming its own
 <code>client_id</code> as <code>audience</code> (#1157).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">A dispatched Mission's selected Agent that is also its Dispatcher
+obtains its delegation handle through that self-exchange, from the
+instance's access token, instead of the Dispatch Handoff (#1195).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

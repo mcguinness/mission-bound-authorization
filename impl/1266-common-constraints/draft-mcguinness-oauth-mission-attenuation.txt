@@ -97,6 +97,7 @@ Table of Contents
    16. References
      16.1.  Normative References
      16.2.  Informative References
+   Appendix A.  Document History
    Acknowledgments
    Author's Address
 
@@ -258,6 +259,18 @@ Table of Contents
    *  each tool identifier in the root maps to an actions value at the
       entry's resource; the root's tool set MUST be a subset of that
       entry's actions;
+
+   *  every operation a mapped tool can perform at each audience in the
+      root's aud MUST have an operation target, as that resource
+      server's operation contract establishes it, that matches the
+      entry's resource
+      ([I-D.draft-mcguinness-oauth-mission-resource-access],
+      Section "Resource Matching").  The root carries no resource
+      member, so an aud value equal to the entry's resource does not
+      establish this by itself.  Where the entry's resource is finer
+      than the targets a tool can reach, the root carries argument
+      constraints that confine every target within it, or the issuer
+      MUST NOT map the entry;
 
    *  a tool's argument constraints map to the entry's constraints,
       compared under the specification-defined Common Constraint value-
@@ -614,7 +627,10 @@ Table of Contents
    to the invoices.read and journal-entries.write actions on
    https://erp.example.com, and the amount_usd argument maps to the
    Mission Common Constraint max_amount (Section 4.1); its aud names
-   that resource server.
+   that resource server.  The ERP's operation contract identifies
+   https://erp.example.com as the operation target of both tools
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]), so the aud
+   value and the tool set bound the mapped entries completely.
 
    The orchestrator spawns a read-only extraction sub-agent and, with no
    authorization server contact, mints a child that drops the write tool
@@ -632,7 +648,7 @@ Table of Contents
      "iat": 1793606430,
      "exp": 1793606640,
      "jti": "aat_child_2Yt7Qv9Lq",
-     "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t" },
+     "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s" },
      "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
      "del_depth": 1,
      "del_max_depth": 2,
@@ -853,6 +869,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
               Delegation Chains", Work in Progress, Internet-Draft,
@@ -930,6 +952,16 @@ Table of Contents
    [RFC7638]  Jones, M. and N. Sakimura, "JSON Web Key (JWK)
               Thumbprint", RFC 7638, DOI 10.17487/RFC7638, September
               2015, <https://www.rfc-editor.org/rfc/rfc7638>.
+
+Appendix A.  Document History
+
+   [[ To be removed from the final specification ]]
+
+   *  Deriving the Root from the Authority Set: every operation a mapped
+      tool can perform at each root audience has an operation target
+      within the entry's resource; equal resource and aud values do not
+      establish this alone, and an entry finer than the reachable
+      targets is confined by argument constraints or not mapped (#1276).
 
 Acknowledgments
 

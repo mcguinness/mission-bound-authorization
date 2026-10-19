@@ -326,6 +326,13 @@ Table of Contents
       certificate on the TLS connection whose SHA-256 thumbprint matches
       the x5t#S256 value.
 
+   In the examples in this document, the invoice API's operation
+   contract identifies the collection https://api.example.com/invoices
+   as the operation target for invoice reads
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).  The entries
+   carry no resource_match, so they are exact and cover only operations
+   whose target is that collection.
+
    The following is an example of a decoded grant payload; the
    authority_hash value is illustrative:
 
@@ -341,7 +348,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://mas.example.com",
        "authority_hash":
-         "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQr",
+         "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo",
        "expires_at": "2026-12-31T23:59:59Z"
      },
      "authorization_details": [
@@ -1391,6 +1398,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [RFC8628]  Denniss, W., Bradley, J., Jones, M., and H. Tschofenig,
               "OAuth 2.0 Device Authorization Grant", RFC 8628,

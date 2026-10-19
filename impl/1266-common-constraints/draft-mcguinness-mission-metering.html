@@ -1599,7 +1599,7 @@ value, and it commits the bounds like any other Intent member
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
             <td class="text-left" rowspan="1" colspan="1">required when a call class or an exclusive selector is drawn from the Authority Set's identifiers</td>
-            <td class="text-left" rowspan="1" colspan="1">Two consumers. A <code>call_class</code> value <span class="bcp14">SHOULD</span> be drawn from the <code>actions</code> identifiers of the entry's <code>mission_resource_access</code>, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable (<a href="#bounds" class="auto internal xref">Section 6</a>). The <code>exclusive</code> control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, <code>resource</code> by equality and the invoked action by membership in <code>actions</code>, per group and per Mission; selector semantics are owned by this document (<a href="#bounds" class="auto internal xref">Section 6</a>, <a href="#exclusivity" class="auto internal xref">Section 8</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Two consumers. A <code>call_class</code> value <span class="bcp14">SHOULD</span> be drawn from the <code>actions</code> identifiers of the entry's <code>mission_resource_access</code>, so the metered class maps to evaluated actions; a deployment that meters a coarser or cross-entry class defines that class's membership, and such a class is not interoperable (<a href="#bounds" class="auto internal xref">Section 6</a>). The <code>exclusive</code> control consumes it even then: its selectors are interpreted in the identifier space of the approved Authority Set entries and compared with each consequential action, <code>resource</code> by equality with the action's operation target (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) and the invoked action by membership in <code>actions</code>, per group and per Mission; selector semantics are owned by this document (<a href="#bounds" class="auto internal xref">Section 6</a>, <a href="#exclusivity" class="auto internal xref">Section 8</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
@@ -1734,11 +1734,13 @@ member is not yet promotion-ready: a 2026-08 assessment against
 #117). An array of exclusivity groups, each an array of two or
 more selectors. A selector is an object with <code>resource</code> (<span class="bcp14">REQUIRED</span>,
 a string) and <code>actions</code> (<span class="bcp14">OPTIONAL</span>, an array of strings); it matches
-a consequential action whose resource equals <code>resource</code> and, when
-<code>actions</code> is present, whose invoked action is within it. Within a
-group, the selectors name authority the Approver consents <span class="bcp14">MUST NOT</span>
-be combined under this Mission or any Mission derived from it,
-absent an explicitly approved relaxation (<a href="#exclusivity" class="auto internal xref">Section 8</a>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
+a consequential action whose operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) equals
+<code>resource</code> and, when <code>actions</code> is present, whose invoked action is
+within it. Within a group, the selectors name authority the
+Approver consents <span class="bcp14">MUST NOT</span> be combined under this Mission or any
+Mission derived from it, absent an explicitly approved relaxation
+(<a href="#exclusivity" class="auto internal xref">Section 8</a>).<a href="#section-6-2.10.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -2549,12 +2551,16 @@ containing an ISO 8601 duration (the <code>duration</code> rule in Appendix A of
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-12.1.3-4">A renewal repeats the evaluation-request envelope for the same
+<p id="section-12.1.3-4">In the ERP examples in this document, the operation contract identifies
+<code>https://erp.example.com</code> as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
+constraints determine the permitted operations within that service.<a href="#section-12.1.3-4" class="pilcrow">¶</a></p>
+<p id="section-12.1.3-5">A renewal repeats the evaluation-request envelope for the same
 activity and adds <code>context.prior_evaluation_id</code>. Here a long-running,
 duration-metered ledger reconciliation renews its lease before the
 prior permit expires; the action is not parameter-bound, so no
-<code>parameter_digest</code> is carried:<a href="#section-12.1.3-4" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-12.1.3-5">
+<code>parameter_digest</code> is carried:<a href="#section-12.1.3-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-12.1.3-6">
 <pre>
 {
   "subject": {
@@ -2568,7 +2574,8 @@ prior permit expires; the action is not parameter-bound, so no
     "type": "ledger",
     "id": "ledger_main",
     "properties": {
-      "audience": "https://erp.example.com"
+      "audience": "https://erp.example.com",
+      "operation_target": "https://erp.example.com"
     }
   },
   "action": { "name": "reconciliation.run" },
@@ -2597,7 +2604,7 @@ prior permit expires; the action is not parameter-bound, so no
     "prior_evaluation_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }
 }
-</pre><a href="#section-12.1.3-5" class="pilcrow">¶</a>
+</pre><a href="#section-12.1.3-6" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2800,6 +2807,10 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consent Evidence for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-consent-evidence.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
 <span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
@@ -2866,18 +2877,26 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Settlement by Evidence State and Reservation starvation: the
-reservation lease bounds how long an unsettled reservation waits
-before reconciliation begins and never releases it; reconciliation
-returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Duration-Lease Renewal: the renewal example carries
+<code>resource.properties.operation_target</code> (#1276).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Conformance: the consented bounds are rendered at each human
-approval, including a standing consent such as a Mission Template's
-consent (#1078).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">The <code>exclusive</code> selector matches a consequential action whose
+operation target equals the selector's <code>resource</code> (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
+          <p id="appendix-A-2.3.1">Settlement by Evidence State and Reservation starvation: the
+reservation lease bounds how long an unsettled reservation waits
+before reconciliation begins and never releases it; reconciliation
+returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Conformance: the consented bounds are rendered at each human
+approval, including a standing consent such as a Mission Template's
+consent (#1078).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
 exclusivity group is one shared latch across the delegation (children,
 descendants, successors, carryover replacements), established
 atomically before a derived Mission issues usable authority, retained
@@ -2885,10 +2904,10 @@ while derived authority remains usable, and relaxed only by an
 explicit, scoped, disclosed approval that keeps the historical latch.
 Settlement releases a latch only when every participating action is
 affirmatively not executed. Template instances are scoped per
-instance, with that limit disclosed.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+instance, with that limit disclosed.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
 Mission is charged to every ancestor's bound or holds an escrowed
 allocation whose remainder returns only after the allocation is
 closed, a successor or carryover replacement continues its
@@ -2898,10 +2917,10 @@ per-instance bound with <code>max_active</code> and <code>dispatch_rate</code>. 
 expiry no longer releases an unsettled reservation for an
 idempotent or reversible action class (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>), and a
 metered high-consequence idempotency horizon reaches the Mission's
-<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
 <code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
 the issuance profile retires the <code>controls</code> bucket entirely
@@ -2915,16 +2934,16 @@ of <code>exclusive</code> against <a href="#promotion-criteria" class="auto inte
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
-to the issuance profile.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+to the issuance profile.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">One informative cross-reference in Settlement by Evidence State
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
