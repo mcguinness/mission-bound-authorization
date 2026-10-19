@@ -139,7 +139,8 @@ the store.
   service token holding the `mission_approval` scope (`validApprovalPrincipal`).
   Where the deployment configures an upstream Approver login
   (`approverLogin`, #1320, D496; the as-native target does), the approval
-  surface records that session itself (`approver-login.ts`): `GET
+  surface records that session itself
+  (`services/authorization-server/src/adapters/approver-login.ts`): `GET
   /interaction/{uid}/approver-login` starts an authorization code request to
   the configured OpenID Provider (PKCE `S256`, `state`, `nonce`,
   `prompt=login`, `acr_values`), bound to the user agent by a cookie, and
