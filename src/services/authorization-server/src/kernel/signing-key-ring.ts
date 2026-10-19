@@ -257,3 +257,30 @@ export function signingKeysFromEnv(env: Readonly<Record<string, string | undefin
     "choose the signing keys: MISSION_KEY_RING=<path> (initialize it once with `pnpm keys init`), or MISSION_EPHEMERAL_KEYS=1 for keys that change at every restart",
   );
 }
+
+/**
+ * @spec #250, #831: a deployment entry point's kernel store, from its
+ * environment. `MISSION_KERNEL_STORE` absent: the kernel is in memory and a
+ * restart loses it. Present: the absolute path of the kernel's file, kept
+ * across restarts. It requires a key ring (`MISSION_KEY_RING`): with keys that
+ * change at every restart, nothing the kept kernel issued or signed verifies
+ * after one.
+ *
+ * This is restart recovery for one process on one host. The file takes no
+ * lock, so a second process on the same file is not refused, and a restore
+ * from an older backup is not detected; both belong to #250's restore and
+ * fencing step.
+ */
+export function kernelStoreFromEnv(env: Readonly<Record<string, string | undefined>>): { file: string } | undefined {
+  const file = env.MISSION_KERNEL_STORE?.trim();
+  if (!file) return undefined;
+  if (!isAbsolute(file)) {
+    throw new Error(`MISSION_KERNEL_STORE must be an absolute path, not ${file}`);
+  }
+  if (!env.MISSION_KEY_RING?.trim()) {
+    throw new Error(
+      "MISSION_KERNEL_STORE requires MISSION_KEY_RING: with signing keys that change at every restart, nothing the kept kernel issued or signed verifies after one",
+    );
+  }
+  return { file };
+}

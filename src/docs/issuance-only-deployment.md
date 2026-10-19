@@ -240,7 +240,7 @@ describe the full assembly. At the launcher those requests get §8's refusal.
 | Narrower refresh | Granted exactly the requested values; a value never granted is `invalid_scope` without consuming the token | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh naming a narrower scope is granted exactly it; a value never granted refuses invalid_scope without consuming the token (#871)` |
 | Explicit OIDC-only refresh (`scope=openid`) | At the plain RS: `invalid_scope`, token kept. At an `authorization_details` audience: 200, response `scope` `openid`, no JWT `scope` | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh naming only OIDC values explicitly asks for no resource value: refused invalid_scope at a scope-only target without consuming the token, which then inherits its full granted scope`, `> a refresh naming only OIDC values at an authorization_details target is granted exactly them, with no scope on the token` |
 | Inherited grant after a mapping change | Narrowed and reported while a value remains; `invalid_scope` before rotation when none would | `refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh omitting scope whose inherited grant the current mapping no longer grants, leaving no scope value to report, is refused invalid_scope before rotation; the restored mapping lets the same token succeed`, `> a refresh omitting scope narrows an inherited grant the response can still report: a mode change keeps the OIDC values, an unsafe value drops out, and nothing widens` |
-| Delegated routing (`act`-bearing tokens) | Minted only when every audience is `mission_aware: true`, else `invalid_target` before any side effect | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`, `> mints the act-bearing token for an audience classified Mission-aware`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is`; JWT-customizer backstop (`formats.customizers.jwt`): no test yet |
+| Delegated routing (`act`-bearing tokens) | Minted only when every audience is `mission_aware: true`, else `invalid_target` before any side effect | `delegated routing on the cross-org exchange (@spec mission#rs-enforcement) > refuses invalid_target, recording no derivation evidence, when the act-bearing token's audience is not classified Mission-aware, even with a safe scope projection`, `> mints the act-bearing token for an audience classified Mission-aware`; `delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, an act-bearing transaction token for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is`; the JWT-customizer backstop (`formats.customizers.jwt`), invoked directly as oidc-provider calls it: `the JWT customizer backstop, invoked directly (@spec mission#scope-projection, mission#rs-enforcement) > refuses invalid_target an act-bearing Mission-bound payload to an audience not classified Mission-aware or not mapped, and passes it to a Mission-aware audience`, and at the token endpoint on a real same-Mission delegated mint (the opt-in `delegation` capability, off at this launcher, §8): `the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check` |
 | Delegate calling the plain RS | Not supported: a delegated (`act`-bearing) token is refused for it, and the refusal never creates a Child Mission. Child Missions are a separately enabled capability, off at the launcher (§8). In the full assembly the plain RS ceiling entry has no `delegation.children` either (`kernel/child-delegation.ts`) | Refusal: the delegated-routing row above; Child Mission path: §8's child rows |
 | Token expiry | `plain-rs` refuses a token once `exp <= now - clockToleranceSeconds` (default tolerance 0), with no operation performed; the DPoP `iat` window is ±60 s inclusive | `plain-rs RFC 9068 / RFC 9449 validation > refuses a wrong typ, a wrong audience or issuer, and an expired token`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 0, a token whose exp is 1 s before now is refused and one whose exp is 1 s after now is accepted`; `plain-rs access-token time boundaries (injected clock) > with clock tolerance 5 s, a token 3 s past exp is accepted and one 6 s past exp is refused`; `plain-rs access-token time boundaries (injected clock) > a DPoP proof whose iat is exactly 60 s either side of now is accepted, and 61 s is refused` |
 | Introspection failure (introspection configuration) | No operation performed, and never a 500. A non-200 status, a network failure, a response slower than the timeout (default 2000 ms), a body that is not JSON, or JSON that is not an object gives 503 `temporarily_unavailable`; an object whose `active` is not the boolean `true` gives 401 `invalid_token` | `plain-rs introspection failure contract (#873) > a 500 from the introspection endpoint refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a body that is not JSON refuses 503 temporarily_unavailable before the operation`; `plain-rs introspection failure contract (#873) > a JSON null body refuses 503 temporarily_unavailable, never 500`; `plain-rs introspection failure contract (#873) > a JSON array, number or string body refuses 503 temporarily_unavailable`; `plain-rs introspection failure contract (#873) > an object with no active member refuses 401 invalid_token before the operation`; `` plain-rs introspection failure contract (#873) > an object whose active is the string "true" refuses 401 invalid_token before the operation ``; `plain-rs introspection failure contract (#873) > a response slower than the introspection timeout refuses 503 temporarily_unavailable within about the timeout` |
@@ -315,19 +315,22 @@ refusal of every issuance completed after an acknowledged revocation.
 
 ### Restart and recovery
 
-The shipped launcher (`pnpm issuance-only`, `startIssuanceOnly` in
-`demo/src/issuance-only.ts`) builds the AS with the default in-memory stores,
-so a restart loses every store. The Mission kernel also accepts a file-backed
-single-writer store as an opt-in (`kernelStore`,
-[control-plane-deployment.md](control-plane-deployment.md)); it restores the
-Mission kernel only, never the provider.
+By default the shipped launcher (`pnpm issuance-only`, `startIssuanceOnly` in
+`demo/src/issuance-only.ts`) builds the AS with in-memory stores, so a restart
+loses every store. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission
+kernel in that file instead, and requires `MISSION_KEY_RING` (#250; the
+inventory is in [control-plane-deployment.md](control-plane-deployment.md)).
+It restores the Mission kernel only, never the provider, and it is restart
+recovery for one process: the file takes no lock and a restore from an older
+backup is not detected.
 
-| State | Shipped launcher (in memory) | File-backed Mission kernel |
+| State | In memory (the default) | File-backed Mission kernel (`MISSION_KERNEL_STORE`) |
 |---|---|---|
 | Approval evidence and Mission Records (anchors, authority-source roots, `derivation_count`, `grant_id`), lifecycle events, tombstones | Lost | Retained (port §4.5); kernel-level test only: `restart recovery on the declared file-backed store > recovers the unpublished commit, the version high-water and the tombstone across a restart` (`control-plane-fanout.test.ts`) |
 | Provider interactions, grants, authorization codes, refresh tokens | Lost | Lost: an outstanding refresh token is unknown, and oidc-provider refuses it `invalid_grant` |
-| The issuance index (`TokenIssuanceStore`), `MissionBoundGrantStore`, `DelegationFamilyStore` | Lost | Empty |
-| Signing identity | Regenerated under the same `kid` with `MISSION_EPHEMERAL_KEYS=1` (D25); kept with `MISSION_KEY_RING` (#831) | The same |
+| The issuance index (`TokenIssuanceStore`), `MissionBoundGrantStore` | Lost | Empty |
+| Continuation anchors and handles, `DelegationFamilyStore` | Lost | Retained, as kernel tables (#1307); a family whose provider grant is gone is refused `invalid_grant` |
+| Signing identity | Regenerated under the same `kid` with `MISSION_EPHEMERAL_KEYS=1` (D25); kept with `MISSION_KEY_RING` (#831) | Kept: a key ring is required |
 | A Mission after the restart | None exists | Stranded: an `active` Mission whose grant is gone stays `active` until `expires_at` or a revocation, and nothing can derive from it |
 
 Consequences, in both configurations:
@@ -367,10 +370,10 @@ deployment's values: the reference AS and `plain-rs`.
   anchors reproduce from the retained record. It is not independent proof
   against an issuer that substitutes both the record and its hashes.
 - The retained records are the Mission Record with its approval evidence and
-  anchors, its lifecycle events, and the per-token issuance index. At the
-  shipped launcher all are in memory and a restart loses them (§4, Restart and
-  recovery); durability is not inferred from the optional file-backed kernel,
-  which never restores the provider.
+  anchors, its lifecycle events, and the per-token issuance index. By default
+  all are in memory and a restart loses them (§4, Restart and recovery). With
+  `MISSION_KERNEL_STORE` the Mission Record, its evidence, anchors and events
+  are kept; the issuance index is not, and the provider never is.
 
 ~~~ json
 {
@@ -402,20 +405,19 @@ deployment's values: the reference AS and `plain-rs`.
     "no token-only authorization_details-consuming Resource Server is part of this deployment: payments is the runtime composition, and mcp-saas accepts RAS-issued tokens",
     "evidence is the AS's issuance records only: the Mission Record, its lifecycle events, and the per-token issuance index",
     "plain-rs logs nothing Mission-linked",
-    "a restart is not revocation: consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes)",
-    "a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across a restart (#831)",
+    "a restart is not revocation: with ephemeral keys, consumers holding the old key keep accepting pre-restart tokens until exp, and plain-rs rejects post-restart tokens until its JWKS cache refreshes (up to 10 minutes); with a key ring the key does not change",
+    "with ephemeral keys a restart drops the signing key from the JWKS while tokens signed under it are unexpired, so the OAuth binding's key-resolvability rule is not met across that restart; a key ring keeps the key, and rotation is #831's",
     "an introspection call that exceeds its timeout (default 2000 ms) or fails refuses service with 503; the plain RS never falls back to the JWT alone",
     "provider token acceptance and derivation counting are not coupled atomically (#250)",
     "a revocation committing while an issuance is past the state gate does not stop that issuance (#250)",
     "a failure after the derivation is counted is never refunded (#250)",
     "a token indexed but never delivered introspects active while unexpired with its Mission active and its grant live; nothing reconciles or revokes it (#250)",
     "no artifact is replayed: a retry after a lost code-exchange response is code reuse, refused invalid_grant with nothing counted, and revokes the grant, leaving the Mission active with no grant; a retry after a lost refresh response is a fresh, counted derivation until the refresh token rotates (#250)",
-    "the shipped launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; a file-backed Mission kernel restores the kernel only, never the provider (#250)",
+    "by default the launcher keeps every store in memory: a restart loses Missions, grants, refresh tokens and the indexes; with MISSION_KERNEL_STORE and a key ring the Mission kernel is kept, never the provider (#250)",
     "the scope-projection mapping's integrity is repository review; it is not fetched or signed",
     "Intent-only requests depend on an oidc-provider workaround (a marked, AS-written authorization_details)",
     "the decision-time scope check projects the derived set without capability_sources, so a catalog-sourced scope_only entry can pass at the decision and refuse at the token endpoint",
-    "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#250)",
-    "the JWT-customizer backstop has no test yet (#870)"
+    "the approval commits the Mission active and bound to its grant one request before the code is issued, so a client that never follows the redirect leaves an active Mission with no code (#250)"
   ]
 }
 ~~~
@@ -497,7 +499,9 @@ The audience stays the mapped one. It also chooses the AS's signing keys
 `MISSION_KEY_RING=<absolute path>` signs with a key ring created once by
 `pnpm keys init --ring <path>`, kept across restarts. Neither, both, a
 relative path or an unusable ring refuses startup with one `issuance-only:`
-line. `src/server.ts` reads the same two variables. The launcher adds one input that
+line. `MISSION_KERNEL_STORE=<absolute path>` keeps the Mission kernel in that
+file (Restart and recovery, above), and requires `MISSION_KEY_RING`.
+`src/server.ts` reads the same three variables. The launcher adds one input that
 `src/server.ts` lacks: the demo's trusted approval input (below).
 
 It writes the per-boot dev credentials, mode 0600, to

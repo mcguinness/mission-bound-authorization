@@ -11,9 +11,10 @@
  * it publishes the commands that wrap both.
  */
 
+import { mkdirSync } from "node:fs";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   APPROVAL_SUBJECT_HEADER,
   buildAuthorizationServer,
@@ -70,6 +71,12 @@ export interface IssuanceOnlyOptions {
    * `pnpm issuance-only` sets it from its environment (`signingKeysFromEnv`).
    */
   signingKeys?: SigningKeySource;
+  /**
+   * @spec #250: the kernel's file, kept across restarts. Absent: in memory.
+   * `pnpm issuance-only` sets it from `MISSION_KERNEL_STORE`
+   * (`kernelStoreFromEnv`), which requires a key ring; `close` closes it.
+   */
+  kernelStore?: { file: string };
 }
 
 /**
@@ -122,6 +129,7 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
   // @spec status#lifecycle-authorization: one dedicated lifecycle console holds
   // the lifecycle grant; no other client does.
   const lifecycleConsole = await newLifecycleConsole();
+  if (opts.kernelStore) mkdirSync(dirname(opts.kernelStore.file), { recursive: true });
   const as = await buildAuthorizationServer({
     issuer: asUrl,
     allowHeadlessAdjudication: true,
@@ -129,6 +137,7 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
     capabilities: ISSUANCE_ONLY_CAPABILITIES,
     lifecycleClients: [lifecycleConsole.registration],
     ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
+    ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
   });
   const asServer = as.provider.listen(asPort);
   await new Promise<void>((r) => asServer.once("listening", () => r()));
@@ -175,6 +184,8 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
           server.closeAllConnections();
         });
       await Promise.all([stop(asServer), stop(rsServer)]);
+      // @spec #250: the kernel's file is released last, once nothing serves.
+      if (opts.kernelStore) as.kernel.close();
     },
   };
 }
