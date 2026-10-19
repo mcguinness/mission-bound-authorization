@@ -1494,9 +1494,12 @@ entry's <code>resource</code>.<a href="#section-3.1-4" class="pilcrow">¶</a></p
 <p id="section-4-1">The runtime core states its decision inputs, permit binding, and
 required evidence fields as abstract roles
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). This section is their
-complete, normative realization on this profile. Each value is read
-from the validated credential context (<a href="#token-validation" class="auto internal xref">Section 3</a>): a JWT
-claim, or the introspection response member of the same name.<a href="#section-4-1" class="pilcrow">¶</a></p>
+complete, normative realization on this profile. Each value is an
+established runtime input: a credential-derived value is read from the
+validated credential context (<a href="#token-validation" class="auto internal xref">Section 3</a>), as a JWT claim or
+the introspection response member of the same name, and the boundary
+identifier comes from the PEP's trusted routing or configuration
+(<a href="#boundary-audience" class="auto internal xref">Section 3.1</a>).<a href="#section-4-1" class="pilcrow">¶</a></p>
 <table class="center" id="table-2">
         <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
 <thead>

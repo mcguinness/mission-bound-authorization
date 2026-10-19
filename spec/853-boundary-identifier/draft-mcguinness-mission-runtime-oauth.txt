@@ -328,9 +328,12 @@ Table of Contents
    The runtime core states its decision inputs, permit binding, and
    required evidence fields as abstract roles
    ([I-D.draft-mcguinness-mission-runtime]).  This section is their
-   complete, normative realization on this profile.  Each value is read
-   from the validated credential context (Section 3): a JWT claim, or
-   the introspection response member of the same name.
+   complete, normative realization on this profile.  Each value is an
+   established runtime input: a credential-derived value is read from
+   the validated credential context (Section 3), as a JWT claim or the
+   introspection response member of the same name, and the boundary
+   identifier comes from the PEP's trusted routing or configuration
+   (Section 3.1).
 
    +=======================+==================================================+
    |Runtime-core role or   |OAuth realization                                 |
