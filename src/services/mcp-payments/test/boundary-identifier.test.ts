@@ -26,9 +26,11 @@ import {
   EnforcementBoundaryContext,
   type EnforcementBoundaries,
   type EvaluationRequest,
+  evidenceKeyConsumer,
   type EvidenceKeyResolver,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
   type Fga,
+  type IdempotencyClaimDomain,
   isDecisionChannelRefusal,
   lineageScopeDigests,
   loadRuntimePosture,
@@ -47,6 +49,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   type ActionMapping,
   BOUNDARY_CUTOVER_ERROR,
+  BOUNDARY_UNPROVISIONED,
   BOUNDARY_UNRESOLVABLE,
   boundaryEvidenceAuthorization,
   CANONICAL_RESOURCE,
@@ -55,7 +58,9 @@ import {
   credentialAuthorityFrom,
   type DecisionEvidence,
   dpopProofFor,
+  EvidenceRetentionStore,
   EvidenceStore,
+  evidenceKeySetLocation,
   type ExecutionEvidence,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
@@ -923,5 +928,107 @@ describe("a declared change of identifier keeps duplicate-effect protection (@sp
     expect(fresh.permitted, JSON.stringify(fresh)).toBe(true);
     expect(fresh.attempt?.audience).toBe(CANONICAL_RESOURCE);
     d.claims?.close();
+  });
+});
+
+describe("a cutover waits for every bound consumer, through the assembled PEP, PDP, evidence store, key set and settlement (@spec runtime#boundary-identifier-change, #853)", () => {
+  it("refuses the new boundary until the key set and the PDP's statement are provisioned, settles late evidence under the old one meanwhile, then serves both versions", async () => {
+    let nowMs = CUTOVER_MS - 60_000;
+    const d = deployment(statementWith(CHANGE), () => new Date(nowMs), { claims: true });
+    const x = buildPep(d, "mcp-payments-pep");
+    // The published key set: each boundary's keys at its own location, bound to it.
+    const keySet = new EvidenceRetentionStore({ retentionWindowSeconds: 86_400, now: d.clock });
+    const publishFor = async (boundary: string) => {
+      for (const k of d.keys.verification) {
+        if (k.role === "receipt_issuer") continue;
+        keySet.publishKey({
+          location: evidenceKeySetLocation(boundary),
+          kid: k.kid,
+          emitterId: k.emitterId,
+          role: k.role,
+          audience: boundary,
+          publicKey: await exportJWK(k.publicKey as Parameters<typeof exportJWK>[0]),
+        });
+      }
+    };
+    await publishFor(LEGACY);
+    x.pep.boundaryContext.bindConsumer(
+      evidenceKeyConsumer({
+        name: "published-evidence-keys",
+        roles: ["pdp", "pep", "executor"],
+        audienceBound: true,
+        keys: (boundary) => keySet.publishedVerificationKeys(evidenceKeySetLocation(boundary)),
+      }),
+    );
+    // The PDP's claim domain is still loaded with the statement from before the change.
+    const earlier = openEphemeralClaimDomain({
+      owner: RUNTIME_POSTURE.pdps[0] as string,
+      statement: { ...d.statement, enforcement_boundaries: { versions: [CHANGE.versions[0]] } },
+    });
+    let pdpStatement: IdempotencyClaimDomain = earlier;
+    x.pep.boundaryContext.bindConsumer({
+      name: "pdp-claim-domain",
+      provisionedFor: (version, boundary) => pdpStatement.boundaryConsumer().provisionedFor(version, boundary),
+    });
+    const verifyAt = (boundary: string) => keySet.resolver({ locations: [evidenceKeySetLocation(boundary)] });
+    try {
+      const token = await mint(LEGACY);
+      // Before the cutover: every consumer is provisioned for the version in force.
+      expect((await call(x, "get_invoice", { invoice_id: "inv-1" }, token)).ok).toBe(true);
+      const k = `idem_${randomUUID()}`;
+      const wire = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, factsFor());
+      expect(wire.permitted, JSON.stringify(wire)).toBe(true);
+      const attempt = wire.attempt as NonNullable<typeof wire.attempt>;
+      const [before] = decisions(x);
+      expect(await verifyEvidenceEnvelope(before, DECISION_EVIDENCE_MEDIA_TYPE, verifyAt(LEGACY))).toEqual({ valid: true });
+
+      nowMs = CUTOVER_MS + 60_000;
+      // Neither the key set nor the PDP's statement is provisioned for the new version: nothing is decided or recorded at it.
+      expect(x.pep.boundaryContext.unprovisioned()).toEqual(["published-evidence-keys", "pdp-claim-domain"]);
+      const recorded = x.evidence.all().length;
+      const decided = x.decided.length;
+      expect(await call(x, "get_invoice", { invoice_id: "inv-1" }, token)).toMatchObject({ ok: false, denial_reason: "invalid_credential" });
+      await expect(x.server.validateMissionToken(token)).rejects.toThrow(new TokenAudienceError("consumer_unprovisioned"));
+      expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, factsFor())).toEqual({
+        permitted: false,
+        refusal_reason: BOUNDARY_UNPROVISIONED,
+      });
+      expect(x.decided).toHaveLength(decided);
+      expect(x.evidence.all()).toHaveLength(recorded);
+      // Late evidence for the operation admitted before the cutover keeps its identifier, verifies and settles.
+      const completed = await x.evidence.recordExecution(EMITTER, "executor", {
+        permitId: attempt.permitId,
+        opKey: attempt.joinKey,
+        execution_id: attempt.executionId,
+        evaluation_id: attempt.evaluationId,
+        mission_id: attempt.mission.id,
+        audience: attempt.audience,
+        ...(attempt.authorizedParameterDigest !== undefined
+          ? { authorized_parameter_digest: attempt.authorizedParameterDigest, effective_parameter_digest: attempt.authorizedParameterDigest }
+          : {}),
+        outcome: "completed",
+      });
+      expect(completed.content.audience).toBe(LEGACY);
+      expect(await verifyEvidenceEnvelope(completed.content, EXECUTION_EVIDENCE_MEDIA_TYPE, verifyAt(LEGACY))).toEqual({ valid: true });
+      expect(await d.keys.claims.settle(completed.content)).toEqual({ accepted: true, state: "completed", duplicate: false });
+
+      // Provisioned: the new boundary's key set is published and the PDP is reloaded with the statement.
+      await publishFor(CANONICAL_RESOURCE);
+      pdpStatement = d.claims as IdempotencyClaimDomain;
+      expect(x.pep.boundaryContext.unprovisioned()).toEqual([]);
+      expect((await call(x, "get_invoice", { invoice_id: "inv-1" }, token)).ok).toBe(true);
+      const after = decisions(x).at(-1);
+      expect(after?.audience).toBe(CANONICAL_RESOURCE);
+      expect(await verifyEvidenceEnvelope(after, DECISION_EVIDENCE_MEDIA_TYPE, verifyAt(CANONICAL_RESOURCE))).toEqual({ valid: true });
+      // The earlier boundary's set still verifies what was produced under it, and never the new records.
+      expect(await verifyEvidenceEnvelope(before, DECISION_EVIDENCE_MEDIA_TYPE, verifyAt(LEGACY))).toEqual({ valid: true });
+      expect(await verifyEvidenceEnvelope(after, DECISION_EVIDENCE_MEDIA_TYPE, verifyAt(LEGACY))).toMatchObject({ valid: false });
+      // The settled key stays consumed across the change: the retry is refused as completed.
+      const retried = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, factsFor());
+      expect(retried).toMatchObject({ permitted: false, denial_reason: "duplicate_suppressed" });
+    } finally {
+      earlier.close();
+      d.claims?.close();
+    }
   });
 });

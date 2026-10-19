@@ -185,6 +185,7 @@ export {
   type AudienceRefusal,
   type AudienceValidation,
   BoundaryConfigError,
+  type BoundaryConsumer,
   type BoundaryEstablishment,
   type BoundaryEvidenceKey,
   type BoundaryEvidenceKeyAuthorization,
@@ -203,6 +204,8 @@ export {
   enforcementBoundaryFindings,
   type EvidenceAuthorizationScope,
   type EvidenceKeyUse,
+  evidenceKeyConsumer,
+  type HeldEvidenceKey,
   lineageScopeDigests,
 } from "./enforcement-boundary.js";
 export {

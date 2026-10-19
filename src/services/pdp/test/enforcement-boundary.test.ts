@@ -20,7 +20,11 @@ import {
   type EnforcementBoundaries,
   EnforcementBoundaryContext,
   enforcementBoundaryFindings,
+  evidenceKeyConsumer,
+  type HeldEvidenceKey,
 } from "../src/enforcement-boundary.js";
+import type { EnforcementScopeStatement } from "../src/enforcement-scope.js";
+import { openEphemeralClaimDomain } from "../src/idempotency-claims.js";
 import { loadRuntimePosture, RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { DECISION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope, verifyEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 
@@ -311,5 +315,74 @@ describe("the identifiers a boundary replaces, for duplicate-effect lookups (@sp
     expect(boundaryPredecessors(CHANGE, ERP)).toEqual([LEGACY]);
     expect(boundaryPredecessors(CHANGE, LEGACY)).toEqual([]);
     expect(boundaryPredecessors(ONE_VERSION, ERP)).toEqual([]);
+  });
+});
+
+describe("a declared version is held until every bound consumer is provisioned for it (@spec runtime#boundary-identifier-change, #853)", () => {
+  it("refuses the new boundary while a published key set lacks its bindings, and establishes it once they are published", () => {
+    const published = new Map<string, HeldEvidenceKey[]>([
+      [LEGACY, [{ kid: "pdp-1", emitterId: PDP, role: "pdp", audience: LEGACY }, { kid: "legacy-only", emitterId: PDP, role: "pdp", audience: LEGACY }]],
+    ]);
+    let now = AT;
+    const context = new EnforcementBoundaryContext(statement(CHANGE), "erp-pep", () => now);
+    context.bindConsumer(
+      evidenceKeyConsumer({ name: "published", roles: ["pdp", "pep", "executor"], audienceBound: true, keys: (b) => published.get(b) ?? [] }),
+    );
+    expect(context.establish()).toEqual({ ok: true, boundary: LEGACY, version: "v1" });
+    now = AFTER;
+    expect(context.establish()).toEqual({ ok: false, reason: "consumer_unprovisioned" });
+    expect(context.unprovisioned()).toEqual(["published"]);
+    expect(context.validateAudience(ERP, at)).toEqual({ ok: false, reason: "consumer_unprovisioned" });
+    // A key published for the old boundary is not a binding for the new one.
+    published.set(ERP, [{ kid: "pdp-1", emitterId: PDP, role: "pdp", audience: LEGACY }]);
+    expect(context.establish().ok).toBe(false);
+    published.set(ERP, [{ kid: "pdp-1", emitterId: PDP, role: "pdp", audience: ERP }]);
+    expect(context.establish()).toEqual({ ok: true, boundary: ERP, version: "v2" });
+    expect(context.validateAudience(ERP, at)).toEqual({ ok: true, boundary: ERP, version: "v2" });
+    expect(context.unprovisioned()).toEqual([]);
+  });
+
+  it("reads a verifier's held keys by kid, emitter and role, only for the roles it verifies", () => {
+    const v2 = CHANGE.versions[1] as EnforcementBoundaries["versions"][number];
+    const erp = v2.boundaries[0] as EnforcementBoundaries["versions"][number]["boundaries"][number];
+    const held = (keys: HeldEvidenceKey[]) =>
+      evidenceKeyConsumer({ name: "verifier", roles: ["pdp"], audienceBound: false, keys: () => keys });
+    expect(held([{ kid: "pdp-1", emitterId: PDP, role: "pdp" }]).provisionedFor(v2, erp)).toBe(true);
+    expect(held([{ kid: "pdp-1", emitterId: "other-pdp.example.com", role: "pdp" }]).provisionedFor(v2, erp)).toBe(false);
+    expect(held([{ kid: "pdp-1", emitterId: PDP, role: "pep" }]).provisionedFor(v2, erp)).toBe(false);
+    expect(held([]).provisionedFor(v2, erp)).toBe(false);
+    // A consumer that verifies no role the version authorizes a key for is provisioned by it.
+    expect(evidenceKeyConsumer({ name: "executor-only", roles: ["executor"], audienceBound: false, keys: () => [] }).provisionedFor(v2, erp)).toBe(true);
+  });
+
+  it("holds the cutover for a PDP claim domain still loaded with the earlier statement", () => {
+    const stale = openEphemeralClaimDomain({
+      owner: RUNTIME_POSTURE.pdps[0] as string,
+      statement: { ...statement(CHANGE), enforcement_boundaries: { versions: [CHANGE.versions[0]] } } as unknown as EnforcementScopeStatement,
+    });
+    const current = openEphemeralClaimDomain({
+      owner: RUNTIME_POSTURE.pdps[0] as string,
+      statement: statement(CHANGE) as unknown as EnforcementScopeStatement,
+    });
+    try {
+      const v1 = CHANGE.versions[0] as EnforcementBoundaries["versions"][number];
+      const v2 = CHANGE.versions[1] as EnforcementBoundaries["versions"][number];
+      expect(stale.boundaryConsumer().provisionedFor(v1, v1.boundaries[0] as never)).toBe(true);
+      expect(stale.boundaryConsumer().provisionedFor(v2, v2.boundaries[0] as never)).toBe(false);
+      expect(current.boundaryConsumer().provisionedFor(v2, v2.boundaries[0] as never)).toBe(true);
+      // A version of the same name with other bytes is not the version in force.
+      const altered = { ...v2, effective_at: "2026-06-02T00:00:00Z" };
+      expect(current.boundaryConsumer().provisionedFor(altered, v2.boundaries[0] as never)).toBe(false);
+      let now = AT;
+      const context = new EnforcementBoundaryContext(statement(CHANGE), "erp-pep", () => now);
+      context.bindConsumer(stale.boundaryConsumer());
+      expect(context.establish().ok).toBe(true);
+      now = AFTER;
+      expect(context.establish()).toEqual({ ok: false, reason: "consumer_unprovisioned" });
+      expect(context.unprovisioned()).toEqual([`pdp-claim-domain:${RUNTIME_POSTURE.pdps[0]}`]);
+    } finally {
+      stale.close();
+      current.close();
+    }
   });
 });

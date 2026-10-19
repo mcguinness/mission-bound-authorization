@@ -97,10 +97,12 @@ URL or the Resource-policy object.
    statement into every consumer before `effective_at`. In the assembled
    stack (`demo/src/stack.ts`) one boundary context feeds the PEP, the
    PDP's emitter authorization, its Refusal Record scope and its PEP scope
-   registration, the evidence store's signing authorization and its
-   Decision Evidence verifier, which then verifies records of either
-   version. The consumers listed under Bounds bind a key to one audience
-   and are re-provisioned for the new boundary.
+   registration, the remote claim channel's scope, the evidence store's
+   signing authorization and its Decision Evidence verifier, the claim
+   domain's settlement verifier, and the key sets the stack publishes,
+   which then serve records of either version. A consumer whose bindings
+   live outside the statement holds the cutover until it is provisioned
+   (below).
 2. **Stop old admissions.** At `effective_at` every PEP establishes the new
    boundary. The reference refuses in-flight operations rather than
    draining them: a request whose credential was validated under the old
@@ -158,17 +160,56 @@ or `idempotency_conflict`), still with no second effect. Retention is
 unchanged: each record is kept for its published horizon from when it was
 made.
 
+## Consumers are provisioned before the cutover
+
+Some consumers hold bindings the statement cannot change by itself: a
+published key set binds each key to one audience, append-only at its
+location; a settlement verifier holds key material; the PDP's claim
+domain reads the `replaces` lineage from its own copy of the statement.
+Each is bound to the boundary context as a `BoundaryConsumer`, and the
+version in force establishes a boundary only once every bound consumer is
+provisioned for it (`EnforcementBoundaryContext.establish`). Until then
+tokens refuse (`consumer_unprovisioned`), the PEP refuses
+`boundary_unprovisioned` with no record, and held permits are suppressed
+at use: no producer uses the new identifier while a consumer still holds
+only the old bindings.
+
+The stack binds three consumers:
+
+- the published key set, provisioned for a boundary when that boundary's
+  own location (`evidenceKeySetLocation`) publishes every key the version
+  authorizes for it, bound to it;
+- the claim domain's settlement verifier, which verifies by the record's
+  (`audience`, `kid`) pair under the declared versions
+  (`buildBoundaryEvidenceKeyResolver`), provisioned when it holds every
+  enforcement key the version authorizes;
+- the claim domain itself, provisioned when its statement declares the
+  version byte for byte.
+
+The stack publishes every key it holds at each declared boundary's
+location that authorizes it, so a change that keeps its keys is
+provisioned when the stack is composed; a version that authorizes a key
+the stack does not hold (a rotated key) holds the cutover until the
+deployment is reprovisioned with it. The remote claim channel's scope
+follows the boundary in force (`claimAudience`) rather than a configured
+audience.
+
+Earlier bindings stay available: the earlier boundary's key set keeps its
+location and bindings (a published binding is append-only, and a retired
+key stays resolvable for the retention window past its last record), the
+settlement verifier still verifies records of every retained version, and
+the claim domain keeps each claim under the scope it was made in.
+
 ## Bounds
 
-- **Static key bindings.** The PDP claim domain's settlement resolver and
-  the key set published at `EVIDENCE_KEY_SET_LOCATION` bind each key to the
-  shipped `audience` and do not read the statement's versions; a change
-  re-provisions both for the new boundary, keeping the old bindings for as
-  long as old evidence must verify.
-- **Remote claim channel.** Settlement and reconciliation requests carry
-  the channel's configured `audience`, not the version in force.
-- **Gate refusals.** A token refused at the HTTP gate answers 401 and, as
-  for every token-validation failure there, no Refusal Record is emitted.
+- **Gate refusals.** A token refused at token validation (a 401 at the
+  HTTP gate, `invalid_credential` on the mediated channel) emits no Refusal
+  Record. That gap predates this change and is outside its claims: the
+  no-boundary exception covers only a request whose boundary cannot be
+  established, never an ordinary token-validation failure at an
+  established boundary. A credential the PEP refuses because its validated
+  boundary or version is no longer in force is recorded
+  (`credential_boundary_changed`).
 - **One process.** "Together" means one declaration and one clock; a
   multi-process deployment relies on synchronized clocks at `effective_at`.
 

@@ -253,8 +253,13 @@ export function enforcementBoundaryFindings(statement: unknown): BoundaryFinding
   return findings;
 }
 
-/** Why a boundary could not be established; no `audience` is supplied for any of these. */
-export type BoundaryUnresolved = "no_version_in_force" | "undeclared_pep_location";
+/**
+ * Why a boundary could not be established; no `audience` is supplied for any
+ * of these. `consumer_unprovisioned`: the version in force declares the
+ * boundary, but a bound consumer is not yet provisioned for it
+ * ({@link BoundaryConsumer}), so no producer uses it.
+ */
+export type BoundaryUnresolved = "no_version_in_force" | "undeclared_pep_location" | "consumer_unprovisioned";
 
 export type BoundaryEstablishment =
   | { ok: true; boundary: string; version: string }
@@ -295,6 +300,7 @@ export type EvidenceAuthorizationScope = "current" | "historical";
  */
 export class EnforcementBoundaryContext {
   readonly declaration: EnforcementBoundaries;
+  private readonly consumers: BoundaryConsumer[] = [];
 
   constructor(
     statement: unknown,
@@ -325,7 +331,30 @@ export class EnforcementBoundaryContext {
     if (!version) return { ok: false, reason: "no_version_in_force" };
     const declared = version.boundaries.find((b) => b.pep_locations.includes(this.pepLocation));
     if (!declared) return { ok: false, reason: "undeclared_pep_location" };
+    // @spec runtime#boundary-identifier-change step 1 (#853 review): every
+    // consumer accepts the version before any producer uses it. Until each
+    // bound consumer is provisioned for it, the boundary is not established:
+    // requests, credentials and held permits refuse, and no record is made.
+    if (this.consumers.some((c) => !c.provisionedFor(version, declared))) return { ok: false, reason: "consumer_unprovisioned" };
     return { ok: true, boundary: declared.boundary, version: version.version };
+  }
+
+  /**
+   * @spec runtime#boundary-identifier-change step 1 (#853 review): register a
+   * consumer whose bindings are provisioned outside the declaration (a
+   * published key set, a settlement verifier, a claim domain's own
+   * statement). {@link establish} holds every later request to it.
+   */
+  bindConsumer(consumer: BoundaryConsumer): void {
+    this.consumers.push(consumer);
+  }
+
+  /** The bound consumers not provisioned for this location's boundary under the version in force at `at`, by name. */
+  unprovisioned(at: Date = this.clock()): string[] {
+    const version = this.versionInForce(at);
+    const declared = version?.boundaries.find((b) => b.pep_locations.includes(this.pepLocation));
+    if (!version || !declared) return [];
+    return this.consumers.filter((c) => !c.provisionedFor(version, declared)).map((c) => c.name);
   }
 
   /**
@@ -504,4 +533,62 @@ export function boundaryPredecessors(declaration: EnforcementBoundaries, boundar
 export function lineageScopeDigests(declaration: EnforcementBoundaries | undefined, scope: IdempotencyScope): string[] {
   if (declaration === undefined) return [];
   return boundaryPredecessors(declaration, scope.audience).map((audience) => idempotencyScopeDigest({ ...scope, audience }));
+}
+
+/**
+ * @spec runtime#boundary-identifier-change step 1 (#853 review): a consumer of
+ * a boundary identifier whose bindings are provisioned outside the
+ * statement: a published evidence key set that binds each key to one
+ * audience, a settlement verifier holding key material, a claim domain
+ * loaded with its own copy of the statement. A version may be in force only
+ * once every consumer is provisioned for it, and a consumer keeps the
+ * bindings of earlier versions for their retention window.
+ */
+export interface BoundaryConsumer {
+  /** A name for diagnostics. */
+  name: string;
+  /** Whether this consumer is provisioned for `boundary` as `version` declares it. */
+  provisionedFor(version: BoundaryStatementVersion, boundary: EnforcementBoundaryDeclaration): boolean;
+}
+
+/** One evidence verification key a consumer holds: its `kid`, emitter and role, and the audience it is bound to, if any. */
+export interface HeldEvidenceKey {
+  kid: string;
+  emitterId: string;
+  role: string;
+  audience?: string;
+}
+
+/**
+ * @spec runtime#boundary-identifier-change step 1 (#853 review): a consumer
+ * holding evidence verification keys. It is provisioned for a boundary when
+ * it holds, for every key the version authorizes for that boundary in one of
+ * `roles`, a key with that `kid`, emitter and role; `audienceBound` also
+ * requires the held key to be bound to the boundary itself (a published key
+ * set entry's `audience`). `keys` is read at every check, so publishing the
+ * new bindings is what makes the consumer ready.
+ */
+export function evidenceKeyConsumer(input: {
+  name: string;
+  roles: readonly BoundaryEvidenceRole[];
+  audienceBound: boolean;
+  keys: (boundary: string) => readonly HeldEvidenceKey[];
+}): BoundaryConsumer {
+  return {
+    name: input.name,
+    provisionedFor: (_version, boundary) => {
+      const held = input.keys(boundary.boundary);
+      return boundary.evidence_keys
+        .filter((k) => input.roles.includes(k.role))
+        .every((k) =>
+          held.some(
+            (h) =>
+              h.kid === k.kid &&
+              h.emitterId === k.emitter &&
+              h.role === k.role &&
+              (!input.audienceBound || h.audience === boundary.boundary),
+          ),
+        );
+    },
+  };
 }

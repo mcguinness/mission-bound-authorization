@@ -111,6 +111,16 @@ export function paymentsBoundaryContext(statement: unknown = RUNTIME_POSTURE): E
 export const BOUNDARY_UNRESOLVABLE = "boundary_unresolvable";
 
 /**
+ * @spec runtime#boundary-identifier-change step 1 (#853 review): the
+ * caller-visible refusal while the version in force declares this PEP's
+ * boundary but a bound consumer (a published key set, a settlement verifier,
+ * the PDP's claim domain) is not yet provisioned for it. No producer uses the
+ * new identifier until every consumer accepts it, so, as for
+ * {@link BOUNDARY_UNRESOLVABLE}, no record is made.
+ */
+export const BOUNDARY_UNPROVISIONED = "boundary_unprovisioned";
+
+/**
  * @spec runtime-evidence#execution-evidence-object `error` (#853, D487): the
  * disposition of a permit whose enforcement boundary is no longer the one
  * this PEP establishes, after a declared cutover invalidated the permits
@@ -1356,7 +1366,12 @@ export class Pep {
     action: string,
   ): Promise<{ ok: true; boundary: string; version: string } | { ok: false; refusal_reason: string }> {
     const established = this.boundary();
-    if (!established.ok) return { ok: false, refusal_reason: BOUNDARY_UNRESOLVABLE };
+    if (!established.ok) {
+      return {
+        ok: false,
+        refusal_reason: established.reason === "consumer_unprovisioned" ? BOUNDARY_UNPROVISIONED : BOUNDARY_UNRESOLVABLE,
+      };
+    }
     const validated = token.validatedBoundary;
     if (validated !== undefined && (validated.boundary !== established.boundary || validated.version !== established.version)) {
       await this.recordRefusal(established.boundary, token, "credential_boundary_changed", action);

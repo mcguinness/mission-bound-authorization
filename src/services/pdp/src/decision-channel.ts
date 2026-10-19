@@ -48,6 +48,13 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
    * the declared boundary context). Absent, `[audience]`.
    */
   scopes?: () => readonly string[];
+  /**
+   * @spec runtime#boundary-identifier-change (#853 review): the boundary the
+   * remote claim channel's settlement and reconciliation requests are scoped
+   * to, read on every request, so it follows the version in force rather
+   * than staying bound to the configured `audience`. Absent, `audience`.
+   */
+  claimAudience?: () => string | undefined;
   getOptions:(request: EvaluationRequest) => DecisionOptions | Promise<DecisionOptions>;
   timeoutMs?: number;
   pepEpoch?: string;
@@ -108,7 +115,7 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
       ...client,
       timeoutMs: channelDeadlineMs(request.context.action_class, config.timeoutMs),
     }),
-    claims: remoteClaimChannel({ ...client, audience: config.audience, ...(config.timeoutMs !== undefined ? { timeoutMs: config.timeoutMs } : {}) }),
+    claims: remoteClaimChannel({ ...client, audience: config.claimAudience ?? config.audience, ...(config.timeoutMs !== undefined ? { timeoutMs: config.timeoutMs } : {}) }),
     remoteDecisionChannels: [{ boundary: `${config.pepId} -> ${server.url}`, trust_mode: "per-PEP MAC request/response; scope-authorized PEP; PDP-signed Decision Evidence" }],
     close: () => closing ??= server.close(),
   };

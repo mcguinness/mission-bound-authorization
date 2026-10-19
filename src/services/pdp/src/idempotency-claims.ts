@@ -42,9 +42,10 @@ import {
   type IdempotencyScope,
   isScopeDimension,
   isVolatileScopeMember,
+  type JsonValue,
 } from "@mission/core";
 import { afterCommit, type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
-import { lineageScopeDigests } from "./enforcement-boundary.js";
+import { type BoundaryConsumer, lineageScopeDigests } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
   retentionWindowSeconds,
@@ -429,6 +430,27 @@ export class IdempotencyClaimDomain {
   /** Whether the statement names a claim domain for this class. */
   declares(actionClass: string | undefined): boolean {
     return actionClass !== undefined && this.classes.has(actionClass);
+  }
+
+  /**
+   * @spec runtime#boundary-identifier-change step 1 (#853 review): this
+   * domain as a consumer of the boundary identifier. It reads the
+   * `replaces` lineage a key is looked up across from its own statement
+   * ({@link heldRow}), so it is provisioned for a version only when that
+   * statement declares the same version, byte for byte. A PDP still loaded
+   * with an earlier statement would treat every key as fresh after the
+   * change; bound to the PEP's boundary context, it holds the cutover until
+   * it is reloaded.
+   */
+  boundaryConsumer(): BoundaryConsumer {
+    const declared = this.options.statement.enforcement_boundaries?.versions ?? [];
+    return {
+      name: `pdp-claim-domain:${this.options.owner}`,
+      provisionedFor: (version) => {
+        const own = declared.find((v) => v.version === version.version);
+        return own !== undefined && canonicalize(own as unknown as JsonValue) === canonicalize(version as unknown as JsonValue);
+      },
+    };
   }
 
   /** Release the file. A closed domain is unreachable: every later call throws. */

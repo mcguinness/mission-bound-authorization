@@ -30,10 +30,12 @@ import {
 import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
+  type BoundaryEvidenceKey,
   buildBoundaryEvidenceKeyResolver,
   createDecisionPoint,
   createDecisionChannel,
   createPdpRefusalRecorder,
+  evidenceKeyConsumer,
   type IdempotencyClaimDomain,
   loadRuntimePosture,
   openIdempotencyClaimDomain,
@@ -61,6 +63,7 @@ import {
   deploymentRetentionWindowSeconds,
   type DpopKeys,
   EVIDENCE_KEY_SET_LOCATION,
+  evidenceKeySetLocation,
   EvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
@@ -767,13 +770,33 @@ export async function composeStack(opts: {
   // closes indeterminate alerts where the claim domain moves it, after the
   // move commits, so a prior process's claim alerts too.
   const operatorAlerts = stderrAlertSink();
+  // @spec runtime#boundary-identifier-change (#853 review): settlement
+  // verifies Execution Evidence under the declared versions, by the record's
+  // (audience, kid) pair, so a record produced under an earlier version still
+  // settles after a change and one under the new version settles once its
+  // key is held. Its readiness for each version is bound below.
+  const settlementKeys: BoundaryEvidenceKey[] = evidenceKeys.verification.flatMap((k) =>
+    k.role === "pep" || k.role === "executor"
+      ? [{ kid: k.kid, publicKey: k.publicKey, emitterId: k.emitterId, role: k.role }]
+      : [],
+  );
   const pdpClaims = openIdempotencyClaimDomain({
     file: claimsFile,
     owner: RUNTIME_POSTURE.pdps[0] as string,
     statement: RUNTIME_POSTURE,
-    settlementKeys: buildEvidenceKeyResolver(evidenceKeys.verification.filter((k) => k.role !== "pdp")),
+    settlementKeys: buildBoundaryEvidenceKeyResolver(boundary.declaration, settlementKeys),
     onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
   });
+  // @spec runtime#boundary-identifier-change step 1 (#853 review): the
+  // consumers whose bindings are provisioned outside the statement. Until
+  // each is provisioned for the version in force, the boundary is not
+  // established and every request refuses (`boundary_unprovisioned`): the
+  // settlement verifier holds a key for every enforcement key the version
+  // authorizes, and the claim domain's own statement declares the version.
+  boundary.bindConsumer(
+    evidenceKeyConsumer({ name: "pdp-settlement-keys", roles: ["pep", "executor"], audienceBound: false, keys: () => settlementKeys }),
+  );
+  boundary.bindConsumer(pdpClaims.boundaryConsumer());
   // @spec runtime#input-resource-policy (#828): the independently
   // administered Resource policy, stored OpenFGA entitlements read with no
   // Mission input, for principals authenticated under this stack's issuer.
@@ -839,10 +862,11 @@ export async function composeStack(opts: {
   const evidenceRetention = new EvidenceRetentionStore({
     retentionWindowSeconds: deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS),
   });
-  for (const key of [
+  const heldKeys = [
     ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
     { ...decisionPoint.evidenceVerification, role: "pdp" as const },
-  ]) {
+  ];
+  for (const key of heldKeys) {
     evidenceRetention.publishKey({
       location: EVIDENCE_KEY_SET_LOCATION,
       kid: key.kid,
@@ -854,6 +878,37 @@ export async function composeStack(opts: {
       publicKey: await exportJWK(key.publicKey as Parameters<typeof exportJWK>[0]),
     });
   }
+  // @spec runtime#boundary-identifier-change (#853 review): every key this
+  // deployment holds is also published, at each declared boundary's own
+  // key-set location, bound to that boundary, for every version that
+  // authorizes it, so the key set is provisioned for a declared change
+  // before its cutover and keeps the earlier boundary's set. A version that
+  // authorizes a key this deployment does not hold leaves that boundary's
+  // set unprovisioned, and the consumer bound below holds the cutover.
+  for (const version of boundary.declaration.versions) {
+    for (const declared of version.boundaries) {
+      for (const authorized of declared.evidence_keys) {
+        const key = heldKeys.find((k) => k.kid === authorized.kid && k.emitterId === authorized.emitter && k.role === authorized.role);
+        if (!key) continue;
+        evidenceRetention.publishKey({
+          location: evidenceKeySetLocation(declared.boundary),
+          kid: key.kid,
+          emitterId: key.emitterId,
+          role: key.role,
+          audience: declared.boundary,
+          publicKey: await exportJWK(key.publicKey as Parameters<typeof exportJWK>[0]),
+        });
+      }
+    }
+  }
+  boundary.bindConsumer(
+    evidenceKeyConsumer({
+      name: "published-evidence-keys",
+      roles: ["pdp", "pep", "executor"],
+      audienceBound: true,
+      keys: (declared) => evidenceRetention.publishedVerificationKeys(evidenceKeySetLocation(declared)),
+    }),
+  );
   // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
   // PEP verifies the PDP's Decision Evidence under the declared statement
   // versions, by the record's (audience, kid) pair, against exactly what the
@@ -1001,6 +1056,10 @@ export async function composeStack(opts: {
       const established = pdpBoundary();
       return established !== undefined ? [established] : [];
     },
+    // @spec runtime#boundary-identifier-change (#853 review): settlement and
+    // reconciliation are scoped to the boundary in force too, never to a
+    // configured audience a cutover would leave behind.
+    claimAudience: pdpBoundary,
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
