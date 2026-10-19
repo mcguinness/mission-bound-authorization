@@ -20198,11 +20198,20 @@
    "surface": "evidence-emission",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "once a Mission is non-active, reconciliation may record the outcome of already-initiated work but never admits a new effect under that Mission; consumed identifiers and idempotency claims persist across the lifecycle transition and an indeterminate outcome converts to a non-reusable tombstone, never expiring into a fresh claim"
+    "normative": "once a Mission is non-active, reconciliation may record the outcome of already-initiated work but never admits a new effect under that Mission; consumed identifiers and idempotency claims persist across the lifecycle transition and an indeterminate outcome converts to a non-reusable tombstone, never expiring into a fresh claim",
+    "local": "a wire commits and its Execution Evidence is lost, then the Mission is terminated. A wire under the terminated Mission for an invoice no wire settled commits nothing (the PDP denies mission_inactive), and the declared reconciler, which reads no Mission state, still settles the unresolved claim completed from the ledger entry recorded against its permit."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a Mission terminated while an outcome is unresolved admits no new effect under it, and reconciliation still records the outcome of the wire already initiated (@spec runtime#evidence, #1176)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1176 item 16. Partial in breadth: the cited test witnesses the quoted clause, and the claim persisting through termination until reconciliation settles it. No test here holds a consumed identifier or claim through its declared horizon after a lifecycle transition, or converts a post-termination outcome to an indeterminate tombstone; the PDP's tombstone rule is witnessed on runtime.idempotency.tombstone-retention-and-refusal."
   },
   {
    "id": "runtime.mission-receipt.must-identify-mission",
