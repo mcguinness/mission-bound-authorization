@@ -982,8 +982,13 @@ single-use, phase and parameter bindings are unchanged.
 
 `audience`:
 : REQUIRED. A string. Carried at `resource.properties.audience`
-  ({{pdp-request}}). The PEP's audience or protected-resource
-  identifier.
+  ({{pdp-request}}). The boundary identifier of the enforcement
+  boundary the PEP established for the request, byte for byte
+  ({{I-D.draft-mcguinness-mission-runtime}}, Section "Enforcement
+  Boundary Identifier"); on OAuth, the protected resource's
+  identifier, never an `aud` value or alias
+  ({{I-D.draft-mcguinness-mission-runtime-oauth}}). Entries are matched
+  against `operation_target`, never this member ({{pdp-request}}).
 
 `mission_state_observation`:
 : CONDITIONAL. An object, carried at `context.mission_state_observation`.
@@ -1215,9 +1220,10 @@ Operation identity:
   execution of.
 
 Authorization binding:
-: The subject, the actor, the operation target, credential-derived
-  facts, the Mission reference, the authority and view identity, the
-  approval, and
+: The subject, the actor, the audience
+  ({{context-audience-freshness}}), the operation target,
+  credential-derived facts, the Mission reference, the authority and
+  view identity, the approval, and
   every policy-relevant context input, including `taint`, the
   Mission history reference, the capability source, and any
   extension member a companion profile adds. This is what a permit
@@ -3080,6 +3086,12 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `resource.properties.audience` carries the runtime profile's
+  boundary identifier, the boundary the PEP established, byte for
+  byte: on OAuth, the protected resource's identifier, never an `aud`
+  value or alias. The authorization binding, and so the cache key,
+  names it. Operation-target matching is unchanged (#853).
 
 - `resource.properties.operation_target` carries the operation target
   the PEP establishes from its trusted operation contract. The PDP
