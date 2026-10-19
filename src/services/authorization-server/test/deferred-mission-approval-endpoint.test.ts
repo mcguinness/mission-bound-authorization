@@ -757,15 +757,24 @@ describe("Deferred Mission Approval capability (@spec deferred-approval#deferred
     return { built, server: built.provider.listen(port) };
   }
 
-  it("is off by default: the hint is ignored, an mdfr_ code is unknown, and no deferral support is advertised", async () => {
+  it("is off by default (the hint is ignored, an mdfr_ code is unknown, nothing is advertised), and where on advertises deferral and its cancellation", async () => {
     const issuer = "http://localhost:14186";
     const { built, server: off } = await assembly(14186, { issuer });
     try {
       expect(built.missionApprovalDeferrals).toBeUndefined();
       const meta = (await (await fetch(`${issuer}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
       expect(meta).not.toHaveProperty("deferred_token_response_supported");
+      expect(meta.revocation_endpoint_token_type_values_supported ?? []).not.toContain(
+        "urn:ietf:params:oauth:token-type:deferral-code",
+      );
+      // On: deferral is advertised, and so is its cancellation at the
+      // revocation endpoint (DTR -00 Section 7.4).
       const onMeta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
       expect(onMeta.deferred_token_response_supported).toBe(true);
+      expect(onMeta.revocation_endpoint).toBe(`${ISSUER}/token/revocation`);
+      expect(onMeta.revocation_endpoint_token_type_values_supported).toContain(
+        "urn:ietf:params:oauth:token-type:deferral-code",
+      );
       // Pushed with the hint, the request reaches the ordinary approval interaction.
       const key = (await importJWK(built.ledgerReconcilerClientJwk as never, "ES256")) as CryptoKey;
       const assertion = async () => ({

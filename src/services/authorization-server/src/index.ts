@@ -512,6 +512,7 @@ export {
   type PolicyCompletionResult,
 } from "./kernel/mission-approval-deferral.js";
 export {
+  DEFERRAL_CODE_TOKEN_TYPE,
   DEFERRED_CODE_TTL_S,
   MISSION_APPROVAL_DEFERRAL_PREFIX,
   QUEUE_FULL_RETRY_AFTER_S,

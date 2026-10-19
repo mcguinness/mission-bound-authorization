@@ -435,6 +435,7 @@ import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-de
 import {
   cancelOnRevocation,
   completeDeferredAuthorization,
+  DEFERRAL_CODE_TOKEN_TYPE,
   DeferredAuthorizationCodes,
   MISSION_APPROVAL_DEFERRAL_PREFIX,
   pollMissionApprovalDeferral,
@@ -4262,7 +4263,19 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // supports deferred token responses says so. Advertised where Deferred
       // Mission Approval is served; the AROP deferral is initiated by its own
       // grant request and never opted into with `completion_mode`.
-      if (deferredCodes) meta.deferred_token_response_supported = true;
+      if (deferredCodes) {
+        meta.deferred_token_response_supported = true;
+        // DTR -00 Section 7.4 (Discovery): an AS that supports deferral
+        // lists the deferral-code token type its revocation endpoint accepts
+        // (the cancellation), so a client can rely on it. The revocation
+        // endpoint is served wherever Deferred Mission Approval is.
+        const listed = Array.isArray(meta.revocation_endpoint_token_type_values_supported)
+          ? (meta.revocation_endpoint_token_type_values_supported as unknown[])
+          : [];
+        meta.revocation_endpoint_token_type_values_supported = [
+          ...new Set([...listed, DEFERRAL_CODE_TOKEN_TYPE]),
+        ];
+      }
       // @spec status#as-metadata, discharge#discharge-receipt — the response-signing
       // algorithms of the Mission Status Response shape, wherever it (or the
       // Discharge Receipt, signed the same way) can be served: the Status

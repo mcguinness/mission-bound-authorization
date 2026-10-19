@@ -38111,6 +38111,36 @@
    "notes": "#1300 review (D474)."
   },
   {
+   "id": "deferred-approval.deferral.substrate-discovery",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "conformance",
+   "text": "support the deferred substrate for Mission approvals it defers",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS that defers Mission approvals publishes the deferred substrate's discovery: deferred_token_response_supported, and the deferral-code token type among revocation_endpoint_token_type_values_supported",
+    "local": "Only the substrate's discovery facet of the clause is witnessed here; its other parts are the rows of this capability. Advertised exactly where the deferred-approval capability is on, so the revocation endpoint is served; the default assembly advertises neither."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "Deferred Mission Approval capability (@spec deferred-approval#deferred-approval, deferred-approval#policy-completion) > is off by default (the hint is ignored, an mdfr_ code is unknown, nothing is advertised), and where on advertises deferral and its cancellation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474)."
+  },
+  {
    "id": "deferred-approval.deferral.code-binding",
    "spec": "draft-mcguinness-oauth-mission-approval.md",
    "anchor": "front-channel",

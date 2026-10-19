@@ -70,6 +70,9 @@ import {
 /** The deferral codes this profile issues; any other code belongs to another deferral. */
 export const MISSION_APPROVAL_DEFERRAL_PREFIX = "mdfr_";
 
+/** DTR -00: the token type of a deferral code, as the revocation endpoint accepts it. */
+export const DEFERRAL_CODE_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:deferral-code";
+
 /** A pending-request authorization code's lifetime, oidc-provider's own default for a code. */
 export const DEFERRED_CODE_TTL_S = 60;
 
