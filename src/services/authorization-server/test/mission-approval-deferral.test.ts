@@ -242,7 +242,8 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(store.cancel(cancelled, "svc-other")).toBe(false);
     expect(store.cancel(cancelled, "svc-agent")).toBe(true);
     expect(await store.completeByPolicy(cancelled)).toEqual({ outcome: "not_pending", state: "cancelled" });
-    expect(store.poll(cancelled, presenter)).toEqual({ error: "invalid_grant" });
+    // The deferred substrate's polling rule: a cancelled request is access_denied.
+    expect(store.poll(cancelled, presenter)).toEqual({ error: "access_denied" });
 
     // The pending lifetime still bounds it.
     const lapsed = open(store);
@@ -277,5 +278,71 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(() => store.approveDirect(code, { approver: DANA, subject: SUBJECT })).toThrow(MissionApprovalDeferralError);
     expect(kernel.allMissions()).toHaveLength(0);
     expect(store.poll(code, presenter)).toEqual({ error: "access_denied" });
+  });
+});
+
+describe("deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine)", () => {
+  it("refuses a client's further submissions at its pending bound until the queue drains, other clients unaffected", () => {
+    const { store } = setup(undefined, { maxPendingPerClient: 2 });
+    const first = open(store);
+    open(store);
+    expect(() => open(store)).toThrow(expect.objectContaining({ code: "queue_full" }));
+    // Another client has its own bound.
+    expect(open(store, { clientId: "svc-other" })).toMatch(/^mdfr_/);
+    // A cancellation drains one place; a lapsed approval no longer counts.
+    expect(store.cancel(first, "svc-agent")).toBe(true);
+    const third = open(store);
+    expect(() => open(store)).toThrow(expect.objectContaining({ code: "queue_full" }));
+    clockMs += 601_000;
+    expect(open(store)).toMatch(/^mdfr_/);
+    expect(store.state(third)).toBe("expired");
+  });
+
+  it("treats a cancellation after approval but before delivery as redeemed and then cancelled", async () => {
+    const { kernel, store } = setup();
+    const code = open(store);
+    const done = await store.completeByPolicy(code);
+    if (done.outcome !== "approved") throw new Error(done.outcome);
+    expect(store.cancel(code, "svc-other")).toBe(false);
+    expect(store.cancel(code, "svc-agent")).toBe(true);
+    expect(store.poll(code, presenter)).toEqual({ error: "access_denied" });
+    expect(store.poll(code, presenter)).toEqual({ error: "access_denied" });
+    // The Mission exists, but nothing was delivered for it.
+    expect(kernel.get(done.mission.id)?.grant_id).toBeNull();
+
+    // After delivery, a cancellation changes nothing.
+    const delivered = open(store);
+    await store.completeByPolicy(delivered);
+    expect(store.poll(delivered, presenter)).toHaveProperty("mission");
+    expect(store.cancel(delivered, "svc-agent")).toBe(false);
+    expect(store.poll(delivered, presenter)).toEqual({ error: "invalid_grant" });
+  });
+
+  it("runs policy completion from the bound presenter's poll only, at most once per interval, and once per evaluation", async () => {
+    const advisor = vi.fn(async (_r: ModelAdvisorRequest) => []);
+    const refusing = setup({ "urn:root:reconciler": rootDoc({ rules: { max_entries: 3, require_purpose: true } }) }, { modelAdvisor: advisor });
+    const code = open(refusing.store);
+    // Another client or key: invalid_grant, and no evaluation runs.
+    expect(await refusing.store.pollAndComplete(code, { ...presenter, clientId: "svc-other" })).toEqual({ error: "invalid_grant" });
+    expect(await refusing.store.pollAndComplete(code, { ...presenter, jkt: "another-key" })).toEqual({ error: "invalid_grant" });
+    expect(advisor).not.toHaveBeenCalled();
+    expect(refusing.store.resolutionReason(code)).toBeUndefined();
+    // The bound presenter's poll evaluates; a refusal is recorded and never re-evaluated.
+    expect(await refusing.store.pollAndComplete(code, presenter)).toMatchObject({ error: "authorization_pending" });
+    expect(refusing.store.resolutionReason(code)).toBe("purpose_required");
+    expect(advisor).toHaveBeenCalledTimes(1);
+    // Too soon: slow_down, with no evaluation.
+    expect(await refusing.store.pollAndComplete(code, presenter)).toMatchObject({ error: "slow_down" });
+    clockMs += 6_000;
+    expect(await refusing.store.pollAndComplete(code, presenter)).toMatchObject({ error: "authorization_pending" });
+    expect(advisor).toHaveBeenCalledTimes(1);
+    expect(refusing.kernel.allMissions()).toHaveLength(0);
+
+    // An approving evaluation delivers on the same poll.
+    const { kernel, store } = setup();
+    const approving = open(store);
+    const r = await store.pollAndComplete(approving, presenter);
+    expect(r).toEqual({ mission: kernel.allMissions()[0] });
+    expect(await store.pollAndComplete(approving, presenter)).toEqual({ error: "invalid_grant" });
   });
 });
