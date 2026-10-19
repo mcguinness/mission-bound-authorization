@@ -19,6 +19,14 @@ test("a value with nonzero pad bits is reported with its canonical form", () => 
   assert.deepEqual(r, [{ line: 2, value: NONCANON, canonical: CANON }]);
 });
 
+test("jkt and x5t#S256 members are checked", () => {
+  assert.deepEqual(findNonCanonical(`{ "jkt": "${CANON}", "x5t#S256": "${CANON}" }`), []);
+  for (const m of ["jkt", "x5t#S256"]) {
+    const r = findNonCanonical(`{ "${m}": "${NONCANON}" }`);
+    assert.deepEqual(r, [{ line: 1, value: NONCANON, canonical: CANON }]);
+  }
+});
+
 test("values of other lengths are ignored", () => {
   assert.deepEqual(findNonCanonical(`sha-256:${NONCANON}x sha-256:abc`), []);
 });

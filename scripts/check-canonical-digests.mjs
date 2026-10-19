@@ -11,7 +11,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const VALUE = /sha-256:([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/g;
+// Covers `sha-256:<value>` and the JSON thumbprint members `"jkt"` and
+// `"x5t#S256"`, which are unpadded base64url SHA-256 digests as well.
+const VALUE = /(?:sha-256:|"(?:jkt|x5t#S256)"\s*:\s*")([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/g;
 
 export function findNonCanonical(text) {
   const out = [];
@@ -30,7 +32,7 @@ function main() {
   const errors = [];
   for (const f of files) {
     for (const r of findNonCanonical(fs.readFileSync(path.join(ROOT, f), "utf8"))) {
-      errors.push(`${f}:${r.line}: sha-256:${r.value} is not canonical base64url (canonical: ${r.canonical})`);
+      errors.push(`${f}:${r.line}: ${r.value} is not canonical base64url (canonical: ${r.canonical})`);
     }
   }
   if (errors.length > 0) {
