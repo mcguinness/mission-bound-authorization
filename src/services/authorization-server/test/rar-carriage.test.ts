@@ -697,6 +697,59 @@ describe("end-to-end issuance under the new carriage", () => {
   });
 });
 
+// D284, #1328: the approval page tells the Approver that a per-action limit
+// applies to each action and that the approval imposes no total spending cap.
+// The wording is this deployment's, shown under the derived authority only
+// when an entry the approval grants carries `max_amount`.
+describe("approval page per-action limit wording (D284, #1328)", () => {
+  const PER_ACTION = "These limits apply to each action.";
+  const NO_TOTAL = "This approval does not impose a total spending cap across the Mission.";
+
+  async function renderApproval(proposal: AuthorityEntry[]): Promise<{ status: number; html: string }> {
+    const par = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      authorization_details: JSON.stringify(proposal),
+    });
+    expect(par.status).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+    const auth = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+      redirect: "manual",
+    });
+    storeCookies(auth);
+    const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+    return { status: page.status, html: await page.text() };
+  }
+
+  it("states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount", async () => {
+    const { status, html } = await renderApproval([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:payment.schedule"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ]);
+    expect(status).toBe(200);
+    const derived = html.split("Derived authority (what approval grants)")[1] as string;
+    expect(derived).toContain('"max_amount"');
+    expect(derived).toContain(`${PER_ACTION} ${NO_TOTAL}`);
+  });
+
+  it("does not state the per-action limit wording when no derived entry carries max_amount", async () => {
+    const { status, html } = await renderApproval([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+    ]);
+    expect(status).toBe(200);
+    expect(html).toContain("Derived authority (what approval grants)");
+    expect(html).toContain('"vendors"');
+    expect(html).not.toContain('"max_amount"');
+    expect(html).not.toContain(PER_ACTION);
+    expect(html).not.toContain(NO_TOTAL);
+  });
+});
+
 // @spec mission#error-mapping — the two derivation-refusal branches at the
 // authorization decision: a submitted proposal that derives nothing is
 // invalid_authorization_details; configured-mapping mode (no proposal

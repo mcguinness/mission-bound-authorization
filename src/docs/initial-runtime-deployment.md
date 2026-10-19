@@ -403,7 +403,6 @@ That test uses another member; no test names `max_budget`.
 **Unmet obligations by owner:**
 
 - Blocking high-risk approval acceptance: a reference upstream login integration whose provider authenticates the Approver and establishes the claimed strength (#1320, option A); the demo console's login is simulated (D438). Token authority (D411) and Resource policy (#828 closed, D436) are met for this target.
-- Blocking acceptance item 1: approval text stating that each limit applies per action and that the approval imposes no total spending cap, with a rendered-page test (D284, #1328). The Mission-bound `unknown_mission` refusal is witnessed below the stack (§11, #1329).
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance stays with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
 - Separated deployment only: #1101 (state source under D293).
@@ -508,7 +507,8 @@ correct surface and role.
 #253 Sketch step 5, reviewed at origin/main `73a2e86b`: one row per claim
 this contract makes for the target (§1, §2, §8) and per overlay obligation of
 [provider-integration-port.md](provider-integration-port.md) §5. Each cited
-test exists at that revision; the sections named hold the full witness lists.
+test exists at that revision, except the approval-wording row's, which #1328
+added; the sections named hold the full witness lists.
 Status:
 
 - `witnessed`: on the assembled target, `composeStack({ target: "as-native" })`
@@ -529,7 +529,7 @@ Status:
 | Per-action `max_amount`, exact decimal (§3) | `PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > an amount exactly at the cap permits (the comparison is <=, not <)` and [FGA] `M4 core enforcement tier > over-cap invoice denied parameter_violation` | witnessed below the stack | none: no §10 vector |
 | Per-action `vendors` (§8) | [FGA] `M4 core enforcement tier > vendor outside constraint denied parameter_violation` | witnessed below the stack | none: no §10 vector |
 | No aggregate cap: an Intent member the issuer does not implement, such as `max_budget`, is refused (§8) | `intent validation (@spec mission#submission-via-par) > rejects unknown top-level members (closed top level)`, with another member | excluded (D284) | #816, parked |
-| Approval promises only the per-action limits (D284 ruling 2) | `end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only`, on the default assembly: the page shows the derived authority as JSON; see below | open: per-entry JSON does not meet D284 (D496) | #1328 |
+| Approval promises only the per-action limits (D284 ruling 2) | `approval page per-action limit wording (D284, #1328) > states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount` and `approval page per-action limit wording (D284, #1328) > does not state the per-action limit wording when no derived entry carries max_amount`, on the default assembly; see below | witnessed below the stack | none: no §10 vector |
 | The local committed read per decision (D293): a revoked Mission refuses the next decision (§4) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the next read mission_inactive once the Mission is revoked at the advertised lifecycle endpoint, with the PDP's deny Decision Evidence and no effect (#253)` | witnessed | a separated source: #1101 |
 | A fresh decision at each commit phase (§4) | [FGA] `the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the fresh commit decision mission_inactive when the Mission is revoked after a permitted preflight and prepare, and no wire exists (#253)` | witnessed | none |
 | Per-class staleness, skew, permit and execution-lease bounds (§4) | `a permit expires no later than the state view it was decided against (@spec runtime#state-freshness) > caps valid_until at the state observation plus the class staleness bound` and [FGA] `M5 transaction-assurance tier > an expired execution lease is refused as permit_expired, not as a parameter mismatch` | witnessed below the stack | none: the target has no controllable clock (§10) |
@@ -565,24 +565,24 @@ Status:
 | Context-drift vectors, conditional (§8) | none | excluded | #773 |
 | The launcher wrappers: the dev-CA check, argument and signal forwarding and exit status of `scripts/as-native.mjs`, and `pnpm resource-policy`'s wrapper (§12) | none | excluded: no wrapper-coverage claim; a disclosed operational residual | #1330 |
 
-Counts: 14 `witnessed`, 14 `witnessed below the stack`, 4 `stated bound`,
-9 `excluded`, 3 `open`. Each open row has an owner: #1320, #1328 and #250.
+Counts: 14 `witnessed`, 15 `witnessed below the stack`, 4 `stated bound`,
+9 `excluded`, 2 `open`. Each open row has an owner: #250 and #1320.
 
 **Approval wording (D284 ruling 2).** The approval page shows the derived
 Authority Set as JSON under "Derived authority (what approval grants)"
 (`renderApprovalPage`,
-`services/authorization-server/src/adapters/provider.ts:5395-5464`). Its
-only amount and vendor limits are each entry's `max_amount` and `vendors`,
-which the PDP enforces per action (§3), and the Intent's closed top level
-admits no aggregate member (`TOP_LEVEL`,
+`services/authorization-server/src/adapters/provider.ts`). Its only amount
+and vendor limits are each entry's `max_amount` and `vendors`, which the PDP
+enforces per action (§3), and the Intent's closed top level admits no
+aggregate member (`TOP_LEVEL`,
 `services/authorization-server/src/kernel/intent.ts:49-57`). The page grants
-no aggregate cap. It carries no text saying that each limit applies per
-action and that no total is enforced, and no test asserts what it says about
-limits. This contract states the boundary (§1, §8). Per-entry JSON does not
-meet D284's requirement that approval text make the boundary explicit
-(D496): the page needs visible text, such as "These limits apply to each
-action. This approval does not impose a total spending cap across the
-Mission.", and a rendered-page test (#1328).
+no aggregate cap. Where an entry it grants carries `max_amount`, the page
+states beneath the derived authority: "These limits apply to each action.
+This approval does not impose a total spending cap across the Mission."
+(D496, #1328). A Mission with no `max_amount` entry, such as a read Mission
+whose entries carry only `vendors`, shows no such text. Both cases are
+tested on the rendered page of the default assembly (the row above); this
+target's AS serves the same page, and no assembled test renders it.
 
 **Inherited from #873.** #253 inherits the floor's limits (D408, D417).
 Each obligation is resolved under the floor's own contract,
@@ -716,12 +716,8 @@ each of its vectors to a witness or an owner. Open before #253 closes:
 1. **High-risk approval:** a reference upstream login integration whose
    provider authenticates the Approver and establishes the claimed strength,
    with assembled positive and negative witnesses (#1320).
-2. **Approval wording:** visible per-action text on the approval page and a
-   rendered-page test (D284, #1328).
-3. **Mission-bound `unknown_mission`:** a witness of the refusal before any
-   decision (#1329).
-4. **Revoke during issuance:** #250.
-5. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+2. **Revoke during issuance:** #250.
+3. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
 Disclosed residuals that make no claim: the launcher wrappers' tests (#1330)
