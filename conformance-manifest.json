@@ -7150,6 +7150,49 @@
    ]
   },
   {
+   "id": "core.tokens.response-authorization-details-exact",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-bound-tokens",
+   "text": "Strengthening {{Section 7 of RFC9396}}, the AS MUST NOT omit values from it: the response states exactly the (possibly narrowed) set assigned to the issued token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a token response's authorization_details is exactly the set the issued access token carries, narrowed or not, with no value omitted"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details narrows the issued token (@spec mission#remediation-grains, #1303) > a narrower request issues exactly that subset, in the token and the response, and a later refresh may ask for the whole grant again",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > a narrower request issues exactly that subset",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > confinement: an absent authorization_details confines to the full active Authority Set (the derived set, not the raw proposal)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Witnessed on a refresh, an authorization code exchange and the async-delegation exchange, each comparing the response with the issued token's own claim. The other Token Exchange responses (designation and redemption, child creation, expansion, dispatch, deferred redemption) are not cited here. Proved by mutation: dropping a value from every token-endpoint response body fails the refresh and code witnesses, and dropping one from the async-delegation response alone fails its witness."
+  },
+  {
    "id": "core.scope-projection.semantic-subset-condition",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "scope-projection",
@@ -42504,7 +42547,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh or authorization code exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
+    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
     "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
    },
    "level": "endpoint",
@@ -42539,9 +42582,15 @@
      "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "containment refresh-path conformance (derivation MUST NOT carry a contained capability) > contain, then open a family naming the contained capability: refused invalid_authorization_details as exceeding the Mission authority, though the presented token carries it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. A Token Exchange naming authority beyond the Mission is refused by the async-delegation exchange's own check, which no test cited here witnesses."
+   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
@@ -42634,6 +42683,49 @@
     }
    ],
    "notes": "#1303. Witnessed at the token endpoint's authorization_details only, for the action and constraint dimensions, on a refresh and a code exchange. The other dimensions (a new resource, actor, delegation path or longer duration) and the other request surfaces are not cited here. Proved by mutation: projecting a request without the subset check fails the action and constraint witnesses."
+  },
+  {
+   "id": "core.subset.derived-entry-subset-of-mission",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "subset",
+   "text": "The AS MUST refuse to derive an entry that is not a subset, under its type's relation, of some Mission Authority Set entry",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose entries are not each a subset of some Mission Authority Set entry under the type's relation (an action the Mission lacks, or a constraint the Mission carries left out) is refused, and no token carries such an entry"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Witnessed at the token endpoint's requested authorization_details on a refresh and a code exchange. The other derivation paths are not cited here. Proved by mutation: issuing the requested entries verbatim, with no subset check, fails each witness."
   },
   {
    "id": "core.self-exchange.result-subset",
