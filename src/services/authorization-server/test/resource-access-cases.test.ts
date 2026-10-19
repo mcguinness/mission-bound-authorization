@@ -36,6 +36,7 @@ const IMPLEMENTED = new Set([
   "constraint.tenant",
   "constraint.time_window",
   "constraint.recipient_domain",
+  "constraint.data_classification",
   "refusal.unsupported-input",
   "delegate-matcher",
 ]);

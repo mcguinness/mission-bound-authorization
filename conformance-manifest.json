@@ -34581,6 +34581,131 @@
    "notes": "#1266 slice 3. Case der-10 (the supported counterpart of der-06) runs through the reader. Proved by mutation: keeping an empty overlap fails the refusal test."
   },
   {
+   "id": "resource-access.common-constraints.data-classification-enforced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "The action applies only to data whose classification label is among the named values.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an operation on data whose trusted classification label is not among the named values, or whose label cannot be established, is refused; a label named in the request cannot establish it",
+    "local": "the payments resource reads the invoice record's classification; vendor and list reads refuse under the bound, and a write whose invoice was relabeled refuses parameter_mismatch"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > permits an invoice whose label the bound names, carrying the store's label",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses an invoice labeled outside the bound, one with no label, and targets with no single label",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > a label named in the arguments cannot establish the fact: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses a write whose invoice was relabeled between decision and execution",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > a credential bound to labels is refused at the PEP, before any decision, for another label",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1266 slice 5. Proved by mutation: letting a missing label satisfy, the PDP or PEP dropping the store's label, and the credential gate losing the label each fail these tests."
+  },
+  {
+   "id": "resource-access.common-constraints.data-classification-subset",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "the candidate array's members are a subset of the reference array's, compared as exact strings",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived data_classification naming a label the reference lacks, or dropping the bound, is broader and is refused; fewer labels are issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "data_classification at the endpoints (@spec resource-access#initial-common-constraints) > a Token Exchange that adds a label or drops the bound is refused; one naming fewer labels is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1266 slice 5. The quoted clause is shared with allowed_tools; this row is witnessed for data_classification. Cases cc-data_classification-* run through the reader. Proved by mutation: a subset rule admitting any labels fails the test."
+  },
+  {
+   "id": "resource-access.common-constraints.data-classification-intersection",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Intersection: the common members; an empty result has no intersection and the combination fails.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "derivation keeps the labels the proposal and the ceiling share and refuses a proposal sharing none",
+    "local": "refused invalid_authorization_details at the approval decision, creating no Mission; refresh and introspection carry the common labels"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "data_classification at the endpoints (@spec resource-access#initial-common-constraints) > a proposal naming some of the ceiling's labels derives the common labels, and refresh and introspection carry them",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "data_classification at the endpoints (@spec resource-access#initial-common-constraints) > a proposal sharing no label with the ceiling is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1266 slice 5. The quoted clause is shared with allowed_tools; this row is witnessed for data_classification. Proved by mutation: an intersection that keeps one side fails these tests."
+  },
+  {
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",

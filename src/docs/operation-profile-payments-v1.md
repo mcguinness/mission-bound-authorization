@@ -118,6 +118,7 @@ and derivation, and the PDP refuses a matched entry that carries one.
 | `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
 | `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
+| `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named | `resource.properties.data_classification` | `list_invoices` and `lookup_vendor` (no single labeled record), and an invoice with no label: refused |
 
 `time_window` is also enforced after the decision: the PDP caps the
 permit's `valid_until` at the matched entry's `not_after` (and, for the
@@ -171,8 +172,8 @@ the `list_invoices` filter) and `idempotency_key`. Authoritative (loaded by
 the PEP from the payments store, never from the caller): invoice `amount`,
 `currency`, `payee_account`, `vendor_id`-of-invoice, invoice `status`,
 vendor `status`, the record versions, and the facts the Common
-Constraints read (invoice `issued_at`, vendor `tenant`, and the
-remittance recipients). No served schema declares an
+Constraints read (invoice `issued_at` and `classification`, vendor
+`tenant`, and the remittance recipients). No served schema declares an
 authoritative field, so its presence in a request is a schema violation,
 refused at the tool boundary.
 

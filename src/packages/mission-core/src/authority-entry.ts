@@ -136,6 +136,11 @@ export interface AuthorityEntry {
      * action reaches is within this DNS domain (whole labels, any case).
      */
     recipient_domain?: string;
+    /**
+     * @spec resource-access#initial-common-constraints — the action applies
+     * only to data whose classification label is among these (exact strings).
+     */
+    data_classification?: string[];
   };
   /**
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation

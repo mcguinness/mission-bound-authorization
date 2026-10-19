@@ -614,3 +614,61 @@ describe("recipient_domain (@spec resource-access#initial-common-constraints)", 
     );
   });
 });
+
+describe("data_classification (@spec resource-access#initial-common-constraints)", () => {
+  const dc = (v: unknown) => ({ data_classification: v });
+
+  it("subset: the candidate's labels are all among the reference's, as exact strings", () => {
+    expect(commonConstraintsNoBroader(dc(["internal"]), dc(["internal", "public"]))).toBe(true);
+    expect(commonConstraintsNoBroader(dc([]), dc(["internal"]))).toBe(true);
+    expect(commonConstraintsNoBroader(dc(["internal", "secret"]), dc(["internal", "public"]))).toBe(
+      false,
+    );
+    expect(commonConstraintsNoBroader(dc(["Internal"]), dc(["internal"]))).toBe(false);
+    expect(commonConstraintsNoBroader({}, dc(["internal"]))).toBe(false);
+  });
+
+  it("intersection: the common labels; none in common has no intersection", () => {
+    expect(
+      intersectCommonConstraints(dc(["public", "internal", "secret"]), dc(["internal", "public"])),
+    ).toEqual({
+      ok: true,
+      values: dc(["public", "internal"]),
+    });
+    expect(intersectCommonConstraints(dc(["secret"]), dc(["internal"])).ok).toBe(false);
+    expect(intersectCommonConstraints(dc([]), dc(["internal"])).ok).toBe(false);
+    expect(intersectCommonConstraints(dc(["internal"]), undefined)).toEqual({
+      ok: true,
+      values: dc(["internal"]),
+    });
+  });
+
+  it("enforcement: every label the operation touches must be named; no label, or an empty bound, refuses", () => {
+    const gate = (bound: string[], labels?: string[]) =>
+      commonConstraintGates(dc(bound), labels === undefined ? {} : { dataClassification: labels })
+        .satisfied;
+    expect(gate(["internal", "public"], ["internal"])).toBe(true);
+    expect(gate(["internal", "public"], ["internal", "public"])).toBe(true);
+    expect(gate(["internal", "public"], ["internal", "secret"])).toBe(false);
+    expect(gate(["internal"], ["Internal"])).toBe(false);
+    expect(gate(["internal"])).toBe(false);
+    expect(gate(["internal"], [])).toBe(false);
+    expect(gate([], ["internal"])).toBe(false);
+  });
+
+  it("value syntax: an array of non-empty strings; the validators and the credential reader agree", () => {
+    expect(SUPPORTED_CONSTRAINT_KEYS).toContain("data_classification");
+    for (const good of [["internal"], [], ["a", "b"]]) {
+      expect(isAuthorityEntry(entry(dc(good))), JSON.stringify(good)).toBe(true);
+    }
+    for (const bad of ["internal", [""], [1], ["a", null], {}]) {
+      expect(isAuthorityEntry(entry(dc(bad))), JSON.stringify(bad)).toBe(false);
+      expect(() => parseCredentialAuthority([entry(dc(bad))]), JSON.stringify(bad)).toThrow(
+        CredentialAuthorityError,
+      );
+    }
+    expect(parseCredentialAuthority([entry(dc(["internal"]))])[0]?.constraints).toEqual(
+      dc(["internal"]),
+    );
+  });
+});

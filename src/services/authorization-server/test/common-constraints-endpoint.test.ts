@@ -26,6 +26,7 @@ const hoisted = await vi.hoisted(async () => {
     tenant: "payments-demo",
     time_window: { not_before: "2026-01-01T00:00:00Z", not_after: "2027-12-31T23:59:59Z" },
     recipient_domain: "vendor.example",
+    data_classification: ["internal", "confidential"],
   };
   const dir = mkdtempSync(join(tmpdir(), "mission-config-1266-"));
   cpSync(fileURLToPath(new URL("../../../config", import.meta.url)), dir, { recursive: true });
@@ -477,5 +478,47 @@ describe("recipient_domain at the endpoints (@spec resource-access#initial-commo
       expect(res.status, JSON.stringify(requested)).toBe(400);
       expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
     }
+  });
+});
+
+describe("data_classification at the endpoints (@spec resource-access#initial-common-constraints)", () => {
+  it("a proposal naming some of the ceiling's labels derives the common labels, and refresh and introspection carry them", async () => {
+    const issued = await issue(read({ data_classification: ["internal", "secret"] }));
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS, data_classification: ["internal"] };
+    expect(constraintsOf(claims(issued.at).authorization_details)).toEqual([derived]);
+    const refreshed = await token(
+      { grant_type: "refresh_token", refresh_token: issued.rt, resource: RESOURCE },
+      issued.keys,
+    );
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(constraintsOf(claims(refreshed.body.access_token as string).authorization_details)).toEqual([derived]);
+    expect(constraintsOf((await introspect(issued.at)).authorization_details)).toEqual([derived]);
+  });
+
+  it("a proposal sharing no label with the ceiling is refused at the approval decision, creating no Mission", async () => {
+    const before = as.kernel.allMissions().length;
+    for (const labels of [["secret"], ["Internal"]]) {
+      const redirect = await approve(read({ data_classification: labels }));
+      expect(redirect.searchParams.get("error"), JSON.stringify(labels)).toBe("invalid_authorization_details");
+      expect(redirect.searchParams.get("error_description"), JSON.stringify(labels)).toMatch(
+        /data_classification values have no intersection/,
+      );
+    }
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a Token Exchange that adds a label or drops the bound is refused; one naming fewer labels is issued", async () => {
+    const issued = await issue(read());
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    const { data_classification: _dropped, ...dropped } = derived;
+    for (const requested of [dropped, { ...derived, data_classification: ["internal", "secret"] }]) {
+      const res = await exchange(issued.at, issued.keys, read(requested));
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
+    const fewer = { ...derived, data_classification: ["confidential"] };
+    const ok = await exchange(issued.at, issued.keys, read(fewer));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([fewer]);
   });
 });

@@ -84,9 +84,9 @@ function harness(opts: {
       { id: "initech", name: "Initech", status: "approved" },
     ],
     [
-      { id: "inv-globex", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable" },
+      { id: "inv-globex", vendor_id: "globex", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable", classification: "restricted" },
       { id: "inv-initech", vendor_id: "initech", amount: "50.00", currency: "USD", payee_account: "acct", status: "payable" },
-      { id: "inv-q3", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-08-15T09:30:00Z" },
+      { id: "inv-q3", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-08-15T09:30:00Z", classification: "internal" },
       { id: "inv-early", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-06-30T23:59:59Z" },
       { id: "inv-late", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-10-01T00:00:00Z" },
       { id: "inv-edge", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-07-01T02:00:00+02:00" },
@@ -517,6 +517,57 @@ describe("the payments resource enforces recipient_domain over every resolved re
   });
 });
 
+describe("the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints)", () => {
+  const DC = { data_classification: ["internal", "public"] };
+
+  it("permits an invoice whose label the bound names, carrying the store's label", async () => {
+    const h = harness({ mission: DC });
+    const res = await read(h, "inv-q3");
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect((h.lastResource()?.properties as Record<string, unknown>).data_classification).toBe("internal");
+  });
+
+  it("refuses an invoice labeled outside the bound, one with no label, and targets with no single label", async () => {
+    const h = harness({ mission: DC });
+    expect((await read(h, "inv-globex")).denial_reason).toBe("parameter_violation");
+    expect((await read(h, "inv-none")).denial_reason).toBe("parameter_violation");
+    expect((await h.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, h.token)).ok).toBe(false);
+    expect((await h.server.callReadTool("list_invoices", { vendor_id: "acme" }, h.token)).ok).toBe(false);
+  });
+
+  it("a label named in the arguments cannot establish the fact: it is refused at intake", async () => {
+    const h = harness({ mission: DC });
+    const res = await h.server.callReadTool(
+      "get_invoice",
+      { invoice_id: "inv-globex", data_classification: "internal" },
+      h.token,
+    );
+    expect(res.refusal_reason).toBe("invalid_request");
+    expect(h.decisions()).toBe(0);
+  });
+
+  it("refuses a write whose invoice was relabeled between decision and execution", async () => {
+    const h = harness({ mission: DC });
+    const res = await h.server.callWriteTool(
+      "schedule_payment",
+      { invoice_id: "inv-q3", idempotency_key: `idem_${randomUUID()}` },
+      h.token,
+      () => h.payments.setInvoiceClassification("inv-q3", "restricted"),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("parameter_mismatch");
+  });
+
+  it("a credential bound to labels is refused at the PEP, before any decision, for another label", async () => {
+    const h = harness({ credential: DC });
+    const res = await read(h, "inv-globex");
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("out_of_authority");
+    expect(h.decisions()).toBe(0);
+    expect((await read(h, "inv-q3")).ok).toBe(true);
+  });
+});
+
 describe("the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses an operation whose matched Mission entry carries a constraints key the resource does not understand", async () => {
     const h = harness({ mission: { x_region: "eu" } });
@@ -532,7 +583,7 @@ describe("protected resource metadata names only enforced constraint keys (@spec
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain"].sort(),
+      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain", "data_classification"].sort(),
     );
     // The supported set the Authorization Server admits is the one this resource enforces.
     expect([...supported].sort()).toEqual(

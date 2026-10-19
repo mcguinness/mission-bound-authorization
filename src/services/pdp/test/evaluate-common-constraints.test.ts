@@ -277,6 +277,37 @@ describe("PDP enforces recipient_domain over every resolved recipient (@spec res
   });
 });
 
+describe("PDP enforces data_classification against the resource's label (@spec resource-access#initial-common-constraints)", () => {
+  const DC = { data_classification: ["internal", "public"] };
+
+  it("permits a label among the bound's and refuses another, compared as exact strings", async () => {
+    expect((await decide(view(DC), { data_classification: "internal" })).permit).toBe(true);
+    for (const other of ["secret", "Internal"]) {
+      expect(await decide(view(DC), { data_classification: other }), other).toMatchObject({
+        permit: false,
+        reason: "parameter_violation",
+      });
+    }
+  });
+
+  it("refuses when the PEP established no label, and under an empty bound", async () => {
+    expect(await decide(view(DC), {})).toMatchObject({ permit: false, reason: "parameter_violation" });
+    expect(await decide(view({ data_classification: [] }), { data_classification: "internal" })).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+
+  it("a credential bound to labels is enforced at its own labels under an unbounded Mission", async () => {
+    const credential = [{ type: "mission_resource_access", resource: RESOURCE, actions: [ACTION], constraints: DC }];
+    expect((await decide(view(), { data_classification: "public" }, credential)).permit).toBe(true);
+    expect(await decide(view(), { data_classification: "secret" }, credential)).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
+});
+
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({

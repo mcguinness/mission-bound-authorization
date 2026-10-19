@@ -48,6 +48,11 @@ export interface ConstraintFacts {
    * records. An empty list is no recipients established.
    */
   recipients?: readonly string[];
+  /**
+   * The classification label of every piece of data the operation touches,
+   * from the resource's own labels. An empty list is no label established.
+   */
+  dataClassification?: readonly string[];
 }
 
 /** One Common Constraint's definition. */
@@ -228,12 +233,50 @@ const RECIPIENT_DOMAIN: Semantics = {
   },
 };
 
+/** An array of non-empty strings; empty is allowed and admits nothing. */
+function isLabelList(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string" && x.length > 0);
+}
+
+/** The members of `a` also in `b`, in `a`'s order, each once; `undefined` when none. */
+function commonMembers(a: JsonValue, b: JsonValue): JsonValue | undefined {
+  const inB = new Set(b as string[]);
+  const out = [...new Set((a as string[]).filter((x) => inB.has(x)))];
+  return out.length > 0 ? out : undefined;
+}
+
+/** The candidate's members are all among the reference's, compared as exact strings. */
+function membersWithin(c: JsonValue, r: JsonValue): boolean {
+  const inR = new Set(r as string[]);
+  return (c as string[]).every((x) => inR.has(x));
+}
+
+/**
+ * `data_classification`: the action applies only to data whose
+ * classification label is among the named values, compared as exact strings.
+ * Every label the operation touches must be named; data with no established
+ * label is refused. An empty list admits no data.
+ */
+const DATA_CLASSIFICATION: Semantics = {
+  valid: isLabelList,
+  noBroader: membersWithin,
+  // The common members; an empty result has no intersection.
+  intersect: commonMembers,
+  satisfied: (v, facts) => {
+    const labels = facts.dataClassification;
+    if (!Array.isArray(labels) || labels.length === 0) return false;
+    const allowed = new Set(v as string[]);
+    return labels.every((l) => typeof l === "string" && allowed.has(l));
+  },
+};
+
 const SEMANTICS = {
   resource_issued_after: RESOURCE_ISSUED_AFTER,
   resource_issued_before: RESOURCE_ISSUED_BEFORE,
   tenant: TENANT,
   time_window: TIME_WINDOW,
   recipient_domain: RECIPIENT_DOMAIN,
+  data_classification: DATA_CLASSIFICATION,
 } as const satisfies Record<string, Semantics>;
 
 /** A Common Constraint key whose semantics this module defines. */

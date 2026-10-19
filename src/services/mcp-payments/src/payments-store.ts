@@ -23,6 +23,7 @@ CREATE TABLE invoices (
   payee_account TEXT NOT NULL,
   status TEXT NOT NULL,
   issued_at TEXT,
+  classification TEXT,
   version INTEGER NOT NULL DEFAULT 1
 ) STRICT;
 CREATE TABLE vendor_remittance (
@@ -72,6 +73,13 @@ export interface Invoice {
    * absent (`null`) when the record carries none, which satisfies neither.
    */
   issued_at?: string | null;
+  /**
+   * @spec resource-access#initial-common-constraints (#1266): the
+   * classification label this service assigned the invoice's data. The
+   * authoritative fact `data_classification` reads; absent (`null`) when the
+   * record carries none, which satisfies no classification bound.
+   */
+  classification?: string | null;
   version: number;
 }
 
@@ -104,10 +112,10 @@ export class PaymentsStore {
     const v = this.db.prepare("INSERT INTO vendors (id, name, status, tenant) VALUES (?, ?, ?, ?)");
     for (const x of vendors) v.run(x.id, x.name, x.status, x.tenant ?? null);
     const i = this.db.prepare(
-      "INSERT INTO invoices (id, vendor_id, amount, currency, payee_account, status, issued_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO invoices (id, vendor_id, amount, currency, payee_account, status, issued_at, classification) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     );
     for (const x of invoices) {
-      i.run(x.id, x.vendor_id, x.amount, x.currency, x.payee_account, x.status, x.issued_at ?? null);
+      i.run(x.id, x.vendor_id, x.amount, x.currency, x.payee_account, x.status, x.issued_at ?? null, x.classification ?? null);
     }
   }
 
@@ -186,6 +194,11 @@ export class PaymentsStore {
   /** Change an invoice's recorded issuance instant (test hook for a changed authoritative fact: bumps version). */
   setInvoiceIssuedAt(id: string, issuedAt: string | null): void {
     this.db.prepare("UPDATE invoices SET issued_at = ?, version = version + 1 WHERE id = ?").run(issuedAt, id);
+  }
+
+  /** Change an invoice's classification label (test hook for a changed authoritative fact: bumps version). */
+  setInvoiceClassification(id: string, classification: string | null): void {
+    this.db.prepare("UPDATE invoices SET classification = ?, version = version + 1 WHERE id = ?").run(classification, id);
   }
 
   /** Change the tenant a vendor's record names (test hook for a changed authoritative fact: bumps version). */

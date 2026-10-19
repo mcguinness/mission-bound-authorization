@@ -1124,7 +1124,13 @@ interface RefusalEstablished {
 type TargetObject = {
   type: string;
   id: string;
-  properties?: { vendor_id?: string; vendor_ids?: string[]; issued_at?: string; tenant?: string };
+  properties?: {
+    vendor_id?: string;
+    vendor_ids?: string[];
+    issued_at?: string;
+    tenant?: string;
+    data_classification?: string;
+  };
 };
 
 export class Pep {
@@ -1438,6 +1444,8 @@ export class Pep {
           // The tenant that owns the invoice is its vendor's, from the vendor
           // record, whose version the parameter digest also binds.
           ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
+          // The invoice's own classification label, from its record.
+          ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
         },
       };
     } else if (mapping.bindsVendorScope) {
@@ -1541,6 +1549,9 @@ export class Pep {
           ? { resourceIssuedAt: resourceObj.properties.issued_at }
           : {}),
         ...(resourceObj.properties?.tenant !== undefined ? { tenant: resourceObj.properties.tenant } : {}),
+        ...(resourceObj.properties?.data_classification !== undefined
+          ? { dataClassification: [resourceObj.properties.data_classification] }
+          : {}),
         // `time_window` reads this PEP's own clock, at this check; every
         // later use is held to the permit's `valid_until`, which the PDP caps
         // at the window's end (PERMIT_USE_CHECKS).

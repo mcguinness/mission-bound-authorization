@@ -177,6 +177,13 @@ export interface EvaluationRequest {
        * reads it, and an absent value never satisfies it.
        */
       tenant?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the
+       * classification label of the data the action targets, from the
+       * resource's own labels, never from the request. The
+       * `data_classification` bound reads it; an absent label satisfies none.
+       */
+      data_classification?: string;
     };
   };
   action: {
@@ -1332,6 +1339,9 @@ async function evaluateInner(
       ? { resourceIssuedAt: req.resource.properties.issued_at }
       : {}),
     ...(typeof req.resource.properties?.tenant === "string" ? { tenant: req.resource.properties.tenant } : {}),
+    ...(typeof req.resource.properties?.data_classification === "string"
+      ? { dataClassification: [req.resource.properties.data_classification] }
+      : {}),
     // `time_window` reads this PDP's own clock at the decision, never a
     // request member; the permit's `valid_until` carries the window's end to
     // every later use (step 8a's ceiling).

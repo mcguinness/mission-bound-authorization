@@ -311,6 +311,57 @@ describe("derivation, projection and intake over recipient_domain (@spec resourc
   });
 });
 
+describe("derivation, projection and intake over data_classification (@spec resource-access#initial-common-constraints)", () => {
+  const dc = (v: string[]) => ({ data_classification: v });
+
+  it("a proposal omitting the ceiling's labels inherits them; one naming some derives the common labels", () => {
+    expect(deriveAuthoritySet(intent, policy([entry(dc(["internal", "public"]))]), [entry()])).toEqual([
+      entry(dc(["internal", "public"])),
+    ]);
+    expect(
+      deriveAuthoritySet(intent, policy([entry(dc(["internal", "public"]))]), [entry(dc(["internal", "secret"]))]),
+    ).toEqual([entry(dc(["internal"]))]);
+  });
+
+  it("refuses a proposal sharing no label with the ceiling, or proposing none, never omitting it", () => {
+    for (const proposed of [["secret"], ["Internal"], []]) {
+      const e = refusal(() =>
+        deriveAuthoritySet(intent, policy([entry(dc(["internal"]))]), [entry(dc(proposed))]),
+      );
+      expect(e.code, JSON.stringify(proposed)).toBe("invalid_authorization_details");
+      expect(e.message, JSON.stringify(proposed)).toMatch(/data_classification values have no intersection/);
+    }
+  });
+
+  it("projection keeps the common labels and drops a fragment sharing none", () => {
+    expect(projectThroughEffective([entry(dc(["internal", "secret"]))], [entry(dc(["internal"]))])).toEqual([
+      entry(dc(["internal"])),
+    ]);
+    expect(projectThroughEffective([entry(dc(["secret"]))], [entry(dc(["internal"]))])).toEqual([]);
+  });
+
+  it("intake refuses a value that is not an array of non-empty strings", () => {
+    for (const bad of ["internal", [""], [3]]) {
+      const e = refusal(() =>
+        validateAuthorityProposal(
+          JSON.stringify([{ type: "mission_resource_access", resource: R, actions: ["invoices.read"], constraints: { data_classification: bad } }]),
+          [R],
+        ),
+      );
+      expect(e.code, JSON.stringify(bad)).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("scope projection and the attenuation root mapping refuse a classification-bound entry", () => {
+    const mapping = {
+      rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
+      mandatory_controls: {},
+    };
+    expect(scopeValueSafeForEntry(mapping, entry(dc(["internal"])))).toBe(false);
+    expect(() => mapAuthorityToTools([entry(dc(["internal"]))])).toThrow(/unknown constraint 'data_classification'/);
+  });
+});
+
 describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;
