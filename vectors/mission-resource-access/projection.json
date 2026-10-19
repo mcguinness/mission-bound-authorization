@@ -1,0 +1,214 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "projection",
+  "description": "Items 3, 9 and 11: capability declaration and scope projection",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "pj-01",
+      "description": "projection omitted by the metadata carrier, declared true in deployment documentation",
+      "role": "authorization-server",
+      "requires": [
+        "transformation-capabilities"
+      ],
+      "check": "capability-declaration",
+      "input": {
+        "carriers": [
+          {
+            "carrier": "authorization_details_types_metadata",
+            "mission_transformation_capabilities": {}
+          },
+          {
+            "carrier": "deployment-documentation",
+            "projection": true
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "declared",
+        "reason": "an omitted member falls through to the next carrier",
+        "projection": true
+      },
+      "refs": [
+        "#1258 item 9"
+      ]
+    },
+    {
+      "id": "pj-02",
+      "description": "projection undeclared everywhere; scope-only target; no other entry projects safely",
+      "role": "authorization-server",
+      "requires": [
+        "transformation-capabilities",
+        "scope-projection"
+      ],
+      "check": "issuance",
+      "input": {
+        "projection": "undeclared",
+        "target": "scope-only",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse-issuance",
+        "reason": "no applicable carried entry supplies a safe projection"
+      },
+      "refs": [
+        "#1258 item 9",
+        "D444"
+      ]
+    },
+    {
+      "id": "pj-03",
+      "description": "projection undeclared for this type; another applicable entry of a declared type projects safely",
+      "role": "authorization-server",
+      "requires": [
+        "transformation-capabilities",
+        "scope-projection"
+      ],
+      "check": "issuance",
+      "input": {
+        "projection": "undeclared",
+        "target": "scope-only",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          },
+          {
+            "type": "other_declared_type",
+            "safe_projection": "invoices:read"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "issue",
+        "reason": "an independently safe alternative entry supplies the projection"
+      },
+      "refs": [
+        "#1258 item 9",
+        "D444"
+      ]
+    },
+    {
+      "id": "pj-04",
+      "description": "A requested scope value that cannot be granted",
+      "role": "authorization-server",
+      "requires": [
+        "transformation-capabilities",
+        "scope-projection"
+      ],
+      "check": "issuance",
+      "input": {
+        "projection": "undeclared",
+        "requested_scope": "invoices:read",
+        "target": "authorization-details"
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an explicitly requested ungrantable scope follows the error rules",
+        "error": "invalid_scope"
+      },
+      "refs": [
+        "#1258 item 9"
+      ]
+    },
+    {
+      "id": "pj-05",
+      "description": "A prefix entry projected to a narrower resource whose rights stay within the entry",
+      "role": "authorization-server",
+      "requires": [
+        "scope-projection",
+        "resource-match.prefix"
+      ],
+      "check": "projection",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "mapping": {
+          "scope": "orders.2026:read",
+          "resource": "https://api.example/orders/2026",
+          "rights_within_entry": true
+        }
+      },
+      "expected": {
+        "outcome": "safe",
+        "reason": "a narrower resource is safe only when its complete effective rights remain a subset"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "pj-06",
+      "description": "A prefix entry projected to a scope the target extends to an ancestor",
+      "role": "authorization-server",
+      "requires": [
+        "scope-projection",
+        "resource-match.prefix"
+      ],
+      "check": "projection",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders/2026",
+          "resource_match": "prefix",
+          "actions": [
+            "invoices.read"
+          ]
+        },
+        "mapping": {
+          "scope": "orders:read",
+          "resource": "https://api.example/orders"
+        }
+      },
+      "expected": {
+        "outcome": "unsafe",
+        "reason": "a broader ancestor is not a safe projection of a narrower prefix entry"
+      },
+      "refs": [
+        "#1258 item 11"
+      ]
+    },
+    {
+      "id": "pj-07",
+      "description": "narrowing true claimed while one initial Common Constraint is unimplemented",
+      "role": "authorization-server",
+      "requires": [
+        "transformation-capabilities"
+      ],
+      "check": "capability-declaration",
+      "input": {
+        "implemented_constraints": [
+          "max_amount",
+          "requires_action_approval"
+        ],
+        "claim": {
+          "narrowing": true
+        }
+      },
+      "expected": {
+        "outcome": "invalid-claim",
+        "reason": "narrowing true requires all nine initial Common Constraints"
+      },
+      "refs": [
+        "#1258 item 3"
+      ]
+    }
+  ]
+}

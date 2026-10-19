@@ -67,12 +67,12 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "266fab74ee1b8508695cea5eb438eb9ea941c461",
-    "content_sha256": "e73617015b3d18111dd093afbefa9b177eddb3f62d022ff311af05e572d53afa"
+    "revision": "2a8a1253dcd8f2f32eeeda927f38c616f668405a",
+    "content_sha256": "fdbe56fb50bfe9fc7632cc1cb387aa72550c3ed6793b16cb76072a78ad976720"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "df1d75d02215348437fadf08bd038e7e5cf991d1",
-    "content_sha256": "fc7b29135eb6262142a2b95f66278efd13ed3b93bae686f2a1f2a4af4b8a3768"
+    "revision": "4e2f0ea1118418979179798fa3fa2deffd4f883a",
+    "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -7574,6 +7574,54 @@
     }
    ],
    "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role), at the token endpoint on the cross-org exchange and on the JWT customizer backstop by direct invocation (unit: no oidc-provider mint carries act today; the endpoint witness follows a same-Mission delegation mint, #869). It does not establish every deployment route: the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. The transaction endpoint applies the same gate before admitting a workflow (txn-endpoint.test.ts, delegated routing of transaction tokens); that coverage is reviewed separately."
+  },
+  {
+   "id": "core.rs-enforcement.unenforceable-entry-no-authority",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST treat as providing no authority any applicable entry whose type it does not implement, or whose type-defined enforcement it cannot complete",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an applicable entry the resource server cannot fully enforce contributes no authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 2. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
+  },
+  {
+   "id": "core.rs-enforcement.whole-request-single-entry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "unless another applicable entry that it can fully enforce authorizes the whole request on its own, and MUST NOT combine parts of several entries to authorize one request",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request is authorized only by one fully enforceable entry covering all of it; parts of entries never combine"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 2. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants."
   },
   {
    "id": "core.introspection.composite-active",
@@ -34502,6 +34550,918 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "resource-access.resource-matching.target-independent",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "MUST establish the target independently of the entries the request presents, and MUST NOT choose a target because an entry would then match",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the resource server derives the operation target from its documented operation contract independently of the presented entries; an entry naming another identifier never changes the target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447). Cases rm-rpc-01..07 and rm-resolve-01..04 in vectors/mission-resource-access/resource-matching.json. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+  },
+  {
+   "id": "resource-access.resource-matching.refuse-unresolved-target",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "MUST refuse the operation when it cannot establish one unambiguous target",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a missing or ambiguous operation contract refuses the operation, even when an entry naming the metadata identifier is present"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447 disposition 1). Cases rm-resolve-01, rm-resolve-02. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+  },
+  {
+   "id": "resource-access.resource-matching.execute-matched-target",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "MUST execute the operation on the target it matched",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the operation executes on the target that was matched; matching another target never authorizes the execution"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447). The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+  },
+  {
+   "id": "resource-access.resource-matching.no-metadata-fallback",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "There is no fallback to the protected resource's metadata identifier",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "without an explicit service-level operation contract, an entry naming the metadata identifier does not match an operation whose target is finer"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447 disposition 1). Cases rm-rpc-02, rm-resolve-01, rm-resolve-03. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+  },
+  {
+   "id": "resource-access.resource-matching.exact-no-reserialization",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "a matcher MUST NOT normalize either operand by parsing and reserializing it",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an exact entry and an operation target that differ by host case, default port, percent spelling, trailing slash, or query do not match; they match only as identical strings after JSON decoding of the entry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447 dispositions 2 and 3). Cases rm-exact-01..12. The reference resource servers do not establish an operation target (cases skipped: operation-target)."
+  },
+  {
+   "id": "resource-access.resource-matching.exact-documented-spelling",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "an issuer SHOULD emit an `exact` `resource` in the resource server's documented target spelling",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization server issuing an exact entry spells its resource as the resource server's documented target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447 disposition 2). The reference issues the ceiling's spelling; no documented-spelling source is modeled."
+  },
+  {
+   "id": "resource-access.resource-matching.prefix-boundary",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "If the base path ends in `/`, a descendant's path begins with the complete base path; otherwise it begins with the base path followed by `/`.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a /orders/ base admits itself and /orders/123 but neither /orders nor /ordersx"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 items 1 and 10 (D447 disposition 4). Cases rm-prefix-01..15. Prefix matching is not implemented; the reference refuses prefix input (#1264)."
+  },
+  {
+   "id": "resource-access.resource-matching.prefix-query-path-only",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "The target's query is excluded from this path comparison only",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a query does not affect the prefix path test but still takes part in target resolution, action and constraint enforcement; a query that selects another resource is resolved to it first"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04."
+  },
+  {
+   "id": "resource-access.subset.same-matcher",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "The authorization server MUST make this resource comparison with the same matcher, over the same URI forms, that resource servers use to enforce the entries",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "whenever the subset test finds a candidate's resource set within the reference's, every target the candidate admits is also admitted by the reference under enforcement"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 1 (D447 disposition 5). The reference compares exact resources literally, but no resource server implements operation-target matching, so consistency is not established."
+  },
+  {
+   "id": "resource-access.subset.exact-under-exact-literal",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "an `exact` A under an `exact` B: A.`resource` equals B.`resource` literally",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an exact candidate is within an exact reference only when the two resources are identical strings"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-01: an exact candidate is within an exact reference with the identical resource",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-02: an exact candidate differing only in host case is not within an exact reference",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-03: an exact candidate carrying a query its exact reference lacks is not within it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447). Helper-level witness (isSubsetEntry through the case reader); it establishes no endpoint behavior. Each cited case is proved by a defect: refusing identical resources fails sub-res-01, a case-insensitive comparison fails sub-res-02, and comparing without the query fails sub-res-03. The prefix combinations (sub-res-04..08) are skipped."
+  },
+  {
+   "id": "resource-access.subset.false-equivalent-absent",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "unless B's value is one K's definition makes equivalent to omitting the member",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a candidate omitting requires_action_approval is within a reference carrying false, and not within one carrying true; recorded entries and commitments are unchanged"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-ra-01: a candidate omitting requires_action_approval is within a reference carrying false",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-ra-02: a candidate omitting requires_action_approval is not within a reference carrying true",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 5. Helper-level witness (isSubsetEntry through the case reader). Each cited case is proved by a defect: treating a false reference as requiring the member fails sub-ra-01, and removing the true-reference check fails sub-ra-02."
+  },
+  {
+   "id": "resource-access.subset.candidate-only-key",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "A key present only in A narrows A only when it has defined semantics and the resource server serving A.`resource` can enforce it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a candidate-only constraints key without defined, enforceable semantics is not narrowing, and the entry is refused rather than derived"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/unsupported-constraint-keys.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 6. Witnessed at direct derivation (an unsupported proposal key refuses); cases der-08 (positive) and der-09 in derivation.json run through the reader. Helper-level."
+  },
+  {
+   "id": "resource-access.subset.inherited-allowed-delegates",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "its `allowed_delegates` MUST be no wider than the parent entry's, and where the parent entry's eligibility inherits the authorization server's policy decision",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived list never admits a delegate the inherited policy decision denies, whether the parent entry has no list or carries one over a policy-deferring ceiling"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 8, #1277 review finding 2 (D454). Not met by the reference: derivation (narrowMatchers) and subset comparison (matchersSubset) adopt a candidate list where the reference has none and then evaluate only the list (#1275). Cases dg-inherit-01, 02, 04, 05 and 07 skipped."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.inherited-eligibility",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "A derived entry's `allowed_delegates` restricts eligibility; it never replaces an obligation the derivation inherits.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with depth within bounds, a delegate the list permits but the inherited policy denies is not eligible, one the policy permits but the list omits is not eligible, and one both permit is eligible"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 8 (D444 multi-hop case), #1277 review finding 4. Cases dg-inherit-01 (policy denial alone), dg-inherit-02 (list denial alone) and dg-inherit-05 (both permit) skipped (delegation.policy; #1275)."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.unresolved-context-narrows-out",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "Where it cannot resolve either, the entry narrows out of the delegated token.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose approved entry or inherited-policy provenance cannot be resolved narrows out of the delegated token, even where the list and policy would permit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 8, #1277 review finding 2 (D454). Cases dg-inherit-03 (approved entry) and dg-inherit-06 (provenance) skipped (delegation.inherited-eligibility)."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.provenance-from-initial-derivation",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "An approved entry derived from a ceiling entry without `allowed_delegates` inherits the policy decision even when the approved proposal added a list",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegate named by a list the proposal added over a policy-deferring ceiling entry is not eligible when the policy denies it, and is eligible when both permit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1277 review finding 2 (D454). Not met by the reference, which adopts the proposal list and evaluates only it (#1275). Cases dg-inherit-04 and dg-inherit-07 skipped."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.provenance-retained",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "records, when it derives the Authority Set, which approved entries inherit the policy decision, and retains that provenance with the Mission",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every later exchange evaluates eligibility against the approved entry and its retained inherited-policy provenance, never against a presented token alone"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1277 review finding 2 (D454). Authorization-server-held state; its witness is the eligibility decision at a later exchange (dg-inherit-04, 06, 07). The reference retains no such provenance (#1275)."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.matcher-conjunction",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "matching-allowed-delegates",
+   "text": "A delegate matcher that carries both `sub` and `sub_profile` is satisfied only when the delegate satisfies both.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
+     "name": "delegatePermitted — sub exact match > requires BOTH fields when a matcher carries sub AND sub_profile",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
+     "name": "delegatePermitted — sub exact match > permits if ANY matcher in the list matches",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1258 item 11. Helper-level witness (delegatePermitted); the gate reaches HTTP only at the ICA continuation exchange. Cases dg-match-01..04 run through the reader; dg-match-03 fails when sub is ignored for a matcher that also names a profile."
+  },
+  {
+   "id": "resource-access.common-constraints.recipient-every",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "An action addressed to several recipients is within the bound only when every recipient is.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action addressed to recipients both inside and outside recipient_domain is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 11. recipient_domain is not implemented (#1266); case cc-recipients-every skipped."
+  },
+  {
+   "id": "resource-access.value-space.time-window-instants",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "value-space-comparison",
+   "text": "`time_window` `not_before` and `not_after` values are compared as the instants they denote after normalization to UTC",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "time_window bounds compare as UTC instants, so offsets and trailing subsecond zeros do not change the result"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 11. time_window is not implemented (#1266); cases cc-time_window-* skipped."
+  },
+  {
+   "id": "resource-access.type.action-whole-value",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "Each value is an action identifier whose whole value matches `[A-Za-z0-9_.:-]+`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action value containing a character outside the grammar, anywhere in the value, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 11. The reference PAR validator checks actions are strings, not the grammar."
+  },
+  {
+   "id": "resource-access.scope-projection.narrower-resource",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "or to a narrower resource within it whose complete effective rights remain a subset of the entry's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a prefix entry projects to a narrower resource only when the value's complete effective rights stay within the entry; a broader ancestor is never safe"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 11. Prefix entries are not implemented; cases pj-05, pj-06 skipped."
+  },
+  {
+   "id": "resource-access.rs-enforcement.no-fragment-combination",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST NOT combine parts of several entries to authorize one request, or borrow authority from an entry it cannot fully enforce",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request no single fully enforceable entry covers is refused, even when parts of several entries would together cover it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 2. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; the credential bound evaluates entries whole. Cases fc-01..03 skipped."
+  },
+  {
+   "id": "resource-access.rs-enforcement.refuse-without-covering-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST refuse the request when no such entry exists",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with no applicable, fully enforceable entry covering the whole request, the request is refused; an entry the resource server cannot fully enforce contributes no authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 2. Cases fc-01, fc-02 skipped (rs.alternative-grants)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.token-wide-failure",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "rejects the token whatever its entries carry",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token failing token-wide validation is rejected regardless of its entries"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 2. Case fc-04 skipped (rs.enforcement)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.delegation-may-disregard",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "so a resource server MAY disregard it, together with any member a companion profile adds to it",
+   "role": "RS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "an entry carrying delegation is enforced on its other members; delegation does not make it unenforceable"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 4. Case fc-06 skipped (rs.member-roles)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "makes the entry one the resource server cannot fully enforce",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry carrying a member the resource server does not recognize, or one whose obligations it cannot fulfill, contributes no authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 4, #1277 review finding 1 (D454). The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json are skipped (rs.alternative-grants, rs.extension-members)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.defined-extension-enforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "leaves the entry fully enforceable when the resource server, or a runtime layer acting for it, implements that specification and fulfills every obligation it places on enforcement",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carrying a member another specification defines for this type is enforced, not refused, when that specification's enforcement obligations are fulfilled"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members)."
+  },
+  {
+   "id": "resource-access.rs-enforcement.locations-unenforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "rs-enforcement",
+   "text": "An entry carrying the {{RFC9396}} common `locations` field, which this type does not use ({{entry-validation}}), is likewise one the resource server cannot fully enforce.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry carrying locations contributes no authority at the resource server"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 4, kept separate from the member rule (D454). Case fc-07 skipped (rs.alternative-grants)."
+  },
+  {
+   "id": "resource-access.entry-validation.locations-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "The authorization server refuses an entry carrying `locations` with the `invalid_authorization_details` error code.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry carrying the RFC 9396 locations field is refused with invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 4; refusal approved in the #1277 review (D454). Not met by the reference: PAR admits locations and derivation drops it (#1278). Case fc-08 skipped (refusal.locations)."
+  },
+  {
+   "id": "resource-access.common-constraints.no-drop-any-key",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "common-constraints",
+   "text": "MUST NOT be dropped while the entry survives",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a constraints key the authorization server cannot narrow, registered or deployment-defined, in the ceiling or the candidate, is never dropped from a surviving entry"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/unsupported-constraint-keys.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > configured-mapping mode refuses a wholly unregistered constraints key on a directly-supplied ceiling entry",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/unsupported-constraint-keys.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > configured-mapping mode refuses a registered-but-unimplemented Common Constraint key on a directly-supplied ceiling entry",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 7. Witnessed at direct derivation; PAR intake and the config loaders also refuse. Cases der-06, der-07, cc-unsupported-extension run through the reader. Helper-level."
+  },
+  {
+   "id": "resource-access.common-constraints.refuse-not-omit",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "common-constraints",
+   "text": "The authorization server MUST instead refuse the derivation",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an unsupported constraint refuses the derivation; the entry is never omitted to repair it"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/unsupported-constraint-keys.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 7, aligned with the binding's refusal over silent drop. Witnessed at direct derivation. Helper-level."
+  },
+  {
+   "id": "resource-access.transformation-capabilities.narrowing-all-nine",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "transformation-capabilities",
+   "text": "An authorization server MUST NOT declare `narrowing` as `true` unless it implements these rules for every Common Constraint",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a narrowing true declaration is made only by an authorization server implementing all nine initial Common Constraints"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities and implements two of the nine (#1266). Case pj-07 skipped."
+  },
+  {
+   "id": "resource-access.transformation-capabilities.undeclared-per-carrier",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "transformation-capabilities",
+   "text": "Omitting `projection` from one carrier leaves it undeclared by that carrier only",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability omitted by one carrier is taken from the next carrier in the binding's order"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities)."
+  },
+  {
+   "id": "resource-access.transformation-capabilities.scope-only-refusal-conditional",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "transformation-capabilities",
+   "text": "refuses issuance to a `scope`-only target only when no other applicable carried entry supplies a safe projection",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with projection undeclared everywhere, a scope-only issuance is refused when no other applicable entry projects safely and succeeds through one that does"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
