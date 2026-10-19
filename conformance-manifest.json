@@ -11,20 +11,20 @@
     "content_sha256": "9ab0d9cd14e281ccac15fd887f0ae1b20ff77492f0add5fd102f0d9083fd62c1"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
-    "content_sha256": "bc31ca55bf2c3ce25d67d5ef1f2200962781df53b4e6590f2b8bd617da154593"
+    "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
+    "content_sha256": "ae89986f38d532ba29d87e8b863b32d352e7448dd3e0671f38f0c8322af22b2e"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
-    "content_sha256": "5b376783f4b883229928a7f632dcfe6ac07adc97ceb4afcf6e47d300cd0792fa"
+    "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
+    "content_sha256": "3e7462342b75647433c40a7036f01662df07ef3001552b75ac2e1852707eb6d9"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
-    "content_sha256": "8a3a2543f85ab7d5e59ca56c9e378a73a6d2e97bd100956c637f6d2fb58e21d8"
+    "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
+    "content_sha256": "36fcee97ecdb5710311c56671b389259fd55bf3934b4833d1f1f0f4ac507bd3b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "cf1df8b8a9cb1a34f14edd167fab926c9a0fe7b1",
-    "content_sha256": "ce52e5606cce029d19088a87c9d9a2e5d75fd25b91aae8d2b163b359058f06e8"
+    "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
+    "content_sha256": "cc8617aaf61a34d8f501734344cafbdfaac8baee97f27c45af59af553c676b1a"
    },
    "draft-mcguinness-mission-substrate.md": {
     "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
@@ -16357,6 +16357,351 @@
    "notes": "Configured demo now publishes its actual remote decision boundary and exercises it across HTTP, or declares no boundary in co-resident mode. The fixture is a same-process loopback hop, not TLS/key isolation. Keep partial: the broader deployment's complete mediation and production trust establishment remain audit properties."
   },
   {
+   "id": "runtime.boundary-identifier.pep-establishes-independently",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier",
+   "text": "The PEP MUST establish the boundary a request is for from its trusted routing or configuration, independently of the credential's audience values, their order, and the Authority Set entries.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two PEPs at one enforcement boundary produce the same boundary identifier for a request whether the credential names the boundary directly or through an alias, in any audience order, and whatever entries it presents; the audience check validates against that boundary and never selects it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier.pdp-accepts-from-authorized-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier",
+   "text": "A PDP MUST accept a boundary identifier only from a PEP authorized for that boundary ({{decision-channel}}).",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a decision request naming a boundary the authenticated requesting PEP is not authorized for is refused before evaluation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier.same-identifier-everywhere",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier",
+   "text": "The decision inputs, the permit binding ({{permit-binding}}) and any permit cache, Decision Evidence, Execution Evidence, pre-decision Refusal Records, and evidence-key authorization ({{I-D.draft-mcguinness-mission-runtime-evidence}}) MUST use that same identifier, byte for byte.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for one request, the decision request's audience, the permit binding and cache key, the Decision Evidence, Execution Evidence and Refusal Record audience, and the boundary the evidence key is authorized for are the same byte string; a denial carries it without any permit"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier.unestablished-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier",
+   "text": "A PEP that cannot establish the boundary MUST refuse the request and MUST NOT supply a boundary identifier taken from the credential, a default, or a guess.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request for which no enforcement boundary is established is refused, and no boundary identifier derived from the credential's audience, a default, or a guess reaches a decision request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier.unestablished-no-evidence-record",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier",
+   "text": "the deployment can log it by its own means, but MUST NOT emit it as a runtime enforcement evidence record ({{evidence}}), every form of which names a boundary.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a refusal with no established boundary produces no Decision Evidence, Execution Evidence, or Refusal Record, and no record carries an invented audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The runtime core's evidence section and the runtime evidence companion's Refusal Record `audience` definition restate this rule; treated as duplicates of this row."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.versioned-statement",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "A deployment that changes a boundary's identifier MUST publish a new version of its Enforcement Scope Statement naming the old and new identifiers, the credential profile's audience aliases for each, scoped as that profile requires ({{I-D.draft-mcguinness-mission-runtime-oauth}}), the evidence signing keys authorized for each, and the effective cutover.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a boundary identifier change is published as a new Enforcement Scope Statement version naming the old and new identifiers, the audience aliases per credential-profile scope, the evidence keys authorized for each identifier, and the effective cutover; no new record member, credential claim, or credential type carries it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.trusted-source",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "Each PEP, PDP, and evidence verifier for the boundary MUST obtain that version from a source it trusts for the deployment's statements.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a statement version from a source the PEP, PDP, or evidence verifier does not trust for the deployment's statements is not applied"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.retain-earlier-versions",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "The deployment MUST retain each earlier version, with its key authorizations, for as long as evidence produced under it must verify.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a superseded statement version and its key authorizations remain available to verifiers for the evidence retention window of the evidence produced under it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.ordered-cutover",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "The deployment MUST complete the cutover in this order:",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "consumers (PDPs, permit caches, evidence verifiers) accept the new version before any producer uses the new identifier; admission under the old identifier stops and each in-flight operation is drained, or refused or restarted under the new identifier; old permits and cache entries are invalidated; then every producer for the boundary switches together"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.old-permits-invalidated",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "Every permit and permit-cache entry bound to the old identifier is invalidated, including those for cacheable reads and for later phases of a compound action ({{compound-actions}}).",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after the cutover a permit or cached permit bound to the old identifier, including a cacheable read and a later phase of a compound action, releases no effect"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.producers-switch-together",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "New decisions, permits, and evidence then carry only the new identifier; no component chooses between the two, and no permit comparison accepts both.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after the cutover every new decision request, permit, and record for the boundary carries the new identifier, and a permit comparison never matches the old identifier for a current request"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.late-evidence-historical",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "Evidence delivered after the cutover for an operation admitted before it keeps that operation's facts and old identifier. It is verified as historical evidence, never accepted as a permit.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a late record for an operation admitted before the cutover carries the old identifier and the original facts, verifies under the earlier statement version, and never authorizes an effect"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The Execution Evidence `audience` definition restates this rule; treated as a duplicate of this row."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.correlation-rewrites-nothing",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "Correlating records across versions through the declared old and new identifiers happens after verification and MUST NOT change a signed payload or extend a key's authorization to another boundary.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "cross-version correlation runs only on verified records, leaves every signed payload byte-identical, and never lets a key verify records for a boundary its version does not authorize it for"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.alias-never-rewrites-entries",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "The alias map never rewrites an approved entry's `resource` or a commitment over it.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approved entry's resource and its commitments are byte-identical before and after the cutover, and an alias never makes an entry match a different operation target"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.boundary-identifier-change.incompatible-entry-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "boundary-identifier-change",
+   "text": "Where an entry cannot keep its original operation-target authority under the new identifier, the deployment MUST refuse the action or obtain explicit reauthorization through the normal Mission creation or derivation path, and MUST NOT rewrite an existing approval or integrity preimage.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action under an entry whose original operation-target authority the new identifier does not preserve is refused unless a new approval or derivation authorizes it; no existing approval or integrity preimage changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
    "id": "runtime.classification.high-consequence-must-be-gated",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "classification",
@@ -17513,6 +17858,213 @@
     }
    ],
    "notes": "Both MUSTs are now fully asserted, but at the PEP/RS resource-operation boundary, not inside a PDP unit test (this row's original misfit reasoning stands: evaluate() is never invoked on either path, so there is no decision-request event to observe). runtime-refusal-backlog.test.ts's new test signs a token with no `mission` claim, drives it through the full in-memory mediated channel, and shows the call denies invalid_credential with ZERO evidence recorded -- proving evaluate() (and so the PDP) was never asked, not merely that the caller's return value says false. mcp-channel.test.ts's 3b (CI-only) shows the same for a bad-signature token. Kept partial rather than tested: the checker's endpoint-level coverage rule requires a mapping whose surface matches the row's OWN declared surface (decision-request) for `tested`, and reclassifying this row's surface to resource-operation to reach it is a separate, deliberate manifest-structure decision this slice defers rather than makes as a side effect of adding tests (see the Wave 2 PR description)."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.boundary-is-resource-identifier",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "On this profile, the runtime core's boundary identifier ({{I-D.draft-mcguinness-mission-runtime}}, Section \"Enforcement Boundary Identifier\") is the resource identifier of the protected resource the PEP guards ({{Section 1.2 of RFC9728}}), spelled exactly as its protected resource metadata `resource` value ({{Section 2 of RFC9728}})",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the boundary identifier a PEP carries is the exact spelling of the guarded protected resource's RFC 9728 resource value, whether supplied by trusted static configuration or by metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.metadata-validated",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "A PEP that retrieves the metadata validates it under {{Section 3.3 of RFC9728}} and compares identifiers as {{Section 6 of RFC9728}} requires.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "retrieved metadata whose resource value is not identical to the expected identifier is not used, and identifiers are compared code point by code point without normalization"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. Conditional on retrieving metadata; a PEP supplied by trusted static configuration fetches none."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.alias-from-trusted-config-only",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "The PEP MUST NOT accept an alias mapping that the request or the token supplies.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an aud value is accepted as an alias only through deployment configuration scoped to the validated issuer and token profile; a mapping asserted by the request or the token, or configured for another issuer, names no boundary"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.refusals",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "The PEP MUST refuse, as a token-validation failure before any PDP decision ({{token-validation}}), a token whose `aud` is absent or malformed or names the boundary neither directly nor through an alias, and a token whose issuer and token profile have an alias that maps to more than one protected resource.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token with absent, malformed, or nonmatching aud, an aud that names the boundary only through another issuer's alias, or an issuer and token profile with an ambiguous alias is refused as a token-validation failure, with no PDP decision"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The direct nonmatching arm is already witnessed under runtime.token-validation.audience-and-pop (a token whose audience does not name this resource is refused); the alias, malformed, issuer-confusion, and ambiguity arms are not."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.no-selection-from-aud",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "It MUST NOT select a boundary from `aud`: not the first member, not a serialization of the array, and not whichever member an alias maps first.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an aud array the PEP checks membership of the established boundary; permutations and duplicate aliases for the same boundary yield the same boundary identifier, permit binding, and evidence"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.other-recipients",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "A member that names another recipient does not authorize this boundary and does not by itself invalidate the token.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "an otherwise valid token whose aud array also names other recipients is accepted at a boundary it names, and is refused at a boundary only another member names"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.stricter-profile-kept",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "A token profile whose audience rule is stricter, for example one that requires a single audience, keeps that rule.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a token profile that requires a single audience still refuses a multi-audience token although the membership rule would accept it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.carries-boundary-not-aud",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "The decision, the permit binding, and the evidence carry the boundary identifier, never an `aud` value or an alias.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a token naming the boundary through a logical alias yields the same decision-request audience, permit binding, and evidence audience as one naming the resource identifier directly"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "runtime.oauth.boundary-audience.alias-across-change",
+   "spec": "draft-mcguinness-mission-runtime-oauth.md",
+   "anchor": "boundary-audience",
+   "text": "A token whose `aud` names the old identifier stays acceptable through a declared alias, under its unchanged validation and lifetime, and the alias never rewrites an entry's `resource`.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a boundary identifier change, a token naming the old identifier is accepted only through an alias the new statement version declares, under its original validation and lifetime, and its entries are matched against their original resource values"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
   },
   {
    "id": "runtime.oauth.authority-operation-target-match",
@@ -19137,7 +19689,7 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permit binds the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, authorizing entry, policy-view version, and a lifetime control"
+    "normative": "a permit binds the Mission reference, issuer, boundary identifier, sub, client_id, actor context, confirmation key, action, resource, authorizing entry, policy-view version, and a lifetime control"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -19149,7 +19701,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test. #1276: the resource item includes the operation target an authority-entry match uses; no test establishes that a permit binds the target."
+   "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test. #1276: the resource item includes the operation target an authority-entry match uses; no test establishes that a permit binds the target. #853: the list binds the boundary identifier in place of \"the credential audience or protected resource\"."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -20307,11 +20859,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a decision or refusal record always contains the result, request time, and a parameter_digest or privacy-preserving digest, plus the Mission, token, actor, action, authorization-detail, decision-identifier, and policy-view fields when available and trusted"
+    "normative": "a decision or refusal record always contains the result, the boundary identifier, request time, and a parameter_digest or privacy-preserving digest, plus the Mission, token, actor, action, authorization-detail, decision-identifier, and policy-view fields when available and trusted"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#853: the boundary identifier moved to the always-required list; the credential issuer stays conditional."
   },
   {
    "id": "runtime.evidence.no-describing-unverified-claims-as-authenticated",
@@ -22985,7 +23538,7 @@
    "id": "authzen.context-audience-freshness.audience-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-audience-freshness",
-   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The PEP's audience or protected-resource identifier.",
+   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The boundary identifier of the enforcement boundary the PEP established for the request, byte for byte",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -22997,11 +23550,12 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the request always carries audience (a string) at resource.properties.audience, the PEP's audience or protected-resource identifier"
+    "normative": "the request always carries audience (a string) at resource.properties.audience: the boundary identifier the PEP established for the request, byte for byte; on OAuth the protected resource's identifier, never an aud value or alias"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#853 (D487): re-quoted for the boundary identifier; no test asserts that two PEPs at one boundary carry the same value."
   },
   {
    "id": "authzen.context-audience-freshness.state-observation-required-by-placement",
@@ -27942,6 +28496,52 @@
     }
    ],
    "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
+  },
+  {
+   "id": "evidence.integrity.historical-version",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "A verifier MUST verify a record's unchanged signed bytes under the version that authorizes the key the `kid` selects for the record's `audience` value.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a record from before a boundary identifier change verifies with its signed bytes unchanged under the statement version that authorizes its kid for its audience, and is rejected under a version that does not"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+  },
+  {
+   "id": "evidence.integrity.version-not-guessed",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "decision-evidence-integrity",
+   "text": "Neither `evaluated_at` nor the verifier's own clock selects that version; where the declared versions do not determine one boundary and key authorization for that pair, verification fails.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the declared versions admit the audience and kid pair under more than one boundary or key authorization, or under none, the record is not verified, whatever its evaluated_at or the verifier's clock"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",
