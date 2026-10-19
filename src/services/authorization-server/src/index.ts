@@ -24,6 +24,7 @@ import {
   APPROVAL_FLOOR,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
+import { randomBytes } from "node:crypto";
 import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
@@ -1055,9 +1056,9 @@ export async function buildAuthorizationServer(opts: {
   // as-continuation signs the continuation ID-JAG (an identity grant gets its
   // own signing key, discoverable on the AS jwks_uri AND trusted by the RAS).
   const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
-  // @spec #831: this process's start, the floor for single-use artifacts whose
-  // consumption is recorded only in memory (AdapterOptions.processStartS).
-  const processStartS = Math.floor((opts.now?.() ?? new Date()).getTime() / 1000);
+  // @spec #831: this process's boot identity, carried by single-use artifacts
+  // whose consumption is recorded only in memory (AdapterOptions.processBootId).
+  const processBootId = randomBytes(12).toString("base64url");
   // @spec mission#introspection (issue #541 P1-4) — the AT signing key is the
   // ONE key a test legitimately needs the private half of, to craft
   // adversarial at+jwt fixtures against the strict introspection resolver
@@ -1514,7 +1515,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.dpopProofReplay ? { dpopProofReplay: opts.dpopProofReplay } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
-    processStartS,
+    processBootId,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(opts.progressive ? { progressive: validateProgressiveDrawdownOptions(opts.progressive) } : {}),
   });

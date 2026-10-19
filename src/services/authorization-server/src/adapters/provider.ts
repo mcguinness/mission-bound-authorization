@@ -757,14 +757,15 @@ export interface AdapterOptions {
    */
   capabilities?: ReadonlySet<ProviderCapability>;
   /**
-   * @spec #831: the second this AS process started (its clock, floored). A
+   * @spec #831: this AS process's boot identity, random per build. A
    * single-use artifact this AS signed, whose consumption it records only in
-   * memory, is refused when it was issued before this second: with signing
-   * keys that survive a restart (a key ring) it would otherwise verify again
-   * after the restart, its consumption forgotten. Today that is the Dispatch
-   * Handoff grant. Absent, no floor applies.
+   * memory, names the process that issued it and is refused by any other:
+   * with signing keys that survive a restart (a key ring) it would otherwise
+   * verify again after the restart, its consumption forgotten. An identity,
+   * not a start time, so a restart within the second of issuance is still
+   * caught. Today that is the Dispatch Handoff grant. Absent, no check applies.
    */
-  processStartS?: number;
+  processBootId?: string;
   /**
    * @spec progressive#in-ceiling-expansion: the policy-adjudicated drawdown
    * path, default off. Absent, an approval decision's ceiling members are

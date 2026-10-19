@@ -223,14 +223,29 @@ async function handedOff(instance: Instance, extra: Record<string, string> = {})
 }
 
 /** Sign `claims` with the AS token key (a grant or token this AS never minted). */
-async function forge(claims: Record<string, unknown>, typ: string, exp?: number): Promise<string> {
+async function forge(claims: Record<string, unknown>, typ: string, exp?: number, jti?: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   return new SignJWT(claims)
     .setProtectedHeader({ alg: TOPOLOGY.keys.asToken.alg, kid: TOPOLOGY.keys.asToken.kid, typ })
     .setIssuedAt(now)
     .setExpirationTime(exp ?? now + 120)
-    .setJti(crypto.randomUUID())
+    .setJti(jti ?? crypto.randomUUID())
     .sign(tokenKey);
+}
+
+/**
+ * A `jti` naming this AS process (#831): a handoff grant carries its issuing
+ * process's boot identity, and the redemption refuses any other, so a forged
+ * grant that is to reach a later check takes the prefix of a real one.
+ */
+let bootPrefix: string | undefined;
+async function thisProcessJti(): Promise<string> {
+  if (bootPrefix === undefined) {
+    const jti = decodeJwt(await grantFor(await dispatchInstance())).jti as string;
+    bootPrefix = jti.slice(0, jti.indexOf(".") + 1);
+    expect(bootPrefix).toMatch(/^dho_[A-Za-z0-9_-]+\.$/);
+  }
+  return `${bootPrefix}${crypto.randomUUID()}`;
 }
 
 /** A forged handoff grant for `missionId`, naming `clientId`. */
@@ -251,6 +266,7 @@ async function forgeGrant(
     },
     over.typ ?? DISPATCH_HANDOFF_TYP,
     over.exp,
+    await thisProcessJti(),
   );
 }
 
@@ -646,13 +662,15 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
   });
 });
 
+/** A real handoff grant for `instance`, from the exchange. */
+async function grantFor(instance: Instance, extra: Record<string, string> = {}): Promise<string> {
+  const h = await handoff(instance.token, extra);
+  const hb = (await h.json()) as { access_token: string };
+  expect(h.status, JSON.stringify(hb)).toBe(200);
+  return hb.access_token;
+}
+
 describe("Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption)", () => {
-  async function grantFor(instance: Instance, extra: Record<string, string> = {}): Promise<string> {
-    const h = await handoff(instance.token, extra);
-    const hb = (await h.json()) as { access_token: string };
-    expect(h.status, JSON.stringify(hb)).toBe(200);
-    return hb.access_token;
-  }
 
   it("wrong recipient: a client the grant does not name is refused, and the grant stays redeemable by the Agent", async () => {
     const instance = await dispatchInstance();

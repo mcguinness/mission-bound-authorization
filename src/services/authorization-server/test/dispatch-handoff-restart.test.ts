@@ -1,11 +1,13 @@
 /**
  * @spec mission-template#dispatch-handoff (single use), #831: a key ring
  * keeps the AS's signing keys across a restart, but the record of a consumed
- * Dispatch Handoff grant is in memory. Without a floor, a grant redeemed
- * before a restart would verify and redeem again after it. The AS refuses
- * any handoff grant issued before its process started, so neither a
- * redeemed grant nor an unredeemed one minted before the restart is
- * redeemable after it (a deliberate, documented invalidation).
+ * Dispatch Handoff grant is in memory. Without a check, a grant redeemed
+ * before a restart would verify and redeem again after it. Each grant names
+ * the process that issued it (a boot identity in its `jti`), and the AS
+ * refuses a grant another process issued, so neither a redeemed grant nor an
+ * unredeemed one minted before the restart is redeemable after it (a
+ * deliberate, documented invalidation), even when the restart lands in the
+ * same clock second as the grant.
  *
  * The exposure needs both durable parts: a key ring, and a file-backed
  * kernel that keeps the dispatched instance's Mission across the restart.
@@ -44,12 +46,13 @@ interface Running {
   clientKeys: Record<Party, CryptoKey>;
 }
 
-async function boot(ring: string, kernelFile: string): Promise<Running> {
+async function boot(ring: string, kernelFile: string, now?: () => Date): Promise<Running> {
   const as = await buildAuthorizationServer({
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     signingKeys: { ring },
     kernelStore: { file: kernelFile },
+    ...(now ? { now } : {}),
   });
   const server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -102,8 +105,12 @@ async function tokenRequest(running: Running, party: Party, keys: Keys, params: 
 
 const json = async (res: Response) => (await res.json()) as Record<string, unknown>;
 
-describe("Dispatch Handoff single use across a restart with durable signing keys (@spec mission-template#dispatch-handoff, #831)", () => {
-  it("refuses, after a restart, both a grant redeemed before it and one never redeemed: the consumption record does not survive, so nothing issued before the process started redeems", async () => {
+/**
+ * Dispatch an instance, take two handoff grants, redeem one, restart on the
+ * same key ring and kernel file, and present both again. `now` pins both
+ * boots' clocks; absent, the restart waits into a later second.
+ */
+async function presentAcrossRestart(now?: () => Date): Promise<void> {
     const dir = mkdtempSync(join(tmpdir(), "handoff-restart-"));
     const ring = join(dir, "keys", "ring.json");
     const kernelFile = join(dir, "kernel.db");
@@ -111,7 +118,7 @@ describe("Dispatch Handoff single use across a restart with durable signing keys
     const dispatcherDpop = await generateKeyPair("ES256", { extractable: true });
     const agentDpop = await generateKeyPair("ES256", { extractable: true });
 
-    const first = await boot(ring, kernelFile);
+    const first = await boot(ring, kernelFile, now);
     let redeemed: string;
     let unredeemed: string;
     try {
@@ -151,9 +158,10 @@ describe("Dispatch Handoff single use across a restart with durable signing keys
       await shutdown(first);
     }
 
-    // The restart lands in a later second than every grant's iat.
-    await new Promise((r) => setTimeout(r, 1100));
-    const second = await boot(ring, kernelFile);
+    // Without a pinned clock, the restart lands in a later second than every
+    // grant's iat; with one, both boots observe the same second.
+    if (!now) await new Promise((r) => setTimeout(r, 1100));
+    const second = await boot(ring, kernelFile, now);
     try {
       for (const grant of [redeemed, unredeemed]) {
         const res = await tokenRequest(second, "agent", agentDpop, { grant_type: CHILD_JWT_BEARER_GRANT_TYPE, assertion: grant });
@@ -161,11 +169,21 @@ describe("Dispatch Handoff single use across a restart with durable signing keys
         expect(res.status, JSON.stringify(body)).toBe(400);
         expect(body.error).toBe("invalid_grant");
         expect(body.error_description).toBe(
-          "dispatch handoff grant was issued before this process started; single-use state is not retained across restarts",
+          "dispatch handoff grant was issued by an earlier process; single-use state is not retained across restarts",
         );
       }
     } finally {
       await shutdown(second);
     }
+}
+
+describe("Dispatch Handoff single use across a restart with durable signing keys (@spec mission-template#dispatch-handoff, #831)", () => {
+  it("refuses, after a restart, both a grant redeemed before it and one never redeemed: the consumption record does not survive, so nothing an earlier process issued redeems", async () => {
+    await presentAcrossRestart();
+  }, 60_000);
+
+  it("refuses them when the restart lands in the same clock second as the grants: the check is the issuing process, not its start time", async () => {
+    const sameSecond = new Date();
+    await presentAcrossRestart(() => sameSecond);
   }, 60_000);
 });
