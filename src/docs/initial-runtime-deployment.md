@@ -87,7 +87,7 @@ acceptance item witnessed (D436).
 | State | For this co-located target, the declared local committed read (D293 narrows D284's "authoritative Status"); per-class staleness, skew, permit and execution bounds; source ownership and unavailable behavior | The PEP and PDP read the AS kernel's committed record in process (`loadView`, `stack.ts:1016-1023`; the statement's state source is `kernel-committed load_view`, placement `pep`). That is the authoritative record behind Status, but it is not the Mission Status operation, introspection or Signals. Bounds and fail-closed behavior: §4 | Source accepted (D293); one unavailable-state witness missing (§4) | Separated PEP or PDP: #1101, which gates only a separated-deployment claim |
 | Policy | Conjunction of token authority, current effective Mission authority and independently administered Resource policy | Current effective Mission authority is enforced and tested. Token authority is enforced at the PEP and the PDP: the PEP refuses an action outside the verified token's own `authorization_details` before the PDP, and carries that authority to the PDP, which enforces it as its own bound (D341); the token-authority gate is met (D411). Independent Resource policy is enforced by the PDP over stored OpenFGA entitlements, for the subject and the authenticated client within the vendor's tenant; it is met for this target (#828 closed, D436; §5) | Token authority met (D411); Resource policy met (D436) | Token authority: none (D411); introspection validates as the resource does (D402). Resource policy: none (#828 closed, D436); the §5 disclosure remains (live witnesses run only in CI) |
 | Evidence | Runtime/Decision Base and explicitly enabled evidence capabilities; emitters, verifiers, retention, failure carriers; missing telemetry is `indeterminate` | Decision Evidence, Refusal Records and Execution Evidence (§6). The `evidence` extension is not enabled, so there is no receipt issuer | Partial | none: the running reconciler settles a reported emission gap from the ledger (§7) |
-| Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain, the PEP write reservations and, when configured, the AS signing key ring are durable files; every other store is in memory, the Mission kernel included (§7). The declared reconciler runs in the launched PEP process; a restarted process cannot reconcile a prior one's claims, a stated bound (§7) | Partial | #250, #831 |
+| Persistence | Every store, its transaction or acceptance boundary, and restart and reconciliation behavior | Only the PDP claim domain, the PEP write reservations and, when configured, the AS signing key ring and the Mission kernel (`MISSION_KERNEL_STORE`, §12) are durable files; every other store is in memory (§7). The declared reconciler runs in the launched PEP process; a restarted process cannot reconcile a prior one's claims, a stated bound (§7) | Partial | #250, #831 |
 | Claims | Per-action limits only; execution and transaction handling for applicable operations; no aggregate cap, compromise containment or unattended prohibited-class exception | §8 | Partial | §8 |
 
 **AS capability set (D332).** The target extends the issuance-only floor
@@ -237,9 +237,9 @@ ordinary class (`missionBoundFactsFrom`, `server.ts:623-656`;
 `the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route`.
 Before the PDP is asked, the PEP refuses `out_of_authority` for an action the
 credential's own authority does not cover, one whole entry at a time, on the
-resource, action, vendors and amount it resolved; an approval requirement is
-honored only with a verified transaction credential's approval
-(`pep.ts:1631-1662`):
+resource, action, vendors and amount it resolved (`pep.ts:1631-1662`); an
+entry's approval requirement and discharge condition reach the PDP with the
+credential's authority, and the PDP decides them (D312, `evaluate.ts:1785-1800`):
 `on the same broad Mission and allowing policy, the credential alone decides a vendor lookup (@spec runtime#input-authority, #825) > over %s, refuses an invoice-only token before the PDP and permits a broad token` and
 `configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission`.
 A token that fails the profile is answered 401 at the HTTP route, before the
@@ -357,7 +357,7 @@ the connector effect, then evidence, then claim settlement.
 | `TransactionEngine` | in memory (`services/mcp-payments/src/transaction.ts:41`) | redemption is three statements, not one transaction | lost, with every redemption record. Every process reuses the constant epoch `demo-epoch` (`demo/src/stack.ts:1055`), so D39's prior-epoch rejection (`transaction.ts:60-61`) never fires: a restarted engine has no record of earlier redemptions. The PEP's `instanceEpoch` is also `demo-epoch` (`stack.ts:1092`) and is never read |
 | Connectors, txn stores, evidence retention | in memory | one insert per operation key; atomic first use of a `txn` | lost |
 | Payments store, DPoP replay cache, actor records | in memory, seeded per boot | none | lost or reseeded |
-| Mission kernel (Mission records, lifecycle events, the continuation and delegation-family tables) and the provider's grants, codes and refresh tokens | in memory: the launcher opens no file-backed kernel, and the provider uses oidc-provider's memory adapter (`provider-integration-port.md` §1) | the floor's | lost: no Mission, grant or refresh token survives (`control-plane-deployment.md`, Restart inventory) |
+| Mission kernel (Mission records, lifecycle events, the continuation and delegation-family tables) and the provider's grants, codes and refresh tokens | in memory by default; `MISSION_KERNEL_STORE` keeps the kernel in a file, with a key ring (§12). The provider uses oidc-provider's memory adapter (`provider-integration-port.md` §1) | the floor's | without the kernel file, lost: no Mission, grant or refresh token survives (`control-plane-deployment.md`, Restart inventory); with it, the Missions survive and the provider's grants, codes and refresh tokens do not (§12) |
 | AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring file named by `MISSION_KEY_RING`, or generated per boot under `MISSION_EPHEMERAL_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with a ring; regenerated otherwise. Rotation and resource-side JWKS refresh: #831 |
 | Other keys (the PEP's `rs-txn` and evidence signers, the PDP's `pdp-decision-evidence`, client keys) | generated per boot under fixed kids (`channel-key-matrix.md`) | none | regenerated (#831) |
 
@@ -403,7 +403,7 @@ That test uses another member; no test names `max_budget`.
 
 **Unmet obligations by owner:**
 
-- Token authority (D411) and Resource policy (#828 closed, D436) are met for this target. High-risk approval rests on the upstream Approver login (#1320, D496), witnessed on the assembled target (§11, §12); the owner records #253's high-risk approval gate.
+- Token authority (D411) and Resource policy (#828 closed, D436) are met for this target. High-risk approval rests on the upstream Approver login (#1320, D496), witnessed on the assembled target (§11, §12); D513 records #253's high-risk approval gate met.
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance stays with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
 - Separated deployment only: #1101 (state source under D293).
@@ -479,8 +479,8 @@ lifecycle vectors at `7d91c7d4`, against CI's pinned OpenFGA image.
 
 Both required gates are met for this target: token authority (D411) and
 Resource policy (#828, D436). High-risk approval rests on the upstream
-Approver login (#1320, D496), witnessed on the assembled path below; the
-owner records that gate.
+Approver login (#1320, D496), witnessed on the assembled path below; D513
+records that gate met.
 
 | Vector | Existing witness | Gap |
 |---|---|---|
@@ -750,12 +750,12 @@ is #253 Sketch step 1, and its §11 is step 5. The runtime integration port
 (step 2) is [provider-integration-port.md](provider-integration-port.md) §5,
 which maps the overlay's obligations to their hooks in the port's eight
 columns. The acceptance pack (step 3) runs on `pnpm as-native`, and §10 maps
-each of its vectors to a witness or an owner. Open before #253 closes:
+each of its vectors to a witness or an owner. High-risk approval is met
+(D513), witnessed through the upstream Approver login (#1320, §11). Open
+before #253 closes:
 
-1. **High-risk approval:** witnessed through the upstream Approver login
-   (#1320, §11); the owner records the gate.
-2. **Revoke during issuance:** #250.
-3. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
+1. **Revoke during issuance:** #250.
+2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
    independently and separately pinned.
 
 Disclosed residuals that make no claim: the launcher wrappers' tests (#1330)
