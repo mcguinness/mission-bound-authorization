@@ -103,8 +103,8 @@
     "content_sha256": "d88875b2ad94d43f21401d0f0e23bb669f0cc66ae639665a31ea3adebee25f12"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "0c4fdf27a58e16890092b37d859192c70cf320df",
-    "content_sha256": "bb15460e0ab46b170be1dcda8fcd594be09fd8b39c1b258810ece17e19730925"
+    "revision": "4528548b9ad889e8e72080d9a042ca61370184dd",
+    "content_sha256": "c1fde7fd879dbd4cd458756d195a41f2c0f3f9850a168a1f30c860acc5e1d3d0"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -42702,7 +42702,7 @@
    "id": "child-delegation.child-actor-eligibility.list-origin-keeps-list-rule",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "child-actor-eligibility",
-   "text": "An entry derived from a reference entry that names its child actors keeps the list rule.",
+   "text": "An entry derived from a reference entry that names its child actors is decided by its list alone; the child-creation policy is not consulted for it.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
