@@ -560,6 +560,56 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     expect(activatingCommits(successorId)).toHaveLength(1);
   });
 
+  it("after completion, a fresh request on the superseded predecessor carries mission_error superseded, and a retry once the successor is suspended, then revoked, carries the successor's own value (@spec mission#issuance-gating, #1179)", async () => {
+    const pred = await issueMission(["payments:invoice.read"]);
+    const crid = crypto.randomUUID();
+    const widened = ["payments:invoice.read", "payments:remittance.send"];
+    const opened = await tokenRequest(expansionParams(pred.accessToken, crid, widened));
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(ob.error, JSON.stringify(ob)).toBe("authorization_pending");
+    as.expansionDeferrals.approve(ob.deferral_code as string, {
+      approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
+      approvalEventId: `apev-idem-${crypto.randomUUID()}`,
+      approvedUntil: FAR_EXP,
+    });
+    const poll = await tokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      deferral_code: ob.deferral_code as string,
+    });
+    const polled = (await poll.json()) as { mission_id?: string };
+    expect(poll.status, JSON.stringify(polled)).toBe(200);
+    const successorId = polled.mission_id as string;
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
+    type Refusal = { error?: string; error_description?: string; mission_error?: string; access_token?: string };
+
+    // A new creation_request_id reaches the predecessor's own lifecycle check.
+    const fresh = await tokenRequest(expansionParams(pred.accessToken, crypto.randomUUID(), widened));
+    const fb = (await fresh.json()) as Refusal;
+    expect(fresh.status, JSON.stringify(fb)).toBe(400);
+    expect(fb.error).toBe("invalid_request");
+    expect(fb.error_description).toBe("predecessor mission is terminated");
+    expect(fb.mission_error).toBe("superseded");
+    expect(fb.access_token).toBeUndefined();
+
+    // The completed operation's retry diagnoses the successor, never the predecessor.
+    for (const [transition, state, missionError] of [
+      ["suspend", "suspended", "suspended"],
+      ["revoke", "terminated", "revoked"],
+    ] as const) {
+      as.kernel.transition(successorId, transition);
+      const retry = await tokenRequest(expansionParams(pred.accessToken, crid, widened));
+      const rb = (await retry.json()) as Refusal;
+      expect(retry.status, JSON.stringify(rb)).toBe(400);
+      expect(rb.error).toBe("invalid_request");
+      expect(rb.error_description).toBe(`recorded successor mission is ${state}`);
+      expect(rb.mission_error).toBe(missionError);
+      expect(rb.access_token).toBeUndefined();
+    }
+    expect(activatingCommits(successorId)).toHaveLength(1);
+  });
+
   it("predecessor cross-check != the subject_token-resolved Mission -> invalid_grant; a MATCHING cross-check leaves the fingerprint/idempotency behavior unchanged", async () => {
     const pred = await issueMission(["payments:invoice.read"]);
     const widened = ["payments:invoice.read", "payments:remittance.send"];

@@ -104,6 +104,7 @@ import {
   gateErrorToMissionError,
   intentErrorToOidc,
   InvalidAuthorizationDetails,
+  lifecycleMissionError,
   MissionGrantError,
   newResourceServer,
   SCOPE_DECIDED_AT_SAVE,
@@ -220,6 +221,31 @@ function refuseContinuationGate(
   txError(ctx, 400, error, `continuation Mission gate refused issuance (${reason})`);
   const missionError = gateErrorToMissionError(reason, observed);
   if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
+}
+
+/**
+ * @spec mission#issuance-gating (#1154, #1179): refuse a Token Exchange whose
+ * Mission is not active with `invalid_request`, and `mission_error` for that
+ * Mission where a value applies: `suspended`, or its termination reason.
+ * `observed` is the whole observed record, not only its `state`, so the
+ * termination reason survives. Callers reach this only after client
+ * authentication and possession, for a Mission the caller may learn about.
+ */
+function refuseInactiveMission(ctx: KoaContextWithOIDC, observed: MissionRecord, description: string): void {
+  txError(ctx, 400, "invalid_request", description);
+  const missionError = lifecycleMissionError(observed);
+  if (missionError) (ctx.body as Record<string, unknown>).mission_error = missionError;
+}
+
+/**
+ * @spec expansion#verification-order step 4 (#1179 review): whether the
+ * authenticated client is `mission`'s own client, the acting agent this
+ * deployment authorizes to expand it or to create a child under it.
+ * Possession of a token for the Mission does not authorize the presenter, so
+ * a refusal discloses the Mission's state only to this client.
+ */
+function isMissionClient(ctx: KoaContextWithOIDC, mission: MissionRecord | undefined): boolean {
+  return mission !== undefined && (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId === mission.client_id;
 }
 
 /**
@@ -1168,8 +1194,10 @@ export async function handleAsyncDelegationExchange(
   // Step 3: require the Mission ACTIVE, an intra-domain target, and a confined subset.
   const active = kernel.applyExpiry(record);
   if (active.state !== "active") {
-    // @spec mission#issuance-gating (#1154): a Token Exchange refuses a Mission that is not active with invalid_request.
-    txError(ctx, 400, "invalid_request", `mission ${missionId} is ${active.state}`);
+    // @spec mission#issuance-gating (#1154, #1179): a Token Exchange refuses a
+    // Mission that is not active with invalid_request. The caller is the
+    // Mission's approved agent holding its handle, so it gets mission_error.
+    refuseInactiveMission(ctx, active, `mission ${missionId} is ${active.state}`);
     return;
   }
   // Intra-domain only: the target MUST be served by this issuer. A cross-domain
@@ -1308,7 +1336,14 @@ export async function handleAsyncDelegationExchange(
       // @spec mission#issuance-gating (#1154): a lifecycle refusal on this
       // exchange is invalid_request; the derivation cap stays invalid_grant.
       const lifecycle = e.reason === "mission_not_active" || e.reason === "mission_expired";
-      const body = { error: lifecycle ? "invalid_request" : "invalid_grant", error_description: e.message };
+      // @spec mission#issuance-gating (#1179): mission_error rides the stored
+      // failure as well, so a replay to the same client and key repeats it.
+      const missionError = gateErrorToMissionError(e.reason, kernel.observedRecord(record.id));
+      const body = {
+        error: lifecycle ? "invalid_request" : "invalid_grant",
+        error_description: e.message,
+        ...(missionError ? { mission_error: missionError } : {}),
+      };
       idem.failReserved(client.clientId, creationRequestId, { status: 400, body });
       ctx.status = 400;
       ctx.body = body;
@@ -1530,7 +1565,7 @@ async function recoverAsyncDelegation(
   }
   const active = opts.kernel.applyExpiry(record);
   if (active.state !== "active") {
-    txError(ctx, 400, "invalid_request", `recorded mission is ${active.state}`);
+    refuseInactiveMission(ctx, active, `recorded mission is ${active.state}`);
     return;
   }
   if (!grantId || !target || !opts.familyStore?.resolve(grantId)) {
@@ -2018,10 +2053,11 @@ async function retrieveCarryoverResult(
     }
     throw e;
   }
-  // Ordinary current lifecycle check before any credential is minted.
-  const state = opts.kernel.applyExpiry(retrieved.replacement).state;
-  if (state !== "active") {
-    txError(ctx, 400, "invalid_request", `replacement mission is ${state}`);
+  // Ordinary current lifecycle check before any credential is minted. The
+  // retriever is the replacement's own child actor, so it gets mission_error.
+  const replacement = opts.kernel.applyExpiry(retrieved.replacement);
+  if (replacement.state !== "active") {
+    refuseInactiveMission(ctx, replacement, `replacement mission is ${replacement.state}`);
     return;
   }
   if (!opts.childGrantKey || !opts.childGrantKid || !opts.childGrantAlg) {
@@ -2363,9 +2399,24 @@ async function recoverChildCreation(
     txError(ctx, 400, "invalid_grant", "recorded child mission not found");
     return;
   }
-  const state = opts.kernel.applyExpiry(child).state;
-  if (state !== "active") {
-    txError(ctx, 400, "invalid_request", `recorded child mission is ${state}`);
+  const observed = opts.kernel.applyExpiry(child);
+  if (observed.state !== "active") {
+    // @spec mission#issuance-gating (#1179): the lifecycle refusal stays first,
+    // but the child's state is disclosed only to the parent's own client, and
+    // only when the presented token's authority, actor and depth admit the
+    // recorded child. The fingerprint does not bind the token, so a narrower
+    // token from the same client and key reaches this check. The fan-out count
+    // is not a disclosure test: it counts live siblings, which no longer
+    // describe a terminal child.
+    const parentClient = isMissionClient(ctx, child.parent ? opts.kernel.get(child.parent.id) : undefined);
+    if (
+      !parentClient ||
+      presentedTokenChildRefusal(opts.kernel, child.authority_set, child.client_id, child.parent?.depth ?? 1, presentedAuthority)
+    ) {
+      txError(ctx, 400, "invalid_request", "recorded child mission is not active");
+    } else {
+      refuseInactiveMission(ctx, observed, `recorded child mission is ${observed.state}`);
+    }
     return;
   }
   const recordedParent = child.parent ? opts.kernel.get(child.parent.id) : undefined;
@@ -2577,8 +2628,15 @@ export async function handleExpansionExchange(
   // The predecessor MUST be active at request time.
   const active = opts.kernel.applyExpiry(resolved.record);
   if (active.state !== "active") {
-    // @spec expansion#predecessor-active (#1154): invalid_request on the expansion exchange.
-    txError(ctx, 400, "invalid_request", `predecessor mission is ${active.state}`);
+    // @spec expansion#predecessor-active (#1154, #1179): invalid_request on the
+    // expansion exchange. Possession alone does not authorize the presenter
+    // (step 4), so the predecessor's state and mission_error go only to its
+    // own client.
+    if (isMissionClient(ctx, active)) {
+      refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
+    } else {
+      txError(ctx, 400, "invalid_request", "predecessor mission is not active");
+    }
     return;
   }
 
@@ -2994,9 +3052,15 @@ async function recoverExpansion(
     txError(ctx, 400, "invalid_grant", "recorded successor mission not found");
     return;
   }
-  const state = opts.kernel.applyExpiry(successor).state;
-  if (state !== "active") {
-    txError(ctx, 400, "invalid_request", `recorded successor mission is ${state}`);
+  // The successor's own state and mission_error, never the predecessor's, and
+  // only to its own client (the predecessor's, which it inherits).
+  const observed = opts.kernel.applyExpiry(successor);
+  if (observed.state !== "active") {
+    if (isMissionClient(ctx, successor)) {
+      refuseInactiveMission(ctx, observed, `recorded successor mission is ${observed.state}`);
+    } else {
+      txError(ctx, 400, "invalid_request", "recorded successor mission is not active");
+    }
     return;
   }
   const stored = op.delivery as { access_token?: string; exp?: number } | undefined;
