@@ -209,17 +209,23 @@ describe("a template ceiling that grants children without allowed_child_actors d
   const registry: DispatchPolicies = {
     [DISPATCH_POLICY_ID]: { version: "1", content_type: "application/json", content: '{"rule":"within the ceiling"}' },
   };
-  const templateKernel = (childCreationPolicy?: ChildCreationAuthorizationPolicy) =>
+  const templateKernel = (
+    childCreationPolicy?: ChildCreationAuthorizationPolicy,
+    ceiling: readonly AuthorityEntry[] = DERIVATION_POLICY.ceiling,
+  ) =>
     new MissionKernel({
       issuer: ISS,
-      policy: DERIVATION_POLICY as never,
-      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["worker", "orchestrator"], ["human-approver"]),
+      policy: { policy_version: DERIVATION_POLICY.policy_version, ceiling },
+      authoritySourceCatalog: testAuthoritySourceCatalog(ceiling, ["worker", "orchestrator"], ["human-approver"]),
       statusKey,
       statusKid: "as-status",
       actorProfiles: aiAgents("tmpl-child"),
       ...(childCreationPolicy ? { childCreationPolicy } : {}),
     });
-  const instanceOf = (kernel: MissionKernel) => {
+  const instanceOf = (
+    kernel: MissionKernel,
+    templateChildren: Record<string, unknown> = { max_children: 5, max_child_depth: 2 },
+  ) => {
     const store = new TemplateStore();
     const template = createTemplate(
       store,
@@ -233,7 +239,7 @@ describe("a template ceiling that grants children without allowed_child_actors d
             resource: RESOURCE,
             actions: ["payments:invoice.read"],
             constraints: { vendors: ["acme"] },
-            delegation: { max_depth: 2, children: { max_children: 5, max_child_depth: 2 } },
+            delegation: { max_depth: 2, children: templateChildren },
           },
         ],
         dispatch_policy: { id: DISPATCH_POLICY_ID, version: "1" },
@@ -285,6 +291,35 @@ describe("a template ceiling that grants children without allowed_child_actors d
       expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
     }
     expect(kernel.findChildren(instance.id)).toHaveLength(0);
+  });
+
+  it("a deployment ceiling that defers keeps its policy origin through a template ceiling that names the actors", () => {
+    const deferring: AuthorityEntry[] = [
+      {
+        type: MRA,
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { vendors: ["acme"] },
+        delegation: { max_depth: 2, children: { max_children: 5, max_child_depth: 2 } } as Delegation,
+      },
+    ];
+    const kernel = templateKernel(undefined, deferring);
+    const instance = instanceOf(kernel, { max_children: 5, max_child_depth: 2, allowed_child_actors: [{ sub_profile: "ai_agent" }] });
+    expect(childrenOf(instance.authority_set[0])?.allowed_child_actors).toEqual([{ sub_profile: "ai_agent" }]);
+    // The second derivation keeps the first one's policy origin: the
+    // template's list only restricts it.
+    expect(instance.child_actor_provenance).toEqual(["policy"]);
+    try {
+      createChildMission(kernel, {
+        parentId: instance.id,
+        intent: validateMissionIntent(JSON.stringify({ goal: "child", target_resources: [RESOURCE], expires_at: EXP })),
+        proposedAuthority: childProposal(),
+        childActor: { sub: "tmpl-child" },
+      });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as ChildDelegationError).reason).toBe("child_actor_not_allowed");
+    }
   });
 
   it("with a policy that permits the actor, the instance's list and the policy both admit it", () => {

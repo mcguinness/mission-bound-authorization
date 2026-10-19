@@ -493,6 +493,18 @@ describe("child-actor eligibility with retained provenance at the child-creation
       permits.creation.add("child-b");
       const before = sideEffects(hooked, parent.id);
       await refused(await createChild(hooked, parent, "child-b"));
+      // The parent entry's retained list refuses on its own: a presented token
+      // whose entry carries no list does not lift it.
+      const listless = await accessToken(
+        hooked,
+        parent,
+        hooked.agent,
+        parent.authority_set.map((e) => ({
+          ...e,
+          delegation: { ...e.delegation, children: { max_children: 1, max_child_depth: 2 } } as AuthorityEntry["delegation"],
+        })),
+      );
+      await refused(await createChild(hooked, parent, "child-b", { token: listless }));
       expect(sideEffects(hooked, parent.id)).toEqual(before);
       expect(creationAsks()).toHaveLength(0);
     });
