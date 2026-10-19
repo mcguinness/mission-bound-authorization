@@ -503,6 +503,22 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
       check.status === "verified" && Buffer.from(check.snapshot.content).toString("utf8"),
     ).toBe(POLICIES["drawdown-std"]?.content);
   });
+
+  it("the successor retains each entry's child-actor origin: a consented ceiling granting children without allowed_child_actors defers the child actor to policy (@spec child-delegation#fanout, #1304)", async () => {
+    const deferring = FULL_CEILING.map((e) => ({
+      ...e,
+      delegation: { ...e.delegation, children: { max_children: 5, max_child_depth: 2 } } as AuthorityEntry["delegation"],
+    }));
+    const pred = await issueMission(READ, ceilingOf("drawdown-std", deferring));
+    // Approved under the deployment ceiling, whose children grant names its actors.
+    expect(as.kernel.get(pred.missionId)?.child_actor_provenance).toEqual(["list"]);
+    const body = await drawdown(pred.accessToken, crypto.randomUUID(), READ_LIST);
+    const successor = as.kernel.get(body.mission_id) as MissionRecord;
+    // The deployment's list stays as a restriction; the consented ceiling's deferral is kept.
+    const children = successor.authority_set[0]?.delegation?.children as Record<string, unknown>;
+    expect(children.allowed_child_actors).toEqual([{ sub_profile: "ai_agent" }]);
+    expect(successor.child_actor_provenance).toEqual(["policy"]);
+  });
 });
 
 describe("approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases)", () => {

@@ -842,3 +842,15 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(activationRows(kernel)).toBe(0);
   });
 });
+
+describe("governed activation retains child-actor provenance (@spec child-delegation#fanout, #1304)", () => {
+  it("a root ceiling granting children without allowed_child_actors defers the activated entry's child actor to policy, keeping the deployment's list as a restriction", () => {
+    const deferring = { ...readEntry(), delegation: { max_depth: 2, children: { max_children: 2, max_child_depth: 2 } } };
+    const kernel = makeKernel({ doc: rootDoc({ authority_ceiling: [deferring as AuthorityEntry] }) });
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    const children = mission.authority_set[0]?.delegation?.children as Record<string, unknown>;
+    expect(children.allowed_child_actors).toEqual([{ sub_profile: "ai_agent" }]);
+    expect(mission.child_actor_provenance).toEqual(["policy"]);
+    expect(kernel.get(mission.id)?.child_actor_provenance).toEqual(["policy"]);
+  });
+});

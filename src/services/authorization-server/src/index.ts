@@ -75,6 +75,7 @@ import {
 } from "./kernel/lifecycle-idempotency.js";
 import type { DerivationPolicy, EffectiveAuthoritySource } from "./kernel/derive.js";
 import type { DelegationAuthorizationPolicy } from "./kernel/eligibility-provenance.js";
+import type { ChildCreationAuthorizationPolicy } from "./kernel/child-actor-eligibility.js";
 import type { DischargeAuthorityPolicy } from "./kernel/discharge.js";
 import { newReplayCache } from "./kernel/instance-assertion.js";
 import { MissionKernel } from "./kernel/kernel.js";
@@ -123,6 +124,7 @@ export {
   AS_SIGNING_ROLES,
   type AsSigningRole,
   initSigningKeyRing,
+  kernelStoreFromEnv,
   loadSigningKeyRing,
   SIGNING_KEY_RING_FORMAT,
   SigningKeyRingError,
@@ -292,6 +294,17 @@ export {
   type PolicyCheck,
   type RetainedOrigin,
 } from "./kernel/eligibility-provenance.js";
+export {
+  type ChildActorParent,
+  type ChildActorRefusal,
+  childActorCeilingOrigin,
+  childActorRefusal,
+  type ChildCreationAuthorizationPolicy,
+  type ChildCreationPolicyRequest,
+  DENY_ALL_CHILD_CREATION_POLICY,
+  inheritChildActorOrigins,
+  presentedChildActorPermitted,
+} from "./kernel/child-actor-eligibility.js";
 export {
   authorizationDetailsTypesMetadata,
   AUTHORIZATION_DETAILS_TYPES_METADATA,
@@ -917,6 +930,16 @@ export async function buildAuthorizationServer(opts: {
    */
   delegationPolicy?: DelegationAuthorizationPolicy;
   /**
+   * @spec child-delegation#fanout (#1304, D486): the authorization server's
+   * child-creation policy, consulted for the child actor at every creation
+   * and carryover commit where a justifying parent entry's child-actor
+   * eligibility defers to it (its `children` grant derives from one without
+   * `allowed_child_actors`), and read at each call. Never asked for an entry
+   * whose eligibility is its list. Absent, the reference policy denies every
+   * child actor. Distinct from an entry's `child_creation_policy` reference.
+   */
+  childCreationPolicy?: ChildCreationAuthorizationPolicy;
+  /**
    * @spec mission#authorization-derivation: override the config-shipped
    * derivation policy ({@link DERIVATION_POLICY}) the kernel derives every
    * Authority Set under. A deployment (or a test) whose ceiling differs from
@@ -1302,6 +1325,8 @@ export async function buildAuthorizationServer(opts: {
     actorProfiles: { ...ACTOR_PROFILES, ...(opts.actorProfiles ?? {}) },
     // @spec resource-access#delegate-eligibility: deny-all unless supplied.
     ...(opts.delegationPolicy ? { delegationPolicy: opts.delegationPolicy } : {}),
+    // @spec child-delegation#fanout (#1304): deny-all unless supplied.
+    ...(opts.childCreationPolicy ? { childCreationPolicy: opts.childCreationPolicy } : {}),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.governedPolicyApproval ? { governedPolicyApproval: opts.governedPolicyApproval } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
