@@ -36344,6 +36344,50 @@
    "notes": "#1258 item 11. The reference PAR validator checks actions are strings, not the grammar."
   },
   {
+   "id": "resource-access.type.emit-enforced-constraint-keys",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "the authorization server SHOULD emit for a given `resource` only `constraints` keys that the resource server serving it is known to understand and enforce",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a resource whose enforced keys are known (by registration, deployment policy or its mission_constraints_supported), the authorization server emits no entry carrying another constraints key",
+    "local": "the RAS applies this by deployment policy (resourceConstraintsSupported): for a listed resource it drops whole an entry carrying an unlisted key, never stripping the key, and refuses invalid_grant without consuming the grant when no entry survives"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole an entry carrying a key the resource does not list, keeps listed keys intact, and leaves an unlisted resource as narrowed",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > refuses when no entry survives, without consuming the grant",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > malformed resourceConstraintsSupported configuration fails at startup",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1298 review (D475, D480). Partial by design, and the requirement stays a SHOULD (D480). Recorded departures: a resource not listed in the RAS's resourceConstraintsSupported keeps its narrowed entries unfiltered, and the main authorization server emits the keys its configured ceilings carry without per-resource enforcement knowledge (it does not filter by mission_constraints_supported). A resource server that cannot enforce a key still fails closed (resource-access.rs-enforcement.constraints-fail-closed). Unit-level RAS witnesses; mutations M8 (filter passes everything), M9 (strip the key instead of dropping the entry) and M10 (configuration validation skipped) each fail them."
+  },
+  {
    "id": "resource-access.scope-projection.narrower-resource",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "scope-projection",
