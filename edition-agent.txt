@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-19T04:55:15Z
-Source repository commit: 54cc6127120017a8a615bc6d34e5c4348218a7dc
+Generated: 2026-10-19T05:03:13Z
+Source repository commit: 956f11a700a2b89e854e9c7f634416dd6225de30
 Member count: 9
 
 Reading order:
@@ -19987,7 +19987,11 @@ Table of Contents
       configuration, legal holds, service invariants, and risk policy;
 
    *  the runtime enforcement evidence fields and privacy treatment for
-      decision and refusal records; and
+      decision and refusal records;
+
+   *  the identifier the resource records with each executed effect,
+      which outcome reconciliation uses to attribute the effect to its
+      action (Section 11); and
 
    *  a profile identifier and version, so a change to any of the above
       is detectable and two independent implementations can name the
@@ -21021,21 +21025,27 @@ Table of Contents
    the deadline, determines the result: an outcome the component cannot
    establish stays undetermined-outcome, is escalated under the declared
    alerting obligation, and is never synthesized into a terminal result.
-   Reconciliation survives the Mission: once the Mission is non-active,
-   it MAY record the outcome of work already initiated and MUST NOT
-   admit a new effect under that Mission (an action already executing
-   follows the run-to-completion rule of Section 9.4, unchanged).
-   Consumed and reserved decision identifiers and idempotency claims
-   persist across Mission lifecycle transitions for at least the
-   reconciliation window and any declared tombstone horizon
-   (Section 9.3): termination does not erase them, so a post-termination
-   retry resolves against the recorded claim rather than executing
-   again.  An unresolved claim never becomes reusable through time
-   alone: when the window closes on an undetermined outcome, the claim
-   converts to a non-reusable indeterminate tombstone, retained for at
-   least the declared idempotency horizon and released only by an
-   evidence-recorded operational resolution, never by expiry into a
-   fresh claim.
+   Matching attributes an effect to its action: the component MUST NOT
+   record an outcome from resource state that the resource does not
+   attribute to the action through an identifier recorded with the
+   effect (the permit or evaluation identifier, the idempotency claim,
+   or a provider operation identifier returned for the request).  State
+   alone, such as an invoice now shown as paid, can have another cause
+   and leaves the outcome undetermined.  Reconciliation survives the
+   Mission: once the Mission is non-active, it MAY record the outcome of
+   work already initiated and MUST NOT admit a new effect under that
+   Mission (an action already executing follows the run-to-completion
+   rule of Section 9.4, unchanged).  Consumed and reserved decision
+   identifiers and idempotency claims persist across Mission lifecycle
+   transitions for at least the reconciliation window and any declared
+   tombstone horizon (Section 9.3): termination does not erase them, so
+   a post-termination retry resolves against the recorded claim rather
+   than executing again.  An unresolved claim never becomes reusable
+   through time alone: when the window closes on an undetermined
+   outcome, the claim converts to a non-reusable indeterminate
+   tombstone, retained for at least the declared idempotency horizon and
+   released only by an evidence-recorded operational resolution, never
+   by expiry into a fresh claim.
 
 11.2.  Mission Receipt
 
@@ -22193,6 +22203,11 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Execution-Outcome Evidence: reconciliation records an outcome only
+      from an effect the resource attributes to the action through an
+      identifier recorded with it, never from resource state alone; the
+      Resource Server runtime profile names that identifier (#1271).
 
    *  Mission Binding Establishment: names the AAuth realization of a
       credential-carried Mission reference beside the OAuth one, limited
