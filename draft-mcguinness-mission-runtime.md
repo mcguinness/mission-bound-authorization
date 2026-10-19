@@ -3716,7 +3716,7 @@ in this manifest ({{policy-view}}).
     },
     "artifact": {
       "digest":
-        "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tX",
+        "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tU",
       "encoding": "application/vnd.example.policy-engine+bin"
     }
   }

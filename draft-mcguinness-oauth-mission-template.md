@@ -935,6 +935,16 @@ on the continuation profile's async delegation transport
 is a derivation from the instance, gated and counted as the issuance
 profile requires ({{I-D.draft-mcguinness-oauth-mission}}).
 
+A Dispatcher that is itself the selected Agent (the same authenticated
+client) already holds the instance's access token, bound to its own
+key, and skips the handoff. It obtains its delegation handle through
+the continuation profile's handle exchange
+({{I-D.draft-mcguinness-oauth-mission-continuation}}): a no-actor
+self-exchange that presents the instance's access token, proves
+possession of that token's key, and names its own `client_id` as
+`audience`. That exchange is a derivation from the instance, gated and
+counted as the issuance profile requires.
+
 # Prohibited Classes {#prohibited-classes}
 
 Some authority classes are too consequential to activate without a
@@ -1294,6 +1304,10 @@ IANA action. Following the restraint of the sibling profiles:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A Dispatcher that is itself the selected Agent skips the Dispatch
+  Handoff and obtains its delegation handle through the continuation
+  profile's handle exchange, a counted derivation (#1195).
 
 - The Dispatch Handoff conveys a dispatched instance to its selected
   Agent: the Dispatcher exchanges the instance's token

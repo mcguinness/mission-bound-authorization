@@ -70,6 +70,8 @@ export {
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
   narrowToCeiling,
+  REFUSED_ENTRY_MEMBERS,
+  refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
   withoutCapabilitySources,
 } from "./authority-subset.js";
