@@ -137,6 +137,20 @@ the store.
   `Origin` or the issuer's origin). When
   `allowHeadlessAdjudication` is set, it may instead come from a registered
   service token holding the `mission_approval` scope (`validApprovalPrincipal`).
+  Where the deployment configures an upstream Approver login
+  (`approverLogin`, #1320, D496; the as-native target does), the approval
+  surface records that session itself (`approver-login.ts`): `GET
+  /interaction/{uid}/approver-login` starts an authorization code request to
+  the configured OpenID Provider (PKCE `S256`, `state`, `nonce`,
+  `prompt=login`, `acr_values`), bound to the user agent by a cookie, and
+  `GET /approver-login/callback` takes the response once, in that user
+  agent, with the provider's `iss` (RFC 9207). It exchanges the code,
+  validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7: the
+  signature against the provider's JWKS under the registered algorithm,
+  `iss`, `aud`, `azp`, `exp`, `iat`, `nonce`, and present `acr` and
+  `auth_time`), maps the issuer-qualified identity to a local Approver, and
+  records the token's `acr` and `auth_time` with the selected Subject. A
+  refused login is 401 and records nothing.
   No principal, or an `auth_time` in the future, is 401. `decide()` then checks
   the requested `acr_values` and `max_age`, and `prompt=login`, which
   oidc-provider substitutes for `max_age=0`, against the principal's `acr` and
@@ -156,7 +170,8 @@ the store.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `ApprovalSessionStore` is an in-process `Map`, and
   the pending interaction is in oidc-provider's memory adapter. Both are lost
-  at restart. The client starts a new authorization request.
+  at restart, and so are the upstream logins started and not yet returned.
+  The client starts a new authorization request.
 - **Tests (HTTP, `demo/test/approval-resolution-identity.test.ts`):**
   - `approval resolution establishes identity from the surface (#759, #761) > refuses every identity-bearing body member loudly, even with a valid approver credential`
   - `approval resolution establishes identity from the surface (#759, #761) > enabled headless mode refuses all agent-held credentials and cookies for both approve and deny, then the independent approver succeeds`
@@ -177,6 +192,30 @@ the store.
   - `> refuses admitted authority the classification does not name: unclassified authority fails closed`
   - `the floor and the client's requested strength are conjunctive (@spec mission#approval-authentication, #826, D425) > a satisfied weaker request does not relax the floor: Alice requests and achieves password, and the floor refuses`
   - `the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425) > the high-risk payments actions are exactly those with an irreversible or external-commitment operation`
+- **Tests (HTTP, the upstream Approver login, `approver-login.test.ts`):**
+  - `the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496) > admits high-risk authority after a login whose validated ID Token carries mfa: the mapped Approver, the token's acr and auth_time, and the selected Subject are recorded`
+  - `> refuses high-risk authority after a password-only login (acr pwd): access_denied, with no Mission, Grant or code`
+  - `> refuses high-risk authority after a login whose auth_time is older than the floor allows: access_denied, with no Mission, Grant or code`
+  - `> admits low-risk authority after a password-only login: the floor does not apply`
+  - `> refuses an ID Token whose signature does not verify against the provider's published keys, recording no login`
+  - `> refuses an ID Token from another issuer, recording no login`
+  - `> refuses an ID Token for another audience, or for this client and another, recording no login`
+  - `> refuses an ID Token whose nonce is not the one this login sent, recording no login`
+  - `> refuses an expired ID Token, and one issued longer ago than the login accepts, recording no login`
+  - `> refuses an ID Token without acr or auth_time, recording no login`
+  - `> refuses an authorization response that names another issuer (RFC 9207), recording no login`
+  - `> completes a login only in the user agent that started it, and only once`
+- **Tests (the reference provider, `demo/test/approver-idp.test.ts`):**
+  `the reference upstream OpenID Provider authenticates the Approver (@spec mission#approval-authentication, #1320, D496)`, every case: `mfa` only after the password and the one-time
+  code, `pwd` for the password alone, and no login from a wrong password or
+  code or a code presented twice.
+- **Tests (assembled, `demo/test/as-native-stack.test.ts`, also in its
+  [FGA] block):**
+  - `the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > admits a high-risk approval after a fresh login at the upstream provider with Bob's password and the one-time code his device received: the provider asserts mfa, and the AS records that token's acr and auth_time (#1320)`
+  - `> refuses a high-risk approval after a password-only login at the upstream provider (acr pwd): access_denied, with no Mission and no code (#1320)`
+  - `> refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)`
+  - `> refuses a login whose ID Token does not verify against the upstream provider's keys, a password-only login rewritten to claim mfa: no login is recorded, and no Mission or code exists (#1320)`
+  - `> admits a low-risk approval after a password-only login at the upstream provider: the floor does not apply (#1320)`
 - **Tests (Expansion approval, `expansion-endpoint.test.ts`):**
   - `an expansion approval meets the approval-authentication floor (@spec mission#approval-authentication, #826, D425) > refuses a high-risk expansion approval that carries no achieved authentication: nothing is recorded, the deferral stays pending, and no successor exists`
   - `> refuses a high-risk expansion approval whose recorded login the floor does not accept, a weaker acr or one older than the age bound, then completes from one it accepts`
@@ -201,7 +240,10 @@ the store.
 
 - **Hook.** In `decide()`, the Subject is the selection the authenticated
   approval surface made (`ApprovalPrincipal.subject`: recorded by the trusted
-  browser login, or named by a headless approval service on
+  browser login, which on the upstream Approver login is the selection the
+  Approver's user agent names when it starts the login and takes effect only
+  with the login the provider completes (§3.1), or named by a headless
+  approval service on
   `x-approval-subject`), else the Approver. `login_hint` concerns the Approver
   and selects nothing. The Subject must be in `knownSubjects`, and an Approver
   other than the Subject must hold it in `approverApprovesFor`; otherwise 403
@@ -285,7 +327,12 @@ the store.
   on the configured `sub` values. A deployment that admits identities from
   another namespace maps each to a canonical local principal first, through
   its own separately trusted mapping. The kernel does not map by equal `sub`,
-  and rewriting a request's `iss` does not establish a mapping.
+  and rewriting a request's `iss` does not establish a mapping. The upstream
+  Approver login (§3.1) is such a mapping for Approvers: each configured
+  identity pairs a provider's `iss` and `sub` with one local Approver, and
+  an identity it does not name, including a `sub` it names only under
+  another issuer, logs no one in:
+  `the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496) > maps the issuer-qualified identity: a subject the mapping names only under another issuer logs no one in`.
 
 ### 3.3 Source and authority derivation
 

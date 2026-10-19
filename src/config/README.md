@@ -15,10 +15,14 @@ keyed by authority type, resource and action. The shipped floor,
 browser Approver whose achieved `acr` is `mfa`, authenticated at most 300
 seconds before the decision. Payment execution and remittance are its
 high-risk actions, matching the payments Operation Profile. The approval
-interaction and an Expansion deferral approval both apply it. The demo's
-approval console presents a login recorded once (simulated; the demo has no
-Approver identity provider) and never at an approval, so it ages out of the
-floor until the demo server's `POST /bff/approver/login` records a new one.
+interaction and an Expansion deferral approval both apply it. On the
+as-native target (`pnpm as-native`) the Approver logs in at each approval
+through an upstream OpenID Provider that checks a password and a one-time
+code, and the floor evaluates the `acr` and `auth_time` of the ID Token the
+AS validates (#1320). The shared demo's approval console presents a login
+recorded once (simulated; that composition has no Approver identity
+provider) and never at an approval, so it ages out of the floor until the
+demo server's `POST /bff/approver/login` records a new one.
 
 - **Owner.** The deployment's security owner owns the floors; each Resource
   Server's operator owns its actions' classes, which follow that server's
