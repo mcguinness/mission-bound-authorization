@@ -439,13 +439,23 @@ the store.
   - `> concurrent decisions by different principals cannot disagree on identity: the first to reserve holds the interaction, the other is refused before saving a grant`
   - `> the commit revalidates the prepared authority source: a source withdrawn during the grant save refuses access_denied and creates no Mission`
   - `> a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes`
-- **Unsupported or residual.**
-  - `{#approval-event}` step 7's record/code atomicity is not met. The record
-    commits `active` and bound one request before the code is issued, so a
-    failure there, or a client that never follows the redirect, leaves an
-    `active`, grant-bound Mission with no code (the post-commit witness
-    above). #916 delivered the local ordering; full record/code atomicity is
-    #250's (`core.approval-event.record-code-atomicity`, partial).
+- **Unsupported or residual.** Two residuals follow the record commit, and
+  they differ (D415):
+  - **No code yet: an existence gap, #250's.** `{#approval-event}` step 7's
+    record/code atomicity is not met. The record commits `active` and bound
+    one request before the code is created, so a failure there, or a client
+    that never follows the redirect, leaves an `active`, grant-bound Mission
+    with no code (the post-commit witness above). #916 delivered the local
+    ordering; full record/code atomicity is #250's
+    (`core.approval-event.record-code-atomicity`, partial).
+  - **A code issued but never received: a delivery gap.** The code exists,
+    but the redirect response carrying it is lost. Atomic record/code
+    issuance would not remove this one, since the front channel can drop any
+    response. It is bounded by the code's lifetime: 60 s, clamped to the
+    Mission's `expires_at` (the hook note above). Once the code expires
+    unredeemed, no derivation is possible under the Mission, which stays
+    `active` until `expires_at` or a revocation, as the core's Mission State
+    Across Bindings describes. Code reading; no test.
   - A lineage resolving to more than one Mission is not detected:
     `findByGrant` returns the first matching row. A grant identity is per
     interaction and a binding never moves, so this path does not reach that
@@ -1075,7 +1085,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   run only where OpenFGA does (CI). A vendor the store does not hold keeps
   `lookup_vendor`'s server target (D324), which a vendor constraint or the
   policy refuses. The payments Operation Profile
-  (`payments-runtime-profile-v4`) declares the policy's owner, principals
+  (`payments-runtime-profile-v5`) declares the policy's owner, principals
   (subject and client), relations, tenant, freshness and failure behavior.
 
 ### 5.3 Protected state and lifecycle
@@ -1395,7 +1405,11 @@ Runtime overlay:
 **Residual.**
 
 - An abandoned redirect, or a failure or crash after the record commit,
-  leaves an `active`, grant-bound Mission with no code (§3.4; #250).
+  leaves an `active`, grant-bound Mission with no code: an existence gap
+  (§3.4; #250).
+- A code whose redirect response is lost is never received: a delivery gap,
+  bounded by the code's 60 s lifetime, after which no derivation is possible
+  and the Mission stays `active` until `expires_at` or a revocation (§3.4).
 - A state change between the refresh pre-check and the save-time gate is
   refused after rotation consumes the presented refresh token (§3.6; #250).
 - A fully contained delegation family is refused after rotation consumes its
@@ -1432,9 +1446,8 @@ Runtime overlay:
 - Approval: a configuration change between render and decision (§3.1).
 - Derivation: a catalog-sourced `scope_only` entry that passes the decision
   and refuses at the token endpoint (§3.3).
-- Binding: record and code atomicity; an abandoned redirect; a crash between
-  the record commit and the binding; the grant count after a repeated
-  decision; a lineage resolving to more than one Mission (§3.4).
+- Binding: record and code atomicity; an abandoned redirect; a lost code
+  response; a lineage resolving to more than one Mission (§3.4).
 - Issuance: revoke versus issue (§3.5).
 - Gating: refresh against an earlier grant after revocation (§3.6).
 - Scope projection: `derivation_count` after a code or refresh projection
