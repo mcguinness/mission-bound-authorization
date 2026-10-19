@@ -326,6 +326,8 @@ let off: Harness;
 let only: Harness;
 /** A deployment whose payments ceiling defers delegate eligibility to policy (#1275). */
 let deferring: Harness;
+/** A deployment whose Effective Authority Set comes from an injected source, which carries no approved-entry origin (#1275). */
+let injected: Harness;
 
 /**
  * @spec resource-access#delegate-eligibility (#1275): the shipped ceiling with
@@ -375,9 +377,18 @@ beforeAll(async () => {
       return policyPermits.has(request.delegate.sub);
     },
   });
+  // Delegation on, the shipped ceiling, and the Effective Authority Set read
+  // through an injected source: equal entries, but not the Mission Record's own.
+  injected = await harness(14874, {
+    capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+    authoritySource: {
+      effectiveAuthoritySet: (record: Parameters<BuiltAs["kernel"]["effectiveAuthoritySet"]>[0]) =>
+        structuredClone(injected.as.kernel.effectiveAuthoritySet(record)),
+    },
+  });
 });
 afterAll(() => {
-  for (const h of [on, off, only, deferring]) h?.server.close();
+  for (const h of [on, off, only, deferring, injected]) h?.server.close();
 });
 
 describe("delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation)", () => {
@@ -984,6 +995,19 @@ describe("delegate eligibility with retained provenance at designation and redem
     policyPermits.add(SUBAGENT);
     const redeemed = await redeem(deferring, designation.body.access_token as string);
     expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+  });
+
+  it("an entry the AS cannot resolve to an approved Mission Record entry narrows out: under an injected source carrying no origin, a designation its list permits is refused invalid_target", async () => {
+    const { missionId, accessToken } = await baseMission(injected);
+    const before = derivations(injected, missionId);
+    // The shipped list admits the sub-agent; only the unresolvable origin refuses.
+    const res = await designate(injected, accessToken, SUBAGENT);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("invalid_target");
+    expect(derivations(injected, missionId)).toBe(before);
+    // The same designation on the local kernel's own set is issued.
+    const local = await designate(on, (await baseMission(on)).accessToken, SUBAGENT);
+    expect(local.status, JSON.stringify(local.body)).toBe(200);
   });
 
   it("an entry whose retained provenance is gone narrows out at redemption although its list and the policy permit", async () => {
