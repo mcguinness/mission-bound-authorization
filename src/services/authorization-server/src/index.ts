@@ -26,6 +26,12 @@ import {
 } from "@mission/demo-data";
 import type { ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
+import {
+  generateEphemeralSigningKeys,
+  loadSigningKeyRing,
+  SigningKeyRingError,
+  type SigningKeySource,
+} from "./kernel/signing-key-ring.js";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
@@ -100,6 +106,16 @@ export {
 } from "./kernel/derivation-reservations.js";
 
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
+export {
+  AS_SIGNING_ROLES,
+  type AsSigningRole,
+  initSigningKeyRing,
+  loadSigningKeyRing,
+  SIGNING_KEY_RING_FORMAT,
+  SigningKeyRingError,
+  type SigningKeySource,
+  signingKeysFromEnv,
+} from "./kernel/signing-key-ring.js";
 export {
   attachCapabilitySources,
   type CapabilitySourceResolution,
@@ -704,6 +720,8 @@ export interface BuiltAs {
    */
   creationIdempotency: CreationIdempotencyStore;
   issuer: string;
+  /** @spec #831: whether this AS signs with a key ring's durable keys or with keys generated at this boot. */
+  signingKeyMode: "ring" | "ephemeral";
   agentClientJwk: Record<string, unknown>;
   /**
    * @spec child-delegation#child-client-identity — the child-actor client's
@@ -888,6 +906,17 @@ export async function buildAuthorizationServer(opts: {
    */
   testTokenSigningJwk?: JWK;
   /**
+   * @spec mission#mission-bound-tokens, #831: where the AS's four role keys
+   * (`as-token`, `as-status`, `as-txn`, `as-continuation`) come from. A key
+   * ring file (`{ ring: path }`, initialized once with `pnpm keys init`)
+   * keeps the same material under the same `kid` across restarts; a missing,
+   * unreadable or mismatched ring refuses startup and nothing is generated in
+   * its place. Absent, or `{ ephemeral: true }`, generates the keys at this
+   * boot, as tests and demos do. A deployment entry point chooses explicitly
+   * ({@link signingKeysFromEnv}).
+   */
+  signingKeys?: SigningKeySource;
+  /**
    * @spec async-delegation (issue #651) — TEST-ONLY: additional client
    * registrations composed ONTO the config-shipped registry
    * (`config/clients.json`), never replacing an entry of it. A test that needs
@@ -1036,29 +1065,36 @@ export async function buildAuthorizationServer(opts: {
   // `testTokenSigningJwk` and get the usual per-boot generated key (D25).
   // The test keeps its own copy of what it injected; nothing signing-capable
   // is ever returned from this function.
-  let tokenPrivateKey: CryptoKey;
-  let tokenJwk: Record<string, unknown>;
-  let tokenJwkPub: Record<string, unknown>;
+  // @spec #831: the four role keys, from a key ring (durable across
+  // restarts) or generated at this boot. A ring never falls back to
+  // generation, and a test-injected token key belongs to ephemeral keys only.
+  const keySource: SigningKeySource = opts.signingKeys ?? { ephemeral: true };
+  const roleConfig = { asToken, asStatus, asTxn, asContinuation };
+  if ("ring" in keySource && opts.testTokenSigningJwk) {
+    throw new SigningKeyRingError("testTokenSigningJwk cannot be combined with a key ring");
+  }
+  const signing =
+    "ring" in keySource
+      ? await loadSigningKeyRing(keySource.ring, opts.issuer, roleConfig)
+      : await generateEphemeralSigningKeys(roleConfig);
+  let tokenPrivateKey: CryptoKey = signing.asToken.privateKey;
+  let tokenJwk: Record<string, unknown> = signing.asToken.privateJwk;
+  let tokenJwkPub: Record<string, unknown> = signing.asToken.publicJwk;
   if (opts.testTokenSigningJwk) {
     const injected = { ...opts.testTokenSigningJwk, kid: asToken.kid, alg: asToken.alg, use: "sig" };
     tokenPrivateKey = (await importJWK(injected as JWK, asToken.alg)) as CryptoKey;
     tokenJwk = injected;
     tokenJwkPub = publicJwkOf(injected as JWK);
-  } else {
-    const tokenKeys = await generateKeyPair(asToken.alg, { extractable: true });
-    tokenPrivateKey = tokenKeys.privateKey;
-    tokenJwk = { ...(await exportJWK(tokenKeys.privateKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
-    tokenJwkPub = { ...(await exportJWK(tokenKeys.publicKey)), kid: asToken.kid, alg: asToken.alg, use: "sig" };
   }
-  const statusKeys = await generateKeyPair(asStatus.alg, { extractable: true });
-  const txnKeys = await generateKeyPair(asTxn.alg, { extractable: true });
-  const continuationKeys = await generateKeyPair(asContinuation.alg, { extractable: true });
-  const statusJwkPriv = { ...(await exportJWK(statusKeys.privateKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
-  const txnJwkPriv = { ...(await exportJWK(txnKeys.privateKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
-  const continuationJwkPriv = { ...(await exportJWK(continuationKeys.privateKey)), kid: asContinuation.kid, alg: asContinuation.alg, use: "sig" };
-  const statusJwkPub = { ...(await exportJWK(statusKeys.publicKey)), kid: asStatus.kid, alg: asStatus.alg, use: "sig" };
-  const txnJwkPub = { ...(await exportJWK(txnKeys.publicKey)), kid: asTxn.kid, alg: asTxn.alg, use: "sig" };
-  const continuationJwkPub = { ...(await exportJWK(continuationKeys.publicKey)), kid: asContinuation.kid, alg: asContinuation.alg, use: "sig" };
+  const statusKeys = { privateKey: signing.asStatus.privateKey };
+  const txnKeys = { privateKey: signing.asTxn.privateKey };
+  const continuationKeys = { privateKey: signing.asContinuation.privateKey };
+  const statusJwkPriv = signing.asStatus.privateJwk;
+  const txnJwkPriv = signing.asTxn.privateJwk;
+  const continuationJwkPriv = signing.asContinuation.privateJwk;
+  const statusJwkPub = signing.asStatus.publicJwk;
+  const txnJwkPub = signing.asTxn.publicJwk;
+  const continuationJwkPub = signing.asContinuation.publicJwk;
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
@@ -1502,6 +1538,7 @@ export async function buildAuthorizationServer(opts: {
     expansionDeferrals,
     creationIdempotency,
     issuer: opts.issuer,
+    signingKeyMode: "ring" in keySource ? "ring" : "ephemeral",
     agentClientJwk: agent.privateJwk,
     childClientJwk: child.privateJwk,
     governedClientJwk: governed.privateJwk,
