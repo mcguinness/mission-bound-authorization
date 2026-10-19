@@ -44,6 +44,7 @@ normative:
         name: Karl McGuinness
     date: 2026
   RFC3339:
+  RFC3986:
   RFC6234:
   RFC7519:
   RFC8259:
@@ -591,22 +592,29 @@ as that profile requires.
 | AuthZEN member | Mission-bound binding |
 |---|---|
 | `subject` | The principal the decision is requested for. |
-| `resource` | `type`/`id` carry the fine-grained target object identity the action names (for example, a specific journal entry), for Resource-policy evaluation; `properties` carries resource-scoped members, including `audience` ({{context-audience-freshness}}). It is NOT the identity matched against the approved entry's `resource`; see below. |
+| `resource` | `type`/`id` carry the fine-grained object identity the action names (for example, a specific journal entry), for Resource-policy evaluation; `properties` carries resource-scoped members, including `operation_target` ({{context-operation-target}}) and `audience` ({{context-audience-freshness}}). Only `operation_target` is matched against an entry's `resource`; see below. |
 | `action` | `name` is the requested action identifier (for example, `journal-entries.write`), which the PDP evaluates against the approved `actions` per {{I-D.draft-mcguinness-oauth-mission}}; `properties` carries action-scoped members ({{parameter-digest}}). |
 | `context` | Carries the Mission-bound, evaluation-wide context object defined below. |
 
 The runtime profile requires the PDP to confirm that the action falls
 within an approved Authority Set entry by matching the action's
 resource and action identity against that entry's `resource` and
-`actions` ({{I-D.draft-mcguinness-mission-runtime}}). In this
-profile, the approved entry's `resource` (the protected-resource or
-audience URI, for example `https://erp.example.com`) is matched against
-`resource.properties.audience`, not against the AuthZEN `resource`
-object's `type`/`id` identity. The AuthZEN `resource` object's `type`
-and `id` carry the finer-grained object identity used only for
-Resource-policy evaluation. A PDP MUST perform the entry match against
-`resource.properties.audience`; matching it against `resource.type` or
-`resource.id` is non-conforming and will diverge across deployments.
+`actions` ({{I-D.draft-mcguinness-mission-runtime}}). For a
+`mission_resource_access` entry, the action's resource in this profile
+is the operation target in `resource.properties.operation_target`
+({{context-operation-target}}). A PDP MUST match each such entry's
+`resource` against that target under
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Resource Matching", in the credential's authority
+({{context-credential}}), in the current effective authority
+({{I-D.draft-mcguinness-mission-runtime}}), and in any other
+`mission_resource_access` authority bound it applies. A PDP MUST NOT
+match an entry against `resource.properties.audience`, `resource.type`
+or `resource.id`, or substitute any of them for the operation target.
+Audience validation ({{context-audience-freshness}}) and
+Resource-policy evaluation of `type` and `id` remain separate checks,
+and the action, constraint and delegation checks remain independent of
+the target match.
 
 The AuthZEN `subject` is the credential's authenticated subject
 identifier (the OAuth realization is the token's `sub` claim,
@@ -625,6 +633,39 @@ is REQUIRED when known ({{conventions-and-definitions}}), carrying the
 issuer that authenticated the Subject, so a `sub` is disambiguated
 across issuers; a PEP that cannot establish the Subject's issuer omits
 it.
+
+## Operation Target {#context-operation-target}
+
+`operation_target`:
+: REQUIRED for an action evaluated against `mission_resource_access`
+  authority. A string, carried at
+  `resource.properties.operation_target`, holding one absolute URI
+  ({{Section 4.3 of RFC3986}}): the operation target of
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+  "Resource Matching", which identifies the resource the operation
+  acts on.
+
+The authenticated PEP establishes the target from the trusted
+operation contract of the resource it enforces for and from the
+operation's validated arguments, as that section requires of a
+resource server. The PEP MUST NOT derive the target from the
+credential's entries, the Mission's entries, or a target value the
+caller asserts. A PEP that cannot establish one unambiguous target
+MUST refuse the operation before requesting a decision
+({{failure-condition-coverage}}).
+
+The PDP checks the target's syntax ({{pdp-request}}) and passes the
+received string to the matcher unchanged: an `exact` match compares
+that string, never a parsed and reserialized form, and a `prefix`
+match applies only the comparison normalization of
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}.
+
+The operation target is part of the operation identity, the
+authorization binding and the cache key ({{projections}}). A permit is
+therefore never reused for another target, even when the audience,
+the action, `resource.type` and `resource.id` are equal, and the PEP
+executes the operation only on the target the permit was evaluated
+for ({{permit-binding-split}}).
 
 ## Mission Decision Context {#context-mission}
 
@@ -1168,12 +1209,15 @@ carries, and this document adds none of them to the AuthZEN
 extension-data registrations of {{iana}}.
 
 Operation identity:
-: The action, the resource, and the normalized effectful parameters.
-  This is what an idempotency key identifies one execution of.
+: The action, the resource, including its operation target
+  ({{context-operation-target}}), and the normalized effectful
+  parameters. This is what an idempotency key identifies one
+  execution of.
 
 Authorization binding:
-: The subject, the actor, credential-derived facts, the Mission
-  reference, the authority and view identity, the approval, and
+: The subject, the actor, the operation target, credential-derived
+  facts, the Mission reference, the authority and view identity, the
+  approval, and
   every policy-relevant context input, including `taint`, the
   Mission history reference, the capability source, and any
   extension member a companion profile adds. This is what a permit
@@ -1203,7 +1247,18 @@ language elsewhere in this profile, what a permit is bound to and
 what a re-presented request must match to rely on that binding, means
 the authorization binding.
 
+Each projection includes the operation target, so two requests that
+differ only in their target differ in all three, including cacheable
+reads that carry no `parameter_digest`.
+
 ## Worked PDP request
+
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+The AuthZEN `resource` object's `type` and `id` name the object for
+Resource-policy evaluation, not the operation target.
 
 The `policy_view_id` values in this document's examples
 (`sha-256:kP3xR9sQ...`) differ from the runtime profile's worked
@@ -1230,7 +1285,8 @@ Authorization: ...
     "type": "journal-entry",
     "id": "je_2026Q3_inv_8421",
     "properties": {
-      "audience": "https://erp.example.com"
+      "audience": "https://erp.example.com",
+      "operation_target": "https://erp.example.com"
     }
   },
   "action": {
@@ -1309,7 +1365,8 @@ Authorization: ...
     "type": "invoice",
     "id": "inv_2026Q3_842",
     "properties": {
-      "audience": "https://erp.example.com"
+      "audience": "https://erp.example.com",
+      "operation_target": "https://erp.example.com"
     }
   },
   "action": {
@@ -1458,6 +1515,17 @@ self-consistent:
     bind to both the origin and the mapped local identity through the
     `principal_mapping` evidence object
     ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+11. For an action evaluated against `mission_resource_access`
+    authority, `resource.properties.operation_target` is present, is a
+    string holding one absolute URI, and names a resource within the
+    declared enforcement scope for which the requesting PEP is
+    authorized ({{I-D.draft-mcguinness-mission-runtime}}, Section
+    "Remote Decision Channel"). Otherwise the PDP MUST refuse the
+    request before evaluation, with no fallback to
+    `resource.properties.audience`, `resource.type` or `resource.id`,
+    and MUST record the refusal as a Refusal Record with
+    `denial_reason` `operation_target_invalid`
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Clock skew {#clock-skew}
 
@@ -1526,7 +1594,8 @@ Authorization: ...
         "type": "journal-entry",
         "id": "je_2026Q3_inv_8421",
         "properties": {
-          "audience": "https://erp.example.com"
+          "audience": "https://erp.example.com",
+          "operation_target": "https://erp.example.com"
         }
       },
       "action": {
@@ -1569,7 +1638,8 @@ Authorization: ...
         "type": "journal-entry",
         "id": "je_2026Q3_inv_9310",
         "properties": {
-          "audience": "https://erp.example.com"
+          "audience": "https://erp.example.com",
+          "operation_target": "https://erp.example.com"
         }
       },
       "action": {
@@ -2367,9 +2437,11 @@ carrier's extensibility rule.
 | Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
 | Supplied arguments fail the PEP-established action's required input schema | Refusal Record | `request_invalid` |
 | Named target object not resolvable at the enforcement surface | Refusal Record | `target_unresolvable` |
+| Operation target not establishable as one unambiguous target at the PEP | Refusal Record | `target_unresolvable` |
 | Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
+| Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial (with obligation) | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
@@ -2396,6 +2468,7 @@ carrier's extensibility rule.
 | Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
 | Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
 | A claimed evaluation-context binding differs or cannot be established at use | Execution Evidence | `target_drift` |
+| Operation target at use differs from the request's `operation_target`, or cannot be established at use | Execution Evidence | `target_drift` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
 | Different evaluation identifier presented for an operation identity already claimed | Execution Evidence | `operation_already_claimed` |
@@ -2414,6 +2487,11 @@ decision request and recorded as a Refusal Record
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}); it does not
 invent a PDP denial or an Execution Evidence record for a permit
 never obtained.
+
+A target-determining argument that changed under a parameter-bound
+permit is a parameter deviation, `parameter_mismatch`; `target_drift`
+records an operation target that differs while the bound parameters
+do not.
 
 The `duplicate_suppressed` and `idempotency_conflict` rows key on the
 same (idempotency scope, `idempotency_key`) claim
@@ -2469,6 +2547,16 @@ and `use_limit`, the same lifetime-bounded controls that already gate
 execution, so a permit issued against a view the PDP has since
 retired cannot outlive its own lease regardless of cache key. A
 cached permit cannot be reused for a request whose cache key differs.
+
+At each use of a permit, cached or not, the executing PEP establishes
+the operation target again from its operation contract and the
+arguments it executes with. It MUST NOT release an effect on a target
+other than the request's `operation_target`, and requests a new
+decision for the changed operation instead
+({{failure-condition-coverage}}). For a parameter-bound action, the
+arguments that determine the target are effectful parameters, so the
+digest reverification also covers them
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 The envelope rule fixes what a permit cache is for. A parameter-bound
 class keys on `parameter_digest`, and a high-consequence permit is
@@ -2688,8 +2776,11 @@ checklist cites them without restating their mechanics.
 A PEP conforming to the Decision Base MUST:
 
 - carry the Mission and actor decision inputs from validated token
-  claims only, matching the approved entry's `resource` against
-  `resource.properties.audience` ({{pdp-request}});
+  claims only ({{pdp-request}}), and carry in
+  `resource.properties.operation_target` the operation target it
+  establishes from its trusted operation contract, refusing an
+  operation for which it cannot establish one
+  ({{context-operation-target}});
 - supply `action.properties.parameter_digest` where required
   ({{parameter-digest}}), and, where the deployment adopts Mission
   Capability Binding, `context.capability_source` as that companion
@@ -2710,7 +2801,8 @@ A PEP conforming to the Decision Base MUST:
   same mutually authenticated channel, and never relay a permit or
   treat signed Decision Evidence as authorization to act
   ({{permit-binding-split}}); and
-- key permit caches on the request's cache key
+- key permit caches on the request's cache key, and release an effect
+  only on the operation target a permit was evaluated for
   ({{permit-binding-split}}).
 
 A PEP additionally claiming the Runtime Evidence profile
@@ -2729,6 +2821,9 @@ A PDP conforming to the Decision Base MUST:
 - refuse an in-scope consequential request that lacks the Mission
   decision context, and perform the PDP-side consistency checks
   ({{pdp-request}});
+- match `mission_resource_access` entries against
+  `resource.properties.operation_target`, never against `audience`,
+  `type` or `id` ({{pdp-request}});
 - classify every denial per {{runtime-denial-classification}};
 - return the decision context of {{response-context}}, including a
   `conditions` object on every consequential permit and an obligations
@@ -2965,9 +3060,10 @@ The `action.properties.parameters`,
 `action.properties.parameter_digest`,
 `action.properties.idempotency_key`, and
 `action.properties.parameter_attributes` members carried inside the
-AuthZEN `action` object, and the `resource.properties.audience` member
-carried inside the AuthZEN `resource` object ({{pdp-request}}), are
-likewise AuthZEN extension data. The
+AuthZEN `action` object, and the `resource.properties.operation_target`
+and `resource.properties.audience` members carried inside the AuthZEN
+`resource` object ({{pdp-request}}), are likewise AuthZEN extension
+data. The
 `action.properties.external_communication` member carried inside that
 same `action` object is likewise AuthZEN extension data, registered
 by the harness profile, not by this document
@@ -2984,6 +3080,16 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- `resource.properties.operation_target` carries the operation target
+  the PEP establishes from its trusted operation contract. The PDP
+  matches `mission_resource_access` entries in the credential's and
+  the current effective authority against it, never against
+  `audience`, `type` or `id`, and refuses a request whose target is
+  absent, malformed or outside the PEP's enforcement scope
+  (`operation_target_invalid`). The target is part of the operation
+  identity, the authorization binding and the cache key; a target
+  that changes at use is `target_drift` (#1276).
 
 - `context.mission`'s `id` and `issuer` are the binding's Mission
   Reference identifier and Controller namespace in that binding's

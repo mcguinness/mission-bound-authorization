@@ -132,6 +132,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8725:
   I-D.draft-mcguinness-oauth-mission-management:
     title: "Mission Management for OAuth 2.0"
@@ -674,6 +682,11 @@ carries:
   counterpart of the OAuth binding's token-response
   `authorization_details` echo.
 
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
+
 The following example shows an approved status response:
 
 ~~~ http-message
@@ -1152,8 +1165,9 @@ Mission binding, the Mission state it observed in the MAS's signed
 Mission Status response as `context.mission_state_observation`, the
 authenticated client as `context.actor.client_id`, the entries the
 token's `scope` maps to under the mapping contract as
-`context.credential.authority`, and the other decision inputs per
-{{I-D.draft-mcguinness-mission-authzen}}:
+`context.credential.authority`, the operation target its operation
+contract establishes as `resource.properties.operation_target`, and
+the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
 
 ~~~ json
 {
@@ -1165,7 +1179,10 @@ token's `scope` maps to under the mapping contract as
   "resource": {
     "type": "invoice",
     "id": "inv_2026Q3_842",
-    "properties": { "audience": "https://erp.example.com" }
+    "properties": {
+      "audience": "https://erp.example.com",
+      "operation_target": "https://erp.example.com"
+    }
   },
   "action": { "name": "invoices.read" },
   "context": {
