@@ -22787,7 +22787,7 @@
    "id": "authzen.context-audience-freshness.audience-required",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-audience-freshness",
-   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The PEP's audience or protected-resource identifier.",
+   "text": "REQUIRED. A string. Carried at `resource.properties.audience` ({{pdp-request}}). The boundary identifier of the enforcement boundary the PEP established for the request, byte for byte",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -22799,11 +22799,12 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the request always carries audience (a string) at resource.properties.audience, the PEP's audience or protected-resource identifier"
+    "normative": "the request always carries audience (a string) at resource.properties.audience: the boundary identifier the PEP established for the request, byte for byte; on OAuth the protected resource's identifier, never an aud value or alias"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#853 (D487): re-quoted for the boundary identifier; no test asserts that two PEPs at one boundary carry the same value."
   },
   {
    "id": "authzen.context-audience-freshness.state-observation-required-by-placement",
