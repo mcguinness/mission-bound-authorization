@@ -232,6 +232,34 @@ describe("the payments resource establishes the operation target from its truste
     }
   });
 
+  it("refuses a contract naming a target that breaks RFC 3986 syntax before any decision request, though the Mission and the credential name the identical string", async () => {
+    // pct-encoded = "%" HEXDIG HEXDIG (RFC 3986, Section 2.1), and an http
+    // or https target names a non-empty host (RFC 9110, Section 4.2).
+    const malformed = [`${CANONICAL_RESOURCE}/%zz`, `${CANONICAL_RESOURCE}%`, `${CANONICAL_RESOURCE}/%4`, `${new URL(CANONICAL_RESOURCE).protocol}///mcp`];
+    for (const mode of MODES) {
+      for (const target of malformed) {
+        const view = viewOf([missionEntry(CANONICAL_RESOURCE), missionEntry(target)]);
+        const x = await build(mode, view, {
+          profile: profileWith("get_invoice", { target: { service: target } }),
+          operationTargets: [CANONICAL_RESOURCE, target],
+        });
+        try {
+          const res = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, credentialFor(CANONICAL_RESOURCE, target)));
+          expect(res, `${mode} ${target}`).toMatchObject({ ok: false, refusal_reason: "operation_target_unresolvable" });
+          expect(res.result, `${mode} ${target}`).toBeUndefined();
+          expect(x.decided, `${mode} ${target}`).toHaveLength(0);
+          expect(x.records().find((e) => e.kind === "refusal")?.content, `${mode} ${target}`).toMatchObject({ denial_reason: "target_unresolvable" });
+          // Control: the same Mission and credential under the shipped contract permit.
+          x.setProfile(TOOL_ACTIONS);
+          const permitted = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, credentialFor(CANONICAL_RESOURCE, target)));
+          expect(permitted.ok, `${mode} ${target}: ${JSON.stringify(permitted)}`).toBe(true);
+        } finally {
+          await x.close();
+        }
+      }
+    }
+  });
+
   it("same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience", async () => {
     for (const mode of MODES) {
       const profile = profileWith("get_invoice", { target: { service: ADMIN } });

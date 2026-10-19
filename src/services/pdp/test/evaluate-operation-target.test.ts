@@ -197,6 +197,79 @@ describe("the PDP matches entries against the PEP-established operation target (
     }
   });
 
+  it("refuses a target that breaks RFC 3986 absolute-URI syntax before evaluation as operation_target_invalid, in process and over the remote channel, though the Mission, the credential and the PEP's registered targets name the identical string", async () => {
+    // The WHATWG URL parser accepts every one of these strings; each breaks
+    // the RFC 3986 grammar: pct-encoded = "%" HEXDIG HEXDIG (Section 2.1),
+    // the permitted characters (Sections 2.2, 2.3, 3.3), or a non-empty
+    // http host (RFC 9110, Section 4.2.1).
+    const MALFORMED: Array<[string, string]> = [
+      ["invalid hex digits", `${SERVICE}/%zz`],
+      ["trailing percent", `${SERVICE}%`],
+      ["one hex digit", `${SERVICE}/%4`],
+      ["raw space", `${SERVICE}/a b`],
+      ["non-ASCII character", `${SERVICE}/caf\u00e9`],
+      ["empty http host", "http:///mcp"],
+    ];
+    const strings = MALFORMED.map(([, target]) => target);
+    const opts = options({ view: view([entry(SERVICE), ...strings.map((t) => entry(t))]) });
+    const covering = credential(credentialEntry(SERVICE), ...strings.map((t) => credentialEntry(t)));
+    for (const [label, target] of MALFORMED) {
+      const req = read({ audience: AUDIENCE, operation_target: target }, covering);
+      const refusals: PdpRefusal[] = [];
+      const emitted: unknown[] = [];
+      const evidence = { emit: async (record: unknown) => emitted.push(record) } as unknown as DecisionEvidenceEmitter;
+      const outcome = await evaluateRequest(req, { ...opts, evidence, refusals: (r) => refusals.push(r) }).then(
+        (decision) => ({ decision }),
+        (error: unknown) => ({ error }),
+      );
+      expect(outcome, label).toEqual({ error: expect.any(DecisionRequestRefused) });
+      expect((outcome as { error: DecisionRequestRefused }).error.denial_reason, label).toBe("operation_target_invalid");
+      expect(refusals, label).toHaveLength(1);
+      expect(refusals[0], label).toMatchObject({ denial_reason: "operation_target_invalid", missionId: "msn_1276" });
+      expect(refusals[0]?.evaluation_request, label).toBe(req);
+      expect(emitted, label).toHaveLength(0);
+    }
+
+    // Remote: the PEP is registered for each string, so the channel's scope
+    // check passes it and only the PDP's syntax check can refuse. No FGA
+    // check and no Resource policy query runs for a refused target.
+    let fgaCalls = 0;
+    const countingFga = {
+      checkWithContext: async () => {
+        fgaCalls += 1;
+        return true;
+      },
+    } as unknown as Fga;
+    const policy = resourcePolicyFixture();
+    const refusals: PdpRefusal[] = [];
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE], operationTargets: [SERVICE, ...strings] }]]),
+      getOptions: () => ({ ...opts, fga: countingFga }),
+      evaluateFn: evaluateRequest,
+      resourcePolicy: policy,
+      refusals: (r) => refusals.push(r),
+    });
+    const server = handle;
+    const ask = (target: string) =>
+      evaluateRemote(read({ audience: AUDIENCE, operation_target: target }, covering), { url: server.url, pepId: PEP_ID, secret: SECRET });
+    for (const [label, target] of MALFORMED) {
+      const refused = await ask(target);
+      expect(refused.decision, label).toBe(false);
+      expect(refused.context, label).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 400 });
+      expect(refused.context, label).not.toHaveProperty("decision_evidence");
+      expect(refusals.at(-1), label).toMatchObject({ denial_reason: "operation_target_invalid", audience: AUDIENCE });
+    }
+    expect(refusals).toHaveLength(MALFORMED.length);
+    expect(fgaCalls).toBe(0);
+    expect(policy.queries).toHaveLength(0);
+    // Control: the same channel, Mission and credential permit a well-formed target.
+    const served = await ask(SERVICE);
+    expect(served.decision, JSON.stringify(served.context)).toBe(true);
+    expect(fgaCalls).toBeGreaterThan(0);
+    expect(policy.queries).toHaveLength(1);
+    expect(refusals).toHaveLength(MALFORMED.length);
+  });
+
   it("records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission", async () => {
     const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
     const retained: PdpRefusalRecord[] = [];

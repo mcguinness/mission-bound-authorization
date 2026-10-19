@@ -97,6 +97,26 @@ describe("the SaaS resource matches the token's entries against the operation ta
     }
   });
 
+  it("refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string", async () => {
+    // pct-encoded = "%" HEXDIG HEXDIG (RFC 3986, Section 2.1), and an http
+    // or https target names a non-empty host (RFC 9110, Section 4.2).
+    const declared = serviceLevelContracts(SAAS_RESOURCE);
+    for (const target of [`${SAAS_RESOURCE}/%zz`, `${SAAS_RESOURCE}%`, `${SAAS_RESOURCE}/%4`, "https:///journal"]) {
+      const [token, proof] = await present([entry(SAAS_RESOURCE), entry(target)]);
+      const server = saas({ ...declared, post_journal_entry: { service: target } });
+      expect(await server.callTool("post_journal_entry", { vendor_id: "acme", amount: "10.00" }, token, proof), target).toEqual({
+        ok: false,
+        error: "target_unresolvable",
+      });
+      expect(server.journalEntries(), target).toHaveLength(0);
+    }
+    // Control: the declared service-level contract posts the entry for the same token shape.
+    const [token, proof] = await present([entry(SAAS_RESOURCE)]);
+    const server = saas(declared);
+    expect(await server.callTool("post_journal_entry", { vendor_id: "acme", amount: "10.00" }, token, proof)).toMatchObject({ ok: true });
+    expect(server.journalEntries()).toHaveLength(1);
+  });
+
   it("refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root", async () => {
     const declared = serviceLevelContracts(SAAS_RESOURCE);
     const variants: Array<[string, SaasOperationContracts]> = [

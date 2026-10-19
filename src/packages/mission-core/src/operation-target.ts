@@ -25,30 +25,119 @@
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** An RFC 3986 scheme followed by its `:`. */
-const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+/*
+ * RFC 3986 `absolute-URI` (Section 4.3), transcribed rule by rule from the
+ * ABNF of RFC 3986 Appendix A. Each fragment below is one rule; the composed
+ * pattern is anchored, so a string is accepted only when the grammar derives
+ * all of it. Rule names are kept in the comments.
+ */
+
+/** `HEXDIG` (RFC 5234 Appendix B.1; case-insensitive, RFC 3986 Section 2.1). */
+const HEXDIG = "[0-9A-Fa-f]";
+/** `pct-encoded = "%" HEXDIG HEXDIG` (Section 2.1): every `%` begins one triplet. */
+const PCT_ENCODED = `%${HEXDIG}{2}`;
+/** `unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"` (Section 2.3). */
+const UNRESERVED = String.raw`A-Za-z0-9\-._~`;
+/** `sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="` (Section 2.2). */
+const SUB_DELIMS = "!$&'()*+,;=";
+/** `pchar = unreserved / pct-encoded / sub-delims / ":" / "@"` (Section 3.3). */
+const PCHAR = `(?:[${UNRESERVED}${SUB_DELIMS}:@]|${PCT_ENCODED})`;
+
+/** `scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )` (Section 3.1). */
+const SCHEME = String.raw`[A-Za-z][A-Za-z0-9+\-.]*`;
+/** `userinfo = *( unreserved / pct-encoded / sub-delims / ":" )` (Section 3.2.1). */
+const USERINFO = `(?:[${UNRESERVED}${SUB_DELIMS}:]|${PCT_ENCODED})*`;
+
+/** `dec-octet` (Section 3.2.2): 0-255 with no leading zero. */
+const DEC_OCTET = "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])";
+/** `IPv4address = dec-octet "." dec-octet "." dec-octet "." dec-octet` (Section 3.2.2). */
+const IPV4ADDRESS = String.raw`${DEC_OCTET}\.${DEC_OCTET}\.${DEC_OCTET}\.${DEC_OCTET}`;
+/** `h16 = 1*4HEXDIG` (Section 3.2.2). */
+const H16 = `${HEXDIG}{1,4}`;
+/** `ls32 = ( h16 ":" h16 ) / IPv4address` (Section 3.2.2). */
+const LS32 = `(?:${H16}:${H16}|${IPV4ADDRESS})`;
+/** `IPv6address` (Section 3.2.2): the nine alternatives of the ABNF, in order. */
+const IPV6ADDRESS = `(?:${[
+  `(?:${H16}:){6}${LS32}`,
+  `::(?:${H16}:){5}${LS32}`,
+  `(?:${H16})?::(?:${H16}:){4}${LS32}`,
+  `(?:(?:${H16}:){0,1}${H16})?::(?:${H16}:){3}${LS32}`,
+  `(?:(?:${H16}:){0,2}${H16})?::(?:${H16}:){2}${LS32}`,
+  `(?:(?:${H16}:){0,3}${H16})?::${H16}:${LS32}`,
+  `(?:(?:${H16}:){0,4}${H16})?::${LS32}`,
+  `(?:(?:${H16}:){0,5}${H16})?::${H16}`,
+  `(?:(?:${H16}:){0,6}${H16})?::`,
+].join("|")})`;
+/** `IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )` (Section 3.2.2). */
+const IPVFUTURE = String.raw`[vV]${HEXDIG}+\.[${UNRESERVED}${SUB_DELIMS}:]+`;
+/** `IP-literal = "[" ( IPv6address / IPvFuture ) "]"` (Section 3.2.2). */
+const IP_LITERAL = String.raw`\[(?:${IPV6ADDRESS}|${IPVFUTURE})\]`;
+/**
+ * `reg-name = *( unreserved / pct-encoded / sub-delims )` (Section 3.2.2).
+ * Every `IPv4address` is also a `reg-name`, so `host` needs only
+ * `IP-literal / reg-name` for a syntax check: the first-match-wins rule of
+ * Section 3.2.2 decides only how a host is interpreted, and a dotted name
+ * that is not a valid IPv4 address (`1.2.3.256`) is a valid `reg-name`.
+ */
+const REG_NAME = `(?:[${UNRESERVED}${SUB_DELIMS}]|${PCT_ENCODED})*`;
+/** `host = IP-literal / IPv4address / reg-name` (Section 3.2.2), captured. */
+const HOST = `(?<host>${IP_LITERAL}|${REG_NAME})`;
+/** `port = *DIGIT` (Section 3.2.3). */
+const PORT = "[0-9]*";
+/** `authority = [ userinfo "@" ] host [ ":" port ]` (Section 3.2). */
+const AUTHORITY = `(?:${USERINFO}@)?${HOST}(?::${PORT})?`;
+
+/** `segment = *pchar`, `segment-nz = 1*pchar` (Section 3.3). */
+const SEGMENT = `${PCHAR}*`;
+const SEGMENT_NZ = `${PCHAR}+`;
+/**
+ * `hier-part = "//" authority path-abempty / path-absolute / path-rootless /
+ * path-empty` (Section 3), with `path-abempty = *( "/" segment )`,
+ * `path-absolute = "/" [ segment-nz *( "/" segment ) ]`,
+ * `path-rootless = segment-nz *( "/" segment )` and `path-empty = 0<pchar>`
+ * (Section 3.3).
+ */
+const HIER_PART = `(?://${AUTHORITY}(?:/${SEGMENT})*|/(?:${SEGMENT_NZ}(?:/${SEGMENT})*)?|${SEGMENT_NZ}(?:/${SEGMENT})*|)`;
+/** `query = *( pchar / "/" / "?" )` (Section 3.4). */
+const QUERY = `(?:${PCHAR}|[/?])*`;
 
 /**
- * Characters an RFC 3986 URI never contains: controls, space, `"<>\^`{|}`,
- * DEL and every non-ASCII code point. `#` begins a fragment, which an
- * operation target, like an RFC 8707 resource indicator, never carries.
+ * `absolute-URI = scheme ":" hier-part [ "?" query ]` (Section 4.3). It has
+ * no fragment, so a `#` anywhere fails the match: an operation target, like
+ * an RFC 8707 resource indicator, never carries one. The pattern carries no
+ * `u` flag and every class is ASCII, so a space, a control character, DEL or
+ * any non-ASCII code point fails it too.
  */
-// biome-ignore lint/suspicious/noControlCharactersInRegex: the class exists to reject control characters.
-const NOT_IN_TARGET = /[\u0000- "<>\\^`{|}#\u007f-￿]/;
+const ABSOLUTE_URI = new RegExp(String.raw`^(?<scheme>${SCHEME}):${HIER_PART}(?:\?${QUERY})?$`);
+
+/**
+ * `http` and `https` (RFC 9110, Sections 4.2.1 and 4.2.2): the URI takes the
+ * `"//" authority` form, and "a recipient that processes such a URI
+ * reference MUST reject it as invalid" when its host is empty. Scheme names
+ * compare case-insensitively (RFC 3986 Section 3.1); the operand itself is
+ * never rewritten. This is the one scheme-specific check here: other schemes
+ * are held to the generic grammar only.
+ */
+const HTTP_SCHEME = /^https?$/i;
 
 /**
  * Whether `value` is a well-formed operation target: a string holding one
- * absolute URI with no fragment. Shape only: the value is never parsed into a
- * different spelling, so an `exact` comparison reads the operand as given.
+ * RFC 3986 `absolute-URI` (Section 4.3), so with no fragment, in which every
+ * `%` begins a `pct-encoded` triplet and every character is one the grammar
+ * permits where it appears; an `http` or `https` target also names a
+ * non-empty host. Syntax only: the value is matched as given and never
+ * parsed into, or replaced by, a different spelling, so an `exact`
+ * comparison reads the operand as given. The WHATWG URL parser is not used:
+ * it accepts what this grammar refuses (`%zz`, a trailing `%`, `https:x`,
+ * `https:///x`) and refuses what it permits (an `IPvFuture` literal, a
+ * dotted `reg-name` such as `1.2.3.256`).
  */
 export function isOperationTarget(value: unknown): value is string {
-  if (typeof value !== "string" || !SCHEME.test(value) || NOT_IN_TARGET.test(value)) return false;
-  try {
-    new URL(value);
-    return true;
-  } catch {
-    return false;
-  }
+  if (typeof value !== "string") return false;
+  const m = ABSOLUTE_URI.exec(value);
+  if (m === null) return false;
+  const { scheme, host } = m.groups ?? {};
+  return !HTTP_SCHEME.test(scheme ?? "") || (host !== undefined && host.length > 0);
 }
 
 /** The outcome of matching one entry against an operation target. */
