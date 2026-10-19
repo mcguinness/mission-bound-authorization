@@ -20,7 +20,7 @@ origin/main `e9001b2f`, and each statement about the as-native target and its
 launcher (#1105), or naming a later merged issue (such as #1103 or #1104), at
 `583e3806`, each naming #828 at `e3f4e789`, and §11 and the signing-key and
 restart statements (#1299, #1307) at `73a2e86b`, and each naming #1320 at
-`2ca5767a`. Each cites the function
+`87a4bd67`. Each cites the function
 (`file:line`, read at `04b11481`, paths relative to `src/`) or the exact test (`describe > it`)
 that shows it. A path with no
 witnessing test says "no test yet". Tests marked [FGA] are skipped without a
@@ -510,7 +510,7 @@ correct surface and role.
 this contract makes for the target (§1, §2, §8) and per overlay obligation of
 [provider-integration-port.md](provider-integration-port.md) §5. Each cited
 test exists at that revision, except the high-risk approval row, re-reviewed
-for #1320 at `2ca5767a`, whose witnesses exist from that commit; the sections
+for #1320 at `87a4bd67`, whose witnesses exist from that commit; the sections
 named hold the full witness lists.
 Status:
 
