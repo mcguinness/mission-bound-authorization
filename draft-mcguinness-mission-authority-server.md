@@ -3218,6 +3218,47 @@ enforcement claim. The phases are:
    MAS record, lifecycle, and authority model continue to govern the
    rest of the estate.
 
+The following tables compare the four mechanisms by which phases 3
+through 6 relate an acting credential to a Mission: the components
+each changes, and what each establishes. The cited sections define
+each entry. The Issuance Grant entries come from
+{{I-D.draft-mcguinness-oauth-mission-issuance-grant}}, the native
+entries from the OAuth binding's issuance gating and Subject
+establishment ({{I-D.draft-mcguinness-oauth-mission}}), and
+credential-carried establishment from the runtime profile
+({{I-D.draft-mcguinness-mission-runtime}}). The identity provider
+(IdP) adapter is the component that applies the mapping contract's
+subject and client mappings ({{mapping-contract}}).
+
+| Mechanism | AS | PEP and PDP | MAS | IdP adapter |
+| --- | --- | --- | --- | --- |
+| Mapping join (phase 3) | No code change | PEP: covers every consequential path in scope, supplying the Mission reference and the credential's own authority. PDP: resolves the Mission and verifies the joins ({{join-rules}}) | Records, lifecycle, and signed Status with join disclosure | Runs at each PDP |
+| Join Assertion (phase 4) | No code change; configured for introspection or validatable JWT access tokens, sender-constrained issuance, and reported `cnf` ({{enterprise-prerequisites}}) | PEP: also obtains and forwards the assertion. PDP: verifies it in place of the mapping checks ({{join-assertion-pdp}}) | Adds the join-assertion endpoint, holding introspection credentials at the AS | Moves to the MAS |
+| MAS plus Issuance Grant (phase 5) | Grant validation, bounded minting, and Mission-state gates; an AS that already supplies them may need configuration and integration rather than source changes | Credential-carried establishment; the join does not run | Adds grant minting | Runs at the consuming AS, at redemption |
+| Native Mission-aware issuance (phase 6) | The OAuth binding's own issuance for its resources | Credential-carried establishment; the join does not run | Serves as the AS's Mission store, or merges into it | Part of the AS's Subject establishment |
+{: title="Components each mechanism changes"}
+
+| Mechanism | Binding property | Issuance and runtime gates | Identity mapping | Uncovered-path residual |
+| --- | --- | --- | --- | --- |
+| Mapping join | `credential-correlated`, with its equivalence-class ambiguity | Issuance: none ({{limitations}}). Runtime: current state, the subject and client joins, and the three-bound permit ({{join-rules}}) | The mapping contract's subject, client, and scope mappings and delegate policy, failing closed when unresolved or ambiguous ({{mapping-contract}}) | Ungoverned: ordinary OAuth alone bounds use ({{limitations}}) |
+| Join Assertion | Token-specific `credential-correlated`, never issuance | Issuance: none for the acting token; assertions only for an `active` Mission ({{join-assertion-request}}). Runtime: as for the mapping join, with the assertion verified | The same contract, evaluated at the MAS over introspection or validated claims ({{join-assertion-request}}); scope mapping stays at the PEP ({{join-rules}}) | As for the mapping join |
+| MAS plus Issuance Grant | `credential-mission-bound`, with `presenter-key-bound` where its confirmation binding is in force end to end | Issuance: grants only for an `active` Mission; redemption and every refresh gated with a Mission-state integration, otherwise no refresh tokens. Runtime: credential-carried establishment | The grant's `sub` to a local account, and its authorization details to served resources, at redemption | Token-layer bounds only; an issued token can run to its expiry after revocation, and the AS's other tokens stay ordinary |
+| Native Mission-aware issuance | `credential-mission-bound`, with `presenter-key-bound` where its confirmation binding is in force end to end | Issuance: the OAuth binding's gates on every derivation, refresh included. Runtime: credential-carried establishment | An external Subject mapped injectively to an AS-local `sub` at approval | Token-layer bounds only; an issued token can run to its expiry after revocation |
+{: title="What each mechanism establishes"}
+
+Ordered by row, the tables describe an upgrade path in which each
+step is independently useful. The mapping join is the compatibility
+case: correlation only, on the paths a PEP covers, with no AS change.
+The Join Assertion binds that correlation to one sender-constrained
+token and moves subject and client mapping to the MAS, still without
+AS code change. Where an AS supports the Issuance Grant, a deployment
+can move that AS's paths there directly, restoring Mission-bound
+credentials and the issuance gate for them; native issuance applies
+where an AS becomes natively Mission-aware. Rows differ per
+authorization server and path, and a path claims only its own row's
+property ({{I-D.draft-mcguinness-mission-architecture}}, Section
+"Mission Binding Properties").
+
 A deployment stops at the phase its risk warrants; nothing above the
 floor is required to begin. The MAS remains the control plane of the
 family's delegated-authority layer
@@ -3303,6 +3344,13 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Progressive Adoption compares the four mechanisms of phases 3
+  through 6 (mapping join, Join Assertion, MAS plus Issuance Grant,
+  and native Mission-aware issuance) in two informative tables: the
+  components each changes, and the binding property, gates, identity
+  mapping, and uncovered-path residual each has. A paragraph orders
+  them as an upgrade path. No requirement changed (#818, D508).
 
 - Native-operation error mapping: a refusal of a predecessor or parent
   that is not `active` maps to `conflict` whatever OAuth code its
