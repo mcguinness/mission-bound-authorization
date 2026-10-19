@@ -22,6 +22,14 @@ export interface EffectiveParams {
   amount: { amount: string; currency: string };
   payee_account: string;
   resource: string;
+  /**
+   * @spec resource-access#initial-common-constraints (#1266): every final
+   * recipient the operation reaches, present only where the vendor record
+   * names its own remittance routing, so the digest binds a set that is not
+   * a function of `vendor_id` alone. A routing change between decision and
+   * execution then refuses `parameter_mismatch`.
+   */
+  recipients?: string[];
 }
 
 export function buildEffectiveParams(input: {
@@ -29,6 +37,7 @@ export function buildEffectiveParams(input: {
   invoice: Invoice;
   vendor: Vendor;
   resource: string;
+  recipients?: readonly string[];
 }): EffectiveParams {
   const { action, invoice, vendor, resource } = input;
   return {
@@ -40,6 +49,7 @@ export function buildEffectiveParams(input: {
     amount: { amount: invoice.amount, currency: invoice.currency },
     payee_account: invoice.payee_account,
     resource,
+    ...(input.recipients !== undefined ? { recipients: [...input.recipients] } : {}),
   };
 }
 

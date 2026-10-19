@@ -1,0 +1,1331 @@
+{
+  "format": "mission-authzen-cases/1",
+  "group": "operation-target",
+  "description": "D457: the PEP-established resource.properties.operation_target, the PDP entry match against it, and its place in permit reuse and execution",
+  "spec": "draft-mcguinness-mission-authzen",
+  "cases": [
+    {
+      "id": "az-ot-01",
+      "description": "Same audience; the target is the exact entry's invoice",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permit",
+        "reason": "both bounds' exact entries equal the operation target"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-02",
+      "description": "Same audience and action; the target is another invoice",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_931",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_931"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "the audience is equal, but no entry matches the operation target",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "credential"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-03",
+      "description": "An exact collection entry does not cover a member of the collection",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "exact compares the whole target; the collection is not its members",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "credential"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-04",
+      "description": "A prefix collection entry covers a member at a segment boundary",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target",
+        "pdp.resource-match.prefix"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permit",
+        "reason": "the target extends the prefix at a path-segment boundary"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-05",
+      "description": "A prefix entry does not cover a sibling that shares its characters",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target",
+        "pdp.resource-match.prefix"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "1",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoicesX/1"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "a prefix extends only at a path-segment boundary",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "credential"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-06",
+      "description": "An exact entry and a target that differs only in host case",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://ERP.EXAMPLE.COM/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "the exact operand is compared as received, never parsed and reserialized, so equivalent spellings do not match",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "credential"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-07",
+      "description": "A prefix entry and a target that differs only in host case",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target",
+        "pdp.resource-match.prefix"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://ERP.EXAMPLE.COM/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permit",
+        "reason": "prefix containment compares after the comparison normalization"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-08",
+      "description": "A logical audience identifier does not take part in the entry match",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "urn:example:erp",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permit",
+        "reason": "the PEP validated the token's audience; the entry matches the operation target, which is independent of the audience value"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-09",
+      "description": "An entry equal to the audience does not cover a finer operation target",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "audience equality is not a resource match: the contract establishes the invoice as the target, and the exact entry names the service root",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "credential"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-10",
+      "description": "An entry naming another member of the token's audience array",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target",
+        "pdp.resource-match.prefix"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://ledger.example.com",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://ledger.example.com",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "the token's aud array named both services, but only an entry matching the operation target authorizes the operation",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "credential"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-11",
+      "description": "No operation_target, with an audience equal to the entry's resource",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a missing target refuses before evaluation; there is no fallback to the audience, type or id",
+        "carrier": "refusal-record",
+        "error": "operation_target_invalid"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-12",
+      "description": "operation_target carries two URIs",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": [
+                "https://erp.example.com/invoices/inv_2026Q3_842",
+                "https://erp.example.com/invoices/inv_2026Q3_931"
+              ]
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the target is not one absolute URI",
+        "carrier": "refusal-record",
+        "error": "operation_target_invalid"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-13",
+      "description": "operation_target is a relative reference",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the target is not an absolute URI",
+        "carrier": "refusal-record",
+        "error": "operation_target_invalid"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-14",
+      "description": "The validated arguments name two invoices for a one-target operation",
+      "role": "pep",
+      "requires": [
+        "pep.operation-target"
+      ],
+      "check": "establish-target",
+      "input": {
+        "metadata_identifier": "https://erp.example.com",
+        "contract": {
+          "operation": "invoices.read",
+          "target": "https://erp.example.com/invoices/{invoice_id}"
+        },
+        "operation": "invoices.read",
+        "arguments": {
+          "invoice_id": [
+            "inv_2026Q3_842",
+            "inv_2026Q3_931"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the PEP cannot establish one unambiguous target, so it refuses before any decision request",
+        "carrier": "refusal-record",
+        "error": "target_unresolvable"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-15",
+      "description": "A caller-asserted target argument is ignored",
+      "role": "pep",
+      "requires": [
+        "pep.operation-target"
+      ],
+      "check": "establish-target",
+      "input": {
+        "metadata_identifier": "https://erp.example.com",
+        "contract": {
+          "operation": "invoices.read",
+          "target": "https://erp.example.com/invoices/{invoice_id}"
+        },
+        "operation": "invoices.read",
+        "arguments": {
+          "invoice_id": "inv_2026Q3_931",
+          "target": "https://erp.example.com"
+        },
+        "presented_entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "established",
+        "reason": "the target comes from the contract and the validated invoice_id, never from a caller assertion or a presented entry",
+        "target": "https://erp.example.com/invoices/inv_2026Q3_931"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-16",
+      "description": "A presented entry does not choose the target",
+      "role": "pep",
+      "requires": [
+        "pep.operation-target"
+      ],
+      "check": "establish-target",
+      "input": {
+        "metadata_identifier": "https://erp.example.com",
+        "contract": {
+          "operation": "invoices.read",
+          "target": "https://erp.example.com/invoices/{invoice_id}"
+        },
+        "operation": "invoices.read",
+        "arguments": {
+          "invoice_id": "inv_2026Q3_931"
+        },
+        "presented_entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "established",
+        "reason": "the PEP establishes the target independently of the entries, never one an entry would match",
+        "target": "https://erp.example.com/invoices/inv_2026Q3_931"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-17",
+      "description": "A target outside the requesting PEP's enforcement scope",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target",
+        "pdp.enforcement-scope"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "payroll-run",
+            "id": "7",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://payroll.example.com/runs/7"
+            }
+          },
+          "action": {
+            "name": "payroll.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://payroll.example.com",
+            "resource_match": "prefix",
+            "actions": [
+              "payroll.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://payroll.example.com",
+            "resource_match": "prefix",
+            "actions": [
+              "payroll.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the authenticated PEP is authorized only for the ERP; an entry covering the target does not make it the PEP's to request",
+        "carrier": "refusal-record",
+        "error": "operation_target_invalid"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-18",
+      "description": "A declared service-level contract makes the root the target",
+      "role": "pep",
+      "requires": [
+        "pep.operation-target"
+      ],
+      "check": "establish-target",
+      "input": {
+        "metadata_identifier": "https://erp.example.com",
+        "contract": {
+          "operation": "invoices.read",
+          "target": "https://erp.example.com",
+          "service_level": true
+        },
+        "operation": "invoices.read",
+        "arguments": {
+          "invoice_id": "inv_2026Q3_842"
+        }
+      },
+      "expected": {
+        "outcome": "established",
+        "reason": "the contract explicitly defines service-level authority",
+        "target": "https://erp.example.com"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-19",
+      "description": "No contract for the operation; the metadata identifier is not a fallback",
+      "role": "pep",
+      "requires": [
+        "pep.operation-target"
+      ],
+      "check": "establish-target",
+      "input": {
+        "metadata_identifier": "https://erp.example.com",
+        "contract": null,
+        "operation": "invoices.read",
+        "arguments": {
+          "invoice_id": "inv_2026Q3_842"
+        },
+        "presented_entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an absent contract is not a service-level definition, so there is no target and no fallback to the metadata identifier",
+        "carrier": "refusal-record",
+        "error": "target_unresolvable"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-20",
+      "description": "Under the declared service-level contract, a root entry matches",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "permit",
+        "reason": "the declared contract identifies the service root as the target"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-21",
+      "description": "The credential's prefix entry covers the target; the narrowed Mission entry does not",
+      "role": "pdp",
+      "requires": [
+        "pdp.operation-target",
+        "pdp.resource-match.prefix"
+      ],
+      "check": "evaluate",
+      "input": {
+        "request": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_931",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_931"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "credential_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices",
+            "resource_match": "prefix",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "current_effective_authority": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com/invoices/inv_2026Q3_842",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ],
+        "pep_enforcement_scope": [
+          {
+            "resource": "https://erp.example.com",
+            "resource_match": "prefix"
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "the current effective authority is matched against the same target",
+        "carrier": "pdp-denial",
+        "error": "out_of_authority",
+        "authority_bound": "mission"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-22",
+      "description": "Same audience, action, type and id; the target changed",
+      "role": "pep",
+      "requires": [
+        "pep.permit-target-binding"
+      ],
+      "check": "permit-reuse",
+      "input": {
+        "evaluated": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "permit": {
+          "decision": true,
+          "conditions": {
+            "valid_until": "2026-11-02T08:15:00Z"
+          }
+        },
+        "next": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/archive/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "now": "2026-11-02T08:14:30Z"
+      },
+      "expected": {
+        "outcome": "re-evaluate",
+        "reason": "the target is part of the cache key, so a read permit with no parameter digest is not reused for another target"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-23",
+      "description": "An identical request, observed later, within the permit's validity",
+      "role": "pep",
+      "requires": [
+        "pep.permit-target-binding"
+      ],
+      "check": "permit-reuse",
+      "input": {
+        "evaluated": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "permit": {
+          "decision": true,
+          "conditions": {
+            "valid_until": "2026-11-02T08:15:00Z"
+          }
+        },
+        "next": {
+          "resource": {
+            "type": "invoice",
+            "id": "inv_2026Q3_842",
+            "properties": {
+              "audience": "https://erp.example.com",
+              "operation_target": "https://erp.example.com/invoices/inv_2026Q3_842"
+            }
+          },
+          "action": {
+            "name": "invoices.read"
+          }
+        },
+        "now": "2026-11-02T08:14:30Z"
+      },
+      "expected": {
+        "outcome": "reuse",
+        "reason": "equal cache keys, including the target, within valid_until"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-24",
+      "description": "At use, the contract resolves the operation to another target",
+      "role": "pep",
+      "requires": [
+        "pep.permit-target-binding"
+      ],
+      "check": "execute",
+      "input": {
+        "evaluated_target": "https://erp.example.com/invoices/inv_2026Q3_842",
+        "target_at_use": "https://erp.example.com/archive/invoices/inv_2026Q3_842",
+        "parameter_bound": false
+      },
+      "expected": {
+        "outcome": "suppress",
+        "reason": "the PEP releases no effect on a target other than the evaluated one and requests a new decision",
+        "carrier": "execution-evidence",
+        "error": "target_drift"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-25",
+      "description": "At use, the target cannot be established again",
+      "role": "pep",
+      "requires": [
+        "pep.permit-target-binding"
+      ],
+      "check": "execute",
+      "input": {
+        "evaluated_target": "https://erp.example.com/invoices/inv_2026Q3_842",
+        "target_at_use": null,
+        "parameter_bound": false
+      },
+      "expected": {
+        "outcome": "suppress",
+        "reason": "a target that cannot be re-established at use releases nothing",
+        "carrier": "execution-evidence",
+        "error": "target_drift"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-26",
+      "description": "A parameter-bound write whose target-determining argument changed",
+      "role": "pep",
+      "requires": [
+        "pep.permit-target-binding"
+      ],
+      "check": "execute",
+      "input": {
+        "evaluated_target": "https://erp.example.com/journal-entries/je_2026Q3_inv_8421",
+        "target_at_use": "https://erp.example.com/journal-entries/je_2026Q3_inv_9310",
+        "parameter_bound": true,
+        "target_argument_changed": true
+      },
+      "expected": {
+        "outcome": "suppress",
+        "reason": "the target-determining argument is an effectful parameter, so the digest reverification fails first",
+        "carrier": "execution-evidence",
+        "error": "parameter_mismatch"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    },
+    {
+      "id": "az-ot-27",
+      "description": "At use, the target equals the evaluated one",
+      "role": "pep",
+      "requires": [
+        "pep.permit-target-binding"
+      ],
+      "check": "execute",
+      "input": {
+        "evaluated_target": "https://erp.example.com/invoices/inv_2026Q3_842",
+        "target_at_use": "https://erp.example.com/invoices/inv_2026Q3_842",
+        "parameter_bound": false
+      },
+      "expected": {
+        "outcome": "release",
+        "reason": "the operation executes on the target it was authorized for"
+      },
+      "refs": [
+        "#1276 sketch step 6",
+        "D457"
+      ]
+    }
+  ]
+}

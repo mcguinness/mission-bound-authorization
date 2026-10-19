@@ -198,7 +198,7 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
 
   it("malformed or unsupported grant authority refuses rather than minting verbatim", async () => {
     const server = await ras();
-    for (const authority of [{}, [], [{ ...delegated, actions: "invoices.read" }], [{ ...delegated, constraints: { tenant: "unknown-constraint" } }]]) {
+    for (const authority of [{}, [], [{ ...delegated, actions: "invoices.read" }], [{ ...delegated, constraints: { x_region: "unknown-constraint" } }]]) {
       await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
     }
   });
@@ -641,5 +641,45 @@ describe("RAS expiry clamp rejected before jti consumption (@spec cross-domain#d
     // succeeds rather than failing on replay.
     const { access_token } = await server.redeem(grant, clientJkt);
     expect(access_token).toBeTruthy();
+  });
+});
+
+describe("RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type)", () => {
+  const details = (token: string) => JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString()).authorization_details;
+  const windowed: AuthorityEntry = {
+    type: "mission_resource_access", resource: AUDIENCE, actions: ["journal-entries.write"],
+    constraints: { time_window: { not_after: FAR_PAST } },
+  };
+  const vendorBound: AuthorityEntry = {
+    type: "mission_resource_access", resource: AUDIENCE, actions: ["invoices.read"],
+    constraints: { vendors: ["acme"] },
+  };
+  const otherCapped: AuthorityEntry = {
+    type: "mission_resource_access", resource: "https://other.example.test/mcp", actions: ["reports.read"],
+    constraints: { max_amount: { amount: "10.00", currency: "USD" } },
+  };
+
+  it("drops whole an entry carrying a key the resource does not list, keeps listed keys intact, and leaves an unlisted resource as narrowed", async () => {
+    const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: ["vendors"] } });
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [windowed, vendorBound, otherCapped] }), clientJkt);
+    expect(details(result.access_token)).toEqual([vendorBound, otherCapped]);
+  });
+
+  it("refuses when no entry survives, without consuming the grant", async () => {
+    const supported = ["vendors"];
+    const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: supported } });
+    const grant = await mintGrant({ authorizationDetails: [windowed] });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    supported.push("time_window");
+    const result = await server.redeem(grant, clientJkt);
+    expect(details(result.access_token)).toEqual([windowed]);
+  });
+
+  it("malformed resourceConstraintsSupported configuration fails at startup", async () => {
+    for (const resourceConstraintsSupported of [[], "vendors", { [AUDIENCE]: "vendors" }, { [AUDIENCE]: [""] }]) {
+      await expect(ras({ resourceConstraintsSupported } as unknown as Partial<RasConfig>)).rejects.toThrow(
+        "resourceConstraintsSupported",
+      );
+    }
   });
 });

@@ -281,6 +281,27 @@ describe("the Mission access-token profile is met before any claim is trusted (@
   });
 });
 
+describe("the token's audience is validated on its own, independently of the operation target (@spec resource-access#resource-matching, #1276)", () => {
+  it("admits an array aud that includes this resource, and the PEP still sends its contract's target beside its own audience", async () => {
+    const facts = await overHttp(await mint({ aud: ["https://ledger.example/api", CANONICAL_RESOURCE] }));
+    const { pep, decided } = pepDeciding();
+    const res = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, facts);
+    expect(res.permitted, JSON.stringify(res)).toBe(true);
+    expect((decided[0] as { resource: { properties: Record<string, unknown> } }).resource.properties).toMatchObject({
+      audience: CANONICAL_RESOURCE,
+      operation_target: CANONICAL_RESOURCE,
+    });
+  });
+
+  it("rejects a token whose aud omits this resource, though its entries name the operation target exactly", async () => {
+    for (const aud of ["https://ledger.example/api", ["https://ledger.example/api"], `${CANONICAL_RESOURCE}/admin`]) {
+      const token = await mint({ aud });
+      await expect(overHttp(token), JSON.stringify(aud)).rejects.toThrow(/aud/);
+      await expect(server.validateMissionToken(token), JSON.stringify(aud)).rejects.toThrow(/aud/);
+    }
+  });
+});
+
 describe("the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825)", () => {
   /** Enforce `tool` under a token carrying `details`, validated over HTTP. */
   async function attempt(details: unknown[], tool: string, args: Record<string, unknown>, view: MissionView = VIEW) {
@@ -437,7 +458,7 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
     expect((x.decided[0] as { resource: unknown }).resource).toEqual({
       type: "vendor",
       id: "acme",
-      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE },
+      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE },
     });
   });
 

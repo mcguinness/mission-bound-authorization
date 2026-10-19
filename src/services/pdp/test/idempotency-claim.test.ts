@@ -145,6 +145,8 @@ interface RequestOptions {
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
   audience?: string;
+  /** The PEP-established operation target (#1276); defaults to the audience. */
+  target?: string;
   /** The target object; the request's `resource.properties.audience` comes from `audience`. */
   resource?: { type: string; id: string; properties?: { vendor_id?: string } };
   /** The PEP's Mission state observation; defaults to a `fresh` read at the clock's instant. */
@@ -155,7 +157,10 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
   return {
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
-    resource: { ...target, properties: { ...target.properties, audience: o.audience ?? RESOURCE } },
+    resource: {
+      ...target,
+      properties: { ...target.properties, audience: o.audience ?? RESOURCE, operation_target: o.target ?? o.audience ?? RESOURCE },
+    },
     action: {
       name: o.action ?? "payments:payment.execute",
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),
@@ -311,6 +316,24 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       ]);
       expect(a?.decision).toBe(true);
       expectDenied(b as Decision, "idempotency_conflict", { next_action: "none" });
+      claims.close();
+    });
+
+    it("a key reused for another operation target under the same audience, action, type/id and digest is idempotency_conflict, never a retransmission of the first permit (#1276)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const run = (o: RequestOptions) => evaluate(request(c, { key, ...o }), options(claims, c, { consumptionStatus: unconsumed }));
+      const first = await run({});
+      expect(first.decision, JSON.stringify(first.context)).toBe(true);
+      // Control: the identical request is the retransmission of that permit.
+      const resent = await run({});
+      expect(resent.context.evaluation_id).toBe(first.context.evaluation_id);
+      // Only the operation target moves (the Mission names both targets).
+      const moved = await run({ target: OTHER_RESOURCE });
+      expectDenied(moved, "idempotency_conflict", { next_action: "none" });
+      expect(moved.context.evaluation_id).not.toBe(first.context.evaluation_id);
       claims.close();
     });
   });

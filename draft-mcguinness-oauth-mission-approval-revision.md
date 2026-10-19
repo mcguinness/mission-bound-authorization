@@ -58,6 +58,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-shaping:
     title: "Mission Intent Shaping"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html
@@ -487,6 +495,11 @@ distinct from widening an approved Mission, which requires a fresh
 approval ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 
 # Worked Example {#example}
+
+In the ERP examples in this document, the operation contract identifies
+`https://erp.example.com` as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
+constraints determine the permitted operations within that service.
 
 Agent `s6BhdRkqt3`, acting for `alice`, proposes a Mission to reconcile
 Q3 invoices that asks for both read and write on the ERP. It expresses
