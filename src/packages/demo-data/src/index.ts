@@ -20,6 +20,7 @@ import {
   isAuthorityEntry,
   parseScopeProjectionMapping,
   parseStrictJson,
+  refusedEntryMember,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
 } from "@mission/core";
@@ -898,12 +899,29 @@ function rejectUnsupportedResourceMatch(
   }
 }
 
+/**
+ * @spec resource-access#entry-validation (#1278, D457): this type does not use
+ * the RFC 9396 common `locations` field. A ceiling entry carrying it, whatever
+ * its value, is refused at load, naming the entry and the member, rather than
+ * rebuilt without it.
+ */
+function rejectRefusedMember(file: string, e: Record<string, unknown>, ctx: string): void {
+  const member = refusedEntryMember(e);
+  if (member !== undefined) {
+    throw new ConfigError(
+      file,
+      `${ctx} carries ${member}, which the mission_resource_access type does not use`,
+    );
+  }
+}
+
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
   rejectUnsupportedResourceMatch(file, e, ctx);
   const type = reqString(file, e, "type", ctx);
   if (type !== "mission_resource_access")
     throw new ConfigError(file, `${ctx} has unsupported authority type`);
+  rejectRefusedMember(file, e, ctx);
   const entry: AuthorityEntry = {
     type,
     resource: reqString(file, e, "resource", ctx),
@@ -1690,6 +1708,7 @@ function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEnt
     const type = reqString(file, e, "type", `${ctx}[${i}]`);
     if (type !== "mission_resource_access")
       throw new ConfigError(file, `${ctx}[${i}] has unsupported authority type`);
+    rejectRefusedMember(file, e, `${ctx}[${i}]`);
     const entry: CeilingEntry = {
       type,
       resource: reqString(file, e, "resource", `${ctx}[${i}]`),

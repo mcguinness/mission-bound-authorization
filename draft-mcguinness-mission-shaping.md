@@ -1348,7 +1348,7 @@ for this proposal. For brevity, it omits `proposed_intent` and
   "shaper_version": "policy-bundle-2026-06-30",
   "outcome": "proposal",
   "input_digest":
-    "sha-256:InP9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4aB7cDe",
+    "sha-256:InP9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4aB7cDc",
   "input_exclusion_ruleset": "standard-2026-06",
   "user_supplied_facts": [
     "tenant acme-corp",

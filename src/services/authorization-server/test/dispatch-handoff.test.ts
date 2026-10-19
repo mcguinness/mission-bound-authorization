@@ -655,6 +655,22 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
     expect(h.status, JSON.stringify(hb)).toBe(200);
     expect(actionsOf(decodeJwt(hb.access_token).authorization_details)).toEqual(actionsOf(narrow));
   });
+
+  // @spec resource-access#entry-validation (#1278, D457): the handed-off
+  // authority is projected, which rebuilds each entry, so a requested entry
+  // carrying `locations` is refused rather than issued with the member dropped.
+  it("a requested entry carrying locations is refused invalid_authorization_details, issuing no handoff grant", async () => {
+    const instance = await dispatchInstance();
+    for (const locations of [[], [RESOURCE]]) {
+      const requested = narrowOf(instance.authority).map((e) => ({ ...e, locations }));
+      const res = await handoff(instance.token, { authorization_details: JSON.stringify(requested) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/locations must be absent/);
+      expect(body.access_token).toBeUndefined();
+    }
+  });
 });
 
 describe("Dispatch Handoff: redemption refusals (@spec mission-template#dispatch-handoff redemption)", () => {

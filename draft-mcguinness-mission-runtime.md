@@ -2113,7 +2113,10 @@ MUST define:
   including local object authorization, tenant configuration, legal
   holds, service invariants, and risk policy;
 - the runtime enforcement evidence fields and privacy treatment for
-  decision and refusal records; and
+  decision and refusal records;
+- the identifier the resource records with each executed effect, which
+  outcome reconciliation uses to attribute the effect to its action
+  ({{evidence}}); and
 - a profile identifier and version, so a change to any of the above
   is detectable and two independent implementations can name the same
   adapter contract.
@@ -2972,6 +2975,13 @@ evidence, and record the outcome the evidence establishes
 the deadline, determines the result: an outcome the component cannot
 establish stays undetermined-outcome, is escalated under the declared
 alerting obligation, and is never synthesized into a terminal result.
+Matching attributes an effect to its action: the component MUST NOT
+record an outcome from resource state that the resource does not
+attribute to the action through an identifier recorded with the
+effect (the permit or evaluation identifier, the idempotency claim,
+or a provider operation identifier returned for the request). State
+alone, such as an invoice now shown as paid, can have another cause
+and leaves the outcome undetermined.
 Reconciliation survives the Mission: once the Mission is non-active,
 it MAY record the outcome of work already initiated and MUST NOT
 admit a new effect under that Mission (an action already executing
@@ -3704,7 +3714,7 @@ in this manifest ({{policy-view}}).
     },
     "artifact": {
       "digest":
-        "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tX",
+        "sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7tU",
       "encoding": "application/vnd.example.policy-engine+bin"
     }
   }
@@ -3783,6 +3793,10 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Execution-Outcome Evidence: reconciliation records an outcome only
+  from an effect the resource attributes to the action through an
+  identifier recorded with it, never from resource state alone; the
+  Resource Server runtime profile names that identifier (#1271).
 - Mission Binding Establishment: names the AAuth realization of a
   credential-carried Mission reference beside the OAuth one, limited
   to the access paths where the AAuth binding supplies

@@ -7,20 +7,20 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "71b224155a509f76052bcc190ca56aace3752d79",
-    "content_sha256": "5f3904b1ff9fe79f60a1ec37e3a7d167fdae9550cb7991ea8fac5ff56ac77068"
+    "revision": "928829f8c6cae5168d4c28ccc2b0eb771ee78a51",
+    "content_sha256": "e4d473c69645c633ee99dbc66725d8367af229f213b01d4d067eea1260e4d60d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "8e34e9c566f14d7083a7a8d0503ad5bb31598fd9",
-    "content_sha256": "d674f8e075e2ca6797a7882264edb52e475f847aecbd1f60d987f9a45956dcde"
+    "revision": "0d2e92792394295ffcaeb6374318fcd9b2983a21",
+    "content_sha256": "7586c06a155ede87033d466599593597ca343dc24fdc5b6deb6a3d44419f3bde"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "77099bab921490c038b68590fce7ea5257c7de78",
-    "content_sha256": "3d0b6ce4af7bb061e0a4acf7497ab123f4c96b36bc6b90204ffe265f11c3c04c"
+    "revision": "e2578581ffea1974ac81ca4f90f3a28ed43baf39",
+    "content_sha256": "7ad8098f25e4546b1830e8fb967d38d68edd455e1c932e20ca3d97f884adcd0a"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "31c97371f6368fe5145b178e0395f0b27af7a41b",
-    "content_sha256": "89bf3dedc4144bf5aee77e79b8a2dc1a35c03a3ba1bf2a4f4170a52386c49310"
+    "revision": "026520e825327dcb33d83e2ae86e83528ad3575d",
+    "content_sha256": "ae15aac09f395bd2e9035bf0053a980540d514076781c958b7215bab9882391e"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1f11bbe47aa41369c0445cc5c7f1ce1ff86b0da4",
@@ -75,8 +75,8 @@
     "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "468cc194eed433fd9d5afcdae54cb0727226f165f6c2580d0e91e3fd5c5a04e7"
+    "revision": "438bce98d6283f92a50e4459f010977922ad345b",
+    "content_sha256": "e66f4eb68db2842f8b2f7aef23c99258b6a782721918a6462327e3de792d6864"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
@@ -91,8 +91,8 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "9d077906dd19a39794a7ce4c6c6db5faa5e720df",
-    "content_sha256": "d547739684cfda29b0ea24a14118e4d57b624bc64380d3ffd5dcacd20895e6b3"
+    "revision": "246cde5356cd616c113dd9a1d157ce877c36bbf5",
+    "content_sha256": "631a95e996b537443a13cccfb5c9e8d63a164c24676b1399bf3dc9f4da7d4395"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -103,8 +103,8 @@
     "content_sha256": "d88875b2ad94d43f21401d0f0e23bb669f0cc66ae639665a31ea3adebee25f12"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "e6697f44e4aae121741d1911d113618bfbac3059",
-    "content_sha256": "dce437f1e6d66ff1069f09ad0379fc5d6060f637af14319197bdfd4bdc0622d7"
+    "revision": "1b89ca722bea7c15bc24eb93ad963554504f7c71",
+    "content_sha256": "52a6c948b534991b34997fe798382008770faabecf6764dee4fc4fa110b145d8"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -248,6 +248,7 @@
    "core.governance-record",
    "approval-governance.governed-policy",
    "deferred-approval.policy-completion",
+   "deferred-approval.deferral",
    "template.dispatch",
    "progressive.ceiling-drawdown",
    "progressive.drawdown-derivation-limits",
@@ -886,6 +887,12 @@
      "file": "src/services/mcp-payments/test/compound-actions.test.ts",
      "name": "compound-action phases (@spec runtime#compound-actions) > denies the fresh commit Decision when the Mission deactivates after prepare",
      "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the fresh commit decision mission_inactive when the Mission is revoked after a permitted preflight and prepare, and no wire exists (#253)",
+     "level": "cross-component",
      "surface": "resource-operation"
     }
    ]
@@ -3192,9 +3199,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a retained root whose bytes no longer reproduce the consented digest, and a forged approval instant",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant."
+   "notes": "PARTIAL: both implemented standing-consent paths (template dispatch, policy_drawdown child creation) record approved_at from RETAINED state (the template record's consent instant; the parent record's approval instant), proven by the two basis round-trip tests; no request-supplied approved_at path exists, so the verify-not-accept duty holds by construction and the mismatched-assertion refusal branch has no wire surface to test. Flips to tested when a standing-consent intake accepts an externally asserted instant and refuses a mismatch. #1185: governed_policy also records approved_at from retained consent; a retained instant altered at rest fails the issuer's attestation and refuses (cited). Still no intake for an externally asserted instant. #1185 wire path: a request-supplied approved_at is dropped by the parameter allow-lists, the retained and attested instant decides, and a retained instant altered at rest refuses. Still no intake for an externally asserted instant."
   },
   {
    "id": "core.approval-basis.standing-consent-recency",
@@ -3753,6 +3772,12 @@
      "file": "src/services/authorization-server/test/authority-source.test.ts",
      "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > admits an activator holding none of the ceiling's operational permissions (activation is not possession)",
      "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > names the Subject in the token and the Approver in the Mission record: Bob approves for Alice without openid (#253)",
+     "level": "cross-component",
      "surface": "derivation"
     }
    ]
@@ -7589,9 +7614,21 @@
      "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "delegated routing of transaction tokens (@spec mission#rs-enforcement) > refuses invalid_target, opening no approval, when the actor context comes only from the subject token, a same-Mission delegated token, for a Challenge-Issuing Resource not classified Mission-aware, and admits it once the resource is",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role), at the token endpoint on the cross-org exchange and on the JWT customizer backstop by direct invocation (unit: no oidc-provider mint carries act today; the endpoint witness follows a same-Mission delegation mint, #869). It does not establish every deployment route: the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. The transaction endpoint applies the same gate before admitting a workflow (txn-endpoint.test.ts, delegated routing of transaction tokens); that coverage is reviewed separately."
+   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens). Both carriers are witnessed as direct handler tests ending at admission: the challenge's act, and the subject token's, a real same-Mission delegated token presented by the delegate with its own key against a challenge carrying no act; restricting the gate to the challenge carrier fails the latter."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
@@ -15395,6 +15432,12 @@
      "name": "transaction endpoint redemption (@spec txn-authorization#challenge-redemption) > admits a workflow, pends on poll, then on approval issues a conforming transaction token",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an unconsumed transaction token for any other tool, a read or a wire, as txn_action_mismatch, before a decision and with no effect (#253)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ]
   },
@@ -20099,6 +20142,36 @@
    ]
   },
   {
+   "id": "runtime.evidence.reconciliation-attribution-required",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "the component MUST NOT record an outcome from resource state that the resource does not attribute to the action through an identifier recorded with the effect",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an effect the resource records against another action (another permit or operation) does not settle this action's outcome; with no attributable effect, the outcome stays undetermined and no outcome record is written for it",
+    "local": "the claim reconciler's ledger step resolves an effect only through Connectors.committedFor(evaluationId), the permit recorded with the ledger entry; another operation's wire for the same invoice leaves the redeemed permit's claim open, and no Execution Evidence is recorded for its evaluation."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > resource state alone settles nothing: another operation's wire for the same invoice leaves a redeemed permit's outcome open, with no evidence recorded for it (@spec runtime#evidence, #1271)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1271: before this rule, 'matching evidence' did not say what a match is, so an observation of resource state could be read as this action's outcome."
+  },
+  {
    "id": "runtime.evidence.claim-persistence-and-no-new-effect-post-termination",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "evidence",
@@ -21201,6 +21274,12 @@
      "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
      "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the PEP-supplied state is exactly active, and the PDP's own view wins on disagreement (@spec authzen#pdp-request rule 1) > the PDP's own revoked view against a PEP-supplied active state denies mission_inactive: the PDP's view wins",
      "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses the next read mission_inactive once the Mission is revoked at the advertised lifecycle endpoint, with the PDP's deny Decision Evidence and no effect (#253)",
+     "level": "cross-component",
      "surface": "decision-request"
     }
    ],
@@ -26798,6 +26877,12 @@
      "file": "src/services/mcp-payments/test/pdp-unavailability.test.ts",
      "name": "configured PDP unavailability (@spec runtime#ride-through, authzen#failure-condition-coverage) > over the %s channel, refuses vendor lookup under an invoice-only credential before the PDP and permits it under a broad one, on the same broad Mission",
      "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses an undeclared argument member and an authoritative member over the endpoint as invalid_request, with no PDP call, one Refusal Record each and no effect (#253)",
+     "level": "cross-component",
      "surface": "evidence-emission"
     }
    ],
@@ -34691,7 +34776,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only, because no issuance path here can carry a resource_match prefix entry: the kernel derivation builds each derived entry member by member (type, resource, actions, constraints, delegation) and never carries resource_match, so every Mission entry is exact, and the cross-org exchange's tool mapping emits none either. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only, because this deployment implements exact matching only and no issuance path can carry a prefix entry: since #1267 (#1264, D446), a resource_match other than exact is refused before approval or issuance, at PAR intake and in direct derivation (invalid_authorization_details) and by the policy.json, governed-policy.json and containment.json loaders (ConfigError), and the cross-org exchange's tool mapping emits none. Prefix matching itself is #1258's and #1266's. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -35636,12 +35721,56 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed entry carrying the RFC 9396 locations field is refused with invalid_authorization_details"
+    "normative": "a proposed or requested entry carrying the RFC 9396 locations field is refused with invalid_authorization_details, whatever its value",
+    "local": "the reference AS decides by property presence, so [], null, an empty string and a malformed value are refused like a populated array; PAR and device submission refuse before any request_uri, device_code or Mission, and the deferred initiation, dispatch handoff and async-delegation exchanges refuse before any deferral, grant, family or derivation count; the RAS's JWT-bearer redemption refuses a redeemed grant whose entry carries it with invalid_grant, the grant-level error, minting no local token, so the resource never receives the entry"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4; refusal approved in the #1277 review (D454). Not met by the reference: PAR admits locations and derivation drops it (#1278). Case fc-08 skipped (refusal.locations)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a proposal entry carrying locations, whatever its value, before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a signed grant whose entry carries locations, whatever its value, is refused, minting no local token",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > a trusted issuer's signed grant whose entry carries locations is refused at the RAS, so the SaaS server never receives the entry",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > refuses a proposal entry carrying locations, whatever its value, with invalid_authorization_details, issuing no device_code",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested entries on the deferral initiation (@spec resource-access#entry-validation, #1278) > refuses a requested entry carrying locations with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested entry carrying locations is refused invalid_authorization_details, issuing no handoff grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > confinement: a requested entry carrying locations is refused invalid_authorization_details, opening no family and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1258 item 4; refusal approved in the #1277 review (D454), shape ruled in D457; implemented by #1278. One presence check (refusedEntryMember in @mission/core) backs every boundary: the published schema carries \"locations\": false with the top level open, validateMissionResourceAccessSchema covers PAR, device submission and the other proposal intakes, and the deferred, handoff and async-delegation exchanges check requested entries before projecting them. Proved by disabling each guard in turn: the validator's check (the PAR and device tests fail), and the deferred, handoff and async-delegation checks (each test fails). The config loaders (ConfigError naming the entry and locations), direct derivation (invalid_authorization_details) and the template admin plane are witnessed in locations-refused.test.ts and template-dispatch-endpoint.test.ts and are not cited, since their errors or level differ from this row. A capability_sources entry is still admitted at PAR. The RAS's intake, a different surface from PAR, applies the same presence rule to a carried entry through isAuthorityEntry, since its trusted issuers are configurable (the #1283 review): a trusted issuer's signed grant whose entry carries locations is refused invalid_grant, the RFC 7523 grant-level error rather than invalid_authorization_details, minting no local token, so SaaS never receives it (mapping-entitlement.test.ts, and cross-domain.test.ts end to end). Proved by disabling the isAuthorityEntry check: both tests fail, and SaaS posts the journal entry. The helper-level witness (authority-subset.test.ts: isAuthorityEntry and both narrowToCeiling operands) and the RAS local ceiling's startup refusal are not cited; a grant without locations, or carrying capability_sources, still mints. Case fc-08 runs (refusal.locations)."
   },
   {
    "id": "resource-access.common-constraints.no-drop-any-key",
@@ -36850,10 +36979,10 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "no Mission is created active under governed_policy without a signed Approval Governance Record committed in the same commit; a failure to record leaves no active Mission",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire: the delivered Mission's signed record is committed with it and verifies against it, and a signing failure leaves no Mission, no record and no credential. The kernel tests assert the same at the store."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -36866,9 +36995,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > leaves no Mission, no record, and no retained inputs when signing or persistence fails",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > leaves no Mission and no credential when the record cannot be signed or persisted, and completes on a later poll",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.root-contents",
@@ -36915,10 +37056,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation request or proposal that names or carries its own standing consent, consenting human or approval instant does not activate a Mission unless retained, authenticated governance state establishes that consent",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation. The activation input has no member for a consent, a consenting human, or an approval instant; a retained consent row carries an issuer attestation, so a row altered at rest establishes nothing."
+    "local": "Over the wire: a request naming a consent, a consenting human and an approval instant activates nothing without retained consent, and under retained consent the issuer's own record decides; a retained approval instant altered at rest fails the issuer's attestation and activates nothing. The activation input has no member for a consent, a consenting human, or an approval instant."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -36931,9 +37072,27 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a missing or withdrawn standing consent and creates no Mission",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.digest-domains",
@@ -36966,9 +37125,15 @@
      "name": "policy snapshot digest domains (@spec approval-governance#governed-policy-root) > commits a root under mission-approval-policy and an evaluator under mission-activation-policy, never one for the other",
      "level": "unit",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a changed root version or bytes, a changed separate evaluator, and a digest from the wrong domain",
+     "level": "endpoint",
+     "surface": "commitment"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.record-members",
@@ -37114,19 +37279,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation under missing or withdrawn standing consent is refused and creates no Mission",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire: no retained consent, and a withdrawn one, each leave the pending approval denied with no Mission. The issuer's selection excludes a withdrawn consent before step 1 checks it again."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a missing or withdrawn standing consent and creates no Mission",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-root-approval",
@@ -37144,10 +37315,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation is refused when the consenting human was not authorized to approve the root, when approved_at does not match the retained approval, or when the retained snapshot's bytes or version no longer reproduce approval_policy.digest",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire: a consenting human whose authority over the root is revoked, a changed root version or changed bytes under the consented version, and a retained approval instant altered at rest each activate nothing. The issuer's selection excludes a changed root before step 2 checks it again."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -37166,9 +37337,27 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a retained root whose bytes no longer reproduce the consented digest, and a forged approval instant",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a changed root version or bytes, a changed separate evaluator, and a digest from the wrong domain",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-evaluator-digest",
@@ -37186,19 +37375,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation is refused when the separate evaluator's snapshot differs from the mission-activation-policy digest the root commits",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire: a root decided by a separate evaluator activates, records that evaluator as the deciding policy, and activates nothing once the evaluator's snapshot changes or when the root commits it under the root's own digest domain."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses when the separate evaluator's snapshot differs from the digest the root commits",
      "level": "unit",
      "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a changed root version or bytes, a changed separate evaluator, and a digest from the wrong domain",
+     "level": "endpoint",
+     "surface": "commitment"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-client-subject-source",
@@ -37216,19 +37411,31 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation for a client, Subject or authority source the root does not admit is refused",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation. The issuer establishes the Subject as the one root-admitted Subject the client resolves a source for."
+    "local": "Over the wire: a root admitting another Subject, another authority source, or another client activates nothing for the agent's request, and the agent cannot use a consent whose root admits another client by naming it. The issuer establishes the Subject as the one root-admitted Subject the client resolves a source for."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a client, Subject, or authority source the root does not admit",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a client, Subject or authority source the root does not admit",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-authority-expiry-bounds",
@@ -37246,19 +37453,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation whose derived Authority Set exceeds the source ceiling or the root's authority ceiling, or whose effective expiry exceeds the Intent or the root's lifetime limits, does not create a Mission with that authority or expiry",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire: a proposal wider than the root's ceiling activates only what the ceiling admits, one with nothing inside it activates nothing, a root ceiling wider than the source's still activates nothing beyond the source, and the effective expiry is the earlier of the Intent's and the root's lifetime limit."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > bounds authority by the source and root ceilings and expiry by the Intent and the root lifetime",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > bounds the activated Mission by the root's authority ceiling and lifetime, whatever the Intent and proposal ask",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-policy-evaluation",
@@ -37311,7 +37524,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an activation is refused when approved_at is older than the strictest applicable ceiling or later than the evaluation instant beyond the skew allowance, and when the derived Mission carries a high-risk class without a committed, class-named exception",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation. The consumption-bound clause has no witness: this AS's closed Mission Intent admits no consumption-bound member, so no activation here can carry one."
+    "local": "Over the wire: an approval older than the root's ceiling, one later than the evaluation instant beyond the skew, and a high-risk class without a committed class-named exception each activate nothing; under the exception the class activates. The consumption-bound clause has no witness: this AS's closed Mission Intent admits no consumption-bound member, so no activation here can carry one, and the row stays partial."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37333,9 +37546,21 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an action the root does not classify instead of treating it as low-risk",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > activates a high-risk class only under the root's committed, class-named exception",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",
@@ -37362,9 +37587,15 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion captured for another activation's approval event",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never counts a model output bound to another approval event",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.check-atomic-commit",
@@ -37382,10 +37613,10 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a signing or persistence failure leaves no active Mission, no committed record, and no issued credential",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation. No credential can issue without a Mission; the deferral test shows the pending approval still polls authorization_pending after a signing failure."
+    "local": "Over the wire: a signing failure during the completing poll leaves no Mission, no record and no token (the poll answers server_error and the approval stays pending), and a later poll completes under the same approval event."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -37398,9 +37629,15 @@
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > leaves the approval pending with no Mission and nothing to deliver when the record cannot be signed",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > leaves no Mission and no credential when the record cannot be signed or persisted, and completes on a later poll",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.failure-no-mission",
@@ -37418,10 +37655,10 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "any failed activation check leaves no Mission and no credential",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire, each failed check (consent, root, evaluator, approval instant, admission, high-risk exception, deciding policy, signing) leaves no Mission and no token: the poll is an error response, never a token response."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -37434,9 +37671,51 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > leaves no Mission, no record, and no retained inputs when signing or persistence fails",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a changed root version or bytes, a changed separate evaluator, and a digest from the wrong domain",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a forged approval instant, an approval older than the recency ceiling, and one in the future",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a client, Subject or authority source the root does not admit",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > activates a high-risk class only under the root's committed, class-named exception",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never counts a model output bound to another approval event",
+     "level": "endpoint",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > leaves no Mission and no credential when the record cannot be signed or persisted, and completes on a later poll",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.model-input-only",
@@ -37483,19 +37762,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "after the standing consent is withdrawn, no further Mission activates under it",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation."
+    "local": "Over the wire: after the consent that activated a delivered Mission is withdrawn, the next request under it activates nothing."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > stops every later activation once the consent is withdrawn",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "approval-governance.governed-policy.withdrawal-not-retroactive",
@@ -37513,7 +37798,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission activated before the standing consent was withdrawn stays active under its ordinary lifecycle",
-    "local": "Kernel-level witness only. The reference AS has no Deferred Mission Approval wire path (PAR with completion_mode=deferred, the deferred-grant poll, a review surface), so this endpoint-level row stays partial; the cited kernel tests assert every clause of the observation. The Mission stays active and derives after withdrawal and ends only by its own expiry."
+    "local": "Over the wire, a Mission delivered before the withdrawal stays active after it; the kernel test shows it derives after withdrawal and ends only by its own expiry. Its lifecycle at the Lifecycle endpoint is not exercised after a withdrawal, so this lifecycle-endpoint row stays partial."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37523,9 +37808,15 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > leaves a Mission activated before withdrawal active under its ordinary lifecycle",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "deferred-approval.policy-completion.issuer-selects-policy",
@@ -37543,19 +37834,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the policy that completes a pending approval is one the issuer configured and whose root admits the proposal, never one the client names",
-    "local": "Kernel-level witness only (MissionApprovalDeferralStore). The PAR and token-endpoint wiring of Deferred Mission Approval is not built in the reference AS, so this row stays partial."
+    "local": "Over the wire: two roots admit the agent, and the issuer selects the latest standing consent while the client names the other one, a basis and a human on the PAR, the redemption and every poll; a consent whose root does not admit the client never completes its request. The issuer orders standing consents latest first and runs every activation check on the one it selects."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > completes a pending proposal under a configured governed policy whose root admits it, never one the client names",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "deferred-approval.policy-completion.deferral-unchanged",
@@ -37573,7 +37870,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy-completed pending approval is polled, cancelled, client-bound and delivered exactly as a human-completed one",
-    "local": "Kernel-level witness only (MissionApprovalDeferralStore). The PAR and token-endpoint wiring of Deferred Mission Approval is not built in the reference AS, so this row stays partial. Polling, slow_down, client and key binding, single delivery, client-only cancellation and the pending lifetime are witnessed at the store; the comparison with a human-completed deferred approval has no wire surface to run on."
+    "local": "Over the wire, for a policy-completed approval: every poll is bound to the client and the DPoP key of the redeeming request and paced (slow_down), the pending lifetime ends in expired_token, cancellation is a revocation at the RFC 7009 endpoint, and the Mission-bound token is delivered once, a delivery that fails before its response leaving the approval deliverable. This assembly serves no human review surface, so the comparison with a human-completed deferred approval has no wire surface to run on, and the row stays partial."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37583,9 +37880,33 @@
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > keeps polling, cancellation, client binding, and single delivery for a policy-completed approval",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > binds every poll to the client and DPoP key the deferral was opened with, and paces it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > cancels at the revocation endpoint for the bound client only, and never delivers a cancelled approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > keeps an approval deliverable when saving its token fails, then delivers exactly one token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation. #1300 review (D474)."
   },
   {
    "id": "deferred-approval.policy-completion.refusal-no-mission",
@@ -37603,7 +37924,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a policy evaluation that does not authorize activation leaves no Mission, and the pending approval either awaits a separately authenticated, full direct approval or resolves to denied",
-    "local": "Kernel-level witness only (MissionApprovalDeferralStore). The PAR and token-endpoint wiring of Deferred Mission Approval is not built in the reference AS, so this row stays partial. A separately authenticated reviewer is the review surface's job; the store's direct path takes the authenticated principal."
+    "local": "Over the wire, every evaluation that does not authorize activation (no eligible consent, a refusing deciding policy, a failed activation check) creates no Mission and no token, and the pending approval resolves to denied, so the next poll is access_denied: this assembly serves no review surface for a human direct approval, so its refusal setting defaults to deny. The branch that leaves the approval pending for a separately authenticated, full direct approval is witnessed only at the kernel, so the row stays partial (D441: kernel-only endpoint obligations stay partial)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37613,9 +37934,21 @@
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > creates no Mission when the evaluation does not authorize activation, leaving the approval pending or, when configured, denied",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > refuses a missing, unauthorized or withdrawn standing consent and creates no Mission or token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never counts a model output bound to another approval event",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "deferred-approval.policy-completion.human-fallback-direct",
@@ -37633,7 +37966,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission created by a human after a policy evaluation did not authorize activation records approval_basis type direct with its own approval event and human accountable assertion, never type governed_policy",
-    "local": "Kernel-level witness only (MissionApprovalDeferralStore). The PAR and token-endpoint wiring of Deferred Mission Approval is not built in the reference AS, so this row stays partial."
+    "local": "Kernel-level witness only (MissionApprovalDeferralStore.approveDirect). The reference AS serves the Deferred Mission Approval wire path (#1185) but no review surface for a human direct approval of a pending proposal, so the token-endpoint obligation has no wire witness and the row stays partial."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37651,7 +37984,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). Owner review of #1227 accepted the human fallback with this guard. #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
+   "notes": "#1185 specification PR (D387, D390, D413). Owner review of #1227 accepted the human fallback with this guard. #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
    "id": "deferred-approval.policy-completion.one-mission",
@@ -37669,7 +38002,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "retried and concurrent completions of one pending approval produce one Mission and one Approval Governance Record",
-    "local": "Kernel-level witness only (MissionApprovalDeferralStore, concurrency and unit tests): two concurrent policy completions, and a human approval racing one, resolve a pending approval to one Mission and at most one record. The token-endpoint obligation has no witness, since Deferred Mission Approval has no wire path in the reference AS."
+    "local": "Over the wire, two concurrent polls of one pending approval run two policy completions and yield one Mission, one record and one delivery (the other poll answers authorization_pending while the delivery is in flight, or invalid_grant after it), and two concurrent redemptions of one code open one pending approval. A human approval racing a policy completion is witnessed only at the kernel, since no review surface is served, so the row stays partial (D441)."
    },
    "level": "concurrency",
    "coverage": "partial",
@@ -37685,9 +38018,21 @@
      "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > leaves the approval pending with no Mission and nothing to deliver when the record cannot be signed",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > resolves concurrent completions to one Mission, one record and one delivery; distinct activations get distinct approval events",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval front channel (@spec deferred-approval#front-channel) > refuses a second redemption of the code and cancels what the first opened, concurrent or later",
+     "level": "concurrency",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record."
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). Completion is issuer-side: two concurrent completions, and a human approval racing a policy completion, resolve to one Mission and at most one record. #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation. #1300 review (D474)."
   },
   {
    "id": "deferred-approval.policy-completion.no-client-basis-selector",
@@ -37704,12 +38049,547 @@
    "surface": "par",
    "assertion": "ignore",
    "observation": {
-    "normative": "no request parameter selects the approval basis; a client cannot cause a pending approval to complete under governed_policy"
+    "normative": "no request parameter selects the approval basis; a client cannot cause a pending approval to complete under governed_policy",
+    "local": "The PAR, the redemption and every poll carry approval_basis, consent_id, governed_policy, policy, consent_principal and approved_at; the provider's parameter allow-lists drop them before any handler reads them, and the issuer's own selection decides the basis and the consent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > never lets the client select the approval basis, the policy, the consent or the human",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel): still no witness, since the reference AS has no PAR or token-endpoint wiring for Deferred Mission Approval; the kernel pending-approval store takes no basis or policy selector. #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
+  },
+  {
+   "id": "deferred-approval.deferral.deferred-response",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-approval",
+   "text": "it returns the substrate's deferred response (`authorization_pending` with a `deferral_code`) instead of a token, and the client polls with the deferred grant type until the approval resolves to a Mission-bound token response, `access_denied`, or `expired_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deferred Mission approval's token request returns authorization_pending with a deferral_code and no token, and polling with the deferred grant type ends in a Mission-bound token response, access_denied, or expired_token",
+    "local": "This assembly defers every request whose pushed parameters carry completion_mode=deferred. The deferral code carries the prefix mdfr_, and the deferred response sets Cache-Control no-store."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > denies, with no Mission and no token, an approval whose requested expiry passed while it pended",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > resolves a pending approval to expired_token once its lifetime passes, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.pending-no-mission",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "The authorization artifact represents a pending authorization, never authority, and no Mission exists.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "until the approval decision, neither the front channel's authorization code nor the deferral code creates a Mission or yields a token",
+    "local": "The front channel issues a pending-request code (prefix mdac_) and creates no provider grant or session. Redeemed without deferred in completion_mode it yields no token (invalid_request); redeemed with it, it yields only the deferred response."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval front channel (@spec deferred-approval#front-channel) > binds the pending-request code to the client, its PKCE challenge, its redirect URI and the substrate's opt-in",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.review-surface-authentication",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "That surface MUST authenticate the Approver, satisfying both the deployment's published approval-authentication floor and any requested `acr_values`/`max_age` strength, exactly as the synchronous approval event requires",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a human approval of a deferred proposal commits only for an Approver the review surface authenticated to the published floor and to any requested acr_values/max_age strength",
+    "local": "No review surface for a human approval of a pending proposal is served: the remaining #1185 slice. Policy completion, the one decision this assembly makes, is not a relocated human decision, so this step does not apply to it."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel): still no witness, since the reference AS has no PAR or token-endpoint wiring for Deferred Mission Approval; the kernel pending-approval store takes no basis or policy selector."
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.active-at-decision",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "The Mission record is created in the `active` state atomically with the approval decision, preserving the issuance profile's atomicity at the moved point.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the approval decision and the active Mission's creation commit together: a committed decision leaves an active Mission, and a decision whose commit fails leaves none",
+    "local": "The only approval decision this assembly's wire path makes is a governed_policy completion, which commits the Mission, the signed record and the recorded inputs in one transaction. The human path (MissionApprovalDeferralStore.approveDirect) exists in the kernel but no review surface wires it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > leaves no Mission and no credential when the record cannot be signed or persisted, and completes on a later poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.expiry-recheck",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "the Mission Issuer MUST refuse creation atomically: no Mission exists, and the deferred approval resolves to `denied`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval whose effective expiry is at or before the creation instant creates no Mission and resolves to denied, and the next authenticated poll returns access_denied",
+    "local": "The completing poll itself answers access_denied: the decision runs on the poll."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > denies, with no Mission and no token, an approval whose requested expiry passed while it pended",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > denies, with no Mission, an approval whose requested expiry passed while it pended",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.revoked-no-token",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "A Mission revoked between the approval decision and the resolving poll yields no token",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a poll for an approved deferral whose Mission is no longer active returns an error response and no token",
+    "local": "The poll answers access_denied."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > yields no token for a Mission revoked between the approval decision and the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.single-delivery",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "Issuance then completes per the deferred substrate: the next poll resolves to a Mission-bound token response.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "an approved deferral resolves to exactly one Mission-bound token response: concurrent polls deliver one token, and a delivery that fails before its response is sent leaves the approval deliverable on a later poll",
+    "local": "A poll claims the delivery, mints the token, and confirms the claim before sending it; the approval is redeemed only by that confirmation. A failed save releases the claim. While one poll's delivery is in flight another poll answers authorization_pending, a local choice (the substrate defines no in-delivery outcome). A claim older than 30 seconds (a crashed delivery) can be taken again, and only one claim ever confirms; a token minted under a claim that does not confirm is never sent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > keeps an approval deliverable when saving its token fails, then delivers exactly one token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > resolves concurrent completions to one Mission, one record and one delivery; distinct activations get distinct approval events",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > redeems an approval only when its delivery confirms: a failed delivery stays deliverable, and one claim delivers at a time",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474)."
+  },
+  {
+   "id": "deferred-approval.deferral.timing-only-resource",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "Deferral changes only the timing of the approval event.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the token a resolved deferral delivers is audienced to the resource the submission selected with its resource indicator, at the authorization request or at the token endpoint, as a synchronous approval of the same submission would issue it; a selection the pending request cannot honor is refused",
+    "local": "Every `resource` the PAR names is carried through the pending-request code; duplicates collapse. A `resource` on the redeeming token request (RFC 8707 Section 2.2) selects the audience and must be one the PAR named, when it named any; otherwise the PAR's one resource selects it; several distinct ones with no selection at the token endpoint are refused invalid_target at redemption, before anything is opened, because one deferral delivers one access token and RFC 8707 has the client name one of several authorized resources at the token endpoint. The first entry of the effective set is the audience only when no resource was selected at all. The direct path instead audiences an unselected request to the provider's default resource (the issuer), which this assembly's scope projection refuses. The token's authorization_details are the whole effective set on both paths. Every selection must be one of the Mission Intent's target resources (the authority the pending request can grant) and is refused invalid_target otherwise; a refused redemption consumes nothing."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > honors a repeated PAR resource and refuses an ambiguous one, never falling back to another audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > takes the resource selected at the token endpoint and refuses one the pending request cannot honor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474). #1300 second review."
+  },
+  {
+   "id": "deferred-approval.deferral.timing-only-evidence",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "deferred-sequencing",
+   "text": "Deferral changes only the timing of the approval event.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the Intent Submission Evidence a deferred submission presented is verified again at the activation, which creates no Mission when the evidence no longer verifies, and the verified facts are recorded on the Mission as submission_evidence, as at a synchronous approval",
+    "local": "The whole Submission envelope (intent and evidence) is carried through the deferral. The evidence is verified at the governed_policy activation before any derivation, and again after the model call with nothing awaited before the commit, so evidence that expires while the model is consulted authorizes nothing; both checks use the deployment's current required types for the client, and the recorded facts are the last check's. A failure resolves the approval (denied under this assembly's refusal setting) with the reason invalid_mission_intent_evidence recorded issuer-side, and the poll answers access_denied, the deferred substrate's outcome for a denied deferral. The unwired human path (approveDirect) refuses to commit when the approval carries evidence and no verified facts are supplied."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > re-verifies submission evidence at activation, refusing evidence that lapsed and recording evidence that verifies",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > refuses a human direct approval of evidence-bearing submissions without verified facts, and records the facts it is given",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "governed policy completion over the wire (@spec deferred-approval#policy-completion, approval-governance#governed-policy-activation) > verifies submission evidence again after a delayed model call, so evidence that expires meanwhile creates no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474). #1300 second review."
+  },
+  {
+   "id": "deferred-approval.deferral.substrate-discovery",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "conformance",
+   "text": "support the deferred substrate for Mission approvals it defers",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS that defers Mission approvals publishes the deferred substrate's discovery: deferred_token_response_supported, and the deferral-code token type among revocation_endpoint_token_type_values_supported",
+    "local": "Only the substrate's discovery facet of the clause is witnessed here; its other parts are the rows of this capability. Advertised exactly where the deferred-approval capability is on, so the revocation endpoint is served; the default assembly advertises neither."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "Deferred Mission Approval capability (@spec deferred-approval#deferred-approval, deferred-approval#policy-completion) > is off by default (the hint is ignored, an mdfr_ code is unknown, nothing is advertised), and where on advertises deferral and its cancellation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1300 review (D474)."
+  },
+  {
+   "id": "deferred-approval.deferral.code-binding",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "front-channel",
+   "text": "The AS MUST still bind the code to the requesting client with PKCE (`S256`) or issue a DPoP-bound code, as the issuance profile requires for a front-channel code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the front channel's pending-request code is redeemed only by the client it was issued to, presenting the PKCE verifier for its S256 challenge (or the DPoP key its dpop_jkt names)",
+    "local": "This assembly requires PKCE S256 on every deferred request and honors dpop_jkt where the request carries one; it also checks the redirect URI and the substrate's opt-in. A refused redemption consumes nothing."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval front channel (@spec deferred-approval#front-channel) > binds the pending-request code to the client, its PKCE challenge, its redirect URI and the substrate's opt-in",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.subject-not-client-input",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "front-channel",
+   "text": "the AS MUST NOT take the Subject from unauthenticated client input",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a Subject the client names (login_hint or any other request parameter) never becomes the Mission's Subject; the issuer establishes the Subject on its own",
+    "local": "Under policy completion the issuer establishes the Subject as the one root-admitted Subject the client resolves a trusted source for."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval front channel (@spec deferred-approval#front-channel) > establishes the Subject on the issuer side, never from client input",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.client-cancellation",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "state-machine",
+   "text": "client cancellation under the deferred substrate moves it to `cancelled`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a revocation of the deferral code by the client it is bound to cancels the pending approval; another client's revocation changes nothing; a cancelled approval is never completed or delivered, and its polls return access_denied",
+    "local": "Cancellation is a revocation at the RFC 7009 endpoint (DTR -00); an approval resolved but not yet delivered is redeemed and then cancelled and delivers nothing; a second redemption of the front channel's code cancels the approval the first opened."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > cancels at the revocation endpoint for the bound client only, and never delivers a cancelled approval",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > treats a cancellation after approval but before delivery as redeemed and then cancelled",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.pending-lifetime",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "pending-staleness",
+   "text": "A deferred approval MUST carry a deployment-set maximum pending lifetime, after which it resolves to `expired_token` per the deferred substrate.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the deferred response's expires_in is the deployment-set pending lifetime, and a poll after it returns expired_token with no Mission",
+    "local": "Set by buildAuthorizationServer's deferredApproval.pendingLifetimeS (default 600 seconds)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > resolves a pending approval to expired_token once its lifetime passes, with no Mission",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
+  },
+  {
+   "id": "deferred-approval.deferral.queue-bound",
+   "spec": "draft-mcguinness-oauth-mission-approval.md",
+   "anchor": "queue-pressure",
+   "text": "The Mission Issuer MUST bound the number of concurrent pending proposals per (client, Approver) pair, refusing further submissions until the queue drains.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "deferred-approval.deferral"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "once a client holds the bounded number of pending proposals, a further submission opens no pending approval until one resolves",
+    "local": "No Approver is named when a proposal is submitted, so the bound is per client (deferredApproval.maxPendingPerClient, default 10), which bounds every (client, Approver) pair. The refusal is 503 temporarily_unavailable with Retry-After, and the refused code is not consumed."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval state, lifetime, cancellation and queue (@spec deferred-approval#state-machine, deferred-approval#pending-staleness, deferred-approval#queue-pressure) > bounds a client's pending approvals and refuses further submissions until the queue drains",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval store bounds and cancellation (@spec deferred-approval#queue-pressure, deferred-approval#state-machine) > refuses a client's further submissions at its pending bound until the queue drains, other clients unaffected",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1185 wire path (capability deferred-approval, default off)."
   },
   {
    "id": "child-delegation.carryover.no-progressive-drawdown",
@@ -39560,6 +40440,154 @@
     }
    ],
    "notes": "#1178. Proved by mutation: the token endpoint's proof refusal and the missing-proof refusal answering invalid_request were each caught."
+  },
+  {
+   "id": "core.error-mapping.token-rar-exceeds-granted",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh or authorization code exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
+    "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry the effective set removed (contained) is refused; the remainder is still issued on request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an async-delegation family, which rotates on every refresh: a schema-invalid or excess request is refused saving nothing, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. A Token Exchange naming authority beyond the Mission is refused by the async-delegation exchange's own check, which no test cited here witnesses."
+  },
+  {
+   "id": "core.remediation-grains.refresh-within-grant-and-authority",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "remediation-grains",
+   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details narrows the issued token (@spec mission#remediation-grains, #1303) > a narrower request issues exactly that subset, in the token and the response, and a later refresh may ask for the whole grant again",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry the effective set removed (contained) is refused; the remainder is still issued on request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an async-delegation family, which rotates on every refresh: a schema-invalid or excess request is refused saving nothing, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh narrowing authorization_details projects the narrowed set: a scope only the dropped entry grants refuses invalid_scope before rotation, and the same token then refreshes (#1303)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1303. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness."
+  },
+  {
+   "id": "core.subset.widening-request-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "subset",
+   "text": "The AS MUST refuse a request that would widen authority under a Mission after the approval event on any dimension",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request naming authority beyond what the Mission approved on any dimension (a new resource, action, actor, delegation path, longer duration, or constraint relaxation) is refused, never issued"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1303. Witnessed at the token endpoint's authorization_details only, for the action and constraint dimensions, on a refresh and a code exchange. The other dimensions (a new resource, actor, delegation path or longer duration) and the other request surfaces are not cited here. Proved by mutation: projecting a request without the subset check fails the action and constraint witnesses."
   },
   {
    "id": "core.self-exchange.result-subset",

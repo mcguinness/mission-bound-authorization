@@ -22,7 +22,16 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { authorityHash, canonicalize, computeAnchor, intentHash, type JsonValue, MISSION_TEMPLATE_TYP, proposalHash } from "@mission/core";
+import {
+  authorityHash,
+  canonicalize,
+  computeAnchor,
+  intentHash,
+  type JsonValue,
+  MISSION_TEMPLATE_TYP,
+  proposalHash,
+  refusedEntryMember,
+} from "@mission/core";
 import {
   assertApproverMayActivate,
   assertLocalPrincipal,
@@ -221,6 +230,15 @@ export function createTemplate(
   if (input.ceiling.length === 0) {
     throw new TemplateError("template ceiling must be non-empty");
   }
+  // @spec resource-access#entry-validation (#1278, D457): a template ceiling
+  // entry carrying `locations`, whatever its value, is refused at consent,
+  // naming the entry, rather than stored and refused only at dispatch.
+  input.ceiling.forEach((entry, i) => {
+    const member = refusedEntryMember(entry);
+    if (member !== undefined) {
+      throw new TemplateError(`ceiling[${i}] carries ${member}, which the mission_resource_access type does not use`);
+    }
+  });
   if (input.per_instance_lifetime_s <= 0 || !Number.isFinite(input.per_instance_lifetime_s)) {
     throw new TemplateError("per_instance_lifetime_s must be a positive number of seconds");
   }
