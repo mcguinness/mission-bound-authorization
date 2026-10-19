@@ -389,6 +389,39 @@ describe("expansion wire: a predecessor that is not active (@spec expansion#pred
       expect(as.kernel.get(pred.missionId)?.termination?.successor).toBeUndefined();
     });
   }
+
+  for (const [transition, state, missionError] of [
+    ["revoke", "terminated", "revoked"],
+    ["suspend", "suspended", "suspended"],
+  ] as const) {
+    it(`a ${missionError} predecessor's refusal carries mission_error ${missionError}; a proof under another key carries none (@spec mission#issuance-gating, #1179)`, async () => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      as.kernel.transition(pred.missionId, transition);
+      const actions = ["payments:invoice.read", "payments:remittance.send"];
+      const res = await expandViaExchange(pred.accessToken, "Widen to add remittance", actions);
+      const body = (await res.json()) as { error?: string; error_description?: string; mission_error?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toBe(`predecessor mission is ${state}`);
+      expect(body.mission_error).toBe(missionError);
+
+      // Possession fails before the lifecycle check: no Mission state is disclosed.
+      const wrongKey = await tokenRequestWithDpop(carryDpop, {
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        subject_token: pred.accessToken,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        login_hint: "alice",
+        mission_intent: intentJson("Widen to add remittance", actions),
+        authorization_details: JSON.stringify(authority(actions)),
+        creation_request_id: crypto.randomUUID(),
+      });
+      const wrongBody = (await wrongKey.json()) as { error?: string; error_description?: string; mission_error?: string };
+      expect(wrongKey.status, JSON.stringify(wrongBody)).toBe(400);
+      expect(wrongBody.error_description).toContain("does not match the subject_token confirmation key");
+      expect(wrongBody.mission_error).toBeUndefined();
+    });
+  }
 });
 
 describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand)", () => {
@@ -1254,6 +1287,45 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     const oldBody = (await oldLookup.json()) as { error?: string };
     expect(oldLookup.status, JSON.stringify(oldBody)).toBe(400);
     expect(oldBody.error).toBe("invalid_request");
+  });
+
+  it("retrieval of a replacement that is no longer active is refused invalid_request with its mission_error, minting nothing; another authenticated client gets none (@spec mission#issuance-gating, #1179)", async () => {
+    const pred = await predecessorWithChild();
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance, then end the replacement", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+    ]);
+    const openedBody = (await opened.json()) as { deferral_code: string };
+    approveDeferral(openedBody.deferral_code);
+    const done = await pollExpansion(openedBody.deferral_code);
+    const completion = (await done.json()) as { carryover_replacements: Array<{ mission_id: string }> };
+    expect(done.status, JSON.stringify(completion)).toBe(200);
+    const params = {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: JWT_TOKEN_TYPE,
+      carryover_replacement: completion.carryover_replacements[0]?.mission_id as string,
+    };
+    type Refusal = { error?: string; error_description?: string; mission_error?: string; access_token?: string };
+    for (const [transition, state, missionError] of [
+      ["suspend", "suspended", "suspended"],
+      ["revoke", "terminated", "revoked"],
+    ] as const) {
+      as.kernel.transition(params.carryover_replacement, transition);
+      const res = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, params);
+      const body = (await res.json()) as Refusal;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      expect(body.error_description).toBe(`replacement mission is ${state}`);
+      expect(body.mission_error).toBe(missionError);
+      expect(body.access_token).toBeUndefined();
+
+      // Another authenticated client is refused as unauthorized before the lifecycle check.
+      const other = await tokenRequest(params);
+      const otherBody = (await other.json()) as Refusal;
+      expect(other.status, JSON.stringify(otherBody)).toBe(400);
+      expect(otherBody.error).toBe("invalid_grant");
+      expect(otherBody.mission_error).toBeUndefined();
+    }
   });
 });
 
