@@ -43,6 +43,9 @@ import {
   type DpopKeys,
   dpopProofFor,
   type McpPaymentsServer,
+  REFUSAL_RECORD_MEDIA_TYPE,
+  type RefusalRecord,
+  verifyEvidenceEnvelope,
 } from "@mission/mcp-payments";
 import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { issueMissionToken, logInAgain } from "../src/approval-console.js";
@@ -1137,6 +1140,78 @@ function targetFixture(opts: { live: boolean; asPort: number; ordinaryTokenMinti
         await agent.close();
       }
     },
+
+    // @spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage
+    // (#1329, #253 acceptance): a verified Mission-bound token whose Mission
+    // the kernel no longer holds. Its record is purged in place, as a restart
+    // loses every in-memory Mission while a key ring keeps its tokens
+    // verifiable (contract §7), so the PEP's loader finds none. The PEP
+    // refuses unknown_mission before any decision request, with one
+    // verifiable signed state_unavailable Refusal Record naming no Mission,
+    // and no effect.
+    async unknownMission(): Promise<void> {
+      // The published floor (D425) admits a high-risk approval only within 300
+      // seconds of the Approver's login; earlier tests can outlast it.
+      logInAgain(stack.approverLogin);
+      const pay = await issue(["payments:invoice.read", "payments:payment.execute"], {
+        max_amount: { amount: "500.00", currency: "USD" },
+        vendors: ["acme"],
+      });
+      const payId = missionIdOf(pay.accessToken);
+      const kinds = () => stack.evidence.forMission(payId).map((e) => e.kind);
+      const refusals = () => stack.evidence.all().filter((e): e is RefusalRecord => e.kind === "refusal");
+      const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, pay.accessToken, pay.dpopKeys);
+      try {
+        // Positive control: the same token on the same session reaches the PDP and permits.
+        const control = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+        expect(control.ok, JSON.stringify(control)).toBe(true);
+        expect(kinds()).toEqual(["decision"]);
+
+        // Purge only the Mission record; the token still verifies at the HTTP gate.
+        stack.kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(payId);
+        expect(stack.kernel.get(payId)).toBeUndefined();
+
+        const cases: [string, Record<string, unknown>, string][] = [
+          ["get_invoice", { invoice_id: "inv-1" }, "payments:invoice.read"],
+          ["execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, "payments:payment.execute"],
+        ];
+        for (const [tool, args, action] of cases) {
+          const before = snapshot();
+          const refusalsBefore = refusals().length;
+          const res = await client.callTool(tool, args);
+          expect(res.ok, tool).toBe(false);
+          expect(res.refusal_reason, `${tool} ${JSON.stringify(res)}`).toBe("unknown_mission");
+          expect(res.result, tool).toBeUndefined();
+          // No decision request, no effect.
+          expect(decisions.length, tool).toBe(before.decisions);
+          expect(stack.connectors.ledgerEntries().length, tool).toBe(before.ledger);
+          const added = refusals().slice(refusalsBefore);
+          expect(added, tool).toHaveLength(1);
+          const refusal = (added[0] as RefusalRecord).content;
+          expect(refusal, tool).toMatchObject({
+            decision: "deny",
+            denial_reason: "state_unavailable",
+            audience: CANONICAL_RESOURCE,
+            action: { name: action },
+            emitter: { role: "pep" },
+            request_digest_input: "pre_request",
+          });
+          // No Mission was established, so the record names none.
+          expect(refusal, tool).not.toHaveProperty("mission");
+          // Verified against the key set this deployment publishes.
+          expect(
+            await verifyEvidenceEnvelope(refusal, REFUSAL_RECORD_MEDIA_TYPE, stack.evidenceRetention.resolver()),
+            tool,
+          ).toEqual({ valid: true });
+        }
+        // The control's Decision Evidence, then the two refusals: no further
+        // Decision Evidence and no Execution Evidence for this Mission.
+        expect(kinds()).toEqual(["decision", "refusal", "refusal"]);
+        expect(stack.connectors.ledgerEntries(payId)).toHaveLength(0);
+      } finally {
+        await close();
+      }
+    },
   };
 }
 
@@ -1686,6 +1761,9 @@ dLive("the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315
   }, 60_000);
   it("reports a completed record that cannot be written as an emission_failed gap, not a refusal: the effect stands once, nothing records it completed, and the same transaction token executes nothing again (#253)", async () => {
     await live.emissionFailure();
+  }, 60_000);
+  it("refuses a verified token whose Mission the kernel no longer holds unknown_mission, a read and a wire, with no decision request, one verifiable signed state_unavailable Refusal Record naming no Mission each and no effect (#253)", async () => {
+    await live.unknownMission();
   }, 60_000);
 });
 
