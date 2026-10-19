@@ -585,6 +585,16 @@ export interface MissionRecord {
    * entry, and every delegable entry narrows out of a delegated token.
    */
   eligibility_provenance?: RetainedOrigin[];
+  /**
+   * @spec child-delegation#fanout (#1304, D486): each approved entry's
+   * child-actor eligibility origin, index-aligned with `authority_set`,
+   * recorded when the Authority Set is derived, apart from
+   * `eligibility_provenance`, and immutable after creation. The same
+   * authorization-server state, outside every anchor and never on the wire.
+   * Absent, or not aligned with `authority_set`, it resolves no entry, and
+   * no child is created or carried under an entry it cannot resolve.
+   */
+  child_actor_provenance?: RetainedOrigin[];
   intent_hash: string;
   authority_hash: string;
   /**

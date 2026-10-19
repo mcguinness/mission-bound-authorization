@@ -103,8 +103,8 @@
     "content_sha256": "d88875b2ad94d43f21401d0f0e23bb669f0cc66ae639665a31ea3adebee25f12"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
-    "content_sha256": "bf5bd973b072d4647d8efc42916d129514c7775574c8928d1076bbc23390cb35"
+    "revision": "4528548b9ad889e8e72080d9a042ca61370184dd",
+    "content_sha256": "c1fde7fd879dbd4cd458756d195a41f2c0f3f9850a168a1f30c860acc5e1d3d0"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
@@ -41664,9 +41664,27 @@
      "name": "Child Mission Carryover (@spec child-delegation#carryover) > excludes every dependent descendant of an excluded parent rather than attaching a replacement to a missing parent",
      "level": "cross-component",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy denies, list permits: the child is rendered and committed as a cascade, with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy permits, list omits: cascaded with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the policy is asked again at the completion commit: a permit given at rendering that is withdrawn before completion fails the whole batch",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Generation order, the prospective-parent attachment (a deeper row attaches to its own replacement parent, never the root successor), the ordinary strict-subset proof against the prospective parent's effective set, dependent-descendant exclusion, and the fan-out recount in the same serialization domain are all witnessed. PARTIAL because the actor and children-control REFUSAL arms are unreachable in the reference deployment: a successor derives `delegation.children` from the same policy ceiling that gated the old children's creation, so no rendered row can fail `allowed_child_actors`, `max_children`, `max_child_depth` or the delegation on-switch at carryover time. The gates run on every rendered replacement; only their refusals lack a witness."
+   "notes": "Generation order, the prospective-parent attachment (a deeper row attaches to its own replacement parent, never the root successor), the ordinary strict-subset proof against the prospective parent's effective set, dependent-descendant exclusion, and the fan-out recount in the same serialization domain are all witnessed. The actor refusal arm is witnessed under a ceiling whose children grant defers the child actor to the child-creation policy (#1304): a child the policy denies, or the successor's list omits, cascades, and a permit withdrawn before completion fails the batch. PARTIAL because the children-control refusal arms remain unreachable in the reference deployment: a successor derives `delegation.children` from the same policy ceiling that gated the old children's creation, so no rendered row can fail `max_children`, `max_child_depth` or the delegation on-switch at carryover time. The gates run on every rendered replacement; only those refusals lack a witness."
   },
   {
    "id": "child-delegation.carryover.effective-set-basis",
@@ -42986,6 +43004,861 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.absence-defers-to-policy",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "When absent, eligibility falls to the authorization server's child-creation policy, applied at every creation: absence defers the decision to that policy and never grants blanket eligibility.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a parent entry whose children grant carries no allowed_child_actors admits no child actor while the child-creation policy permits none, and none under the reference default with no policy installed; it admits the actor once the policy permits it; carryover under such a successor entry cascades the child while the policy permits nobody"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > an absent list defers to the policy and is never a grant: refused while the policy permits nobody, created once it permits the actor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > the reference default denies: with no policy installed, an absent list admits no child actor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an absent list on the successor entry defers to the policy: cascaded while it permits nobody",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "a template ceiling that grants children without allowed_child_actors defers its instances to the child-creation policy (@spec child-delegation#fanout, #1304) > the instance entry keeps the deployment's list but retains the policy origin, so the reference default refuses the child its list admits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "carryover under the reference default (@spec child-delegation#fanout, #carryover-generations, #1304) > a child created while a policy permitted it is rendered as a cascade once no policy is installed, and completion creates no replacement",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). The reference child-creation policy denies every child actor; the endpoint suite installs a hook on one authorization server and none on a second, which runs the reference default. Proven by disabling the code it covers (each mutation restored byte for byte): recording a children grant without a list as list origin (the pre-fix admission by a derived list), ignoring the policy decision, and treating a presented token entry without a list as always denying (the old rule) each fail these witnesses."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.empty-list-admits-none",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "An empty array admits no actor.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an allowed_child_actors of [] refuses every child actor, whether the entry defers to policy (the policy permitting the actor) or its list decides, at creation and at carryover"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > an explicit empty list admits nobody, whether the entry defers to policy or its list decides",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit empty list on the successor entry admits nobody, though the policy permits the actor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "derivation records each entry's child-actor origin, apart from its delegate origin (@spec child-delegation#fanout, #1304) > an entry derived from a children grant naming its actors has the list origin, with or without a proposal list, and an empty list is kept",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). The matcher admits nobody from an empty list (delegatePermitted); a derived [] is kept, never dropped. Proven by disabling the code it covers (each mutation restored byte for byte): skipping the parent entry's list fails the carryover witness, and the creation witness fails when both the parent's and the token's lists are skipped."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.list-only-restricts",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "fanout",
+   "text": "A list never creates the `children` grant, and it only restricts an eligibility the entry inherits ({{child-actor-eligibility}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an actor a derived list names is refused while the inherited child-creation policy denies it; a candidate introducing a children grant its grantor lacks is not a subset, and a permitting policy cannot supply a children grant an entry lacks"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy denies, list permits: the actor the list names is refused, with no child, no fan-out slot and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy denies, list permits: the child is rendered and committed as a cascade, with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/derivation-delegation.test.ts",
+     "name": "isSubsetEntry treats delegation as a narrowing dimension (@spec mission#subset) > (c) a candidate INTRODUCING children where the grantor has none fails",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > a permitting policy creates no children grant and relaxes no control: the on-switch, max_children and max_child_depth still refuse",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). The restriction clause is witnessed at the endpoint. That a list never creates the grant is witnessed at derivation (the grant flip in the subset rule) and at the kernel (the on-switch refuses though the policy permits), so the row is partial at its endpoint level. Proven by disabling the code it covers (each mutation restored byte for byte): recording the origin as list admits the policy-denied actor; lifting the on-switch fails the kernel witness."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.policy-creates-no-grant",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "Neither a list nor the authorization server's child-creation policy creates that grant or relaxes its other controls, and an entry's `child_creation_policy` reference admits no actor by itself.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with a policy that permits every child actor, a parent entry without a children grant refuses delegation_not_permitted, a full max_children and a depth above max_child_depth refuse fanout_exceeded; an entry whose children carries a verified child_creation_policy reference and no list refuses child_actor_not_allowed under the reference default"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > a permitting policy creates no children grant and relaxes no control: the on-switch, max_children and max_child_depth still refuse",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > an entry's child_creation_policy reference admits no actor by itself: with no list and no installed policy, a verified reference still refuses",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). Kernel witnesses (createChildMission, the function the child-creation exchange calls); no endpoint witness, so partial. Proven by disabling the code it covers (each mutation restored byte for byte): lifting the on-switch, dropping the per-entry max_child_depth check, and treating a verified child_creation_policy reference as admitting the actor each fail their witness."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.lists-permit",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "every `allowed_child_actors` the justifying entry carries permits it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with the policy permitting the actor, an actor the justifying entry's list omits is refused at creation (also when the presented token carries no list) and cascaded at carryover; a list-origin entry admits the actor it names and refuses another"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy permits, list omits: an actor the policy permits is refused, and the policy is not asked",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy permits, list omits: cascaded with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > an explicit list keeps deciding: a list-origin entry admits the actor it names and refuses another, without asking the policy",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): skipping the justifying entry's list fails the creation witness (with a list-less presented token) and the carryover witnesses."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.policy-at-commit",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "where the entry's eligibility falls to the child-creation policy, that policy permits it, evaluated at the creation commit ({{request-processing}}) and never answered from an earlier decision",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an actor the list names is refused while the policy denies it; one both permit is created, the policy asked at the first check and again at the creation commit; a policy that permits the first check and denies at the commit refuses, creating nothing; a permit an earlier creation received does not admit a new creation for the same actor once the policy withdraws it, while the replay of that committed creation delivers the same child and grant without asking the policy"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy denies, list permits: the actor the list names is refused, with no child, no fan-out slot and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy and list both permit: the child is created, asked at creation and again at the commit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > the policy is asked again at the creation commit: a decision that changes after the first check refuses, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a policy withdrawal refuses a new creation but not the replay of a committed one: no second child, and recovery does not ask the policy",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > the gate asks the policy about the parent, its approved entry, the authenticated child actor and the child-generation depth, only for a policy origin",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). The reference asks the policy once the other conditions hold, at the first check and again inside the creation transaction (the insertRecord precondition). Recovery delivers a committed creation and never asks it (the #1335 review (D500)). Proven by disabling the code it covers (each mutation restored byte for byte): ignoring the policy decision fails the denial witnesses and the withdrawal witness's new creation; dropping the commit re-check fails the changed-decision and asked-twice witnesses; asking the policy on recovery again fails the withdrawal witness at the replay, and asking it there while ignoring the answer fails the witness's unchanged ask count."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.inherited-eligibility",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "A derived entry's `allowed_child_actors` restricts eligibility; it never replaces an obligation the derivation inherits.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with depth and fan-out within bounds, an actor a derived list permits but the inherited policy denies is refused, one the policy permits but the list omits is refused, and one both permit is created; a Child Mission's list over a policy-deferring parent entry only restricts the grandchild decision; at carryover the same three cases hold, and a grandchild is carried only where the policy and its replacement parent's list both permit"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy denies, list permits: the actor the list names is refused, with no child, no fan-out slot and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy permits, list omits: an actor the policy permits is refused, and the policy is not asked",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy and list both permit: the child is created, asked at creation and again at the commit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a later generation's list only restricts the origin it inherits > a Child Mission whose proposal added a list over a policy-deferring parent entry creates a grandchild only where the policy and that list both permit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy denies, list permits: the child is rendered and committed as a cascade, with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy permits, list omits: cascaded with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy and list both permit: carried, asked at rendering and again at the completion commit, the replacement keeping the policy origin",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > a deeper generation inherits through its replacement parent > multiple retained origins: the grandchild is carried only where the policy and its replacement parent's list both permit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1304 (D486), mirroring D454/D457 for allowed_delegates. Two independently named child actors per case, a permitting hook the test installs, and authority, depth and max_children kept valid so the child-actor gate is the only refusal. Proven by disabling the code it covers (each mutation restored byte for byte): recording the origin as list, ignoring the policy, and skipping the justifying entry's list each fail witnesses here."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.list-origin-keeps-list-rule",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "An entry derived from a reference entry that names its child actors is decided by its list alone; the child-creation policy is not consulted for it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a list-origin entry admits the actor its list names without asking the child-creation policy, also under the reference default with no policy installed, at creation and at carryover, and refuses an actor its list omits"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > an explicit list keeps deciding: a list-origin entry admits the actor it names and refuses another, without asking the policy",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > an explicit list keeps deciding under the reference default: no default-deny is imposed on a list-origin entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit list keeps deciding at carryover: a list-origin child is carried without asking the policy",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit list keeps deciding at carryover under the reference default: no default-deny is imposed on a list-origin child",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1304 (D486): the default-deny hook is not imposed on existing explicit-list grants. Proven by disabling the code it covers (each mutation restored byte for byte): asking the policy for list-origin entries too fails all four witnesses."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.provenance-from-initial-derivation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "an approved entry derived from a ceiling entry whose `children` names no actors inherits the policy decision even when the approved proposal added a list",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the approved entry keeps the list the proposal added over a children grant without one, its child-actor origin is recorded as policy, and the actor that list names is refused while the policy denies it, at creation and (for an expansion's proposal list) at carryover"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > derivation keeps the proposal's list as a restriction and retains a policy child-actor origin, apart from the delegate origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy denies, list permits: the actor the list names is refused, with no child, no fan-out slot and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy denies, list permits: the child is rendered and committed as a cascade, with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "derivation records each entry's child-actor origin, apart from its delegate origin (@spec child-delegation#fanout, #1304) > a list the proposal adds over a children grant without one is kept as a restriction, and the entry's child-actor origin is policy",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). The issue's defect: narrowMatchers takes a proposal's list where the ceiling's children has none, and the reference then admitted exactly the actors the client named. Proven by disabling the code it covers (each mutation restored byte for byte): recording the ceiling's origin as list admits the policy-denied actor."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.provenance-retained",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "The Mission Issuer MUST record, when it derives an Authority Set, which approved entries inherit that decision, MUST retain this child-actor provenance with the Mission apart from delegate eligibility provenance, and MUST carry it into every entry derived from those entries.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "direct approval, child creation, carryover replacement, expansion, template dispatch, governed activation and progressive drawdown each record every entry's child-actor origin in its own column, apart from the delegate origin, read back from the store; an entry derived within others keeps all their origins (policy and list combine to policy), and a second derivation keeps the first one's origin"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > approval persists each approved entry's child-actor origin in its own column, read back from the store",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > derivation keeps the proposal's list as a restriction and retains a policy child-actor origin, apart from the delegate origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > multiple retained origins: the first-in-order justifying entry's policy origin governs, and a list-origin overlap never lends it eligibility",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy and list both permit: carried, asked at rendering and again at the completion commit, the replacement keeping the policy origin",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > a deeper generation inherits through its replacement parent > multiple retained origins: the grandchild is carried only where the policy and its replacement parent's list both permit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "derivation records each entry's child-actor origin, apart from its delegate origin (@spec child-delegation#fanout, #1304) > a second derivation under a further ceiling keeps the child-actor origin the first one recorded, independently of the delegate origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "a template ceiling that grants children without allowed_child_actors defers its instances to the child-creation policy (@spec child-delegation#fanout, #1304) > a deployment ceiling that defers keeps its policy origin through a template ceiling that names the actors",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed activation retains child-actor provenance (@spec child-delegation#fanout, #1304) > a root ceiling granting children without allowed_child_actors defers the activated entry's child actor to policy, keeping the deployment's list as a restriction",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > the successor retains each entry's child-actor origin: a consented ceiling granting children without allowed_child_actors defers the child actor to policy (@spec child-delegation#fanout, #1304)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). Retained as authorization-server state (MissionRecord.child_actor_provenance, the child_actor_provenance_json column), never on the wire. Proven by disabling the code it covers (each mutation restored byte for byte): dropping it from direct approval, expansion, child creation inheritance, the replacement, the template's second derivation, governed activation or the drawdown each fails a witness here."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.provenance-separate",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "Neither provenance establishes the other.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose delegate list came from the ceiling and whose children grant names no actors records a list delegate origin and a policy child-actor origin; with the child-actor provenance gone and the delegate provenance intact, the child actor is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > derivation keeps the proposal's list as a restriction and retains a policy child-actor origin, apart from the delegate origin",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > unresolved provenance (missing, unreadable, an unknown value, or misaligned) refuses although the list and the policy permit: no fallback to the list or to the delegate origin",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "derivation records each entry's child-actor origin, apart from its delegate origin (@spec child-delegation#fanout, #1304) > a list the proposal adds over a children grant without one is kept as a restriction, and the entry's child-actor origin is policy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "derivation records each entry's child-actor origin, apart from its delegate origin (@spec child-delegation#fanout, #1304) > a second derivation under a further ceiling keeps the child-actor origin the first one recorded, independently of the delegate origin",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): reading the child-actor origin from the delegate provenance fails the unresolved-provenance witness and most of the matrix."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.attribution-not-relaxed",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "The justifying entry is the one {{fanout-accounting}} attributes; another parent entry the child entry falls within never lends it a less restrictive provenance.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child entry attributed first-in-order to a policy-origin parent entry is refused while the policy denies, although a later list-origin parent entry names the actor; the policy is asked about the attributed entry, and the created child keeps the combined policy origin"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > multiple retained origins: the first-in-order justifying entry's policy origin governs, and a list-origin overlap never lends it eligibility",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "derivation records each entry's child-actor origin, apart from its delegate origin (@spec child-delegation#fanout, #1304) > one proposal entry under overlapping ceiling entries derives entries with different child-actor origins, each recorded",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). First-in-order attribution (justifyingIndex) is unchanged. Proven by disabling the code it covers (each mutation restored byte for byte): dropping the parent's origins from the child's inheritance fails the combined-origin assertion; recording the ceiling origin as list admits the actor."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.unresolved-refuses",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "Where the Mission Issuer cannot resolve a justifying entry's child-actor provenance, because it is missing, unreadable, or ambiguous, it MUST refuse the creation or carryover with `child_actor_not_allowed`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with the parent's child-actor provenance missing, unreadable, an unknown value, or misaligned with its Authority Set, creation is refused child_actor_not_allowed although the list and the policy permit, creating nothing and never asking the policy; a carryover replacement parent inheriting an unresolved origin carries no grandchild (cascade child_actor_not_allowed)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > unresolved provenance (missing, unreadable, an unknown value, or misaligned) refuses although the list and the policy permit: no fallback to the list or to the delegate origin",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > a deeper generation inherits through its replacement parent > missing provenance: a replacement parent that inherits an unresolved origin carries no grandchild, and the policy is not asked for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > a stored value it does not recognize reads as unresolved, and no child is created under that entry",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): letting an unresolved origin fall through to the policy fails these witnesses, as does reading an unknown stored value as list."
+  },
+  {
+   "id": "child-delegation.child-actor-eligibility.no-inference-no-backfill",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-actor-eligibility",
+   "text": "It MUST NOT infer that provenance from the entry's list or from delegate eligibility provenance, and it backfills provenance for an earlier record only from an authoritative and unambiguous source.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose child-actor provenance cannot be resolved is refused although its list names the actor and its delegate provenance is intact; a record without stored child-actor provenance, as one predating it, refuses; a replacement under such a child retains the unresolved origin rather than a list default"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > unresolved provenance (missing, unreadable, an unknown value, or misaligned) refuses although the list and the policy permit: no fallback to the list or to the delegate origin",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > a deeper generation inherits through its replacement parent > missing provenance: a replacement parent that inherits an unresolved origin carries no grandchild, and the policy is not asked for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "the kernel retains child-actor provenance with the Mission and reads it fail-closed (@spec child-delegation#fanout, #1304) > a stored value it does not recognize reads as unresolved, and no child is created under that entry",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). The reference backfills nothing: the column is added nullable with no default (migrateMissions). Proven by disabling the code it covers (each mutation restored byte for byte): reading the origin from the delegate provenance, backfilling an unknown stored value as list, and backfilling a replacement with list origins each fail a witness here."
+  },
+  {
+   "id": "child-delegation.attenuation.presented-token-child-actors",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "attenuation",
+   "text": "an `allowed_child_actors` on that attributed token entry MUST permit the child actor; where the entry carries none, it defers to the child-creation policy only where the justifying parent entry's eligibility does ({{child-actor-eligibility}}), and otherwise the creation is refused",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with the policy permitting the actor, a presented token whose attributed entry lists another actor, or none ([]), refuses, and one naming the actor creates; a token entry without a list creates under a policy-origin parent entry once the policy permits, and refuses under a list-origin parent entry although the parent's list names the actor"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > the presented token's restrictions > a list the presented token carries restricts the policy decision: refused where it omits the actor, created where it names it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > the presented token's restrictions > a presented token without a list defers to the policy only under a policy-origin parent entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1304 (D486). The token's list restricts the inherited decision; the policy itself is asked by the parent-side gate. Proven by disabling the code it covers (each mutation restored byte for byte): skipping the token's list, treating a list-less token entry as always denying (the old rule), and as always passing each fail a witness here."
+  },
+  {
+   "id": "child-delegation.request-processing.commit-child-actor-eligibility",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "request-processing",
+   "text": "At the creation commit, re-verify parent state ({{creation-race}}), the inherited authority source ({{record-requirements}}), and child-actor eligibility ({{child-actor-eligibility}})",
+   "facet": "child-actor-eligibility",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "child-actor eligibility is re-verified at the creation commit: a policy that permits the first check and denies at the commit refuses, creating nothing, and a creation both permit asks the policy at both"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > the policy is asked again at the creation commit: a decision that changes after the first check refuses, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a parent entry whose ceiling entry defers the child actor to policy, with a list the parent's proposal added > policy and list both permit: the child is created, asked at creation and again at the commit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1304 (D486). Facet: the child-actor clause only; parent state and the inherited authority source at the commit are witnessed by their own rows, not cited here. The re-check runs inside the creation transaction (the insertRecord precondition). Proven by disabling the code it covers (each mutation restored byte for byte): dropping the commit re-check fails both witnesses."
+  },
+  {
+   "id": "child-delegation.carryover.child-actor-eligibility-at-commit",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-generations",
+   "text": "The actor check is {{child-actor-eligibility}}'s, against the prospective parent's retained child-actor provenance, and it is repeated at the completion commit: a policy decision rendered into the manifest does not admit a replacement.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child the policy denies under the successor's policy-origin entry is rendered and committed as a cascade with no replacement, as is one the list omits or an empty list refuses; one both permit is carried, the policy asked at rendering and again at completion; a permit withdrawn between rendering and completion fails the whole batch (access_denied), committing no successor and no replacement and leaving the old subtree active; a list-origin child is carried without asking the policy, also under the reference default"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy denies, list permits: the child is rendered and committed as a cascade, with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy permits, list omits: cascaded with no replacement",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy and list both permit: carried, asked at rendering and again at the completion commit, the replacement keeping the policy origin",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the policy is asked again at the completion commit: a permit given at rendering that is withdrawn before completion fails the whole batch",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an absent list on the successor entry defers to the policy: cascaded while it permits nobody",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit empty list on the successor entry admits nobody, though the policy permits the actor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit list keeps deciding at carryover: a list-origin child is carried without asking the policy",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit list keeps deciding at carryover under the reference default: no default-deny is imposed on a list-origin child",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-provenance.test.ts",
+     "name": "carryover under the reference default (@spec child-delegation#fanout, #carryover-generations, #1304) > a child created while a policy permitted it is rendered as a cascade once no policy is installed, and completion creates no replacement",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). Through the expansion exchange and its deferred completion (poll) at the token endpoint. Proven by disabling the code it covers (each mutation restored byte for byte): dropping the actor refusal at completion fails the withdrawn-permit witness; dropping it at rendering fails the cascade witnesses."
+  },
+  {
+   "id": "child-delegation.carryover.replacement-child-actor-provenance",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-generations",
+   "text": "A replacement retains the old child's child-actor provenance and that of every new parent entry it falls within.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.carryover"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a carried replacement records the policy origin it inherits from the old child and the successor entry, a list-origin child's replacement records list, and a replacement of a child whose provenance is gone records the unresolved origin, under which no grandchild is carried; a grandchild is carried under its replacement parent only where the policy and that parent's list both permit"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > the successor entry defers the child actor to policy, with a list the expansion's proposal added > policy and list both permit: carried, asked at rendering and again at the completion commit, the replacement keeping the policy origin",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > an explicit list keeps deciding at carryover: a list-origin child is carried without asking the policy",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > a deeper generation inherits through its replacement parent > missing provenance: a replacement parent that inherits an unresolved origin carries no grandchild, and the policy is not asked for it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
+     "name": "child-actor eligibility at Child Mission Carryover (@spec child-delegation#fanout, #carryover-generations, #1304) > a deeper generation inherits through its replacement parent > multiple retained origins: the grandchild is carried only where the policy and its replacement parent's list both permit",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1304 (D486). Proven by disabling the code it covers (each mutation restored byte for byte): backfilling the replacement with list origins, and rendering the prospective replacement parent with list origins, each fail a witness here."
   },
   {
    "id": "child-delegation.carryover.expansion-disclosure",
