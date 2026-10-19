@@ -1,19 +1,25 @@
-# payments-runtime-profile-v5
+# payments-runtime-profile-v6
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v5`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v6`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
-- **v5** (#1276, D457): declares the operation contract (below). Every
+- **v6** (#1276, D457): declares the operation contract (below). Every
   payments operation's target is the service the canonical resource URI
   identifies, sent as `resource.properties.operation_target` beside
   `audience`, and the PEP rechecks it before every release. Parameter
-  digests are unchanged from v4: the effective parameters' `resource` is
+  digests are unchanged from v5: the effective parameters' `resource` is
   that target.
+- **v5** (#1270): names the settlement identity of `execute_wire_transfer`,
+  the invoice. The ledger settles each invoice once and refuses a later
+  wire for it, under any Mission, operation key or caller key, with no
+  effect (`already_settled`); `check_transfer` reports a settled invoice
+  as not feasible. Decision bytes are unchanged from v4.
+
 - **v4** (#828, D429): the Resource policy also evaluates the
   authenticated client, which must hold `authorized_client` on every
   target, and the tenant: an entitlement counts only for a member of the
@@ -330,6 +336,40 @@ fresh Decision; a different operation under the same key is refused
   instance-profiled leaf with no client) is refused `actor_unkeyable`
   before any effect, recorded as
   `https://payments.demo/execution-errors/actor_unkeyable`.
+
+## Settlement identity
+
+An idempotency key, and the operation key above, identifies one request,
+not the business event it carries out (runtime § security
+considerations). `execute_wire_transfer` settles an invoice, and the
+invoice (`invoice_id`) is its settlement identity:
+
+- The ledger connector settles each invoice at most once. A wire under the
+  same operation key is a retry and returns the original result
+  (`deduped`). A wire for an invoice another operation already settled is
+  refused with no effect, whatever Mission, operation key, record version
+  or caller `idempotency_key` it arrives under. The check and the ledger
+  insert are one step at the commit point, and a unique settlement index
+  holds the invariant.
+- The refusal is affirmative non-execution: Execution Evidence `outcome`
+  `suppressed` with the collision-resistant `error`
+  `https://payments.demo/execution-errors/already_settled`, and the
+  caller-visible diagnostic `already_settled`. No money moved, so nothing
+  stays charged.
+- `check_transfer` reports a settled invoice as not feasible.
+- Outcome reconciliation attributes a ledger entry to an action only
+  through the identifiers recorded with it, the permit (evaluation)
+  identifier and the operation key. An entry for the same invoice under
+  another permit is that operation's effect, never this action's outcome.
+
+Residuals:
+
+- `send_remittance_email` keeps operation-key deduplication only: a
+  second remittance notice for one invoice is an external commitment but
+  moves no money.
+- An invoice amended after settlement (a larger amount) is refused as
+  already settled; paying the difference is a new business event that
+  needs its own identity and is left to operator handling.
 
 ## Permits, leases, commit point (D28/D36/D29/D39)
 

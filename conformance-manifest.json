@@ -3865,9 +3865,21 @@
      "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 3 (token): the access token's sub is the workload principal, its client_id the agent, and it carries no act",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 5 (same-Mission delegation): the agent designates a sub-agent, and the sub-agent's redeemed token keeps the workload principal as sub, names the sub-agent in act, binds the sub-agent's own key and carries the sub-agent as client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194. Partial: the client_id half is witnessed for a service_owned source (the agent ledger-reconciler, its workload Subject in sub, no act). The act half needs the delegated exchange of Delegation Within a Mission, which the reference AS does not implement (#869); the test records that step as a todo. Proved by overwriting client_id with the Subject in the JWT customizer (provider.ts)."
+   "notes": "#1194. Witnessed for a service_owned source (the agent ledger-reconciler, workload Subject agt_ledger_reconciler): client_id names the Agent and the Subject stays in sub (step 3), and a delegate the agent designates appears in act with sub unchanged (step 5); and for user_delegated by the delegation-exchange witness. Partial: the organizational source is not exercised for client_id or for a delegate in act. Proofs: overwriting client_id with the Subject in the JWT customizer fails step 3; omitting act at redemption fails step 5; taking sub from the delegate fails step 5 only with both the redemption's account and the customizer's Subject assignment disabled (either alone keeps sub)."
   },
   {
    "id": "core.approval-event.approver-establishment-not-from-client-input",
@@ -5972,7 +5984,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "Partial (#916, D415). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+   "notes": "Partial (#916, D415; #916 closed, D461). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. A second residual is a delivery gap: a code issued whose redirect response is lost, which atomic record/code issuance would not remove, bounded by the code's 60 s lifetime clamped to the Mission's expires_at (provider-integration-port.md section 3.4; code reading, no test). The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
   },
   {
    "id": "core.approval-event.every-mission-own-event",
@@ -6924,9 +6936,15 @@
      "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 5 (same-Mission delegation): the agent designates a sub-agent, and the sub-agent's redeemed token keeps the workload principal as sub, names the sub-agent in act, binds the sub-agent's own key and carries the sub-agent as client_id",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1194, #869: the delegated token's `client_id` is the requesting delegate, not the Mission's approved agent; minting it under the approved agent's client fails the witness."
+   "notes": "#1194, #869: the delegated token's `client_id` is the requesting delegate, not the Mission's approved agent; minting it under the approved agent's client fails the witness. Step 5 witnesses it for a service_owned Mission: the sub-agent that redeems the designation is the delegated token's client_id while the Mission's Agent stays ledger-reconciler; minting under the Mission's Agent fails step 5."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
@@ -7571,9 +7589,15 @@
      "name": "the exchange selector (@spec mission#delegation) > a delegated token reaches only a Mission-aware target: otherwise invalid_target, counting nothing (D166)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the JWT customizer backstop on a real delegated mint (@spec mission#rs-enforcement, mission#scope-projection, #870) > refuses invalid_target, issuing no token and keeping no accounting record, when the target stops being classified Mission-aware after the exchange's own routing check",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role), at the token endpoint on the cross-org exchange and on the JWT customizer backstop by direct invocation (unit: no oidc-provider mint carries act today; the endpoint witness follows a same-Mission delegation mint, #869). It does not establish every deployment route: the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. The transaction endpoint applies the same gate before admitting a workflow (txn-endpoint.test.ts, delegated routing of transaction tokens); that coverage is reviewed separately."
+   "notes": "Inventory per D415. The condition is literal: any Mission-bound token carrying an emitted act chain, not gated on a delegation capability, because the cross-org exchange and transaction tokens carry act too. Partial: witnesses only the AS issuance gate (model.roles has no deployment role); it does not establish every deployment route, and the deployment's actual routing and the truth of the mission_aware classification are trust assumptions. Witnessed at the token endpoint on the cross-org exchange and on same-Mission delegation (#869), whose exchange refuses a target not classified Mission-aware before counting; the JWT customizer backstop is witnessed directly (unit) and at the endpoint on a real delegated mint, where a target reclassified after the exchange's own check is refused at the save (disabling the customizer's act branch issues the token). Transaction tokens (#870 review): the transaction endpoint refuses before admitting a workflow whenever either upstream carrier supplies actor context, the condition under which the issued token carries act, for the challenge issuer that becomes its audience (txn-endpoint.test.ts, delegated routing of transaction tokens, which discriminates on the challenge's act). The subject-token carrier, a delegated token presented at the transaction endpoint and reachable since #869, takes the same disjunctive gate but has no discriminating witness."
   },
   {
    "id": "core.rs-enforcement.unenforceable-entry-no-authority",
@@ -8101,7 +8125,7 @@
     "normative": "each redemption re-checks the validity of the credential the designation was derived from and of its grant, the Mission's state, the delegation policy and the Mission's current authority, and is counted as a derivation; a revoked source grant or family, or a Mission that is not active, refuses a redemption even after an earlier redemption of the same designation succeeded"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -8138,9 +8162,21 @@
      "name": "lifetimes are absolute across the request (@spec mission#designation, #1279 review) > a redemption whose designation expires while the exchange awaits its checks is refused invalid_request, counting nothing",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-reads the Mission's current authority: a containment after the designation narrows the delegated token, and one leaving nothing refuses invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers. Witnessed: the source grant or family's validity (skipping the liveness check fails two witnesses), the Mission's state, and a separate count per redemption. Partial: the delegation policy and the Mission's current authority are evaluated at every redemption, but no witness changes either between a designation and its redemption. #1279 review: an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses the exchanges (requiring the row alone fails that witness); the designation's own expiry is rechecked after every awaited check."
+   "notes": "#869 (D449): proven by disabling the code it covers. Every clause is witnessed at a redemption: the source grant or family's validity (an async family is valid only while its row and its provider Grant both exist, so RFC 7009 revocation of its refresh token refuses; requiring the row alone fails that witness), the Mission's state, the designation's own expiry, the delegation policy (a delegate whose AS-asserted profile is withdrawn after the designation is refused; skipping the redemption's eligibility gate fails it), the Mission's current authority (a containment after the designation narrows the result, or refuses when nothing is left; skipping the projection through current authority fails it), and a separate count per redemption, none for a refusal (#869 acceptance review)."
   },
   {
    "id": "core.delegation-constraints.designation-adds-no-delegate",
@@ -8246,7 +8282,7 @@
     "normative": "a designation's authorization_details are a subset of the presented token's, and its mission claim equals the presented token's"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -8259,9 +8295,15 @@
      "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > a credential narrower than its Mission: neither the designation nor the delegated token regains the omitted action",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: carrying the presented authority unfiltered fails the eligibility witness. Partial: the presented token's authority equals the Mission's here, so substituting the Mission's set for the presented token's would not be caught."
+   "notes": "#869 (D449): proven by disabling the code it covers. A credential narrower than its Mission (an async-family token issued with one of the Mission's two actions) is designated and redeemed, and neither result regains the omitted action; substituting the Mission's set for the presented credential's at the designation, or for the designation's at the redemption, fails that witness. Carrying the presented authority unfiltered fails the eligibility witness (#869 acceptance review)."
   },
   {
    "id": "core.designation.audience-names-client",
@@ -16932,7 +16974,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v5, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v6, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270) and declares the operation contract (#1276); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -20809,6 +20851,47 @@
     }
    ],
    "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax."
+  },
+  {
+   "id": "runtime.security.business-event-resource-deduplicates",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "security-considerations",
+   "text": "Where an event must take effect once, the Operation Profile names the parameters that identify it, and the resource deduplicates on them.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "for an event that must take effect once, a second request carrying out the same event under another operation key, Mission or caller key produces no second effect at the resource",
+    "local": "payments-runtime-profile-v5 names the invoice as execute_wire_transfer's settlement identity. The ledger connector refuses a wire for a settled invoice with no effect (`already_settled`); the PEP records Execution Evidence `suppressed` with `https://payments.demo/execution-errors/already_settled`. A retry under the same operation key stays deduped."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/settlement-identity.test.ts",
+     "name": "settlement identity (@spec runtime#security-considerations, operation-profile-payments-v1) > refuses a second wire for a settled invoice under another operation key and Mission, with no effect",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > a second Mission cannot settle an invoice another Mission settled: refused already_settled with no effect (@spec runtime#security-considerations, #1270)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/transaction.test.ts",
+     "name": "M5 transaction-assurance tier > the same Mission cannot settle an invoice twice after the record changes: a new key and digest are refused already_settled (#1270)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1270: the operation key covers the Mission and the record versions, so before v5 two Missions, or one Mission after an invoice change, could each settle one invoice. The live witnesses need OpenFGA."
   },
   {
    "id": "runtime.idempotency.retransmission-returns-prior-decision",
@@ -34900,7 +34983,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier."
   },
   {
    "id": "resource-access.resource-matching.refuse-unresolved-target",
@@ -34943,7 +35026,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported."
   },
   {
    "id": "resource-access.resource-matching.execute-matched-target",
@@ -34974,7 +35057,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write."
   },
   {
    "id": "resource-access.resource-matching.no-metadata-fallback",
@@ -35017,7 +35100,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457)."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457)."
   },
   {
    "id": "resource-access.resource-matching.exact-no-reserialization",
@@ -35054,7 +35137,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v5; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level."
+   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level."
   },
   {
    "id": "resource-access.resource-matching.exact-documented-spelling",

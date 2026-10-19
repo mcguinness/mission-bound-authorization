@@ -323,6 +323,14 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
 });
 
 /**
+ * The Execution Evidence `error` for a wire the ledger refused because the
+ * invoice is already settled (#1270): a collision-resistant name, for the same
+ * reason as the reversible-write refusals above. The caller-visible diagnostic
+ * is `already_settled`.
+ */
+export const SETTLEMENT_REFUSAL_ERROR = "https://payments.demo/execution-errors/already_settled";
+
+/**
  * Test-only failpoints on the keyed reversible-write path (#918): the awaited
  * reverification, where concurrent in-process attempts interleave after each
  * found the pair free; inside the one local transaction (a throw rolls the
@@ -1769,6 +1777,15 @@ export class McpPaymentsServer {
       permitId,
       missionId: resolvedMission.id,
     });
+    // @spec runtime#security-considerations (#1270): the resource refused a
+    // second settlement of the invoice with no effect, so this is affirmative
+    // non-execution under the deployment's collision-resistant error, the
+    // same disposition as the reversible writes' `schedule_exists`.
+    if (!commit.committed) {
+      await this.deps.pep.suppressExecution(attempt, SETTLEMENT_REFUSAL_ERROR);
+      tx.engine.advance(opKey, "abandoned");
+      return { ok: false, refusal_reason: commit.refusal ?? "already_settled" };
+    }
     tx.engine.advance(opKey, "connector_committed");
     // The effect is durable, so the consumption row says so. A failure to write
     // it leaves the row at `consumed`, which is exactly the resumable state: a
@@ -1951,8 +1968,11 @@ export class McpPaymentsServer {
       // @spec runtime#compound-actions — the preflight crossing: a
       // feasibility answer with no reservation and no external effect.
       case "check_transfer": {
-        const invoice = this.deps.payments.getInvoice(String(args.invoice_id));
-        return { feasible: invoice?.status === "payable", invoice_id: String(args.invoice_id) };
+        const invoiceId = String(args.invoice_id);
+        const invoice = this.deps.payments.getInvoice(invoiceId);
+        // A settled invoice is not payable again (#1270).
+        const settled = this.deps.transaction?.connectors.settled(invoiceId) ?? false;
+        return { feasible: invoice?.status === "payable" && !settled, invoice_id: invoiceId };
       }
       // The prepare crossing: a hold, which is state and never authority for
       // the commit crossing.
