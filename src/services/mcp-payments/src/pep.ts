@@ -45,6 +45,7 @@ import {
   EnforcementBoundaryContext,
   lineageScopeDigests,
   type EntitlementResolver,
+  type JoinMappingContract,
   evaluate,
   type EvaluateOptions,
   isDecisionChannelRefusal,
@@ -820,6 +821,26 @@ export interface PepDeps {
       clientId: string,
       missionClientId: string,
     ) => number | undefined;
+    /**
+     * @spec authority-server#mapping-contract (#818) — the deployment's
+     * versioned mapping contract, for a route whose credentials come from an
+     * issuer outside the Mission's subject and client namespace. Called ONCE
+     * per joined request; that one snapshot supplies the credential bound
+     * (its scope mapping, in place of `resolveOrdinaryAuthority`), the client
+     * the actor-record lookup is keyed on, and the PDP's subject and client
+     * join (forwarded as `joinMapping`), so one request applies one contract
+     * version throughout. A source with no usable snapshot returns
+     * `UNRESOLVED_JOIN_MAPPING`, which resolves nothing. Absent: the
+     * shared-namespace hooks above, unchanged.
+     */
+    mappingContract?: () => JoinMappingContract;
+    /**
+     * @spec authority-server#high-consequence-binding (#818) — forwarded to
+     * the PDP as `missionBoundOnlyClasses`: the action classes this route
+     * admits only under a Mission-bound credential, so a joined request in one
+     * is denied rather than evaluated under the join.
+     */
+    missionBoundOnlyClasses?: ReadonlySet<string>;
   };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
@@ -1521,6 +1542,9 @@ export class Pep {
     // case, where no delegate policy is consulted at all).
     let isBaselineJoin = false;
     let delegateDepth: number | undefined;
+    // @spec authority-server#mapping-contract (#818) — the one contract
+    // snapshot this joined request applies, forwarded to the PDP below.
+    let joinMapping: JoinMappingContract | undefined;
     // @spec authzen#context-credential (#825, D312) — the credential's own
     // authority as the PDP receives it: the Mission-bound credential's
     // verified entries, or, on the baseline-Join path, the entries the
@@ -1590,7 +1614,19 @@ export class Pep {
       // which enforces it as its own bound (D312, D340). No evaluator
       // configured -> fail closed (see PepDeps.masJoin doc): a working Join
       // with no usable permit, never a silently unbounded one.
-      const ordinaryAuthority = this.deps.masJoin.resolveOrdinaryAuthority?.(token);
+      // @spec authority-server#mapping-contract (#818): under a mapping
+      // contract the credential bound is the contract's scope mapping, read
+      // from the same snapshot the PDP's join applies, for the credential's
+      // own verified issuer and `scope`.
+      joinMapping = this.deps.masJoin.mappingContract?.();
+      const ordinaryAuthority = joinMapping
+        ? joinMapping.credentialAuthority({
+            issuer: token.credential?.issuer ?? "",
+            scope: token.mission ? undefined : token.scope,
+            resource: CANONICAL_RESOURCE,
+            now: this.now(),
+          })
+        : this.deps.masJoin.resolveOrdinaryAuthority?.(token);
       if (!ordinaryAuthority) return await this.refuse(boundary, token, "out_of_authority", mapping.action, loaded.view);
       // The same entries reach the PDP as the credential bound, so a remote
       // PDP enforces them too rather than only this non-empty gate. Entries
@@ -1615,11 +1651,22 @@ export class Pep {
       observation = loaded.observation;
       missionAnchor = { id: propagated.id, issuer: propagated.issuer };
       isBaselineJoin = true;
-      delegateDepth = this.deps.masJoin.resolveDelegateDepth?.(
-        { id: propagated.id, issuer: propagated.issuer },
-        token.clientId,
-        loaded.view.client_id,
-      );
+      // Rule 5's actor records name clients in the Mission's namespace, so
+      // under a mapping contract the lookup is keyed on the client the
+      // contract maps this credential's client to. No mapped client, no
+      // record: an absent depth, which the PDP denies on the delegate
+      // disposition.
+      const depthClientId = joinMapping
+        ? joinMapping.clientFor({ iss: token.credential?.issuer ?? "", clientId: token.clientId }, this.now())
+        : token.clientId;
+      delegateDepth =
+        depthClientId === undefined
+          ? undefined
+          : this.deps.masJoin.resolveDelegateDepth?.(
+              { id: propagated.id, issuer: propagated.issuer },
+              depthClientId,
+              loaded.view.client_id,
+            );
     }
 
     // @spec authzen#context-audience-freshness: where the declared placement
@@ -2020,7 +2067,20 @@ export class Pep {
       // @spec authority-server#mission-join rule 4 (#557 review point 1) —
       // forwarded to the PDP unchanged; consulted only when this request
       // carries `context.mission_join` above.
-      ...(this.deps.masJoin?.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
+      // @spec authority-server#mapping-contract (#818): under a mapping
+      // contract, the delegate policy is the one that contract version states.
+      ...(joinMapping?.delegatePolicy !== undefined
+        ? { delegatePolicy: joinMapping.delegatePolicy }
+        : this.deps.masJoin?.delegatePolicy !== undefined
+          ? { delegatePolicy: this.deps.masJoin.delegatePolicy }
+          : {}),
+      // @spec authority-server#mapping-contract, #high-consequence-binding
+      // (#818): the snapshot this request already applied, and the classes
+      // this route reserves for Mission-bound credentials.
+      ...(joinMapping ? { joinMapping } : {}),
+      ...(this.deps.masJoin?.missionBoundOnlyClasses !== undefined
+        ? { missionBoundOnlyClasses: this.deps.masJoin.missionBoundOnlyClasses }
+        : {}),
     };
     // @spec authzen#failure-condition-coverage, runtime#outage-radius — the
     // decision call is guarded. A call that threw obtained no decision, and

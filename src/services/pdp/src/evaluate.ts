@@ -67,7 +67,7 @@ import type {
   ConsumptionStatusFn,
   IdempotencyClaimDomain,
 } from "./idempotency-claims.js";
-import { type DelegatePolicy, resolveBaselineJoin } from "./mas-join.js";
+import { type DelegatePolicy, type JoinMappingContract, resolveBaselineJoin } from "./mas-join.js";
 import { decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 import {
   type AuthorityEntry,
@@ -627,6 +627,26 @@ export interface EvaluateOptions {
    * fail-closed-on-unconfigured idiom as `stateSourcePlacement`).
    */
   delegatePolicy?: DelegatePolicy;
+  /**
+   * @spec authority-server#mapping-contract, authority-server#mission-join
+   * rules 3 and 4 (#818) — the deployment's mapping contract, one snapshot
+   * per request. Present: a joined request's authenticated subject and client
+   * are mapped under it, qualified by `context.credential.issuer`, before the
+   * join compares them with the Mission's own; a request the contract does not
+   * resolve denies `mission_binding_failed`, never falling back to bare
+   * string equality. Absent: the shared-namespace join, unchanged (the
+   * subject compared as an issuer-qualified pair, the client by equality).
+   */
+  joinMapping?: JoinMappingContract;
+  /**
+   * @spec authority-server#high-consequence-binding (#818): action classes
+   * this enforcement scope admits only under a Mission-bound acting
+   * credential. A joined request (`context.mission_join` present) in one is
+   * denied before the join runs, so it is never evaluated under a mapping
+   * join; the reason is this PDP's local choice. Absent: no class is
+   * reserved, the floor's behavior.
+   */
+  missionBoundOnlyClasses?: ReadonlySet<string>;
   /**
    * @spec runtime#idempotency (#917): this PDP's Exact idempotency claim
    * domain, bound at decision-point construction exactly as `evidence` is.
@@ -1339,13 +1359,39 @@ async function evaluateInner(
   // Mission-bound request never carries it, so this block is a complete
   // no-op for the existing path -- byte-for-byte unchanged.
   if (req.context.mission_join) {
+    // @spec authority-server#high-consequence-binding (#818): a class this
+    // scope reserves for Mission-bound credentials denies a joined request
+    // before the join runs, rather than falling back to the mapping join.
+    if (actionClass !== undefined && opts.missionBoundOnlyClasses?.has(actionClass)) {
+      return deny("mission_binding_failed");
+    }
     const clientId = req.context.actor?.client_id;
     if (typeof clientId !== "string" || !clientId) return deny("mission_binding_failed");
+    let joinSubject = { iss: req.subject.properties?.iss ?? "", sub: req.subject.id };
+    let joinClientId = clientId;
+    // @spec authority-server#mission-join rules 3 and 4, #mapping-contract
+    // (#818): under a mapping contract the credential's own issuer qualifies
+    // both identities, and only the contract's resolution reaches the
+    // comparison below. An unresolved mapping, or a request naming no
+    // credential issuer to qualify them, fails the join.
+    if (opts.joinMapping) {
+      const credentialIssuer = req.context.credential?.issuer;
+      if (typeof credentialIssuer !== "string" || !credentialIssuer) return deny("mission_binding_failed");
+      const mapped = opts.joinMapping.resolveIdentity({
+        subject: joinSubject,
+        client: { iss: credentialIssuer, clientId },
+        missionIssuer: view.issuer,
+        now: now(),
+      });
+      if (!mapped) return deny("mission_binding_failed");
+      joinSubject = mapped.subject;
+      joinClientId = mapped.clientId;
+    }
     const joined = resolveBaselineJoin({
       view,
       onEntryEvaluated: entry => { contributions.add(entry.type); },
-      subject: { iss: req.subject.properties?.iss ?? "", sub: req.subject.id },
-      clientId,
+      subject: joinSubject,
+      clientId: joinClientId,
       ...(req.context.mission_join.delegate_depth !== undefined
         ? { delegateDepth: req.context.mission_join.delegate_depth }
         : {}),
@@ -1356,6 +1402,9 @@ async function evaluateInner(
     // never sees `view.authority_set` for this request either, and no
     // joined-view commitment is recorded.
     if (!joined.ok) return deny("mission_binding_failed");
+    // The commitment binds the client as authenticated, not as mapped (#818):
+    // two credential clients a contract maps to one Mission client are two
+    // joined views.
     joinedAuthority = { disposition: joined.disposition, clientId, authoritySet: joined.authoritySet };
     // Rule 9: a SEPARATE commitment for a joined decision, distinct from
     // policy_view_id: it tells a joined decision from a direct Mission-bound

@@ -111,6 +111,23 @@ export class TokenAudienceError extends Error {
 }
 
 /**
+ * @spec authority-server#mapping-contract (#818) — the one credential format an
+ * estate route (`ordinaryOnly`) accepts: an RFC 9068 JWT access token, `typ`
+ * `at+jwt`, with the string `sub`, `client_id` and `jti` and the numeric `exp`
+ * and `iat` the profile requires, and a `scope` string when present. Signature,
+ * issuer, audience, `cnf` and the proof are checked before this. A credential in
+ * any other format throws: it is refused, not interpreted.
+ */
+function assertEstateAccessToken(typ: unknown, payload: JWTPayload): void {
+  if (typeof typ !== "string" || typ.toLowerCase() !== "at+jwt") throw new Error("unsupported credential format");
+  for (const claim of ["sub", "client_id", "jti"] as const) {
+    if (typeof payload[claim] !== "string" || payload[claim] === "") throw new Error(`token missing ${claim}`);
+  }
+  if (typeof payload.exp !== "number" || typeof payload.iat !== "number") throw new Error("token missing exp or iat");
+  if (payload.scope !== undefined && typeof payload.scope !== "string") throw new Error("token scope is not a string");
+}
+
+/**
  * @spec txn-authorization#transaction-token — a transaction token authorizes
  * exactly the challenged operation and MUST NOT be accepted as a general
  * Mission-bound access token for any other purpose. Its `typ` is read before
@@ -416,6 +433,17 @@ export interface McpServerDeps {
    */
   keyRoles: KeyRoles;
   issuer: string;
+  /**
+   * @spec authority-server#limitations, #high-consequence-binding (#818) —
+   * `issuer` is an estate authorization server that is NOT a Mission Issuer:
+   * it issues ordinary OAuth tokens only. Every credential this server
+   * verifies is then ordinary; one carrying a `mission` claim is refused,
+   * never read as Mission-bound, so an estate token cannot pose as a
+   * Mission-bound credential on any route this server serves. The published
+   * metadata then omits `mission_bound_authorization_required`. Default
+   * false: `issuer` is the Mission Issuer, unchanged.
+   */
+  ordinaryOnly?: boolean;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
   /**
@@ -590,7 +618,10 @@ export class McpPaymentsServer {
       resource: CANONICAL_RESOURCE,
       authorization_servers: [this.deps.issuer],
       bearer_methods_supported: ["dpop"],
-      mission_bound_authorization_required: true,
+      // @spec mission#protected-resource-metadata: an ordinary-only route
+      // accepts tokens with no `mission` claim, so it does not advertise
+      // Mission-bound-only acceptance (#818).
+      ...(this.deps.ordinaryOnly ? {} : { mission_bound_authorization_required: true }),
       // @spec resource-access#protected-resource-metadata (#1266): only keys
       // this resource enforces against its own authoritative facts.
       mission_constraints_supported: [
@@ -667,6 +698,10 @@ export class McpPaymentsServer {
    * possession is not part of this: each transport verifies its own.
    */
   private missionBoundFactsFrom(payload: JWTPayload, typ: unknown, validated: ValidatedBoundary): MissionBoundTokenFacts {
+    // @spec authority-server#limitations (#818): an estate issuer that is not a
+    // Mission Issuer mints no Mission-bound credential, so a `mission` claim
+    // under it is refused rather than trusted.
+    if (this.deps.ordinaryOnly) throw new Error("this route's issuer is not a Mission Issuer");
     // @spec cross-domain#mission-subject — readTxnMissionClaim (inside the
     // profile) validates the REQUIRED invariants and, when present, the
     // closed {iss, sub} shape of the origin principal; a present-but-malformed
@@ -788,6 +823,10 @@ export class McpPaymentsServer {
     const { payload, typ, cnfJkt, validated } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
     if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, typ, validated);
     if (!admitsOrdinary) throw new Error("token missing mission claim");
+    // @spec authority-server#mapping-contract (#818): an estate route accepts
+    // exactly one credential format, an RFC 9068 JWT access token. Anything
+    // else is refused here rather than read on a best-effort basis.
+    if (this.deps.ordinaryOnly) assertEstateAccessToken(typ, payload);
     return this.ordinaryFactsFrom(payload, cnfJkt, validated);
   }
 
