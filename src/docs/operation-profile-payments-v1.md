@@ -1,13 +1,19 @@
-# payments-runtime-profile-v4
+# payments-runtime-profile-v5
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v4`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v5`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
+- **v5** (#1276, D457): declares the operation contract (below). Every
+  payments operation's target is the service the canonical resource URI
+  identifies, sent as `resource.properties.operation_target` beside
+  `audience`, and the PEP rechecks it before every release. Parameter
+  digests are unchanged from v4: the effective parameters' `resource` is
+  that target.
 - **v4** (#828, D429): the Resource policy also evaluates the
   authenticated client, which must hold `authorized_client` on every
   target, and the tenant: an entitlement counts only for a member of the
@@ -30,7 +36,8 @@ The file name is the document's stable name and does not carry the version.
 - Canonical MCP resource URI (byte-for-byte everywhere per D38):
   `http://localhost:4403/mcp` (overridable via `.env`; whatever the value,
   it is used identically in PRM, OAuth `resource`, token `aud`, AuthZEN
-  `resource.properties.audience`, and evidence).
+  `resource.properties.audience`, the operation target below, and
+  evidence).
 - Tool ids (capability source `tool_id`): `mcp://payments.demo/tools/<name>`.
 - AuthZEN action ids: `payments:<operation>` as listed below.
 
@@ -57,6 +64,36 @@ single-use permit, execution lease, and connector path. The three
 `payments:payment.execute` rows are the phases of one compound action
 (runtime compound actions); each phase is classified by what that
 crossing does.
+
+## Operation contract
+
+The payments operation contract identifies the canonical resource URI as
+the operation target for every operation above (Resource Access, Resource
+Matching). Actions and constraints determine the permitted operations
+within that service. Each `TOOL_ACTIONS` row declares the contract
+(`target: { service: <canonical resource URI> }`); it is never assumed.
+
+- The PEP establishes the target from that declaration alone, before any
+  decision request: never from an entry, the token's audience, or an
+  argument. A tool with no declaration, a finer contract form (one deriving
+  the target from arguments, which this profile does not support), or
+  declarations naming different targets is refused
+  `operation_target_unresolvable` (`target_unresolvable`) before any
+  decision request.
+- The decision request carries the target as
+  `resource.properties.operation_target`. The PDP matches the credential's
+  and the Mission's entries against it with the Resource Access matcher:
+  literal `exact` only; a `prefix` entry or an unrecognized
+  `resource_match` provides no authority, and a credential carrying one is
+  refused. `audience` stays the token-validation and decision-channel scope
+  input; `resource.type` and `resource.id` stay Resource-policy object
+  identity.
+- The target is the effective parameters' `resource`, so the parameter
+  digest and the operation key bind it, and it is part of operation
+  identity and of the cache key.
+- Before every release the PEP re-establishes the target from the live
+  profile; a target that moved or can no longer be established suppresses
+  the permit with `target_drift` and no effect.
 
 ## Money
 
@@ -142,6 +179,8 @@ with the authoritative fields and the record versions:
   "resource": "http://localhost:4403/mcp"
 }
 ```
+
+`resource` is the operation target the contract establishes.
 
 `parameter_digest` = `sha-256:` + base64url(no pad) of SHA-256 over the
 JCS canonicalization of that object (the anchor encoding family; computed

@@ -318,6 +318,24 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expectDenied(b as Decision, "idempotency_conflict", { next_action: "none" });
       claims.close();
     });
+
+    it("a key reused for another operation target under the same audience, action, type/id and digest is idempotency_conflict, never a retransmission of the first permit (#1276)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const run = (o: RequestOptions) => evaluate(request(c, { key, ...o }), options(claims, c, { consumptionStatus: unconsumed }));
+      const first = await run({});
+      expect(first.decision, JSON.stringify(first.context)).toBe(true);
+      // Control: the identical request is the retransmission of that permit.
+      const resent = await run({});
+      expect(resent.context.evaluation_id).toBe(first.context.evaluation_id);
+      // Only the operation target moves (the Mission names both targets).
+      const moved = await run({ target: OTHER_RESOURCE });
+      expectDenied(moved, "idempotency_conflict", { next_action: "none" });
+      expect(moved.context.evaluation_id).not.toBe(first.context.evaluation_id);
+      claims.close();
+    });
   });
 
   describe("the idempotency scope is the published namespace", () => {

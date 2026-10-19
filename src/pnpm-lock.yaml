@@ -375,6 +375,9 @@ importers:
       '@mission/authorization-server':
         specifier: workspace:*
         version: link:../authorization-server
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../../packages/mission-core
       '@mission/ras':
         specifier: workspace:*
         version: link:../ras

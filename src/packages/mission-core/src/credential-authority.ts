@@ -48,7 +48,13 @@ export class CredentialAuthorityError extends Error {}
  * point of use, so neither can be lost by not evaluating it here.
  */
 const IGNORED_ENTRY_MEMBERS = new Set(["delegation", "capability_sources"]);
-const EVALUATED_ENTRY_MEMBERS = new Set(["type", "resource", "resource_match", "actions", "constraints"]);
+const EVALUATED_ENTRY_MEMBERS = new Set([
+  "type",
+  "resource",
+  "resource_match",
+  "actions",
+  "constraints",
+]);
 const CONSTRAINT_KEYS = new Set([
   "max_amount",
   "vendors",
@@ -167,7 +173,10 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
       // or a value it does not recognize) cannot be evaluated in full, so it
       // refuses the whole credential like any other such member, never read
       // as `exact`.
-      if (raw.resource_match !== undefined && !ENFORCED_RESOURCE_MATCHES.includes(raw.resource_match as string)) {
+      if (
+        raw.resource_match !== undefined &&
+        !ENFORCED_RESOURCE_MATCHES.includes(raw.resource_match as string)
+      ) {
         throw new CredentialAuthorityError(
           `${at}.resource_match ${JSON.stringify(raw.resource_match)} is not enforceable here`,
         );

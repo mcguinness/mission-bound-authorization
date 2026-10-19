@@ -70,7 +70,8 @@ export function matchResource(
   target: string,
 ): ResourceMatch {
   const form = entry.resource_match;
-  if (form !== undefined && !ENFORCED_RESOURCE_MATCHES.includes(form as string)) return "unsupported";
+  if (form !== undefined && !ENFORCED_RESOURCE_MATCHES.includes(form as string))
+    return "unsupported";
   return typeof entry.resource === "string" && entry.resource === target ? "match" : "no-match";
 }
 
@@ -137,7 +138,11 @@ export function establishOperationTarget(declared: unknown): OperationTargetReso
   const contracts: readonly unknown[] = Array.isArray(declared) ? declared : [declared];
   const candidates: unknown[] = [];
   for (const contract of contracts) {
-    if (!isObject(contract) || Object.keys(contract).length !== 1 || !Object.hasOwn(contract, "service")) {
+    if (
+      !isObject(contract) ||
+      Object.keys(contract).length !== 1 ||
+      !Object.hasOwn(contract, "service")
+    ) {
       return { ok: false, reason: "unsupported_contract" };
     }
     candidates.push(contract.service);
