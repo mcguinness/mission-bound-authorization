@@ -20485,7 +20485,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#1176 item 16. Partial in breadth: the cited test witnesses the quoted clause, and the claim persisting through termination until reconciliation settles it. No test here holds a consumed identifier or claim through its declared horizon after a lifecycle transition, or converts a post-termination outcome to an indeterminate tombstone; the PDP's tombstone rule is witnessed on runtime.idempotency.tombstone-retention-and-refusal."
+   "notes": "#1176 item 16. The clause's subject is reconciliation, which runs in the PEP process (the declared reconciler). The PEP-role witness is the cited test's last assertion: the reconciler's run records the earlier wire's outcome and adds no ledger entry. Mutation-proved both ways: a reconciler that commits a new effect during its run fails it, and one that cannot attribute the ledger entry (Connectors.committedFor returning nothing) leaves the claim open. The test's refusal of a new wire under the terminated Mission is the ordinary decision path's PDP denial (mission_inactive), context for this row rather than its PEP witness. Partial in breadth: no test holds a consumed identifier or claim through its declared horizon after a lifecycle transition, or converts a post-termination outcome to an indeterminate tombstone; the PDP's tombstone rule is witnessed on runtime.idempotency.tombstone-retention-and-refusal."
   },
   {
    "id": "runtime.mission-receipt.must-identify-mission",
