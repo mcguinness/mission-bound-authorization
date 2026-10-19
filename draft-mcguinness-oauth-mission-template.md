@@ -188,7 +188,7 @@ publishes a set of bounds. Each **dispatch** then instantiates an
 ordinary Mission from the template by that policy, at machine speed,
 with no fresh human approval. Consent is given once, to the ceiling;
 each instance draws within it deterministically. The agent never holds
-the template: it receives each dispatched instance and works it as it
+the template: it obtains each dispatched instance and works it as it
 works any Mission ({{overview}}).
 
 This follows the architecture's Approve verb: a deterministic,
@@ -386,10 +386,12 @@ Approver   Dispatcher        Mission Issuer          Agent    Resource
 
 ## How an agent uses a template {#agent-view}
 
-The Agent never holds, presents, or names the template. It works with
-an instance, an ordinary Mission with its own identifier, Authority
-Set, and `expires_at`. The `template` member on its tokens records
-where the instance came from; it grants nothing ({{template-member}}).
+The Agent never holds or presents the template. Only a Dispatcher
+names it, by `template_id`, and only to request a Dispatch. The Agent
+works with an instance: an ordinary Mission with its own identifier,
+Authority Set, and `expires_at`. The `template` member on its tokens
+records where the instance came from; it grants nothing
+({{template-member}}).
 
 An Agent obtains an instance in one of two ways:
 
