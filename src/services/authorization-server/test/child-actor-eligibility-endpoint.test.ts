@@ -577,28 +577,20 @@ describe("child-actor eligibility with retained provenance at the child-creation
     expect(sideEffects(hooked, deferring.id).children + sideEffects(hooked, listed.id).children).toBe(0);
   });
 
-  describe("unresolved provenance fails closed (no fallback to the list, nor to the delegate origin)", () => {
-    for (const [label, stored] of [
-      ["missing", null],
-      ["unreadable", "{not json"],
-      ["an unknown value", JSON.stringify(["maybe"])],
-      ["misaligned with the Authority Set", JSON.stringify(["policy", "policy"])],
-    ] as const) {
-      it(`${label}: refused although the list and the policy permit, and the policy is not asked`, async () => {
-        const parent = approve(hooked, [pEntry({ allowed_child_actors: [{ sub: "child-a" }] })]);
-        hooked.as.kernel.db
-          .prepare("UPDATE missions SET child_actor_provenance_json = ? WHERE id = ?")
-          .run(stored, parent.id);
-        // The delegate origin is intact and says nothing about child actors.
-        expect(hooked.as.kernel.get(parent.id)?.eligibility_provenance).toEqual(["list"]);
-        permits.creation.add("child-a");
-        const before = sideEffects(hooked, parent.id);
-        // The list and the policy both permit child-a, and the policy is never
-        // asked: only the unresolved origin refuses.
-        await refused(await createChild(hooked, parent, "child-a"));
-        expect(sideEffects(hooked, parent.id)).toEqual(before);
-        expect(asked).toHaveLength(0);
-      });
+  it("unresolved provenance (missing, unreadable, an unknown value, or misaligned) refuses although the list and the policy permit: no fallback to the list or to the delegate origin", async () => {
+    const cases = [null, "{not json", JSON.stringify(["maybe"]), JSON.stringify(["policy", "policy"])];
+    for (const stored of cases) {
+      const parent = approve(hooked, [pEntry({ allowed_child_actors: [{ sub: "child-a" }] })]);
+      hooked.as.kernel.db.prepare("UPDATE missions SET child_actor_provenance_json = ? WHERE id = ?").run(stored, parent.id);
+      // The delegate origin is intact and says nothing about child actors.
+      expect(hooked.as.kernel.get(parent.id)?.eligibility_provenance).toEqual(["list"]);
+      permits.creation.add("child-a");
+      const before = sideEffects(hooked, parent.id);
+      // The list and the policy both permit child-a, and the policy is never
+      // asked: only the unresolved origin refuses.
+      await refused(await createChild(hooked, parent, "child-a"));
+      expect(sideEffects(hooked, parent.id), String(stored)).toEqual(before);
+      expect(asked, String(stored)).toHaveLength(0);
     }
   });
 
