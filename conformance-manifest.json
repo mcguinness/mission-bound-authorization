@@ -221,6 +221,7 @@
    "runtime.mediated-execution",
    "runtime.agent-isolated-evidence-emission",
    "runtime.transaction-assurance-tier",
+   "runtime.reversible-write-single-use",
    "runtime.compromise-resistant",
    "runtime.trifecta-containment",
    "runtime.semantic-evaluator",
@@ -19943,11 +19944,10 @@
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "runtime.reversible-write-single-use"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "resource-operation",
    "assertion": "replay",
    "observation": {
