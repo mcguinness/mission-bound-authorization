@@ -21,6 +21,53 @@ export const SAAS_TOOLS: SaasTool[] = [
   { name: "post_journal_entry", action: "ledger:journal.write" },
 ];
 
+/**
+ * @spec resource-access#rs-enforcement (#1266, review on PR #1298): the gate
+ * for each `constraints` key this resource enforces, against the request it
+ * serves. Every tool here addresses one vendor by its `vendor_id` argument
+ * and acts on exactly that string, so `vendors` admits the request only when
+ * that string is listed. A malformed value makes the entry unenforceable.
+ */
+const CONSTRAINT_GATES: Readonly<Record<string, (value: unknown, args: Record<string, unknown>) => boolean>> = {
+  vendors: (value, args) =>
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((v) => typeof v === "string" && v.length > 0) &&
+    typeof args.vendor_id === "string" &&
+    value.includes(args.vendor_id),
+};
+
+/**
+ * @spec resource-access#protected-resource-metadata: the `constraints` keys
+ * this resource understands and enforces, advertised as
+ * `mission_constraints_supported`. Any other key is one it cannot enforce.
+ */
+export const SAAS_ENFORCED_CONSTRAINTS: readonly string[] = Object.freeze(Object.keys(CONSTRAINT_GATES));
+
+interface SaasEntry {
+  resource: string;
+  actions: string[];
+  constraints?: unknown;
+}
+
+/**
+ * @spec resource-access#rs-enforcement: whether one entry, on its own, covers
+ * the request. An entry carrying a `constraints` key this resource does not
+ * enforce, or a malformed `constraints` member, provides no authority: no key
+ * is ever set aside as advisory.
+ */
+function entryCovers(entry: SaasEntry, resource: string, action: string, args: Record<string, unknown>): boolean {
+  if (!entry || typeof entry !== "object") return false;
+  if (entry.resource !== resource || !Array.isArray(entry.actions) || !entry.actions.includes(action)) return false;
+  if (entry.constraints === undefined) return true;
+  const c = entry.constraints;
+  if (!c || typeof c !== "object" || Array.isArray(c)) return false;
+  return Object.entries(c).every(([key, value]) => {
+    const gate = Object.hasOwn(CONSTRAINT_GATES, key) ? CONSTRAINT_GATES[key] : undefined;
+    return gate !== undefined && gate(value, args);
+  });
+}
+
 interface SaasToken {
   sub: string;
   /**
@@ -29,7 +76,7 @@ interface SaasToken {
    * introspection) never reads `authority_hash`, so it is not typed here.
    */
   mission: { id: string; issuer: string };
-  authorizationDetails: Array<{ resource: string; actions: string[] }>;
+  authorizationDetails: SaasEntry[];
   cnfJkt: string;
 }
 
@@ -52,6 +99,7 @@ export class SaasMcpServer {
       authorization_servers: [this.deps.rasIssuer],
       bearer_methods_supported: ["dpop"],
       "io.modelcontextprotocol/enterprise-managed-authorization": { required: true },
+      mission_constraints_supported: [...SAAS_ENFORCED_CONSTRAINTS],
     };
   }
 
@@ -72,12 +120,19 @@ export class SaasMcpServer {
     return {
       sub: payload.sub as string,
       mission,
-      authorizationDetails: (payload.authorization_details as SaasToken["authorizationDetails"]) ?? [],
+      authorizationDetails: Array.isArray(payload.authorization_details)
+        ? (payload.authorization_details as SaasEntry[])
+        : [],
       cnfJkt: cnf.jkt,
     };
   }
 
-  /** Token-only enforcement: action must be within the token's audience-scoped authority. */
+  /**
+   * Token-only enforcement: one entry of the token's audience-scoped
+   * authority must cover the request on its own (@spec
+   * resource-access#rs-enforcement). Entries are alternatives, never
+   * combined, and one this resource cannot fully enforce lends nothing.
+   */
   async callTool(
     tool: string,
     args: Record<string, unknown>,
@@ -92,9 +147,7 @@ export class SaasMcpServer {
     }
     const def = SAAS_TOOLS.find((t) => t.name === tool);
     if (!def) return { ok: false, error: "unknown_tool" };
-    const authorized = token.authorizationDetails.some(
-      (e) => e.resource === this.resource && e.actions.includes(def.action),
-    );
+    const authorized = token.authorizationDetails.some((e) => entryCovers(e, this.resource, def.action, args));
     if (!authorized) return { ok: false, error: "out_of_authority" };
     if (tool === "post_journal_entry") {
       this.journal.push({
