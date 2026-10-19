@@ -35,7 +35,10 @@ import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, RESOURCE_POLICY_REFUSES_ALL_FIXTUR
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
 const ISSUER = "https://as.test";
-const RESOURCE = "vendor.example";
+// The vendor every lookup here reads. The store holds it, so each probe
+// reaches the Join, credential and decision checks it is about; a vendor the
+// store does not hold is refused before any decision (#1251, D484).
+const VENDOR = "acme";
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 // @spec authority-server#mission-join rule 8, bound 3 — current Resource
 // policy, the bound the existing FGA check enforces. Refusing here with both
@@ -73,10 +76,16 @@ const FULL_AUTHORITY: () => AuthorityEntry[] | undefined = () => [
   { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ] },
 ];
 
+function seededPayments(): PaymentsStore {
+  const payments = new PaymentsStore();
+  payments.seed([{ id: VENDOR, name: "Acme", status: "approved" }], []);
+  return payments;
+}
+
 function build(overrides: Partial<PepDeps> = {}, viewOverride: MissionView = view): Pep {
   return new Pep({
     decide: EVIDENCE_KEYS.decide,
-    payments: new PaymentsStore(),
+    payments: seededPayments(),
     // @spec runtime-evidence#decision-evidence-integrity (issue #649):
     // EvidenceStore fails closed without a signer configured for the
     // emitter role a call needs; every enforce() path here goes through it.
@@ -101,7 +110,7 @@ const REFERENCE = { id: missionId, issuer: ISSUER };
 describe("baseline MAS Join: configuration gate (@spec authority-server#mission-join)", () => {
   it("refuses unknown_mission for an ordinary credential when masJoin is not configured at all", async () => {
     const pep = build(); // no masJoin
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -110,7 +119,7 @@ describe("baseline MAS Join: configuration gate (@spec authority-server#mission-
 
   it("refuses mission_reference_conflict for an ordinary credential with no propagated Mission reference at all on a MAS-governed route", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN);
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN);
     expect(res.permitted).toBe(false);
     // @spec authority-server#reference-verification (#972 item 13, D289) — a
     // MISSING reference where governance requires one is unusable carriage,
@@ -121,7 +130,7 @@ describe("baseline MAS Join: configuration gate (@spec authority-server#mission-
 
   it("refuses mission_reference_conflict for a malformed propagated reference, not unknown_mission", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: { malformed: true },
     });
     expect(res.permitted).toBe(false);
@@ -135,7 +144,7 @@ describe("baseline MAS Join: configuration gate (@spec authority-server#mission-
 describe("baseline MAS Join: successful join (@spec authority-server#mission-join rules 1-4, 7, 8)", () => {
   it("permits a direct-client ordinary credential whose subject matches the Mission's subject", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -164,7 +173,7 @@ describe("baseline MAS Join: successful join (@spec authority-server#mission-joi
       delegateView,
     );
     const delegateToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "delegate-client" };
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, delegateToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -192,7 +201,7 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
       },
       shallowView,
     );
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, delegateToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -209,7 +218,7 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
       },
       shallowView,
     );
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, delegateToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -227,7 +236,7 @@ describe("baseline MAS Join: PepDeps.masJoin.resolveDelegateDepth (@spec authori
       },
       shallowView,
     );
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, delegateToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -239,7 +248,7 @@ describe("baseline MAS Join: mission_binding_failed (@spec authority-server#miss
   it("denies mission_binding_failed when the authenticated subject does not match the Mission's subject", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const mismatchedToken: TokenFacts = { ...ORDINARY_TOKEN, sub: "mallory" };
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, mismatchedToken, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, mismatchedToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -254,7 +263,7 @@ describe("baseline MAS Join: mission_binding_failed (@spec authority-server#miss
   it("denies mission_binding_failed for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
     const unknownClientToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "unrecognized-client" };
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, unknownClientToken, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, unknownClientToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -269,7 +278,7 @@ describe("baseline MAS Join: mission_binding_failed (@spec authority-server#miss
 
   it("refuses unknown_mission, before any decision, for a referenced Mission that does not resolve at all", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: { id: "no-such-mission", issuer: ISSUER },
     });
     expect(res.permitted).toBe(false);
@@ -280,7 +289,7 @@ describe("baseline MAS Join: mission_binding_failed (@spec authority-server#miss
 describe("baseline MAS Join: rule 8, bound 1 (acting credential authority)", () => {
   it("fails closed with out_of_authority when no resolveOrdinaryAuthority evaluator is configured, even after a successful join", async () => {
     const pep = build({ masJoin: {} }); // configured, but no evaluator
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -296,7 +305,7 @@ describe("baseline MAS Join: rule 8, bound 1 (acting credential authority)", () 
       },
       masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY },
     });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -316,7 +325,7 @@ describe("baseline MAS Join: rule 8, bound 1 (acting credential authority)", () 
         ],
       },
     });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -352,7 +361,7 @@ describe("baseline MAS Join: depth from the deployment's actor records (@spec au
   it("permits a delegate whose ledger-resolved depth is within the deployment's ceiling", async () => {
     const res = await pepFor(twoHopLedger(), 2).enforce(
       "lookup_vendor",
-      { vendor_id: RESOURCE },
+      { vendor_id: VENDOR },
       delegateToken,
       undefined,
       { missionReference: REFERENCE },
@@ -365,7 +374,7 @@ describe("baseline MAS Join: depth from the deployment's actor records (@spec au
     // the ledger's, walked over the recorded edges, not a token act chain.
     const res = await pepFor(twoHopLedger(), 1).enforce(
       "lookup_vendor",
-      { vendor_id: RESOURCE },
+      { vendor_id: VENDOR },
       delegateToken,
       undefined,
       { missionReference: REFERENCE },
@@ -384,7 +393,7 @@ describe("baseline MAS Join: depth from the deployment's actor records (@spec au
     });
     const res = await pepFor(records, 2).enforce(
       "lookup_vendor",
-      { vendor_id: RESOURCE },
+      { vendor_id: VENDOR },
       delegateToken,
       undefined,
       { missionReference: REFERENCE },
@@ -414,7 +423,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
         ],
       },
     });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -423,7 +432,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
 
   it("bound 2: an action the credential carries but the MISSION does not denies out_of_authority, so the permit's authority is the Mission's", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: BROAD_CREDENTIAL } }, missionShortView);
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -436,7 +445,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
 
   it("bound 2, contextual check: the Mission's FGA projection refusing denies out_of_authority with the credential bound satisfied", async () => {
     const pep = build({ fga: denyingFga, masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -455,7 +464,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
       evidence: new EvidenceStore(keys.signing, keys.resolver),
       masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY },
     });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted).toBe(false);
@@ -465,7 +474,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
 
   it("all three bounds satisfied permits, so the three denials above are attributable to each bound", async () => {
     const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -483,7 +492,7 @@ describe("baseline MAS Join: the Mission-bound path is unaffected (@spec authori
       cnfJkt: "jkt-1",
       credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, missionBoundToken);
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, missionBoundToken);
     expect(res.permitted, JSON.stringify(res)).toBe(true);
     expect(res.resolvedMission).toEqual({ id: missionId, issuer: ISSUER, authority_hash: "sha-256:hash557" });
   });
@@ -513,7 +522,7 @@ describe("baseline MAS Join: the PDP decides over the Mission's own view, never 
       },
       broadView,
     );
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res.permitted, JSON.stringify(res)).toBe(true);
@@ -527,7 +536,7 @@ describe("baseline MAS Join: the PDP decides over the Mission's own view, never 
     ];
     const capture = capturingDecide();
     const pep = build({ decide: capture.decide, masJoin: { resolveOrdinaryAuthority: narrowToInvoice } }, broadView);
-    const res = await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, ORDINARY_TOKEN, undefined, {
+    const res = await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, ORDINARY_TOKEN, undefined, {
       missionReference: REFERENCE,
     });
     expect(res).toMatchObject({ permitted: false, refusal_reason: "out_of_authority" });
@@ -570,7 +579,7 @@ describe("baseline MAS Join: context.mission_join carriage (@spec authority-serv
       { ...view, authority_set: [DIRECT_ENTRY, SHALLOW_DELEGABLE_ENTRY] },
     );
     const delegateToken: TokenFacts = { ...ORDINARY_TOKEN, clientId: "delegate-client" };
-    await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, delegateToken, undefined, {
+    await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, delegateToken, undefined, {
       missionReference: REFERENCE,
     });
     expect(capture.requests.length).toBeGreaterThan(0);
@@ -590,7 +599,7 @@ describe("baseline MAS Join: context.mission_join carriage (@spec authority-serv
       cnfJkt: "jkt-1",
       credentialAuthority: ALL_ACTIONS_CREDENTIAL,
     };
-    await pep.enforce("lookup_vendor", { vendor_id: RESOURCE }, missionBoundToken);
+    await pep.enforce("lookup_vendor", { vendor_id: VENDOR }, missionBoundToken);
     expect(capture.requests.length).toBeGreaterThan(0);
     for (const req of capture.requests) {
       expect(req.context.mission_join).toBeUndefined();

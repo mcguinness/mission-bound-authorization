@@ -1,4 +1,5 @@
 import type { ActivationPolicyRef, AuthorityEntry, JsonValue } from "@mission/core";
+import type { RetainedOrigin } from "./eligibility-provenance.js";
 export type { AuthorityEntry, DelegateMatcher, ChildFanoutControls, TerminalWhenCondition } from "@mission/core";
 
 /**
@@ -575,6 +576,15 @@ export interface MissionRecord {
    */
   proposed_authority?: AuthorityEntry[];
   authority_set: AuthorityEntry[];
+  /**
+   * @spec resource-access#delegate-eligibility (#1275, D457): each approved
+   * entry's delegate eligibility origin, index-aligned with `authority_set`,
+   * recorded when the Authority Set is derived and immutable after creation.
+   * Authorization-server state: outside every integrity anchor and never on
+   * the wire. Absent, or not aligned with `authority_set`, it resolves no
+   * entry, and every delegable entry narrows out of a delegated token.
+   */
+  eligibility_provenance?: RetainedOrigin[];
   intent_hash: string;
   authority_hash: string;
   /**

@@ -1,5 +1,7 @@
 /**
- * @spec authzen#pdp-request (envelope binding, resource.properties.audience rule)
+ * @spec authzen#pdp-request (envelope binding; the entry match reads
+ *   resource.properties.operation_target, #1276, D457)
+ * @spec resource-access#resource-matching (the Resource Access matcher)
  * @spec authzen#denial-response, authzen#runtime-denial-classification
  * @spec runtime (abstract decision contract)
  *
@@ -17,10 +19,14 @@ import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
   type AuthorityEntry as CoreAuthorityEntry,
+  commonConstraintGates,
   compareAmounts,
   computeAnchor,
+  type ConstraintFacts,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
+  entryMatchesTarget,
+  isOperationTarget,
   credentialConstraintGates,
   entryMatchesAction,
   isSubsetEntry,
@@ -36,6 +42,8 @@ import {
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
+  SUPPORTED_CONSTRAINT_KEYS,
+  timeWindowEndMs,
 } from "@mission/core";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
@@ -138,7 +146,9 @@ export interface EvaluationRequest {
   };
   /**
    * `type`/`id`: the fine-grained target object (Resource-policy only), NOT
-   * the entry match. `vendor_ids`, when present, names the FULL collection a
+   * the entry match, which reads `properties.operation_target` (#1276,
+   * D457); neither stands in for the other. `vendor_ids`, when present,
+   * names the FULL collection a
    * bound bulk read resolves to (@spec runtime#read-binding): `id`/`vendor_id`
    * still name one REPRESENTATIVE member (so every existing single-object
    * caller is unaffected), but Resource policy is checked against EVERY
@@ -151,13 +161,51 @@ export interface EvaluationRequest {
     properties: {
       /**
        * @spec authzen#context-audience-freshness, authzen#pdp-request:
-       * REQUIRED, the PEP's audience or protected-resource identifier. The
-       * approved entry's `resource` is matched against this member, never
-       * against `type` or `id`.
+       * REQUIRED, the PEP's audience or protected-resource identifier: the
+       * token-validation and permit-boundary input (the decision channel's
+       * scope check, the idempotency scope, the state assertion's audience).
+       * It is never the entry-match operand and never stands in for a
+       * missing `operation_target` (#1276, D457).
        */
       audience: string;
+      /**
+       * @spec resource-access#resource-matching, authzen#pdp-request (#1276,
+       * D457): REQUIRED, the one absolute URI the authenticated PEP
+       * established as the operation's target, from its trusted operation
+       * contract and validated arguments, independently of the presented
+       * entries. The credential's authority and the Mission's current
+       * authority are both matched against it with the Resource Access
+       * matcher. Missing, malformed or ambiguous (any value other than one
+       * well-formed URI string) refuses; there is no fallback to `audience`
+       * or to `type`/`id`. It rides inside the authorization binding and the
+       * cache key with the rest of `resource`, and inside operation identity
+       * (./projections.ts).
+       */
+      operation_target: string;
       vendor_id?: string;
       vendor_ids?: string[];
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the RFC 3339
+       * issuance instant of the one object the action targets, read by the
+       * PEP from the resource's own record, never from tool arguments. The
+       * `resource_issued_after`/`resource_issued_before` bounds read it, and
+       * an absent value satisfies neither.
+       */
+      issued_at?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the tenant
+       * that owns the one object the action targets, read by the PEP from the
+       * resource's own record, never from the request. The `tenant` bound
+       * reads it, and an absent value never satisfies it.
+       */
+      tenant?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the
+       * classification label of the data the action targets, from the
+       * resource's own labels, never from the request. The
+       * `data_classification` bound reads it; an absent label satisfies none.
+       */
+      data_classification?: string;
     };
   };
   action: {
@@ -169,7 +217,24 @@ export interface EvaluationRequest {
      * Typed `string` deliberately: a malformed value is refused at the claim
      * step, never admitted by the type system.
      */
-    properties?: { idempotency_key?: string };
+    properties?: {
+      idempotency_key?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): every final
+       * recipient the action reaches, routing and list expansion applied,
+       * resolved by the PEP from the resource's own records and never from
+       * tool arguments. The `recipient_domain` bound reads it; an absent or
+       * empty list satisfies no such bound.
+       */
+      recipients?: string[];
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): the tool
+       * the PEP dispatched this operation to, from its trusted operation
+       * contract, never a name the caller supplies. The `allowed_tools` bound
+       * reads it; an absent identity satisfies no such bound.
+       */
+      tool?: string;
+    };
   };
   context: {
     mission: {
@@ -354,6 +419,97 @@ export interface Decision {
   context: Record<string, unknown>;
 }
 
+/**
+ * @spec authzen#pdp-request consistency check 11, authzen#context-operation-target
+ * (#1276, D457): the Refusal Record `denial_reason` values a PDP refuses a
+ * decision request with before evaluating it. A refusal is not a decision: it
+ * carries no `evaluation_id` and no Decision Evidence, and never a PDP denial
+ * reason such as `out_of_authority`.
+ */
+export type PdpRefusalReason = "operation_target_invalid";
+
+/**
+ * Thrown by {@link evaluate} for a decision request the PDP refuses before
+ * evaluation, after the refusal was handed to the bound
+ * {@link PdpRefusalRecorder}. Like an unanswerable Resource policy, it yields
+ * no decision at all; the remote decision channel answers it with a refusal,
+ * never a signed decision.
+ */
+export class DecisionRequestRefused extends Error {
+  constructor(readonly denial_reason: PdpRefusalReason) {
+    super(`decision request refused before evaluation: ${denial_reason}`);
+    this.name = "DecisionRequestRefused";
+  }
+}
+
+/**
+ * @spec runtime-evidence#pre-decision-refusal: what the PDP can attest about a
+ * request it refused before evaluation, for its Refusal Record. Members the
+ * request did not carry in a well-formed shape are absent, never invented; no
+ * Mission is established, so `missionId` is store correlation only (the
+ * claimed identifier, or `unknown`).
+ */
+export interface PdpRefusal {
+  denial_reason: PdpRefusalReason;
+  /** The request exactly as submitted (@spec runtime-evidence#request-digest-worked). */
+  evaluation_request: unknown;
+  missionId: string;
+  audience?: string;
+  action?: { name: string };
+  subject?: { id: string; properties?: { iss: string } };
+  resource?: { type: string; id: string };
+}
+
+/**
+ * The PDP's Refusal Record emission path, bound PDP-side at decision-point or
+ * server construction exactly as the Decision Evidence emitter is, and never
+ * supplied by an enforcement component.
+ */
+export type PdpRefusalRecorder = (refusal: PdpRefusal) => unknown;
+
+const objectOf = (v: unknown): Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+/** The attestable members of a refused request (see {@link PdpRefusal}). */
+export function pdpRefusalOf(denial_reason: PdpRefusalReason, request: unknown): PdpRefusal {
+  const r = objectOf(request);
+  const resource = objectOf(r.resource);
+  const properties = objectOf(resource.properties);
+  const subject = objectOf(r.subject);
+  const iss = objectOf(subject.properties).iss;
+  const action = objectOf(r.action);
+  const mission = objectOf(objectOf(r.context).mission);
+  return {
+    denial_reason,
+    evaluation_request: request,
+    missionId: typeof mission.id === "string" ? mission.id : "unknown",
+    ...(typeof properties.audience === "string" ? { audience: properties.audience } : {}),
+    ...(typeof action.name === "string" ? { action: { name: action.name } } : {}),
+    ...(typeof subject.id === "string"
+      ? { subject: { id: subject.id, ...(typeof iss === "string" ? { properties: { iss } } : {}) } }
+      : {}),
+    ...(typeof resource.type === "string" && typeof resource.id === "string"
+      ? { resource: { type: resource.type, id: resource.id } }
+      : {}),
+  };
+}
+
+/**
+ * Hand one refusal to the bound recorder. A recorder that fails does not turn
+ * the refusal into a decision: the request stays refused either way.
+ */
+export async function recordPdpRefusal(
+  recorder: PdpRefusalRecorder | undefined,
+  denial_reason: PdpRefusalReason,
+  request: unknown,
+): Promise<void> {
+  try {
+    await recorder?.(pdpRefusalOf(denial_reason, request));
+  } catch {
+    /* the refusal stands; the missing record is the recorder's failure */
+  }
+}
+
 export interface EvaluateOptions {
   view: MissionView;
   fga: Fga;
@@ -505,6 +661,13 @@ export interface EvaluateOptions {
    * is `unknown`, which suppresses.
    */
   consumptionStatus?: ConsumptionStatusFn;
+  /**
+   * @spec authzen#pdp-request consistency check 11 (#1276, D457): this PDP's
+   * Refusal Record emission path for a request it refuses before evaluation,
+   * bound at decision-point or server construction exactly as `evidence` is.
+   * Absent, the request is still refused; nothing records it.
+   */
+  refusals?: PdpRefusalRecorder;
 }
 
 /**
@@ -526,8 +689,14 @@ export interface EvaluateOptions {
  * @spec runtime#input-resource-policy (#828): the Resource policy is a
  * PDP-side binding too. An enforcement component that could supply it could
  * hand the PDP a policy that permits everything.
+ *
+ * @spec authzen#pdp-request consistency check 11 (#1276): so is the Refusal
+ * Record path, for the reason the emitter is.
  */
-export type DecisionOptions = Omit<EvaluateOptions, "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy">;
+export type DecisionOptions = Omit<
+  EvaluateOptions,
+  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals"
+>;
 
 /** What the claim step left for {@link evaluate} to finish. */
 interface ClaimContext {
@@ -590,6 +759,21 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (!isResourcePolicy(opts.resourcePolicy)) {
     throw new ResourcePolicyConfigError("no Resource policy is bound to this decision");
   }
+  // @spec authzen#pdp-request consistency check 11, authzen#context-operation-target,
+  // resource-access#resource-matching (#1276, D457): every action this PDP
+  // evaluates is evaluated against `mission_resource_access` authority, so the
+  // PEP-established operation target is REQUIRED: one string holding one
+  // absolute URI. Absent, malformed or ambiguous (an array of targets
+  // included), the request is refused BEFORE evaluation and recorded as a
+  // Refusal Record `operation_target_invalid`: no decision, no evaluation_id,
+  // no Decision Evidence, and no fallback to `audience`, `type` or `id`. The
+  // string is otherwise passed to the matcher unchanged.
+  const operationTarget = (req as { resource?: { properties?: { operation_target?: unknown } } } | undefined)?.resource
+    ?.properties?.operation_target;
+  if (!isOperationTarget(operationTarget)) {
+    await recordPdpRefusal(opts.refusals, "operation_target_invalid", req);
+    throw new DecisionRequestRefused("operation_target_invalid");
+  }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
   const requestDigest = evaluationRequestDigest(req);
@@ -601,7 +785,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       const claim: ClaimContext = {};
       const join: JoinTrace = {};
       const bound: BoundTrace = {};
-      const decision = await evaluateInner(req, opts, contributions, claim, join, bound);
+      const decision = await evaluateInner(req, opts, operationTarget, contributions, claim, join, bound);
       span.setAttribute("mission.action", req.action.name);
       span.setAttribute("mission.decision", decision.decision);
       if (decision.context.denial_reason) {
@@ -752,6 +936,12 @@ function resourcePolicyTargets(req: EvaluationRequest): ResourcePolicyTarget[] {
 async function evaluateInner(
   req: EvaluationRequest,
   opts: EvaluateOptions,
+  /**
+   * @spec resource-access#resource-matching (#1276, D457): the operation
+   * target {@link evaluate} validated, exactly as the request carried it; the
+   * one operand of every Mission Resource Access entry match below.
+   */
+  operationTarget: string,
   contributions: Set<string>,
   claim: ClaimContext,
   join: JoinTrace,
@@ -760,9 +950,9 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
-  // @spec authzen#pdp-request: "A PDP MUST perform the entry match against
-  // `resource.properties.audience`". Read once; a request lacking it matches
-  // no entry.
+  // @spec authzen#context-audience-freshness: the PEP's audience, the
+  // token-validation and permit-boundary input. Read once and validated
+  // below; never the entry-match operand (#1276, D457).
   const audience = req.resource.properties?.audience;
   const decisionId = newDecisionId();
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping
@@ -837,6 +1027,16 @@ async function evaluateInner(
   if (req.context.action_phase !== undefined && !isActionPhase(req.context.action_phase)) {
     return deny("out_of_authority");
   }
+
+  // @spec authzen#context-audience-freshness (#1276, D457): `audience` is
+  // REQUIRED and stays its own check. The operation target was validated
+  // before evaluation (consistency check 11, in `evaluate`); a missing or
+  // malformed audience is a request fault the PDP cannot place under the
+  // PEP's declared scope, and the target never stands in for it, nor it for
+  // the target. It takes the request-fault classification an undeclared phase
+  // or class takes ("or the request would broaden it",
+  // @spec authzen#failure-condition-coverage); check 11 does not cover it.
+  if (typeof audience !== "string" || audience.length === 0) return deny("out_of_authority");
 
   // 1. View consistency (@spec: view_inconsistent). `id`/`issuer` are the
   // mandatory identity check; `authority_hash` and `policy_view_id` (#702:
@@ -1111,10 +1311,12 @@ async function evaluateInner(
     // intersected with this request's own (resource, action) pair, so an
     // entitlement gap on one action denies that action alone and leaves the
     // rest of the delegated set evaluable. The resource matched here is
-    // `resource.properties.audience`, the same member step 5 below matches an authority
-    // entry's `resource` against; the AuthZEN `resource.id` names the
-    // object instance, a different namespace the delegated set is not keyed
-    // by.
+    // `resource.properties.audience`, the audience the entitlement is
+    // observed at; the AuthZEN `resource.id` names the object instance, a
+    // different namespace the delegated set is not keyed by. Entitlement
+    // rows are not `mission_resource_access` entries, so this grain stays on
+    // the audience, while step 5 matches the Authority Set entries, and step
+    // 5c the credential's, against the operation target (#1276, D457).
     const entitlementCurrent =
       entitlementBoundS !== undefined &&
       entitlement !== undefined &&
@@ -1163,10 +1365,13 @@ async function evaluateInner(
   }
 
   // 5. Authority entry match: the approved entry's resource is matched
-  //    against resource.properties.audience, never the AuthZEN resource
-  //    object's type/id (@spec authzen#pdp-request). On the
-  //    baseline-Join path (4b above), matched against the JOINED authority
-  //    set, never the Mission's raw view.authority_set.
+  //    against the PEP-established operation target with the Resource Access
+  //    matcher (@spec resource-access#resource-matching, #1276, D457):
+  //    literal `exact`, and an entry under `prefix` or an unrecognized
+  //    `resource_match` provides no authority. Never the audience, never the
+  //    AuthZEN resource object's type/id. On the baseline-Join path (4b
+  //    above), matched against the JOINED authority set, never the Mission's
+  //    raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
   // type, the PDP MUST evaluate the action under that type's documented
   // runtime semantics and MUST refuse if it does not understand or cannot
@@ -1182,7 +1387,7 @@ async function evaluateInner(
     (e) => {
       contributions.add(e.type);
       return e.type === MISSION_RESOURCE_ACCESS_TYPE &&
-      e.resource === audience &&
+      entryMatchesTarget(e, operationTarget) &&
       e.actions.includes(req.action.name);
     },
   );
@@ -1202,7 +1407,7 @@ async function evaluateInner(
     const unrecognizedTypeMatch = candidateAuthoritySet.some(
       (e) =>
         e.type !== MISSION_RESOURCE_ACCESS_TYPE &&
-        e.resource === audience &&
+        e.resource === operationTarget &&
         e.actions.includes(req.action.name),
     );
     if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
@@ -1294,6 +1499,34 @@ async function evaluateInner(
   const credentialVendorIds: readonly string[] =
     req.resource.properties?.vendor_ids ??
     (req.resource.properties?.vendor_id ? [req.resource.properties.vendor_id] : []);
+  // @spec resource-access#rs-enforcement, runtime#input-parameters (#1266):
+  // the authoritative facts the implemented Common Constraints read, as the
+  // authenticated PEP established them. One reading serves the credential
+  // bound here and the Mission bound at step 7a.
+  const constraintFacts: ConstraintFacts = {
+    ...(typeof req.resource.properties?.issued_at === "string"
+      ? { resourceIssuedAt: req.resource.properties.issued_at }
+      : {}),
+    ...(typeof req.resource.properties?.tenant === "string" ? { tenant: req.resource.properties.tenant } : {}),
+    ...(typeof req.resource.properties?.data_classification === "string"
+      ? { dataClassification: [req.resource.properties.data_classification] }
+      : {}),
+    ...(typeof req.action.properties?.tool === "string" ? { tool: req.action.properties.tool } : {}),
+    // `time_window` reads this PDP's own clock at the decision, never a
+    // request member; the permit's `valid_until` carries the window's end to
+    // every later use (step 8a's ceiling).
+    now: now().getTime(),
+    // A list with any member that is not a string is unreadable as a whole:
+    // it is carried as empty, which satisfies no recipient bound, rather than
+    // filtered to the members that happen to read.
+    ...(Array.isArray(req.action.properties?.recipients)
+      ? {
+          recipients: req.action.properties.recipients.every((r) => typeof r === "string")
+            ? [...req.action.properties.recipients]
+            : [],
+        }
+      : {}),
+  };
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
     c: CredentialAuthorityEntry,
@@ -1325,11 +1558,15 @@ async function evaluateInner(
     }
     return { state: sources > 0 ? "live" : "unestablished" };
   };
+  // @spec runtime#input-authority, resource-access#resource-matching (#1276,
+  // D457): the credential bound reads the SAME operation target as the
+  // Mission bound, through the same matcher (`entryMatchesAction`).
   const credentialFacts = {
-    resource: audience ?? "",
+    resource: operationTarget,
     action: req.action.name,
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
+    constraintFacts,
   };
   const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
   if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
@@ -1379,6 +1616,16 @@ async function evaluateInner(
         (recorded.catalog_digest !== undefined && presented.catalog_digest !== recorded.catalog_digest)) {
       return deny("capability_drift");
     }
+  }
+
+  // 5d. @spec resource-access#rs-enforcement (#1266): "MUST fail closed on any
+  // `constraints` key it does not understand, or understands but cannot
+  // enforce". The matched Mission entry is evaluated whole: a key outside the
+  // set this PDP evaluates refuses here, never passes as though absent, so a
+  // Common Constraint this deployment does not yet implement cannot reach a
+  // permit unenforced.
+  if (entry.constraints && Object.keys(entry.constraints).some((k) => !SUPPORTED_CONSTRAINT_KEYS.includes(k))) {
+    return deny("parameter_violation", "mission");
   }
 
   const mapping = opts.relationForAction(req.action.name);
@@ -1522,6 +1769,15 @@ async function evaluateInner(
     }
   }
 
+  // 7a. The implemented Common Constraints (@spec resource-access#rs-enforcement,
+  // runtime#input-parameters; #1266): each key the matched entry carries is
+  // evaluated against the facts the PEP established, through the same shared
+  // gate the credential bound uses. Keyed on the constraint's own presence; an
+  // absent fact or a malformed value refuses, never permits open.
+  const commonGates = commonConstraintGates(entry.constraints, constraintFacts);
+  for (const key of commonGates.evaluated) contributions.add(key);
+  if (!commonGates.satisfied) return deny("parameter_violation", "mission");
+
   // 8. Action-bound approval (@spec authzen#context-approval): when policy
   //    requires one, the presented approval MUST match the request's
   //    parameter_digest and be within the max approval age; else deny
@@ -1608,6 +1864,18 @@ async function evaluateInner(
   // ceiling here, measured from the same decision instant, so the permit
   // never outlives the window the published retention was validated against.
   const decisionNowMs = now().getTime();
+  const windowCeilings: Array<{ name: string; atMs: number }> = [];
+  const missionWindowEnd = timeWindowEndMs(entry.constraints);
+  if (missionWindowEnd !== undefined) {
+    windowCeilings.push({ name: "mission_time_window_not_after", atMs: missionWindowEnd });
+  }
+  const credentialWindowEnds = credentialCandidates.map((c) => timeWindowEndMs(c.constraints));
+  if (credentialWindowEnds.length > 0 && credentialWindowEnds.every((end) => end !== undefined)) {
+    windowCeilings.push({
+      name: "credential_time_window_not_after",
+      atMs: Math.max(...(credentialWindowEnds as number[])),
+    });
+  }
   const reversibleWriteMaxSeconds = HIGH_CONSEQUENCE_ACTION_CLASSES.has(actionClass ?? "")
     ? undefined
     : (
@@ -1626,9 +1894,20 @@ async function evaluateInner(
         : []),
       // #1049 review P2-a: a verified status response's signed state ceiling.
       ...(signedFreshUntilMs !== undefined ? [{ name: "signed_state_fresh_until", atMs: signedFreshUntilMs }] : []),
+      // @spec resource-access#initial-common-constraints (`time_window`,
+      // #1266): the permit expires no later than the matched entry's window,
+      // so neither a retained permit nor an execution lease derived from it
+      // reaches past the window's end. The credential bound rests on any one
+      // satisfying candidate, so its ceiling is the latest of their window
+      // ends, and none when one of them carries no end.
+      ...windowCeilings,
     ],
   });
-  if (deadline.kind === "elapsed") return deny("stale_state");
+  if (deadline.kind === "elapsed") {
+    // A window that closes at the decision instant leaves no time to rely on
+    // the permit: the window refuses it, not the state view.
+    return deny(deadline.source.endsWith("time_window_not_after") ? "parameter_violation" : "stale_state");
+  }
   const validUntil = deadline.validUntil;
   // @spec runtime#classification: the high-consequence classes are
   // irreversible_action, external_commitment, and privileged_administration

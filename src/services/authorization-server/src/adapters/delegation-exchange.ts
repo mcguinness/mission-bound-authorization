@@ -24,8 +24,8 @@ import { canonicalize, delegatedRoutingRefusal, type JsonValue } from "@mission/
 import { createLocalJWKSet, jwtVerify } from "jose";
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
-import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
-import { gateDelegableAuthority } from "../kernel/delegation.js";
+import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
+import { projectThroughEffectiveWithOrigin, SourceUnavailableError } from "../kernel/derive.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AccountedActor, RecordedIssuance } from "../kernel/token-issuance-store.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
@@ -191,10 +191,23 @@ function accountingFor(opts: AdapterOptions, claims: Record<string, unknown>, mi
   return issuance;
 }
 
-/** The Mission's effective authority, or a 503 refusal on a source outage. */
-function effectiveAuthority(opts: AdapterOptions, ctx: KoaContextWithOIDC, record: MissionRecord): AuthorityEntry[] | undefined {
+/**
+ * The Mission's effective authority, each entry with the approved Mission
+ * Record entry it was computed from, or a 503 refusal on a source outage.
+ * @spec resource-access#delegate-eligibility (#1275): only the local kernel
+ * knows the approved entries and the provenance retained with them; an
+ * injected source supplies entries without that origin, so every entry it
+ * supplies resolves nothing at the delegation gate and narrows out.
+ */
+function effectiveWithOrigin(
+  opts: AdapterOptions,
+  ctx: KoaContextWithOIDC,
+  record: MissionRecord,
+): Array<{ entry: AuthorityEntry; origin: AuthorityEntry }> | undefined {
   try {
-    return authoritySource(opts).effectiveAuthoritySet(record);
+    const source = authoritySource(opts);
+    if (source === opts.kernel) return opts.kernel.effectiveEntriesWithOrigin(record);
+    return source.effectiveAuthoritySet(record).map((entry) => ({ entry, origin: entry }));
   } catch (e) {
     if (e instanceof SourceUnavailableError) {
       txError(ctx, 503, "temporarily_unavailable", e.message);
@@ -202,6 +215,27 @@ function effectiveAuthority(opts: AdapterOptions, ctx: KoaContextWithOIDC, recor
     }
     throw e;
   }
+}
+
+/**
+ * @spec mission#delegation-constraints, resource-access#delegate-eligibility
+ * (#1275, D457): the presented authority within the Mission's current
+ * effective authority, narrowed to the entries `delegate` may carry at
+ * accounted depth `depth`. Each projected entry resolves to the approved
+ * entries it derives from and the provenance retained with them; where an
+ * entry's eligibility defers to the delegation-authorization policy, the
+ * policy is asked now, for this delegate and depth, and every retained list
+ * must permit as well. An unresolved or ambiguous origin narrows the entry out.
+ */
+function delegableAuthority(
+  opts: AdapterOptions,
+  record: MissionRecord,
+  presented: readonly AuthorityEntry[],
+  effective: ReadonlyArray<{ entry: AuthorityEntry; origin: AuthorityEntry }>,
+  delegate: DelegateCandidate,
+  depth: number,
+): AuthorityEntry[] {
+  return opts.kernel.delegableEntries(record, projectThroughEffectiveWithOrigin(presented, effective), delegate, depth);
 }
 
 /**
@@ -290,10 +324,16 @@ export async function handleDesignationExchange(
     txError(ctx, 400, "invalid_request", "subject_token carries no readable authorization_details");
     return;
   }
-  const effective = effectiveAuthority(opts, ctx, active);
-  if (!effective) return;
-  const authority = gateDelegableAuthority(
-    projectThroughEffective(presented, effective),
+  const withOrigin = effectiveWithOrigin(opts, ctx, active);
+  if (!withOrigin) return;
+  const effective = withOrigin.map((e) => e.entry);
+  // The designated client is the delegate, at the next accounted depth: the
+  // policy is asked here, and again at the redemption.
+  const authority = delegableAuthority(
+    opts,
+    active,
+    presented,
+    withOrigin,
     { sub: designee, assertedProfile: opts.kernel.actorProfile(designee) },
     issuance.depth + 1,
   );
@@ -469,12 +509,18 @@ export async function handleDelegatedExchange(
     txError(ctx, 400, "invalid_request", "subject_token carries no readable authorization_details");
     return;
   }
-  const effective = effectiveAuthority(opts, ctx, active);
-  if (!effective) return;
+  const withOrigin = effectiveWithOrigin(opts, ctx, active);
+  if (!withOrigin) return;
   // Entries covering `resource`, by exact string equality (the comparison
-  // model this slice uses while #1258 settles resource matching).
-  const authority = gateDelegableAuthority(
-    projectThroughEffective(designated, effective),
+  // model this slice uses while #1258 settles resource matching). The
+  // designation's entries are evaluated afresh against the approved entries,
+  // their retained provenance and the current policy: a permit at the
+  // designation is never reused here.
+  const authority = delegableAuthority(
+    opts,
+    active,
+    designated,
+    withOrigin,
     { sub: client.clientId, assertedProfile: profile },
     depth,
   ).filter((e) => e.resource === resource);

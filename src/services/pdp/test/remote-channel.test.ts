@@ -62,7 +62,7 @@ const view = (): MissionView => ({
 const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest =>
   withCredential({
     subject: { id: "alice" },
-    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+    resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:invoice.read" },
     // The observation is REQUIRED under the declared pep placement (#1049 owner ruling).
     context: {
@@ -226,7 +226,8 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
     const evaluations = { n: 0 };
     const server = await startServer(evaluations);
     const decision = await evaluateRemote(
-      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: OTHER_RESOURCE, vendor_id: "acme" } } }),
+      // The target is one this PEP may establish: only the audience is out of scope.
+      req({ resource: { type: "invoice", id: "inv-1", properties: { audience: OTHER_RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } } }),
       { url: server.url, pepId: PEP_ID, secret: SECRET },
     );
     expect(decision.decision).toBe(false);
@@ -388,11 +389,11 @@ describe("Remote Decision Channel (@spec runtime#decision-channel)", () => {
 
   it("a request body larger than the configured bound is refused before evaluation, with zero PDP evaluation", async () => {
     const evaluations = { n: 0 };
-    const server = await startServer(evaluations, { maxBodyBytes: 512 });
+    const server = await startServer(evaluations, { maxBodyBytes: 768 });
     const nonce = randomUUID();
     const issuedAt = String(Date.now());
     const oversized = JSON.stringify({
-      request: req({ resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "x".repeat(500) } } }),
+      request: req({ resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "x".repeat(800) } } }),
     });
     const signature = macHex(SECRET, REQUEST_MAC_DOMAIN, [PEP_ID, nonce, issuedAt, oversized]);
     const res = await fetch(server.url, {
@@ -465,7 +466,7 @@ describe("the remote channel binds the claim requester (@spec runtime#idempotenc
   const keyed = (key: string): EvaluationRequest =>
     withCredential({
       subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, vendor_id: "acme" } },
+      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.read", properties: { idempotency_key: key } },
       context: {
         mission: { id: "msn_test_1", issuer: "https://as.test" },
