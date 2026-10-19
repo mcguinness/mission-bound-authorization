@@ -5925,6 +5925,50 @@
    "notes": "Witnessed for derivation only (D397). Through kernel.derive, Intents that differ only in purpose (absent, one URI, another URI) derive identical, ceiling-bounded sets for a submitted proposal, within the ceiling and over it, and for the resource-keyed configured mapping, and an input that derives nothing is refused identically (invalid_authorization_details for a submitted proposal, access_denied for the configured mapping). A mutation letting purpose bypass the ceiling, or turn a refusal into a grant, fails them. The equality holds because this implementation ignores purpose (kernel/intent.ts validates it as a string; deriveAuthoritySet keys the configured mapping on target_resources); a configured purpose lookup, which the specification permits, could select different bounded candidates. Partial: no expiry, refresh or runtime coverage, where the reference has no purpose path. Runtime decision points are covered by the runtime.classification purpose rows."
   },
   {
+   "id": "core.intent.target-resources-absolute-uri",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-intent",
+   "text": "A client-requested Intent ceiling on the task's target resources, each an absolute URI identifying a protected resource",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission Intent whose target_resources holds a value that is not an absolute URI (RFC 3986 absolute-URI: no fragment, every % a valid pct-encoded triplet, an http(s) URI with a host) is refused invalid_request at PAR, creating no Mission",
+    "local": "the reference AS checks each value with the shared isAbsoluteUri grammar (@mission/core) and records an accepted value as submitted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses an Intent whose target_resources value is not an RFC 3986 absolute URI with invalid_request, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "Mission Intent target_resources are RFC 3986 absolute URIs (#1310) > validateMissionIntent refuses each malformed value with invalid_request",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "Mission Intent target_resources are RFC 3986 absolute URIs (#1310) > admits each well-formed value, keeping its spelling (positive control)",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1310 (D480). Before it the Intent check was a WHATWG new URL() parse, which accepts %zz, https:x and https:///x and refuses a valid IPvFuture literal. Proved by mutation: restoring the new URL() check fails the PAR witness, the refusal list and the well-formed positive control; a grammar that admits a fragment fails the refusal list."
+  },
+  {
    "id": "core.record.effective-not-later-than-requested",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -38195,6 +38239,98 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped."
+  },
+  {
+   "id": "resource-access.type.resource-absolute-uri",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "The resource the entry applies to: an absolute URI compared with the target of an operation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource is not an absolute URI (RFC 3986 absolute-URI) fails its type's definition and is refused invalid_authorization_details at PAR, creating no Mission",
+    "local": "the reference AS applies the same shared isAbsoluteUri check at the schema validator (PAR and every intake that runs it), at the ceiling config loaders (a native configuration error naming the entry and the value) and at direct derivation (over the ceiling and the proposal), and records an accepted value as submitted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a proposal entry whose resource is not an RFC 3986 absolute URI with invalid_authorization_details, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "an entry's resource is an RFC 3986 absolute URI at the proposal intake (#1310) > validateMissionResourceAccessSchema refuses each malformed resource, naming it",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "an entry's resource is an RFC 3986 absolute URI at the proposal intake (#1310) > validateAuthorityProposal, the PAR and device proposal intake, refuses each with invalid_authorization_details",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "an entry's resource is an RFC 3986 absolute URI at the proposal intake (#1310) > admits each well-formed resource unchanged (positive control)",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "config loaders refuse a ceiling entry whose resource is not an RFC 3986 absolute URI (#1310) > parseCeilingEntry (policy.json) rejects a ceiling entry with a malformed percent-encoding, naming the entry and the value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "config loaders refuse a ceiling entry whose resource is not an RFC 3986 absolute URI (#1310) > parseCeilingEntry (ras-policy.json) rejects a ceiling entry with no authority, naming the entry and the value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "config loaders refuse a ceiling entry whose resource is not an RFC 3986 absolute URI (#1310) > loadCeilingEntries (governed-policy.json) rejects a governed ceiling entry with an empty host, naming the entry and the value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "config loaders refuse a ceiling entry whose resource is not an RFC 3986 absolute URI (#1310) > loadCeilingEntries (authority-sources.json) rejects a source ceiling entry carrying a fragment, naming the entry and the value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an entry whose resource is not an RFC 3986 absolute URI (#1310) > refuses a ceiling entry with each malformed resource",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an entry whose resource is not an RFC 3986 absolute URI (#1310) > refuses a submitted proposal entry with each malformed resource",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-uri-syntax.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an entry whose resource is not an RFC 3986 absolute URI (#1310) > derives from a well-formed resource, keeping its spelling (positive control)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1310 (D480). Before it the runtime validator checked only that resource is a string, though the advertised schema says format uri. Proved by mutation, each guard alone: removing the schema validator's check fails the PAR witness and both intake unit tests; removing the loader check fails the four loader witnesses; removing the derivation guard fails both derivation witnesses; a grammar that admits a fragment fails every seam's refusal list."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
