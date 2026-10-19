@@ -2506,7 +2506,10 @@ export function newResourceServer(
  *    (HTTP 400 authorization_pending + deferral_code/expires_in/interval,
  *    Cache-Control: no-store). This is set directly on ctx because the OAuth
  *    error renderer (err_out) drops any member other than error/error_description.
- *  - Poll/redeem: `deferral_code` present -> `deferrals.redeem(code)`. Error
+ *    Only the Mission's own client may open one, and the deferral records that
+ *    client and its DPoP key (#1348).
+ *  - Poll/redeem: `deferral_code` present, polled by the recording client
+ *    under the recorded key -> `deferrals.redeem(code)`. Error
  *    states map to the RFC 8628-shaped OAuth errors (all HTTP 400); a
  *    DeferredToken mints a REAL resource-bound mission JWT (see mintDeferredToken).
  *
@@ -2551,6 +2554,22 @@ async function handleDeferredGrant(
       refuseTokenEndpointProof(ctx, verified);
       return;
     }
+    // @spec DTR -00 Sections 5.5.1 and 5.6 (#1348): a code issued to another
+    // client is answered as an unknown one. So is a poll under a key other
+    // than the one that opened the deferral, and a deferral whose recorded
+    // client is not the Mission's own client. All are refused before redeem, so
+    // the deferral and the Mission's derivation count are unchanged.
+    const recorded = deferrals.recorded(params.deferral_code);
+    if (recorded) {
+      const mission = opts.kernel.get(recorded.missionId);
+      if (
+        recorded.clientId !== ctx.oidc.client?.clientId ||
+        recorded.jkt !== verified.proof.jkt ||
+        (mission !== undefined && mission.client_id !== recorded.clientId)
+      ) {
+        throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+      }
+    }
     const r = deferrals.redeem(params.deferral_code);
     if ("error" in r) {
       switch (r.error) {
@@ -2594,12 +2613,32 @@ async function handleDeferredGrant(
     // is refused here, before any deferral opens.
     const refusedMember = refusedMemberInRequest(intent.requested);
     if (refusedMember) throw new InvalidAuthorizationDetails(refusedMember);
+    // @spec DTR -00 Section 10.1 (#1348): the deferral is bound to this
+    // request's key, which every poll must prove. Required here because the
+    // poll requires it.
+    const proofJws = ctx.get("DPoP");
+    if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+    const verified = await verifyTokenEndpointDpop(opts, proofJws);
+    if (!verified.ok) {
+      refuseTokenEndpointProof(ctx, verified);
+      return;
+    }
+    // #1348: the deferred token is a token of this Mission, minted on its own
+    // grant, so only the Mission's own client may open a deferral on it. Another
+    // client gets the same answer as for an unknown Mission (the store's), and
+    // gets it before the store's subset check, so the refusal discloses neither
+    // the Mission's state nor its authority.
+    const clientId = ctx.oidc.client?.clientId as string;
+    if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
+      throw new errors.InvalidRequest("mission is not active");
+    }
     let pending;
     try {
       pending = deferrals.open({
         missionId: intent.mission_id,
         requested: intent.requested as AuthorityEntry[],
-        clientId: ctx.oidc.client?.clientId as string,
+        clientId,
+        jkt: verified.proof.jkt,
       });
     } catch (e) {
       // Requested authority exceeds the active Mission (or it is not active):
