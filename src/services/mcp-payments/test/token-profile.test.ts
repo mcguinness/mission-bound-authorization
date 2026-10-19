@@ -494,20 +494,25 @@ describe("on the same broad Mission and allowing policy, the credential alone de
 });
 
 describe("lookup_vendor refuses a vendor the store does not hold at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, authzen#failure-condition-coverage, #1251, D484)", () => {
-  /** Vendor reads scoped to acme and initech, on the Mission and the credential alike; the store holds acme and globex, never initech. */
-  const VENDOR_READ = entry(["payments:vendor.read"], { vendors: ["acme", "initech"] });
-  const vendorView: MissionView = { ...VIEW, authority_set: [VENDOR_READ as MissionView["authority_set"][number]] };
+  /**
+   * Vendor reads on the Mission and the credential alike: `open` constrains no
+   * vendor, and `named` names acme and initech. The store holds acme and
+   * globex, never initech.
+   */
+  const OPEN_VENDOR_READ = entry(["payments:vendor.read"]);
+  const NAMED_VENDOR_READ = entry(["payments:vendor.read"], { vendors: ["acme", "initech"] });
 
-  /** The resource's HTTP MCP endpoint under DPoP, deciding through the embedded signing PDP under a recording Resource policy. */
-  async function endpoint() {
+  /** The resource's HTTP MCP endpoint under DPoP for a Mission carrying `read`, deciding through the embedded signing PDP under a recording Resource policy. */
+  async function endpoint(read: ReturnType<typeof entry>) {
+    const view: MissionView = { ...VIEW, authority_set: [read as MissionView["authority_set"][number]] };
     const policy = resourcePolicyFixture();
     const keys = createEphemeralEvidenceKeys({ resourcePolicy: policy });
     const evidence = new EvidenceStore(keys.signing, keys.resolver);
     const store = payments();
     const decided: unknown[] = [];
     const loadView = (ref: { id: string; issuer: string }) =>
-      ref.id === vendorView.id && ref.issuer === vendorView.issuer
-        ? { view: vendorView, observation: { state: vendorView.state, version: vendorView.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
         : undefined;
     const pep = new Pep({
       decide: (req, opts) => {
@@ -531,41 +536,62 @@ describe("lookup_vendor refuses a vendor the store does not hold at the resource
       issuer: ISSUER,
     });
     const channel = await createHttpMcpChannel(routed);
-    return { policy, resolver: keys.resolver, evidence, decided, channel };
+    const session = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [read] }), holder);
+    return {
+      view,
+      policy,
+      resolver: keys.resolver,
+      evidence,
+      decided,
+      client: session.client,
+      close: async () => {
+        await session.close();
+        await channel.close();
+      },
+    };
   }
 
-  it("refuses a vendor the store does not hold, named by the Mission and the presented credential, unknown_vendor over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal; a stored vendor under the same credential reaches the PDP and the policy as vendor:<id> and permits", async () => {
-    const x = await endpoint();
-    try {
-      const { client, close } = await createHttpMediatedClient(x.channel.url, await mint({ authorization_details: [VENDOR_READ] }), holder);
-      try {
-        const refused = await client.callTool("lookup_vendor", { vendor_id: "initech" });
-        expect(refused).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
-        expect(x.decided).toHaveLength(0);
-        expect(x.policy.queries).toEqual([]);
-        expect(x.evidence.all().map((e) => e.kind)).toEqual(["refusal"]);
-        const refusal = x.evidence.all()[0] as RefusalRecord;
-        expect(refusal.content).toMatchObject({
-          denial_reason: "target_unresolvable",
-          emitter: { role: "pep" },
-          action: { name: "payments:vendor.read" },
-          mission: { id: vendorView.id, issuer: vendorView.issuer },
-        });
-        expect(refusal.content).not.toHaveProperty("resource");
-        expect(await verifyEvidenceEnvelope(refusal.content, REFUSAL_RECORD_MEDIA_TYPE, x.resolver)).toEqual({ valid: true });
+  /** The refusal over HTTP, then a stored vendor on the same session: it reaches the PDP and the policy as vendor:acme and permits. */
+  async function expectRefusedThenStoredPermits(x: Awaited<ReturnType<typeof endpoint>>) {
+    const refused = await x.client.callTool("lookup_vendor", { vendor_id: "initech" });
+    expect(refused).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+    expect(x.decided).toHaveLength(0);
+    expect(x.policy.queries).toEqual([]);
+    expect(x.evidence.all().map((e) => e.kind)).toEqual(["refusal"]);
+    const refusal = x.evidence.all()[0] as RefusalRecord;
+    expect(refusal.content).toMatchObject({
+      denial_reason: "target_unresolvable",
+      emitter: { role: "pep" },
+      action: { name: "payments:vendor.read" },
+      mission: { id: x.view.id, issuer: x.view.issuer },
+    });
+    expect(refusal.content).not.toHaveProperty("resource");
+    expect(await verifyEvidenceEnvelope(refusal.content, REFUSAL_RECORD_MEDIA_TYPE, x.resolver)).toEqual({ valid: true });
 
-        const permitted = await client.callTool("lookup_vendor", { vendor_id: "acme" });
-        expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
-        expect(permitted.result).toMatchObject({ id: "acme" });
-        expect(x.decided).toHaveLength(1);
-        expect((x.decided[0] as { resource: unknown }).resource).toMatchObject({ type: "vendor", id: "acme" });
-        expect(x.policy.queries.map((q) => q.targets)).toEqual([[{ type: "vendor", id: "acme" }]]);
-        expect(x.evidence.all().filter((e) => e.kind === "decision").map((e) => (e.content as { decision: string }).decision)).toEqual(["permit"]);
-      } finally {
-        await close();
-      }
+    const permitted = await x.client.callTool("lookup_vendor", { vendor_id: "acme" });
+    expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+    expect(permitted.result).toMatchObject({ id: "acme" });
+    expect(x.decided).toHaveLength(1);
+    expect((x.decided[0] as { resource: unknown }).resource).toMatchObject({ type: "vendor", id: "acme" });
+    expect(x.policy.queries.map((q) => q.targets)).toEqual([[{ type: "vendor", id: "acme" }]]);
+    expect(x.evidence.all().filter((e) => e.kind === "decision").map((e) => (e.content as { decision: string }).decision)).toEqual(["permit"]);
+  }
+
+  it("refuses a vendor the store does not hold unknown_vendor over HTTP with DPoP: no PDP request, no policy query, no Decision Evidence, no result and a verifiable signed target_unresolvable refusal; a stored vendor on the same session reaches the PDP and the policy as vendor:<id> and permits", async () => {
+    const x = await endpoint(OPEN_VENDOR_READ);
+    try {
+      await expectRefusedThenStoredPermits(x);
     } finally {
-      await x.channel.close();
+      await x.close();
+    }
+  });
+
+  it("a Mission and a presented credential that name the vendor do not bypass the refusal over HTTP with DPoP, and a stored vendor they name permits", async () => {
+    const x = await endpoint(NAMED_VENDOR_READ);
+    try {
+      await expectRefusedThenStoredPermits(x);
+    } finally {
+      await x.close();
     }
   });
 });
