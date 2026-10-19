@@ -1452,7 +1452,8 @@ The same mechanisms, placed on the authority path
 ## Propose
 
 Question:
-: How does a user's request become a candidate approved task?
+: How does a user request or upstream trigger become a candidate
+  approved task?
 
 Boundary:
 : The client side, in OAuth.
@@ -2194,8 +2195,8 @@ configured mapping keyed on structured Intent members and narrows
 those. The prose members (`goal`, `task_bounds`) never change what is
 derived; they bound authority through disclosure,
 since the Approver refuses authority the words do not support.
-Translating a user's words into structure is the shaper's job, before
-admission and outside the trust boundary
+Translating a request's words into structure is the shaper's job,
+before admission and outside the trust boundary
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
 Derivation policy stays local: what the Mission Issuer narrows to, and
@@ -4234,7 +4235,7 @@ with no `suspended` state and its own termination reasons, served by
 
 | Document | Role |
 |---|---|
-| `mission-shaping` | Client-side shaping of a user's request into a candidate Mission Intent, as untrusted proposal. |
+| `mission-shaping` | Client-side shaping of a user request or upstream trigger into a candidate Mission Intent, as untrusted proposal. |
 | `oauth-mission-submission-evidence` | The Intent Submission Evidence framework: entry convention, binding, and verification bounds; defines no types. |
 | `oauth-mission-request-provenance` | Optional evidence type: a trusted intake's signed record of who originated the request behind an Intent, with a secret-keyed request digest. |
 | `oauth-mission-consent-evidence` | The `consent_rendering_hash` anchor and signed evidence of what the Approver was shown. |
