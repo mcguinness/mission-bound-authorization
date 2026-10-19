@@ -82,7 +82,7 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     expect(record.contributing_constraints).toEqual(["mission_resource_access", "vendors", "max_amount"]);
   });
 
-  it("a vendor constraint that excludes the target records the key it evaluated and never reaches resource policy", async () => {
+  it("a vendor constraint that excludes the target records the key it evaluated and never reaches the Mission's contextual check", async () => {
     const v = view(); v.authority_set[0]!.constraints = { vendors: ["globex"], max_amount: { amount: "500", currency: "USD" } };
     const throwingFga = { checkWithContext: async () => { throw new Error("must not reach FGA"); } } as unknown as Fga;
     // @spec authzen#runtime-denial-classification (#801): the vendor

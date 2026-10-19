@@ -219,7 +219,7 @@ constraints (`parameter_violation`). Witnesses include [FGA]
 and
 `discharged entries are excluded from the PDP's authority input > denies authority_discharged for the discharged entry while the Mission stays active`. The composed stack's canonical loader (`viewFor`) supplies the discharge delta, so the refusal holds end to end, a credential deriving only from a discharged entry included (step 5c), wherever a composition registers a discharge authority; the as-native target enables no discharge (D332): `the composed stack refuses a discharged entry at the point of use (@spec discharge#runtime, #1144) > after a discharge commit, the next decision for that entry is authority_discharged, and a credential deriving only from it is refused at step 5c while a live entry's credential still permits (co-resident)`.
 The gates are independently necessary:
-`runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority and the Resource-policy/FGA check both permit`.
+`runtime decision gates are independently necessary (@spec runtime#decision) > a stale freshness failure denies even though authority, the Mission's contextual check and Resource policy all permit`.
 
 **Token authority:** met for this target (D411), enforced at the PEP and the
 PDP (#825: #1062, D302; #1133, D341). The PEP validates the token's signature, issuer, audience, `cnf` and DPoP
