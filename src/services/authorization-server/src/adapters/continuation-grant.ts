@@ -238,11 +238,14 @@ function refuseInactiveMission(ctx: KoaContextWithOIDC, observed: MissionRecord,
 }
 
 /**
- * @spec expansion#verification-order step 4 (#1179 review): whether the
- * authenticated client is `mission`'s own client, the acting agent this
- * deployment authorizes to expand it or to create a child under it.
- * Possession of a token for the Mission does not authorize the presenter, so
- * a refusal discloses the Mission's state only to this client.
+ * @spec expansion#verification-order step 4, child-delegation#request-processing
+ * step 4 (#1326, #1179 review): whether the authenticated client is
+ * `mission`'s own client, the acting agent this deployment authorizes to
+ * expand it or to create a child under it. An `actor_token` is carried, never
+ * used to authorize another client (#433), and possession of a token for the
+ * Mission does not authorize the presenter. Both exchanges refuse any other
+ * client before the idempotency lookup, and the deferred poll before
+ * `redeem`; a refusal discloses the Mission's state only to this client.
  */
 function isMissionClient(ctx: KoaContextWithOIDC, mission: MissionRecord | undefined): boolean {
   return mission !== undefined && (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId === mission.client_id;
@@ -2129,6 +2132,14 @@ export async function handleChildCreationExchange(
   // Step 4: acting agent (the authenticated parent client; carry actor_token).
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt, "invalid_request");
   if (!acting) return;
+  // @spec child-delegation#request-processing step 4 (#1326): only the
+  // parent's own client may create a child under it, whatever token and key it
+  // holds. Refused before the idempotency lookup, so another client's retained
+  // operation is never recovered, and with no Mission state disclosed.
+  if (!isMissionClient(ctx, parent)) {
+    txError(ctx, 400, "invalid_request", "the acting client is not authorized to create a child under this parent");
+    return;
+  }
   // @spec child-delegation#attenuation (#825, D353): the presented token's own
   // authority bounds the child. Read here, before the idempotency lookup, so a
   // retry recovers a recorded child only within it.
@@ -2550,6 +2561,14 @@ export async function handleExpansionExchange(
   // Step 4: acting agent.
   const acting = await carryActingAgent(opts, ctx, resolved.dpopJwk, resolved.jkt, "invalid_request");
   if (!acting) return;
+  // @spec expansion#verification-order step 4 (#1326): only the predecessor's
+  // own client may request its expansion, whatever token and key it holds.
+  // Refused before the idempotency lookup, so another client's retained
+  // operation is never recovered, and with no Mission state disclosed.
+  if (!isMissionClient(ctx, resolved.record)) {
+    txError(ctx, 400, "invalid_request", "the acting client is not authorized to request expansion of this predecessor");
+    return;
+  }
 
   // @spec expansion#request-binding — the non-authoritative `predecessor`
   // cross-check (audit only; subject_token is the selector, mirroring the
@@ -2812,6 +2831,18 @@ async function pollDeferredExpansion(
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+  // @spec expansion#verification-order step 4 (#1326): the poll runs no
+  // initiation check, and deferrals persist, so a deferral another client
+  // opened (before the initiation check existed) is refused here, before
+  // redeem creates a successor or supersedes the predecessor. Decided from the
+  // recorded predecessor, never the subject_token, which the poll does not
+  // carry and which may have expired.
+  const recordedPredecessorId = store.recordedPredecessorId(deferralCode);
+  const recordedPredecessor = recordedPredecessorId !== undefined ? opts.kernel.get(recordedPredecessorId) : undefined;
+  if (recordedPredecessor !== undefined && !isMissionClient(ctx, recordedPredecessor)) {
+    txError(ctx, 400, "invalid_grant", "deferral was not opened by the predecessor's client");
     return;
   }
 
