@@ -23,7 +23,7 @@ export const SAAS_TOOLS: SaasTool[] = [
 ];
 
 /**
- * @spec resource-access#resource-matching (#1276, D447, D457) — the operation
+ * @spec resource-access#resource-matching (#1276, D447, D457): the operation
  * contract a tool declares: how this server establishes the tool's target. A
  * tool with no declaration has no target and is refused.
  */

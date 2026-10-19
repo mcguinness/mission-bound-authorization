@@ -263,7 +263,7 @@ export interface ActionMapping {
    */
   phase?: ActionPhase;
   /**
-   * @spec resource-access#resource-matching (#1276, D447, D457) — this
+   * @spec resource-access#resource-matching (#1276, D447, D457): this
    * operation's documented, trusted operation contract: how the PEP
    * establishes its target before any authority is matched. The payments
    * contract is service-level: every payments tool acts on the service
@@ -324,7 +324,7 @@ export interface ActionMapping {
  * binding exists to catch.
  */
 /**
- * @spec resource-access#resource-matching (#1276, D447, D452, D457) — the
+ * @spec resource-access#resource-matching (#1276, D447, D452, D457): the
  * payments operation contract: explicitly service-level. Every payments tool
  * acts on the service {@link CANONICAL_RESOURCE} identifies, so an `exact`
  * entry naming that identifier covers the tool's action there, and actions
@@ -1179,7 +1179,7 @@ export class Pep {
   }
 
   /**
-   * @spec resource-access#resource-matching (#1276, D447, D457) — the
+   * @spec resource-access#resource-matching (#1276, D447, D457): the
    * operation target this surface establishes for `tool`, from the trusted
    * contract its LIVE Operation Profile declares, independently of any
    * presented entry, the token's audience, and the caller's arguments. A
