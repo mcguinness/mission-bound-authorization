@@ -37,6 +37,7 @@ import type { DelegateCandidate } from "./delegate-matcher.js";
 import { isSubsetEntry, isSubsetSet } from "./derive.js";
 import { inheritOrigins, retainedOrigins } from "./eligibility-provenance.js";
 import { withoutCapabilitySources } from "@mission/core";
+import type { CreationIdempotencyStore } from "./creation-idempotency.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -331,6 +332,30 @@ export function presentedTokenFanoutRefusal(
     }
   }
   return undefined;
+}
+
+/**
+ * @spec child-delegation#request-processing step 4 (#1326): revoke every
+ * non-terminal child that a client other than its parent's own created before
+ * the step-4 check existed. Such a child is found through its retained
+ * creation operation: the child record names no creating client, so a child
+ * whose operation was purged cannot be found. Revocation terminates the child
+ * (`revoked`), so issuance gating refuses its grant and every credential
+ * derived from it, and the cascade reaches its own children. Idempotent: a
+ * terminal child, or one its parent's own client created, is left alone.
+ * Returns the revoked children's identifiers.
+ */
+export function revokeChildrenCreatedByAnotherClient(kernel: MissionKernel, store: CreationIdempotencyStore): string[] {
+  const revoked: string[] = [];
+  for (const op of store.retainedChildCreations()) {
+    const parent = kernel.get(op.parentId);
+    const child = kernel.get(op.childId);
+    if (!parent || !child || child.parent?.id !== parent.id || op.clientId === parent.client_id) continue;
+    if (TERMINAL_STATES.has(kernel.applyExpiry(child).state)) continue;
+    kernel.transition(child.id, "revoke");
+    revoked.push(child.id);
+  }
+  return revoked;
 }
 
 /** @spec child-delegation#child-evidence-canonical — the record's JCS bytes. */

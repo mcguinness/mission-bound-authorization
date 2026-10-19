@@ -441,6 +441,45 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     }
   });
 
+  // @spec resource-access#entry-validation, mission#mission-intent (#1310,
+  // D480): an entry's resource and each Intent target_resources value are one
+  // RFC 3986 absolute URI under the shared check, refused at PAR before any
+  // interaction or Mission. `new URL()` accepted both of these values.
+  it("refuses a proposal entry whose resource is not an RFC 3986 absolute URI with invalid_authorization_details, creating no Mission", async () => {
+    for (const resource of [`${RESOURCE}/%zz`, "https:x"]) {
+      const before = as.kernel.allMissions().length;
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+        authorization_details: JSON.stringify([
+          { type: "mission_resource_access", resource, actions: ["payments:invoice.read"] },
+        ]),
+      });
+      const body = (await res.json()) as { error: string; error_description?: string; request_uri?: string };
+      expect(res.status, resource).toBe(400);
+      expect(body.error, resource).toBe("invalid_authorization_details");
+      expect(body.error_description, resource).toMatch(/is not an RFC 3986 absolute URI/);
+      expect(body.request_uri).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
+  it("refuses an Intent whose target_resources value is not an RFC 3986 absolute URI with invalid_request, creating no Mission", async () => {
+    for (const target of [`${RESOURCE}/%zz`, "https:///x"]) {
+      const before = as.kernel.allMissions().length;
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, target_resources: [RESOURCE, target] } }),
+      });
+      const body = (await res.json()) as { error: string; error_description?: string; request_uri?: string };
+      expect(res.status, target).toBe(400);
+      expect(body.error, target).toBe("invalid_request");
+      expect(body.error_description, target).toBe(`resource is not an absolute URI: ${target}`);
+      expect(body.request_uri).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
   it("admits a proposal entry carrying capability_sources, a member another specification defines for this type (positive control for the locations refusal)", async () => {
     const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
       login_hint: "alice",

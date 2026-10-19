@@ -616,3 +616,95 @@ describe("lookup_vendor refuses a vendor the store does not hold at the resource
     }
   });
 });
+
+describe("a Mission-bound credential whose Mission the loader does not hold is refused unknown_mission at the resource's HTTP endpoint, before any decision (@spec runtime-evidence#pre-decision-refusal, #1329, D496)", () => {
+  const SCHEDULE = entry(["payments:invoice.read", "payments:payment.schedule"], { vendors: ["acme", "globex"] });
+
+  it("a schedule_payment under an unknown Mission is refused with one verifiable signed refusal (state_unavailable), no PDP request, no Decision Evidence and no business effect; the same write under the held Mission schedules", async () => {
+    const view: MissionView = { ...VIEW, authority_set: [SCHEDULE as MissionView["authority_set"][number]] };
+    const policy = resourcePolicyFixture();
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: policy });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const store = payments();
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const decided: unknown[] = [];
+    const loadView = (ref: { id: string; issuer: string }) =>
+      ref.id === view.id && ref.issuer === view.issuer
+        ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+        : undefined;
+    const pep = new Pep({
+      decide: (req, opts) => {
+        decided.push(req);
+        return keys.decide(req, opts);
+      },
+      payments: store,
+      evidence,
+      fga: allowingFga,
+      modelId: "m",
+      loadView,
+      instanceEpoch: "epoch-1329",
+    });
+    const routed = new McpPaymentsServer({
+      writeReservations,
+      pep,
+      payments: store,
+      loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    const businessState = () => ({
+      invoices: store.listInvoices(),
+      schedules: writeReservations.schedules(),
+      reservations: writeReservations.reservations(),
+      consumedPermits: writeReservations.consumedPermits(),
+    });
+    try {
+      const before = businessState();
+      const unknown = await createHttpMediatedClient(
+        channel.url,
+        await mint({ mission: { id: "msn_unknown_1329", issuer: ISSUER }, authorization_details: [SCHEDULE] }),
+        holder,
+      );
+      try {
+        const refused = await unknown.client.callTool("schedule_payment", {
+          invoice_id: "inv-1",
+          idempotency_key: `idem_${randomUUID()}`,
+        });
+        expect(refused).toEqual({ ok: false, refusal_reason: "unknown_mission" });
+        expect(decided).toHaveLength(0);
+        expect(policy.queries).toEqual([]);
+        expect(evidence.all().map((e) => e.kind)).toEqual(["refusal"]);
+        const refusal = evidence.all()[0] as RefusalRecord;
+        expect(refusal.content).toMatchObject({
+          denial_reason: "state_unavailable",
+          emitter: { role: "pep" },
+          action: { name: "payments:payment.schedule" },
+        });
+        expect(await verifyEvidenceEnvelope(refusal.content, REFUSAL_RECORD_MEDIA_TYPE, keys.resolver)).toEqual({
+          valid: true,
+        });
+        expect(businessState()).toEqual(before);
+      } finally {
+        await unknown.close();
+      }
+
+      // The same write under the Mission the loader holds reaches the PDP and schedules.
+      const held = await createHttpMediatedClient(channel.url, await mint({ authorization_details: [SCHEDULE] }), holder);
+      try {
+        const permitted = await held.client.callTool("schedule_payment", {
+          invoice_id: "inv-1",
+          idempotency_key: `idem_${randomUUID()}`,
+        });
+        expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+        expect(decided).toHaveLength(1);
+        expect(writeReservations.schedules()).toHaveLength(1);
+      } finally {
+        await held.close();
+      }
+    } finally {
+      await channel.close();
+    }
+  });
+});
