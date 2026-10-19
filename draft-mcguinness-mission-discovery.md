@@ -715,10 +715,10 @@ the OAuth binding's walkthrough):
     "issuer": "https://auth.vendor.example"
   },
   "resource_declaration_digest":
-    "sha-256:pV2nR8kQ4mZ7tX1cF5gH9jL3bD6eY0wS8uA2iE4oN7q",
+    "sha-256:pV2nR8kQ4mZ7tX1cF5gH9jL3bD6eY0wS8uA2iE4oN7o",
   "sought_classes": ["data_read"],
   "ceiling_entry_digest":
-    "sha-256:tY8cD1eF6gH3jL0pS4uA7iE2oN9MmK4wZ7rQ2nX9bV5",
+    "sha-256:tY8cD1eF6gH3jL0pS4uA7iE2oN9MmK4wZ7rQ2nX9bV4",
   "actor": "s6BhdRkqt3",
   "tainted": false,
   "adjudicated_at": "2026-07-08T15:04:05Z"
