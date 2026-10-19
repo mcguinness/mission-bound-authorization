@@ -17258,9 +17258,28 @@
     "normative": "on the OAuth credential profile, a mission_resource_access entry authorizes an action only when the PEP-established operation target matches the entry's resource under Resource Matching and the invoked identity is within its actions; equality of the entry's resource with the token audience is not a match"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > matches the credential's authority on the same target: an entry naming the audience's identifier does not cover another target",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > an entry spelled differently from the target never covers it: the credential's is refused before the PDP, and the Mission's is denied out_of_authority",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The credential bound matches the token's entries against the operation target (P2, unit); the payments PEP's credential pre-check refuses a differently spelled entry before the PDP (T5). Mutations M2 and M15 fail P2 and T4."
   },
   {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
@@ -21149,9 +21168,46 @@
     "normative": "for every mission_resource_access entry in the credential authority, the current effective authority and any other mission_resource_access bound, the PDP matches the entry's resource against resource.properties.operation_target with the Resource Access matcher (exact character for character, prefix at a path-segment boundary after comparison normalization); a request whose target is outside every entry of a bound is denied even when its audience equals the entry's resource"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) replaces authzen.pdp-request.audience-match-mandatory, which required the entry match against resource.properties.audience and was tested on the reference PDP's audience match. Those tests witness the retired operand, so they are not cited here. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > same audience, different targets: the target the Mission names permits, and another target under the same audience is out_of_authority",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > matches the credential's authority on the same target: an entry naming the audience's identifier does not cover another target",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > exact matching is literal: a target spelled differently from the entry by host case, default port, percent spelling, trailing slash or query never matches",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.operation_target (#1276, D457) > matches the approved entry's resource against the operation target, with no context.audience, a resource id that names an object, and an audience the entry does not name",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > an entry spelled differently from the target never covers it: the credential's is refused before the PDP, and the Mission's is denied out_of_authority",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) replaces authzen.pdp-request.audience-match-mandatory, which required the entry match against resource.properties.audience and was tested on the reference PDP's audience match. Those tests witness the retired operand, so they are not cited here. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. #1276 implementation (D457, payments-runtime-profile-v6). The PDP matches Mission and credential entries against operation_target with the literal exact matcher (unit witnesses at evaluate()); the payments PEP, in co-resident and remote modes, observes the outcome at the resource operation, not on a decision request the test inspects. prefix and unrecognized resource_match give no authority (refused, not implemented). Mutations M1 and M2 (match on audience) fail P1, A1 and P2."
   },
   {
    "id": "authzen.pdp-request.no-audience-or-object-identity-match",
@@ -21172,9 +21228,40 @@
     "normative": "an entry whose resource equals the request's audience, resource.type or resource.id, but does not match its operation_target, authorizes nothing; a request without operation_target is never matched through audience, type or id instead"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457). The reference PDP still matches entries on resource.properties.audience, which this row forbids; the earlier type/id test expects an out_of_authority denial for a request that now lacks a required operation_target, so it is not a witness. #1276's implementation step owns the witness."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authzen-members.test.ts",
+     "name": "AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > the entry match reads resource.properties.operation_target (#1276, D457) > never matches on the resource object's id or type: an id and type naming the entry's resource under another target are out_of_authority",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > validates the audience independently of the target: a missing or array audience refuses though the target matches, and a logical audience no entry names permits on the target",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > same type and id with a changed target: the entry match follows the target while Resource policy sees the same object identity",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > same audience, different targets: the target the Mission names permits, and another target under the same audience is out_of_authority",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457). The reference PDP still matches entries on resource.properties.audience, which this row forbids; the earlier type/id test expects an out_of_authority denial for a request that now lacks a required operation_target, so it is not a witness. #1276's implementation step owns the witness. #1276 implementation (D457, payments-runtime-profile-v6). Unit witnesses at evaluate(): no match on id or type (A2), audience validated separately and a logical audience permitting on the target (P7), a changed target with the same type and id (P8). Mutation M1 fails P1 and A1; M3a (fall back to audience) fails P5."
   },
   {
    "id": "authzen.context-operation-target.required",
@@ -21195,9 +21282,22 @@
     "normative": "every decision request for an action evaluated against mission_resource_access authority carries resource.properties.operation_target as a string holding one absolute URI"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > sends the contract's target beside the audience, and never reads a caller-supplied target or resource argument",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > a missing, malformed or ambiguous target is refused before evaluation as operation_target_invalid, with no decision, no Decision Evidence and no fallback to the audience or to type and id",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The payments PEP sends the contract's target as resource.properties.operation_target on every decision request (T1, both modes); the PDP refuses a request lacking it (P5). Mutation M10 (PEP reads the caller's target) fails T1."
   },
   {
    "id": "authzen.context-operation-target.pep-trusted-derivation",
@@ -21218,9 +21318,22 @@
     "normative": "the operation_target a PEP sends is the one its trusted operation contract derives from the validated operation and arguments; a caller-supplied target argument, a presented token entry or a Mission entry never becomes or changes it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > sends the contract's target beside the audience, and never reads a caller-supplied target or resource argument",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The PEP derives the target from its Operation Profile contract and ignores a caller-supplied target or resource argument (T1). Mutations M10 and M15 fail T1 and T4."
   },
   {
    "id": "authzen.context-operation-target.pep-refuses-unestablishable",
@@ -21241,9 +21354,28 @@
     "normative": "an operation with no contract-established target, or with more than one candidate target, is refused with no decision request, no effect and no fallback to the metadata identifier or audience; the Refusal Record names target_unresolvable"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses an unsupported finer contract and declarations naming different targets before any decision request",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported finer contract or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -22017,7 +22149,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target."
+   "notes": "#1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target. #1276 implementation: evaluate-credential-authority.test.ts now sends a logical audience, so operation_target is the only operand its witnesses match on; the decision-evidence and remote-channel witnesses still send a target equal to the audience."
   },
   {
    "id": "authzen.context-credential.failure-classification",
@@ -22089,7 +22221,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval). #1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target."
+   "notes": "D324 extends #801's split to the credential bound: reordering it after the Mission's own checks alone was declined, since a narrower credential's identical constraint failure would still be classified differently. Discharge and approval keep their dedicated handling (unestablished-condition, context-approval). #1276 (D457): these witnesses establish the whole-entry and classification rules with the entry resource matched against resource.properties.audience, the operand D457 retires; the resource operand itself is owned by authzen.pdp-request.operation-target-match (todo). The implementation step must re-witness these tests with resource.properties.operation_target. #1276 implementation: evaluate-credential-authority.test.ts now sends a logical audience, so operation_target is the only operand its witnesses match on; the decision-evidence and remote-channel witnesses still send a target equal to the audience."
   },
   {
    "id": "authzen.evidence.authority-bound-required",
@@ -22352,9 +22484,28 @@
     "normative": "a request whose operation_target is absent, not a string, not one absolute URI, or outside the requesting PEP's enforcement scope is refused before evaluation with a Refusal Record naming operation_target_invalid, and is never evaluated against audience, type or id instead; a well-formed exact target reaches the matcher unrewritten"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > the remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation as operation_target_invalid, independently of its audience scope",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > a missing, malformed or ambiguous target is refused before evaluation as operation_target_invalid, with no decision, no Decision Evidence and no fallback to the audience or to type and id",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -23555,9 +23706,16 @@
     "normative": "a changed target-determining argument under a parameter-bound permit is recorded parameter_mismatch; a target that differs at use while the bound parameters are unchanged, or cannot be established at use, is recorded target_drift"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). target_drift at use is witnessed (T7). The parameter_mismatch precedence branch cannot arise under the reference's service-level contracts, which derive no target from arguments."
   },
   {
    "id": "authzen.permit-binding-split.same-identity-no-relay",
@@ -23652,9 +23810,16 @@
     "normative": "a permit, cached or fresh, evaluated for one operation target releases no effect on another, even when audience, action and resource type/id are equal; the changed operation is evaluated anew and the unused permit ends suppressed with target_drift"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). A contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect (get_invoice, lookup_vendor, hold_transfer). Mutation M14 fails T7."
   },
   {
    "id": "authzen.projections.operation-target-in-every-projection",
@@ -23675,9 +23840,22 @@
     "normative": "two requests equal in every member except operation_target have different operation identities, authorization bindings and cache keys, so neither a cached read permit nor an idempotency claim made for one serves the other"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > binds the target into operation identity, the authorization binding and the cache key while audience, action and type/id stay equal",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > a key reused for another operation target under the same audience, action, type/id and digest is idempotency_conflict, never a retransmission of the first permit (#1276)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -27024,9 +27202,28 @@
     "normative": "a PDP's pre-evaluation refusal of a request whose operation target is absent, malformed or outside the requesting PEP's enforcement scope is a Refusal Record with denial_reason operation_target_invalid, a value in the PDP's closed set only"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > records the refusal as a PDP-signed Refusal Record over the request as submitted, naming no Mission",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > operation_target_invalid is the PDP's alone, and a PEP-side store never signs it (#1276)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > the remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation as operation_target_invalid, independently of its audience scope",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. The reference evidence store's PDP closed set holds only mission_context_missing. #1276 implementation (D457, payments-runtime-profile-v6). The PDP signs a pdp-role Refusal Record operation_target_invalid over the request as submitted (P6); the PEP-side store refuses to sign that value (R1). Mutation M19 fails P5 and P6."
   },
   {
    "id": "evidence.refusal.parameter-binding-digest-xor",
@@ -27799,9 +27996,16 @@
     "normative": "a permit not executed because the operation target established at use differs from, or cannot re-establish, the evaluated target is recorded suppressed with error target_drift"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. Only the operation-target clause is new; the evaluation-context clause is the existing Evaluation-Context Binding carrier, also todo. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed end to end at the payments resource (T7: suppression with target_drift); no unit-level witness of the Execution Evidence record alone. Mutation M14 fails T7."
   },
   {
    "id": "evidence.execution.error-condition-unrecognized",
