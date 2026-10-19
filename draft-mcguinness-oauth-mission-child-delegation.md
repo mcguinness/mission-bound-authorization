@@ -935,7 +935,7 @@ parent. The decoded child access token:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
+        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate"
@@ -1071,7 +1071,7 @@ Example:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6",
+        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate",
@@ -2000,7 +2000,7 @@ Example:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6"
+      "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4"
   },
   "child": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
