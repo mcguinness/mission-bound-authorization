@@ -549,6 +549,8 @@ export async function composeStack(opts: {
     const asServer = as.provider.listen(asPort);
     // A port already in use refuses startup here, with the discovery
     // listener released, rather than surfacing as an unhandled error event.
+    // @spec #250: a kernel kept in a file is released too; the caller never
+    // receives the stack that would close it.
     try {
       await new Promise<void>((resolve, reject) => {
         asServer.once("listening", () => resolve());
@@ -556,6 +558,7 @@ export async function composeStack(opts: {
       });
     } catch (err) {
       await metadataServer.close();
+      if (opts.kernelStore) as.kernel.close();
       throw err;
     }
     kernel = as.kernel;
@@ -1092,13 +1095,15 @@ export async function composeStack(opts: {
   if (asNative) {
     const audience = new URL(CANONICAL_RESOURCE);
     // A failed startup releases what it already opened: the AS and discovery
-    // listeners, the decision channel and both single-writer store files.
+    // listeners, the decision channel, both single-writer store files and,
+    // last, a kernel kept in a file (#250).
     const release = async (): Promise<void> => {
       await reconciler.stop();
       await authServer?.closeAuthServer();
       await decisionChannel.close();
       pdpClaims.close();
       writeReservations.close();
+      if (opts.kernelStore) kernel.close();
     };
     try {
       resourceChannel = await createHttpMcpChannel(server, { host: audience.hostname, port: Number(audience.port) });

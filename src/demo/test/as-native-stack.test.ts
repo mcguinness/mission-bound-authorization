@@ -32,7 +32,7 @@ import { connect, createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { ALL_PROVIDER_CAPABILITIES, initSigningKeyRing, type ProviderCapability, STATUS_LIST_ID } from "@mission/authorization-server";
+import { ALL_PROVIDER_CAPABILITIES, initSigningKeyRing, MissionKernel, type ProviderCapability, STATUS_LIST_ID } from "@mission/authorization-server";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
@@ -1394,24 +1394,38 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     }
   });
 
-  it("refuses startup when the AS port or the declared audience's port is taken, and keeps no port or store file", async () => {
+  it("refuses startup when the AS port or the declared audience's port is taken, and keeps no port, store file or kernel file open", async () => {
     const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
-    let free = await holdPort(LAUNCH_AS_PORT);
+    // @spec #250: with a kernel kept in a file, each failed startup closes it.
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-kernel-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: join(dir, "state", "kernel.db") };
+    const kernelClose = vi.spyOn(MissionKernel.prototype, "close");
     try {
-      await expect(launchAsNative(launchOptions({}, files))).rejects.toThrow(/EADDRINUSE/);
+      let free = await holdPort(LAUNCH_AS_PORT);
+      try {
+        await expect(launchAsNative(launchOptions(env, files))).rejects.toThrow(/EADDRINUSE/);
+        expect(kernelClose).toHaveBeenCalledTimes(1);
+      } finally {
+        await free();
+      }
+      free = await holdPort(Number(AUDIENCE.port), AUDIENCE.hostname);
+      try {
+        await expect(launchAsNative(launchOptions(env, files))).rejects.toThrow(/EADDRINUSE/);
+        expect(await accepts(`http://localhost:${LAUNCH_AS_PORT}`)).toBe(false);
+        expect(kernelClose).toHaveBeenCalledTimes(2);
+      } finally {
+        await free();
+      }
+      // Neither failure kept a port or a single-writer store: the same configuration starts.
+      const launched = await launchAsNative(launchOptions(env, files));
+      await launched.close();
+      expect(kernelClose).toHaveBeenCalledTimes(3);
     } finally {
-      await free();
+      kernelClose.mockRestore();
     }
-    free = await holdPort(Number(AUDIENCE.port), AUDIENCE.hostname);
-    try {
-      await expect(launchAsNative(launchOptions({}, files))).rejects.toThrow(/EADDRINUSE/);
-      expect(await accepts(`http://localhost:${LAUNCH_AS_PORT}`)).toBe(false);
-    } finally {
-      await free();
-    }
-    // Neither failure kept a port or a single-writer store: the same configuration starts.
-    const launched = await launchAsNative(launchOptions({}, files));
-    await launched.close();
   });
 
   it("closes every listener it published and releases both store files on shutdown, in co-resident and remote PDP mode", async () => {
