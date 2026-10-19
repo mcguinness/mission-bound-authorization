@@ -42590,7 +42590,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an actor the list names is refused while the policy denies it; one both permit is created, the policy asked at the first check and again at the creation commit; a policy that permits the first check and denies at the commit refuses, creating nothing; a completed creation is redelivered only while the policy still permits the actor"
+    "normative": "an actor the list names is refused while the policy denies it; one both permit is created, the policy asked at the first check and again at the creation commit; a policy that permits the first check and denies at the commit refuses, creating nothing; a permit an earlier creation received does not admit a new creation for the same actor once the policy withdraws it, while the replay of that committed creation delivers the same child and grant without asking the policy"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -42615,7 +42615,7 @@
     },
     {
      "file": "src/services/authorization-server/test/child-actor-eligibility-endpoint.test.ts",
-     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > recovery re-establishes the rule: a completed creation is redelivered only while the policy still permits the actor",
+     "name": "child-actor eligibility with retained provenance at the child-creation exchange (@spec child-delegation#fanout, #1304) > a policy withdrawal refuses a new creation but not the replay of a committed one: no second child, and recovery does not ask the policy",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -42626,7 +42626,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1304 (D486). The reference asks the policy once the other conditions hold, at the first check and again inside the creation transaction (the insertRecord precondition), and on recovery. Proven by disabling the code it covers (each mutation restored byte for byte): ignoring the policy decision fails the denial witnesses; dropping the commit re-check fails the changed-decision and asked-twice witnesses; dropping the recovery gate fails the recovery witness."
+   "notes": "#1304 (D486). The reference asks the policy once the other conditions hold, at the first check and again inside the creation transaction (the insertRecord precondition). Recovery delivers a committed creation and never asks it (#1335 review). Proven by disabling the code it covers (each mutation restored byte for byte): ignoring the policy decision fails the denial witnesses and the withdrawal witness's new creation; dropping the commit re-check fails the changed-decision and asked-twice witnesses; asking the policy on recovery again fails the withdrawal witness at the replay, and asking it there while ignoring the answer fails the witness's unchanged ask count."
   },
   {
    "id": "child-delegation.child-actor-eligibility.inherited-eligibility",
