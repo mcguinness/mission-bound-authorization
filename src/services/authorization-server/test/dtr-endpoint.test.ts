@@ -29,6 +29,13 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
+  delegationWithMatcher,
+  MATCHER_LIST_CASES,
+  MATCHER_REPRODUCTION,
+  type MatcherList,
+  WELL_FORMED_MATCHER,
+} from "./malformed-matcher.helper.js";
+import {
   buildAuthorizationServer,
   DEFERRED_GRANT_TYPE,
   type AuthorityEntry,
@@ -445,6 +452,44 @@ describe("requested entries on the deferral initiation (@spec resource-access#en
       expect(body.deferral_code).toBeUndefined();
       expect(body.access_token).toBeUndefined();
       expect(count()).toBe(before);
+    }
+  });
+});
+
+describe("requested delegate matchers on the deferral initiation (@spec resource-access#matching-allowed-delegates, #1373)", () => {
+  // The deferred token carries the requested entries as submitted, and the
+  // subset check reads a delegate matcher's `sub` and `sub_profile` only, so a
+  // matcher carrying another member is refused before any deferral opens.
+  it("refuses a requested entry whose delegate matcher carries an unrecognized member with invalid_authorization_details, opening no deferral", async () => {
+    const count = () =>
+      (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+    const requestWith = (matcher: Readonly<Record<string, string>>, list: MatcherList) =>
+      subset(["payments:remittance.send"]).map((e) => ({
+        ...e,
+        delegation: delegationWithMatcher(matcher, list),
+      })) as AuthorityEntry[];
+    for (const [list, description] of MATCHER_LIST_CASES) {
+      const before = count();
+      const res = await initiate(requestWith(MATCHER_REPRODUCTION, list));
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        deferral_code?: string;
+        access_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe(description);
+      expect(body.deferral_code).toBeUndefined();
+      expect(body.access_token).toBeUndefined();
+      expect(count()).toBe(before);
+    }
+    // Positive control: with a well-formed matcher, the same request opens a deferral.
+    for (const [list] of MATCHER_LIST_CASES) {
+      const res = await initiate(requestWith(WELL_FORMED_MATCHER, list));
+      const body = (await res.json()) as { error?: string; deferral_code?: string };
+      expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+      expect(body.deferral_code).toBeDefined();
     }
   });
 });

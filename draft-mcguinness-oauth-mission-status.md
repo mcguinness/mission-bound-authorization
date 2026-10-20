@@ -544,7 +544,7 @@ Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 Pragma: no-cache
 
-eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 ~~~
 
 Decoded JWS header:
@@ -552,7 +552,7 @@ Decoded JWS header:
 ~~~ json
 {
   "alg": "ES256",
-  "kid": "sa-key-2026-q3",
+  "kid": "as-key-2026-q3",
   "typ": "mission-status-response+jwt"
 }
 ~~~
@@ -835,7 +835,7 @@ Cache-Control: no-store
   "error": "not_found",
   "error_description":
     "Mission reference is not found or not visible.",
-  "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+  "nonce": "nonce_zsPy4APqVNO96xAT"
 }
 ~~~
 
@@ -1335,7 +1335,7 @@ HTTP/1.1 200 OK
 Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 
-eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 ~~~
 
 Decoded JWS payload:

@@ -2741,29 +2741,109 @@ The contextual-governance kernel maps as follows:
    the same integrity and access controls as the Mission record; and
    MUST retain both for the declared audit horizon.
 
-The capability table has one row per capability. Every supplied row
-states its activation conditions, and states its temporal and failure
-elements in its cells or by express inheritance of the Bounded
-Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}).
+The capability list has one entry per capability. Every supplied
+entry states its activation conditions, and states its temporal and
+failure elements in the entry or by express inheritance of the
+Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}).
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP for joined decisions | A current-state check at each such operation or decision ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged authorization server gates neither issuance nor refresh; the token-layer residual runs to expiry |
-| State-Observable | supplied | always | Signed Mission Status with the `mission_max_stale_seconds` bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed past the declared freshness bound |
-| Structured Authority | supplied | always | The OAuth binding's Authority Set, held at the MAS and evaluated at the joining PDP ({{mission-join}}) | Semantics cover only declared authority-detail types and mappings |
-| Monotonic Derivation | supplied | native child creation ({{native-child}}) | The no-broader-than relation at child creation | Enforcement and expansion are never derivation; unchanged AS tokens are outside the claim |
-| Credential-Bound | supplied | the Join Assertion endpoint ({{join-assertion}}) | A signed assertion binds one token's digest and `cnf` thumbprint to the Mission; fact semantics: verified party correlation | Does not prove the authorization server issued the token under the Mission; mapping-join-only deployments are outside this row |
-| Authorized Context Correlation | supplied | always | The mapping join and the Join Assertion, with the MAS and its joining PDPs as joining authority ({{mission-join}}, {{join-assertion}}) | Proves the credential belongs to the Mission's parties, never that it was issued for the Mission ({{join-scope}}) |
-| Independently Verifiable | supplied | signed Mission Status ({{lifecycle-and-state}}) | Record and state as of the response's freshness window; Join Assertions add token correlation | Proves neither AS issuance under the Mission nor current state after the observation window |
-| Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base MAS audit log is Controller-local |
-{: title="Standalone MAS Mission substrate capabilities"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
 
-Unless a row states otherwise, each supplied row's temporal elements
-inherit the signed Status freshness contract: facts are current as of
-the response's `mission_max_stale_seconds` window, assertion lifetime
-is capped by the introspected token's remaining lifetime, and the
-residual after non-active is bounded by the consumer's declared
-staleness bound.
+  Activation: always for MAS-native authority operations; a
+  Mission-joining PDP for joined decisions
+
+  Scope and defining sections: A current-state check at each such
+  operation or decision ({{lifecycle-and-state}}, {{mission-join}})
+
+  Limitations: The unchanged authorization server gates neither issuance
+  nor refresh; the token-layer residual runs to expiry
+
+State-Observable:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: Signed Mission Status with the
+  `mission_max_stale_seconds` bound ({{lifecycle-and-state}},
+  {{discovery}})
+
+  Limitations: Consumers fail closed past the declared freshness bound
+
+Structured Authority:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The OAuth binding's Authority Set, held
+  at the MAS and evaluated at the joining PDP ({{mission-join}})
+
+  Limitations: Semantics cover only declared authority-detail types and
+  mappings
+
+Monotonic Derivation:
+: Claim: supplied
+
+  Activation: native child creation ({{native-child}})
+
+  Scope and defining sections: The no-broader-than relation at child
+  creation
+
+  Limitations: Enforcement and expansion are never derivation; unchanged
+  AS tokens are outside the claim
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: the Join Assertion endpoint ({{join-assertion}})
+
+  Scope and defining sections: A signed assertion binds one token's
+  digest and `cnf` thumbprint to the Mission; fact semantics: verified
+  party correlation
+
+  Limitations: Does not prove the authorization server issued the token
+  under the Mission; mapping-join-only deployments are outside this row
+
+Authorized Context Correlation:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The mapping join and the Join Assertion,
+  with the MAS and its joining PDPs as joining authority
+  ({{mission-join}}, {{join-assertion}})
+
+  Limitations: Proves the credential belongs to the Mission's parties,
+  never that it was issued for the Mission ({{join-scope}})
+
+Independently Verifiable:
+: Claim: supplied
+
+  Activation: signed Mission Status ({{lifecycle-and-state}})
+
+  Scope and defining sections: Record and state as of the response's
+  freshness window; Join Assertions add token correlation
+
+  Limitations: Proves neither AS issuance under the Mission nor current
+  state after the observation window
+
+Portable Evidence:
+: Claim: supplied
+
+  Activation: Consent Evidence, a Mission Mandate, or Audit Transparency
+  adopted
+
+  Scope and defining sections: The adopted profile's artifact and
+  verification procedure
+
+  Limitations: The base MAS audit log is Controller-local
+{: #standalone-mas-mission-substrate-capabilities newline="true"}
+
+Unless an entry states otherwise, each supplied entry's temporal
+elements inherit the signed Status freshness contract: facts are
+current as of the response's `mission_max_stale_seconds` window,
+assertion lifetime is capped by the introspected token's remaining
+lifetime, and the residual after non-active is bounded by the
+consumer's declared staleness bound.
 
 Failure behavior is uniformly fail-closed. An unresolvable Mission, a
 stale or failed Status response, a join failure
@@ -2774,7 +2854,7 @@ consumes a Join Assertion and finds it invalid denies with
 `mission_binding_failed`
 ({{join-assertion-pdp}}), never falling back to the mapping join.
 
-The following qualifications apply to individual rows:
+The following qualifications apply to individual entries:
 
 - Structured Authority includes each supported type's own constraint
   vocabulary; for `mission_resource_access`, that vocabulary is the
@@ -3366,6 +3446,10 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial (#1382): the Mission Substrate Statement's capability
+  table is a capability list, one entry per capability, which fits
+  the text rendering. No requirement changes.
 
 - Editorial (#1176): examples of the canonical Mission follow one
   dated history; an example line too long for the page is folded per

@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "341757b237a77f48fe162f5d4c3aa065b09164c7",
-    "content_sha256": "42bb7813442ffb5a62b10f2c2069f969f8a9d6cad64c3f54293cfb3985334b61"
+    "revision": "016f333588f6946c085b9cb856fb115f139cf053",
+    "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
@@ -19,16 +19,16 @@
     "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "5b8bffc4ebcd2f8f4eb4ba502178f91aab0161f9",
-    "content_sha256": "ffb7099651b674b77bddccab395bc28307c11dd180c4cc84a150a621a97a0c2d"
+    "revision": "4a173efb23bb2e1addb05132a71d26f2f8bccac5",
+    "content_sha256": "c68225ffa0b2b85b4a188d25ab3dd8a4a3ff2b67f6050b4e9827e59ea707d4b1"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
     "content_sha256": "cc8617aaf61a34d8f501734344cafbdfaac8baee97f27c45af59af553c676b1a"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
-    "content_sha256": "544a843d5bfd57cff78271abd280050b85816f87de51c615e2911c805966f334"
+    "revision": "3aef11fcc1181547adee092649aed883762fa3a2",
+    "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -51,8 +51,8 @@
     "content_sha256": "454d12089e67988a3cc7ae14146af092ffcecfb7ce9b2dddf4c92590ac5f7547"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "1d4585bfb2c7f9fc69052151907b4f80f30c4a6a",
-    "content_sha256": "bb1119dc5d934d1e9003732266ebb1991beeadc5401c6dc661efa8a8325df86f"
+    "revision": "8b02da4ed021453a5b3adfaf9b3c4e495e1a084f",
+    "content_sha256": "a896f68f624a520df854c63bb5bfbbc2bdc20c66b197638d2aae10e446bdd4e2"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "41c262683159cb44a0564ebfb9b8ca792a139b21",
@@ -67,12 +67,12 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "68808ec081923670c5fec998dec10c336a34d756",
-    "content_sha256": "c5fbe127c972b65cd31648ededeaf8e97ad9d4deb98b88005af454c85800e76c"
+    "revision": "8dc118e210f096f491beea7e5899685493b065cb",
+    "content_sha256": "84737e41c516c5108df8339c22f3b601922c5411c05af8f7a4f63b0b488b2adf"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "4e2f0ea1118418979179798fa3fa2deffd4f883a",
-    "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
+    "revision": "5683745b7c29b9b9796221b0bea112d0fbd85cfc",
+    "content_sha256": "6dcba6175293353e6c333e0da785b225a2282f427c56dda84dcba01d1a5c3b13"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
@@ -83,28 +83,28 @@
     "content_sha256": "fde328e1de5cc5d286402164d12f799916c15b7b804348484ca941d943208740"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "f1560eb98139c1502d92a2e74e5dfadd6be6c9d9",
-    "content_sha256": "eab318b87d5f30101f06c053e37fbdc91330e48644fe785e5f664f23fca4e577"
+    "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
+    "content_sha256": "3174fa1ab1b9b76c260e561a7d036e61f599d50f9543356ffa6f96d92d8ef946"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "44f6c5eb882d0156f5db6dad24e86587e79fd6c1",
-    "content_sha256": "e8817d91713df777b5f3437e3415f9d662859d35169b1e37081b3bb3480b01ef"
+    "revision": "228b8f3a7696d06e1d52f149140f487d3bf2837d",
+    "content_sha256": "dde493a296da308b2dce3d58678771929a4649af3f46598a5435e5b9c57c41b1"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "ec04a53ff3746ed30019146c41613535a40221e8",
-    "content_sha256": "d26ab13e46780cb78fb0974509a0873982233906ee320c00ee544932190a7c75"
+    "revision": "3dd273e94ad71c79e8467ff5938a31f8d3a921f1",
+    "content_sha256": "80033cd3624e52c1839820aa62376e61901c1ee961ef9f6e4de41d4d0171e021"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "49a5798039f4432dd1c1aaaf088c3432e1a164d9",
-    "content_sha256": "174bfd11e6a7a8fe9f89c80c73eec080e1ead7927003b1dbd0f16cd7e8ae2928"
+    "revision": "b6ce6fd224a3a0023bc087c7f9c1452d05b7a277",
+    "content_sha256": "384a802e326a4956c252b7dd4348873d0c5c9e2310b752cdbc4dcf1cd03f6e75"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "d08dd0e9e7d01bce036532b3ab014370e080b7b3",
@@ -127,8 +127,8 @@
     "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "c908bd3ed1638bdf994d615a5b65423fa6eebf7c",
-    "content_sha256": "0af450d300a722cd9a6e2ae480ecab221646d2d1b2e9a15b5b630f8d48b425e0"
+    "revision": "59720df0220f097bc4a8b92dfb7f8f6d3b08c06c",
+    "content_sha256": "3c1d883d71a887cc0643d40a023ecea1b16e272778ce9851353a3b6807b14927"
    },
    "draft-mcguinness-mission-mandate.md": {
     "revision": "b37b5d37d2a8b43a8efcb02ff66713814e98291c",
@@ -27618,7 +27618,7 @@
    "id": "substrate.statement.capability-table-required",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "The Statement MUST then include a capability table with one row for each capability in {{capabilities}}.",
+   "text": "The Statement MUST then include a capability list with one entry for each capability in {{capabilities}}.",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27630,7 +27630,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Statement includes a capability table with one row for each of the eight optional capabilities"
+    "normative": "the Statement includes a capability list with one entry for each of the eight optional capabilities"
    },
    "level": "unit",
    "coverage": "todo",
@@ -27640,7 +27640,7 @@
    "id": "substrate.statement.binary-supplied-state",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "Each row MUST say `supplied` or `not supplied`",
+   "text": "Each entry MUST say `supplied` or `not supplied`",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27652,7 +27652,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a capability row states supplied or not supplied; there is no third (retired conditional) state"
+    "normative": "a capability entry states supplied or not supplied; there is no third (retired conditional) state"
    },
    "level": "unit",
    "coverage": "todo",
@@ -27662,7 +27662,7 @@
    "id": "substrate.statement.supplied-row-requirements",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "A supplied row MUST:",
+   "text": "A supplied entry MUST:",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27674,7 +27674,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a supplied row cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
+    "normative": "a supplied entry cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
    },
    "level": "unit",
    "coverage": "todo",
@@ -38024,7 +38024,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#1377. The reference declares no transformation capability for this type in any carrier, yet projects scope for it, so it does not apply this undeclared fallback. Inventory: src/docs/resource-access-transformation-capabilities.md (sections 1 and 4)."
   },
   {
    "id": "resource-access.conformance.rs-role-independent-of-as-duties",
@@ -38859,7 +38860,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives"
+    "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives",
+    "local": "#1373: the reference AS refuses a matcher, in allowed_delegates or allowed_child_actors, that carries a member other than sub and sub_profile, carries neither, or carries an empty or non-string value, at proposal intake, configuration load, template consent and derivation, and in the requested authority of the deferred grant, the dispatch handoff and the async-delegation exchange, rather than deriving or issuing it without the member; Resource Access Entry Validation states the rule (resource-access.entry-validation.matcher-members)"
    },
    "level": "unit",
    "coverage": "partial",
@@ -39178,9 +39180,64 @@
     "normative": "an action value containing a character outside the grammar, anywhere in the value, is refused"
    },
    "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an action value outside the grammar, wherever the offending character sits",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1258 item 11; enforced by #1376: validateMissionResourceAccessSchema matches each value against ACTION_VALUE (an identifier, or an identifier followed by .*), anchored and without the m flag, and the published schema carries the same items pattern. The witness puts the offending character first, inside and last (a leading or trailing space, a trailing newline, a slash, a non-ASCII letter, a family marker mid-value). Proved by mutation: a check that admits every string fails the witness."
+  },
+  {
+   "id": "resource-access.type.action-family-contract",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "A resource that documents an action family SHOULD treat the family's membership as part of its authorization contract",
+   "role": "RS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resource documenting an action family documents the family's membership as part of its authorization contract"
+   },
+   "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 11. The reference PAR validator checks actions are strings, not the grammar."
+   "notes": "#1376. Guidance to the resource's documented namespace. The reference resources define no action families, so no test observes it. The residual is stated in Security Considerations (Action Family Growth)."
+  },
+  {
+   "id": "resource-access.type.action-family-new-namespace",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "SHOULD place an action that confers materially different authority under a new family or namespace version rather than under an existing family",
+   "role": "RS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resource adding an action that confers materially different authority places it under a new family or namespace version, not under an existing family"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1376. Guidance to the resource's documented namespace; a departure is recorded, not failed. The reference resources define no action families. A binding compatibility rule for families is out of scope here (#249)."
   },
   {
    "id": "resource-access.type.emit-enforced-constraint-keys",
@@ -39520,6 +39577,480 @@
    "notes": "#1258 item 4; refusal approved in the #1277 review (D454), shape ruled in D457; implemented by #1278. One presence check (refusedEntryMember in @mission/core) backs every boundary: the published schema carries \"locations\": false with the top level open, validateMissionResourceAccessSchema covers PAR, device submission and the other proposal intakes, and the deferred, handoff and async-delegation exchanges check requested entries before projecting them. Proved by disabling each guard in turn: the validator's check (the PAR and device tests fail), and the deferred, handoff and async-delegation checks (each test fails). The config loaders (ConfigError naming the entry and locations), direct derivation (invalid_authorization_details) and the template admin plane are witnessed in locations-refused.test.ts and template-dispatch-endpoint.test.ts and are not cited, since their errors or level differ from this row. A capability_sources entry is still admitted at PAR. The RAS's intake, a different surface from PAR, applies the same presence rule to a carried entry through isAuthorityEntry, since its trusted issuers are configurable (the #1283 review): a trusted issuer's signed grant whose entry carries locations is refused invalid_grant, the RFC 7523 grant-level error rather than invalid_authorization_details, minting no local token, so SaaS never receives it (mapping-entitlement.test.ts, and cross-domain.test.ts end to end). Proved by disabling the isAuthorityEntry check: both tests fail, and SaaS posts the journal entry. The helper-level witness (authority-subset.test.ts: isAuthorityEntry and both narrowToCeiling operands) and the RAS local ceiling's startup refusal are not cited; a grant without locations, or carrying capability_sources, still mints. Case fc-08 runs (refusal.locations)."
   },
   {
+   "id": "resource-access.entry-validation.resource-absolute-uri-no-fragment",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource` is not an `absolute-URI`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource is not an RFC 3986 absolute-URI, including an exact entry whose resource carries a fragment, is refused invalid_authorization_details, creating no Mission",
+    "local": "the reference AS applies the shared isAbsoluteUri check at the schema validator (PAR and the other proposal intakes), the ceiling config loaders and direct derivation, and records an accepted value as submitted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a resource carrying a fragment, or an https resource without the // form and a non-empty host",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states for every entry the absolute-URI rule the reference enforced through #1310 (D480), so an exact entry carries no fragment either. Proved by mutation: an absolute-URI pattern that admits a trailing fragment fails the witness (the value then reaches the target_resources check and is refused invalid_request, not invalid_authorization_details). Cases ev-res-01 and ev-res-04 (a query stays valid) run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.http-non-empty-host",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource` is an `http` or `https` URI without the `//` authority form naming a non-empty host",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose http or https resource lacks the // authority form or names an empty host is refused invalid_authorization_details, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a resource carrying a fragment, or an https resource without the // form and a non-empty host",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.actions-non-empty-grammar",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `actions` array is empty, or one of its values is neither an action identifier nor an action family",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry with an empty actions array, or with an actions value outside the action grammar, is refused invalid_authorization_details, creating no Mission; identifiers and a family the grammar admits are accepted",
+    "local": "the reference AS checks the grammar at proposal intake only; configuration load and derivation do not re-check it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a proposal entry whose actions array is empty",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an action value outside the grammar, wherever the offending character sits",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > accepts action identifiers and an action family the grammar admits (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376. The non-empty check predates it; the grammar check is new (ACTION_VALUE in validateMissionResourceAccessSchema, mirrored as the published schema's items pattern). The provider's RFC 9396 common-field check refuses an empty-string action before it. Proved by mutation, each alone: dropping the length check admits [] (the empty-array witness fails); a grammar check that admits every string admits each malformed value (the grammar witness fails). Cases ev-act-01 to ev-act-07 run (entry-validation); ev-act-08 (a family) is skipped, since this reader does not declare action-families."
+  },
+  {
+   "id": "resource-access.entry-validation.max-depth-non-negative-integer",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `delegation.max_depth` is not a non-negative integer, so a negative or fractional value is refused",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose delegation.max_depth is negative or fractional is refused invalid_authorization_details, creating no Mission; a max_depth of 0 is accepted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a negative or fractional delegation.max_depth",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > accepts a delegation.max_depth of 0, with and without a children grant (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states the rule the reference already enforced. Proved by mutation, each alone: dropping the < 0 test admits -1; dropping the integer test admits 1.5; refusing values below 1 fails the 0 positive control. Cases ev-depth-01 to ev-depth-03 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.matcher-members",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "an `allowed_delegates` matcher carries neither `sub` nor `sub_profile`, or carries any other member",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose allowed_delegates matcher carries neither sub nor sub_profile, or carries any other member, is refused invalid_authorization_details, and no derived entry keeps a narrowed form of it",
+    "local": "the reference AS applies one shared rule (delegateMatcherListViolation in @mission/core, #1373) at proposal intake, configuration load, template consent and derivation, and to the requested entries of the deferral initiation, the dispatch handoff and the async-delegation exchange; it also refuses an empty or non-string sub or sub_profile, and applies the same rule to Child Delegation's allowed_child_actors"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an allowed_delegates matcher carrying neither sub nor sub_profile, or carrying another member",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher-members.test.ts",
+     "name": "PAR refuses a proposal carrying a malformed delegate matcher (#1373) > refuses the org reproduction in allowed_delegates with invalid_authorization_details, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher-members.test.ts",
+     "name": "proposal intake refuses a malformed delegate matcher (#1373) > validateMissionResourceAccessSchema refuses each malformed allowed_delegates matcher, naming the violation",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher-members.test.ts",
+     "name": "direct derivation refuses a malformed delegate matcher before deriving any entry (#1373) > refuses the org reproduction in a proposal's allowed_delegates, so no matcher admitting an ai_agent outside organization A is derived",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher-members.test.ts",
+     "name": "direct derivation refuses a malformed delegate matcher before deriving any entry (#1373) > refuses each malformed allowed_delegates matcher in a proposal or a ceiling entry, naming the violation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested delegate matchers on the deferral initiation (@spec resource-access#matching-allowed-delegates, #1373) > refuses a requested entry whose delegate matcher carries an unrecognized member with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested entry whose delegate matcher carries an unrecognized member is refused invalid_authorization_details, issuing no handoff grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > confinement: a requested entry whose delegate matcher carries an unrecognized member is refused invalid_authorization_details, opening no family and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1376 states the rule; #1373 (#1386, #1398) enforces it. Every clause is witnessed: neither member and another member are refused at PAR (entry-validation.test.ts) and by the intake validator and direct derivation (delegate-matcher-members.test.ts, which asserts invalid_authorization_details for both shapes in a proposal and a ceiling entry); no derived entry keeps the org reproduction's narrowed matcher; and the deferral, handoff and async-delegation exchanges refuse a requested entry carrying another member. The PAR witness here was proved by mutation, each alone: admitting an unknown member (expected 201 to be 400 for the org matcher) and admitting a matcher with neither member (expected 201 to be 400 for {}); the #1386 and #1398 witnesses were proved in those PRs. Not cited, since their error or surface differs from this row: the config loaders (a native configuration error naming the entry) and the template admin plane (invalid_request), and the allowed_child_actors cases, which are Child Delegation's list. No vector case: the reader's delegate-matcher and entry-validation executors run none for this rule yet."
+  },
+  {
+   "id": "resource-access.entry-validation.time-window-ordering",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `time_window` Common Constraint has a `not_before` later than its `not_after`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose time_window not_before is a later instant than its not_after is refused invalid_authorization_details at intake, creating no Mission; bounds naming the same instant are accepted",
+    "local": "the bounds compare as instants, so a window inverted only once its offsets are applied is refused too"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a time_window whose not_before is later than its not_after, and accepts equal bounds",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376. Before it the window passed intake and was refused only when a derivation combined it. The time_window value syntax in @mission/core now refuses an inverted window, so intake, configuration load, derivation and credential parsing all refuse it. Proved by mutation: a value syntax that skips the ordering check admits the inverted window at PAR (expected 201 to be 400). Cases ev-tw-01 to ev-tw-03 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.recipient-domain-form",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `recipient_domain` Common Constraint is not a DNS name in ASCII form, with each internationalized label in its A-label form, or ends in a dot",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose recipient_domain carries a non-ASCII label, an empty label or a trailing dot is refused invalid_authorization_details, creating no Mission",
+    "local": "the reference checks letter-digit-hyphen labels of 1 to 63 octets and 253 octets overall; it does not decode an xn-- label to confirm it is a valid A-label"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a recipient_domain that is not an ASCII DNS name or that ends in a dot",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states the rule the reference already enforced through the shared recipient_domain value syntax. Exercised: a non-ASCII label, an empty label and a trailing dot are refused at PAR, and an A-label is accepted (resource-access.entry-validation.recipient-domain-case). Not exercised: the reference does not decode an xn-- label, so a label that only looks like an A-label is accepted, hence partial. Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com. Cases ev-rd-01 and ev-rd-02 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.recipient-domain-case",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "Letter case does not make a `recipient_domain` invalid",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose recipient_domain is an ASCII DNS name in any letter case, including an A-label, is accepted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > accepts a recipient_domain in A-label form, in any letter case (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376. Comparison is case-insensitive (resource-access.value-space.recipient-domain-labels); this row covers validity only. Proved by mutation: a lowercase-only label pattern refuses Mail.Example.COM (expected 400 to be 201). Case ev-rd-03 runs (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.max-depth-zero-no-delegation",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "A `max_depth` of 0 admits the entry into no delegated token",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose delegation.max_depth is 0 is not eligible for a delegated token at delegation depth 1, even for a delegate the delegation policy permits"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "max_depth 0 and an empty allowed_delegates (@spec resource-access#entry-validation, #1376) > max_depth 0 admits no delegated token, while the entry's children grant still creates a Child Mission",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1376. Witnessed at the kernel's eligibility decision (delegationEligibility), the one the Token Exchange applies. Proved by mutation: a depth bound of max_depth + 1 makes the entry eligible at depth 1 (expected 'eligible' to be 'not-eligible'). Case ev-depth-04 runs (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.max-depth-zero-children-intact",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "Any other `delegation` member stays intact; a member a companion profile defines there, such as a child-creation grant, keeps the bound that profile gives it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a derived entry whose delegation.max_depth is 0 keeps its delegation.children grant, and that grant still permits creating a Child Mission"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "max_depth 0 and an empty allowed_delegates (@spec resource-access#entry-validation, #1376) > max_depth 0 admits no delegated token, while the entry's children grant still creates a Child Mission",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1376. Proved by mutation: a derivation that drops children when max_depth is 0 fails the committed-entry assertion. Case ev-depth-05 runs (entry-validation, derive)."
+  },
+  {
+   "id": "resource-access.entry-validation.allowed-delegates-empty",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "An empty `allowed_delegates` array permits no delegate.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose allowed_delegates is [] is not eligible for a delegate the delegation policy permits, while an entry with no allowed_delegates is eligible for that delegate under the same policy"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "max_depth 0 and an empty allowed_delegates (@spec resource-access#entry-validation, #1376) > an empty allowed_delegates admits no delegate the policy permits, where an absent list defers to that policy",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1376. Witnessed at the kernel's eligibility decision, the one the Token Exchange applies. Proved by mutation: treating an empty list as absent makes the delegate eligible (expected 'eligible' to be 'not-eligible'). Cases ev-dlg-01 to ev-dlg-03 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.unrecognized-action-grants-nothing",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "An action value that a consumer does not recognize for the entry's `resource` grants nothing.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose only action is one the resource does not define authorizes no operation at that resource"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/unrecognized-action.test.ts",
+     "name": "an unrecognized action value grants nothing (@spec resource-access#entry-validation, #1376) > an entry whose only action this resource does not define authorizes no operation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1376. Witnessed at the SaaS resource, with RAS-issued tokens minted directly. Proved by mutation: an entry check that grants any operation when the entry lists an undefined action lets both tools run. Case ev-act-09 is skipped by this reader (rs.enforcement)."
+  },
+  {
+   "id": "resource-access.entry-validation.unrecognized-action-rest-enforceable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "It does not make the entry unenforceable: the entry's other actions remain enforceable",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry listing an action the resource does not define beside actions it does define still authorizes those defined actions, and only them"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/unrecognized-action.test.ts",
+     "name": "an unrecognized action value grants nothing (@spec resource-access#entry-validation, #1376) > an entry carrying an action this resource does not define still authorizes the actions it does define",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/unrecognized-action.test.ts",
+     "name": "an unrecognized action value grants nothing (@spec resource-access#entry-validation, #1376) > an entry carrying both defined actions and an undefined one authorizes both defined actions",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1376. The SaaS resource evaluates the requested action alone against each entry's actions. Proved by mutation: treating an entry with an undefined action as unenforceable fails both witnesses (expected ok true)."
+  },
+  {
    "id": "resource-access.common-constraints.no-drop-any-key",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "common-constraints",
@@ -39609,7 +40140,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped."
+   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped. #1377: the inventory of every rule a narrowing declaration would claim, which makes no declaration, is src/docs/resource-access-transformation-capabilities.md. D538 rules a qualified supported-subset declaration through a reviewable change; none is made yet."
   },
   {
    "id": "resource-access.transformation-capabilities.undeclared-per-carrier",
@@ -39633,7 +40164,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities)."
+   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities). #1377: no carrier declares any capability for this type, so no carrier order is exercised; inventory: src/docs/resource-access-transformation-capabilities.md (section 1)."
   },
   {
    "id": "resource-access.transformation-capabilities.scope-only-refusal-conditional",
@@ -39657,7 +40188,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped."
+   "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped. #1377: the reference projects this type without a declaration, so this undeclared-projection path is not implemented; inventory: src/docs/resource-access-transformation-capabilities.md (section 4)."
   },
   {
    "id": "resource-access.type.resource-absolute-uri",

@@ -320,6 +320,7 @@ import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/pro
 import { ID_JAG_TOKEN_TYPE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
+  malformedMatcherInRequest,
   refusedMemberInRequest,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
@@ -2628,6 +2629,12 @@ async function handleDeferredGrant(
     // is refused here, before any deferral opens.
     const refusedMember = refusedMemberInRequest(intent.requested);
     if (refusedMember) throw new InvalidAuthorizationDetails(refusedMember);
+    // @spec resource-access#matching-allowed-delegates (#1373): the deferred
+    // token carries the requested entries as submitted, and the subset check
+    // reads a delegate matcher's `sub` and `sub_profile` only, so a matcher
+    // carrying another member is refused before any deferral opens.
+    const malformedMatcher = malformedMatcherInRequest(intent.requested);
+    if (malformedMatcher) throw new InvalidAuthorizationDetails(malformedMatcher);
     // @spec DTR -00 Section 10.1 (#1348): the deferral is bound to this
     // request's key, which every poll must prove. Required here because the
     // poll requires it.

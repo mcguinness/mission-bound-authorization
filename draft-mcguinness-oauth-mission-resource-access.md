@@ -216,6 +216,11 @@ with these members:
     not one action.
   - An authorization server SHOULD treat deriving a family as high-risk
     breadth.
+  - A resource that documents an action family SHOULD treat the family's
+    membership as part of its authorization contract, and SHOULD place
+    an action that confers materially different authority under a new
+    family or namespace version rather than under an existing family
+    ({{action-family-growth}}).
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource bounds (for
@@ -312,6 +317,44 @@ This type does not use the {{RFC9396}} common `locations` field:
 `resource` identifies where an entry applies. The authorization server
 refuses an entry carrying `locations` with the
 `invalid_authorization_details` error code.
+
+The authorization server also refuses an entry with the
+`invalid_authorization_details` error code when:
+
+- its `resource` is not an `absolute-URI` ({{Section 4.3 of RFC3986}}),
+  so no entry's `resource` carries a fragment component;
+- its `resource` is an `http` or `https` URI without the `//` authority
+  form naming a non-empty host;
+- its `actions` array is empty, or one of its values is neither an
+  action identifier nor an action family ({{resource-access-type}});
+- its `delegation.max_depth` is not a non-negative integer, so a
+  negative or fractional value is refused;
+- an `allowed_delegates` matcher carries neither `sub` nor
+  `sub_profile`, or carries any other member
+  ({{matching-allowed-delegates}});
+- its `time_window` Common Constraint has a `not_before` later than its
+  `not_after`, a window that admits no instant; or
+- its `recipient_domain` Common Constraint is not a DNS name in ASCII
+  form, with each internationalized label in its A-label form, or ends
+  in a dot.
+
+Letter case does not make a `recipient_domain` invalid; values compare
+case-insensitively ({{value-space-comparison}}).
+
+The following values are valid and carry a defined meaning:
+
+- A `max_depth` of 0 admits the entry into no delegated token, since a
+  delegated token's delegation depth is 1 or more
+  ({{delegate-eligibility}}): the entry supplies no in-Mission delegated
+  authority. Any other `delegation` member stays intact; a member a
+  companion profile defines there, such as a child-creation grant, keeps
+  the bound that profile gives it.
+- An empty `allowed_delegates` array permits no delegate. It differs
+  from an absent member, which defers eligibility to the authorization
+  server's delegation-authorization policy ({{delegate-eligibility}}).
+- An action value that a consumer does not recognize for the entry's
+  `resource` grants nothing. It does not make the entry unenforceable:
+  the entry's other actions remain enforceable ({{rs-enforcement}}).
 
 ### Decimal Values {#decimal-values}
 
@@ -1065,7 +1108,10 @@ and to send messages through a messaging MCP server:
 [
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
-    "actions": ["query_invoices", "post_adjustment"],
+    "actions": ["query_invoices"] },
+  { "type": "mission_resource_access",
+    "resource": "https://finance.example.com/mcp",
+    "actions": ["post_adjustment"],
     "constraints": {
       "max_amount": { "amount": "500.00", "currency": "USD" }
     } },
@@ -1075,6 +1121,10 @@ and to send messages through a messaging MCP server:
     "constraints": { "recipient_domain": "example.com" } }
 ]
 ~~~
+
+An entry's `constraints` bind every action it lists, so the read tool
+has an entry of its own, outside the `max_amount` bound that applies to
+the adjustment tool.
 
 Delegation to a sub-agent uses the same `delegation` member
 ({{delegate-eligibility}}). The following example shows an Authority Set
@@ -1209,6 +1259,22 @@ A deployment MAY agree out of band on the canonicalization profile its
 authorization server and resource servers apply; this document defines
 one rule ({{resource-matching}}), so no profile identifier is required
 for interoperation.
+
+## Action Family Growth {#action-family-growth}
+
+An action family ({{resource-access-type}}) authorizes every action
+under its name, including an action the resource adds after approval. A
+durable approval naming `invoices.*` therefore authorizes an `invoices`
+action the resource defines later, which can confer more authority than
+any action the Approver saw.
+
+The family guidance in {{resource-access-type}} narrows this risk but
+does not remove it. It is a recommendation to the resource and does not
+freeze an existing family's membership, and this document defines no
+rule that binds an entry to the action semantics its resource
+documented at approval. An Approver or authorization server that needs
+a fixed set of actions approves or derives literal actions rather than
+a family.
 
 # Privacy Considerations {#privacy-considerations}
 
