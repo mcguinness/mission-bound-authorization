@@ -39771,7 +39771,7 @@
     "local": "the reference checks letter-digit-hyphen labels of 1 to 63 octets and 253 octets overall; it does not decode an xn-- label to confirm it is a valid A-label"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/entry-validation.test.ts",
@@ -39780,7 +39780,7 @@
      "surface": "par"
     }
    ],
-   "notes": "#1376 states the rule the reference already enforced through the shared recipient_domain value syntax. Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com. Cases ev-rd-01 and ev-rd-02 run (entry-validation)."
+   "notes": "#1376 states the rule the reference already enforced through the shared recipient_domain value syntax. Exercised: a non-ASCII label, an empty label and a trailing dot are refused at PAR, and an A-label is accepted (resource-access.entry-validation.recipient-domain-case). Not exercised: the reference does not decode an xn-- label, so a label that only looks like an A-label is accepted, hence partial. Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com. Cases ev-rd-01 and ev-rd-02 run (entry-validation)."
   },
   {
    "id": "resource-access.entry-validation.recipient-domain-case",
