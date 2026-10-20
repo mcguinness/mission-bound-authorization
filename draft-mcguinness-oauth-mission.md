@@ -2268,7 +2268,7 @@ A derivation passes these checks, each stated where cited:
    ({{subset}});
 4. any emitted `scope` meets {{scope-projection}}; and
 5. each token's `exp` does not exceed the Mission's `expires_at`
-   ({{mission-bound-tokens}}).
+   ({{token-authentication-lifetime}}).
 
 Unless the referenced Mission is `active`, the AS MUST refuse a
 request to derive a token at the token endpoint: a Token Exchange
@@ -6873,7 +6873,7 @@ Cross-Domain:
   AS-supported type such as `mission_resource_access`, and that a
   Mission-aware Resource Server enforces each entry under its type.
   The Introduction's chain drops its continuation-transport example;
-  eleven cross-references name the sections that hold their content;
+  twelve cross-references name the sections that hold their content;
   two tables gain captions. No requirement changes.
 
 - Editorial (#1404): Mission Intent, Conformance, Standing-Consent
