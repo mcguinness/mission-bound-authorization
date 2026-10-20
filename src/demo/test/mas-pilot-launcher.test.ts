@@ -21,7 +21,7 @@ import { Fga } from "@mission/pdp";
 import { decodeJwt, decodeProtectedHeader, generateKeyPair, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
-import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology } from "../src/mas-pilot/launcher.js";
+import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology, spawnMasProcess } from "../src/mas-pilot/launcher.js";
 import { estateToken, handshakeStatus, OPENFGA, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
 
 const d = (await openfgaReachable()) ? describe : describe.skip;
@@ -210,6 +210,81 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
     expect(launch.masProcess?.exitCode === 0 || launch.masProcess?.signalCode !== null).toBe(true);
     for (const url of ["http://127.0.0.1:14860", "http://127.0.0.1:14861", launch.pilot.gateway.url, launch.consoles.pilot]) {
       expect(await refusesConnection(url), url).toBe(true);
+    }
+  }, 180_000);
+
+  it("attaches to a MAS already running (MAS_PILOT_MAS_URL), approves at its own console, permits, refuses after a revocation, and leaves the MAS running on shutdown", async () => {
+    const configPath = configFile(14867, 14866);
+    const pdpToken = crypto.randomUUID();
+    const masBearer = crypto.randomUUID();
+    const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
+    Object.assign(env, {
+      MAS_PILOT_CONFIG: configPath,
+      MISSION_EPHEMERAL_KEYS: "1",
+      MAS_PILOT_PDP_TOKEN: pdpToken,
+      MAS_PILOT_OPERATOR_TOKEN: masBearer,
+      MAS_PILOT_OPERATOR_CONSOLE_PORT: "0",
+    });
+    const mas = spawnMasProcess(env);
+    try {
+      const masConsole = await new Promise<string>((resolve, reject) => {
+        let out = "";
+        mas.stdout?.on("data", (d: Buffer) => {
+          out += d.toString();
+          const url = /mas-pilot: operator console (\S+)/.exec(out)?.[1];
+          if (url && out.includes("mas-pilot: ready ")) resolve(url);
+        });
+        mas.once("exit", (code) => reject(new Error(`the MAS exited ${code}`)));
+      });
+      const launch = await launchMasPilot(
+        masPilotLaunchOptions(
+          {
+            ...fgaEnv(),
+            MAS_PILOT_CONFIG: configPath,
+            MAS_PILOT_DEVELOPMENT_STORE: "1",
+            MAS_PILOT_MAS_URL: "http://127.0.0.1:14866",
+            MAS_PILOT_PDP_TOKEN: pdpToken,
+          },
+          "separated",
+        ),
+      );
+      try {
+        expect(launch.masProcess).toBeUndefined();
+        expect(launch.consoles.mas).toBeUndefined();
+        const approve = async (label: string) =>
+          (await consoleRequest(launch, masConsole, "/missions", { label }, masBearer)).body.mission_id as string;
+        const permitted = await approve("attach-read");
+        const revoked = await approve("attach-revoke");
+        const credential = (
+          await consoleRequest(launch, launch.consoles.pilot, "/estate-tokens", {
+            client_id: "estate-opaque-bot-4e2",
+            account: "u-1002",
+            scope: "invoices.read",
+          })
+        ).body.credential_id;
+        const read = (mission: string) =>
+          consoleRequest(launch, launch.consoles.pilot, "/calls", {
+            credential_id: credential,
+            mission_id: mission,
+            tool: "get_invoice",
+            arguments: { invoice_id: "inv-1" },
+          });
+        expect((await read(permitted)).body.ok).toBe(true);
+        expect(await consoleRequest(launch, masConsole, `/missions/${revoked}/revoke`, {}, masBearer)).toMatchObject({
+          status: 200,
+          body: { state: "terminated" },
+        });
+        expect((await read(revoked)).body).toMatchObject({ ok: false, denial_reason: "mission_inactive" });
+      } finally {
+        await launch.close();
+      }
+      // The launcher did not start this MAS, so it leaves it running.
+      expect(mas.exitCode).toBeNull();
+      expect((await fetch("http://127.0.0.1:14866/.well-known/openid-configuration")).status).toBe(200);
+    } finally {
+      const exited = new Promise<void>((resolve) => mas.once("exit", () => resolve()));
+      mas.kill("SIGTERM");
+      await exited;
     }
   }, 180_000);
 });
