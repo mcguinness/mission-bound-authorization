@@ -1290,9 +1290,8 @@ entries of an AS-supported type ({{other-types}}).
 
 ## Derivation Modes {#derivation-modes}
 
-Derivation is mechanical. It happens once, at the approval event, under
-the derivation policy then in force, as one procedure whose candidate
-entries depend on whether an authority proposal was submitted:
+Derivation is mechanical: one procedure whose candidate entries depend
+on whether an authority proposal was submitted:
 
 - **Narrowing mode** (preferred where the client can author
   `authorization_details`): the client submitted an authority
@@ -1322,6 +1321,16 @@ entries depend on whether an authority proposal was submitted:
   consent to a pre-approved ceiling is the separate, experimental
   Mission Template profile
   ({{I-D.draft-mcguinness-oauth-mission-template}}), not this mode.
+
+Derivation can run provisionally during submission processing, where
+the inputs it needs are available ({{submission-processing}}). The
+candidate Authority Set is complete before the approval rendering
+({{direct-approval-steps}}), and a change that
+{{approval-context-changes}} covers is recomputed and approved over the
+changed context. The approved Authority Set is fixed when the Mission
+Record is created, atomically with the approval decision
+({{direct-approval-steps}}), under the derivation policy in force at
+that approval event.
 
 In both modes the AS bounds every Authority Set entry by the Mission
 Intent: each entry that carries a `resource` member MUST have it among
