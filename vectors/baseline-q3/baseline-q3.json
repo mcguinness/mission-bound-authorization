@@ -1,0 +1,436 @@
+{
+  "format": "mission-baseline-fixture/1",
+  "scenario": "baseline-q3",
+  "refs": [
+    "#1176 item 5",
+    "D510"
+  ],
+  "mission": {
+    "issuer": "https://as.example.com",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  },
+  "cast": {
+    "client_id": "s6BhdRkqt3",
+    "subject": {
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR"
+    },
+    "approver": {
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR"
+    },
+    "identity_provider": "https://idp.example.com",
+    "resource": "https://erp.example.com"
+  },
+  "expiry": {
+    "requested": "2026-12-31T23:59:59Z",
+    "effective": "2026-12-31T23:59:59Z",
+    "numeric_date": 1798761599
+  },
+  "anchors": {
+    "intent_hash": "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
+    "proposal_hash": "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
+    "authority_hash": "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "root_commitment": "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+  },
+  "record": {
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "issuer": "https://as.example.com",
+    "state": "active",
+    "intent": {
+      "goal": "Reconcile Q3 invoices and post adjustments of at most USD 500 per journal entry.",
+      "target_resources": [
+        "https://erp.example.com"
+      ],
+      "task_bounds": [
+        "Read only invoices issued in 2026-Q3.",
+        "Post journal entries of at most USD 500 each."
+      ],
+      "purpose": "urn:example:purpose:reconcile",
+      "expires_at": "2026-12-31T23:59:59Z"
+    },
+    "proposed_authority": [
+      {
+        "type": "mission_resource_access",
+        "resource": "https://erp.example.com",
+        "actions": [
+          "invoices.*"
+        ],
+        "constraints": {
+          "resource_issued_after": "2026-07-01T00:00:00Z",
+          "resource_issued_before": "2026-09-30T23:59:59Z"
+        },
+        "delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [
+            {
+              "sub_profile": "ai_agent"
+            }
+          ]
+        }
+      },
+      {
+        "type": "mission_resource_access",
+        "resource": "https://erp.example.com",
+        "actions": [
+          "journal-entries.write"
+        ],
+        "constraints": {
+          "max_amount": {
+            "amount": "500.00",
+            "currency": "USD"
+          }
+        }
+      }
+    ],
+    "authority_set": [
+      {
+        "type": "mission_resource_access",
+        "resource": "https://erp.example.com",
+        "actions": [
+          "invoices.read"
+        ],
+        "constraints": {
+          "resource_issued_after": "2026-07-01T00:00:00Z",
+          "resource_issued_before": "2026-09-30T23:59:59Z"
+        },
+        "delegation": {
+          "max_depth": 2,
+          "allowed_delegates": [
+            {
+              "sub_profile": "ai_agent"
+            }
+          ]
+        }
+      },
+      {
+        "type": "mission_resource_access",
+        "resource": "https://erp.example.com",
+        "actions": [
+          "journal-entries.write"
+        ],
+        "constraints": {
+          "max_amount": {
+            "amount": "500.00",
+            "currency": "USD"
+          }
+        }
+      }
+    ],
+    "authority_hash": "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "intent_hash": "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
+    "proposal_hash": "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
+    "subject": {
+      "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR"
+    },
+    "approval_basis": {
+      "type": "direct",
+      "consent_principal": {
+        "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR"
+      },
+      "activation": {
+        "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z"
+      },
+      "activation_actor": {
+        "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR"
+      },
+      "adjudication": {
+        "kind": "human"
+      },
+      "root_commitment": "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+    },
+    "authority_source": {
+      "type": "user_delegated"
+    },
+    "client_id": "s6BhdRkqt3",
+    "policy_version": "deploy-policy:v17",
+    "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
+    "created_at": "2026-11-02T08:00:00Z",
+    "expires_at": "2026-12-31T23:59:59Z"
+  },
+  "timeline": [
+    {
+      "at": "2026-11-02T08:00:00Z",
+      "event": "approval-and-creation",
+      "state": "active",
+      "version": 1,
+      "numeric_date": 1793606400
+    },
+    {
+      "at": "2026-11-02T08:00:05Z",
+      "event": "first-token-issuance",
+      "state": "active",
+      "version": 1,
+      "numeric_date": 1793606405
+    },
+    {
+      "at": "2026-11-02T08:20:00Z",
+      "event": "suspension",
+      "state": "suspended",
+      "version": 2,
+      "numeric_date": 1793607600
+    },
+    {
+      "at": "2026-11-02T08:30:00Z",
+      "event": "resume",
+      "state": "active",
+      "version": 3,
+      "numeric_date": 1793608200
+    },
+    {
+      "at": "2026-11-02T08:53:20Z",
+      "event": "revocation",
+      "state": "terminated",
+      "termination_reason": "revoked",
+      "version": 4,
+      "numeric_date": 1793609600
+    }
+  ],
+  "first_token": {
+    "iat": 1793606405,
+    "exp": 1793606705
+  },
+  "access_token_lifetime": 300,
+  "tokens": [
+    {
+      "name": "first",
+      "grant": "authorization_code",
+      "client_id": "s6BhdRkqt3",
+      "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
+      "entries": [
+        0,
+        1
+      ],
+      "issued_at": "2026-11-02T08:00:05Z",
+      "iat": 1793606405,
+      "exp": 1793606705
+    },
+    {
+      "name": "delegated",
+      "grant": "token-exchange",
+      "client_id": "tool-runner-7",
+      "jti": "at_3qX5bN7sR1tY8mZ9Kp2v",
+      "entries": [
+        0
+      ],
+      "issued_at": "2026-11-02T08:10:05Z",
+      "iat": 1793607005,
+      "exp": 1793607305
+    },
+    {
+      "name": "journal-write",
+      "grant": "refresh_token",
+      "client_id": "s6BhdRkqt3",
+      "jti": "at_5v9Kq2mR7xW4nP8sL1zT6",
+      "entries": [
+        1
+      ],
+      "issued_at": "2026-11-02T08:14:00Z",
+      "iat": 1793607240,
+      "exp": 1793607540
+    },
+    {
+      "name": "refreshed",
+      "grant": "refresh_token",
+      "client_id": "s6BhdRkqt3",
+      "entries": [
+        0
+      ],
+      "issued_at": "2026-11-02T08:50:00Z",
+      "iat": 1793609400,
+      "exp": 1793609700
+    }
+  ],
+  "revocation": {
+    "actor": "s6BhdRkqt3",
+    "operation": "revoke",
+    "reason": "Quarterly reconcile completed early"
+  },
+  "variants": [
+    {
+      "name": "overnight-revocation",
+      "label": "baseline-q3/variant/overnight-revocation",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_ozWdThJGIbqzWd0NzyTCY9qv3zFUReI9"
+      },
+      "differs_by": "Active by 2026-11-01T22:00:00Z; Alice revokes it at 2026-11-01T23:00:00Z, and the harness suppresses a queued resume at 2026-11-02T02:00:05Z.",
+      "drafts": [
+        "harness"
+      ]
+    },
+    {
+      "name": "scheduled-suspend-revoke",
+      "label": "baseline-q3/variant/scheduled-suspend-revoke",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5"
+      },
+      "differs_by": "Suspended at 08:20:00 (version 2) with `suspend_until` 2026-11-09T08:15:00Z and `on_expiry` `revoke`; never resumed, so the deadline revokes it (version 3).",
+      "drafts": [
+        "status"
+      ]
+    },
+    {
+      "name": "superseded-by-expansion",
+      "label": "baseline-q3/variant/superseded-by-expansion",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
+      },
+      "differs_by": "Never suspended; superseded at 09:40:00 (version 2) by the expanded Mission `msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX`.",
+      "drafts": [
+        "expansion",
+        "signals"
+      ]
+    },
+    {
+      "name": "subject-compromise-sweep",
+      "label": "baseline-q3/variant/subject-compromise-sweep",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_hmJWfikLFPQykayEyxPaiqril0TBUnyM"
+      },
+      "differs_by": "Follows the baseline through the 08:30:00 resume (version 3) but is not revoked at 08:53:20; a bulk subject sweep revokes it at 09:33:00 (version 4).",
+      "drafts": [
+        "management"
+      ]
+    },
+    {
+      "name": "mas-issued",
+      "label": null,
+      "mission": {
+        "issuer": "https://mas.example.com",
+        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+      },
+      "differs_by": "The baseline task and Authority Set issued by a Mission Authority Server under its own issuer, with no proposal; its anchors use `iss` `https://mas.example.com`.",
+      "drafts": [
+        "authority-server",
+        "issuance-grant"
+      ]
+    },
+    {
+      "name": "cap-expansion",
+      "label": "baseline-q3/variant/cap-expansion",
+      "mission": {
+        "issuer": "https://mas.example.com",
+        "id": "msn_w9zhlsZxoTTlSeSsZOHDG7gr0Z0Ok-lZ"
+      },
+      "differs_by": "A Mission Authority Server Mission whose 1,200 USD adjustment leads to an approved expansion to a 2,000 USD cap.",
+      "drafts": [
+        "authority-server"
+      ]
+    },
+    {
+      "name": "agr-backed-direct",
+      "label": "baseline-q3/variant/agr-backed-direct",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj"
+      },
+      "differs_by": "Alice's approval is recorded through an Approval Governance Record.",
+      "drafts": [
+        "approval-governance"
+      ]
+    },
+    {
+      "name": "metered-consumption",
+      "label": "baseline-q3/variant/metered-consumption",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_YJRRFCK6J8RraBk7ryPypDdFbezmGlLg"
+      },
+      "differs_by": "The Intent adds consumption bounds and the Authority Set adds a `reconciliation.run` entry.",
+      "drafts": [
+        "metering"
+      ]
+    },
+    {
+      "name": "children-enabled",
+      "label": "baseline-q3/variant/children-enabled",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_M9nCx5pbv3KEbM7Xz7gT0_OB9bKOSUZ-"
+      },
+      "differs_by": "The invoice-read entry's `delegation` adds `children`.",
+      "drafts": [
+        "child-delegation"
+      ]
+    },
+    {
+      "name": "write-delegable",
+      "label": "baseline-q3/variant/write-delegable",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns"
+      },
+      "differs_by": "The journal-write entry carries a `delegation` member.",
+      "drafts": [
+        "attenuation"
+      ]
+    },
+    {
+      "name": "contained-on-taint",
+      "label": "baseline-q3/variant/contained-on-taint",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_boI-VDB1ZAjwTOvq9ZFAo-vsEGk6a_FU"
+      },
+      "differs_by": "After the 08:30:00 resume, a containment at 08:41:02 (version 4) removes `journal-entries.write`.",
+      "drafts": [
+        "containment"
+      ]
+    },
+    {
+      "name": "discharge-at-close",
+      "label": "baseline-q3/variant/discharge-at-close",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_ONfClQ7GEkjX8YRu8n_N3js79ifrskm9"
+      },
+      "differs_by": "The journal-write entry carries a `terminal_when` discharge condition.",
+      "drafts": [
+        "discharge"
+      ]
+    },
+    {
+      "name": "derivation-limited",
+      "label": "baseline-q3/variant/derivation-limited",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_yus7U3N_e3iDkgiz5tLJseuV5ytwgt-i"
+      },
+      "differs_by": "The Intent requests a derivation limit of 200.",
+      "drafts": [
+        "derivation-limits"
+      ]
+    },
+    {
+      "name": "cross-domain-partner",
+      "label": "baseline-q3/variant/cross-domain-partner",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY"
+      },
+      "differs_by": "The Intent and Authority Set add the partner ERP `https://erp.partner.example.com`.",
+      "drafts": [
+        "cross-domain"
+      ]
+    },
+    {
+      "name": "revision-read-only",
+      "label": "baseline-q3/variant/revision-read-only",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_BZ0X6ddT5JmWo5krirQjkgYXUq_T4loG"
+      },
+      "differs_by": "A deferred, revised approval: the Approver refuses `journal-entries.write`, so the Mission holds only the invoice-read entry.",
+      "drafts": [
+        "approval-revision"
+      ]
+    }
+  ]
+}
