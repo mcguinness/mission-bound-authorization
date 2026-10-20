@@ -100,12 +100,16 @@ describe("scope-projection mapping validation", () => {
 
 describe("the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type)", () => {
   const withKeys = (keys: unknown, mode = "authorization_details") => ({
-    audiences: { [OTHER]: { version: "1", mission_aware: true, mode, mission_constraints_supported: keys } },
+    audiences: {
+      [OTHER]: { version: "1", mission_aware: true, mode, mission_constraints_supported: keys },
+    },
   });
 
   it("accepts a key list on an authorization_details audience, an empty one included, and keeps it", () => {
     const m = parseScopeProjectionMapping(withKeys(["vendors", "tenant"]));
-    expect(m.audiences[OTHER]).toMatchObject({ mission_constraints_supported: ["vendors", "tenant"] });
+    expect(m.audiences[OTHER]).toMatchObject({
+      mission_constraints_supported: ["vendors", "tenant"],
+    });
     expect(parseScopeProjectionMapping(withKeys([])).audiences[OTHER]).toMatchObject({
       mission_constraints_supported: [],
     });
@@ -117,7 +121,9 @@ describe("the mapping's per-audience enforced constraints keys (@spec resource-a
         /mission_constraints_supported must be an array of non-empty strings/,
       );
     }
-    expect(() => parseScopeProjectionMapping(withKeys(["vendors", "vendors"]))).toThrow(/must not repeat a value/);
+    expect(() => parseScopeProjectionMapping(withKeys(["vendors", "vendors"]))).toThrow(
+      /must not repeat a value/,
+    );
     const scopeOnly = {
       audiences: {
         [RS]: {
@@ -129,7 +135,9 @@ describe("the mapping's per-audience enforced constraints keys (@spec resource-a
         },
       },
     };
-    expect(() => parseScopeProjectionMapping(scopeOnly)).toThrow(/mission_constraints_supported is not a known member/);
+    expect(() => parseScopeProjectionMapping(scopeOnly)).toThrow(
+      /mission_constraints_supported is not a known member/,
+    );
   });
 });
 

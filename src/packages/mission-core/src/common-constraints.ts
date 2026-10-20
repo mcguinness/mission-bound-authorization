@@ -500,7 +500,9 @@ export function collectionMemberConstraintFacts(member: unknown): ConstraintFact
   return {
     ...(typeof m.issued_at === "string" ? { resourceIssuedAt: m.issued_at } : {}),
     ...(typeof m.tenant === "string" ? { tenant: m.tenant } : {}),
-    ...(typeof m.data_classification === "string" ? { dataClassification: [m.data_classification] } : {}),
+    ...(typeof m.data_classification === "string"
+      ? { dataClassification: [m.data_classification] }
+      : {}),
   };
 }
 

@@ -382,7 +382,11 @@ export function credentialConstraintGates(
       return { satisfied: false, evaluated };
     }
   }
-  const common = commonConstraintGatesOverMembers(c, facts.constraintFacts ?? {}, facts.constraintMembers);
+  const common = commonConstraintGatesOverMembers(
+    c,
+    facts.constraintFacts ?? {},
+    facts.constraintMembers,
+  );
   evaluated.push(...common.evaluated);
   if (!common.satisfied) return { satisfied: false, evaluated };
   return { satisfied: true, evaluated };

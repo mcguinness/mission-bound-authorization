@@ -222,13 +222,21 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
     const supported = o.mission_constraints_supported;
     if (supported === undefined) return { version, mission_aware: missionAware, mode };
     const keysPath = `${path}.mission_constraints_supported`;
-    if (!Array.isArray(supported) || !supported.every((k) => typeof k === "string" && k.length > 0)) {
+    if (
+      !Array.isArray(supported) ||
+      !supported.every((k) => typeof k === "string" && k.length > 0)
+    ) {
       throw new ScopeProjectionMappingError(keysPath, "must be an array of non-empty strings");
     }
     if (new Set(supported).size !== supported.length) {
       throw new ScopeProjectionMappingError(keysPath, "must not repeat a value");
     }
-    return { version, mission_aware: missionAware, mode, mission_constraints_supported: [...supported] };
+    return {
+      version,
+      mission_aware: missionAware,
+      mode,
+      mission_constraints_supported: [...supported],
+    };
   }
   if (mode !== "scope_only") {
     throw new ScopeProjectionMappingError(

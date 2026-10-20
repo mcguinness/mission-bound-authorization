@@ -102,10 +102,10 @@ export {
   normalizeCapabilitySources,
 } from "./capability-binding.js";
 export {
+  type CollectionMemberFacts,
   type CommonConstraintIntersection,
   type CommonConstraintKey,
   type CommonConstraintTrace,
-  type CollectionMemberFacts,
   type ConstraintFacts,
   collectionMemberConstraintFacts,
   commonConstraintGates,
