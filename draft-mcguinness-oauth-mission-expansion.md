@@ -1972,9 +1972,10 @@ that target.
 
 A conforming **expansion-capable Mission Issuer** MUST:
 
-- accept an {{RFC8693}} token exchange whose `subject_token` is the
-  predecessor's Mission-bound access token, with `subject_token_type`
-  of `access_token`, treating it as an expansion ({{submission}}), and
+- accept an {{RFC8693}} token exchange whose `requested_token_type` is
+  the access-token type and whose `subject_token` is the predecessor's
+  Mission-bound access token, with `subject_token_type` of
+  `access_token`, treating it as an expansion ({{submission}}), and
   reject a refresh token as the `subject_token`;
 - resolve the predecessor from `subject_token`, verify possession
   against the token's own confirmation key, refuse a `predecessor`
