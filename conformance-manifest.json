@@ -99,12 +99,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "720fe3d7033e467c0b7d23fcbcce86247662d3ced385b023b7cd1ead4b4cfac4"
+    "revision": "72d04a272b75c225a6e89e9b8f08b618e7ef802e",
+    "content_sha256": "c8078df955b0bddff702199f0e1d98ee7dc1d0f299c54a7c72e8541da11c0c88"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "d3b998ee50ff458b459b91a8eded3595cb20733d13db19803bf658b92b1f4dee"
+    "revision": "6d1411b79228cc3e0de3cf42e12769375c906284",
+    "content_sha256": "3e2f21de06e311164a53215c816487aed2bab10db25c959766da7717f4c844d6"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -49519,7 +49519,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49541,7 +49541,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49563,7 +49563,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (`predecessor_state_changed` for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
+    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (a terminal-exit code chosen by Reconciliation's attribution rule for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
     "local": "the error code and the absence of any successor are witnessed; the reference does not attach mission_expansion_status on this request-time check (pre-existing)"
    },
    "level": "endpoint",
@@ -49618,7 +49618,7 @@
    "id": "expansion.reconciliation.completion-refusal-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "If any check fails, the Mission Issuer MUST refuse the completion with `invalid_grant` and the applicable reconciliation status from the closed set below",
+   "text": "If any check fails, the Mission Issuer MUST refuse the completion with the applicable reconciliation status from the closed set below, alongside the error code of the step that completes it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -49629,8 +49629,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused `invalid_grant` with the reconciliation status on a code redemption or deferred poll, and `invalid_request` for a predecessor no longer `active` where the token-exchange response completes it",
-    "local": "the reference's deferred poll answers a predecessor revoked during the window with access_denied rather than invalid_grant and a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, and, where the token-exchange response completes it, invalid_request for a predecessor no longer `active` and invalid_grant for check 3",
+    "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49795,7 +49795,7 @@
    "id": "expansion.interactive.no-second-code-after-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "interactive-handoff",
-   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation with `invalid_request`, and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -49806,7 +49806,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused with invalid_request and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50351,6 +50351,204 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
+  },
+  {
+   "id": "expansion.completion.deferred-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The Mission Issuer MUST NOT return the deferred response to an exchange that does not opt in.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an expansion exchange, or a retry of a deferred one, whose completion_mode does not include deferred never receives the deferred response: a new exchange receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request with no operation recorded, and a retry of a deferred operation receives invalid_request",
+    "local": "the reference AS defers every widening expansion exchange and never reads completion_mode"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.completion.deferred-poll-grant",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The client polls with the substrate's deferred grant type and the `deferral_code`",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client polls a deferred expansion with the deferred token response's deferred grant type and its deferral_code",
+    "local": "the reference AS serves, and its clients use, the token-exchange grant with deferral_code for the expansion poll (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.successor-expiry.completion-codes",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-expiry",
+   "text": "A deferred poll then answers `access_denied`, a code redemption `invalid_grant`, and a completion in the token-exchange response `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.submission.child-actor-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "submission",
+   "text": "The Mission Issuer MUST refuse with `invalid_request` a token exchange that carries both a `predecessor` cross-check and the child-delegation profile's `child_actor`, and an expansion exchange that carries `child_actor`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange (requested_token_type access token) that carries child_actor, or any token exchange carrying both predecessor and child_actor, is refused invalid_request and creates nothing",
+    "local": "the reference AS selects by requested_token_type and ignores child_actor on an access-token exchange"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.lineage.related-to-record-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "predecessor-member",
+   "text": "It is a member of the Mission Record and is not carried on the `mission` claim.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission's related_to appears on its Mission record and never on the mission claim of a token derived under it",
+    "local": "the reference AS records related_to only in carryover replacement records"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "Any other operation answers the repeated token exchange directly: `access_denied` after the Approver's denial and `expired_token` after its continuation expired before activation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed interactive operation is answered on the token exchange: access_denied after the Approver's denial, expired_token after the continuation expired before activation, and after a refused activation the code a token-exchange-response completion answers for that failure, with any reconciliation status; it creates nothing",
+    "local": "the reference AS has no interactive path"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.not-step-up.client-no-expansion-for-authn",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "not-step-up",
+   "text": "A client MUST NOT initiate expansion for a denial that is an authentication shortfall.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a denial caused by an acr or amr constraint leads the client to step-up authentication, never to an expansion request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation-revalidation.deferred-retry-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-revalidation",
+   "text": "A retry of a deferred operation without the opt-in is refused with `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a same-creation_request_id retry of an operation opened in the deferred mode whose completion_mode does not include deferred is refused invalid_request and receives no deferral",
+    "local": "the reference AS never reads completion_mode, so it returns the same deferral (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-deferred",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "An operation in the deferred mode returns its deferral, whose next poll answers as the deferred token response defines",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed deferred expansion returns its deferral, whose next poll answers access_denied after a denial or a refused activation (with any reconciliation status) and expired_token once the deferral has expired; it creates nothing",
+    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
