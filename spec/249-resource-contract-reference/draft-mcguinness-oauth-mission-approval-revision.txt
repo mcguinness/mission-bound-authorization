@@ -99,10 +99,10 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]) to an asynchronous review
    surface: the client submits a proposed Mission, receives the deferred
    substrate's pending response
-   ([I-D.draft-gerber-oauth-deferred-token-response]), and polls until
-   the approval resolves.  When a reviewer will grant only a narrowed
-   subset of the proposal, that profile resolves to access_denied and
-   the client submits a fresh, narrower Mission Intent.
+   ([I-D.draft-ietf-oauth-deferred-token-response]), and polls until the
+   approval resolves.  When a reviewer will grant only a narrowed subset
+   of the proposal, that profile resolves to access_denied and the
+   client submits a fresh, narrower Mission Intent.
 
    This document defines a *revisable* approval mode that keeps the
    deferred approval open instead: the Mission Issuer signals which
@@ -134,16 +134,16 @@ Table of Contents
 
    Like the deferred approval profile, this document tracks the in-
    progress deferred substrate
-   ([I-D.draft-gerber-oauth-deferred-token-response]) and will track it
-   as it evolves.
+   ([I-D.draft-ietf-oauth-deferred-token-response]) and will track it as
+   it evolves.
 
 2.  Relationship to the Deferred Approval Profile
 
    This document depends normatively on the deferred approval profile
    [I-D.draft-mcguinness-oauth-mission-approval], on the issuance
    profile [I-D.draft-mcguinness-oauth-mission], and on the deferred
-   substrate [I-D.draft-gerber-oauth-deferred-token-response], and is
-   not implementable alone.  It reuses, without restating:
+   substrate [I-D.draft-ietf-oauth-deferred-token-response], and is not
+   implementable alone.  It reuses, without restating:
 
    *  the deferred approval profile's sequencing of the approval event
       and its state machine;
@@ -191,7 +191,7 @@ Table of Contents
 
    Client cancellation under the deferred substrate moves a pending or
    revision_required approval to cancelled
-   ([I-D.draft-gerber-oauth-deferred-token-response]). approved, denied,
+   ([I-D.draft-ietf-oauth-deferred-token-response]). approved, denied,
    expired, and cancelled are the terminal states.  Resolving a deferred
    approval and replacing its proposed Mission with a revision are
    atomic with respect to each other: a concurrent approval of a
@@ -294,10 +294,9 @@ Table of Contents
 
    The mission_revision_handle is not a token, grant, or continuation
    handle.  It is sender-constrained to the same key as the
-   deferral_code ([I-D.draft-gerber-oauth-deferred-token-response]).
-   Like the deferral_code, the mission_revision_handle is pending-
-   request state, not a grant
-   ([I-D.draft-mcguinness-oauth-mission-approval]).
+   deferral_code ([I-D.draft-ietf-oauth-deferred-token-response]).  Like
+   the deferral_code, the mission_revision_handle is pending-request
+   state, not a grant ([I-D.draft-mcguinness-oauth-mission-approval]).
 
    A client MUST NOT treat mission_revision_required, the rejected
    dimensions, or the handle as evidence of any granted authority; the
@@ -326,7 +325,7 @@ Table of Contents
        client MUST demonstrate possession of the same key that
        constrains the deferral_code under the deferred substrate's
        sender-constraint rules
-       ([I-D.draft-gerber-oauth-deferred-token-response]).  The client
+       ([I-D.draft-ietf-oauth-deferred-token-response]).  The client
        demonstrates possession by presenting a DPoP proof on the PAR
        request keyed to that key or, where the deferred approval is
        bound by client authentication, by authenticating with the same
@@ -717,7 +716,7 @@ Table of Contents
 
    This document registers one value in the OAuth Completion Mode Values
    registry established by the deferred substrate
-   ([I-D.draft-gerber-oauth-deferred-token-response]):
+   ([I-D.draft-ietf-oauth-deferred-token-response]):
 
    *  mission_revisable: Change Controller IETF; Reference this
       document, Section 5.
@@ -761,12 +760,12 @@ Table of Contents
 
 12.1.  Normative References
 
-   [I-D.draft-gerber-oauth-deferred-token-response]
+   [I-D.draft-ietf-oauth-deferred-token-response]
               Jacobsen, F. K., de Oliveira Niero, G., and M. Gerber,
               "Deferred Token Response", Work in Progress, Internet-
-              Draft, draft-gerber-oauth-deferred-token-response-00, 23
-              June 2026, <https://datatracker.ietf.org/doc/html/draft-
-              gerber-oauth-deferred-token-response-00>.
+              Draft, draft-ietf-oauth-deferred-token-response-00, 16
+              September 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-oauth-deferred-token-response-00>.
 
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth

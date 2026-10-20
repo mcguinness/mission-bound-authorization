@@ -2817,11 +2817,14 @@ the same. The <code>resource_contract</code> member fixes, at approval, the
 version of that meaning the entry was approved under.<a href="#section-3.7-1" class="pilcrow">¶</a></p>
 <p id="section-3.7-2">A <strong>resource contract</strong> is a JSON document, identified by an <code>id</code> and a
 <code>version</code>, whose bytes never change for that pair. It fixes the
-operation contract (<a href="#resource-matching" class="auto internal xref">Section 3.2</a>) of each operation it covers,
-including the members of each action family it defines, and, where the
-deployment adopts Mission-Bound Runtime Enforcement, the further
-material that document lists (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
-It assembles those definitions and overrides none of them: a Common
+contract material that Mission-Bound Runtime Enforcement lists
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Resource
+Contract"), including the operation contract (<a href="#resource-matching" class="auto internal xref">Section 3.2</a>) of
+each operation it covers and the members of each action family it
+defines. That section also defines the version states and how a
+reference resolves. This section depends on those rules normatively;
+the dependency binds only a deployment that supports
+<code>resource_contract</code>. The contract assembles those definitions and overrides none of them: a Common
 Constraint keeps the semantics its definition gives it
 (<a href="#common-constraints" class="auto internal xref">Section 3.4</a>). A resource that changes any of that material
 publishes a new version with its own <code>digest</code>. The resource publishes
@@ -2891,9 +2894,9 @@ cases the entry is one the resource server cannot fully enforce
 (<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a>). The reference fixes meaning, not state: it
 supplies no observation of the resource, and it exempts no operation
 from the resource's other authorization checks. Which versions a
-resource still performs, and for which entries, is set by
-<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> where the deployment adopts
-it.<a href="#section-3.7-9" class="pilcrow">¶</a></p>
+resource still performs, and for which entries, follows the version
+states of <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>: a reference that
+does not resolve there authorizes nothing.<a href="#section-3.7-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="delegate-eligibility">
@@ -3733,6 +3736,10 @@ and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pi
 <a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -3809,10 +3816,6 @@ and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pi
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
         <dd>

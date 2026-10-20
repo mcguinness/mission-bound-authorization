@@ -2727,8 +2727,9 @@ so exactly-once could not be established),
 <code>capability_source_unresolvable</code> (the capability definition the
 permit was decided against could not be re-resolved at execution),
 <code>resource_contract_unresolvable</code> (the resource contract the permit
-was decided under did not resolve to the same contract at
-execution), <code>obligation_unfulfilled</code> (a permit suppressed before release because
+was decided under did not resolve at execution, or differs from the
+contract the operation would be performed under),
+<code>obligation_unfulfilled</code> (a permit suppressed before release because
 an attached obligation could not be fulfilled; the failing entry is
 named in <code>obligation_outcomes</code>), and <code>kill_switch</code> (execution
 suppressed by an operator or safety control). A deployment <span class="bcp14">MAY</span>
@@ -4795,8 +4796,8 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <li class="normal" id="appendix-A-2.1">
           <p id="appendix-A-2.1.1">Refusal Record and Execution Evidence: <code>resource_contract_unresolvable</code>
 records a resource contract the PEP could not resolve before the
-decision request, or that did not resolve to the same contract at
-execution (#249).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+decision request, or that at execution did not resolve or differed
+from the contract the operation would be performed under (#249).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
           <p id="appendix-A-2.2.1">Decision Evidence, Refusal Record, and Execution Evidence: the
