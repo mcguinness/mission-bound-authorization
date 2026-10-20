@@ -5,8 +5,8 @@
  * and the authorization server refuses an entry carrying it. Before #1278 the
  * advertised schema admitted the member and derivation's member-by-member
  * rebuild dropped it. The refusal is by presence, whatever the value, and by
- * name, so the entry's top level stays open to a member another specification
- * defines for this type (`capability_sources`).
+ * name, with its own message; #1399 closes the top level to the supported
+ * members (unknown-entry-member.test.ts), `capability_sources` included.
  *
  * The schema, the shared validator, the config loaders and direct derivation
  * are covered here. PAR is in rar-carriage.test.ts, device submission in
@@ -71,13 +71,12 @@ function refusal(fn: () => unknown): IntentError {
 }
 
 describe("the advertised schema and the runtime validator agree on locations (#1278)", () => {
-  it("the published schema prohibits locations by name and leaves the entry's top level open", () => {
+  it("the published schema prohibits locations by name, and capability_sources stays declared", () => {
     const schema = authorizationDetailsTypesMetadata()[MISSION_RESOURCE_ACCESS_TYPE]?.schema as {
       properties: Record<string, unknown>;
-      additionalProperties: unknown;
     };
     expect(schema.properties.locations).toBe(false);
-    expect(schema.additionalProperties).toBe(true);
+    expect(schema.properties.capability_sources).toBeDefined();
   });
 
   it("validateMissionResourceAccessSchema refuses an entry carrying locations, whatever its value", () => {

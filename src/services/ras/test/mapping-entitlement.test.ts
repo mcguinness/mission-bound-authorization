@@ -274,6 +274,21 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
     }
   });
 
+  // @spec mission#subset (#1399, D538): the same presence rule refuses a
+  // signed grant whose entry carries any member outside the supported set,
+  // which the local ceiling's comparison cannot decide.
+  it("a signed grant whose entry carries an unsupported member is refused, minting no local token", async () => {
+    const server = await ras();
+    for (const invoice_ids of [["INV-7"], []]) {
+      for (const authority of [[{ ...delegated, invoice_ids }], [DEFAULT_CEILING[1], { ...delegated, invoice_ids }]]) {
+        await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({
+          code: "invalid_grant",
+          message: "local policy check failed",
+        });
+      }
+    }
+  });
+
   it("a grant without locations, or carrying capability_sources, still mints", async () => {
     const bindings = delegated.actions.map(action => ({ action, tool_id: action, source_uri: "https://catalog.test", source_digest: "sha-256:" + Buffer.alloc(32).toString("base64url"), operation_ref: action }));
     const server = await ras();

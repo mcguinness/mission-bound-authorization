@@ -704,6 +704,22 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
     }
   });
 
+  // @spec mission#subset (#1399, D538): the handed-off authority is projected,
+  // which rebuilds each entry, so a requested entry carrying an unsupported
+  // member is refused rather than issued with the member dropped.
+  it("a requested entry carrying an unsupported member is refused invalid_authorization_details, issuing no handoff grant", async () => {
+    const instance = await dispatchInstance();
+    for (const invoice_ids of [["INV-7"], []]) {
+      const requested = narrowOf(instance.authority).map((e) => ({ ...e, invoice_ids }));
+      const res = await handoff(instance.token, { authorization_details: JSON.stringify(requested) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/invoice_ids is not a supported member/);
+      expect(body.access_token).toBeUndefined();
+    }
+  });
+
   // @spec resource-access#matching-allowed-delegates (#1373): the projection
   // rebuilds each delegate matcher from `sub` and `sub_profile`, so a requested
   // matcher carrying another member is refused rather than issued without it.
