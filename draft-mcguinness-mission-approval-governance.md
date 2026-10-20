@@ -126,107 +126,135 @@ informative:
 
 --- abstract
 
-Mission-Bound Authorization records exactly one accountable Approver
-per Mission and defers approval-authority provenance to a governance
-layer. This document defines that layer's record: the Approval
-Governance Record, an issuer-retained, issuer-signed record of the
-policy, assertions, and evaluation standing behind an approval event.
-It gives an estate first-class, auditable answers to who approved,
-under which authority, and why the decision satisfied governance,
-without adding any wire artifact. The record never appears on
-tokens, protocol messages, or enforcement projections, and the
-Mission Record's single accountable Approver is unchanged. The
-document also defines a governed policy approval basis, under which a
-policy version that an accountable human approved activates a Mission
-proposal.
+Mission-Bound Authorization records one accountable Approver for each
+Mission and leaves multi-party approval and approval-authority
+provenance to a governance layer. This document defines that layer's
+record, the Approval Governance Record: an issuer-signed,
+issuer-retained record of the policy, assertions, and evaluation behind
+one approval event. Before the Mission is created, the record is part of
+the approval decision; afterwards, it is immutable evidence of who
+approved, under which authority, and why the decision satisfied
+governance. The record never appears on tokens or protocol messages, and
+the Mission's single accountable Approver is unchanged.
+
+This document also defines the `governed_policy` approval basis, under
+which a policy version that an accountable human approved activates
+Mission proposals, and the Approval Context Commitment, a digest over a
+Mission's immutable creation facts that lets two authenticated artifacts
+be matched to one approval.
 
 --- middle
 
 # Introduction {#introduction}
 
 An authority-bearing binding of the Mission model records one
-accountable Approver and defers multi-party approval and
-approval-authority provenance to a governance layer
-({{I-D.draft-mcguinness-oauth-mission}} states the rule for the
-OAuth binding, whose record members this document's binding rules
-consume). An enterprise review surface is often that governance
-layer: a decision may involve several principals, a threshold or
-separation-of-duty rule, and a delegation-of-authority policy, and an
-auditor later needs to prove not only who approved but under which
+accountable Approver for each Mission and leaves multi-party approval
+and approval-authority provenance to a governance layer. Mission-Bound
+Authorization for OAuth 2.0 {{I-D.draft-mcguinness-oauth-mission}} (the
+"issuance profile") states this rule for the OAuth binding, which
+records the Approver in `approval_basis.consent_principal`; this
+document consumes that binding's record members.
+
+An enterprise review process is often that governance layer. One
+approval can involve several principals, a threshold or
+separation-of-duty rule, and a delegation-of-authority policy. An
+auditor later has to prove not only who approved, but under which
 authority the approval was valid.
 
-This document defines the Approval Governance Record (AGR) as
-governance evidence with teeth: where it is recorded, it participates
-in whether the Mission activates, so its assertions carry
-authentication and binding requirements, and its committed form is
-signed and immutable.
+The issuance profile answers who is accountable for a Mission. This
+document answers under which authority that approval was made, and why
+it satisfied governance. It defines:
 
-It also defines the `governed_policy` approval basis
-({{governed-policy}}): an accountable human approves a bounded policy
-version once, and that policy then decides eligible Mission proposals,
-each activation committing a record.
+- the Approval Governance Record (AGR), the record of the policy,
+  assertions, and evaluation behind one approval event ({{record}});
+- the `governed_policy` approval basis ({{governed-policy}}), under
+  which an accountable human approves a bounded policy version once, and
+  that policy then decides eligible Mission proposals, each activation
+  committing a record; and
+- the Approval Context Commitment ({{approval-context-commitment}}), an
+  optional digest over a Mission's immutable creation facts that other
+  authenticated artifacts can disclose.
 
-Before commitment, the record is part of the approval decision
-itself: an assertion that fails authentication, event binding, or
-policy authorization MUST NOT contribute, and a record that cannot be
-evaluated or persisted MUST prevent activation. After commitment, the
-record is evidence: immutable, signed, and consumed by audit, never
-by enforcement.
+The record has two phases:
 
-This document is optional. A deployment that records nothing beyond
-the Mission Record's accountable `approval_basis.consent_principal`
-is fully conformant to its Mission binding and unaffected by this
-document. Profiles MAY
-require this record; the Enterprise Mission Authority Profile does
-so under its recording triggers
-({{I-D.draft-mcguinness-mission-authority-server}}).
+- Before commitment, it is part of the approval decision. An assertion
+  that fails authentication, event binding, or policy authorization does
+  not contribute ({{assertion-requirements}}), and a record that cannot
+  be evaluated or persisted prevents activation ({{atomic-commitment}}).
+- After commitment, it is evidence: immutable, signed ({{envelope}}),
+  and consumed by audit, never by enforcement.
 
-This document is ceremony-independent: it applies to synchronous
-approval, deferred approval
-({{I-D.draft-mcguinness-oauth-mission-approval}}), and the standalone
-Mission Authority Server's native asynchronous approval alike, and
-depends on no deferral substrate.
+This document is optional. A deployment that records nothing beyond the
+Mission Record's accountable `approval_basis.consent_principal` is fully
+conformant to its Mission binding and unaffected by this document. A
+profile can require the record under the Recording Triggers
+({{triggers}}).
+
+The record is independent of the approval ceremony. It applies alike to
+synchronous approval, to deferred approval
+({{I-D.draft-mcguinness-oauth-mission-approval}}), and to the native
+asynchronous approval of a standalone Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}), and it depends on
+no deferral substrate.
 
 # Conventions and Definitions {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
 
-This document uses JSON {{RFC8259}} as the data model for the
-Approval Governance Record. JCS canonicalization {{RFC8785}} applies
-wherever this document computes a digest or a signing input, under
-the canonicalization rules of {{I-D.draft-mcguinness-oauth-mission}};
-this document does not define a second canonicalization.
+This document uses JSON {{RFC8259}} as the data model for the Approval
+Governance Record. JCS canonicalization {{RFC8785}} applies wherever
+this document computes a digest or a signing input, under the
+canonicalization rules of {{I-D.draft-mcguinness-oauth-mission}}; this
+document does not define a second canonicalization.
 
 A digest is encoded in the integrity-anchor encoded form of
-{{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix
-followed by the base64url, no-padding encoding of the digest. This
-document defines no digest algorithm of its own. Its two digests are
-classified under the substrate's default commitment construction,
-which this document imports normatively
-({{I-D.draft-mcguinness-mission-substrate}}):
-`approval_policy.digest` is an envelope anchor, and the record
-digest ({{envelope}}) is a canonical-object digest.
+{{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix followed
+by the base64url, no-padding encoding of the digest. This document
+defines no digest algorithm of its own. The record's two digests are
+classified under the substrate's default commitment construction, which
+this document imports normatively
+({{I-D.draft-mcguinness-mission-substrate}}): `approval_policy.digest`
+is an envelope anchor, and the record digest ({{envelope}}) is a
+canonical-object digest.
 
-The terms Mission, Mission Issuer, Approver, approval event, Mission
-Intent, `approval_event_id`, `intent_hash`, and `authority_hash`
-are used as defined in
-{{I-D.draft-mcguinness-oauth-mission}}.
+The terms Mission, Mission Record, Mission Issuer, Approver, Subject,
+approval event, Mission Intent, Authority Set, audit horizon,
+`approval_event_id`, `intent_hash`, and `authority_hash` are used as
+defined in {{I-D.draft-mcguinness-oauth-mission}}.
+
+This document defines the following terms:
 
 Approval Governance Record (AGR):
-: The record this document defines: the policy, assertions, and
-  evaluation standing behind one approval event ({{record}}).
+: The policy, assertions, and evaluation standing behind one approval
+  event ({{record}}).
 
 Assertion:
 : One principal's authenticated decision statement carried in an AGR
   ({{record}}).
 
+Accountable assertion:
+: The assertion that satisfies the accountable-approver rule
+  ({{assertion-requirements}}).
+
 Evaluation:
-: The issuer's determination of whether the recorded assertions
-  satisfy the referenced approval policy ({{record}}).
+: The issuer's determination of whether the recorded assertions satisfy
+  the referenced approval policy ({{record}}).
+
+Record digest:
+: The digest over a complete record, `envelope` included, that every
+  external binding names ({{envelope}}).
 
 Recording trigger:
-: A condition under which a profile requires this record for an
-  approval event ({{triggers}}).
+: A condition under which a profile requires this record for an approval
+  event ({{triggers}}).
+
+Recording Issuer:
+: A Mission Issuer that records Approval Governance Records
+  ({{conformance}}). This document also calls it "the issuer".
+
+Relying Auditor:
+: A party that verifies a retained record and re-checks its evaluation
+  ({{conformance}}).
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
@@ -302,8 +330,11 @@ still binds that record directly.
 
 # Recording Triggers {#triggers}
 
-Defined here so a profile cites one list. The record is REQUIRED for
-an approval event when any of the following holds:
+A profile MAY require this record; the Enterprise Mission Authority
+Profile does so under these recording triggers
+({{I-D.draft-mcguinness-mission-authority-server}}). The triggers are
+defined here so that a profile cites one list. The record is REQUIRED
+for an approval event when any of the following holds:
 
 - the Mission Record's `approval_basis.consent_principal` differs from
   its `subject`;
@@ -313,19 +344,20 @@ an approval event when any of the following holds:
 - validating any assertion requires authority standing outside the
   Mission Record.
 
+Independently of any profile, every activation under `governed_policy`
+records an Approval Governance Record ({{governed-policy}}).
+
 The Approver is always `approval_basis.consent_principal`
 ({{I-D.draft-mcguinness-oauth-mission}}), so a Mission whose Approver
 differs from its Subject holds the first trigger, and the Enterprise
-Mission Authority Profile
-({{I-D.draft-mcguinness-mission-authority-server}}) always records an
-Approval Governance Record for it.
+Mission Authority Profile always records an Approval Governance Record
+for it.
 
-Direct self-approval by one authenticated human is the degenerate
-case: the Mission Record already carries it completely, and no
-record is required.
-This presumes the human resolved approval on the approval surface itself;
-where an agent resolves it on its own behalf, there is no human decision
-for this list to be degenerate about
+Direct self-approval by one authenticated human is the degenerate case:
+the Mission Record already carries it completely, and no record is
+required. This presumes that the human resolved the approval on the
+approval surface itself. Where an agent resolves it on its own behalf,
+there is no human decision for this list to be degenerate about
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # The Approval Governance Record {#record}
@@ -1580,10 +1612,7 @@ same rule as vector 5.
 # Acknowledgments
 {:numbered="false"}
 
-This document extracts the experimental approval-provenance record
-that Mission Deferred Approval first sketched into a standalone
-companion, and reshapes it so its assertions carry the
-authentication, binding, and policy-authorization requirements that
-governance evidence with teeth requires. The author thanks the
-Mission-Bound Authorization
-implementer community for feedback.
+The Approval Governance Record began as an approval-provenance sketch in
+Mission Deferred Approval
+({{I-D.draft-mcguinness-oauth-mission-approval}}). The author thanks the
+Mission-Bound Authorization implementer community for feedback.
