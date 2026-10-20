@@ -13,6 +13,7 @@
 
 import {
   delegateMatcherListViolation,
+  entryDelegateMatcherViolation,
   isAbsoluteUri,
   isActivationPolicyRef,
   isImplementedCommonConstraint,
@@ -405,6 +406,27 @@ export function refusedMemberInRequest(entries: readonly unknown[]): string | un
   for (const entry of entries) {
     if ((entry as { type?: unknown } | null)?.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
     const violation = refusedMemberViolation(entry);
+    if (violation) return violation;
+  }
+  return undefined;
+}
+
+/**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): the shared delegate-matcher rule over a requested
+ * `authorization_details` array, for the same intakes as
+ * {@link refusedMemberInRequest}: the first `mission_resource_access` entry
+ * whose `allowed_delegates` or `allowed_child_actors` carries a malformed
+ * matcher yields the violation (`entryDelegateMatcherViolation`, which applies
+ * `delegateMatcherListViolation`). Each intake's subset check reads a matcher's
+ * `sub` and `sub_profile` only, so a matcher carrying another member would be
+ * admitted, then issued either rebuilt without the member (a projection) or
+ * carrying a member no enforcement point reads (the deferred grant).
+ */
+export function malformedMatcherInRequest(entries: readonly unknown[]): string | undefined {
+  for (const entry of entries) {
+    if ((entry as { type?: unknown } | null)?.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
+    const violation = entryDelegateMatcherViolation(entry);
     if (violation) return violation;
   }
   return undefined;

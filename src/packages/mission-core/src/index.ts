@@ -66,6 +66,7 @@ export {
   conditionsNoBroader,
   DELEGATE_MATCHER_MEMBERS,
   delegateMatcherListViolation,
+  entryDelegateMatcherViolation,
   entryWithinCeiling,
   isAuthorityEntry,
   isSubsetEntry,
