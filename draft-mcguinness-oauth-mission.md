@@ -5804,7 +5804,11 @@ refreshes for the read-only token of the refresh example in
 {{mission-bound-tokens}}, which expires at 08:55:00.
 
 At 08:53:20 the agent revokes the Mission with the reason "Quarterly
-reconcile completed early". The AS commits `terminated` with reason
+reconcile completed early", under an explicit lifecycle authorization
+the deployment grants it for this Mission
+({{I-D.draft-mcguinness-oauth-mission-status}}); its resource tokens
+and refresh token confer no such authority. The AS commits
+`terminated` with reason
 `revoked` as state version 4, and a receiver of the Mission Signals
 profile learns of it from a Security Event Token
 ({{I-D.draft-mcguinness-oauth-mission-signals}}). Revocation stops the
@@ -5828,9 +5832,12 @@ termination, although the token has not expired ({{examples}},
 
 Revocation does not recall the token already issued. The ERP,
 enforcing from the token alone, can honor the read-only token until
-its `exp` at 08:55:00; a resource server that introspects, or that
-obtains a point-of-use permit under the runtime profile, stops
-honoring it on its next request.
+its `exp` at 08:55:00. A resource server that introspects at the
+issuer on every request stops honoring it on its next request. One
+that obtains a point-of-use permit under the runtime profile
+({{I-D.draft-mcguinness-mission-runtime}}) stops within that
+deployment's declared freshness and permit bounds, since a permit can
+rest on a state observation taken before the revocation.
 
 # Design Context and Boundaries {#design-context}
 
