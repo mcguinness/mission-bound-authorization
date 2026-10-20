@@ -20,6 +20,7 @@ import {
   refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
   type JsonValue,
+  unsupportedEntryMember,
   validCommonConstraint,
 } from "@mission/core";
 
@@ -79,10 +80,13 @@ export interface AuthorizationDetailsTypeMetadata {
  * `const` below.
  *
  * @spec resource-access#entry-validation (#1278, D457): `locations` is
- * prohibited by name (`"locations": false`), not by closing the top level:
- * `additionalProperties` stays `true`, so a member another specification
- * defines for this type (such as `capability_sources`) remains possible.
- * {@link validateMissionResourceAccessSchema} enforces the same prohibition.
+ * prohibited by name (`"locations": false`). @spec mission#subset (#1399,
+ * D538): the top level is CLOSED (`additionalProperties: false`) to
+ * {@link SUPPORTED_ENTRY_MEMBERS}, the type's own members and
+ * `capability_sources`, which Capability Binding defines for it. Any other
+ * member is refused rather than admitted and then dropped by derivation's
+ * member-by-member rebuild. {@link validateMissionResourceAccessSchema}
+ * enforces both prohibitions.
  */
 export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -92,6 +96,9 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   properties: {
     type: { const: MISSION_RESOURCE_ACCESS_TYPE },
     resource: { type: "string", format: "uri" },
+    // @spec resource-access#resource-matching (#1264, D446): this
+    // authorization server implements exact matching only.
+    resource_match: { const: "exact" },
     // @spec resource-access#entry-validation (#1278): this type does not use
     // the RFC 9396 common `locations` field; its presence, whatever its value,
     // fails the schema.
@@ -189,9 +196,13 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       required: ["max_depth"],
       additionalProperties: true,
     },
+    // @spec capability-binding#capability-source-binding: recorded by the
+    // authorization server at derivation; a proposal's value is never carried.
+    capability_sources: { type: "array", items: { type: "object" } },
   },
   required: ["type", "resource", "actions"],
-  additionalProperties: true,
+  // @spec mission#subset (#1399, D538): closed to SUPPORTED_ENTRY_MEMBERS.
+  additionalProperties: false,
 };
 
 /**
@@ -268,6 +279,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   }
   if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
     return "actions must be a non-empty array of strings";
+  }
+  if (
+    e.capability_sources !== undefined &&
+    (!Array.isArray(e.capability_sources) ||
+      !e.capability_sources.every((b) => b !== null && typeof b === "object" && !Array.isArray(b)))
+  ) {
+    return "capability_sources must be an array of objects";
   }
   // @spec resource-access#entry-validation (#1376): each value matches the
   // action grammar as a whole, so an identifier the namespace cannot carry
@@ -400,17 +418,23 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
 }
 
 /**
- * @spec resource-access#entry-validation (#1278, D457): the violation for a
- * `mission_resource_access` entry carrying a member this type refuses by
- * name ({@link refusedEntryMember}: `locations`), or undefined. Shared by the
- * schema check above and by the token-exchange and deferred intakes that read
- * requested entries without it, each refusing `invalid_authorization_details`.
+ * @spec resource-access#entry-validation (#1278, D457), mission#subset
+ * (#1399, D538): the violation for a `mission_resource_access` entry carrying
+ * a member this type refuses by name ({@link refusedEntryMember}:
+ * `locations`), or any other member outside the supported set
+ * ({@link unsupportedEntryMember}), or undefined. Shared by the schema check
+ * above and by the token-exchange and deferred intakes that read requested
+ * entries without it, each refusing `invalid_authorization_details`.
  */
 export function refusedMemberViolation(entry: unknown): string | undefined {
   const member = refusedEntryMember(entry);
-  return member === undefined
+  if (member !== undefined) {
+    return `${member} must be absent: the ${MISSION_RESOURCE_ACCESS_TYPE} type does not use this RFC 9396 common field`;
+  }
+  const unsupported = unsupportedEntryMember(entry);
+  return unsupported === undefined
     ? undefined
-    : `${member} must be absent: the ${MISSION_RESOURCE_ACCESS_TYPE} type does not use this RFC 9396 common field`;
+    : `${unsupported} is not a supported member of the ${MISSION_RESOURCE_ACCESS_TYPE} type; refusing rather than dropping it`;
 }
 
 /**

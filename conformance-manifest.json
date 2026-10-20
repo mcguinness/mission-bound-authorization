@@ -67,8 +67,8 @@
     "content_sha256": "748baa5b01e2e8052eba9d7ba14358140eb6790f2f78990a4b466fcd75d8f5f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "bae24b0159dc48cacc2152354c2ccc5891f2faa3",
-    "content_sha256": "c763457d16b7d0e56d03e8a0384a980c4185e0124a9f1c1ec7bf5b097283f282"
+    "revision": "b3bb3ee8d83454cad7a59349de9e9cc0f134cd1c",
+    "content_sha256": "b5b0f2e926915a920b0def153fdaf8e6f104d5aa5f3f90ee3a9184ad7145415e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
@@ -254,6 +254,7 @@
    "progressive.ceiling-drawdown",
    "progressive.drawdown-derivation-limits",
    "cross-domain.projection",
+   "cross-domain.resource-as-delegated-issuance",
    "approved-set-verification.verification",
    "authzen.runtime-evidence",
    "authzen.obligations",
@@ -6719,7 +6720,7 @@
    "id": "core.approval-authentication.openid-refused-when-approver-not-subject",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-authentication",
-   "text": "When the Approver is not the Subject established at step 2 of {{approval-event}}, the AS MUST refuse such a request, without creating the Mission, with the `invalid_scope` error",
+   "text": "When the Approver is not the Subject established at step 2 of {{direct-approval-steps}}, the AS MUST refuse such a request, without creating the Mission, with the `invalid_scope` error",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36318,7 +36319,7 @@
     "kind": "capabilities",
     "all_of": [
      "cross-domain.projection",
-     "core.delegation"
+     "cross-domain.resource-as-delegated-issuance"
     ]
    },
    "profiles": [],
@@ -36330,7 +36331,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1180, D378. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens. redeem() mints one local token per grant, and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own, which applies the issuance profile's delegation (core.delegation) in the partner domain; hence the all_of gate."
+   "notes": "#1180, D378. The clause binds only a Resource AS that issues delegated tokens of its own, so the row is gated on cross-domain.resource-as-delegated-issuance, which no deployment claims. core.delegation does not gate it, because the reference implements that capability at the originating AS, not at the Resource AS. The reference Resource AS lacks the capability: in src/services/ras/src/index.ts, redeem() mints one local token per grant and returns only access_token and expires_in, metadata() advertises only the JWT-bearer grant, and the class has no token exchange or other delegation path. No witness exists, so the row stays todo."
   },
   {
    "id": "cross-domain.resource-as.local-token-exp-bounded-by-grant",
@@ -36603,7 +36604,7 @@
     "kind": "capabilities",
     "all_of": [
      "cross-domain.projection",
-     "core.delegation"
+     "cross-domain.resource-as-delegated-issuance"
     ]
    },
    "profiles": [],
@@ -36615,7 +36616,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1374. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens; redeem() mints one local token per grant and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own (core.delegation in the partner domain); hence the all_of gate."
+   "notes": "#1374, #1180. The clause binds only a Resource AS that issues delegated tokens of its own, so the row is gated on cross-domain.resource-as-delegated-issuance, which no deployment claims. core.delegation does not gate it, because the reference implements that capability at the originating AS, not at the Resource AS. The reference Resource AS lacks the capability: in src/services/ras/src/index.ts, redeem() mints one local token per grant and returns only access_token and expires_in, metadata() advertises only the JWT-bearer grant, and the class has no token exchange or other delegation path. No witness exists, so the row stays todo."
   },
   {
    "id": "cross-domain.resource-as.sub-profile-local-classification",
@@ -36628,7 +36629,7 @@
     "kind": "capabilities",
     "all_of": [
      "cross-domain.projection",
-     "core.delegation"
+     "cross-domain.resource-as-delegated-issuance"
     ]
    },
    "profiles": [],
@@ -36640,7 +36641,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1374. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens; redeem() mints one local token per grant and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own (core.delegation in the partner domain); hence the all_of gate."
+   "notes": "#1374, #1180. The clause binds only a Resource AS that issues delegated tokens of its own, so the row is gated on cross-domain.resource-as-delegated-issuance, which no deployment claims. core.delegation does not gate it, because the reference implements that capability at the originating AS, not at the Resource AS. The reference Resource AS lacks the capability: in src/services/ras/src/index.ts, redeem() mints one local token per grant and returns only access_token and expires_in, metadata() advertises only the JWT-bearer grant, and the class has no token exchange or other delegation path. No witness exists, so the row stays todo."
   },
   {
    "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
@@ -41370,7 +41371,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1258 item 4; refusal approved in the #1277 review (D454), shape ruled in D457; implemented by #1278. One presence check (refusedEntryMember in @mission/core) backs every boundary: the published schema carries \"locations\": false with the top level open, validateMissionResourceAccessSchema covers PAR, device submission and the other proposal intakes, and the deferred, handoff and async-delegation exchanges check requested entries before projecting them. Proved by disabling each guard in turn: the validator's check (the PAR and device tests fail), and the deferred, handoff and async-delegation checks (each test fails). The config loaders (ConfigError naming the entry and locations), direct derivation (invalid_authorization_details) and the template admin plane are witnessed in locations-refused.test.ts and template-dispatch-endpoint.test.ts and are not cited, since their errors or level differ from this row. A capability_sources entry is still admitted at PAR. The RAS's intake, a different surface from PAR, applies the same presence rule to a carried entry through isAuthorityEntry, since its trusted issuers are configurable (the #1283 review): a trusted issuer's signed grant whose entry carries locations is refused invalid_grant, the RFC 7523 grant-level error rather than invalid_authorization_details, minting no local token, so SaaS never receives it (mapping-entitlement.test.ts, and cross-domain.test.ts end to end). Proved by disabling the isAuthorityEntry check: both tests fail, and SaaS posts the journal entry. The helper-level witness (authority-subset.test.ts: isAuthorityEntry and both narrowToCeiling operands) and the RAS local ceiling's startup refusal are not cited; a grant without locations, or carrying capability_sources, still mints. Case fc-08 runs (refusal.locations)."
+   "notes": "#1258 item 4; refusal approved in the #1277 review (D454), shape ruled in D457; implemented by #1278. One presence check (refusedEntryMember in @mission/core) backs every boundary: the published schema carries \"locations\": false (its top level closed to the supported set by #1399), validateMissionResourceAccessSchema covers PAR, device submission and the other proposal intakes, and the deferred, handoff and async-delegation exchanges check requested entries before projecting them. Proved by disabling each guard in turn: the validator's check (the PAR and device tests fail), and the deferred, handoff and async-delegation checks (each test fails). The config loaders (ConfigError naming the entry and locations), direct derivation (invalid_authorization_details) and the template admin plane are witnessed in locations-refused.test.ts and template-dispatch-endpoint.test.ts and are not cited, since their errors or level differ from this row. A capability_sources entry is still admitted at PAR. The RAS's intake, a different surface from PAR, applies the same presence rule to a carried entry through isAuthorityEntry, since its trusted issuers are configurable (the #1283 review): a trusted issuer's signed grant whose entry carries locations is refused invalid_grant, the RFC 7523 grant-level error rather than invalid_authorization_details, minting no local token, so SaaS never receives it (mapping-entitlement.test.ts, and cross-domain.test.ts end to end). Proved by disabling the isAuthorityEntry check: both tests fail, and SaaS posts the journal entry. The helper-level witness (authority-subset.test.ts: isAuthorityEntry and both narrowToCeiling operands) and the RAS local ceiling's startup refusal are not cited; a grant without locations, or carrying capability_sources, still mints. Case fc-08 runs (refusal.locations)."
   },
   {
    "id": "resource-access.entry-validation.resource-absolute-uri-no-fragment",
@@ -47777,6 +47778,116 @@
    "notes": "Witnessed at the token endpoint's requested authorization_details on a refresh and a code exchange. The other derivation paths are not cited here. Proved by mutation: issuing the requested entries verbatim, with no subset check, fails each witness."
   },
   {
+   "id": "core.subset.unrecognized-member-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "subset",
+   "text": "Where the comparison relation cannot decide (an unrecognized member, an incomparable value), the posture is conservative refusal",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry carrying a top-level member the comparison cannot decide is refused, never admitted and then rebuilt without the member",
+    "local": "the reference AS decides by presence against one supported set for mission_resource_access (the type's own members and capability_sources): PAR and device submission refuse invalid_authorization_details before any request_uri, device_code or Mission; refresh narrowing refuses before rotation, saving no refresh token; the deferral initiation, dispatch handoff and async-delegation exchanges refuse before any deferral, grant, family or derivation count; the ICA continuation exchange refuses before any hop or derivation; direct derivation refuses over both the ceiling and the proposal; projection drops the pairing, issuing no fragment; the subset relation refuses any comparison involving one except a byte-identical pair, so an approved entry carrying one is never compared as if it were absent; and the RAS refuses a signed grant whose entry carries one with invalid_grant, minting no local token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a proposal entry carrying an unsupported member, whatever its value, before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > refuses a proposal entry carrying an unsupported member, whatever its value, with invalid_authorization_details, issuing no device_code",
+     "level": "endpoint",
+     "surface": "device-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry carrying an unsupported member is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "requested entries carrying an unsupported member on the deferral initiation (@spec mission#subset, #1399) > refuses a requested entry carrying an unsupported member with invalid_authorization_details, opening no deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-handoff steps 1-5) > a requested entry carrying an unsupported member is refused invalid_authorization_details, issuing no handoff grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "async-delegation issuance (@spec async-delegation) > confinement: a requested entry carrying an unsupported member is refused invalid_authorization_details, opening no family and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (h2b) a requested entry carrying an unsupported top-level member -> invalid_authorization_details naming it, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (h2c) a request against a Mission whose approved entry carries an unsupported top-level member -> invalid_authorization_details, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/unknown-entry-member.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an entry carrying an unsupported member (#1399) > refuses a ceiling entry carrying an unsupported member, whatever its value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/unknown-entry-member.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an entry carrying an unsupported member (#1399) > refuses a ceiling entry carrying an unsupported member that no submitted proposal entry shares a resource with",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/unknown-entry-member.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an entry carrying an unsupported member (#1399) > refuses a submitted proposal entry carrying an unsupported member, whatever its value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/unknown-entry-member.test.ts",
+     "name": "projection drops a pairing that carries an unsupported member (#1399) > a candidate carrying an unsupported member projects to nothing, whatever its value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/unknown-entry-member.test.ts",
+     "name": "projection drops a pairing that carries an unsupported member (#1399) > an effective entry carrying an unsupported member projects nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762) > a signed grant whose entry carries an unsupported member is refused, minting no local token",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_request, its error for any excess, so its witness (dtr-endpoint.test.ts) is not cited. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
+  },
+  {
    "id": "core.self-exchange.result-subset",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "self-exchange",
@@ -47916,9 +48027,16 @@
     "normative": "a Mission Status response to an enrolled joining PDP carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No standalone MAS service exists in the reference composition; the reference PEP loads the same facts through its MissionView loader. Todo until a MAS Mission Status surface exists (#972)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > discloses subject, client_id and each entry's recorded delegation to a PDP enrolled for the requested enforcement scope",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a service principal its enrolledJoinPdps configuration enrolls for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id."
   },
   {
    "id": "mas.join-disclosure.not-to-others",
@@ -47938,9 +48056,22 @@
     "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No standalone MAS service exists in the reference composition; the reference PEP loads the same facts through its MissionView loader. Todo until a MAS Mission Status surface exists (#972)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > includes neither member for any other caller: a principal enrolled for nothing, the enrolled PDP for another scope or for no scope, an inherited-name principal",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the response the kernel's default observation signs, byte for byte",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the kernel's default observation. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. Partial: the reference response's envelope sub names the Mission's client_id for every caller, so a caller not enrolled still learns the client the mission object withholds, contrary to Join Disclosure's 'sub still identifies the requesting caller' and Status consumer check 6. Tested once the envelope sub names the requesting caller (#1407)."
   },
   {
    "id": "mas.join-inputs.pep-carries-member",

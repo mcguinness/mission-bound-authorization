@@ -76,6 +76,8 @@ export {
   REFUSED_ENTRY_MEMBERS,
   refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
+  SUPPORTED_ENTRY_MEMBERS,
+  unsupportedEntryMember,
   withoutCapabilitySources,
 } from "./authority-subset.js";
 export {
