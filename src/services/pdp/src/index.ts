@@ -66,8 +66,23 @@ export {
   parseStateObservation,
   type ParsedStateObservation,
   STATE_OBSERVATION_MODES,
+  verifyMissionStatusResponse,
   verifyStateAssertion,
+  type VerifiedMissionStatus,
 } from "./state-observation.js";
+export {
+  declaredStatusKeys,
+  MISSION_STATUS_SKEW_SECONDS,
+  MISSION_STATUS_STATES,
+  type MissionStatusFailure,
+  type MissionStatusResolution,
+  MissionStatusResolver,
+  type MissionStatusResolverOptions,
+  type ResolvedMission,
+  type ResolveOptions,
+  type StatusMissionView,
+  type UnresolvedMission,
+} from "./mission-status-resolver.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
 export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionCapabilitiesFor, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";
