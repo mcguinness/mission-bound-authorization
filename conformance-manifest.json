@@ -5170,7 +5170,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -5193,7 +5193,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -5216,7 +5216,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
   },
   {
    "id": "derivation-limits.effective.standing-consent-ceiling",
@@ -5237,9 +5237,52 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > an instance with no requested limit records the committed maximum; a larger request is capped at it and a smaller one stands, each instance counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > a deployment ceiling raised above the maximum after consent does not lift an instance above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a deployment ceiling above the figure does not lift a child above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > carries the derivation count forward under a limit a larger request cannot raise, and refuses at exhaustion creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > a stricter request narrows the inherited limit without resetting the count; one that leaves no derivation refuses",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > an exact retry returns the recorded token without counting; once that token has expired, the fresh delivery token is gated by the successor's limit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. Not witnessed: the precondition that the maximum is rendered at the standing consent (the reference has no standing-consent rendering surface; see the rendering rows), and the clause that only a fresh human approval of the standing consent lifts the maximum. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -33626,12 +33669,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where Mission Derivation Limits is adopted, each dispatched instance's derivation_limit is established at its own Dispatch with its own count, at or below the maximum the committed Dispatch Policy states; a later raise or removal of the deployment's general policy ceiling does not lift a dispatched instance above that maximum",
-    "local": "requires the deployment to also adopt Mission Derivation Limits"
+    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads the maximum from the verified Dispatch Policy snapshot's derivation_limit_ceiling (an integer of at least 1, or null or absent for no finite maximum), clamps each instance's resolved limit to it and never leaves the limit absent where it is finite; template consent refuses a malformed statement"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > an instance with no requested limit records the committed maximum; a larger request is capped at it and a smaller one stands, each instance counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > a deployment ceiling raised above the maximum after consent does not lift an instance above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1119 (D327). Every clause witnessed: each instance's own limit and count at its Dispatch (no request records the maximum, a larger request is capped, a smaller one stands, derivation_count 0), and a deployment ceiling raised above the maximum (a kernel at 100), removed (the suite's null ceiling) or stricter (2) never lifts an instance above it. Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the endpoint witness and the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "template.grant-type.agent-separate-from-presenter",
@@ -33751,7 +33813,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -35400,7 +35462,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
   },
   {
    "id": "progressive.in-ceiling.successor-subject-source",
@@ -46909,12 +46971,37 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or the policy the Parent Mission's policy_version identifies, with the child's own count; after the deployment raises or removes its per-child policy ceiling, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
-    "local": "requires the deployment to also adopt Mission Derivation Limits"
+    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a deployment ceiling above the figure does not lift a child above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the strictest committed figure binds a child drawing on several entries",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1119 (D327). Partial: every clause is witnessed at the kernel (unit) level, and no endpoint witness exists, since no endpoint suite builds an AS whose policy commits a child_creation_policy. At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
