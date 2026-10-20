@@ -87,8 +87,8 @@
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "9d61842777ef55834a198434289e0eed4d88fb16",
-    "content_sha256": "91355a5e310223dda4d4d9513b2a98923dc568f716a8ab6e72a7d597a4088b6f"
+    "revision": "0f8529ed4c7d73ec386bfc4ce930db363ae56757",
+    "content_sha256": "bf8e39b9b15b7359c300421c85970c18f4c07596f5f39d9d699f470eca279c7e"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -34838,7 +34838,7 @@
    "id": "progressive.in-ceiling.contained-overlap-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority capability under a containment restriction of its expansion chain",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority capability under a containment restriction of its expansion chain",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -34862,7 +34862,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -34934,7 +34934,7 @@
    "id": "progressive.in-ceiling.discharged-overlap-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority the authority a discharge restriction of its expansion chain covers",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority the authority a discharge restriction of its expansion chain covers",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -34958,7 +34958,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
   },
   {
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
@@ -35545,7 +35545,7 @@
    "id": "progressive.ceiling.consent-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "progressive-authorization",
-   "text": "The consent disclosure MUST render the ceiling and the fact that in-ceiling expansion is policy-adjudicated",
+   "text": "At the initial approval, the consent disclosure MUST render the ceiling to the Approver, together with the fact that in-ceiling expansion is policy-adjudicated",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35561,7 +35561,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017)."
+   "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
   },
   {
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
@@ -35627,6 +35627,29 @@
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.declaration-evaluated",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "the adjudication MUST evaluate the declaration against the ceiling",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown triggered by a resource not named at approval whose content-addressed self-declaration is available is adjudicated against that declaration and the ceiling",
+    "local": "The reference AS has no resource self-declaration intake (AAuth Rich Resource Requests, the discovery companion)."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row."
   },
   {
    "id": "progressive.ceiling-test.beyond-ceiling-not-policy",
@@ -36515,6 +36538,29 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
+   "id": "progressive.limits.pair-with-short-lifetimes",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-limits",
+   "text": "A deployment SHOULD pair it with short successor lifetimes, constraint-bounded ceilings, and runtime enforcement",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment of progressive authorization bounds successor lifetimes, constrains its ceilings, and runs runtime enforcement",
+    "local": "Deployment guidance; the reference deployment declares no successor lifetime bound of its own."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row."
+  },
+  {
    "id": "progressive.audit.cumulative-drawdown-count",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
@@ -36590,7 +36636,7 @@
    "id": "progressive.audit.resource-declaration-digest",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record of such a drawdown MUST carry the declaration's digest as `resource_declaration_digest`",
+   "text": "The record of a drawdown whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36606,7 +36652,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017)."
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated)."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
