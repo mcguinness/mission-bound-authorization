@@ -634,8 +634,9 @@ The following rules apply to the assertions in a record:
   `service` or `policy` assertion through an integrity-protected channel
   or signature the issuer verifies.
 - Every assertion MUST be bound to this approval event: an assertion is
-  made against this `approval_event_id` and this `authority_hash`, and
-  an assertion captured for one event MUST NOT be replayed into another.
+  made against this `approval_event_id`, this `intent_hash`, and this
+  `authority_hash`, and an assertion captured for one event MUST NOT be
+  replayed into another.
 - Every contributing assertion MUST be policy-authorized: the issuer
   verifies the asserting principal was eligible to assert under the
   referenced `approval_policy` version before counting it.

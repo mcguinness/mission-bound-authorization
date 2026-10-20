@@ -816,6 +816,22 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
   });
 
+  it("does not count an assertion bound to another Intent under the same approval event and Authority Set", () => {
+    const MODEL = { id: "risk-model", version: "3" };
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-i", intent: intent(), clientId: "svc-agent" });
+    const captured: RecordedModelOutput = { model: MODEL, ...view, verdict: "no_objection" };
+    const { authority: _drop, ...bindingOnly } = captured as RecordedModelOutput & { authority?: unknown };
+    const otherIntent = { ...bindingOnly, intent_hash: "sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU" };
+    expect(outcome(() => activate(kernel, c.consent_id, { approvalEventId: "ape-i", modelOutputs: [otherIntent] }))).toBe(
+      "policy_refused",
+    );
+    nothingCommitted(kernel);
+    const { record } = activate(kernel, c.consent_id, { approvalEventId: "ape-i", modelOutputs: [bindingOnly] });
+    expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
+  });
+
   it("leaves no Mission, no record, and no retained inputs when signing or persistence fails", () => {
     const signing = makeKernel();
     const c1 = consent(signing);
