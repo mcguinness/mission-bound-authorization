@@ -920,11 +920,13 @@ The client then sends a pushed authorization request
 ({{Section 2 of RFC9126}}) carrying:
 
 - `mission_continuation`;
-- `response_type=code`, its `redirect_uri`, and `state`; and
+- `response_type=code`, its `redirect_uri`, and `state`;
 - the PKCE `S256` challenge or DPoP binding the issuance profile
   requires for an authorization code
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization Code
-  Protection").
+  Protection"); and
+- optionally, the `predecessor` cross-check ({{submission}}), which
+  names the recorded predecessor.
 
 It carries no `mission_intent` and no `authorization_details`: the
 token exchange is this operation's carriage ({{submission}}). Client authentication at the pushed authorization request endpoint
@@ -957,7 +959,8 @@ The Mission Issuer:
 - MUST take the predecessor, Intent, proposal, submission evidence,
   presenter confirmation, and actor context only from the recorded
   operation, and MUST refuse a pushed request that supplies any of
-  them with a different value; and
+  them with a different value, accepting an equal `predecessor` as a
+  cross-check; and
 - validates the other authorization request parameters as for any
   pushed request.
 
