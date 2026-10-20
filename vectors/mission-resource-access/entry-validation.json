@@ -1,0 +1,795 @@
+{
+  "format": "mission-resource-access-cases/1",
+  "group": "entry-validation",
+  "description": "Entry validation (#1376): actions, max_depth, allowed_delegates, time_window, recipient_domain and resource form",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "cases": [
+    {
+      "id": "ev-act-01",
+      "description": "An entry whose actions array is empty",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": []
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "actions is non-empty",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-02",
+      "description": "An action value carrying a slash",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices/read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the whole value matches the action grammar; a slash is outside it",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-03",
+      "description": "An action value with a trailing space",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read "
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a character outside the grammar fails the value wherever it sits",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-04",
+      "description": "A recognized action beside a value outside the grammar",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read",
+            "invoices read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "one malformed value refuses the entry; it is not dropped",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-05",
+      "description": "A family marker inside an action value",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.*.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a family is an identifier followed by .* at the end of the value",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-06",
+      "description": "A bare wildcard",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "*"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a family needs an identifier before .*",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-07",
+      "description": "Action identifiers using every character the grammar admits",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read",
+            "journal-entries.write",
+            "payments:invoice.list",
+            "A_z-0.9:x"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "letters, digits, underscore, dot, colon and hyphen are all admitted"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-08",
+      "description": "An action family",
+      "role": "authorization-server",
+      "requires": [
+        "action-families"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.*"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "an identifier followed by .* is an action family"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-depth-01",
+      "description": "A negative delegation.max_depth",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "delegation": {
+            "max_depth": -1
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "max_depth is a non-negative integer",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-depth-02",
+      "description": "A fractional delegation.max_depth",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "delegation": {
+            "max_depth": 1.5
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "max_depth is a non-negative integer",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-depth-03",
+      "description": "A delegation.max_depth of 0 beside a children grant",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "delegation": {
+            "max_depth": 0,
+            "children": {
+              "max_children": 2
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "0 is a valid depth; the companion-defined children member is not voided by it"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-dlg-01",
+      "description": "An empty allowed_delegates list",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "delegation": {
+            "max_depth": 2,
+            "allowed_delegates": []
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "an empty list is well formed; it permits no delegate (ev-dlg-02)"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-tw-01",
+      "description": "A time_window whose not_before is later than its not_after",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-09-01T00:00:00Z",
+              "not_after": "2026-08-31T23:59:59Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an inverted window is refused at intake, not first at derivation",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-tw-02",
+      "description": "A time_window inverted only once its offsets are applied",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-09-01T01:00:00Z",
+              "not_after": "2026-09-01T02:00:00+02:00"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the bounds are compared as instants: 02:00+02:00 is 00:00Z, before 01:00Z",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-tw-03",
+      "description": "A time_window whose bounds name the same instant",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2026-09-01T00:00:00Z",
+              "not_after": "2026-09-01T02:00:00+02:00"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "not_before at or before not_after; both bounds are inclusive"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-rd-01",
+      "description": "A recipient_domain with a trailing dot",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "example.com."
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "a recipient_domain carries no trailing dot",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-rd-02",
+      "description": "A recipient_domain with a non-ASCII label",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "exämple.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label appears in its A-label form",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-rd-03",
+      "description": "A recipient_domain in A-label form, in mixed case",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "Mail.XN--exmple-cua.com"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "ASCII labels in any letter case; values compare case-insensitively"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-01",
+      "description": "An exact entry whose resource carries a fragment",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders#items",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "every resource is an RFC 3986 absolute-URI, which has no fragment",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-02",
+      "description": "An https resource with an empty host",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https:///orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an http or https resource names a non-empty host",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-03",
+      "description": "An https resource without the // authority form",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https:api.example/orders",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an http or https resource takes the // authority form",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-res-04",
+      "description": "An exact entry whose resource carries a query",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://api.example/orders?id=1",
+          "actions": [
+            "invoices.read"
+          ]
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "absolute-URI admits a query; only a prefix entry refuses one"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-dlg-02",
+      "description": "An empty allowed_delegates list; the delegation policy permits the delegate",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher",
+        "delegation.policy"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2,
+          "allowed_delegates": []
+        },
+        "approved_entry_delegation": {
+          "max_depth": 2,
+          "allowed_delegates": []
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ]
+        },
+        "delegate": {
+          "sub": "bob"
+        },
+        "depth": 1
+      },
+      "expected": {
+        "outcome": "not-eligible",
+        "reason": "an empty list permits no delegate; it does not defer to policy"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-dlg-03",
+      "description": "An absent allowed_delegates list; the delegation policy permits the delegate",
+      "role": "authorization-server",
+      "requires": [
+        "delegation.policy"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 2
+        },
+        "approved_entry_delegation": {
+          "max_depth": 2
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ]
+        },
+        "delegate": {
+          "sub": "bob"
+        },
+        "depth": 1
+      },
+      "expected": {
+        "outcome": "eligible",
+        "reason": "an absent list defers to policy, the counterpart of ev-dlg-02"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-depth-04",
+      "description": "max_depth 0; the list names the delegate, at delegation depth 1",
+      "role": "authorization-server",
+      "requires": [
+        "delegate-matcher"
+      ],
+      "check": "delegate-eligibility",
+      "input": {
+        "ceiling_entry_delegation": {
+          "max_depth": 0,
+          "allowed_delegates": [
+            {
+              "sub": "bob"
+            }
+          ]
+        },
+        "approved_entry_delegation": {
+          "max_depth": 0,
+          "allowed_delegates": [
+            {
+              "sub": "bob"
+            }
+          ]
+        },
+        "policy": {
+          "permit": [
+            "bob"
+          ]
+        },
+        "delegate": {
+          "sub": "bob"
+        },
+        "depth": 1
+      },
+      "expected": {
+        "outcome": "not-eligible",
+        "reason": "every delegated token has depth 1 or more, so depth 0 supplies no in-Mission delegated authority"
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-depth-05",
+      "description": "max_depth 0 with a children grant, in the ceiling and the proposal",
+      "role": "authorization-server",
+      "requires": [],
+      "check": "derive",
+      "input": {
+        "ceiling": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 0,
+              "children": {
+                "max_children": 2
+              }
+            }
+          }
+        ],
+        "proposal": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 0,
+              "children": {
+                "max_children": 2
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "derived",
+        "reason": "depth 0 leaves the independently bounded children grant intact",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "delegation": {
+              "max_depth": 0,
+              "children": {
+                "max_children": 2
+              }
+            }
+          }
+        ]
+      },
+      "refs": [
+        "#1376"
+      ]
+    },
+    {
+      "id": "ev-act-09",
+      "description": "An entry carries an action the resource does not define beside one it does",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.enforcement"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "resource_defines": [
+          "invoices.read"
+        ],
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read",
+              "invoices.frobnicate"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "allow",
+        "reason": "an unrecognized action grants nothing and leaves the rest of the entry enforceable"
+      },
+      "refs": [
+        "#1376"
+      ]
+    }
+  ]
+}

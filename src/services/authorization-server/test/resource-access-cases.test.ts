@@ -25,6 +25,7 @@ import {
   type MissionIntent,
   MissionKernel,
   type OriginProjection,
+  validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -98,6 +99,7 @@ const OUTCOMES: Record<string, readonly string[]> = {
   "capability-declaration": ["declared", "invalid-claim"],
   issuance: ["issue", "refuse-issuance", "refuse"],
   projection: ["safe", "unsafe"],
+  "entry-validation": ["valid", "refuse"],
 };
 
 interface Case {
@@ -196,6 +198,25 @@ function run(c: Case): void {
     case "delegate-eligibility":
       runDelegateEligibility(c);
       return;
+    case "entry-validation": {
+      // #1376: the authorization server's intake of one proposed entry, the
+      // validation PAR and the other proposal intakes run (validateAuthorityProposal).
+      const entry = input.entry as { resource?: unknown };
+      const validate = () => validateAuthorityProposal(JSON.stringify([entry]), [String(entry.resource)]);
+      if (c.expected.outcome === "refuse") {
+        let error: unknown;
+        try {
+          validate();
+        } catch (e) {
+          error = e;
+        }
+        expect(error, c.expected.reason).toBeInstanceOf(IntentError);
+        expect((error as IntentError).code, c.expected.reason).toBe(c.expected.error);
+      } else {
+        expect(validate, c.expected.reason).not.toThrow();
+      }
+      return;
+    }
     default:
       throw new Error(`${c.id}: no executor for check ${c.check}`);
   }
@@ -301,6 +322,7 @@ const EXECUTABLE_CHECKS = new Set([
   "delegate-eligibility",
   "resource-match",
   "target-resolution",
+  "entry-validation",
 ]);
 
 /** A capability is known when the README names it, or it is one `constraints` key or entry member. */
