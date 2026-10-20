@@ -7,8 +7,8 @@
  */
 
 import { createHash } from "node:crypto";
-import { canonicalize, type JsonValue } from "@mission/core";
-import type { Invoice, Vendor } from "./payments-store.js";
+import { canonicalize, type CollectionMemberFacts, type JsonValue } from "@mission/core";
+import type { Invoice, PaymentsStore, Vendor } from "./payments-store.js";
 import type { CapabilitySnapshot } from "./tool-catalog.js";
 
 export interface EffectiveParams {
@@ -75,6 +75,14 @@ export interface ListEffectiveParams {
   resource: string;
   vendor_scope: string[];
   vendor_scope_source: "requested" | "entry" | "all";
+  /**
+   * @spec resource-access#initial-common-constraints (#1266): present only
+   * when an entry the read could rely on carries a bound that reads a member
+   * fact (issuance, tenant, classification). Every invoice the read returns,
+   * sorted by `id`, with the facts its records hold, so the digest binds them
+   * and a changed, added or removed member is a mismatch before release.
+   */
+  members?: CollectionMemberFacts[];
 }
 
 export function buildListEffectiveParams(input: {
@@ -82,13 +90,43 @@ export function buildListEffectiveParams(input: {
   resource: string;
   vendor_scope: string[];
   vendor_scope_source: "requested" | "entry" | "all";
+  members?: CollectionMemberFacts[];
 }): ListEffectiveParams {
   return {
     action: input.action,
     resource: input.resource,
     vendor_scope: input.vendor_scope,
     vendor_scope_source: input.vendor_scope_source,
+    ...(input.members !== undefined ? { members: input.members } : {}),
   };
+}
+
+/**
+ * @spec resource-access#initial-common-constraints (#1266): the members of a
+ * bound `list_invoices` read, from the payments store: every invoice the read
+ * returns (the requested vendor's, or every vendor's, within `vendorScope`),
+ * each with its own record's issuance instant and classification label and
+ * its vendor's tenant, where the records hold them, sorted by `id`. The same
+ * filter execution applies, so the members are the result.
+ */
+export function listMembers(
+  store: Pick<PaymentsStore, "listInvoices" | "getVendor">,
+  vendorScope: readonly string[],
+  requestedVendorId: string | undefined,
+): CollectionMemberFacts[] {
+  return store
+    .listInvoices(requestedVendorId)
+    .filter((invoice) => vendorScope.includes(invoice.vendor_id))
+    .map((invoice) => {
+      const tenant = store.getVendor(invoice.vendor_id)?.tenant;
+      return {
+        id: invoice.id,
+        ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
+        ...(typeof tenant === "string" ? { tenant } : {}),
+        ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
+      };
+    })
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 export function parameterDigest(params: EffectiveParams | ListEffectiveParams): string {

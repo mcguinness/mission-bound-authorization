@@ -15,6 +15,7 @@ import {
   ScopeProjectionMappingError,
   type ScopeValueMapping,
   scopeValueSafeForEntry,
+  unenforcedConstraintRefusal,
 } from "../src/index.js";
 
 const RS = "https://rs.example/api";
@@ -98,6 +99,49 @@ describe("scope-projection mapping validation", () => {
   });
 });
 
+describe("the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type)", () => {
+  const withKeys = (keys: unknown, mode = "authorization_details") => ({
+    audiences: {
+      [OTHER]: { version: "1", mission_aware: true, mode, mission_constraints_supported: keys },
+    },
+  });
+
+  it("accepts a key list on an authorization_details audience, an empty one included, and keeps it", () => {
+    const m = parseScopeProjectionMapping(withKeys(["vendors", "tenant"]));
+    expect(m.audiences[OTHER]).toMatchObject({
+      mission_constraints_supported: ["vendors", "tenant"],
+    });
+    expect(parseScopeProjectionMapping(withKeys([])).audiences[OTHER]).toMatchObject({
+      mission_constraints_supported: [],
+    });
+  });
+
+  it("refuses a malformed list, a repeated key, and the member on a scope-only audience", () => {
+    for (const keys of ["vendors", [""], ["vendors", 7], null]) {
+      expect(() => parseScopeProjectionMapping(withKeys(keys)), JSON.stringify(keys)).toThrow(
+        /mission_constraints_supported must be an array of non-empty strings/,
+      );
+    }
+    expect(() => parseScopeProjectionMapping(withKeys(["vendors", "vendors"]))).toThrow(
+      /must not repeat a value/,
+    );
+    const scopeOnly = {
+      audiences: {
+        [RS]: {
+          version: "1",
+          mission_aware: false,
+          mode: "scope_only",
+          scopes: { "r.read": { rights: value(["read"]).rights, mandatory_controls: {} } },
+          mission_constraints_supported: ["vendors"],
+        },
+      },
+    };
+    expect(() => parseScopeProjectionMapping(scopeOnly)).toThrow(
+      /mission_constraints_supported is not a known member/,
+    );
+  });
+});
+
 describe("mission_resource_access scope-projection conditions (@spec resource-access#scope-projection)", () => {
   it("a value is safe for a constraints-free entry that carries every action it grants", () => {
     expect(scopeValueSafeForEntry(value(["read"]), entry(["read", "write"]))).toBe(true);
@@ -126,6 +170,45 @@ describe("mission_resource_access scope-projection conditions (@spec resource-ac
     expect(
       scopeValueSafeForEntry(value(["read"]), entry(["read"], { resource_match: "glob" })),
     ).toBe(false);
+  });
+
+  it("narrower resource: a prefix entry projects safely to a value over that prefix or a narrower resource within it, never a sibling, a dot-segment escape or an ancestor; an exact entry only to its own resource (#1276)", () => {
+    const REPORTS = `${RS}/reports`;
+    const prefixEntry = entry(["read"], { resource: REPORTS, resource_match: "prefix" });
+    for (const over of [
+      { resource: REPORTS, match: "prefix" as const },
+      { resource: `${REPORTS}/2026` },
+      { resource: `${REPORTS}/2026`, match: "prefix" as const },
+      { resource: `${REPORTS}/`, match: "prefix" as const },
+      { resource: "https://RS.EXAMPLE:443/api/reports/2026" },
+    ]) {
+      expect(scopeValueSafeForEntry(value(["read"], over), prefixEntry), JSON.stringify(over)).toBe(
+        true,
+      );
+    }
+    for (const over of [
+      { resource: `${RS}/reports-archive` },
+      { resource: `${REPORTS}/%2e%2e/admin` },
+      { resource: RS, match: "prefix" as const },
+      { resource: RS },
+    ]) {
+      expect(scopeValueSafeForEntry(value(["read"], over), prefixEntry), JSON.stringify(over)).toBe(
+        false,
+      );
+    }
+    // An exact entry: a narrower value under another resource is not the entry's resource set.
+    expect(
+      scopeValueSafeForEntry(
+        value(["read"], { resource: `${REPORTS}/2026` }),
+        entry(["read"], { resource: REPORTS }),
+      ),
+    ).toBe(false);
+    expect(
+      scopeValueSafeForEntry(
+        value(["read"], { resource: REPORTS }),
+        entry(["read"], { resource: REPORTS }),
+      ),
+    ).toBe(true);
   });
 
   it("constraints: every carried key needs an independently enforced control at least as tight", () => {
@@ -200,6 +283,62 @@ describe("mission_resource_access scope-projection conditions (@spec resource-ac
     expect(
       scopeValueSafeForEntry(value(["read"]), entry(["read"], { delegation: { max_depth: 1 } })),
     ).toBe(true);
+  });
+});
+
+describe("the emission check pairs an entry with every audience whose resource tree overlaps it (@spec resource-access#resource-access-type, #1266)", () => {
+  const BASE = "https://pay.example/mcp";
+  const SUB = `${BASE}/invoices`;
+  const audience = (keys: string[]) => ({
+    version: "1",
+    mission_aware: true,
+    mode: "authorization_details" as const,
+    mission_constraints_supported: keys,
+  });
+  const mapping: ScopeProjectionMapping = {
+    audiences: { [BASE]: audience(["tenant", "vendors"]), [SUB]: audience(["vendors"]) },
+  };
+  const at = (
+    resource: string,
+    constraints: Record<string, unknown>,
+    resource_match?: "prefix",
+  ) => ({
+    type: "mission_resource_access",
+    resource,
+    ...(resource_match ? { resource_match } : {}),
+    actions: ["read"],
+    constraints,
+  });
+  const subRefuses = new RegExp(`${SUB} is not known to enforce the constraints key tenant`);
+
+  it("a token with two overlapping audiences checks the entry against both lists", () => {
+    const both = [BASE, SUB];
+    // Within both audiences' trees: SUB does not list tenant.
+    expect(
+      unenforcedConstraintRefusal(mapping, both, [at(`${SUB}/inv-1`, { tenant: "t" })]),
+    ).toMatch(subRefuses);
+    // A prefix entry on BASE contains SUB as well.
+    expect(
+      unenforcedConstraintRefusal(mapping, both, [at(BASE, { tenant: "t" }, "prefix")]),
+    ).toMatch(subRefuses);
+    expect(
+      unenforcedConstraintRefusal(mapping, both, [at(`${SUB}/inv-1`, { vendors: ["a"] })]),
+    ).toBeUndefined();
+    // The same entry in a token for BASE alone is checked against BASE's list only.
+    expect(
+      unenforcedConstraintRefusal(mapping, [BASE], [at(`${SUB}/inv-1`, { tenant: "t" })]),
+    ).toBeUndefined();
+  });
+
+  it("an audience that is not a // base is paired by equality only (boundary)", () => {
+    const URN = "urn:example:payments";
+    const urnMapping: ScopeProjectionMapping = { audiences: { [URN]: audience([]) } };
+    expect(
+      unenforcedConstraintRefusal(urnMapping, [URN], [at(`${URN}/inv-1`, { tenant: "t" })]),
+    ).toBeUndefined();
+    expect(unenforcedConstraintRefusal(urnMapping, [URN], [at(URN, { tenant: "t" })])).toMatch(
+      /key tenant/,
+    );
   });
 });
 
