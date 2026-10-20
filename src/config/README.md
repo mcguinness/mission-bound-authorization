@@ -68,7 +68,11 @@ authorization server's issuer, port, directory accounts, client
 registrations (each with the access token format the estate issues it,
 `jwt` or `opaque`) and resource vocabulary; the gateway's RFC 7662
 introspection of opaque tokens (`introspection`: its registered
-introspection client, call timeout and positive-cache bound); the mapping
+introspection client, call timeout and positive-cache bound); the separated
+MAS (`separated_mas`, #818 slice 4b: its host and port, the PDP principal
+that reads its Mission Status, the PDPs it enrolls for Join Disclosure by
+enforcement scope, and the state source's placement, which must be `pdp`,
+read timeout and response-size cap); the mapping
 cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the
 grants a development bootstrap of the pilot's Resource-policy store writes
@@ -87,8 +91,9 @@ is the pilot's contract.
 - **Integrity.** Repository review and the strict loaders: the configuration
   loader refuses unknown or missing members, a duplicate client, an estate
   issuer equal to the Mission Issuer, resource servers that omit the payments
-  resource, a token format other than `jwt` or `opaque`, and an introspection
-  client that is also one of the estate's own clients; the contract loader refuses an ambiguous mapping (a second row
+  resource, a token format other than `jwt` or `opaque`, an introspection
+  client that is also one of the estate's own clients, and a separated MAS
+  whose state source is placed anywhere but the PDP; the contract loader refuses an ambiguous mapping (a second row
   for one issuer-qualified estate subject or client), a claimed
   client-instance mapping and any failure semantics but
   `mission_binding_failed`; the Resource-policy grants are refused unless each
