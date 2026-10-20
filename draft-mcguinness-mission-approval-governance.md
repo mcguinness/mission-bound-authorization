@@ -648,7 +648,11 @@ The following rules apply to the assertions in a record:
 - Every assertion MUST be bound to this approval event: an assertion is
   made against this `approval_event_id`, this `intent_hash`, and this
   `authority_hash`, and an assertion captured for one event MUST NOT be
-  replayed into another.
+  replayed into another. An assertion that can narrow the authority,
+  such as a model output an activation consults, is made against the
+  `authority_hash` of the set it evaluated rather than of the narrowed
+  result; the issuer records that set with the activation's inputs, and
+  the committed Authority Set lies within it.
 - Every contributing assertion MUST be policy-authorized: before
   counting it, the issuer verifies that the asserting principal was
   eligible to assert under the referenced `approval_policy` version. For
@@ -1043,9 +1047,10 @@ re-checked ({{conformance}}). The re-check has these steps:
    "Principals and Approval Basis"). These include each model output in
    full, with its verdict and any narrowing, which the matching
    `service` assertion records only by identifier. Confirm that each
-   input carries this record's `approval_event_id` and the Mission's
-   `intent_hash`, and that each contributing `service` assertion
-   corresponds to one of them.
+   input carries this record's `approval_event_id`, the Mission's
+   `intent_hash`, and the `authority_hash` of the set recorded as
+   evaluated, and that each contributing `service` assertion corresponds
+   to one of them.
 5. Re-run the deciding policy or evaluator, at its exact version, over
    those inputs and the recorded assertions, and confirm that it
    approves, counting exactly the assertions `contributing` lists
@@ -1188,7 +1193,8 @@ MUST, before it creates the Mission `active`:
    only under a committed, class-named exception.
 8. Bind every assertion and the record to this instance's
    `approval_event_id`, `intent_hash`, and `authority_hash`
-   ({{assertion-validation}}, {{record-members}}).
+   ({{assertion-validation}}, {{record-members}}), except that a model
+   output binds to the `authority_hash` of the set it evaluated.
 9. Sign the record and commit it with the `active` Mission
    ({{atomic-commitment}}).
 
@@ -2033,6 +2039,12 @@ same rule as vector 5.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- An assertion that can narrow the authority, such as a model output, is
+  bound to the `authority_hash` of the set it evaluated, which the
+  issuer records with the activation's inputs, rather than to the
+  narrowed result; Activation step 8 and the re-check follow (#1436 item
+  16).
 
 - Resolutions of the remaining #1436 questions. An assertion binds to
   the approval event's `intent_hash` as well. Policy-authorization says
