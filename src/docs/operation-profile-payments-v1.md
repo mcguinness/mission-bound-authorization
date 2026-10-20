@@ -1,12 +1,19 @@
-# payments-runtime-profile-v9
+# payments-runtime-profile-v10
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v9`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v10`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v10** (#817): declares each operation's execution capabilities
+  (below), published as the Enforcement Scope Statement's
+  `extensions.execution_capabilities`. No operation asserts exactly-once
+  execution or the enforced Evaluation-Context Binding property, and the
+  loader refuses a statement that asserts either without the capability
+  it rests on. Decision bytes are unchanged from v9.
 
 - **v9** (#853, D487): the canonical resource URI is the enforcement
   boundary identifier the Enforcement Scope Statement declares for
@@ -468,6 +475,57 @@ Residuals:
 - Freshness at decision time (D33): `payments:payment.execute` requires
   the introspection immediate check; `payments:remittance.send` uses
   permit-within-bound; reads ride the Status List cache.
+
+## Execution capabilities (#817)
+
+The Operation Profile's execution capabilities (runtime Execution
+Capabilities) for each operation with an effect, stated even where the
+answer is no. The Enforcement Scope Statement publishes them as
+`extensions.execution_capabilities`, one entry per operation and phase
+with its class. `loadRuntimePosture` refuses at load an entry that leaves
+an item unstated, names an idempotency holder the statement does not
+declare, or asserts a claim or a recovery no declared capability supports.
+The reads (`list_invoices`, `get_invoice`, `lookup_vendor`,
+`check_transfer`) release no effect and declare none.
+
+| Tool | Idempotency held by | Outcome lookup | Commit point | Unknown outcome |
+|---|---|---|---|---|
+| `schedule_payment` | PEP reservation | reservation row | the local transaction | lookup |
+| `cancel_scheduled_payment` | PEP reservation | reservation row | the local transaction | lookup |
+| `hold_transfer` | none | none | the response | held |
+| `execute_wire_transfer` | PDP claim | ledger entry | ledger acceptance | lookup |
+| `send_remittance_email` | PDP claim | outbox entry | outbox acceptance | lookup |
+
+- **Durable idempotency.** The wire and the notice rely on the PDP's
+  claim over (idempotency scope, `idempotency_key`) under the horizon
+  their `transaction_assurance` declaration publishes (604800 s); the
+  schedule writes rely on the PEP's reservation under its P7D retention
+  (Idempotency keys, above). A deliberately new operation carries a new
+  `idempotency_key`. The connectors' operation key omits it, so a new
+  identical wire or notice is refused `operation_already_claimed`, a new
+  wire for a settled invoice `already_settled`, a second schedule
+  `schedule_exists`, and a cancel with nothing left to cancel
+  `schedule_not_found`. The connectors also deduplicate on the operation
+  key, in memory only, so no resource holds durable idempotency of its
+  own and no operation asserts exactly-once execution.
+- **Conditional effect.** None. No operation carries a precondition to
+  its resource, so none can assert the enforced Evaluation-Context Binding
+  property; the reference claims that extension nowhere (#773).
+- **Outcome lookup.** The connectors answer, by the permit's
+  `evaluation_id`, whether a wire or a notice committed, and the declared
+  reconciler reads that answer. They hold it in memory, so a prior
+  process's effect is out of reach and its claim closes indeterminate
+  (`prior_process_outcomes`). A schedule write resolves from its
+  reservation row, committed with the schedule in one local transaction.
+  The simulated hold records nothing, and its unknown outcome is held.
+- **Cancellation.** Before the commit point, an expired execution lease or
+  a failed reverification suppresses a wire or a notice; nothing stops
+  either after it. `cancel_scheduled_payment` withdraws a schedule after
+  its commit as its own operation under its own Decision.
+- **Compensation.** None. A refund or a correcting notice would be a new
+  operation under its own authority (runtime compound actions).
+- **Claims.** Every entry asserts none. Recovery never executes an effect
+  again: no operation declares `resource_retransmission`.
 
 ## Evidence fields
 
