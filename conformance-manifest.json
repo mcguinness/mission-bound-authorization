@@ -50356,6 +50356,28 @@
    "tests": []
   },
   {
+   "id": "expansion.creation-revalidation.deferred-retry-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-revalidation",
+   "text": "A retry of a deferred operation without the opt-in is refused with `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a same-creation_request_id retry of an operation opened in the deferred mode whose completion_mode does not include deferred is refused invalid_request and receives no deferral",
+    "local": "the reference AS never reads completion_mode, so it returns the same deferral (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",
