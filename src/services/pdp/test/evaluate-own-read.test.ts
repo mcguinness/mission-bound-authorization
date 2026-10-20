@@ -102,11 +102,29 @@ describe("a view without Join Disclosure never joins (@spec authority-server#joi
       ["no client_id", noClient],
       ["neither", neither],
     ] as const) {
-      const dec = await evaluate(request({ join: true }), options({ view: v as MissionView }));
-      expect(dec.decision, label).toBe(false);
-      expect(dec.context.denial_reason, label).toBe("mission_binding_failed");
+      await expect(evaluate(request({ join: true }), options({ view: v as MissionView })), label).resolves.toMatchObject({
+        decision: false,
+        context: { denial_reason: "mission_binding_failed" },
+      });
     }
     const joined = await evaluate(request({ join: true }), options());
     expect(joined.decision, JSON.stringify(joined.context)).toBe(true);
+  });
+
+  it("denies mission_binding_failed when the view carries no client_id, even where a delegate policy and the entry would admit the client as a delegate", async () => {
+    const delegable = view({
+      authority_set: [
+        { type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:payment.execute"], join_delegation: { max_depth: 1, allowed_delegates: ["ap-agent"] } },
+      ],
+    });
+    const { client_id: _c, ...noClient } = delegable;
+    const delegateJoin = { ...request({ join: true }), context: { ...request({ join: true }).context, mission_join: { delegate_depth: 1 } } } as EvaluationRequest;
+    const delegatePolicy = { delegates: { "ap-agent": { maxDepth: 1 } } };
+    const dec = await evaluate(delegateJoin, options({ view: noClient as MissionView, delegatePolicy }));
+    expect(dec.decision).toBe(false);
+    expect(dec.context.denial_reason).toBe("mission_binding_failed");
+    // Control: the same delegate join against a view naming another client permits.
+    const other = await evaluate(delegateJoin, options({ view: { ...delegable, client_id: "ap-orchestrator" }, delegatePolicy }));
+    expect(other.decision, JSON.stringify(other.context)).toBe(true);
   });
 });

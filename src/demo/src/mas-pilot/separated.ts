@@ -74,7 +74,7 @@ function loadedFrom(read: ResolvedMission): LoadedView {
  * replacing whatever the PEP forwarded. With no read, no state option is
  * given, so the decision denies `stale_state`.
  */
-function ownReadDecide(resolver: MissionStatusResolver): (inner: PdpDecide) => PdpDecide {
+export function ownReadDecide(resolver: Pick<MissionStatusResolver, "resolve">): (inner: PdpDecide) => PdpDecide {
   return (inner) => async (request, options) => {
     const { stateObservedAt: _forwarded, stateFreshUntil: _signed, ...rest } = options;
     const ref = request.context.mission;
@@ -94,6 +94,24 @@ function ownReadDecide(resolver: MissionStatusResolver): (inner: PdpDecide) => P
         ? { view: read.view as MissionView, stateObservedAt: iso(read.observedAtMs), stateFreshUntil: iso(read.freshUntilMs) }
         : {}),
     });
+  };
+}
+
+/**
+ * The PEP's one read per enforcement, through the resolver. A Mission the MAS
+ * does not hold, or will not show this PDP, is `unknown_mission`; every
+ * other failure leaves "Mission state not establishable at the PEP"
+ * (authzen#failure-condition-coverage), `state_unavailable`, including the
+ * MAS refusing this PDP's own credential, for which the join rules name no
+ * code of their own.
+ */
+export function statusViewSource(resolver: Pick<MissionStatusResolver, "resolve">): MissionViewSource {
+  return {
+    prepare: async (ref) => {
+      const read = await resolver.resolve(ref);
+      if (read.ok) return { ok: true };
+      return { ok: false, refusal: read.reason === "not_found" ? "unknown_mission" : "state_unavailable" };
+    },
   };
 }
 
@@ -124,20 +142,13 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     maxResponseBytes: source.max_response_bytes,
     ...(resolverNow ? { now: resolverNow } : {}),
   });
-  const viewSource: MissionViewSource = {
-    prepare: async (ref) => {
-      const read = await resolver.resolve(ref);
-      if (read.ok) return { ok: true };
-      return { ok: false, refusal: read.reason === "not_found" ? "unknown_mission" : "state_unavailable" };
-    },
-  };
   const parts = await assembleMasPilot(opts, config, {
     missionIssuer: metadata.issuer,
     loadView: (ref: MissionReference) => {
       const read = resolver.peek(ref);
       return read ? loadedFrom(read) : undefined;
     },
-    viewSource,
+    viewSource: statusViewSource(resolver),
     stateSourcePlacement: source.placement,
     decide: ownReadDecide(resolver),
   });
