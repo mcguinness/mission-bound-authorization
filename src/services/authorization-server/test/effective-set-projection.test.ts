@@ -179,6 +179,30 @@ describe("projectThroughEffective: entry-wise intersection (@spec issuance-grant
     expect(unknownMember[0]?.delegation).toBeUndefined();
   });
 
+  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // reference is compared for identity, so a token projected from an entry
+  // that commits one keeps the children grant a child entry is a subset of.
+  it("carries a child_creation_policy both sides commit identically, and drops the children grant where one side lacks it or they differ", () => {
+    const ref = (version: string) => ({ id: "urn:policy:child", version, digest: `sha-256:${"A".repeat(43)}` });
+    const withPolicy = (policy?: ReturnType<typeof ref>) =>
+      entry({
+        delegation: { max_depth: 2, children: { max_children: 5, ...(policy ? { child_creation_policy: policy } : {}) } },
+      } as Partial<AuthorityEntry>);
+    const carried = project([withPolicy(ref("1"))], [withPolicy(ref("1"))]);
+    expect(carried[0]?.delegation).toEqual({
+      max_depth: 2,
+      children: { max_children: 5, child_creation_policy: ref("1") },
+    });
+    const unprovable: Array<[AuthorityEntry, AuthorityEntry]> = [
+      [withPolicy(ref("1")), withPolicy(ref("2"))],
+      [withPolicy(), withPolicy(ref("1"))],
+      [withPolicy(ref("1")), withPolicy()],
+    ];
+    for (const [candidate, effective] of unprovable) {
+      expect(project([candidate], [effective])[0]?.delegation).toEqual({ max_depth: 2 });
+    }
+  });
+
   it("regression (the containment shape): narrows actions and leaves the rest of the entry alone", () => {
     const candidate = [
       entry({ actions: [READ, PAY], constraints: { max_amount: usd("500.00"), vendors: ["acme"] } }),
