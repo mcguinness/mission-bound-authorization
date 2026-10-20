@@ -1367,9 +1367,10 @@ predecessor when its successor is later revoked, expired, or itself
 superseded; `terminated` is terminal, whatever its reason. A
 deployment that needs to revert to the predecessor's authority
 expresses that as a new approval event creating a new Mission that
-carries the relevant authority, with its own `predecessor` link
-preserving the lineage. A rollback is a new governed Mission, not a
-state reversal.
+carries the relevant authority, and MAY record its `related_to` member
+naming the superseded predecessor to preserve the lineage
+({{independent-continuation}}). A rollback is a new governed Mission,
+not a state reversal.
 
 # Replacement Expansion {#replacement}
 
