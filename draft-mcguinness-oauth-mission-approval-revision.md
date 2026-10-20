@@ -583,7 +583,7 @@ over that object as that profile computes it:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_7nR3w",
     "consent_rendering_hash":
-      "sha-256:zfzbAIawIpHyTut1FbyCQLqR0s_jbr-l7rbAUIje5L8"
+      "sha-256:3pgTrle6nKWp7a5UKN4DDiRcVGXYJzWyf8wb9Sbh8lI"
   },
   "evidence_envelope": {
     "format": "jws-compact",
