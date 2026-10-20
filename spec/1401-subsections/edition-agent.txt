@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-20T06:14:03Z
-Source repository commit: 01b56af59bfe82ab84c880941b389356ba3079b2
+Generated: 2026-10-20T06:24:02Z
+Source repository commit: 803e6f1daad216c13e71823beac811d843c05b7d
 Member count: 9
 
 Reading order:
@@ -11098,7 +11098,8 @@ Table of Contents
 
    Because the policy lives in the entry, authority_hash commits it with
    the rest of the Authority Set, and it is carried with the entries
-   wherever they go, including across a cross-domain projection
+   wherever they go, including across a cross-domain projection where
+   that profile's provenance rule keeps it
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    *Delegation depth.* The delegation depth of a token is the number of
