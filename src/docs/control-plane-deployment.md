@@ -309,10 +309,12 @@ before it serves a request:
   the transaction that created the successor. A later `deny` rewrites the
   row's `state` but not the marker, and deferral rows are never deleted. The
   successor carries the predecessor's client, so its own record cannot show
-  the defect. The AS acts only when exactly one Mission carries the deferral's
+  the defect. The AS acts only when the predecessor and the successor both
+  name this AS's issuer, exactly one Mission carries the deferral's
   predecessor and approval event, the predecessor's `superseded` termination
   names it, it carries the predecessor's client, and no deferral the
-  predecessor's own client opened claims the same approval event.
+  predecessor's own client opened claims the same approval event. Each check
+  runs before the expiry clock.
 - A Progressive ceiling-drawdown successor another client requested. With
   Progressive drawdown on (`progressive`, off in every shipped launcher), the
   in-ceiling path creates a successor without a deferral. Its

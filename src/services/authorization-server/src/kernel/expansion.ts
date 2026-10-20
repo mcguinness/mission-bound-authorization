@@ -282,11 +282,13 @@ export interface SuccessorRemediation {
  * created by polling a deferral before the poll check existed (#1326). Such a
  * successor carries the predecessor's client, so its own record cannot show
  * the defect; the retained committed deferral is the link. A successor is
- * identified only when the links agree: exactly one Mission carries the
- * deferral's predecessor and approval event, the predecessor's supersession
- * names it, it carries the predecessor's client, and no deferral the
- * predecessor's own client opened claims the same approval event. Anything
- * else is reported, never resolved to another Mission.
+ * identified only when the links agree: the predecessor and the successor are
+ * both this kernel's issuer (`issuerId`, #1392), exactly one Mission carries
+ * the deferral's predecessor and approval event, the predecessor's
+ * supersession names it, it carries the predecessor's client, and no deferral
+ * the predecessor's own client opened claims the same approval event.
+ * Anything else is reported before the expiry clock or any transition runs,
+ * never resolved to another Mission.
  *
  * Revocation is the ordinary lifecycle transition, after the expiry clock: the
  * predecessor stays superseded, a terminal successor keeps its recorded
@@ -300,6 +302,7 @@ export function revokeSuccessorsExpandedByAnotherClient(
   kernel: MissionKernel,
   deferrals: Pick<ExpansionDeferralStore, "retainedCommittedExpansions">,
 ): SuccessorRemediation {
+  const issuer = kernel.issuerId();
   const committed = deferrals.retainedCommittedExpansions();
   const revoked: string[] = [];
   const unresolved: UnresolvedSuccessorProvenance[] = [];
@@ -307,9 +310,16 @@ export function revokeSuccessorsExpandedByAnotherClient(
     const report = (reason: string): void => {
       unresolved.push({ deferralCode: op.deferralCode, predecessorId: op.predecessorId, clientId: op.clientId, reason });
     };
+    // Every check below precedes the expiry clock and the transition, so an
+    // inconsistent record is reported with nothing committed for it.
     const predecessor = kernel.get(op.predecessorId);
     if (!predecessor) {
       report("the predecessor record is missing");
+      continue;
+    }
+    // Before the client comparison, which a foreign record cannot support.
+    if (predecessor.issuer !== issuer) {
+      report("the predecessor is not this issuer's");
       continue;
     }
     if (op.clientId === predecessor.client_id) continue;
@@ -321,6 +331,10 @@ export function revokeSuccessorsExpandedByAnotherClient(
     const successor = linked[0];
     if (!successor || linked.length > 1) {
       report(successor ? "several successors carry the deferral's approval event" : "no successor carries the deferral's approval event");
+      continue;
+    }
+    if (successor.issuer !== issuer) {
+      report("the successor is not this issuer's");
       continue;
     }
     const termination = predecessor.termination;
