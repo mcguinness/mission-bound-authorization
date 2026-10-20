@@ -1344,9 +1344,7 @@ consent disclosure SHOULD surface that fact as a material notice: at
 minimum the count of live Child Missions and that supersession
 terminates them. Where a deployment provides this notice, the
 expansion consent event renders the cost above; that consent event is the only point in this document at which a human can witness the
-cascade before it happens. A deployment MAY additionally support an
-expansion-request parameter by which the client asks the Mission
-Issuer to refuse the expansion while live Child Missions exist.
+cascade before it happens.
 
 Where explicitly approved Child Mission Carryover is selected, the Mission
 Issuer MUST render and commit its complete manifest and exclusion policy,
