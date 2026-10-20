@@ -166,6 +166,7 @@ matcher is `delegatePermitted` (`kernel/delegate-matcher.ts`).
 | A `sub_profile` matcher is satisfied by membership among the actor's values | implemented; a matcher value naming several space-separated tokens requires every token | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP" |
 | A matcher with both members needs both; any matcher in the list permits | implemented | cases dg-match-01 to dg-match-04 |
 | Only an asserted `sub_profile` satisfies a matcher, never a self-asserted one | implemented (`DelegateCandidate.assertedProfile`) | `delegation.test.ts` "a SELF-ASSERTED profile (no asserted class) does NOT satisfy a sub_profile matcher"; case dg-match-05 |
+| A matcher carrying another member, neither member, or an empty or non-string value permits nothing, and the list's other matchers still decide | implemented (local, #1373): intake refuses such a matcher, and `delegatePermitted` applies the same rule (`delegateMatcherListViolation`) to one a record committed earlier still holds | `delegate-matcher.test.ts` "does NOT match a matcher whose sub or sub_profile matches but which carries another member"; `delegate-eligibility-endpoint.test.ts` "a committed matcher carrying another member permits nothing (#1373): a record holding one, from before intake refused it, does not admit the delegate it names" |
 
 How a Resource AS evaluates conveyed `sub` matchers is Cross-Domain's rule and
 is outside this inventory.
