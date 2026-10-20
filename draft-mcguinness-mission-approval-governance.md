@@ -834,7 +834,7 @@ with the Mission ({{atomic-commitment}}).
 ## Consented Root {#governed-policy-root}
 
 The consented root is the retained `approval_policy` snapshot that a
-human approved ({{record}}). It commits:
+human approved ({{approval-policy}}). It commits:
 
 - the clients, Subjects, and authority sources that can activate
   under it;
@@ -845,7 +845,7 @@ human approved ({{record}}). It commits:
   exceptions of {{policy-approval-recency}}; and
 - where a separate policy artifact decides instances, that artifact's
   activation policy reference ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Standing-Consent Bases").
+  Section "Activation Policy Commitment").
 
 The root decides whether an instance activates. It is distinct from
 an `organizational` authority source's `authority_source.policy`,
@@ -859,7 +859,7 @@ submitted proposal cannot supply its own standing consent.
 
 The root and a separate evaluator keep distinct digest domains:
 `approval_policy.digest` commits the root under `typ`
-`mission-approval-policy` ({{record}}), and the activation policy
+`mission-approval-policy` ({{approval-policy}}), and the activation policy
 reference commits the evaluator under `typ`
 `mission-activation-policy`. The issuer MUST NOT accept either digest
 in place of the other.
@@ -930,7 +930,7 @@ MUST, before it creates the Mission `active`:
 3. Where the root commits a separate evaluator, recompute that
    evaluator's digest over the exact snapshot evaluated
    ({{I-D.draft-mcguinness-oauth-mission}}, Section
-   "Standing-Consent Bases").
+   "Activation Policy Commitment").
 4. Establish the Subject and the authority source as the issuance
    profile requires, and verify that the requesting client, the
    Subject, and the source are ones the root admits.
@@ -955,8 +955,8 @@ A failure at any step creates no Mission and issues no credential.
 A model's output enters only as a recorded input at step 6: it can
 refuse an activation or narrow the authority activated, and never
 supplies authority or decides the approval
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Bases").
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis").
 
 Withdrawing the standing consent stops every later activation under
 it (step 1). A Mission already activated keeps its ordinary
