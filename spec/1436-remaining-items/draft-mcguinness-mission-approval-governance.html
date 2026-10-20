@@ -2530,11 +2530,11 @@ value (<a href="#consent-evidence-relationship" class="auto internal xref">Secti
       <h2 id="name-re-checking-an-evaluation">
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-re-checking-an-evaluation" class="section-name selfRef">Re-checking an Evaluation</a>
       </h2>
-<p id="section-10-1">A Relying Auditor re-checks an evaluation by confirming that it follows
-from the retained policy and the recorded assertions. Conformance
-requires it to obtain the retained policy version before treating the
-evaluation as re-checked (<a href="#conformance" class="auto internal xref">Section 15</a>). The re-check has these
-steps:<a href="#section-10-1" class="pilcrow">¶</a></p>
+<p id="section-10-1">A Relying Auditor re-checks an evaluation by replaying it from retained
+evidence: the policy and any evaluator that decided, the inputs they
+evaluated, and the recorded assertions. Conformance requires it to
+obtain the retained policy version before treating the evaluation as
+re-checked (<a href="#conformance" class="auto internal xref">Section 15</a>). The re-check has these steps:<a href="#section-10-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-10-2">
 <li id="section-10-2.1">
           <p id="section-10-2.1.1">Verify the record (<a href="#envelope" class="auto internal xref">Section 9</a>).<a href="#section-10-2.1.1" class="pilcrow">¶</a></p>
@@ -2542,23 +2542,43 @@ steps:<a href="#section-10-1" class="pilcrow">¶</a></p>
         <li id="section-10-2.2">
           <p id="section-10-2.2.1">Obtain the retained snapshot of the <code>approval_policy</code> version the
 record names, and recompute <code>approval_policy.digest</code> over it
-(<a href="#approval-policy" class="auto internal xref">Section 5.4</a>). A mismatch means the evaluation is not
-re-checked.<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
+(<a href="#approval-policy" class="auto internal xref">Section 5.4</a>).<a href="#section-10-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-10-2.3">
-          <p id="section-10-2.3.1">Apply the snapshot's rule to the recorded assertions, and confirm
-that it approves, counting exactly the assertions <code>contributing</code>
-lists (<a href="#record-members" class="auto internal xref">Section 5.1</a>).<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-10-2.3.1">Where that snapshot commits a separate evaluator that decides, as a
+<code>governed_policy</code> root can (<a href="#governed-policy-root" class="auto internal xref">Section 11.1</a>), obtain the
+retained snapshot of that evaluator and recompute its activation
+policy reference digest (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Activation Policy Commitment").<a href="#section-10-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-10-2.4">
-          <p id="section-10-2.4.1">Apply the recency rules of <a href="#policy-approval-recency" class="auto internal xref">Section 7</a>, as the
+          <p id="section-10-2.4.1">Obtain the inputs the deciding policy or evaluator evaluated, as the
+issuer recorded them (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Principals and Approval Basis"). These include each model output in
+full, with its verdict and any narrowing, which the matching
+<code>service</code> assertion records only by identifier. Confirm that each
+input carries this record's <code>approval_event_id</code> and the Mission's
+<code>intent_hash</code>, and that each contributing <code>service</code> assertion
+corresponds to one of them.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.5">
+          <p id="section-10-2.5.1">Re-run the deciding policy or evaluator, at its exact version, over
+those inputs and the recorded assertions, and confirm that it
+approves, counting exactly the assertions <code>contributing</code> lists
+(<a href="#record-members" class="auto internal xref">Section 5.1</a>).<a href="#section-10-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-10-2.6">
+          <p id="section-10-2.6.1">Apply the recency rules of <a href="#policy-approval-recency" class="auto internal xref">Section 7</a>, as the
 snapshot or the declaration it commits states them, with
-<code>evaluation.evaluated_at</code> as the evaluation instant.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+<code>evaluation.evaluated_at</code> as the evaluation instant.<a href="#section-10-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-10-3">A re-check does not re-authenticate an assertion: the record carries an
+<p id="section-10-3">Where a snapshot, the evaluator, or an input cannot be obtained, a
+recomputed digest does not match, a binding does not hold, or the replay
+reaches a different outcome, the evaluation is not re-checked.<a href="#section-10-3" class="pilcrow">¶</a></p>
+<p id="section-10-4">A re-check does not re-authenticate an assertion: the record carries an
 assertion's authentication context (<a href="#assertion-authority" class="auto internal xref">Section 5.3</a>), not the
-authentication itself.<a href="#section-10-3" class="pilcrow">¶</a></p>
+authentication itself.<a href="#section-10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="governed-policy">
