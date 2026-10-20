@@ -1775,6 +1775,11 @@ async function evaluateInner(
   // and nothing derived from the Mission. A policy that cannot answer throws
   // out of `evaluate` (no decision; the PEP records `pdp_unreachable`), so
   // no Decision Evidence ever claims a policy evaluation that did not happen.
+  // On a joined request the subject and client are the ones the PEP
+  // authenticated, in the credential's own namespace, never the mapping
+  // contract's resolution from step 4b: the policy stays a bound evaluated
+  // independently of the join (@spec authority-server#mission-join rule 8,
+  // #818).
   const iss = req.subject.properties?.iss;
   const client = req.context.actor?.client_id;
   const policy = await checkResourcePolicy(opts.resourcePolicy, {
