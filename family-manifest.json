@@ -1240,6 +1240,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-discharge",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-transaction-authorization"
    ]
@@ -2210,9 +2211,13 @@
     "draft-mcguinness-oauth-mission"
    ],
    "references": [
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-metering",
+    "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-cross-domain"
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-transaction-authorization"
    ]
   },
   {
