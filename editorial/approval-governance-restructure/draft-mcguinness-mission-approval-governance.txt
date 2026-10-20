@@ -88,13 +88,13 @@ Table of Contents
    6.  Assertion Requirements
      6.1.  Assertion Validation
      6.2.  Accountable Assertion
-   7.  Evaluation and Atomic Commitment
-   8.  Policy-Approval Recency
-     8.1.  Recency Declarations
-     8.2.  Evaluating Recency
-     8.3.  High-Risk Classes
-     8.4.  Scope of the Recency Rules
-     8.5.  Relationship to Standing-Consent Recency
+   7.  Policy-Approval Recency
+     7.1.  Recency Declarations
+     7.2.  Evaluating Recency
+     7.3.  High-Risk Classes
+     7.4.  Scope of the Recency Rules
+     7.5.  Relationship to Standing-Consent Recency
+   8.  Evaluation and Atomic Commitment
    9.  Envelope and Verification
    10. Governed Policy Approval
      10.1.  Consented Root
@@ -132,14 +132,13 @@ Table of Contents
 
 1.  Introduction
 
-   An authority-bearing binding of the Mission model records one
-   accountable Approver for each Mission and leaves multi-party approval
-   and approval-authority provenance to a governance layer.  Mission-
-   Bound Authorization for OAuth 2.0
-   [I-D.draft-mcguinness-oauth-mission] (the "issuance profile") states
-   this rule for the OAuth binding, which records the Approver in
-   approval_basis.consent_principal; this document consumes that
-   binding's record members.
+   Mission-Bound Authorization records one accountable Approver for each
+   Mission and leaves multi-party approval and approval-authority
+   provenance to a governance layer.  Mission-Bound Authorization for
+   OAuth 2.0 [I-D.draft-mcguinness-oauth-mission] (the "issuance
+   profile") states this rule for the OAuth binding, which records the
+   Approver in approval_basis.consent_principal; this document consumes
+   that binding's record members.
 
    An enterprise review process is often that governance layer.  One
    approval can involve several principals, a threshold or separation-
@@ -168,7 +167,7 @@ Table of Contents
    *  Before commitment, it is part of the approval decision.  An
       assertion that fails authentication, event binding, or policy
       authorization does not contribute (Section 6), and a record that
-      cannot be evaluated or persisted prevents activation (Section 7).
+      cannot be evaluated or persisted prevents activation (Section 8).
 
    *  After commitment, it is evidence: immutable, signed (Section 9),
       and consumed by audit, never by enforcement.
@@ -176,8 +175,8 @@ Table of Contents
    This document is optional.  A deployment that records nothing beyond
    the Mission Record's accountable approval_basis.consent_principal is
    fully conformant to its Mission binding and unaffected by this
-   document.  A profile can require the record under the Recording
-   Triggers (Section 4).
+   document.  A profile can require the record; Section 4 defines the
+   conditions under which one does.
 
    The record is independent of the approval ceremony.  It applies alike
    to synchronous approval, to deferred approval
@@ -197,7 +196,8 @@ Table of Contents
    All JSON shown in this document is non-normative and illustrative;
    the member definitions in the surrounding text are authoritative.  An
    example line too long for the page is folded with the single
-   backslash strategy of [RFC8792].
+   backslash strategy of [RFC8792]; the canonical-bytes blocks of
+   Appendix A are wrapped as that appendix describes.
 
    This document uses JSON [RFC8259] as the data model for the Approval
    Governance Record.  JCS canonicalization [RFC8785] applies wherever
@@ -208,7 +208,7 @@ Table of Contents
    A digest is encoded in the integrity-anchor encoded form of
    [I-D.draft-mcguinness-oauth-mission]: the sha-256: prefix followed by
    the base64url, no-padding encoding of the digest.  This document
-   defines no digest algorithm of its own.  The record's two digests are
+   defines no digest algorithm of its own.  Its two digests are
    classified under the substrate's default commitment construction,
    which this document imports normatively
    ([I-D.draft-mcguinness-mission-substrate]): approval_policy.digest is
@@ -232,7 +232,7 @@ Table of Contents
       approver rule (Section 6.2).
 
    Evaluation:  The issuer's determination of whether the recorded
-      assertions satisfy the referenced approval policy (Section 5.1).
+      assertions satisfy the referenced approval policy (Section 8).
 
    Record digest:  The digest over a complete record, envelope included,
       that every external binding names (Section 9).
@@ -241,10 +241,10 @@ Table of Contents
       record for an approval event (Section 4).
 
    Recording Issuer:  A Mission Issuer that records Approval Governance
-      Records (Section 14).  This document also calls it "the issuer".
+      Records (Section 14).
 
-   Relying Auditor:  A party that verifies a retained record and re-
-      checks its evaluation (Section 14).
+   Relying Auditor:  A party that verifies a retained record and can re-
+      check its evaluation (Section 14).
 
 3.  Relationship to the Issuance Profile
 
@@ -293,17 +293,17 @@ Table of Contents
    defined here so that a profile cites one list.  The record is
    REQUIRED for an approval event when any of the following holds:
 
-   *  the Mission Record's approval_basis.consent_principal differs from
-      its subject;
+   1.  the Mission Record's approval_basis.consent_principal differs
+       from its subject;
 
-   *  more than one principal contributes to the decision;
+   2.  more than one principal contributes to the decision;
 
-   *  a non-human assertion contributes to the decision;
+   3.  a non-human assertion contributes to the decision;
 
-   *  a threshold, veto, or separation-of-duty rule is evaluated; or
+   4.  a threshold, veto, or separation-of-duty rule is evaluated; or
 
-   *  validating any assertion requires authority standing outside the
-      Mission Record.
+   5.  validating any assertion requires authority standing outside the
+       Mission Record.
 
    Independently of any profile, every activation under governed_policy
    records an Approval Governance Record (Section 10).
@@ -353,7 +353,7 @@ Table of Contents
 5.  The Approval Governance Record
 
    An Approval Governance Record is a JSON object.  Section 5.1 and
-   Section 5.2 define its members.  Section 6 and Section 7 define how
+   Section 5.2 define its members.  Section 6 and Section 8 define how
    the issuer builds and commits it, and Section 9 defines its integrity
    protection.
 
@@ -383,7 +383,7 @@ Table of Contents
 
       decision:  A string.  The only value a committed record carries is
          approved, since a record exists only for an approval that
-         committed (Section 7).
+         committed (Section 8).
 
       evaluated_at:  An RFC 3339 timestamp.
 
@@ -396,7 +396,7 @@ Table of Contents
       member of this record, never of the Mission Record (Section 13.3).
       An issuer that records it computes it in the same commit that
       creates the Mission and persists this record, before the record is
-      signed (Section 7), so the signed payload commits to it.  A
+      signed (Section 8), so the signed payload commits to it.  A
       verifier checks it against the Mission Record (Section 9).
 
    envelope:  REQUIRED.  An object.  Integrity protection over the
@@ -440,7 +440,7 @@ Table of Contents
    under.  The issuer MUST verify approved_at from retained,
    authenticated governance state for the named policy_id and version;
    it MUST NOT accept approved_at as the assertion's own uncorroborated
-   clock value (Section 8).
+   clock value (Section 7).
 
 5.3.  Approval Policy Reference
 
@@ -527,10 +527,9 @@ Table of Contents
       approver rule of Section 6.2 directly.
 
    *  ast_2 is a policy assertion carrying its own provenance chain,
-      recorded alongside the accountable approver's assertion rather
-      than in place of it.  Because a non-human assertion contributes,
-      the record is required under the third recording trigger
-      (Section 4).
+      recorded alongside the accountable assertion rather than in place
+      of it.  Because a non-human assertion contributes, the record is
+      required under the third recording trigger (Section 4).
 
    *  The envelope member's value is the JWS whose payload is the JCS
       canonical bytes of this object with envelope itself removed
@@ -538,8 +537,7 @@ Table of Contents
 
 6.  Assertion Requirements
 
-   These rules apply before commitment, while the record is part of the
-   approval decision (Section 7).
+   These rules govern the assertions the issuer evaluates (Section 8).
 
 6.1.  Assertion Validation
 
@@ -575,7 +573,7 @@ Table of Contents
    commit.  This is the accountable-approver rule.  The matching
    assertion's kind MUST be human or policy: a service assertion,
    including one a model produced, is a contributing governance input,
-   never the accountable approver's assertion.
+   never the accountable assertion.
 
    The Mission's approval_basis.type fixes the accountable assertion:
 
@@ -588,7 +586,7 @@ Table of Contents
       deciding policy's provenance chain (Section 10.2): the policy is
       the decision mechanism and the matched principal stays the human
       who approved it, subject to the high-risk-class restriction of
-      Section 8.
+      Section 7.3.
 
    *  For any other named standing-consent approval_basis
       ([I-D.draft-mcguinness-oauth-mission]), the Mission satisfies this
@@ -602,68 +600,25 @@ Table of Contents
    the requesting actor to stand in for a fresh human decision that did
    not occur.
 
-7.  Evaluation and Atomic Commitment
+   Where the Mission populates approval_basis.adjudication, the
+   accountable assertion's kind also equals adjudication.kind
+   (Section 3).
 
-   Where a deployment records the Approval Governance Record for an
-   approval, the record and the Mission are one commit.  Within that
-   commit, the issuer:
-
-   1.  validates the assertions (Section 6);
-
-   2.  evaluates them under the referenced policy version;
-
-   3.  where the record carries approval_context_commitment
-       (Section 5.1), computes it from the Mission Record being created;
-
-   4.  signs the evaluated record (Section 9); and
-
-   5.  persists the signed record in the same commit as the Mission's
-       creation.
-
-   Signing follows evaluation and precedes persistence, never the
-   reverse, and approval_context_commitment is computed before signing.
-   A value of approval_context_commitment computed after the commit is
-   not covered by the record's signature and MUST NOT be added to a
-   committed record.
-
-   Where a deployment records the Approval Governance Record for an
-   approval, the Mission Record MUST NOT be created active unless the
-   evaluation's decision is approved and the signed record persists
-   atomically with the Mission's creation.  Failure to authenticate the
-   contributing assertions, to complete the evaluation, or to persist
-   the record MUST prevent activation; there is no Mission whose
-   governance record was meant to exist and does not.
-
-   A governance evaluation that denies creates no Mission and no
-   committed record:
-
-   *  negative assertions retained inside a committed record document
-      dissent (Section 6.1); and
-
-   *  a wholly declined approval's evidence surface is consent
-      evidence's declined outcome
-      ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), which
-      exists without a Mission Record.
-
-   A committed record is immutable.  A subsequent governance action,
-   such as a re-review or an incident finding, is a new record about a
-   new event, never an edit.
-
-8.  Policy-Approval Recency
+7.  Policy-Approval Recency
 
    This section bounds staleness on the AGR policy assertion path: it
    governs a policy assertion's authority.approved_at and the kind of
    the accountable assertion (Section 6.2).  It does not apply to a
    human assertion, whose decided_at is the approval instant itself.
 
-8.1.  Recency Declarations
+7.1.  Recency Declarations
 
    A Recording Issuer that admits policy assertions MUST declare a
    maximum policy-approval age per consequence class (a *recency
    ceiling*) and a bounded clock-skew allowance, and MAY declare, per
    class, an *exception* admitting a policy assertion as the accountable
-   approver's assertion for that class, each exception carrying its own
-   maximum age.
+   assertion for that class, each exception carrying its own maximum
+   age.
 
    The ceiling, the skew allowance, and any exception MUST be part of
    the retained approval_policy snapshot that approval_policy.digest
@@ -673,7 +628,7 @@ Table of Contents
    impossible to reproduce, contrary to the purpose of the retained
    policy, which lets an auditor re-run the decision (Section 5.3).
 
-8.2.  Evaluating Recency
+7.2.  Evaluating Recency
 
    At evaluation, the issuer MUST classify the committed Mission's
    consequence classes from the derived Authority Set and from any
@@ -694,7 +649,7 @@ Table of Contents
 
    *  MUST measure the assertion's age as evaluation.evaluated_at minus
       authority.approved_at, using the atomic-commitment instant
-      (Section 7);
+      (Section 8);
 
    *  MUST enforce authority.approved_at <= decided_at <=
       evaluation.evaluated_at, subject to the declared clock-skew
@@ -707,15 +662,15 @@ Table of Contents
    A policy assertion whose age exceeds the applicable maximum, or whose
    ordering the checks above do not admit, fails policy-authorization
    under Section 6.1: the issuer MUST NOT count it toward the
-   evaluation, and by Section 7 the Mission MUST NOT be created active
+   evaluation, and by Section 8 the Mission MUST NOT be created active
    on an evaluation that depended on it.
 
    An evaluation.evaluated_at later than the issuer's own clock, beyond
    the declared allowance, is a defect of the record rather than of one
    assertion: the evaluation MUST NOT be treated as complete, and by
-   Section 7 the Mission MUST NOT be created active on it.
+   Section 8 the Mission MUST NOT be created active on it.
 
-8.3.  High-Risk Classes
+7.3.  High-Risk Classes
 
    Four conditions are the high-risk classes the issuance profile
    defines: irreversible action, external commitment, privileged
@@ -724,20 +679,21 @@ Table of Contents
    Mission's derived Authority Set or Mission Intent
    ([I-D.draft-mcguinness-mission-metering]) carries one, the assertion
    satisfying the accountable-approver rule of Section 6.2 MUST be kind:
-   human, unless a committed, class-named exception under Section 8.1
-   admits kind: policy for that class.  Only governed_policy has a
-   policy accountable assertion (Section 6.2), so a governed policy
-   activates a Mission carrying one of these classes only under such an
-   exception.
+   human, unless a committed, class-named exception under Section 7.1
+   admits kind: policy for that class.
+
+   Only governed_policy has a policy accountable assertion
+   (Section 6.2), so a governed policy activates a Mission carrying one
+   of these classes only under such an exception.
 
    The same default binds a Mission whose accountable-approver rule is
    satisfied through its own approval_basis record rather than an
    assertion (Section 6.2): recording an AGR for such a Mission carrying
    one of the four classes requires a committed, class-named exception
-   under Section 8.1; absent it, the record MUST NOT be created and, by
-   Section 7, the Mission MUST NOT be created active.
+   under Section 7.1; absent it, the record MUST NOT be created and, by
+   Section 8, the Mission MUST NOT be created active.
 
-8.4.  Scope of the Recency Rules
+7.4.  Scope of the Recency Rules
 
    Recency is issuance-time eligibility.  It determines whether a
    Mission activates and does not reach back into a Mission already
@@ -746,19 +702,19 @@ Table of Contents
    exception, or the policy's freshness does not narrow or terminate it.
 
    Approval Governance is an optional extension (Section 1).  The rules
-   of Section 8 are a conservative default of this document, not a
+   of Section 7 are a conservative default of this document, not a
    family-wide guarantee, and a deployment that records no Approval
    Governance Record is unbounded by them.
 
    The kind: human requirement is not by itself an assurance property:
    the authentication-strength, rendering, and accountable-principal
    requirements the issuance profile and Section 6 otherwise impose
-   still carry that property; Section 8 only decides which assertion
+   still carry that property; Section 7 only decides which assertion
    kind MUST be present.
 
-8.5.  Relationship to Standing-Consent Recency
+7.5.  Relationship to Standing-Consent Recency
 
-   Section 8 bounds the AGR policy assertion path and, by extension, a
+   Section 7 bounds the AGR policy assertion path and, by extension, a
    standing-consent Mission whose approval_basis record stands in for
    that assertion (Section 6.2).
 
@@ -791,6 +747,49 @@ Table of Contents
    *  a profile's own maximum age governs whether the dispatch or
       drawdown may happen at all, independent of whether an AGR is ever
       recorded.
+
+8.  Evaluation and Atomic Commitment
+
+   Where a deployment records the Approval Governance Record for an
+   approval, the record and the Mission are one commit.  Within that
+   commit, the issuer:
+
+   *  validates the assertions (Section 6);
+
+   *  evaluates them under the referenced policy version;
+
+   *  where the record carries approval_context_commitment
+      (Section 5.1), computes it from the Mission Record being created;
+
+   *  signs the evaluated record (Section 9); and
+
+   *  persists the signed record in the same commit as the Mission's
+      creation.
+
+   Signing follows evaluation and precedes persistence, never the
+   reverse, and approval_context_commitment is computed before signing.
+   A value of approval_context_commitment computed after the commit is
+   not covered by the record's signature and MUST NOT be added to a
+   committed record.
+
+   Where a deployment records the Approval Governance Record for an
+   approval, the Mission Record MUST NOT be created active unless the
+   evaluation's decision is approved and the signed record persists
+   atomically with the Mission's creation.  Failure to authenticate the
+   contributing assertions, to complete the evaluation, or to persist
+   the record MUST prevent activation; there is no Mission whose
+   governance record was meant to exist and does not.
+
+   A governance evaluation that denies creates no Mission and no
+   committed record.  Negative assertions retained inside a committed
+   record document dissent (Section 6.1), and a wholly declined
+   approval's evidence surface is consent evidence's declined outcome
+   ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), which exists
+   without a Mission Record.
+
+   A committed record is immutable.  A subsequent governance action,
+   such as a re-review or an incident finding, is a new record about a
+   new event, never an edit.
 
 9.  Envelope and Verification
 
@@ -851,13 +850,13 @@ Table of Contents
 
    Where the record carries approval_context_commitment, the mission
    member carries no Mission id, so a verifier recomputes the commitment
-   from the Mission Record this record is retained with, the record step
-   5 resolves, and rejects the reference on a mismatch (Section 13.3).
+   from the Mission Record this record is retained with, which step 5
+   resolves, and rejects the reference on a mismatch (Section 13.3).
 
    The *record digest* is the digest, in the encoded form Section 2
    fixes, over the JCS [RFC8785] canonical bytes of the complete record,
    envelope included.  It is the one byte sequence every external
-   binding names:
+   reference names:
 
    *  audit registration hashes exactly these bytes (Section 12); and
 
@@ -873,7 +872,7 @@ Table of Contents
    version once; that policy then activates eligible Mission proposals
    with no fresh human decision per instance.  Every activation under
    this basis MUST record an Approval Governance Record, committed with
-   the Mission (Section 7).
+   the Mission (Section 8).
 
 10.1.  Consented Root
 
@@ -889,7 +888,7 @@ Table of Contents
    *  the deterministic rules that decide an activation;
 
    *  the recency ceilings, the clock-skew allowance, and any class-
-      named exceptions of Section 8; and
+      named exceptions of Section 7; and
 
    *  where a separate policy artifact decides instances, that
       artifact's activation policy reference
@@ -959,7 +958,7 @@ Table of Contents
 
 10.3.  Activation
 
-   At the atomic creation commit (Section 7), the issuer MUST, before it
+   At the atomic creation commit (Section 8), the issuer MUST, before it
    creates the Mission active:
 
    1.  Resolve the standing consent from retained, authenticated state
@@ -986,17 +985,17 @@ Table of Contents
    6.  Evaluate the deciding policy, at its exact version, over recorded
        inputs.
 
-   7.  Apply the policy-approval recency rules (Section 8) across the
+   7.  Apply the policy-approval recency rules (Section 7) across the
        whole derived Mission, including any consumption bound, so a
        high-risk class activates only under a committed, class-named
        exception.
 
    8.  Bind every assertion and the record to this instance's
-       approval_event_id, intent_hash, and authority_hash (Section 6,
-       Section 5).
+       approval_event_id, intent_hash, and authority_hash (Section 6.1,
+       Section 5.1).
 
    9.  Sign the record and commit it with the active Mission
-       (Section 7).
+       (Section 8).
 
    A failure at any step creates no Mission and issues no credential.
 
@@ -1107,16 +1106,16 @@ Table of Contents
    *  The root declares a 30-day recency ceiling for every consequence
       class, a 60-second clock-skew allowance, and an exception that
       admits a policy accountable assertion for irreversible actions,
-      with a maximum age of 7 days (Section 8.1).  The issuer classifies
-      journal-entries.write as an irreversible action, so the exception
-      applies and the strictest applicable maximum is 7 days
-      (Section 8.2).
+      with a maximum age of 7 days (Section 7.1).  The issuer classifies
+      journal-entries.write as an irreversible action and finds no other
+      high-risk class, so the exception applies and the strictest
+      applicable maximum is 7 days (Section 7.2).
 
    *  At evaluated_at, ast_1 is 2 days and 16 hours old, and approved_at
       <= decided_at <= evaluated_at holds, so the issuer counts it.
       Without the exception, the accountable assertion would have to be
       kind: human, and the policy could not activate this Mission
-      (Section 8.3).
+      (Section 7.3).
 
 11.  Consent Evidence Relationship
 
@@ -1132,8 +1131,8 @@ Table of Contents
       timestamp equal to the assertion's decided_at.  Omitting an
       assertion is permitted; an entry with no corresponding assertion,
       or one that alters a decision or time, is an integrity failure.
-      service and policy assertions are governance inputs, never consent
-      events, and are never presented as co-approvals.
+      Assertions of kind service or policy are governance inputs, never
+      consent events, and are never presented as co-approvals.
 
    *  The consent evidence approver MUST equal the principal of the
       record's accountable assertion (Section 6.2); for a standing-
@@ -1174,8 +1173,8 @@ Table of Contents
    deployment records consent evidence, each revision_required outcome
    produces a narrowed consent-evidence decision with no corresponding
    record: no Mission yet exists for the atomic commitment rule
-   (Section 7) to attach to.  The two artifacts hold different facts, so
-   they do not conflict:
+   (Section 8) to attach to.  This is a deliberate artifact separation,
+   not an authority conflict:
 
    *  where consent evidence is recorded, it owns the narrowing history,
       through its narrowed entries and predecessor_intent_hashes; and
@@ -1375,41 +1374,43 @@ Table of Contents
 
 14.  Conformance
 
-   This document has two conformance targets.  A Recording Issuer MUST:
+   A Recording Issuer MUST:
 
    *  authenticate, event-bind, and policy-authorize every contributing
       assertion (Section 6.1);
 
    *  record denials (Section 6.1);
 
-   *  include the accountable-approver assertion (Section 6.2);
+   *  include the accountable assertion (Section 6.2);
 
-   *  evaluate under the retained policy version (Section 5.3);
+   *  evaluate under the retained policy version (Section 8);
 
    *  enforce the strictest applicable policy-approval maximum age
       across the consequence classes the committed Mission's derived
       Authority Set and Mission Intent carry, from a committed ceiling
-      and any committed exception (Section 8);
+      and any committed exception (Section 7);
 
-   *  require kind: human for the accountable-approver assertion where
-      the committed Mission's derived Authority Set or Mission Intent
+   *  require kind: human for the accountable assertion where the
+      committed Mission's derived Authority Set or Mission Intent
       carries a high-risk class, unless a committed class-named
-      exception applies (Section 8);
+      exception applies (Section 7);
 
    *  under governed_policy, record the members of Section 10.2 and
       complete the activation checks of Section 10.3;
 
    *  commit the record atomically with Mission creation and let failure
-      prevent activation (Section 7);
+      prevent activation (Section 8);
 
-   *  sign the committed record and keep it immutable (Section 9); and
+   *  sign the evaluated record before it is committed, and keep the
+      committed record immutable (Section 8, Section 9); and
 
    *  retain the record and the referenced policy for the Mission's
       audit horizon ([I-D.draft-mcguinness-oauth-mission]).
 
    A Relying Auditor MUST verify the envelope by byte equality, MUST
    validate the mission binding, and MUST obtain the retained policy
-   version before treating the evaluation as re-checked (Section 9).
+   version before treating the evaluation as re-checked (Section 9,
+   Section 5.3).
 
 15.  Security Considerations
 
@@ -1421,7 +1422,7 @@ Table of Contents
 
    A forged or padded assertion is an authorization attack before
    commitment, not an audit defect: the assertion requirements of
-   Section 6.1 are the control, and a deployment that records assertions
+   Section 6 are the control, and a deployment that records assertions
    without authenticating them has built an approval bypass rather than
    an evidence trail.
 
@@ -1442,7 +1443,7 @@ Table of Contents
 
 15.4.  Stale Policy Approval
 
-   Without Section 8, a policy assertion could rely on a human approval
+   Without Section 7, a policy assertion could rely on a human approval
    far in the past, or stand in for the accountable approver on a high-
    risk consequence with no human assertion at all.  The recency
    ceiling, its ordering checks, and the human-by-default consequence-
@@ -1702,12 +1703,14 @@ Appendix A.  Approval Context Commitment Test Vectors
    Mission Record ([I-D.draft-mcguinness-oauth-mission]), including its
    proposal_hash, per that document's rule that an extending example
    must either reproduce the recorded objects byte-exactly or state its
-   divergence.  Vectors 1, 3, and 4 are hypothetical variants of that
-   same Mission (same id, intent_hash, and authority_hash) that diverge
-   in exactly one respect each, stated at each vector: this lets three
-   different approval_context_commitment values legitimately exist for
-   the one Mission id across the set, each correct for the variant it
-   names, never for the others.
+   divergence.
+
+   Vectors 1, 3, and 4 are hypothetical variants of that same Mission
+   (same id, intent_hash, and authority_hash) that diverge in exactly
+   one respect each, stated at each vector: this lets three different
+   approval_context_commitment values legitimately exist for the one
+   Mission id across the set, each correct for the variant it names,
+   never for the others.
 
    The always-present members, reused unchanged across every vector:
 
@@ -1966,12 +1969,13 @@ Appendix B.  Document History
       Requirements and Policy-Approval Recency are split into
       subsections; Boundaries is folded into the sections it qualified;
       Conformance precedes Security Considerations; and the Approval
-      Context Commitment test vectors are an appendix.  Conventions
-      defines the accountable assertion, the record digest, the
-      Recording Issuer and the Relying Auditor.  New examples show one
-      approval per recording trigger, the decoded JWS protected header,
-      a governed_policy activation with its recency computation, and the
-      matching Consent Evidence members.
+      Context Commitment test vectors are an appendix.  Security and
+      Privacy Considerations open with a pointer to the issuance
+      profile's.  Conventions defines the accountable assertion, the
+      record digest, the Recording Issuer and the Relying Auditor.  New
+      examples show one approval per recording trigger, the decoded JWS
+      protected header, a governed_policy activation with its recency
+      computation, and the matching Consent Evidence members.
 
    *  Recording Triggers states that a Mission whose Approver differs
       from its Subject holds the first trigger, so the Enterprise
