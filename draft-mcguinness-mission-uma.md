@@ -1001,31 +1001,119 @@ The contextual-governance kernel maps as follows:
    the same integrity and access controls as the Mission record; and
    MUST retain both for the deployment-declared audit horizon.
 
-The Statement's capability table follows, one row per capability;
-every supplied row states its activation conditions, and its temporal
-and failure elements in its cells or by express inheritance of the
-Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
+The Statement's capability list follows, one entry per capability;
+every supplied entry states its activation conditions, and its
+temporal and failure elements in the entry or by express inheritance
+of the Bounded Reliance floor
+({{I-D.draft-mcguinness-mission-substrate}}):
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | RPT issuance and upgrade are state-gated; introspection gates continued reliance ({{gating}}, {{state-surfaces}}) | A self-contained RPT without a state check remains usable only for its bounded lifetime |
-| State-Observable | supplied | authenticated per-use introspection with a deployment-declared cache bound, or Mission Status active ({{state-surfaces}}) | Those surfaces, within their declared bounds | A self-contained RPT validated only to its `exp` is not state observation; token lifetime alone is not observation |
-| Structured Authority | supplied | always | The Authority Set is the approved representation; UMA permissions are its resource/scope projection ({{subset}}) | UMA permissions cannot carry parameter or consumption constraints |
-| Monotonic Derivation | supplied | always | The token endpoint applies the issuance profile's no-broader-than relation at RPT issuance and upgrade ({{subset}}, {{drawdown}}) | Applies to the declared Authority Set projection, not arbitrary UMA policy values |
-| Credential-Bound | supplied | a protected RPT claim, or authenticated introspection ({{mission-claim}}) | One RPT, Actor, and Mission Reference associated at issuance; fact semantics: issuance under the Mission | Introspection carriage is an online issuer assertion, not offline proof |
-| Authorized Context Correlation | not supplied | -- | -- | The authorization server co-establishes the RPT, Actor, and Mission Reference at issuance; no authoritative join of independently established facts is defined |
-| Independently Verifiable | supplied | self-contained signed RPTs, or signed Mission Status ({{mission-claim}}, {{state-surfaces}}) | A signed self-contained RPT proves issuance under the Mission, offline; a signed Mission Status response proves record and state properties as of its observation window; each activation supplies exactly its own half | Signed Status alone proves nothing about any particular RPT's issuance; opaque RPT introspection is online |
-| Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base assessment log is Controller-local and is not portable evidence |
-{: title="UMA Mission substrate capabilities"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
 
-Each supplied row's temporal elements inherit the gating contract
+  Activation: always
+
+  Scope and defining sections: RPT issuance and upgrade are state-gated;
+  introspection gates continued reliance ({{gating}},
+  {{state-surfaces}})
+
+  Limitations: A self-contained RPT without a state check remains usable
+  only for its bounded lifetime
+
+State-Observable:
+: Claim: supplied
+
+  Activation: authenticated per-use introspection with a
+  deployment-declared cache bound, or Mission Status active
+  ({{state-surfaces}})
+
+  Scope and defining sections: Those surfaces, within their declared
+  bounds
+
+  Limitations: A self-contained RPT validated only to its `exp` is not
+  state observation; token lifetime alone is not observation
+
+Structured Authority:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The Authority Set is the approved
+  representation; UMA permissions are its resource/scope projection
+  ({{subset}})
+
+  Limitations: UMA permissions cannot carry parameter or consumption
+  constraints
+
+Monotonic Derivation:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The token endpoint applies the issuance
+  profile's no-broader-than relation at RPT issuance and upgrade
+  ({{subset}}, {{drawdown}})
+
+  Limitations: Applies to the declared Authority Set projection, not
+  arbitrary UMA policy values
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: a protected RPT claim, or authenticated introspection
+  ({{mission-claim}})
+
+  Scope and defining sections: One RPT, Actor, and Mission Reference
+  associated at issuance; fact semantics: issuance under the Mission
+
+  Limitations: Introspection carriage is an online issuer assertion, not
+  offline proof
+
+Authorized Context Correlation:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: The authorization server co-establishes the RPT, Actor,
+  and Mission Reference at issuance; no authoritative join of
+  independently established facts is defined
+
+Independently Verifiable:
+: Claim: supplied
+
+  Activation: self-contained signed RPTs, or signed Mission Status
+  ({{mission-claim}}, {{state-surfaces}})
+
+  Scope and defining sections: A signed self-contained RPT proves
+  issuance under the Mission, offline; a signed Mission Status response
+  proves record and state properties as of its observation window; each
+  activation supplies exactly its own half
+
+  Limitations: Signed Status alone proves nothing about any particular
+  RPT's issuance; opaque RPT introspection is online
+
+Portable Evidence:
+: Claim: supplied
+
+  Activation: Consent Evidence, a Mission Mandate, or Audit Transparency
+  adopted
+
+  Scope and defining sections: The adopted profile's artifact and
+  verification procedure
+
+  Limitations: The base assessment log is Controller-local and is not
+  portable evidence
+{: #uma-mission-substrate-capabilities newline="true"}
+
+Each supplied entry's temporal elements inherit the gating contract
 unless stated: freshness is established at the state-gated operation
 or at introspection within its declared cache bound, artifact
 lifetime is the RPT's expiry capped by the Mission's `expires_at`,
 and the residual after non-active is the remaining self-contained
 RPT lifetime or the introspection cache bound. Failure behavior is
 uniformly fail-closed: an unavailable or invalid introspection or
-Status surface refuses the rows that activate on it (an opaque RPT
+Status surface refuses the entries that activate on it (an opaque RPT
 whose introspection is unavailable is denied, never extended); an
 incomparable permission projection refuses issuance or upgrade; a
 stale observation past its window is no observation.

@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "341757b237a77f48fe162f5d4c3aa065b09164c7",
-    "content_sha256": "42bb7813442ffb5a62b10f2c2069f969f8a9d6cad64c3f54293cfb3985334b61"
+    "revision": "016f333588f6946c085b9cb856fb115f139cf053",
+    "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
@@ -27,8 +27,8 @@
     "content_sha256": "cc8617aaf61a34d8f501734344cafbdfaac8baee97f27c45af59af553c676b1a"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "def293555bbf4041e81c5602b9d9ce7e9ac41b77",
-    "content_sha256": "544a843d5bfd57cff78271abd280050b85816f87de51c615e2911c805966f334"
+    "revision": "3aef11fcc1181547adee092649aed883762fa3a2",
+    "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "cc857da23f2b7c1072738b73308f8599faae3fb5",
@@ -67,8 +67,8 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "e219cc572f7082c7eac576a843d4f1719dec935c",
-    "content_sha256": "a02236b3c4371577f18988efffe4d92ff265f099eb2e203c8c008b6407c2a210"
+    "revision": "8dc118e210f096f491beea7e5899685493b065cb",
+    "content_sha256": "84737e41c516c5108df8339c22f3b601922c5411c05af8f7a4f63b0b488b2adf"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "5683745b7c29b9b9796221b0bea112d0fbd85cfc",
@@ -127,8 +127,8 @@
     "content_sha256": "7a24c9a98ece9ae1ac533dde1a1158558a8e93c7d8419bbc39e4c1d33a4622fe"
    },
    "draft-mcguinness-mission-aauth.md": {
-    "revision": "c908bd3ed1638bdf994d615a5b65423fa6eebf7c",
-    "content_sha256": "0af450d300a722cd9a6e2ae480ecab221646d2d1b2e9a15b5b630f8d48b425e0"
+    "revision": "59720df0220f097bc4a8b92dfb7f8f6d3b08c06c",
+    "content_sha256": "3c1d883d71a887cc0643d40a023ecea1b16e272778ce9851353a3b6807b14927"
    },
    "draft-mcguinness-mission-mandate.md": {
     "revision": "b37b5d37d2a8b43a8efcb02ff66713814e98291c",
@@ -27606,7 +27606,7 @@
    "id": "substrate.statement.capability-table-required",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "The Statement MUST then include a capability table with one row for each capability in {{capabilities}}.",
+   "text": "The Statement MUST then include a capability list with one entry for each capability in {{capabilities}}.",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27618,7 +27618,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Statement includes a capability table with one row for each of the eight optional capabilities"
+    "normative": "the Statement includes a capability list with one entry for each of the eight optional capabilities"
    },
    "level": "unit",
    "coverage": "todo",
@@ -27628,7 +27628,7 @@
    "id": "substrate.statement.binary-supplied-state",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "Each row MUST say `supplied` or `not supplied`",
+   "text": "Each entry MUST say `supplied` or `not supplied`",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27640,7 +27640,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a capability row states supplied or not supplied; there is no third (retired conditional) state"
+    "normative": "a capability entry states supplied or not supplied; there is no third (retired conditional) state"
    },
    "level": "unit",
    "coverage": "todo",
@@ -27650,7 +27650,7 @@
    "id": "substrate.statement.supplied-row-requirements",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "A supplied row MUST:",
+   "text": "A supplied entry MUST:",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27662,7 +27662,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a supplied row cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
+    "normative": "a supplied entry cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
    },
    "level": "unit",
    "coverage": "todo",
