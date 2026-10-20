@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "f54872a6dbdc85981e96f3ed42a481ad502f901f",
-    "content_sha256": "9ab0d9cd14e281ccac15fd887f0ae1b20ff77492f0add5fd102f0d9083fd62c1"
+    "revision": "d6f68cab958b0fb6c69201e20dec30032da359e9",
+    "content_sha256": "4709060708ca58f5593cc3a3c2a21b07744c8b9dfc94da9cd29eb32dd2b64860"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
@@ -35,8 +35,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "cf1df8b8a9cb1a34f14edd167fab926c9a0fe7b1",
-    "content_sha256": "186978cebc8cf52630af5a5fd106d718fd05d495ec5428e89a7bfa19dbe6fce1"
+    "revision": "cb2d17c9638dc6278fb1dcdbdfa7abfe81c58745",
+    "content_sha256": "b9ca6eb7a58c14c8326c0d06aa31a5125b9605daf1490abd904e39bb0bdeaccf"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "5a1e06044ef2d0ab5e1e29cdb4ec7efeff29e920",
@@ -35985,6 +35985,119 @@
     }
    ],
    "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. #787 settles the ceiling's child-creation term: a ceiling-declared `child_creation_policy` binds under the lineage rule instead of being stripped, and the minted entry keeps the reference with its retained-action provenance (see cross-domain.resource-as.local-policy-bound). Per-token derivation evidence remains separately tracked as SHOULD/todo."
+  },
+  {
+   "id": "cross-domain.resource-as.no-renewal-authority",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST NOT issue a refresh token, or any equivalent renewal authority, on a Mission-bound grant.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS redeeming a Mission-bound cross-domain grant returns no refresh token and issues no other credential that renews local authority without a new grant from the originating AS",
+    "local": "the reference RAS's redemption result carries exactly access_token and expires_in, and its metadata lists only the JWT-bearer grant type"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "Resource AS issues no renewal authority on the grant (#1180) > the redemption response carries no refresh_token, and the Resource AS offers no refresh grant",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1180, D378. Partial by design: the witness proves the no-refresh_token facet of the redemption response and that the Resource AS offers no refresh grant, which D378 records as proving only that facet. The clause's \"any equivalent renewal authority\" is wider than any response-shape check can enumerate. Re-presenting the grant itself is refused separately by the one-time jti rule."
+  },
+  {
+   "id": "cross-domain.resource-as.delegated-descendant-expiry",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "Each such delegated token, and every token descended from it, MUST NOT expire after the `exp` of the original cross-domain grant.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "cross-domain.projection",
+     "core.delegation"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token a Resource AS issues under a Mission-bound cross-domain grant, and every token descended from it, has an exp no later than the exp of the cross-domain grant the local authority was minted from"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1180, D378. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens. redeem() mints one local token per grant, and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own, which applies the issuance profile's delegation (core.delegation) in the partner domain; hence the all_of gate."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-exp-bounded-by-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "has an `exp` that MUST NOT exceed the grant's `exp`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a local access token minted from a Mission-bound cross-domain grant has an exp no later than the grant's exp, including when the grant is redeemed so late that the Resource AS's own local token lifetime would outlive it"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "Resource AS issues no renewal authority on the grant (#1180) > delayed redemption: a grant redeemed just before its exp, after the Mission was revoked, yields a local token that expires no later than the grant",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1180, D378. The delayed-redemption witness redeems five seconds before the grant's exp, where the RAS's 120 s local lifetime would outlive the grant, and fails when the grant bound is dropped from the RAS expiry clamp. The older \"M9 scenario 12 > the local token dies with its lease (exp never exceeds the grant)\" test redeems immediately, inside the 300 s grant, and passes with that bound removed, so it is not cited."
+  },
+  {
+   "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-revocation",
+   "text": "A grant redeemed late still yields a local token whose `exp` cannot exceed the grant's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the Mission is revoked and the issuer refuses new grants, an outstanding grant redeemed just before its exp yields a local token that expires no later than the grant, so exposure measured from revocation can exceed one local token lifetime but ends by the grant's exp"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "Resource AS issues no renewal authority on the grant (#1180) > delayed redemption: a grant redeemed just before its exp, after the Mission was revoked, yields a local token that expires no later than the grant",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1180, D378 (the delayed-redemption witness). The test revokes the Mission, confirms the issuer refuses a new grant, redeems the outstanding grant five seconds before its exp, and shows the partner resource honoring the local token until the grant's exp and refusing it after; exposure from revocation exceeds the 120 s local lifetime. The rest of the sentence, that the Resource AS issues no renewal authority on the grant, is cross-domain.resource-as.no-renewal-authority."
   },
   {
    "id": "continuation.ica-transport.refusal-codes",

@@ -41,10 +41,14 @@ const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
+/** A client's private_key_jwt identity: its client_id and signing key. */
+type ClientAuth = { id: string; key: CryptoKey };
 
 let as: BuiltAs;
 let asServer: Server;
 let clientKey: CryptoKey;
+/** `ledger-reconciler`: registered for the deferred grant, and not the Mission's client (#1348). */
+let reconciler: ClientAuth;
 let dpopKeys: DpopKeys;
 let dpopJkt: string;
 let missionId = "";
@@ -61,16 +65,16 @@ function storeCookies(res: Response, jar: Map<string, string> = cookies): void {
   }
 }
 
-async function clientAssertion(): Promise<string> {
+async function clientAssertion(client: ClientAuth = { id: "ap-agent", key: clientKey }): Promise<string> {
   return new SignJWT({})
-    .setProtectedHeader({ alg: "ES256", kid: "ap-agent-auth" })
-    .setIssuer("ap-agent")
-    .setSubject("ap-agent")
+    .setProtectedHeader({ alg: "ES256", kid: `${client.id}-auth` })
+    .setIssuer(client.id)
+    .setSubject(client.id)
     .setAudience(ISSUER)
     .setIssuedAt()
     .setExpirationTime("2m")
     .setJti(crypto.randomUUID())
-    .sign(clientKey);
+    .sign(client.key);
 }
 
 async function dpopProof(
@@ -94,11 +98,16 @@ async function rawProof(claims: Record<string, unknown>, keys: DpopKeys = dpopKe
     .sign(keys.privateKey);
 }
 
-/** POST /token with private_key_jwt + DPoP; `makeProof` replaces the default fresh proof (the freshness cases). */
+/**
+ * POST /token with private_key_jwt + DPoP; `makeProof` replaces the default
+ * fresh proof (the freshness cases), and `client` authenticates as another
+ * client than ap-agent.
+ */
 async function tokenRequest(
   params: Record<string, string>,
   keys: DpopKeys = dpopKeys,
   makeProof?: (extra: Record<string, unknown>) => Promise<string>,
+  client?: ClientAuth,
 ): Promise<Response> {
   const htu = `${ISSUER}/token`;
   const proof = makeProof ?? ((extra: Record<string, unknown>) => dpopProof(htu, "POST", keys, extra));
@@ -108,7 +117,7 @@ async function tokenRequest(
       headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
       body: new URLSearchParams({
         ...params,
-        client_assertion: await clientAssertion(),
+        client_assertion: await clientAssertion(client),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
     });
@@ -244,6 +253,10 @@ beforeAll(async () => {
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
+  reconciler = {
+    id: "ledger-reconciler",
+    key: (await importJWK(as.ledgerReconcilerClientJwk as never, "ES256")) as CryptoKey,
+  };
   dpopKeys = await generateKeyPair("ES256", { extractable: true });
   dpopJkt = await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey));
 
@@ -529,5 +542,134 @@ describe("the deferred grant at the DPoP replay cache's bound (@spec RFC 9449 Se
     const retryBody = (await retry.json()) as { access_token?: string };
     expect(retry.status, JSON.stringify(retryBody)).toBe(200);
     expect(retryBody.access_token).toBeTruthy();
+  });
+});
+
+describe("the AROP deferral is bound to the Mission's client and the opening key (#1348, DTR -00 Sections 5.5.1, 5.6 and 10.1)", () => {
+  type Body = { error?: string; error_description?: string; deferral_code?: string; access_token?: string };
+  const derivations = (): number => (as.kernel.get(missionId) as { derivation_count: number }).derivation_count;
+  const deferralRows = (): number =>
+    (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+  const approvedUntil = (): string => new Date((Math.floor(Date.now() / 1000) + 120) * 1000).toISOString();
+
+  /** The Mission's own client opens a deferral under its key, and the approver approves it. */
+  async function approvedOwnDeferral(): Promise<string> {
+    const res = await initiate(subset(["payments:invoice.read"]));
+    const body = (await res.json()) as Body;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("authorization_pending");
+    const code = body.deferral_code as string;
+    as.deferrals.approve(code, approvedUntil());
+    return code;
+  }
+
+  /** Poll `code` as `client` under `keys`. */
+  async function pollAs(code: string, keys: DpopKeys, client?: ClientAuth): Promise<Response> {
+    return tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code }, keys, undefined, client);
+  }
+
+  it("another client cannot open a deferral on the Mission: refused invalid_request as an unknown Mission is, even for authority beyond the Mission, opening no deferral; the Mission's own client still opens one", async () => {
+    const initiateAsReconciler = (ref: string, requested: AuthorityEntry[]) =>
+      tokenRequest(
+        { grant_type: DEFERRED_GRANT_TYPE, deferred_authorization: JSON.stringify({ mission_id: ref, requested }) },
+        dpopKeys,
+        undefined,
+        reconciler,
+      );
+    const inside = subset(["payments:invoice.read"]);
+    const beyond = inside.map((e) => ({ ...e, actions: ["payments:payment.execute"] }));
+    const unknown = (await (await initiateAsReconciler("msn_does-not-exist", inside)).json()) as Body;
+    expect(unknown.error).toBe("invalid_request");
+
+    const rows = deferralRows();
+    const before = derivations();
+    for (const requested of [inside, beyond]) {
+      const res = await initiateAsReconciler(missionId, requested);
+      const body = (await res.json()) as Body;
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_request");
+      // Neither the Mission's state nor its authority is disclosed.
+      expect(body.error_description).toBe(unknown.error_description);
+      expect(body.deferral_code).toBeUndefined();
+      expect(body.access_token).toBeUndefined();
+    }
+    expect(deferralRows()).toBe(rows);
+    expect(derivations()).toBe(before);
+
+    // The Mission's own client: the same request opens a deferral, and the
+    // request beyond the Mission gets the subset refusal the other client did not see.
+    const own = (await (await initiate(inside)).json()) as Body;
+    expect(own.error).toBe("authorization_pending");
+    expect(own.deferral_code).toMatch(/^dfr_/);
+    const ownBeyond = (await (await initiate(beyond)).json()) as Body;
+    expect(ownBeyond.error).toBe("invalid_request");
+    expect(ownBeyond.error_description).toMatch(/exceeds the active Mission/);
+  });
+
+  it("a poll by another client, under the opening key or another, is refused invalid_grant as an unknown code is, with no token and no derivation; the Mission's own client then redeems the deferral", async () => {
+    const code = await approvedOwnDeferral();
+    const otherKeys = await generateKeyPair("ES256", { extractable: true });
+    const unknown = (await (await pollAs("dfr_does-not-exist", dpopKeys, reconciler)).json()) as Body;
+    const before = derivations();
+
+    // Under another key too: the client check comes first, so the key
+    // refusal (DTR Section 10.1) never tells another client the code exists.
+    for (const [label, keys] of [["the opening key", dpopKeys], ["another key", otherKeys]] as const) {
+      const res = await pollAs(code, keys, reconciler);
+      const body = (await res.json()) as Body;
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(400);
+      expect(body.error, label).toBe("invalid_grant");
+      expect(body.error_description, label).toBe(unknown.error_description);
+      expect(body.access_token, label).toBeUndefined();
+    }
+    expect(derivations()).toBe(before);
+
+    // The refusal took nothing from the deferral.
+    const ok = await poll(code);
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    expect(derivations()).toBe(before + 1);
+  });
+
+  it("a poll by the Mission's own client under another key is refused invalid_dpop_proof (DTR Section 10.1), with no token and no derivation; the opening key then redeems the deferral", async () => {
+    const code = await approvedOwnDeferral();
+    const otherKeys = await generateKeyPair("ES256", { extractable: true });
+    const before = derivations();
+
+    const res = await pollAs(code, otherKeys);
+    const body = (await res.json()) as Body;
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_dpop_proof");
+    expect(body.error_description).toMatch(/not the key bound to this deferral_code/);
+    expect(body.access_token).toBeUndefined();
+    expect(derivations()).toBe(before);
+
+    const ok = await poll(code);
+    const okBody = (await ok.json()) as Body;
+    expect(ok.status, JSON.stringify(okBody)).toBe(200);
+    expect((decodeJwt(okBody.access_token as string).cnf as { jkt: string }).jkt).toBe(dpopJkt);
+    expect(derivations()).toBe(before + 1);
+  });
+
+  it("a retained deferral another client opened on the Mission is refused invalid_grant at the poll, by that client under its key and by the Mission's own client, with no token and no derivation", async () => {
+    // Seeded through the store, which records the client the handler passes,
+    // as initiation did before #1348; this store is in-memory, so such a row
+    // exists only when seeded.
+    const seeded = as.deferrals.open({
+      missionId,
+      requested: subset(["payments:invoice.read"]),
+      clientId: reconciler.id,
+      jkt: dpopJkt,
+    });
+    as.deferrals.approve(seeded.deferral_code, approvedUntil());
+    const before = derivations();
+
+    for (const [label, client] of [["the opening client", reconciler], ["the Mission's own client", undefined]] as const) {
+      const res = await pollAs(seeded.deferral_code, dpopKeys, client);
+      const body = (await res.json()) as Body;
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(400);
+      expect(body.error, label).toBe("invalid_grant");
+      expect(body.access_token, label).toBeUndefined();
+    }
+    expect(derivations()).toBe(before);
   });
 });

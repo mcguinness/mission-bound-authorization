@@ -652,11 +652,11 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
     const requested = as.kernel.get(m.missionId)?.authority_set ?? [];
 
     // AROP DeferralStore (the {m, r} key omitted the client before this fix).
-    const a = as.deferrals.open({ missionId: m.missionId, requested, clientId: "client-a" });
-    const b = as.deferrals.open({ missionId: m.missionId, requested, clientId: "client-b" });
+    const a = as.deferrals.open({ missionId: m.missionId, requested, clientId: "client-a", jkt: "jkt-a" });
+    const b = as.deferrals.open({ missionId: m.missionId, requested, clientId: "client-b", jkt: "jkt-b" });
     expect(a.deferral_code).not.toBe(b.deferral_code);
     // Same client + same request still coalesces (idempotent submission).
-    const a2 = as.deferrals.open({ missionId: m.missionId, requested, clientId: "client-a" });
+    const a2 = as.deferrals.open({ missionId: m.missionId, requested, clientId: "client-a", jkt: "jkt-a" });
     expect(a2.deferral_code).toBe(a.deferral_code);
 
     // ExpansionDeferralStore: client-scoped as well.
