@@ -271,14 +271,15 @@ downstream projection, token, or enforcement point consumes. The record
 captures the standing behind that approval, never a second authorization
 surface visible outside the issuer.
 
-`approval_event_id` joins the record to the approval event and to the
-Mission Record it governs ({{I-D.draft-mcguinness-oauth-mission}}). The
-record never appears on tokens or in any protocol message; it is
-issuer-retained control-plane state. OAuth standardizes the
-authorization data that a client requests and is granted ({{RFC9396}}
-for rich authorization requests), not an organization's internal
-approval provenance, so the record also stays out of enforcement
-projections, matching the issuance profile's control-plane discipline.
+The `approval_event_id` member joins the record to the approval event
+and to the Mission Record it governs
+({{I-D.draft-mcguinness-oauth-mission}}). The record never appears on
+tokens or in any protocol message; it is issuer-retained control-plane
+state. OAuth standardizes the authorization data that a client requests
+and is granted ({{RFC9396}} for rich authorization requests), not an
+organization's internal approval provenance, so the record also stays
+out of enforcement projections, matching the issuance profile's
+control-plane discipline.
 
 The record governs the Mission approval event. An action-time approval
 under the runtime profile's re-evaluation surfaces
@@ -381,7 +382,7 @@ An Approval Governance Record is a JSON object. {{record-members}} and
 : REQUIRED. An object recording the outcome, with these members:
 
     `decision`:
-    : A string. `approved` is the only value a committed record carries,
+    : A string. The only value a committed record carries is `approved`,
       since a record exists only for an approval that committed
       ({{atomic-commitment}}).
 
@@ -447,11 +448,11 @@ Each element of `assertions` is an object with these members:
 
 A `policy` assertion's `approved_at` is an RFC 3339 timestamp: the human
 approval instant of that exact policy version, not the assertion
-instant. `decided_at` records when the policy asserted; `approved_at`
-records when a human approved the version it asserts under. The issuer
-MUST verify `approved_at` from retained, authenticated governance state
-for the named `policy_id` and `version`; it MUST NOT accept
-`approved_at` as the assertion's own uncorroborated clock value
+instant. The `decided_at` member records when the policy asserted, and
+`approved_at` records when a human approved the version it asserts
+under. The issuer MUST verify `approved_at` from retained, authenticated
+governance state for the named `policy_id` and `version`; it MUST NOT
+accept `approved_at` as the assertion's own uncorroborated clock value
 ({{policy-approval-recency}}).
 
 ## Approval Policy Reference {#approval-policy}
@@ -745,8 +746,8 @@ rules of {{policy-approval-recency}} are a conservative default of this
 document, not a family-wide guarantee, and a deployment that records no
 Approval Governance Record is unbounded by them.
 
-`kind: human` is not by itself an assurance property: the
-authentication-strength, rendering, and accountable-principal
+The `kind: human` requirement is not by itself an assurance property:
+the authentication-strength, rendering, and accountable-principal
 requirements the issuance profile and {{assertion-requirements}}
 otherwise impose still carry that property; {{policy-approval-recency}}
 only decides which assertion kind MUST be present.
@@ -935,11 +936,11 @@ is `approval_policy.digest` when the root decides, and the
 evaluator's `mission-activation-policy` digest when the evaluator
 decides.
 
-`approval_event_id` identifies this activation's approval event,
-never the human's approval of the root. The issuer allocates one per
-proposal it activates, so a retried or concurrent activation of the
-same proposal resolves to one Mission and one record, and each
-distinct activation creates its own Mission.
+The instance's `approval_event_id` identifies this activation's approval
+event, never the human's approval of the root. The issuer allocates one
+per proposal it activates, so a retried or concurrent activation of the
+same proposal resolves to one Mission and one record, and each distinct
+activation creates its own Mission.
 
 The record's accountable assertion ({{assertion-requirements}}) MUST
 be a `policy` assertion whose `principal` is `consent_principal` and
@@ -1231,13 +1232,13 @@ function of the Mission Record alone, never of which companion
 profiles a deployment runs: two parties holding the same record
 compute the same manifest.
 
-`ceiling_hash` is the manifest's fourth anchor alongside `intent_hash`,
-`proposal_hash`, and `authority_hash`: the manifest MUST include
-`ceiling_hash` when the Mission Record carries one and MUST omit it
-when the Mission Record carries none. The manifest copies the recorded
-value verbatim, as it copies every other member, so computing or
-verifying the manifest never computes `ceiling_hash`. Its construction
-and semantics belong to the Progressive profile
+The `ceiling_hash` member is the manifest's fourth anchor alongside
+`intent_hash`, `proposal_hash`, and `authority_hash`: the manifest MUST
+include `ceiling_hash` when the Mission Record carries one and MUST omit
+it when the Mission Record carries none. The manifest copies the
+recorded value verbatim, as it copies every other member, so computing
+or verifying the manifest never computes `ceiling_hash`. Its
+construction and semantics belong to the Progressive profile
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), and adopting this
 Approval Context Commitment profile does not require adopting
 Progressive.
@@ -1583,8 +1584,8 @@ approval_context_commitment = sha-256:dPaMl8eUhPExoiVA2zHbz4wPzmDLVs
 fZnHDxCYHDGos
 ~~~
 
-**Vector 2: conditional `proposal_hash`.** This is the canonical
-Mission unchanged: the always-present members above plus
+**Vector 2: conditional `proposal_hash`.** This is the canonical Mission
+unchanged: the always-present members above plus
 `"proposal_hash": "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"`.
 
 ~~~ text
@@ -1613,9 +1614,9 @@ FS9CfHirjwwvU
 ~~~
 
 **Vector 3: conditional `ceiling_hash`.** Diverges from the canonical
-Mission by adding a Progressive ceiling and carrying no
-`proposal_hash` (isolating the `ceiling_hash` case). `ceiling_hash`
-is derived first, per the Progressive profile's own construction
+Mission by adding a Progressive ceiling and carrying no `proposal_hash`
+(isolating the `ceiling_hash` case). The `ceiling_hash` value is derived
+first, per the Progressive profile's own construction
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}): `typ`
 `mission-authority-ceiling`, `value` a two-member object of
 `authority_ceiling` and `drawdown_policy`. The ceiling covers the
@@ -1693,8 +1694,8 @@ YDjBNEO1TTQWA
 **Vector 4: conditional `submission_evidence_commitment`.** Diverges
 from the canonical Mission by recording one verified Intent Submission
 Evidence entry and carrying no `proposal_hash` (isolating the
-`submission_evidence_commitment` case). `artifact_hash` is derived
-first, over the entry exactly as presented
+`submission_evidence_commitment` case). The `artifact_hash` value is
+derived first, over the entry exactly as presented
 ({{I-D.draft-mcguinness-oauth-mission}}): `typ`
 `mission-intent-evidence`.
 
@@ -1780,9 +1781,9 @@ K0jYMrCwWHvKE
 
 **Vector 5: mutated-member rejection.** Vector 2's manifest with one
 member changed, `approval_event_id` from `ape_8K2nP4qV9rL3tY6sB1z` to
-`ape_9K2nP4qV9rL3tY6sB1z`, illustrating what {{approval-context-computation}}
-requires a verifier to do when a recomputed digest disagrees with a
-disclosed one:
+`ape_9K2nP4qV9rL3tY6sB1z`, illustrating what
+{{approval-context-computation}} requires a verifier to do when a
+recomputed digest disagrees with a disclosed one:
 
 ~~~ text
 recomputed = sha-256:4Ev4vJSv_VYjxB48tuJTsYKTSU81jfQRD48pOjazBf0
