@@ -1846,9 +1846,9 @@ no successor is created, and the predecessor remains `active` and
 untouched. The denial surfaces according to the completion mode
 ({{completion-modes}}):
 
-- on the token exchange response, as an OAuth error (typically
-  `invalid_request` for a request the Mission Issuer will not derive a
-  valid Authority Set from);
+- on the token exchange response, as an OAuth error: `invalid_request`
+  for `nothing_to_expand`, and otherwise the codes of the failure
+  classes below;
 - on a deferred poll, as the deferred substrate's `access_denied`
   resolution; or
 - on the interactive path, through the approval's own decline path.
