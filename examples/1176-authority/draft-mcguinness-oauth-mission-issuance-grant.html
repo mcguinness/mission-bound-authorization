@@ -1606,14 +1606,18 @@ connection whose SHA-256 thumbprint matches the <code>x5t#S256</code> value.<a h
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-4-4">In the examples in this document, the invoice API's operation contract
-identifies the collection <code>https://api.example.com/invoices</code> as the
-operation target for invoice reads
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). The entries
+<p id="section-4-4">In the examples in this document, the ERP's operation contract
+identifies the service's own identifier, <code>https://erp.example.com</code>,
+as the operation target
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>); actions and
+constraints determine the permitted operations within it. The entries
 carry no <code>resource_match</code>, so they are <code>exact</code> and cover only
-operations whose target is that collection.<a href="#section-4-4" class="pilcrow">¶</a></p>
-<p id="section-4-5">The following is an example of a decoded grant payload; the
-<code>authority_hash</code> value is illustrative:<a href="#section-4-5" class="pilcrow">¶</a></p>
+operations whose target is that identifier.<a href="#section-4-4" class="pilcrow">¶</a></p>
+<p id="section-4-5">The following is an example of a decoded grant payload for the
+Mission of the Mission Authority Server's examples
+(<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), whose
+<code>authority_hash</code> it carries; its entry is a subset of that
+Mission's invoice-read entry:<a href="#section-4-5" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-4-6">
 <pre>
 {
@@ -1634,10 +1638,11 @@ operations whose target is that collection.<a href="#section-4-4" class="pilcrow
   "authorization_details": [
     {
       "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"],
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
       "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
   ]
@@ -1735,10 +1740,11 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
   "authorization_details": [
     {
       "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"],
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
       "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
   ]
@@ -2099,10 +2105,11 @@ Cache-Control: no-store
   "authorization_details": [
     {
       "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"],
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
       "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
   ],

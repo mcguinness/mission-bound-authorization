@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-20T00:56:36Z
-Source repository commit: a7fa5545f5b4e348c6981af981725dbed7af8914
+Generated: 2026-10-20T04:18:33Z
+Source repository commit: 321e027cd85ac9ffef5997338a21fab5597e99ea
 Member count: 9
 
 Reading order:
@@ -32883,8 +32883,11 @@ Appendix B.  Worked Disclosure and Test Vector
    proposed invoices.*, which the authorization server narrowed to
    invoices.read, so the read element's narrowed_from renders that
    narrowing; the write entry is derived as proposed and carries none.
-   The write entry warrants a material notice and an irreversibility
-   risk dimension because posted journal entries are not automatically
+   This example chooses the narrowed_from member to show the proposed-
+   versus-granted distinction inside the committed disclosure; this
+   document defines no interoperable member by that name.  The write
+   entry warrants a material notice and an irreversibility risk
+   dimension because posted journal entries are not automatically
    reversible; constraint_provenance attributes the max_amount bound to
    the Subject, who stated it in the task request.  The notice is of a
    high-risk class, so approver_actions carries its per-notice
