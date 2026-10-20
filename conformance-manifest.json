@@ -34363,7 +34363,7 @@
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of this section",
+   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of {{in-ceiling-expansion}}",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -34549,7 +34549,7 @@
    "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Its record's `approval_event_id` identifies this drawdown, never the ceiling consent",
+   "text": "The successor record's `approval_event_id` identifies this drawdown, never the ceiling consent",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -35056,7 +35056,7 @@
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "its `activation` is an object with exactly two members, `policy_id` (the Mission's `drawdown_policy.id`) and `policy_version`",
+   "text": "`activation`: an object with exactly two members, `policy_id` (the Mission's `drawdown_policy.id`) and `policy_version`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
