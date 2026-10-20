@@ -1034,26 +1034,34 @@ Mission.
 
 The **Approval Context Manifest** is a closed, enumerated v1 object
 built from Mission Record members
-({{I-D.draft-mcguinness-oauth-mission}}). Its members:
+({{I-D.draft-mcguinness-oauth-mission}}). Each member copies the Mission
+Record member of the same name, verbatim, except:
 
-| Member | Source | Presence |
-|---|---|---|
-| `issuer` | Mission Record `issuer` | always |
-| `id` | Mission Record `id` | always |
-| `intent_hash` | Mission Record `intent_hash` | always |
-| `proposal_hash` | Mission Record `proposal_hash` | iff the Mission Record carries it |
-| `authority_hash` | Mission Record `authority_hash` | always |
-| `ceiling_hash` | Mission Record `ceiling_hash`, verbatim ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
-| `subject` | Mission Record `subject` | always |
-| `approver` | Mission Record `approval_basis.consent_principal` | always |
-| `client_id` | Mission Record `client_id` | always |
-| `created_at` | Mission Record `created_at` | always |
-| `expires_at` | Mission Record `expires_at` | always |
-| `approval_basis` | Mission Record `approval_basis`, verbatim | always |
-| `authority_source` | Mission Record `authority_source`, verbatim | always |
-| `policy_version` | Mission Record `policy_version` | always |
-| `approval_event_id` | Mission Record `approval_event_id` | always |
-| `submission_evidence_commitment` | {{approval-context-construction}} | iff the Mission Record carries `submission_evidence` |
+- `approver` copies the Mission Record's
+  `approval_basis.consent_principal`; and
+- `submission_evidence_commitment` is computed from the Mission Record's
+  `submission_evidence` ({{approval-context-construction}}).
+
+A conditional member is present if and only if its condition holds:
+
+| Member | Presence |
+|---|---|
+| `issuer` | always |
+| `id` | always |
+| `intent_hash` | always |
+| `proposal_hash` | when the Mission Record carries `proposal_hash` |
+| `authority_hash` | always |
+| `ceiling_hash` | when the Mission Record carries `ceiling_hash` |
+| `subject` | always |
+| `approver` | always |
+| `client_id` | always |
+| `created_at` | always |
+| `expires_at` | always |
+| `approval_basis` | always |
+| `authority_source` | always |
+| `policy_version` | always |
+| `approval_event_id` | always |
+| `submission_evidence_commitment` | when the Mission Record carries `submission_evidence` |
 {: title="Approval Context Manifest v1 members"}
 
 The presence of every conditional member MUST be a deterministic
