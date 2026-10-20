@@ -40,16 +40,57 @@ export const MAX_ROOT_LIFETIME_S = 300;
  * become the tool's argument constraints (`max_amount` -> `amount_<ccy>` as a
  * range, `vendors` -> `vendor` as an enum). TOTAL and FAIL-CLOSED: an
  * unrecognized constraint name is rejected, never silently dropped.
+ *
+ * @spec attenuation#root-mapping, resource-access#resource-matching (#1276,
+ * D457): the mapping preserves each entry's whole target restriction, for
+ * every tool and every audience. The root carries no resource member, so
+ * the restriction travels in the tool identifier: each tool names the
+ * entry's `resource`, and the consumer matches the operation target against
+ * that `resource` exactly (`credentialEntriesFromAatTools`), whatever the
+ * root's `aud`. An `aud` equal to the entry's `resource` is never relied on.
+ * Where a tool identifier cannot carry the restriction, the root is refused
+ * rather than minted without it ({@link toolIdCarryingTarget}).
  */
 export function mapAuthorityToTools(entries: readonly AuthorityEntry[]): AATTools {
   const tools: AATTools = {};
   for (const entry of entries) {
     const args = argsFromConstraints(entry.constraints);
     for (const action of entry.actions) {
-      tools[aatToolId(entry.resource, action)] = { ...args };
+      tools[toolIdCarryingTarget(entry, action)] = { ...args };
     }
   }
   return tools;
+}
+
+/**
+ * @spec attenuation#root-mapping (#1276, D457): the tool identifier for one
+ * action of `entry`, which carries the entry's whole target restriction, or
+ * a refusal. The identifier is `<resource>#<action>`, read back as an `exact`
+ * entry naming that `resource`, so it carries an entry whose
+ * `resource_match` is absent or `exact`. Two restrictions it cannot carry
+ * refuse the mapping:
+ *
+ * - any other `resource_match` (`prefix` included): read back as `exact`, the
+ *   tool would carry a different restriction than the entry's; and
+ * - a `resource` and action whose identifier does not read back as that same
+ *   pair (an action carrying `#` moves the split): the tool would name a
+ *   different target.
+ */
+function toolIdCarryingTarget(entry: AuthorityEntry, action: string): string {
+  const match = (entry as { resource_match?: unknown }).resource_match;
+  if (match !== undefined && match !== "exact") {
+    throw new Error(
+      `attenuation root-mapping: resource_match ${JSON.stringify(match)} cannot be carried by a tool identifier; the entry is not mapped`,
+    );
+  }
+  const toolId = aatToolId(entry.resource, action);
+  const carried = parseAatToolId(toolId);
+  if (carried.resource !== entry.resource || carried.action !== action) {
+    throw new Error(
+      `attenuation root-mapping: the tool identifier for ${JSON.stringify(action)} at ${JSON.stringify(entry.resource)} does not carry that target; the entry is not mapped`,
+    );
+  }
+  return toolId;
 }
 
 function argsFromConstraints(constraints: AuthorityEntry["constraints"]): AATToolArgs {

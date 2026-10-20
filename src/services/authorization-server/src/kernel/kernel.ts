@@ -1449,7 +1449,7 @@ export class MissionKernel {
     // approval event is recorded with its `ceiling_hash`, and its consent
     // instant is this event's own.
     const ceiling = input.ceiling
-      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt)
+      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt, input.approver)
       : undefined;
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,

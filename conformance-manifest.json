@@ -14,13 +14,17 @@
     "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
     "content_sha256": "33e8ae6138b82668731a7d5e6cb125e183c49750144caa3438903e5c719c8cbc"
    },
+   "draft-mcguinness-mission-metering.md": {
+    "revision": "6667b68f9afece5e490ea65022196e6c4991dd1b",
+    "content_sha256": "8cd8d68437668e5a6268b3ffa5e158017d5d71ef4129d4250ef70da2f3beb317"
+   },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "1df0e37958729923a4ea977df0da22b45c5bae4d",
     "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "f69e5dc0d0047b55578dbc7ac3f9c2bc1b1935df",
-    "content_sha256": "ac8bdce5360f73f3671d169a8b6fa7d7ac088b5c7c67cafb39a96570e5d0611d"
+    "revision": "10e05d79c000dd30182270bc9f3765ccdfaffbb8",
+    "content_sha256": "58a1455a07f9e93758ddc802e98a41ca3b3b7affc4887847f13829741721241b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -74,13 +78,17 @@
     "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
     "content_sha256": "27edd07822a1d48d0d33f71a8708fc36836218a466d924f07d04eefdb85dcc1c"
    },
+   "draft-mcguinness-oauth-mission-attenuation.md": {
+    "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
+    "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
+   },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "04a2c0f01078c59fabc6a768055a1de99cfecaf4",
-    "content_sha256": "f200829411b753abb3555d38757e25f1948498e5b62e4d9624b8d76645d5d144"
+    "revision": "9d61842777ef55834a198434289e0eed4d88fb16",
+    "content_sha256": "91355a5e310223dda4d4d9513b2a98923dc568f716a8ab6e72a7d597a4088b6f"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -91,20 +99,20 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "228b8f3a7696d06e1d52f149140f487d3bf2837d",
-    "content_sha256": "dde493a296da308b2dce3d58678771929a4649af3f46598a5435e5b9c57c41b1"
+    "revision": "102070fe47f006ba57d9d3c9a99f921c1acc1982",
+    "content_sha256": "0a58266776c374a93c2296abe6df9424f2cab91af9ea2e296fdd7b351c8c9e62"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "720fe3d7033e467c0b7d23fcbcce86247662d3ced385b023b7cd1ead4b4cfac4"
+    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
+    "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "d3b998ee50ff458b459b91a8eded3595cb20733d13db19803bf658b92b1f4dee"
+    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
+    "content_sha256": "03313926575c29814dc3d56328f76dc778a00ba9697df39c1a377588bd08e934"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -135,8 +143,8 @@
     "content_sha256": "d05b02b6664c2acfdd532b8bcbebf19af04ccbb55d5146149226bb8932b0be18"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "96fe0378b56daecb3bebd073d4f9b723bac2a5d280d9380ce4e3d006e55c174d"
+    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
+    "content_sha256": "479c860ed0ba047bf6dc585382ab316fbf3b5cebcf4a2a2d7845211743669978"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
@@ -3723,7 +3731,7 @@
    "id": "core.approval-basis.adjudication-governance-record-override",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "issuance-relationship",
-   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
+   "text": "where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `adjudication.kind`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -6727,7 +6735,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -18231,7 +18239,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v10, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), and declares each operation's execution capabilities (#817); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -21500,6 +21508,232 @@
    "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
   },
   {
+   "id": "runtime.execution-capabilities.declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Where the transaction-assurance tier covers an operation's class ({{runtime-conformance}}), its Operation Profile MUST declare these **execution capabilities**, each stated even where the answer is no:",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for every operation in a class the transaction-assurance tier covers, the published Operation Profile states durable idempotency (its holder, key, scope and retention, and what distinguishes a deliberately new operation with identical parameters from a retransmission), conditional-effect support, authoritative outcome lookup, the commit point, cancellation semantics, compensation authority, and the recovery from an unknown outcome, each even where the answer is no",
+    "local": "the reference publishes them per operation and phase as the Enforcement Scope Statement's extensions.execution_capabilities in its Protected Resource Metadata; a PDP-claim or PEP-reservation holder names its key, scope and retention through the class's transaction_assurance declaration or the operation's reversible_write_idempotency key control, and loadRuntimePosture refuses an unstated item or a holder the statement does not resolve"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > publishes the execution capabilities of every effectful operation the PEP serves, each under its own class and phase",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > the shipped statement declares every execution capability of each effectful payments operation and asserts no transaction claim",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a declaration that leaves an execution capability unstated, naming the entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a durable-idempotency holder the statement does not resolve",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. The payments statement declares all five effectful operations, the two high-consequence ones the tier covers and the three reversible writes it does not. Each test was proved by disabling the check it covers (the commit_point item, the PDP-claim and PEP-reservation holder checks, the shipped wire declaration)."
+  },
+  {
+   "id": "runtime.execution-capabilities.enforced-context-needs-conditional-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim the enforced property of Evaluation-Context Binding ({{evaluation-context-binding}}) for an operation whose Operation Profile declares no conditional-effect support.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims the enforced Evaluation-Context Binding property for an operation whose Operation Profile declares no conditional-effect support; a reread at the PEP alone reaches only the verified property",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting evaluation_context_enforced with conditional_effect none, and admits it with a declared precondition"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an enforced Evaluation-Context Binding claim with no declared conditional-effect support, and admits it with a declared precondition",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "Partial: the refusal is witnessed on the reference statement's per-operation assertion (proved by disabling the evaluation_context_enforced check). The Evaluation-Context Binding declaration that publishes the verified or enforced property per operation is #773's and does not exist in the reference, so no test reads the property from it."
+  },
+  {
+   "id": "runtime.execution-capabilities.exactly-once-needs-resource-idempotency",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim exactly-once execution for an operation whose Operation Profile declares no durable idempotency held by the resource.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims exactly-once execution for an operation unless its Operation Profile declares durable idempotency held by the resource; the PDP's idempotency claim or the PEP's reservation does not back the claim",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting exactly_once unless durable_idempotency.held_by is resource with a key, scope and retention, and the PDP module refuses to boot on such a configuration; the shipped statement asserts it nowhere"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an exactly-once claim with no durable idempotency held by the resource, and admits it once the resource holds a key, scope and retention",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > a configuration claiming exactly-once execution on the PDP's claim alone refuses the boot",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. Proved by disabling the exactly_once check (the unit test) and the loader's call to executionCapabilityFindings (the boot test)."
+  },
+  {
+   "id": "runtime.execution-capabilities.recovery-rests-on-declared-capability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the published statement declares a recovery from an unknown outcome only on a declared capability: re-presenting the effect only where the resource holds durable idempotency, resolving it by lookup only where an outcome lookup is declared, and otherwise holding it",
+    "local": "the reference loader refuses at load a resource_retransmission recovery without durable idempotency held by the resource, and an outcome_lookup recovery without a declared lookup; the shipped statement declares outcome_lookup or hold"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an unknown-outcome recovery that rests on no declared outcome lookup or resource idempotency",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The declaration facet of the clause; runtime.execution-capabilities.no-recovery-by-re-execution is the execution facet. Proved by disabling each of the two recovery checks in turn."
+  },
+  {
+   "id": "runtime.execution-capabilities.no-recovery-by-re-execution",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an executing deployment never recovers an unknown high-consequence outcome by executing the effect again, except as a retransmission that a resource with declared durable idempotency deduplicates",
+    "local": "witnessed where no lookup reaches the effect: after a restart the in-memory connectors cannot answer for the prior process's wire, the claim closes indeterminate, and a retry under the same key is refused duplicate_suppressed with no ledger entry"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+  },
+  {
+   "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Without one, the outcome stays undetermined, and its idempotency claim and any consumption reservation stay held until evidence resolves it",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for a high-consequence operation whose outcome no declared lookup establishes, the outcome stays undetermined and its idempotency claim and any consumption reservation stay held until evidence resolves it, never released by time",
+    "local": "the PDP's claim closes indeterminate at the reconciliation window's end and keeps refusing the key"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial: the idempotency-claim half is witnessed; consumption reservations are the metering companion's, which the reference does not implement. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again."
+  },
+  {
+   "id": "runtime.execution-capabilities.compensation-declaration-grants-no-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "the declaration names the action and grants no authority",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a declared compensating action is authorized only by its own Decision under current authority; the Operation Profile's compensation declaration never serves as authority for it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No payments operation declares a compensating action (compensation none throughout), so nothing exercises the rule. The compound-actions rows carry the compensate-phase Decision and compensates_evaluation_id."
+  },
+  {
    "id": "runtime.metering.unmetered-bound-refusal",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "metering",
@@ -22992,6 +23226,42 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The payments PEP sends the contract's target as resource.properties.operation_target on every decision request (T1, both modes); the PDP refuses a request lacking it (P5). Mutation M10 (PEP reads the caller's target) fails T1."
   },
   {
+   "id": "authzen.context-operation-target.pep-derives-from-contract-and-arguments",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "The authenticated PEP establishes the target from the trusted operation contract of the resource it enforces for and from the operation's validated arguments, as that section requires of a resource server.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the request's resource.properties.operation_target is the target the PEP's trusted contract establishes, from the validated argument an argument-derived contract names; requests for different objects under the same audience carry different targets"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). The decision request carries the invoice target beside the unchanged audience; a forged operation_target or resource argument never reaches it. Mutations: deriving from one fixed argument value and reading a caller-supplied operation_target each fail a witness."
+  },
+  {
    "id": "authzen.context-operation-target.pep-trusted-derivation",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-operation-target",
@@ -23023,9 +23293,15 @@
      "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The PEP derives the target from its Operation Profile contract and ignores a caller-supplied target or resource argument (T1). Mutations M10 and M15 fail T1 and T4."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The PEP derives the target from its Operation Profile contract and ignores a caller-supplied target or resource argument (T1). Mutations M10 and M15 fail T1 and T4. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, an operation_target or resource argument is ignored though the credential names it, and an invoice_id carrying delimiters stays one percent-encoded segment under /invoices/. Mutations: reading a caller-supplied operation_target and dropping the percent-encoding fail that witness."
   },
   {
    "id": "authzen.context-operation-target.pep-refuses-unestablishable",
@@ -23077,9 +23353,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a missing, empty, list-valued, dot-segment or ambiguous argument-derived target refuses before any decision request, though the Mission and the credential name both the service and the invoice",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported finer contract or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported contract form or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). A missing, empty, list-valued or dot-segment argument and declarations deriving different targets refuse target_unresolvable before any decision request. Mutations: a service-identifier fallback on a missing argument, a list's first value and a dropped dot-segment check each fail that witness."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -24219,9 +24501,15 @@
      "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > refuses a target that breaks RFC 3986 absolute-URI syntax before evaluation as operation_target_invalid, in process and over the remote channel, though the Mission, the credential and the PEP's registered targets name the identical string",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > the remote PDP admits every target a registered argument-derived contract establishes, and refuses any other before evaluation as operation_target_invalid",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. The remote PDP refuses %zz, a trailing %, %4, a raw space, a non-ASCII character and an empty http host before evaluation (no FGA check, no Resource policy query) though the PEP is registered for each string and the Mission and credential name it (endpoint). Mutations (new URL() only; pct-encoded loosened to {0,2}, {1,2} or a trailing %; the host rule removed) fail that witness. Partial stays: the non-string, array and no-fallback clauses are witnessed at evaluate() only (P5)."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. The remote PDP refuses %zz, a trailing %, %4, a raw space, a non-ASCII character and an empty http host before evaluation (no FGA check, no Resource policy query) though the PEP is registered for each string and the Mission and credential name it (endpoint). Mutations (new URL() only; pct-encoded loosened to {0,2}, {1,2} or a trailing %; the host rule removed) fail that witness. Partial stays: the non-string, array and no-fallback clauses are witnessed at evaluate() only (P5). #1276 argument-derived contracts: a remote PEP may be registered for operation contracts (AuthorizedPep.operationContracts); the remote PDP admits every target a registered contract establishes and refuses, before evaluation, the service identifier when only an argument-derived contract is registered, a second segment, a non-canonical encoding, a dot-segment and another collection, as operation_target_invalid. Mutations: ignoring registered contracts and accepting a non-canonical encoding fail that witness. Partial stays for the reasons above."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -25534,9 +25822,15 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a target change between the decision and the release suppresses an argument-derived permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). A contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect (get_invoice, lookup_vendor, hold_transfer). Mutation M14 fails T7."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). A contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect (get_invoice, lookup_vendor, hold_transfer). Mutation M14 fails T7. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). The use check re-derives an argument-derived target from the live contract and the arguments of the execution; a moved or removed contract suppresses the permit with target_drift and no effect, for a parameter-bound read and a write. Mutations: re-deriving without the arguments and accepting a moved target fail that witness."
   },
   {
    "id": "authzen.projections.operation-target-in-every-projection",
@@ -25570,9 +25864,36 @@
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > a key reused for another operation target under the same audience, action, type/id and digest is idempotency_conflict, never a retransmission of the first permit (#1276)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same type and id, changed target: moving the contract changes the request's target, digest, operation identity and cache key while audience, action and type/id stay equal",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1. #1276 argument-derived contracts: two payments PEP requests for the same invoice under contracts deriving different targets carry the same audience, action and type/id, and differ in operation_target, parameter_digest, operation identity and cache key (computed with the PDP's projections). Still no PEP-side permit cache, so the row stays partial. Mutation: binding the service identifier rather than the target into the effective parameters fails that witness."
+  },
+  {
+   "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The PDP MUST verify that the renewal's Mission, subject, action, operation target and audience match the evaluation named by `prior_evaluation_id`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a duration-lease renewal whose Mission, subject, action, operation target or audience differs from the evaluation named by context.prior_evaluation_id does not continue that metered activity; one that matches in all five does"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457, D475). The reference implements no duration-lease renewal: nothing in src/ reads context.prior_evaluation_id or reports measured_duration, so no part of this check (the operation target included) has a witness. #1285 deferred the operation-target clause until a renewal path exists; the row stays todo until one is built."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -35308,12 +35629,12 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
-   "id": "progressive.in-ceiling.out-of-ceiling-refused",
+   "id": "progressive.ceiling-test.beyond-ceiling-not-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
-   "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer MUST refuse, with `out_of_ceiling` ({{denial-reason}}), a requested authority that is not within the consented `authority_ceiling`",
+   "anchor": "ceiling-test",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate a requested authority that is not within the consented `authority_ceiling`",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "progressive.ceiling-drawdown"
@@ -35322,20 +35643,391 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion of a Mission carrying a ceiling whose requested successor Authority Set is not a subset of the ceiling is refused with mission_denial_reason out_of_ceiling, creating no successor and leaving the predecessor active",
-    "local": "Refused invalid_request on the token exchange, with nothing reserved; the draft fixes the reason, not the OAuth error code. The reference does not route such a request to a fresh human approval that could raise the ceiling."
+    "normative": "a request outside the consented ceiling never completes as a policy-adjudicated drawdown",
+    "local": "adjudicateDrawdown returns out_of_ceiling before any policy check; the adapter then takes the fresh-approval path, or refuses where the deployment's beyondCeiling is refuse."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "out of ceiling (@spec progressive#in-ceiling-expansion, progressive#denial-reason) > refuses a successor outside the consented ceiling with out_of_ceiling: no successor, the predecessor untouched, nothing reserved",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a deployment whose policy refuses beyond-ceiling expansions refuses, creating and reserving nothing; this reference carries out_of_ceiling on that refusal",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by restoring the default refusal (#1413 mutation M1)."
+  },
+  {
+   "id": "progressive.ceiling-test.beyond-ceiling-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "Such a request falls back to an ordinary, freshly human-approved expansion",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a request outside the ceiling is taken to an ordinary fresh human approval, which completes a successor on approval",
+    "local": "The deferred fresh-approval path (authorization_pending with a deferral_code); the no-re-consent test completes it through approval and the poll."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.refusal-may-carry-reason",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "A refusal MAY carry `out_of_ceiling`",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Issuer whose policy refuses a request outside the ceiling may carry out_of_ceiling on the refusal; omitting it also conforms",
+    "local": "This reference carries it on the refusal its beyondCeiling = refuse option produces: an implementation choice, not a conformance requirement (#1415, D555)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a deployment whose policy refuses beyond-ceiling expansions refuses, creating and reserving nothing; this reference carries out_of_ceiling on that refusal",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.no-reason-on-fallback",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "a response that starts the human approval never carries it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the response that starts the fresh human approval for a request outside the ceiling carries no out_of_ceiling",
+    "local": "The deferred response body carries error, deferral_code, expires_in and interval only."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.no-implicit-raise",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "Approving that authority does not raise the ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successor approved with authority beyond the ceiling records the predecessor's ceiling unchanged",
+    "local": "successorCeilingMembers carries the predecessor's members when the approval carries no re-consent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.carry-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Without an explicit re-consent, the successor MUST carry the predecessor's `authority_ceiling`, `drawdown_policy` and `ceiling_hash` unchanged, together with the instant and the Approver of the ceiling consent they commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successor of a fresh human approval without a re-consent records the predecessor's authority_ceiling, drawdown_policy, ceiling_hash and ceiling consent instant and Approver unchanged; a later drawdown names that Approver and instant",
+    "local": "createExpansion spreads successorCeilingMembers(predecessor); the consenting Approver is kept as ceiling_consent_principal."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by dropping the carry (M2) and by reading the drawdown's consent_principal from the predecessor's basis (M4)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.beyond-stays-outside",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Authority approved beyond the ceiling stays outside it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a later expansion that retains authority approved beyond the ceiling is outside the ceiling and is not policy-adjudicated",
+    "local": "The ceiling test runs over the complete requested successor Authority Set."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.reconsent-recorded",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "the successor MUST record the re-consented `authority_ceiling` and the selected `drawdown_policy` under a recomputed `ceiling_hash`, with the re-consent's instant and Approver as those of the ceiling consent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successor of an approval that re-consents a ceiling records the re-consented ceiling and policy under the ceiling_hash computed over them, the re-consent's instant and Approver, and a later drawdown names them",
+    "local": "ExpansionDeferralStore.approve commits the re-consent (consentCeiling) at the decision, held to the approval floor with the successor's authority; redemption records it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by ignoring the re-consent (M3) and by not storing it at approval (M7)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.cadence-restarts",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "The ceiling review cadence restarts from that instant",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a re-consent, a drawdown is adjudicated by policy against the re-consent's instant even though the earlier consent's cadence has lapsed",
+    "local": "The witness lets a one-second cadence lapse, re-consents under a 30-day policy, and draws down by policy."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.disclosure",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "The consent disclosure MUST render the re-consented ceiling and policy as at the initial approval",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval that re-consents a ceiling renders the re-consented ceiling and drawdown policy to the Approver",
+    "local": "The reference has no rendering surface for the deferral approval; as for progressive.ceiling.consent-disclosure."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.chain-restrictions-carry",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Either way the expansion chain continues: its root, `predecessor` links, rate-bound window, cumulative drawdown count, and every discharge and containment restriction carry forward, and a re-consent clears none of them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a re-consent clears no containment or discharge restriction of the chain",
+    "local": "Restrictions are read through predecessor links (chainRestrictions), which a human-approved successor keeps."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Witnessed for containment; the discharge facet has no witness through a re-consent. Proved by stopping the chain walk at a human-approved successor (M6)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.chain-count-and-window-carry",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Either way the expansion chain continues: its root, `predecessor` links, rate-bound window, cumulative drawdown count, and every discharge and containment restriction carry forward, and a re-consent clears none of them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a re-consent the chain's cumulative drawdown count continues and the rate-bound window still counts drawdowns before it",
+    "local": "successorCeilingMembers carries drawdown_count; the rate window counts ceiling_drawdown successors along predecessor links."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent continues the chain's drawdown count and rate window",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by resetting the count (M5) and by stopping the chain walk (M6)."
+  },
+  {
+   "id": "progressive.ceiling-drawdown-basis.consent-principal-is-ceiling-approver",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "`consent_principal`: the Approver who consented the ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a drawdown's consent_principal is the Approver who consented the ceiling, including after a successor another Approver approved",
+    "local": "ceilingConsentPrincipal reads ceiling_consent_principal, falling back to approval_basis for records stored before #1413."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by reading the predecessor's approval_basis instead (M4)."
   },
   {
    "id": "progressive.in-ceiling.successor-carries-ceiling",
@@ -35491,14 +36183,188 @@
    "assertion": "refusal",
    "observation": {
     "normative": "no single policy-adjudicated drawdown activates all of the ceiling that remains beyond the predecessor's authority",
-    "local": "Enforced only through the per-drawdown bound: a bound at least as large as the remaining ceiling would let one drawdown activate all of it, and the reference adds no separate check."
+    "local": "A separate check (activatesEntireCeiling) compares the successor's set with the ceiling one action at a time under the subset relation; it applies whatever the per-drawdown bound allows."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414: the final-increment test proves the separate check (disabling it lets the drawdown complete by policy)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.entire-ceiling-defined",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
+    "local": "ceilingAuthorityLeftUndrawn searches the ceiling's actions, vendors and amount caps for a request no successor entry authorizes, assuming every other member covered: a witness found is genuine, and a missed one falls back."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a drawdown narrower than a ceiling entry's constraint does not activate the entire remaining ceiling; at the ceiling's own constraint it does",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a ceiling entry's authority split across several successor entries counts as held: that final increment falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414 review: proved by restoring the per-entry comparison (the split test and the unit test fail), by disabling the check, and by matching actions only."
+  },
+  {
+   "id": "progressive.drawdown-bounds.split-authority-held",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "The successor's entries are judged together, so ceiling authority it splits across several entries counts as held",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a successor that holds a ceiling entry's authority split across several entries (by issuance window, vendor or amount) holds it: the final increment falls back rather than completing by policy",
+    "local": "The endpoint witness splits the Q3 issuance window across two entries; the unit witness splits two vendors and two amount caps, which the demo deployment's single-vendor derivation ceiling cannot reach end to end."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a ceiling entry's authority split across several successor entries counts as held: that final increment falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > ceiling authority split across successor entries by vendor or amount counts as held (unit)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414 review finding: restoring the per-entry comparison fails both witnesses."
+  },
+  {
+   "id": "progressive.drawdown-bounds.entire-ceiling-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown within the per-drawdown and rate bounds that would activate the entire remaining ceiling is not adjudicated by policy; it falls back to a fresh human approval, and the same request with ceiling authority left over is adjudicated",
+    "local": "Fallback reason entire_remaining_ceiling; the response is the deferred authorization_pending, with no successor created."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.per-drawdown-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown over the per-drawdown bound falls back to a fresh human approval",
+    "local": "Fallback reason per_drawdown_bound against the policy snapshot's max_added_actions."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.rate-bound-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown over the chain rate bound falls back to a fresh human approval",
+    "local": "Fallback reason chain_rate_bound, counting ceiling_drawdown successors of the chain within the window."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > the chain's rate bound stops policy adjudication once reached",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -39545,6 +40411,43 @@
    "tests": []
   },
   {
+   "id": "resource-access.resource-matching.tool-call-target-from-arguments",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "for an RPC or tool call the resource server derives it from the operation and its validated arguments",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under a contract that derives a tool call's target from its arguments, the target is the one the contract derives from the validated argument it names: calls naming different objects under the same audience have different targets, and no other argument contributes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Each invoice is its own target beside the unchanged audience, and the PEP executes that invoice; an invoice_id carrying delimiters is percent-encoded as one segment. Mutations: deriving every call from one fixed argument value, dropping the percent-encoding and reading a caller-supplied operation_target each fail a witness. The SaaS resource supports the service-level form only."
+  },
+  {
    "id": "resource-access.resource-matching.target-independent",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-matching",
@@ -39577,9 +40480,21 @@
      "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > an argument-derived contract never falls back to the service identifier: entries naming only the service cover no invoice target, while the shipped service-level contract still permits them",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, a caller-supplied operation_target or resource argument never moves the target, though the credential names that value, and entries naming the service identifier never make the service the target of an invoice operation. Mutations: reading a caller-supplied operation_target and collapsing the argument-derived target to the service identifier each fail a witness."
   },
   {
    "id": "resource-access.resource-matching.refuse-unresolved-target",
@@ -39632,9 +40547,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a missing, empty, list-valued, dot-segment or ambiguous argument-derived target refuses before any decision request, though the Mission and the credential name both the service and the invoice",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable through declarations naming different targets and, under an argument-derived contract, through a list-valued argument; template forms outside the supported one refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An absent, empty, list-valued or dot-segment argument, a tool with no such argument, and declarations deriving different targets refuse target_unresolvable before any decision request, though the Mission and the credential name the service and the invoice. Mutations: falling back to the service identifier on a missing argument, taking a list's first value and dropping the dot-segment check each fail that witness."
   },
   {
    "id": "resource-access.resource-matching.execute-matched-target",
@@ -39663,9 +40584,21 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a target change between the decision and the release suppresses an argument-derived permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An argument-derived target is re-derived at use from the live contract and the arguments of the execution: a contract that moves or disappears suppresses the permit with target_drift and no effect (get_invoice, hold_transfer), and a permitted call executes the invoice its target names. Mutations: re-deriving at use without the arguments, or accepting a moved target, fail T6."
   },
   {
    "id": "resource-access.resource-matching.no-metadata-fallback",
@@ -39706,9 +40639,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > an argument-derived contract never falls back to the service identifier: entries naming only the service cover no invoice target, while the shipped service-level contract still permits them",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457)."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, entries naming only the service identifier cover no invoice target, refused before the PDP or denied out_of_authority there, while the shipped service-level contract permits the same call. Mutation: collapsing the argument-derived target to the service identifier fails that witness."
   },
   {
    "id": "resource-access.resource-matching.operation-contract-content",
@@ -39738,9 +40677,15 @@
      "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The target rule and the refusal of an operation with no contract are witnessed here and by the resource-matching target rows; the supported resource_match values (exact only) by resource-access.rs-enforcement.resource-match-unrecognized-fail-closed; the constraint inputs by resource-access.resource-matching.contract-constraint-inputs. No test isolates the action identifier item, so the row stays partial."
+   "notes": "#1375. The target rule and the refusal of an operation with no contract are witnessed here and by the resource-matching target rows; the supported resource_match values (exact only) by resource-access.rs-enforcement.resource-match-unrecognized-fail-closed; the constraint inputs by resource-access.resource-matching.contract-constraint-inputs. No test isolates the action identifier item, so the row stays partial. #1276: the target derivation rule is also witnessed for an argument-derived contract (the invoice target from the validated invoice_id). The action identifier item stays unisolated, so the row stays partial."
   },
   {
    "id": "resource-access.resource-matching.contract-constraint-inputs",
@@ -39949,6 +40894,76 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04. Prefix matching is not implemented; a prefix entry provides no authority (#1276)."
+  },
+  {
+   "id": "attenuation.root-mapping.target-restriction-every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "every operation a mapped tool can perform at each audience in the root's `aud` MUST have an operation target, as that resource server's operation contract establishes it, that matches the entry's `resource` under the entry's `resource_match`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each tool a root maps from an entry reaches, at every audience the root names, only operation targets the entry's resource matches under its resource_match; an aud value equal to (or naming) a coarser identifier never widens a finer entry to it",
+    "local": "the reference carries the restriction in each tool identifier (<resource>#<action>), which the consumer reads back as an exact entry naming that resource and matches against the operation target, whatever the root's aud; the mapping never reads aud"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation-target-restriction.test.ts",
+     "name": "an attenuation root keeps a finer entry's target restriction at a coarser audience (@spec attenuation#root-mapping, #1276) > the root's tool names the entry's invoice, and at the service audience it covers that invoice alone, never the service or another invoice",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276 (D457), the attenuation target-restriction proof. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, covers that invoice alone at the payments resource: under the argument-derived invoice contract another invoice is refused out_of_authority, and under the shipped service-level contract the service target is refused out_of_authority too. Mutations: mapping each entry at the root's first aud instead of its resource fails the cross-component witness, and mapping every entry at the first entry's resource fails the unit witness. The root is presented at one of its two audiences; that aud is not the boundary at any audience rests on the construction (the mapping never reads aud) and on the first mutation. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
+  },
+  {
+   "id": "attenuation.root-mapping.refuse-unestablishable-tool",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "An issuer that cannot establish this for a tool at every audience MUST NOT map the entry to that tool, and never maps it with the restriction removed",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose target restriction a tool cannot carry is not mapped to that tool; the root is never minted with that tool narrowed, widened or relaxed to a different restriction",
+    "local": "the reference refuses the whole root mapping (throws) for an entry whose resource_match is present and not exact, and for an action whose tool identifier would read back as a different (resource, action) pair"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Kernel derivation refuses non-exact entries earlier (#1264), so the first guard is defense in depth until prefix lands (#1399)."
   },
   {
    "id": "resource-access.subset.same-matcher",
@@ -43150,7 +44165,7 @@
    "id": "approval-governance.envelope.typ-cty",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
-   "text": "a verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
+   "text": "A verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -49606,7 +50621,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49628,7 +50643,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49650,7 +50665,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (`predecessor_state_changed` for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
+    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (a terminal-exit code chosen by Reconciliation's attribution rule for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
     "local": "the error code and the absence of any successor are witnessed; the reference does not attach mission_expansion_status on this request-time check (pre-existing)"
    },
    "level": "endpoint",
@@ -49705,7 +50720,7 @@
    "id": "expansion.reconciliation.completion-refusal-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "If any check fails, the Mission Issuer MUST refuse the completion with `invalid_grant` and the applicable reconciliation status from the closed set below",
+   "text": "If any check fails, the Mission Issuer MUST refuse the completion with the applicable reconciliation status from the closed set below, alongside the error code of the step that completes it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -49716,8 +50731,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused `invalid_grant` with the reconciliation status on a code redemption or deferred poll, and `invalid_request` for a predecessor no longer `active` where the token-exchange response completes it",
-    "local": "the reference's deferred poll answers a predecessor revoked during the window with access_denied rather than invalid_grant and a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion",
+    "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49882,7 +50897,7 @@
    "id": "expansion.interactive.no-second-code-after-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "interactive-handoff",
-   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation with `invalid_request`, and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -49893,7 +50908,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused with invalid_request and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50438,6 +51453,204 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
+  },
+  {
+   "id": "expansion.completion.deferred-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The Mission Issuer MUST NOT return the deferred response to an exchange that does not opt in.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an expansion exchange, or a retry of a deferred one, whose completion_mode does not include deferred never receives the deferred response: a new exchange receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request with no operation recorded, and a retry of a deferred operation receives invalid_request",
+    "local": "the reference AS defers every widening expansion exchange and never reads completion_mode"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.completion.deferred-poll-grant",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The client polls with the substrate's deferred grant type and the `deferral_code`",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client polls a deferred expansion with the deferred token response's deferred grant type and its deferral_code",
+    "local": "the reference AS serves, and its clients use, the token-exchange grant with deferral_code for the expansion poll (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.successor-expiry.completion-codes",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-expiry",
+   "text": "A deferred poll then answers `access_denied`, a code redemption `invalid_grant`, and a completion in the token-exchange response `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.submission.child-actor-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "submission",
+   "text": "The Mission Issuer MUST refuse with `invalid_request` a token exchange that carries both a `predecessor` cross-check and the child-delegation profile's `child_actor`, and an expansion exchange that carries `child_actor`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange (requested_token_type access token) that carries child_actor, or any token exchange carrying both predecessor and child_actor, is refused invalid_request and creates nothing",
+    "local": "the reference AS selects by requested_token_type and ignores child_actor on an access-token exchange"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.lineage.related-to-record-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "predecessor-member",
+   "text": "It is a member of the Mission Record and is not carried on the `mission` claim.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission's related_to appears on its Mission record and never on the mission claim of a token derived under it",
+    "local": "the reference AS records related_to only in carryover replacement records"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "Any other operation answers the repeated token exchange directly: `access_denied` after the Approver's denial and `expired_token` after its continuation expired before activation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed interactive operation is answered on the token exchange: access_denied after the Approver's denial, expired_token after the continuation expired before activation, and after a refused activation the code a token-exchange-response completion answers for that failure, with any reconciliation status; it creates nothing",
+    "local": "the reference AS has no interactive path"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.not-step-up.client-no-expansion-for-authn",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "not-step-up",
+   "text": "A client MUST NOT initiate expansion for a denial that is an authentication shortfall.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a denial caused by an acr or amr constraint leads the client to step-up authentication, never to an expansion request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation-revalidation.deferred-retry-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-revalidation",
+   "text": "A retry of a deferred operation without the opt-in is refused with `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a same-creation_request_id retry of an operation opened in the deferred mode whose completion_mode does not include deferred is refused invalid_request and receives no deferral",
+    "local": "the reference AS never reads completion_mode, so it returns the same deferral (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-deferred",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "An operation in the deferred mode returns its deferral, whose next poll answers as the deferred token response defines",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed deferred expansion returns its deferral, whose next poll answers access_denied after a denial or a refused activation (with any reconciliation status) and expired_token once the deferral has expired; it creates nothing",
+    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
