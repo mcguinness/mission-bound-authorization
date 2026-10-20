@@ -34,6 +34,24 @@ export interface MasPilotIntrospectionConfig {
   cache_max_seconds: number;
 }
 
+/**
+ * @spec authority-server#join-disclosure, authority-server#mission-join rule 2
+ * (#818 slice 4b): the separated configuration. The MAS is the reference
+ * authorization server in its own process at `http://{host}:{port}`, which
+ * is then the Mission issuer; the PDP reads Missions through its signed
+ * Mission Status as `pdp_principal_id`, whose credential is generated at each
+ * boot. `enrolled_pdps` is the MAS-held enrollment that releases Join
+ * Disclosure. The state source is placed with the PDP, read within
+ * `timeout_ms` and `max_response_bytes`.
+ */
+export interface MasPilotSeparatedConfig {
+  host: string;
+  port: number;
+  pdp_principal_id: string;
+  enrolled_pdps: Array<{ principal_id: string; enforcement_scopes: string[] }>;
+  state_source: { placement: "pdp"; timeout_ms: number; max_response_bytes: number };
+}
+
 export interface MasPilotInventoryEntry {
   tool: string;
   class: string;
@@ -62,6 +80,7 @@ export interface MasPilotConfig {
   };
   mapping_cache: { max_stale_seconds: number };
   introspection: MasPilotIntrospectionConfig;
+  separated_mas: MasPilotSeparatedConfig;
   mission_bound_only_classes: string[];
   /**
    * @spec runtime#input-resource-policy (#828, #818): the grants a development
@@ -151,6 +170,36 @@ function resourcePolicySeed(raw: unknown): ResourcePolicySeed {
   return { tenants, entitlements };
 }
 
+function positiveInt(v: unknown, ctx: string): number {
+  if (typeof v !== "number" || !Number.isInteger(v) || v <= 0) throw new MasPilotConfigError(`${ctx} must be a positive integer`);
+  return v;
+}
+
+/** The separated configuration: closed shapes, a `pdp` placement, positive bounds. */
+function separatedMas(raw: unknown): MasPilotSeparatedConfig {
+  const o = obj(raw, "separated_mas", ["host", "port", "pdp_principal_id", "enrolled_pdps", "state_source"]);
+  if (!Array.isArray(o.enrolled_pdps)) throw new MasPilotConfigError("separated_mas.enrolled_pdps must be an array");
+  const enrolled = o.enrolled_pdps.map((e, i) => {
+    const ctx = `separated_mas.enrolled_pdps[${i}]`;
+    const eo = obj(e, ctx, ["principal_id", "enforcement_scopes"]);
+    return { principal_id: str(eo.principal_id, `${ctx}.principal_id`), enforcement_scopes: strs(eo.enforcement_scopes, `${ctx}.enforcement_scopes`) };
+  });
+  const source = obj(o.state_source, "separated_mas.state_source", ["placement", "timeout_ms", "max_response_bytes"]);
+  // The PDP is the party that resolves the Mission at the MAS (rule 2).
+  if (source.placement !== "pdp") throw new MasPilotConfigError('separated_mas.state_source.placement must be "pdp"');
+  return {
+    host: str(o.host, "separated_mas.host"),
+    port: positiveInt(o.port, "separated_mas.port"),
+    pdp_principal_id: str(o.pdp_principal_id, "separated_mas.pdp_principal_id"),
+    enrolled_pdps: enrolled,
+    state_source: {
+      placement: "pdp",
+      timeout_ms: positiveInt(source.timeout_ms, "separated_mas.state_source.timeout_ms"),
+      max_response_bytes: positiveInt(source.max_response_bytes, "separated_mas.state_source.max_response_bytes"),
+    },
+  };
+}
+
 /** Validate a parsed pilot configuration. */
 export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
   const root = obj(raw, "root", [
@@ -160,6 +209,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     "estate",
     "mapping_cache",
     "introspection",
+    "separated_mas",
     "mission_bound_only_classes",
     "resource_policy",
     "mapping_contract",
@@ -248,6 +298,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     estate: { issuer, host: str(estate.host, "estate.host"), port, accounts: strs(estate.accounts, "estate.accounts"), clients, resource_servers },
     mapping_cache: { max_stale_seconds: maxStale },
     introspection: { client_id: introspectionClient, timeout_ms: timeoutMs, cache_max_seconds: cacheMax },
+    separated_mas: separatedMas(root.separated_mas),
     mission_bound_only_classes: strs(root.mission_bound_only_classes, "mission_bound_only_classes"),
     resource_policy: resourcePolicySeed(root.resource_policy),
     mapping_contract: root.mapping_contract,
