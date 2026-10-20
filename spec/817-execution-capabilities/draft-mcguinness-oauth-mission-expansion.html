@@ -1379,14 +1379,14 @@ an agent derives. The issuance profile commits the Authority Set once,
 at the approval event, and defines no mid-stream authorization
 upgrade. Widening authority requires a new approval and a successor
 Mission, as this document specifies.<a href="#section-1-1" class="pilcrow">¶</a></p>
-<p id="section-1-2">An agent's task does not always stay within the authority approved
-for it. The agent can meet an action that the approved Authority Set
-does not cover but that the deployment's governance policy would
-permit under a fresh consent. Expansion is the governed path from that
-shortfall to a new approval. It does not modify or widen the existing Mission. It creates a new Mission through the issuance profile's own
-approval event, with its own integrity anchors and Mission record,
-linked to the Mission it replaces. The successor's authority comes
-only from that approval.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-2">An agent's task does not always stay within the authority approved for
+it. The agent can meet an action that the approved Authority Set does
+not cover but that the deployment's governance policy would permit under
+a fresh consent. Expansion is the governed path from that shortfall to a
+new approval. It does not modify or widen the existing Mission. It
+creates a new Mission through the issuance profile's own approval event,
+with its own integrity anchors and Mission Record, linked to the Mission
+it replaces. The successor's authority comes only from that approval.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">The mechanism rests on three additions to the issuance profile:<a href="#section-1-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1-4.1">
@@ -1423,7 +1423,7 @@ without restating them:<a href="#section-1.1-1" class="pilcrow">¶</a></p>
             <p id="section-1.1-2.3.1">the approval event and its integrity anchors;<a href="#section-1.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-2.4">
-            <p id="section-1.1-2.4.1">the Mission record and the <code>mission</code> claim; and<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-1.1-2.4.1">the Mission Record and the <code>mission</code> claim; and<a href="#section-1.1-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-1.1-2.5">
             <p id="section-1.1-2.5.1">the lifecycle and issuance gating.<a href="#section-1.1-2.5.1" class="pilcrow">¶</a></p>
@@ -1624,7 +1624,7 @@ nothing is refused.<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
         <li id="section-3-3.4">
           <p id="section-3-3.4.1">An expansion always widens authority, so a fresh consent supplies
 the broader authority, obtained through the deferred token response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>) or the
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>) or the
 deployment's interactive approval (<a href="#completion-modes" class="auto internal xref">Section 5.2</a>). The
 successor's authority comes only from that consent.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -1681,12 +1681,14 @@ change.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.2-2.2">
             <p id="section-3.2-2.2.1">A request denied because the requested authority is not in the
-active Mission's Authority Set requires expansion. The Authority Set
+  active Mission's Authority Set requires expansion. The Authority Set
 is enlarged only through a new approval event.<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.2-3"><a href="#step-up-distinction" class="auto internal xref">Section 14.6</a> describes the consequence of conflating the
-two.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">A client <span class="bcp14">MUST NOT</span> initiate expansion for a denial that is an
+authentication shortfall.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4"><a href="#step-up-distinction" class="auto internal xref">Section 14.6</a> describes the consequence of conflating the
+two.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1814,22 +1816,24 @@ expand a Mission merely by naming its <code>mission_id</code>.<a href="#section-
 <code>creation_request_id</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-4.1-2.20">
             <p id="section-4.1-2.20.1"><span class="bcp14">REQUIRED</span>. The creation idempotency identifier
-(<a href="#creation-idempotency" class="auto internal xref">Section 11</a>): an ASCII string of at most 255 octets,
-opaque to the Mission Issuer beyond equality, that identifies this
-one Mission-creation operation across every completion mode. At
-least 128 bits of client-generated randomness is <span class="bcp14">RECOMMENDED</span>; a UUID
-<span>[<a href="#RFC9562" class="cite xref">RFC9562</a>]</span> satisfies this. The Mission Issuer <span class="bcp14">MUST</span> refuse an
-exchange missing it with <code>invalid_request</code>.<a href="#section-4.1-2.20.1" class="pilcrow">¶</a></p>
+  (<a href="#creation-idempotency" class="auto internal xref">Section 11</a>): an ASCII string of at most 255 octets,
+  opaque to the Mission Issuer beyond equality, that identifies this one
+  Mission-creation operation across every completion mode. At least 122
+  bits of client-generated randomness is <span class="bcp14">RECOMMENDED</span>; a version 4 UUID
+  <span>[<a href="#RFC9562" class="cite xref">RFC9562</a>]</span> satisfies this. The identifier is a deduplication handle,
+  not a secret (<a href="#duplicate-creation" class="auto internal xref">Section 14.5</a>). The Mission Issuer <span class="bcp14">MUST</span> refuse
+  an exchange missing it with <code>invalid_request</code>.<a href="#section-4.1-2.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
 <p id="section-4.1-3">A <code>mission_intent</code> on a token exchange marks it as a Mission-creation
-exchange. A Mission-creation exchange whose <code>subject_token</code> resolves
-to a Mission and that carries no <code>child_actor</code> is an expansion. A token exchange
-carrying both a <code>predecessor</code> cross-check and the child-delegation
-profile's <code>child_actor</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>) <span class="bcp14">MUST</span> be
-refused with <code>invalid_request</code>: the operations do not combine.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+exchange, and its <code>requested_token_type</code> selects the operation: the
+access-token type selects expansion, and the JWT type selects child
+creation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).
+The Mission Issuer <span class="bcp14">MUST</span> refuse with <code>invalid_request</code> a token exchange
+that carries both a <code>predecessor</code> cross-check and the child-delegation
+profile's <code>child_actor</code>, and an expansion exchange that carries
+<code>child_actor</code>: the operations do not combine.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
 <p id="section-4.1-4">The possession proof of <a href="#request-binding" class="auto internal xref">Section 4.2</a> is presented only on the
 token endpoint's authenticated back channel and <span class="bcp14">MUST NOT</span> appear on any
 front channel. The token exchange establishes the predecessor binding
@@ -1840,7 +1844,7 @@ decision (<a href="#interactive-handoff" class="auto internal xref">Section 5.3<
 <a href="#example" class="auto internal xref">Appendix A</a>, with client authentication omitted (line breaks for
 display purposes only). The client also opts in to deferred completion
 with the deferred token response's <code>completion_mode</code> parameter
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00#section-4.1" class="relref">Section 4.1</a> of [<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>):<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00#section-4.1" class="relref">Section 4.1</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>):<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 <span id="name-expansion-request"></span><div id="fig-request">
 <figure id="figure-2">
           <div class="lang-http sourcecode" id="section-4.1-6.1">
@@ -1948,10 +1952,10 @@ proposal channel (who may put an expansion of this predecessor in
 front of the Approver, and who may trigger the atomic supersession),
 never the authority: no proof failure can widen anything.<a href="#section-4.2-4" class="pilcrow">¶</a></p>
 <p id="section-4.2-5">The Mission Issuer <span class="bcp14">MUST</span> record each expansion presentation and count it
-toward the deployment's anomaly detection, and the per-predecessor rate
-limit (<a href="#policy-probing" class="auto internal xref">Section 14.7</a>) applies unconditionally. The <code>subject_token</code>
-is consumed only to resolve and bind the predecessor, never to
-refresh, so presenting it has no interaction with refresh token
+toward the deployment's anomaly detection, and the rate limit per
+predecessor and client (<a href="#policy-probing" class="auto internal xref">Section 14.7</a>) applies unconditionally. The
+<code>subject_token</code> is consumed only to resolve and bind the predecessor,
+never to refresh, so presenting it has no interaction with refresh token
 rotation or replay detection.<a href="#section-4.2-5" class="pilcrow">¶</a></p>
 <p id="section-4.2-6">Expansion therefore requires a sender-constrained Mission-bound access
 token. A deployment that issues only bearer tokens for a Mission, or
@@ -1988,8 +1992,9 @@ is not <code>active</code> <span class="bcp14">MUST</span> be refused with <code
 <li class="normal" id="section-4.3-2.1">
             <p id="section-4.3-2.1.1">if the predecessor made a terminal exit from <code>active</code> (it is
 <code>terminated</code>, with reason <code>revoked</code>, <code>expired</code>, already <code>superseded</code>
-(<a href="#superseded-state" class="auto internal xref">Section 7</a>), or another), the status is
-<code>predecessor_state_changed</code>;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
+(<a href="#superseded-state" class="auto internal xref">Section 7</a>), or another), the status is one of the two
+terminal-exit codes, chosen by the attribution rule of
+<a href="#reconciliation" class="auto internal xref">Section 10</a>;<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.3-2.2">
             <p id="section-4.3-2.2.1">if the predecessor is in a non-terminal non-active state, for example
@@ -2090,8 +2095,8 @@ own validation, is refused with <code>invalid_dpop_proof</code>
 (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-5" class="relref">Section 5</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>); and<a href="#section-5.1-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.1-4.3">
-            <p id="section-5.1-4.3.1">any other failure is refused with <code>invalid_request</code>,
-<code>invalid_grant</code>, or <code>invalid_token</code> as appropriate.<a href="#section-5.1-4.3.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-4.3.1">any other failure is refused with <code>invalid_request</code> or
+<code>invalid_grant</code> as appropriate (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>).<a href="#section-5.1-4.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-5.1-5">An authorization server that requires a DPoP nonce answers a proof
@@ -2127,15 +2132,17 @@ possession-proven token exchange (<a href="#expansion-request" class="auto inter
 <span class="break"></span><dl class="dlParallel" id="section-5.2-2">
           <dt id="section-5.2-2.1">Deferred:</dt>
           <dd style="margin-left: 1.5em" id="section-5.2-2.2">
-            <p id="section-5.2-2.2.1">When approval is asynchronous, the Mission Issuer returns the
-deferred token response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>, profiled for
+            <p id="section-5.2-2.2.1">When approval is asynchronous and the exchange opts in, the Mission
+Issuer returns the deferred token response
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>, profiled for
 Missions by <span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>):
 <code>authorization_pending</code> with a <code>deferral_code</code>, its <code>expires_in</code>, and
-a polling <code>interval</code>. The Approver acts on the deployment's asynchronous review
-surface, and the client polls. The poll resolves to the successor's
-access token on approval, or to <code>access_denied</code> or <code>expired_token</code>.
-This document references that substrate and does not redefine it.<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
+a polling <code>interval</code>. The Approver acts on the deployment's
+asynchronous review surface. The client polls with the substrate's
+deferred grant type and the <code>deferral_code</code>; the poll resolves to the
+successor's access token on approval, or to <code>access_denied</code> or
+<code>expired_token</code>. This document references that substrate and does
+not redefine it.<a href="#section-5.2-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.2-2.3">Interactive:</dt>
@@ -2146,52 +2153,59 @@ exchange with the interaction-required response of
 carrying the continuation, the user agent completes the issuance
 profile's own approval ceremony
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and the client redeems the
-resulting authorization code for the successor's authority.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
+  resulting authorization code for the successor's authority.<a href="#section-5.2-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-5.2-3">This document defines no synchronous completion for an expansion that
+<p id="section-5.2-3">An exchange opts in to deferred completion when its <code>completion_mode</code>
+includes <code>deferred</code>, the deferred token response's opt-in. The Mission
+Issuer <span class="bcp14">MUST NOT</span> return the deferred response to an exchange that does
+not opt in. It answers such an exchange with the interactive handoff
+(<a href="#interactive-handoff" class="auto internal xref">Section 5.3</a>) or, where it offers no interactive
+completion, refuses it with <code>invalid_request</code> and records no
+operation (<a href="#creation-reservation" class="auto internal xref">Section 11.2</a>).<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.2-4">This document defines no synchronous completion for an expansion that
 takes fresh consent. An expansion response is a successor or a
 refusal, never a token derived under the predecessor: a request whose
 derived authority is a subset of the predecessor's own Effective
 Authority Set is refused with <code>nothing_to_expand</code>
-(<a href="#verification-order" class="auto internal xref">Section 5.1</a>, <a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-5.2-3" class="pilcrow">¶</a></p>
-<p id="section-5.2-4">Policy-adjudicated expansion within a pre-consented authority ceiling
+(<a href="#verification-order" class="auto internal xref">Section 5.1</a>, <a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+<p id="section-5.2-5">Policy-adjudicated expansion within a pre-consented authority ceiling
 belongs to the experimental progressive authorization companion
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>). An in-ceiling
 drawdown that passes that companion's policy-adjudication guards
 completes synchronously in the token-exchange response, which returns
 the successor's access token. One that falls back to a fresh human
-approval completes in one of the two modes above.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
-<p id="section-5.2-5">In either mode, obtaining the fresh approval follows the issuance
-profile's approval event. The Mission Issuer:<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+approval completes in one of the two modes above.<a href="#section-5.2-5" class="pilcrow">¶</a></p>
+<p id="section-5.2-6">In either mode, obtaining the fresh approval follows the issuance
+profile's approval event. The Mission Issuer:<a href="#section-5.2-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-5.2-6.1">
-            <p id="section-5.2-6.1.1">authenticates the Approver against the published
-approval-authentication floor;<a href="#section-5.2-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-5.2-7.1">
+            <p id="section-5.2-7.1.1">authenticates the Approver against the published
+approval-authentication floor;<a href="#section-5.2-7.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.2">
-            <p id="section-5.2-6.2.1">obtains fresh consent for the derived Authority Set;<a href="#section-5.2-6.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.2-7.2">
+            <p id="section-5.2-7.2.1">obtains fresh consent for the derived Authority Set;<a href="#section-5.2-7.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.3">
-            <p id="section-5.2-6.3.1">satisfies any requested <code>acr_values</code> or <code>max_age</code> strength; and<a href="#section-5.2-6.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.2-7.3">
+            <p id="section-5.2-7.3.1">satisfies any requested <code>acr_values</code> or <code>max_age</code> strength; and<a href="#section-5.2-7.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-5.2-6.4">
-            <p id="section-5.2-6.4.1">renders the Subject when the Approver is not the Subject.<a href="#section-5.2-6.4.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-5.2-7.4">
+            <p id="section-5.2-7.4.1">renders the Subject when the Approver is not the Subject.<a href="#section-5.2-7.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.2-7">The consent disclosure <span class="bcp14">MUST</span> reflect the successor's authority being
+<p id="section-5.2-8">The consent disclosure <span class="bcp14">MUST</span> reflect the successor's authority being
 adjudicated. If the Approver declines, no successor is created and the
-predecessor is untouched (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-5.2-7" class="pilcrow">¶</a></p>
-<p id="section-5.2-8">In either mode, the exchange's <code>creation_request_id</code> reservation
+predecessor is untouched (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-5.2-8" class="pilcrow">¶</a></p>
+<p id="section-5.2-9">In either mode, the exchange's <code>creation_request_id</code> reservation
 (<a href="#creation-idempotency" class="auto internal xref">Section 11</a>) makes completion recoverable: a client that
 loses the response recovers the one committed operation, never a
-second creation.<a href="#section-5.2-8" class="pilcrow">¶</a></p>
-<p id="section-5.2-9">The following is an example of a deferred response to the request in
-<a href="#fig-request" class="auto internal xref">Figure 2</a>:<a href="#section-5.2-9" class="pilcrow">¶</a></p>
+second creation.<a href="#section-5.2-9" class="pilcrow">¶</a></p>
+<p id="section-5.2-10">The following is an example of a deferred response to the request in
+<a href="#fig-request" class="auto internal xref">Figure 2</a>:<a href="#section-5.2-10" class="pilcrow">¶</a></p>
 <span id="name-deferred-response"></span><div id="fig-deferred">
 <figure id="figure-4">
-          <div class="lang-http sourcecode" id="section-5.2-10.1">
+          <div class="lang-http sourcecode" id="section-5.2-11.1">
 <pre>
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -2209,13 +2223,13 @@ Cache-Control: no-store
 <a href="#name-deferred-response" class="selfRef">Deferred Response</a>
           </figcaption></figure>
 </div>
-<p id="section-5.2-11">The following is an example of the client's poll with the deferred
-grant type (<span><a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00#section-5.5" class="relref">Section 5.5</a> of [<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>)
+<p id="section-5.2-12">The following is an example of the client's poll with the deferred grant
+type (<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00#section-5.5" class="relref">Section 5.5</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>)
 and a DPoP proof, with client authentication omitted (line breaks for
-display purposes only):<a href="#section-5.2-11" class="pilcrow">¶</a></p>
+display purposes only):<a href="#section-5.2-12" class="pilcrow">¶</a></p>
 <span id="name-deferred-poll"></span><div id="fig-poll">
 <figure id="figure-5">
-          <div class="lang-http sourcecode" id="section-5.2-12.1">
+          <div class="lang-http sourcecode" id="section-5.2-13.1">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
@@ -2231,16 +2245,16 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
 <a href="#name-deferred-poll" class="selfRef">Deferred Poll</a>
           </figcaption></figure>
 </div>
-<p id="section-5.2-13">The following is an example of the response to the first poll after
+<p id="section-5.2-14">The following is an example of the response to the first poll after
 the Approver approves, which activates the successor
 (<a href="#successor-activation" class="auto internal xref">Section 5.4</a>). In this example, the response carries the
 token exchange's <code>issued_token_type</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.1" class="relref">Section 2.2.1</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>),
 the successor's <code>mission_id</code>, the effective expiry in
 <code>mission_expires_at</code> (<a href="#successor-expiry" class="auto internal xref">Section 5.6</a>), and the granted
-<code>authorization_details</code>:<a href="#section-5.2-13" class="pilcrow">¶</a></p>
+<code>authorization_details</code>:<a href="#section-5.2-14" class="pilcrow">¶</a></p>
 <span id="name-successful-completion"></span><div id="fig-success">
 <figure id="figure-6">
-          <div class="lang-http sourcecode" id="section-5.2-14.1">
+          <div class="lang-http sourcecode" id="section-5.2-15.1">
 <pre>
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -2350,19 +2364,24 @@ Cache-Control: no-store
             <p id="section-5.3-8.1.1"><code>mission_continuation</code>;<a href="#section-5.3-8.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.3-8.2">
-            <p id="section-5.3-8.2.1"><code>response_type=code</code>, its <code>redirect_uri</code>, and <code>state</code>; and<a href="#section-5.3-8.2.1" class="pilcrow">¶</a></p>
+            <p id="section-5.3-8.2.1"><code>response_type=code</code>, its <code>redirect_uri</code>, and <code>state</code>;<a href="#section-5.3-8.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.3-8.3">
             <p id="section-5.3-8.3.1">the PKCE <code>S256</code> challenge or DPoP binding the issuance profile
 requires for an authorization code
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authorization Code
-Protection").<a href="#section-5.3-8.3.1" class="pilcrow">¶</a></p>
+Protection"); and<a href="#section-5.3-8.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-5.3-8.4">
+            <p id="section-5.3-8.4.1">optionally, the <code>predecessor</code> cross-check (<a href="#submission" class="auto internal xref">Section 4.1</a>), which
+names the recorded predecessor.<a href="#section-5.3-8.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-5.3-9">It carries no <code>mission_intent</code> and no <code>authorization_details</code>: the
-token exchange is this operation's carriage (<a href="#submission" class="auto internal xref">Section 4.1</a>). Client authentication at the pushed authorization request endpoint
-binds the handle to the client, so the handle alone does not give its
-holder the operation.<a href="#section-5.3-9" class="pilcrow">¶</a></p>
+<p id="section-5.3-9">It carries no <code>mission_intent</code> and no <code>authorization_details</code>: the token
+exchange is this operation's carriage (<a href="#submission" class="auto internal xref">Section 4.1</a>). Client
+authentication at the pushed authorization request endpoint binds the
+handle to the client, so the handle alone does not give its holder the
+operation.<a href="#section-5.3-9" class="pilcrow">¶</a></p>
 <p id="section-5.3-10">The following is an example of the pushed authorization request, with
 client authentication omitted (line breaks for display purposes
 only):<a href="#section-5.3-10" class="pilcrow">¶</a></p>
@@ -2396,8 +2415,9 @@ expired, or bound to another client, with <code>invalid_request</code>;<a href="
           <li class="normal" id="section-5.3-13.2">
             <p id="section-5.3-13.2.1"><span class="bcp14">MUST</span> take the predecessor, Intent, proposal, submission evidence,
 presenter confirmation, and actor context only from the recorded
-operation, and <span class="bcp14">MUST</span> refuse a pushed request that supplies any of
-them with a different value; and<a href="#section-5.3-13.2.1" class="pilcrow">¶</a></p>
+operation, and <span class="bcp14">MUST</span> refuse with <code>invalid_request</code> a pushed request
+that supplies any of them with a different value, accepting an equal
+<code>predecessor</code> as a cross-check; and<a href="#section-5.3-13.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.3-13.3">
             <p id="section-5.3-13.3.1">validates the other authorization request parameters as for any
@@ -2453,8 +2473,9 @@ redemption at or after it with <code>invalid_grant</code>, and nothing activates
 <code>subject_token</code> expiry during the window does not gate redemption
 (<a href="#deferred-window" class="auto internal xref">Section 5.5</a>).<a href="#section-5.3-19" class="pilcrow">¶</a></p>
 <p id="section-5.3-20">After activation the Mission Issuer <span class="bcp14">MUST</span> refuse a further pushed
-request for the continuation and <span class="bcp14">MUST</span> refuse redemption of any other
-code issued for the operation with <code>invalid_grant</code>. A lost redemption
+request for the continuation with <code>invalid_request</code>, and <span class="bcp14">MUST</span> refuse
+redemption of any other code issued for the operation with
+<code>invalid_grant</code>. A lost redemption
 response is recovered by repeating the token exchange with the same
 <code>creation_request_id</code> (<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>); an operation whose
 continuation expired before activation answers that retry with
@@ -2483,7 +2504,7 @@ under the progressive authorization companion
 <p id="section-5.4-3">At completion the Mission Issuer computes the successor's integrity
 anchors: <code>intent_hash</code>, <code>authority_hash</code>, and, where the exchange
 carried an authority proposal, <code>proposal_hash</code>. At activation it
-creates the successor Mission record in the <code>active</code> state, with its
+creates the successor Mission Record in the <code>active</code> state, with its
 <code>predecessor</code> member set (<a href="#predecessor-member" class="auto internal xref">Section 6</a>), atomically with the
 predecessor's transition to <code>terminated</code> with reason <code>superseded</code>
 (<a href="#superseded-state" class="auto internal xref">Section 7</a>). The same atomic step applies:<a href="#section-5.4-3" class="pilcrow">¶</a></p>
@@ -2503,10 +2524,11 @@ predecessor's transition to <code>terminated</code> with reason <code>superseded
 </li>
         </ul>
 <p id="section-5.4-5">Until the successor activates, the predecessor remains <code>active</code>. An
-expansion that never completes, whose deferred approval lapses, or
-whose authorization code is never redeemed or expires, creates no
-successor and leaves the predecessor <code>active</code>. It therefore never leaves the task without authority or cascade-terminates the predecessor's
-Child Missions.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+expansion that never completes, whose deferred approval lapses, or whose
+authorization code is never redeemed or expires, creates no successor
+and leaves the predecessor <code>active</code>. It therefore never leaves the task
+without authority or cascade-terminates the predecessor's Child
+Missions.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="deferred-window">
@@ -2519,11 +2541,12 @@ interactive approval window. Two rules govern that window:<a href="#section-5.5-
 <ul class="normal">
 <li class="normal" id="section-5.5-2.1">
             <p id="section-5.5-2.1.1">The predecessor's Mission state <span class="bcp14">MUST</span> be re-verified at issuance
-(completion), not only at request time. A predecessor that was
-terminated or contained during the window <span class="bcp14">MUST</span> fail completion, per
-the compare-and-set of <a href="#reconciliation" class="auto internal xref">Section 10</a>. This preserves the
-halt on new derivation that a terminal predecessor state effects: a
-deferred approval <span class="bcp14">MUST NOT</span> become a bypass of it.<a href="#section-5.5-2.1.1" class="pilcrow">¶</a></p>
+  (completion), not only at request time. A predecessor that was
+  terminated during the window, or whose containment or discharge since
+  adjudication restricts authority the successor carries, <span class="bcp14">MUST</span> fail
+  completion, per the compare-and-set of <a href="#reconciliation" class="auto internal xref">Section 10</a>. This
+  preserves the halt on new derivation that a terminal predecessor state
+  effects: a deferred approval <span class="bcp14">MUST NOT</span> become a bypass of it.<a href="#section-5.5-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-5.5-2.2">
             <p id="section-5.5-2.2.1">Expiry of the <code>subject_token</code> during the window <span class="bcp14">MUST NOT</span> gate
@@ -2566,8 +2589,9 @@ redemption, <span class="bcp14">MUST</span> carry the effective value in the iss
 <code>mission_expires_at</code> response member. Completion inherits the
 issuance profile's atomic creation-time check: where the
 submission's <code>intent.expires_at</code> passes while the expansion is
-pending, completion creates no successor Mission and the exchange
-fails with this document's denial semantics (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-5.6-4" class="pilcrow">¶</a></p>
+pending, completion creates no successor Mission. A deferred poll then
+answers <code>access_denied</code>, a code redemption <code>invalid_grant</code>, and a
+completion in the token-exchange response <code>invalid_request</code>.<a href="#section-5.6-4" class="pilcrow">¶</a></p>
 <p id="section-5.6-5">An auditor verifies the successor record by inequalities, never by
 matching a recomputed minimum:<a href="#section-5.6-5" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2631,7 +2655,7 @@ member.<a href="#section-6-1" class="pilcrow">¶</a></p>
           <p id="section-6-2.2.1"><span class="bcp14">REQUIRED</span> on a successor Mission; absent otherwise. A string: the
 <code>mission_id</code> of the Mission this Mission succeeded by expansion. It
 is carried on the successor's <code>mission</code> claim and recorded on the
-successor's immutable Mission record, so the lineage is durable
+successor's immutable Mission Record, so the lineage is durable
 independently of any derived token and the expansion chain is
 observable in audit.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2643,8 +2667,10 @@ observable in audit.<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 related to by lineage without superseding it, used for a
 non-superseding link such as a branch (<a href="#replacement" class="auto internal xref">Section 8</a>) or an
 independent continuation (<a href="#independent-continuation" class="auto internal xref">Section 9</a>). Unlike
-<code>predecessor</code>, its presence does not imply that the referenced
-Mission was superseded, and it carries no lifecycle consequence.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+  <code>predecessor</code>, its presence does not imply that the referenced
+Mission was superseded, and it carries no lifecycle consequence. It
+is a member of the Mission Record and is not carried on the
+<code>mission</code> claim.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-6-2.5">
@@ -2665,11 +2691,11 @@ Signals profile in the supersession's lifecycle event
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-6-3">All three members are lineage and audit context only. Consistent with the issuance profile's
-open-<code>mission</code>-claim rule, each of them <span class="bcp14">MUST NOT</span> grant or widen
-authority, and a consumer that does not understand one <span class="bcp14">MUST</span> ignore it.
-The successor's authority comes only from its own <code>authority_hash</code>,
-never from its predecessor.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-3">All three members are lineage and audit context only. Like the
+additional members of the <code>mission</code> claim, each of them <span class="bcp14">MUST NOT</span> grant
+or widen authority, and a consumer that does not understand one <span class="bcp14">MUST</span>
+ignore it. The successor's authority comes only from its own
+<code>authority_hash</code>, never from its predecessor.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-6-4">Each is a bare Mission Identifier string, not an object like the
 <code>parent</code> member of a Child Mission
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>): same-issuer
@@ -2684,11 +2710,11 @@ expansion chain is expressed by walking <code>predecessor</code> links from a
 successor back toward the original Mission.<a href="#section-6-6.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-6.2">
-          <p id="section-6-6.2.1"><strong>Immutability.</strong> The <code>predecessor</code> member is set at the
-successor's approval event and <span class="bcp14">MUST NOT</span> change thereafter. The Mission record is immutable
-except for its <code>state</code> and its <code>termination</code>, which a supersession
-writes once on the predecessor with the <code>successor</code> link
-(<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
+          <p id="section-6-6.2.1"><strong>Immutability.</strong> The <code>predecessor</code> member is set at the successor's
+  approval event and <span class="bcp14">MUST NOT</span> change thereafter. The Mission Record is
+  immutable except for its <code>state</code> and its <code>termination</code>, which a
+  supersession writes once on the predecessor with the <code>successor</code> link
+  (<a href="#superseded-state" class="auto internal xref">Section 7</a>).<a href="#section-6-6.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-6.3">
           <p id="section-6-6.3.1"><strong>Origin.</strong> The predecessor and successor share an <code>issuer</code>: an
@@ -2842,7 +2868,7 @@ rule: a <code>terminated</code> Mission, whatever its reason, is non-deriving.<a
 </li>
       </ul>
 <p id="section-7-7">The following is an example of the predecessor's <code>state</code> and
-<code>termination</code> after supersession (other Mission record members
+<code>termination</code> after supersession (other Mission Record members
 omitted):<a href="#section-7-7" class="pilcrow">¶</a></p>
 <span id="name-superseded-predecessor"></span><div id="fig-termination">
 <figure id="figure-10">
@@ -2918,22 +2944,24 @@ is deployed, the runtime staleness bound.<a href="#section-7.1-3.2.1" class="pil
 <p id="section-7.1-4">When the predecessor has non-terminal Child Missions, the expansion
 consent disclosure <span class="bcp14">SHOULD</span> surface that fact as a material notice: at
 minimum the count of live Child Missions and that supersession
-terminates them. Where a deployment provides this notice, the
-expansion consent event renders the cost above; that consent event is the only point in this document at which a human can witness the
-cascade before it happens. A deployment <span class="bcp14">MAY</span> additionally support an
-expansion-request parameter by which the client asks the Mission
-Issuer to refuse the expansion while live Child Missions exist.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
-<p id="section-7.1-5">Where explicitly approved Child Mission Carryover is selected, the Mission
-Issuer <span class="bcp14">MUST</span> render and commit its complete manifest and exclusion policy,
-and recheck that snapshot at completion under the child profile's Carryover
-rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Otherwise
-the ordinary cascade notice and per-child re-creation above remain the minimum.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
+terminates them. Where a deployment provides this notice, the expansion
+consent event renders the cost above; that consent event is the only
+point in this document at which a human can witness the cascade before
+it happens.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+<p id="section-7.1-5">Where explicitly approved Child Mission Carryover is selected, the
+Mission Issuer <span class="bcp14">MUST</span> render and commit its complete manifest and
+exclusion policy, and recheck that snapshot at completion under the
+child profile's Carryover rules
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Otherwise the
+ordinary cascade notice and per-child re-creation above remain the
+minimum.<a href="#section-7.1-5" class="pilcrow">¶</a></p>
 <p id="section-7.1-6">Carryover completes in the successor's activation step
 (<a href="#successor-activation" class="auto internal xref">Section 5.4</a>). When the approved operation includes Child
-Mission Carryover, the Mission Issuer <span class="bcp14">MUST</span> include replacement records, required old-child
-cascades, the committed outcome map, and durable recovery work in the
-same atomic operation. Publication follows commit and is repairable;
-constructing replacements first does not guarantee external event order
+Mission Carryover, the Mission Issuer <span class="bcp14">MUST</span> include replacement records,
+required old-child cascades, the committed outcome map, and durable
+recovery work in the same atomic operation. Publication follows commit
+and is repairable; constructing replacements first does not guarantee
+external event order
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -2947,9 +2975,10 @@ predecessor when its successor is later revoked, expired, or itself
 superseded; <code>terminated</code> is terminal, whatever its reason. A
 deployment that needs to revert to the predecessor's authority
 expresses that as a new approval event creating a new Mission that
-carries the relevant authority, with its own <code>predecessor</code> link
-preserving the lineage. A rollback is a new governed Mission, not a
-state reversal.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
+carries the relevant authority, and <span class="bcp14">MAY</span> record its <code>related_to</code> member
+naming the superseded predecessor to preserve the lineage
+(<a href="#independent-continuation" class="auto internal xref">Section 9</a>). A rollback is a new governed Mission,
+not a state reversal.<a href="#section-7.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2981,7 +3010,7 @@ commits exactly the authority the Approver saw and approved
 (<a href="#adjudication" class="auto internal xref">Section 5</a>).<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">A branch mode, in which the predecessor and the successor both remain
 <code>active</code> after expansion (for example, a separately scoped child task
-running alongside the original), is <span class="bcp14">OPTIONAL</span> and is not defined here.
+running alongside the original), is not defined here.
 A deployment that needs a separately scoped task alongside a
 still-active Mission creates an ordinary new Mission under the
 issuance profile and <span class="bcp14">MAY</span> set that Mission's <code>related_to</code> member
@@ -3058,7 +3087,7 @@ before the new Mission's approval completes (a cross-issuer
 relationship requires a structured extension);<a href="#section-9-7.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.2">
-          <p id="section-9-7.2.1"><span class="bcp14">MUST</span> set <code>related_to</code> atomically when the Mission record is created;
+          <p id="section-9-7.2.1"><span class="bcp14">MUST</span> set <code>related_to</code> atomically when the Mission Record is created;
 and<a href="#section-9-7.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-7.3">
@@ -3083,8 +3112,8 @@ approval renders.<a href="#section-9-9" class="pilcrow">¶</a></p>
       <h2 id="name-concurrent-expansion-reconc">
 <a href="#section-10" class="section-number selfRef">10. </a><a href="#name-concurrent-expansion-reconc" class="section-name selfRef">Concurrent Expansion Reconciliation</a>
       </h2>
-<p id="section-10-1">More than one expansion request <span class="bcp14">MAY</span> be in flight against the same
-predecessor at once, and more than one <span class="bcp14">MAY</span> be adjudicated and awaiting
+<p id="section-10-1">More than one expansion request can be in flight against the same
+predecessor at once, and more than one can be adjudicated and awaiting
 its completion. Because replacement produces exactly one successor per
 predecessor (<a href="#replacement" class="auto internal xref">Section 8</a>) and supersession is deferred to
 activation (<a href="#successor-activation" class="auto internal xref">Section 5.4</a>), the Mission Issuer <span class="bcp14">MUST</span>
@@ -3105,72 +3134,86 @@ this predecessor (equivalently, the predecessor has not already
 been terminated with reason <code>superseded</code>); and<a href="#section-10-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-10-3.3">
-          <p id="section-10-3.3.1">the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a
-current containment or discharge restriction of the chain
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>) that the
-successor's approval did not explicitly restore with that
-restriction disclosed.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
+          <p id="section-10-3.3.1">the successor's complete Authority Set, including authority carried
+   forward from the predecessor, overlaps no authority under a current
+   containment or discharge restriction of the chain
+   (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>,
+   <span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>) that the
+   successor's approval did not explicitly restore with that restriction
+   disclosed.<a href="#section-10-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-10-4">If any check fails, the Mission Issuer <span class="bcp14">MUST</span> refuse the completion
-with <code>invalid_grant</code> and the applicable reconciliation status from the
-closed set below; where the token-exchange response completes the
-expansion, a failed first or second check, a predecessor no longer
-<code>active</code>, is refused with <code>invalid_request</code> instead
-(<a href="#predecessor-active" class="auto internal xref">Section 4.3</a>). The losing or otherwise stale expansion is
-rejected at completion; it activates no successor.<a href="#section-10-4" class="pilcrow">¶</a></p>
-<p id="section-10-5">The third check catches narrowing that occurs between adjudication and
+with the applicable reconciliation status from the closed set below,
+alongside the error code of the step that completes it:<a href="#section-10-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-10-5.1">
+          <p id="section-10-5.1.1">a deferred poll answers <code>access_denied</code>, the deferred token
+response's outcome for a request that resolved with an error;<a href="#section-10-5.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-5.2">
+          <p id="section-10-5.2.1">an authorization code redemption answers <code>invalid_grant</code>; and<a href="#section-10-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-10-5.3">
+          <p id="section-10-5.3.1">where the token-exchange response completes the expansion, a failed
+first or second check, a predecessor no longer <code>active</code>, answers
+<code>invalid_request</code> (<a href="#predecessor-active" class="auto internal xref">Section 4.3</a>), and a failed third check
+answers <code>invalid_grant</code>.<a href="#section-10-5.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-10-6">The losing or otherwise stale expansion is rejected at completion; it
+activates no successor.<a href="#section-10-6" class="pilcrow">¶</a></p>
+<p id="section-10-7">The third check catches narrowing that occurs between adjudication and
 activation: authority contained or discharged after the approval
 returns only through a new expansion, adjudicated against the current
 restrictions, which require fresh human approval with the restriction
-disclosed.<a href="#section-10-5" class="pilcrow">¶</a></p>
-<p id="section-10-6">The reconciliation status codes are:<a href="#section-10-6" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10-7">
-        <dt id="section-10-7.1">
+disclosed.<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-8">The reconciliation status codes are:<a href="#section-10-8" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-9">
+        <dt id="section-10-9.1">
 <code>superseded_by_concurrent_expansion</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-7.2">
-          <p id="section-10-7.2.1">A concurrent replacement expansion has already produced a successor;
+        <dd style="margin-left: 1.5em" id="section-10-9.2">
+          <p id="section-10-9.2.1">A concurrent replacement expansion has already produced a successor;
 the predecessor is <code>terminated</code> with reason <code>superseded</code> rather than
 <code>active</code>. The client
 <span class="bcp14">SHOULD</span> discover the existing successor and re-evaluate whether a
 further expansion is still required (an expansion of the successor is
-a new expansion against the successor as predecessor).<a href="#section-10-7.2.1" class="pilcrow">¶</a></p>
+a new expansion against the successor as predecessor).<a href="#section-10-9.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-10-7.3">
+<dt id="section-10-9.3">
 <code>predecessor_state_changed</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-7.4">
-          <p id="section-10-7.4.1">The predecessor made a terminal exit from <code>active</code> (to <code>terminated</code>,
+        <dd style="margin-left: 1.5em" id="section-10-9.4">
+          <p id="section-10-9.4.1">The predecessor made a terminal exit from <code>active</code> (to <code>terminated</code>,
 with reason <code>revoked</code>, <code>expired</code>, <code>superseded</code>, or another) before
 this expansion could complete,
 whether caught at request binding (<a href="#predecessor-active" class="auto internal xref">Section 4.3</a>) or at the
 compare-and-set on successor activation. The
-client <span class="bcp14">MUST NOT</span> retry the same expansion against this predecessor.<a href="#section-10-7.4.1" class="pilcrow">¶</a></p>
+client <span class="bcp14">MUST NOT</span> retry the same expansion against this predecessor.<a href="#section-10-9.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-10-7.5">
+<dt id="section-10-9.5">
 <code>predecessor_not_active</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-7.6">
-          <p id="section-10-7.6.1">The predecessor is in a non-terminal non-active state (for example
+        <dd style="margin-left: 1.5em" id="section-10-9.6">
+          <p id="section-10-9.6.1">The predecessor is in a non-terminal non-active state (for example
 <code>suspended</code> under the Mission Status profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>) and cannot be expanded
 until it returns to <code>active</code>. The client <span class="bcp14">MAY</span> retry the expansion after
-the predecessor is <code>active</code> again.<a href="#section-10-7.6.1" class="pilcrow">¶</a></p>
+the predecessor is <code>active</code> again.<a href="#section-10-9.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-10-7.7">
+<dt id="section-10-9.7">
 <code>authority_restricted_since_approval</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-7.8">
-          <p id="section-10-7.8.1">The successor's Authority Set overlaps authority that came under a
+        <dd style="margin-left: 1.5em" id="section-10-9.8">
+          <p id="section-10-9.8.1">The successor's Authority Set overlaps authority that came under a
 containment or discharge restriction of the chain after the
 successor's approval was adjudicated (check 3 above). The client <span class="bcp14">MAY</span>
 submit a new expansion, which is adjudicated against the current
-restrictions.<a href="#section-10-7.8.1" class="pilcrow">¶</a></p>
+restrictions.<a href="#section-10-9.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-10-8">The two terminal-exit codes overlap in the <code>superseded</code> case:
+<p id="section-10-10">The two terminal-exit codes overlap in the <code>superseded</code> case:
 <code>superseded_by_concurrent_expansion</code> is the specific reconciliation
 outcome when the cause is a concurrent expansion that has already
 activated a successor,
@@ -3178,37 +3221,37 @@ and <code>predecessor_state_changed</code> is the general outcome for any other
 terminal exit from <code>active</code>. A Mission Issuer <span class="bcp14">SHOULD</span> return the
 specific code when it can attribute the change to a concurrent
 expansion. The <code>predecessor_not_active</code> code reports a reversible,
-non-terminal state, so it invites the retry the terminal codes forbid.<a href="#section-10-8" class="pilcrow">¶</a></p>
-<p id="section-10-9">The Mission Issuer conveys the reconciliation status in an OAuth error
-response member:<a href="#section-10-9" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-10-10">
-        <dt id="section-10-10.1">
+non-terminal state, so it invites the retry the terminal codes forbid.<a href="#section-10-10" class="pilcrow">¶</a></p>
+<p id="section-10-11">The Mission Issuer conveys the reconciliation status in an OAuth error
+response member:<a href="#section-10-11" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-10-12">
+        <dt id="section-10-12.1">
 <code>mission_expansion_status</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-10-10.2">
-          <p id="section-10-10.2.1">A string carrying one reconciliation status from the closed set
-above, returned by the step that failed. At the token endpoint (the
-token exchange response and a deferred token response poll,
-<a href="#completion-modes" class="auto internal xref">Section 5.2</a>), it is a member of the JSON error response
-body, alongside the OAuth <code>error</code> member. On the interactive path's
-front-channel authorization error response, which carries error
-parameters rather than a JSON body, it is an error response
-parameter of the same name. Adjudication denial reasons use the
-separate <code>mission_denial_reason</code> member (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-10-10.2.1" class="pilcrow">¶</a></p>
+        <dd style="margin-left: 1.5em" id="section-10-12.2">
+          <p id="section-10-12.2.1">A string carrying one reconciliation status from the closed set
+  above, returned by the step that failed. At the token endpoint (the
+  token exchange response, a deferred token response poll, and an
+  authorization code redemption), it is a member of the JSON error
+  response body, alongside the OAuth <code>error</code> member. On the interactive
+  path's front-channel authorization error response, which carries error
+  parameters rather than a JSON body, it is an error response parameter
+  of the same name. Adjudication denial reasons use the separate
+  <code>mission_denial_reason</code> member (<a href="#denial-reasons" class="auto internal xref">Section 12</a>).<a href="#section-10-12.2.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-10-11">The following is an example of a resolving poll refused because a
-concurrent expansion of the same predecessor activated first:<a href="#section-10-11" class="pilcrow">¶</a></p>
+<p id="section-10-13">The following is an example of a resolving poll refused because a
+concurrent expansion of the same predecessor activated first:<a href="#section-10-13" class="pilcrow">¶</a></p>
 <span id="name-reconciliation-refusal"></span><div id="fig-reconciliation">
 <figure id="figure-12">
-        <div class="lang-http sourcecode" id="section-10-12.1">
+        <div class="lang-http sourcecode" id="section-10-14.1">
 <pre>
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 Cache-Control: no-store
 
 {
-  "error": "invalid_grant",
+  "error": "access_denied",
   "mission_expansion_status": "superseded_by_concurrent_expansion"
 }
 </pre>
@@ -3347,16 +3390,20 @@ that identifier is a Mission ID.<a href="#section-11.1-5.8.1" class="pilcrow">¶
 <dt id="section-11.1-5.9">
 <code>cnf</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-5.10">
-            <p id="section-11.1-5.10.1">The verified presenter confirmation: the DPoP proof key's <code>jkt</code>,
-or the mTLS certificate's <code>x5t#S256</code> (<a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-11.1-5.10.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-5.10.1">The verified presenter confirmation, as a JSON object with one
+member as in a <code>cnf</code> claim: <code>jkt</code>, the DPoP proof key's thumbprint,
+or <code>x5t#S256</code>, the mTLS certificate's thumbprint
+(<a href="#request-binding" class="auto internal xref">Section 4.2</a>).<a href="#section-11.1-5.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-5.11">
 <code>actor</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-11.1-5.12">
-            <p id="section-11.1-5.12.1">The verified acting-agent identity, with its relevant actor
-context, where the exchange carries one (<code>actor_token</code>); absent
-where client authentication alone identifies the acting agent.<a href="#section-11.1-5.12.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-5.12.1">The verified acting-agent identity where the exchange carries an
+<code>actor_token</code>: a JSON object with that token's <code>iss</code> and <code>sub</code>, and
+any further actor context the Mission Issuer's authorization of the
+acting agent relies on. Absent where client authentication alone
+identifies the acting agent.<a href="#section-11.1-5.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-11.1-5.13">
@@ -3408,7 +3455,9 @@ authorization, derivation, approval, output, or side effects of the
 creation <span class="bcp14">MUST</span> extend the fingerprint object with it. Attempt-specific
 material is excluded: the DPoP proof serialization and its <code>jti</code>, the
 client-authentication assertion serialization, the raw
-<code>subject_token</code> serialization, and <code>creation_request_id</code> itself.<a href="#section-11.1-6" class="pilcrow">¶</a></p>
+<code>subject_token</code> serialization, <code>completion_mode</code>, and
+<code>creation_request_id</code> itself. The completion mode recorded at
+initiation governs recovery (<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>).<a href="#section-11.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="creation-reservation">
@@ -3418,15 +3467,17 @@ client-authentication assertion serialization, the raw
         </h3>
 <p id="section-11.2-1">A reservation is the durable record binding the authenticated client,
 the <code>creation_request_id</code>, and the fingerprint. It is created in a
-<code>reserved</code> state and moves to <code>completed</code> or <code>failed</code>. The
+<code>reserved</code> state, which covers a pending completion, and moves to
+<code>completed</code> when the successor activates or to <code>failed</code> when the
+operation is denied, its deadline passes, or its activation is
+refused. The
 <code>(client, creation_request_id)</code> pair is unique, and the store <span class="bcp14">MUST</span>
 enforce that uniqueness as a constraint; a read-before-insert check
 without one does not withstand concurrent retries.<a href="#section-11.2-1" class="pilcrow">¶</a></p>
-<p id="section-11.2-2">The reservation and the created Mission's identifier <span class="bcp14">MUST</span> be
-committed atomically with Mission creation; credential generation <span class="bcp14">MAY</span>
-follow the commit. When the Mission commits and the Mission Issuer fails before
-responding, the retry
-finds the committed operation and resumes delivery
+<p id="section-11.2-2">The reservation and the created Mission's identifier <span class="bcp14">MUST</span> be committed
+atomically with Mission creation; credential generation <span class="bcp14">MAY</span> follow the
+commit. When the Mission commits and the Mission Issuer fails before
+responding, the retry finds the committed operation and resumes delivery
 (<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>), never creating again.<a href="#section-11.2-2" class="pilcrow">¶</a></p>
 <p id="section-11.2-3">A repeated presentation of the same <code>(client, creation_request_id)</code>
 resolves by fingerprint:<a href="#section-11.2-3" class="pilcrow">¶</a></p>
@@ -3436,12 +3487,36 @@ resolves by fingerprint:<a href="#section-11.2-3" class="pilcrow">¶</a></p>
 (<a href="#creation-recovery" class="auto internal xref">Section 11.3</a>);<a href="#section-11.2-4.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-4.2">
-            <p id="section-11.2-4.2.1">same fingerprint, operation reserved or pending: return the same
-continuation, or a retryable in-progress result; and<a href="#section-11.2-4.2.1" class="pilcrow">¶</a></p>
+            <p id="section-11.2-4.2.1">same fingerprint, operation reserved: return the same continuation
+or deferral, or a retryable in-progress result;<a href="#section-11.2-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-4.3">
-            <p id="section-11.2-4.3.1">different fingerprint: refuse with <code>invalid_request</code>, since the
-identifier was reused for a different operation.<a href="#section-11.2-4.3.1" class="pilcrow">¶</a></p>
+            <p id="section-11.2-4.3.1">same fingerprint, operation failed: answer with the recorded
+failure, as below; and<a href="#section-11.2-4.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-4.4">
+            <p id="section-11.2-4.4.1">different fingerprint: refuse with <code>invalid_request</code>, since the
+identifier was reused for a different operation.<a href="#section-11.2-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.2-5">A retry of a failed operation is answered by the failure and by the
+surface the retry reaches:<a href="#section-11.2-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.2-6.1">
+            <p id="section-11.2-6.1.1">An operation in the deferred mode returns its deferral, whose next
+poll answers as the deferred token response defines: <code>access_denied</code>
+after a denial or a refused activation, with any reconciliation
+status, and <code>expired_token</code> once the deferral has expired.<a href="#section-11.2-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-6.2">
+            <p id="section-11.2-6.2.1">Any other operation answers the repeated token exchange directly:
+<code>access_denied</code> after the Approver's denial and <code>expired_token</code> after
+its continuation expired before activation (<a href="#interactive-handoff" class="auto internal xref">Section 5.3</a>).
+After a refused activation it answers the error a completion in the
+token-exchange response answers for the same failure
+(<a href="#reconciliation" class="auto internal xref">Section 10</a>, <a href="#successor-expiry" class="auto internal xref">Section 5.6</a>), with any reconciliation
+status, and a refusal the token exchange response itself carried is
+repeated.<a href="#section-11.2-6.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3510,15 +3585,21 @@ establish:<a href="#section-11.4-1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-2.4">
             <p id="section-11.4-2.4.1">possession of the recorded sender-constraint identity, the stored
-<code>cnf</code> of <a href="#creation-fingerprint" class="auto internal xref">Section 11.1</a>; and<a href="#section-11.4-2.4.1" class="pilcrow">¶</a></p>
+<code>cnf</code> of <a href="#creation-fingerprint" class="auto internal xref">Section 11.1</a>;<a href="#section-11.4-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.4-2.5">
-            <p id="section-11.4-2.5.1">fingerprint compatibility (<a href="#creation-reservation" class="auto internal xref">Section 11.2</a>).<a href="#section-11.4-2.5.1" class="pilcrow">¶</a></p>
+            <p id="section-11.4-2.5.1">for an operation in the deferred mode, a <code>completion_mode</code> that
+includes <code>deferred</code>, the opt-in the deferred response requires
+(<a href="#completion-modes" class="auto internal xref">Section 5.2</a>); and<a href="#section-11.4-2.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.4-2.6">
+            <p id="section-11.4-2.6.1">fingerprint compatibility (<a href="#creation-reservation" class="auto internal xref">Section 11.2</a>).<a href="#section-11.4-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-11.4-3">No key-rotation recovery path is defined: a requester that can no
-longer prove possession of the recorded <code>cnf</code> does not recover the
-operation.<a href="#section-11.4-3" class="pilcrow">¶</a></p>
+<p id="section-11.4-3">A retry of a deferred operation without the opt-in is refused with
+<code>invalid_request</code>. No key-rotation recovery path is defined: a requester
+that can no longer prove possession of the recorded <code>cnf</code> does not
+recover the operation.<a href="#section-11.4-3" class="pilcrow">¶</a></p>
 <p id="section-11.4-4">The idempotency lookup occurs after client authentication and
 possession verification and before the predecessor lifecycle gate
 (<a href="#verification-order" class="auto internal xref">Section 5.1</a>). The order matters: the retry worth
@@ -3567,9 +3648,9 @@ untouched. The denial surfaces according to the completion mode
 (<a href="#completion-modes" class="auto internal xref">Section 5.2</a>):<a href="#section-12-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12-2.1">
-          <p id="section-12-2.1.1">on the token exchange response, as an OAuth error (typically
-<code>invalid_request</code> for a request the Mission Issuer will not derive a
-valid Authority Set from);<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.1.1">on the token exchange response that adjudicates it, as
+<code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); a retry of the
+operation is answered as <a href="#creation-reservation" class="auto internal xref">Section 11.2</a> states;<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.2">
           <p id="section-12-2.2.1">on a deferred poll, as the deferred substrate's <code>access_denied</code>
@@ -3618,15 +3699,14 @@ non-successor.<a href="#section-12-4.8.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-12-5">Companion profiles register further values in the Mission Denial
-Reasons registry (<a href="#iana-denial-reasons" class="auto internal xref">Section 16.2</a>). For example, the experimental progressive authorization companion
-registers <code>out_of_ceiling</code>
+<p id="section-12-5">Companion profiles register further values in the Mission Denial Reasons
+registry (<a href="#iana-denial-reasons" class="auto internal xref">Section 16.2</a>). For example, the experimental
+progressive authorization companion registers <code>out_of_ceiling</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>), and the
-experimental template profile registers
-<code>out_of_template_ceiling</code> and <code>dispatch_prohibited_class</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>). A consumer <span class="bcp14">MUST</span>
-treat an unrecognized reason code as a denial with no further
-semantics.<a href="#section-12-5" class="pilcrow">¶</a></p>
+experimental template profile registers <code>out_of_template_ceiling</code> and
+<code>dispatch_prohibited_class</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>). A consumer <span class="bcp14">MUST</span> treat
+an unrecognized reason code as a denial with no further semantics.<a href="#section-12-5" class="pilcrow">¶</a></p>
 <p id="section-12-6">A Mission Issuer <span class="bcp14">MUST NOT</span> use a reason code to disclose policy
 boundaries beyond the adjudicated request (<a href="#policy-probing" class="auto internal xref">Section 14.7</a>).
 Omitting the reason code is always permitted, except on a
@@ -3692,8 +3772,7 @@ predecessor is not <code>active</code> (<a href="#predecessor-active" class="aut
 with <code>invalid_request</code>, and one it can parse but cannot derive a
 valid Authority Set from fails with <code>invalid_authorization_details</code>
 (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) where the client submitted a proposal alongside it, or
-<code>access_denied</code> where it did not, exactly as for any Mission
-creation.<a href="#section-12-13.2.1" class="pilcrow">¶</a></p>
+<code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>) where it did not.<a href="#section-12-13.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -3703,10 +3782,11 @@ creation.<a href="#section-12-13.2.1" class="pilcrow">¶</a></p>
       <h2 id="name-conformance">
 <a href="#section-13" class="section-number selfRef">13. </a><a href="#name-conformance" class="section-name selfRef">Conformance</a>
       </h2>
-<p id="section-13-1">An implementation claims conformance to this document only in the
-Mission Issuer role, under one of two targets: as an
-expansion-capable Mission Issuer when it adjudicates expansion, or
-under the optional <code>related_to</code> correlation target below.<a href="#section-13-1" class="pilcrow">¶</a></p>
+<p id="section-13-1">An implementation claims conformance to this document in the Mission
+Issuer role, under one of two targets (as an expansion-capable Mission
+Issuer when it adjudicates expansion, or under the optional
+<code>related_to</code> correlation target below), or in the client role, as an
+expansion client.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <p id="section-13-2">A Mission Issuer that records <code>related_to</code> without adjudicating
 expansion conforms to the <strong><code>related_to</code> correlation</strong> target when it
 meets every rule of <a href="#independent-continuation" class="auto internal xref">Section 9</a>: authenticated and
@@ -3717,9 +3797,10 @@ that target.<a href="#section-13-2" class="pilcrow">¶</a></p>
 <p id="section-13-3">A conforming <strong>expansion-capable Mission Issuer</strong> <span class="bcp14">MUST</span>:<a href="#section-13-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-4.1">
-          <p id="section-13-4.1.1">accept an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange whose <code>subject_token</code> is the
-predecessor's Mission-bound access token, with <code>subject_token_type</code>
-of <code>access_token</code>, treating it as an expansion (<a href="#submission" class="auto internal xref">Section 4.1</a>), and
+          <p id="section-13-4.1.1">accept an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> token exchange whose <code>requested_token_type</code> is
+the access-token type and whose <code>subject_token</code> is the predecessor's
+Mission-bound access token, with <code>subject_token_type</code> of
+<code>access_token</code>, treating it as an expansion (<a href="#submission" class="auto internal xref">Section 4.1</a>), and
 reject a refresh token as the <code>subject_token</code>;<a href="#section-13-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-4.2">
@@ -3757,7 +3838,7 @@ successor and verify that source in the activating commit
 </li>
         <li class="normal" id="section-13-4.7">
           <p id="section-13-4.7.1">record the <code>predecessor</code> member on the successor's <code>mission</code> claim
-and Mission record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-13-4.7.1" class="pilcrow">¶</a></p>
+and Mission Record (<a href="#predecessor-member" class="auto internal xref">Section 6</a>);<a href="#section-13-4.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-4.8">
           <p id="section-13-4.8.1">activate the successor and transition the predecessor to
@@ -3780,11 +3861,34 @@ new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the <code>predecessor</code> member, if it
 reads it at all, as audit context it <span class="bcp14">MUST NOT</span> use to grant authority
 (<a href="#predecessor-member" class="auto internal xref">Section 6</a>).<a href="#section-13-5" class="pilcrow">¶</a></p>
-<p id="section-13-6">Every expansion this document defines is adjudicated as a fresh
+<p id="section-13-6">A conforming <strong>expansion client</strong> <span class="bcp14">MUST</span>:<a href="#section-13-6" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-7.1">
+          <p id="section-13-7.1.1">prove possession of the predecessor's authority with a
+sender-constrained proof, never with a reusable bearer refresh
+credential and never on a front channel (<a href="#expansion-request" class="auto internal xref">Section 4</a>,
+<a href="#submission" class="auto internal xref">Section 4.1</a>);<a href="#section-13-7.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-7.2">
+          <p id="section-13-7.2.1">send the <span class="bcp14">REQUIRED</span> parameters of <a href="#submission" class="auto internal xref">Section 4.1</a>, including
+<code>creation_request_id</code>;<a href="#section-13-7.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-7.3">
+          <p id="section-13-7.3.1">not retry the same expansion against a predecessor after a
+<code>predecessor_state_changed</code> refusal, and not retry a creation past the
+published retry horizon (<a href="#reconciliation" class="auto internal xref">Section 10</a>,
+<a href="#creation-retention" class="auto internal xref">Section 11.5</a>); and<a href="#section-13-7.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-7.4">
+          <p id="section-13-7.4.1">not initiate expansion for an authentication shortfall
+(<a href="#not-step-up" class="auto internal xref">Section 3.2</a>).<a href="#section-13-7.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-8">Every expansion this document defines is adjudicated as a fresh
 approval event (<a href="#adjudication" class="auto internal xref">Section 5</a>). The experimental progressive
 authorization companion defines a further <span class="bcp14">OPTIONAL</span> capability,
 <strong>Expansion with Progressive Authorization</strong>, with its own conformance
-requirements (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-13-6" class="pilcrow">¶</a></p>
+requirements (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>).<a href="#section-13-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -3963,8 +4067,8 @@ Approver did not need to perform, surfacing irrelevant consent and
 risking approval fatigue, or conversely would treat a genuine
 authority shortfall as a mere re-authentication and silently widen
 nothing.<a href="#section-14.6-1" class="pilcrow">¶</a></p>
-<p id="section-14.6-2">Mitigation: a denial that is an authentication shortfall (<code>acr</code>,
-<code>amr</code>) is satisfied by step-up and <span class="bcp14">MUST NOT</span> be routed to expansion; a
+<p id="section-14.6-2">Mitigation: a denial that is an authentication shortfall (<code>acr</code>, <code>amr</code>)
+is satisfied by step-up, and a client does not route it to expansion; a
 denial that is an authority shortfall is the one expansion addresses
 (<a href="#not-step-up" class="auto internal xref">Section 3.2</a>). The component that classifies the denial
 (<a href="#eligibility" class="auto internal xref">Section 3.1</a>) makes this distinction.<a href="#section-14.6-2" class="pilcrow">¶</a></p>
@@ -4070,17 +4174,18 @@ treatment of consent disclosure.<a href="#section-15.3-1" class="pilcrow">¶</a>
 <p id="section-16-1">The <code>predecessor</code> member of the <code>mission</code> claim (<a href="#predecessor-member" class="auto internal xref">Section 6</a>)
 is not registered in a dedicated registry: it is carried inside the
 already-registered <code>mission</code> claim, an open object for which the
-issuance profile establishes no member registry. No new claim,
-parameter, or token-introspection registration is required for the
-lineage link.<a href="#section-16-1" class="pilcrow">¶</a></p>
+issuance profile establishes no member registry. No new claim or
+token-introspection registration is required for the lineage link;
+the <code>predecessor</code> request parameter is registered in
+<a href="#iana-parameters" class="auto internal xref">Section 16.3</a>.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="section-16-2">This document defines two sets of symbolic codes: the expansion
 reconciliation status codes (<a href="#reconciliation" class="auto internal xref">Section 10</a>), a closed set conveyed
 in <code>mission_expansion_status</code>, and the expansion denial reasons
 (<a href="#denial-reasons" class="auto internal xref">Section 12</a>), conveyed in the shared <code>mission_denial_reason</code>
-member. As members of the OAuth error response JSON body at the token
-endpoint, both are namespaced to their error responses and require no
-registration; their authorization error response parameter forms, used
-on the interactive path, are registered in <a href="#iana-parameters" class="auto internal xref">Section 16.3</a>.<a href="#section-16-2" class="pilcrow">¶</a></p>
+member. Both members are registered in the OAuth Parameters registry
+(<a href="#iana-parameters" class="auto internal xref">Section 16.3</a>) for the token response, where they are members
+of the JSON error response body, and for the authorization response,
+where the interactive path carries them as error response parameters.<a href="#section-16-2" class="pilcrow">¶</a></p>
 <p id="section-16-3">The reconciliation status codes remain specification-defined: the
 closed set is small and fully specified in <a href="#reconciliation" class="auto internal xref">Section 10</a>. A future
 revision <span class="bcp14">MAY</span> establish a "Mission Expansion Reconciliation Status"
@@ -4248,7 +4353,7 @@ already-registered token-exchange parameters <code>subject_token</code>,
 <code>subject_token_type</code>, <code>requested_token_type</code>, <code>actor_token</code>, and
 <code>actor_token_type</code>; none of these needs registration by this document.
 The deferred completion mode uses the deferred token response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>) and registers
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>) and registers
 nothing here.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
 <p id="section-16.3-2">The <code>predecessor</code> cross-check is carried in the token exchange request
 at the token endpoint and, on the interactive path, in the
@@ -4419,9 +4524,9 @@ Error Registry" (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-11.4"
 <a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-gerber-oauth-deferred-token-response">[I-D.draft-gerber-oauth-deferred-token-response]</dt>
+<dt id="I-D.draft-ietf-oauth-deferred-token-response">[I-D.draft-ietf-oauth-deferred-token-response]</dt>
         <dd>
-<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gerber-oauth-deferred-token-response-00</span>, <time datetime="2026-06-23" class="refDate">23 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
+<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-deferred-token-response-00</span>, <time datetime="2026-09-16" class="refDate">16 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>
@@ -4520,9 +4625,10 @@ successor's Authority Set, which widens the predecessor's
 (<a href="#verification-order" class="auto internal xref">Section 5.1</a>).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The widening requires fresh consent, and the deployment approves
-asynchronously, so the Mission Issuer defers (<a href="#fig-deferred" class="auto internal xref">Figure 4</a>) and
-the client polls (<a href="#fig-poll" class="auto internal xref">Figure 5</a>).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.3.1">The widening requires fresh consent, the deployment approves
+asynchronously, and the request opted in to deferral, so the Mission
+Issuer defers (<a href="#fig-deferred" class="auto internal xref">Figure 4</a>) and the client polls
+(<a href="#fig-poll" class="auto internal xref">Figure 5</a>).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="appendix-A-2.4">
           <p id="appendix-A-2.4.1"><code>alice</code> approves the widened cap on the review surface. At 09:40:00
@@ -4556,7 +4662,66 @@ approved, not the predecessor's authority plus a delta.<a href="#appendix-A-3" c
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Editorial restructure, with no change to any requirement: sections
+          <p id="appendix-B-2.1.1">The deferred mode applies only to an exchange whose
+<code>completion_mode</code> includes <code>deferred</code>; any other exchange gets the
+interactive handoff or <code>invalid_request</code>, and the client polls with
+the deferred token response's deferred grant type.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">A completion refused on a deferred poll answers <code>access_denied</code> with
+the reconciliation status, as the deferred token response requires,
+replacing the <code>invalid_grant</code> the #1154 entry below records for a
+deferred poll;
+a code redemption keeps <code>invalid_grant</code>, and
+<code>mission_expansion_status</code> is also carried on code redemption. When
+<code>intent.expires_at</code> passes while an expansion is pending, a poll
+answers <code>access_denied</code>, a code redemption <code>invalid_grant</code>, and a
+token-exchange-response completion <code>invalid_request</code>.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">A pushed request after activation is refused with <code>invalid_request</code>;
+the pushed request may carry <code>predecessor</code> as a cross-check.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1"><code>requested_token_type</code> selects the operation, and an expansion
+exchange that carries <code>child_actor</code> is refused with
+<code>invalid_request</code>.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">The fingerprint's <code>cnf</code> is a confirmation object and its <code>actor</code> an
+object with the <code>actor_token</code>'s <code>iss</code> and <code>sub</code>; <code>completion_mode</code> is
+outside the fingerprint.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1"><code>related_to</code> is a Mission Record member, not a <code>mission</code> claim
+member, and a rollback Mission links to the superseded predecessor
+with <code>related_to</code>, not <code>predecessor</code>.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.7">
+          <p id="appendix-B-2.7.1">The deferred window fails completion on a containment or discharge
+restriction that overlaps the successor's authority, as check 3
+states, and the request-time status follows reconciliation's
+attribution rule.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.8">
+          <p id="appendix-B-2.8.1">A reservation becomes <code>failed</code> on a denial, a passed deadline or a
+refused activation, and a retry receives the recorded failure.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.9">
+          <p id="appendix-B-2.9.1">A client conformance target; a client does not initiate expansion for
+an authentication shortfall.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.10">
+          <p id="appendix-B-2.10.1"><code>creation_request_id</code> randomness is at least 122 bits, which a
+version 4 UUID provides.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.11">
+          <p id="appendix-B-2.11.1">Removed: the undefined parameter for refusing an expansion while live
+Child Missions exist, and <code>invalid_token</code> from the token-endpoint
+refusals.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.12">
+          <p id="appendix-B-2.12.1">Editorial restructure, with no change to any requirement: sections
 reordered and titled in Title Case; Successor Activation and Child
 Missions of the Predecessor collect the activation and child-cascade
 rules previously spread across several sections; dense paragraphs
@@ -4564,69 +4729,69 @@ become lists; restatements in the Lineage, Security and IANA text
 point to the rule's home instead of repeating the keyword; the main
 messages have examples, and Appendix A walks one expansion end to
 end; the OAuth Parameters
-registrations use the RFC 6749 template.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+registrations use the RFC 6749 template.<a href="#appendix-B-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">No <code>predecessor_token</code> parameter is registered: the predecessor is
-resolved from <code>subject_token</code>.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="appendix-B-2.13">
+          <p id="appendix-B-2.13.1">No <code>predecessor_token</code> parameter is registered: the predecessor is
+resolved from <code>subject_token</code>.<a href="#appendix-B-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">A failed expansion exchange uses the code this document assigns to
+        <li class="normal" id="appendix-B-2.14">
+          <p id="appendix-B-2.14.1">A failed expansion exchange uses the code this document assigns to
 the failure; otherwise an invalid, unproven or unacceptable
 <code>subject_token</code> or <code>actor_token</code> is <code>invalid_request</code>, as Section
 2.2.2 of RFC 8693 requires; a required DPoP proof that is missing, or
 one that fails validation, is <code>invalid_dpop_proof</code>, and a proof
-lacking a required nonce keeps <code>use_dpop_nonce</code> (#1178).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+lacking a required nonce keeps <code>use_dpop_nonce</code> (#1178).<a href="#appendix-B-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">A predecessor that is not <code>active</code> refuses the expansion exchange
+        <li class="normal" id="appendix-B-2.15">
+          <p id="appendix-B-2.15.1">A predecessor that is not <code>active</code> refuses the expansion exchange
 with <code>invalid_request</code>, following the issuance profile's Token
 Exchange rule; a predecessor cross-check mismatch, and a completion
-by code redemption or deferred poll, keep <code>invalid_grant</code> (#1154).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+by code redemption or deferred poll, keep <code>invalid_grant</code> (#1154).<a href="#appendix-B-2.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Supersession terminates the predecessor: it becomes <code>terminated</code> with
+        <li class="normal" id="appendix-B-2.16">
+          <p id="appendix-B-2.16.1">Supersession terminates the predecessor: it becomes <code>terminated</code> with
 reason <code>superseded</code>, registered in the Mission Termination Reasons
 registry, and its <code>termination</code> carries the <span class="bcp14">REQUIRED</span> <code>successor</code>; the
 record's mutable members are <code>state</code> and <code>termination</code>, and a
-refused derivation's <code>mission_error</code> is <code>superseded</code> (#705).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+refused derivation's <code>mission_error</code> is <code>superseded</code> (#705).<a href="#appendix-B-2.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Successor Subject and authority source: every successor keeps the
+        <li class="normal" id="appendix-B-2.17">
+          <p id="appendix-B-2.17.1">Successor Subject and authority source: every successor keeps the
 predecessor's <code>subject</code> and <code>authority_source</code>, whatever approval
 basis creates it; another Subject or source needs a separately
 approved Mission outside succession, and the activating commit
 verifies that the source applies and that its current ceiling covers
-the successor (#1118).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+the successor (#1118).<a href="#appendix-B-2.17.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Interactive completion has a defined handoff: the token exchange
+        <li class="normal" id="appendix-B-2.18">
+          <p id="appendix-B-2.18.1">Interactive completion has a defined handoff: the token exchange
 answers <code>mission_interaction_required</code> with a <code>mission_continuation</code>
 handle, the client pushes an RFC 9126 request carrying it, and code
 redemption activates the successor; the handle names the durable
-operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+operation and each <code>request_uri</code> is a temporary reference.<a href="#appendix-B-2.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">An in-ceiling drawdown under the progressive authorization companion
+        <li class="normal" id="appendix-B-2.19">
+          <p id="appendix-B-2.19.1">An in-ceiling drawdown under the progressive authorization companion
 completes synchronously in the token-exchange response, a third
 issuance point; fresh-consent expansion still completes deferred or
-interactively.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+interactively.<a href="#appendix-B-2.19.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">Successor activation's compare-and-set also rechecks the complete
+        <li class="normal" id="appendix-B-2.20">
+          <p id="appendix-B-2.20.1">Successor activation's compare-and-set also rechecks the complete
 successor Authority Set against current containment and discharge
 restrictions, refusing with <code>authority_restricted_since_approval</code>
-when narrowing landed after adjudication.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+when narrowing landed after adjudication.<a href="#appendix-B-2.20.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">A fresh-consent restoration of authority under a discharge
+        <li class="normal" id="appendix-B-2.21">
+          <p id="appendix-B-2.21.1">A fresh-consent restoration of authority under a discharge
 restriction authorizes that authority explicitly and discloses the
 discharged entry and its condition; the consent also surfaces the
-chain's outstanding containment restrictions.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+chain's outstanding containment restrictions.<a href="#appendix-B-2.21.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Added explicitly approved carryover hooks for disclosure, atomic completion,
-and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="appendix-B-2.22">
+          <p id="appendix-B-2.22.1">Added explicitly approved carryover hooks for disclosure, atomic
+  completion, and the carried child's unchanged expiry ceiling (#576).<a href="#appendix-B-2.22.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
