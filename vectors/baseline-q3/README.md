@@ -37,7 +37,7 @@ All instants are UTC on 2026-11-02.
 
 Token issuance and ordinary execution leave the Status version unchanged. The Mission issues and executes only in [08:00:05, 08:20:00) and [08:30:00, 08:53:20). A token issued before a suspension or the revocation can remain valid after it: the issuer's state and an already-issued token's validity are distinct. The token refreshed at 08:50:00 is that case: it is valid until 08:55:00, and introspection after 08:53:20 reports it inactive because its Mission is terminated.
 
-The revocation is the Status lifecycle `revoke` by the Mission's client `s6BhdRkqt3`, with the `reason` "Quarterly reconcile completed early".
+The revocation is the Status lifecycle `revoke` by the Mission's client `s6BhdRkqt3`, with the `reason` "Quarterly reconcile completed early". The scenario grants that client an explicit lifecycle authorization to revoke this Mission (a `mission_lifecycle` grant, Status Section "Authorization"); being the Mission's client, holding its resource tokens, or a DPoP binding does not by itself confer that authority.
 
 ## Variants
 
