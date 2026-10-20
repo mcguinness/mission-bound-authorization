@@ -44306,6 +44306,42 @@
    "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version. #1436 ruling 3 (D568): typed members logic_id, logic_version, model_id, model_version; requoted; mutations: dropping the producer's logic pair, the logic check, or the model pairing."
   },
   {
+   "id": "approval-governance.record.contributing-excludes-deny",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "record-members",
+   "text": "a `deny` assertion never appears in `contributing`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evaluation.contributing lists only assertions the record carries and the satisfied rule counted; a record whose contributing names a deny assertion does not commit",
+    "local": "The reference never produces a deny assertion; the refusal is witnessed at the validator and at the governed_policy commit gate on an injected record."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "evaluation contributing (@spec approval-governance#record-members) > lists the counted assertions; a recorded denial that did not block the approval is not contributing",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "evaluation contributing (@spec approval-governance#record-members) > is enforced at the governed_policy commit gate",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 6: contributing lists what the satisfied rule counted; a non-blocking denial is recorded but not counted, and a blocking one leaves no record. Mutations: admitting a deny as contributing; the commit gate skipping the check."
+  },
+  {
    "id": "approval-governance.assertion.policy-principal-approver",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-members",

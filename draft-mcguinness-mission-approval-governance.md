@@ -397,7 +397,11 @@ protection.
     : An RFC 3339 timestamp.
 
     `contributing`:
-    : An array of the `assertion_id` values the evaluation relied on.
+    : An array of the `assertion_id` values the evaluation counted
+      toward the rule the approval satisfied. A denial that did not
+      block the approval is recorded but not counted, and a blocking
+      denial leaves no committed record ({{atomic-commitment}}), so a
+      `deny` assertion never appears in `contributing`.
 
 `approval_context_commitment`:
 : OPTIONAL. A string. The Approval Context Commitment over the governed
@@ -649,6 +653,48 @@ The following rules apply to the assertions in a record:
 An assertion that fails authentication, event binding, or policy
 authorization MUST NOT contribute to the evaluation and MUST NOT be
 counted toward any policy rule.
+
+The following example shows the `assertions` and `evaluation` members of
+a record, other members omitted, whose delegation-of-authority policy
+requires one finance approval beside the accountable approver's. Alice
+approves directly; one finance approver approves and another denies.
+Under that policy a finance denial does not block an approval that
+another finance approver supports, so the denial is recorded but not
+contributing.
+
+~~~ json
+{
+  "assertions": [
+    { "assertion_id": "ast_1",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-11-02T08:00:00Z",
+      "authority": { "auth_time": "2026-11-02T07:59:00Z" } },
+    { "assertion_id": "ast_2",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_t1yd3CZCLPOis5n" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-11-02T07:58:10Z",
+      "authority": { "auth_time": "2026-11-02T07:58:00Z" } },
+    { "assertion_id": "ast_3",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_Kq-iUUKDYl8jhWF" },
+      "kind": "human", "decision": "deny",
+      "decided_at": "2026-11-02T07:57:40Z",
+      "authority": { "auth_time": "2026-11-02T07:57:30Z" },
+      "reason": "Asks for a lower journal-entry cap." }
+  ],
+  "evaluation": {
+    "decision": "approved",
+    "evaluated_at": "2026-11-02T08:00:00Z",
+    "contributing": ["ast_1", "ast_2"]
+  }
+}
+~~~
+
+More than one principal contributes and a threshold rule is evaluated,
+so the second and fourth recording triggers hold ({{triggers}}).
 
 ## Accountable Assertion {#accountable-assertion}
 
