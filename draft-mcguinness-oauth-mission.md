@@ -1748,7 +1748,7 @@ The consent rendering is hardened against client text:
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
-The enforcement table ({{rs-enforcement}}) summarizes which party
+The enforcement table ({{rs-responsibilities}}) summarizes which party
 enforces each bound and what holds when that enforcer is absent.
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
@@ -1778,7 +1778,7 @@ is unchanged.
 The approval event commits the Mission Intent and Authority Set the
 AS records as approved. Those commitments establish neither that the
 AS rendered them faithfully nor that the Approver understood them
-({{consent-binding}}). Step 5 of {{approval-event}} requires
+({{consent-binding}}). Step 5 of {{direct-approval-steps}} requires
 human-meaningful rendering; comprehension cannot be inferred from an
 approval or its integrity anchors.
 
@@ -1840,8 +1840,9 @@ The subject-representation discipline is the same in every source:
   source. A service-owned or organizational Mission MUST record the
   workload or organizational principal as `subject` and MUST NOT
   record a human principal in its place. The injective mapping of
-  {{approval-event}} applies unchanged: that principal receives its
-  own AS-local `sub`, denotes itself, and impersonates nobody. It
+  {{subject-establishment}} applies unchanged: that principal
+  receives its own AS-local `sub`, denotes itself, and impersonates
+  nobody. It
   MUST be an authorization subject the AS recognizes as a resource
   owner in its own right (the `sub` model of {{RFC9068}}), not only
   the task's beneficiary.
@@ -1887,7 +1888,7 @@ a narrower or absent client request.
 An authorization request whose `scope` includes `openid`
 {{OpenID.Core}} asks for an ID Token about the End-User the approval
 interaction authenticates, who is the Approver. When the Approver is
-not the Subject established at step 2 of {{approval-event}}, the AS
+not the Subject established at step 2 of {{direct-approval-steps}}, the AS
 MUST refuse such a request, without creating the Mission, with the
 `invalid_scope` error code ({{Section 4.1.2.1 of RFC6749}}). When the
 Approver is not the Subject, whether or not `openid` was requested,
@@ -2892,12 +2893,12 @@ row names a type specification, it is the one for
 
 A denial can carry independent remediation grains, each naming a next
 step without granting anything. This document's own grain is
-`mission_denial` ({{rs-enforcement}}): which path a denial leads
+`mission_denial` ({{rs-denials}}): which path a denial leads
 into. The three remediation grains are:
 
 `mission_denial`:
 : - Carriage: `WWW-Authenticate` attribute
-  - Defined by: This document ({{rs-enforcement}})
+  - Defined by: This document ({{rs-denials}})
 
 `insufficient_authorization` with `authorization_remediation`:
 : - Carriage: `WWW-Authenticate` error code and parameter
@@ -3563,7 +3564,7 @@ the subject grant itself remains valid for other exchanges.
 **The resource server enforces none of this.** The AS applies
 delegation constraints at issuance; a resource server sees only the
 already-narrowed `authorization_details` and enforces those as usual
-({{mission-bound-tokens}}).
+({{rs-enforcement}}).
 
 ## Worked Example: Delegated Token {#worked-example-delegated-token}
 
@@ -3999,7 +4000,7 @@ snapshot it evaluates, and MUST NOT activate the instance under that
 policy when the result differs; the companion profile fixes what
 follows, as it does for an activation the policy does not authorize.
 The issuer MUST retain each snapshot's bytes and media type for the
-audit horizon ({{mission-record}}) of every Mission it activates
+audit horizon ({{record-provenance-members}}) of every Mission it activates
 under that snapshot, so an auditor can reproduce the digest.
 Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
@@ -5045,7 +5046,8 @@ the AS's signing key, whose publication and rotation
 {{mission-bound-tokens}} specifies.
 
 Verification for audit outlives validity: keeping a key resolvable for
-the audit horizon ({{mission-record}}) of every Mission whose tokens it
+the audit horizon ({{record-provenance-members}}) of every Mission
+whose tokens it
 signed lets an auditor verify those tokens later. A companion that
 anchors a longer-lived artifact to the same keys (a status assertion, a
 Mandate, registered evidence) states its own retention bound.
@@ -5246,7 +5248,7 @@ authority, or recorded-evidence member:
 Whatever the member, it:
 
 - persists on the Mission Record for its audit horizon
-  ({{mission-record}});
+  ({{record-provenance-members}});
 - concentrates at the AS with the record ({{record-access}}); and
 - if committed, is confirmable through the unsalted anchors by any
   party holding a candidate value
@@ -5275,7 +5277,7 @@ Access to the record and to Mission evidence is policy-governed and
 auditable: reading a Mission's evidence is a privileged operation, not
 a byproduct of holding a Mission reference. Retention and erasure are
 deployment policy, bounded below by the audit horizon
-({{mission-record}}).
+({{record-provenance-members}}).
 
 Where approval-event evidence was registered under the audit
 transparency profile ({{I-D.draft-mcguinness-mission-audit}}), its
