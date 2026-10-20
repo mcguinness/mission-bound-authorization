@@ -1675,13 +1675,17 @@ The fingerprint object carries exactly these members:
   that identifier is a Mission ID.
 
 `cnf`:
-: The verified presenter confirmation: the DPoP proof key's `jkt`,
-  or the mTLS certificate's `x5t#S256` ({{request-binding}}).
+: The verified presenter confirmation, as a JSON object with one
+  member as in a `cnf` claim: `jkt`, the DPoP proof key's thumbprint,
+  or `x5t#S256`, the mTLS certificate's thumbprint
+  ({{request-binding}}).
 
 `actor`:
-: The verified acting-agent identity, with its relevant actor
-  context, where the exchange carries one (`actor_token`); absent
-  where client authentication alone identifies the acting agent.
+: The verified acting-agent identity where the exchange carries an
+  `actor_token`: a JSON object with that token's `iss` and `sub`, and
+  any further actor context the Mission Issuer's authorization of the
+  acting agent relies on. Absent where client authentication alone
+  identifies the acting agent.
 
 `intent`:
 : The semantic `intent` object of the parsed `mission_intent`
