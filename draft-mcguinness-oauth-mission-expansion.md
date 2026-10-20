@@ -1397,7 +1397,7 @@ commits exactly the authority the Approver saw and approved
 
 A branch mode, in which the predecessor and the successor both remain
 `active` after expansion (for example, a separately scoped child task
-running alongside the original), is OPTIONAL and is not defined here.
+running alongside the original), is not defined here.
 A deployment that needs a separately scoped task alongside a
 still-active Mission creates an ordinary new Mission under the
 issuance profile and MAY set that Mission's `related_to` member
@@ -1471,8 +1471,8 @@ approval renders.
 
 # Concurrent Expansion Reconciliation {#reconciliation}
 
-More than one expansion request MAY be in flight against the same
-predecessor at once, and more than one MAY be adjudicated and awaiting
+More than one expansion request can be in flight against the same
+predecessor at once, and more than one can be adjudicated and awaiting
 its completion. Because replacement produces exactly one successor per
 predecessor ({{replacement}}) and supersession is deferred to
 activation ({{successor-activation}}), the Mission Issuer MUST
