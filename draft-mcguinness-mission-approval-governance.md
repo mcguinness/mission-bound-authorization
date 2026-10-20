@@ -370,13 +370,13 @@ plus the integrity `envelope` {{envelope}} defines.
 
 ~~~ json
 {
-  "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
+  "approval_event_id": "ape_hON9D0svLKQAMyy-uug",
   "mission": {
     "issuer": "https://as.example.com",
     "intent_hash":
-      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "approval_policy": {
     "id": "dlg-matrix",
@@ -386,16 +386,16 @@ plus the integrity `envelope` {{envelope}} defines.
   },
   "assertions": [
     { "assertion_id": "ast_1",
-      "principal": { "iss": "https://login.example.com",
-        "sub": "manager@example.com" },
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR" },
       "kind": "human", "decision": "approve",
-      "decided_at": "2026-09-30T16:58:11Z",
+      "decided_at": "2026-11-02T08:00:00Z",
       "authority": { "role": "finance-manager" } },
     { "assertion_id": "ast_2",
       "principal": { "iss": "https://as.example.com",
         "sub": "policy:finance-charter" },
       "kind": "policy", "decision": "approve",
-      "decided_at": "2026-09-30T16:58:12Z",
+      "decided_at": "2026-11-02T08:00:00Z",
       "authority": { "policy_id": "dlg-matrix", "version": "v7",
         "approved_by": { "iss": "https://login.example.com",
           "sub": "cfo@example.com" },
@@ -403,7 +403,7 @@ plus the integrity `envelope` {{envelope}} defines.
   ],
   "evaluation": {
     "decision": "approved",
-    "evaluated_at": "2026-09-30T16:58:13Z",
+    "evaluated_at": "2026-11-02T08:00:00Z",
     "contributing": ["ast_1", "ast_2"]
   },
   "envelope": {
@@ -413,9 +413,12 @@ plus the integrity `envelope` {{envelope}} defines.
 }
 ~~~
 
-The Mission record's accountable `approval_basis.consent_principal`
-in this example is `manager@example.com`; `ast_1` is that
-principal's own `approve` assertion, satisfying the
+The example's Mission, `msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj`, is not
+the issuance profile's canonical Worked Example Mission, though it
+shares that Mission's Intent and Authority Set and so its anchors.
+Its record's accountable `approval_basis.consent_principal` is Alice
+(`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`); `ast_1` is
+that principal's own `approve` assertion, satisfying the
 accountable-approver rule of {{assertion-requirements}} directly.
 `ast_2` is a `policy` assertion carrying its own provenance chain,
 recorded alongside rather than in place of the accountable
