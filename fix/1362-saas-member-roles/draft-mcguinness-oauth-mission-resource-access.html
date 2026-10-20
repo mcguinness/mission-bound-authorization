@@ -1485,8 +1485,10 @@ deployment policy, or by the resource's
         <dd style="margin-left: 1.5em" id="section-3-2.12">
           <p id="section-3-2.12.1"><span class="bcp14">OPTIONAL</span>. An object. The delegation policy for this entry
 (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). When absent, this entry's authority is
-non-delegable: it <span class="bcp14">MUST NOT</span> appear in a delegated token. When present,
-it has these members:<a href="#section-3-2.12.1" class="pilcrow">¶</a></p>
+non-delegable: it <span class="bcp14">MUST NOT</span> appear in a delegated token. This applies
+to the entry the authorization server evaluates for a delegated
+token, not to a copy a cross-domain grant conveys without the member
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). When present, it has these members:<a href="#section-3-2.12.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3-2.12.2">
             <dt id="section-3-2.12.2.1">
 <code>max_depth</code>:</dt>
@@ -2782,15 +2784,24 @@ decision deferred to policy, never a blanket grant of eligibility.<a href="#sect
 consistent with the subset rule (<a href="#subset" class="auto internal xref">Section 3.3</a>). Surviving entries are
 carried with their <code>delegation</code> member intact, so the next hop is
 evaluated the same way.<a href="#section-3.7-3" class="pilcrow">¶</a></p>
-<p id="section-3.7-4"><strong>Inherited eligibility.</strong> A derived entry's <code>allowed_delegates</code>
+<p id="section-3.7-4">A cross-domain grant separates two stages. Eligibility for the grant
+itself is decided as above, against the approved entry in the Mission
+Record. The copy the grant conveys keeps <code>delegation</code> only as
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> allows, and an
+omitted member ends onward delegation from that copy. Neither stage
+lets an entry without <code>delegation</code> in the Mission Record appear in a
+delegated token. The dependency on that profile, here and in the
+absent-member exception of <a href="#resource-access-type" class="auto internal xref">Section 3</a>, binds only an
+authorization server that issues cross-domain grants.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
+<p id="section-3.7-5"><strong>Inherited eligibility.</strong> A derived entry's <code>allowed_delegates</code>
 restricts eligibility; it never replaces an obligation the derivation
 inherits. An entry derived from a reference entry that has no
 <code>allowed_delegates</code> inherits the authorization server's policy
 decision, and so does every entry derived from it: a delegate is
 permitted only when the policy permits it and, where the entry carries
 a list, the list permits it too. When policy permits Bob and denies
-Carol, an entry whose list names Carol still cannot admit Carol.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
-<p id="section-3.7-5">The obligation holds from the initial derivation. An approved entry
+Carol, an entry whose list names Carol still cannot admit Carol.<a href="#section-3.7-5" class="pilcrow">¶</a></p>
+<p id="section-3.7-6">The obligation holds from the initial derivation. An approved entry
 derived from a ceiling entry without <code>allowed_delegates</code> inherits the
 policy decision even when the approved proposal added a list, so the
 approved entry's own members do not reveal the obligation. The
@@ -2800,7 +2811,9 @@ that provenance with the Mission. It evaluates every later exchange
 against the approved entry in the Mission Record
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and that provenance, never
 against a presented token alone. Where it cannot resolve either, the
-entry narrows out of the delegated token.<a href="#section-3.7-5" class="pilcrow">¶</a></p>
+entry narrows out of the delegated token. A cross-domain grant conveys
+no such provenance; <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>
+specifies how its conveyed copy treats <code>delegation</code>.<a href="#section-3.7-6" class="pilcrow">¶</a></p>
 <div id="matching-allowed-delegates">
 <section id="section-3.7.1">
           <h4 id="name-matching-allowed_delegates">
@@ -3559,6 +3572,10 @@ and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pi
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="ISO4217">[ISO4217]</dt>
         <dd>
 <span class="refAuthor">International Organization for Standardization</span>, <span class="refTitle">"ISO 4217:2015, Codes for the representation of currencies and funds"</span>, <span class="seriesInfo">ISO 4217:2015</span>, <time datetime="2015-08" class="refDate">August 2015</time>. </dd>
@@ -3631,10 +3648,6 @@ and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pi
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
         <dd>
