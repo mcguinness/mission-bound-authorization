@@ -22,6 +22,7 @@ import {
   parseScopeProjectionMapping,
   parseStrictJson,
   refusedEntryMember,
+  resourceMatchViolation,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
   unsupportedEntryMember,
@@ -994,17 +995,12 @@ interface LoadedPolicy {
 }
 
 /**
- * @spec resource-access#resource-matching (#1264, D446, #1276): this
- * deployment's configured entries are `exact` only. The matcher, the subset
- * rule and derivation implement `prefix` (#1276), but configured ceilings
- * also reach paths that compare resources as strings: a governed policy's
- * removal (`removeAuthority`) and the approval floor's classification would
- * not reach a descendant of a `prefix` ceiling entry, and a containment
- * removal names an approved entry's own `resource`. An entry naming any other
- * `resource_match` (`prefix`, or an unknown value) is therefore refused at
- * load rather than rebuilt without the member, which would silently change
- * its matching semantics: narrower for a ceiling entry, wider for a
- * containment removal.
+ * @spec resource-access#resource-matching (#1264, D446, #1276, #1440): a
+ * containment removal names an approved entry's own `resource`, and the
+ * kernel's containment paths pair removals with entries by that string. A
+ * removal naming any other `resource_match` (`prefix`, or an unknown value)
+ * is therefore refused at load rather than rebuilt without the member, which
+ * would silently widen it.
  */
 function rejectUnsupportedResourceMatch(
   file: string,
@@ -1014,9 +1010,31 @@ function rejectUnsupportedResourceMatch(
   if (e.resource_match !== undefined && e.resource_match !== "exact") {
     throw new ConfigError(
       file,
-      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment's configured entries are exact only`,
+      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment's containment removals are exact only`,
     );
   }
+}
+
+/**
+ * @spec resource-access#resource-access-type, resource-access#subset (#1276,
+ * #1440): a ceiling entry's `resource_match`, kept as written. Derivation, the
+ * subset rule, governed removal and the approval floor's classification all
+ * pair a ceiling entry with other resources through the shared matcher, so
+ * both values Resource Access defines load. An unrecognized value, and a
+ * `prefix` entry whose `resource` carries a query or names no `//` authority,
+ * are refused at load naming the entry ({@link resourceMatchViolation}).
+ */
+function ceilingResourceMatch(
+  file: string,
+  e: Record<string, unknown>,
+  resource: string,
+  ctx: string,
+): Pick<AuthorityEntry, "resource_match"> {
+  const violation = resourceMatchViolation({ resource, resource_match: e.resource_match });
+  if (violation !== undefined) throw new ConfigError(file, `${ctx} ${violation}`);
+  return e.resource_match === undefined
+    ? {}
+    : { resource_match: e.resource_match as "exact" | "prefix" };
 }
 
 /**
@@ -1062,14 +1080,15 @@ function wellFormedResource(file: string, e: Record<string, unknown>, ctx: strin
 
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
-  rejectUnsupportedResourceMatch(file, e, ctx);
   const type = reqString(file, e, "type", ctx);
   if (type !== "mission_resource_access")
     throw new ConfigError(file, `${ctx} has unsupported authority type`);
   rejectRefusedMember(file, e, ctx);
+  const resource = wellFormedResource(file, e, ctx);
   const entry: AuthorityEntry = {
     type,
-    resource: wellFormedResource(file, e, ctx),
+    resource,
+    ...ceilingResourceMatch(file, e, resource, ctx),
     actions: reqStringArray(file, e, "actions", ctx),
     ...(e.constraints !== undefined
       ? {
@@ -1849,14 +1868,15 @@ export interface GovernedPolicy {
 function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEntry[] {
   return asArray(file, raw, ctx).map((item, i) => {
     const e = asObject(file, item, `${ctx}[${i}]`);
-    rejectUnsupportedResourceMatch(file, e, `${ctx}[${i}]`);
     const type = reqString(file, e, "type", `${ctx}[${i}]`);
     if (type !== "mission_resource_access")
       throw new ConfigError(file, `${ctx}[${i}] has unsupported authority type`);
     rejectRefusedMember(file, e, `${ctx}[${i}]`);
+    const resource = wellFormedResource(file, e, `${ctx}[${i}]`);
     const entry: CeilingEntry = {
       type,
-      resource: wellFormedResource(file, e, `${ctx}[${i}]`),
+      resource,
+      ...ceilingResourceMatch(file, e, resource, `${ctx}[${i}]`),
       actions: reqStringArray(file, e, "actions", `${ctx}[${i}]`),
     };
     if (e.constraints !== undefined) {
