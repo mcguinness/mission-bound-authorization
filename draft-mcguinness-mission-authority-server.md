@@ -141,6 +141,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC8725:
+  RFC8792:
   I-D.draft-mcguinness-oauth-mission-management:
     title: "Mission Management for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
@@ -402,7 +403,9 @@ claim it ({{limitations}}).
 {::boilerplate bcp14-tagged}
 
 All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 This document uses Mission, Mission Intent, Mission Issuer, Authority
 Set, Approver, Subject, `mission_id`, the integrity anchors, and the
@@ -585,6 +588,8 @@ and returns HTTP 202 with a pending-submission reference:
 The following example shows a submission and its response:
 
 ~~~ http-message
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 POST /mas/mission/submit HTTP/1.1
 Host: mas.example.com
 Content-Type: application/json
@@ -593,8 +598,14 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 500 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
@@ -608,7 +619,7 @@ Cache-Control: no-store
 {
   "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
   "status": "pending",
-  "expires_at": "2026-10-16T14:32:11Z"
+  "expires_at": "2026-11-03T07:59:00Z"
 }
 ~~~
 
