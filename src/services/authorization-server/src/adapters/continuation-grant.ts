@@ -41,6 +41,7 @@ import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel
 import {
   ID_JAG_TOKEN_TYPE,
   AuthorityNarrowedToEmptyError,
+  conveyedCopy,
   DestinationClientUnresolvedError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
@@ -802,9 +803,14 @@ export async function handleTokenExchangeGrant(
     return;
   }
   // The grant's authority: the entries this delegate may carry, narrowed to
-  // the requested resources (continuationResourceFilter).
+  // the requested resources (continuationResourceFilter), as the grant would
+  // convey them. @spec cross-domain#conveyed-delegation (#1374): the same
+  // conveyed-copy rule the mint applies after the gate (conveyedCopy), so a
+  // request that keeps an omitted `delegation` is refused here, before any
+  // derivation is reserved or counted, like every other requested-authority
+  // refusal at this exchange.
   const resourceFilter = continuationResourceFilter(resources);
-  const grantable = resourceFilter(delegable);
+  const grantable = conveyedCopy(record, audienceCandidates, resourceFilter(delegable));
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the grant's authority:
   // the Mission's Effective Authority Set for this audience, as this delegate

@@ -46,9 +46,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC9700:
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -57,9 +54,20 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
+  RFC9700:
   I-D.draft-mcguinness-oauth-mission-cross-org-delegation:
     title: "Mission Cross-Organizational Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-org-delegation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-child-delegation:
+    title: "Mission Child Delegation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
     author:
       -
         ins: K. McGuinness
@@ -335,8 +343,9 @@ token preserves ({{validation-at-resource-as}}). They are audit and
 correlation anchors, not credentials.
 
 Two things cross scoped: the audience-scoped Authority Set entries
-({{audience-scope}}), and the Mission's Subject in the form the
-identity chaining architecture defines ({{cross-domain-grant}}).
+({{audience-scope}}, {{conveyed-delegation}}), and the Mission's
+Subject in the form the identity chaining architecture defines
+({{cross-domain-grant}}).
 
 Everything else stays home. The Mission record, the Mission Intent,
 the full Authority Set, and lifecycle authority remain with the
@@ -359,6 +368,50 @@ includes only the Authority Set entries whose `resource` that
 Resource AS is authoritative for, under the deployment's
 resource-to-AS mapping ({{pre-established-trust}}). Entries for other
 Resource ASes MUST NOT be disclosed.
+
+## Conveyed Delegation Policy {#conveyed-delegation}
+
+An entry's delegate eligibility can depend on state the Mission
+Issuer keeps and the grant does not carry. An approved entry derived
+from a ceiling entry without `allowed_delegates` inherits the Mission
+Issuer's delegation-authorization policy decision, even when the entry
+carries a list of its own. The Mission Issuer retains that provenance
+from the initial derivation, and the entry's own members do not show
+it ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Delegate Eligibility"). This profile conveys neither that provenance
+nor a mechanism for a Resource AS to evaluate the Mission Issuer's
+policy.
+
+When projecting authority, the Mission Issuer MUST omit the
+`delegation` member from a conveyed entry unless the retained
+provenance of every approved entry it derives from resolves to a
+committed `allowed_delegates` list, and the conveyed `delegation` is
+no broader than each such approved entry's under the subset rule
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"). A
+combination of origins never selects the more permissive one:
+
+| Retained origins | Conveyed copy |
+|---|---|
+| Committed lists only, each inherited list preserved | Keeps `delegation` |
+| Any policy origin, alone or with a list | Omits `delegation` |
+| Any origin unresolved, or the resolution ambiguous | Omits `delegation` |
+{: title="Conveyed delegation by retained origin"}
+
+The omission changes only the conveyed copy. Whether a grant carries
+the entry at all is decided first, against the approved entry in the
+Mission Record and its retained provenance, as for any delegated
+issuance. The omission never admits an entry that decision excludes
+and never makes a non-delegable entry delegable. The Mission Record,
+its Authority Set, and `authority_hash` are unchanged.
+
+Omitting `delegation` also omits every member nested in it, including
+a `children` grant
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). An entry
+conveyed without `delegation` is non-delegable at the Resource AS
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
+Constraints"). Cross-domain delegation of an entry whose eligibility
+defers to policy therefore ends at the trust boundary; a ceiling that
+commits `allowed_delegates` for the entry restores it.
 
 # Relationship to Transaction Token Chaining {#txn-chaining}
 
@@ -759,7 +812,8 @@ A Resource AS consuming a Mission-bound cross-domain grant:
 - MUST, when it issues delegated tokens of its own, enforce each
   entry's `delegation` policy as the issuance profile specifies
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
-  Constraints"); the policy travels on the conveyed entries. The
+  Constraints"); the policy travels on the conveyed entries that keep
+  it ({{conveyed-delegation}}). The
   cross-domain grant carries no `act` chain ({{cross-domain-grant}}),
   so the Resource AS's own delegation depth begins at 0. Such a
   delegated token's `client_id` is the local delegate, with that
@@ -802,7 +856,11 @@ resolve against the delegate it authenticated in its own namespace.
 Portable cross-domain matching SHOULD therefore use a `sub_profile`
 matcher, an actor-type class rather than a domain-relative identifier
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Delegation
-Constraints").
+Constraints"). A Resource AS evaluates a conveyed `sub_profile`
+matcher against the classification it asserts for its own delegates.
+A value names no equivalent class across trust domains unless
+pre-established trust ({{pre-established-trust}}) fixes a shared
+vocabulary.
 
 This document defines no universal account-linking protocol. A
 Resource AS consuming a Mission-bound cross-domain grant resolves the
@@ -1313,9 +1371,10 @@ across every hop and organizational boundary
 ({{I-D.draft-mcguinness-oauth-mission-cross-org-delegation}}):
 projection-local depth starts after chain verification, and a
 projected token cannot re-enter a chain. An entry's `max_depth` ceiling is
-therefore enforced per domain, not globally across the projection: a
-Mission delegable to depth N at the originating AS may be delegated a
-further N hops inside each Resource AS domain that honors it. A
+therefore enforced per domain, not globally across the projection: an
+entry delegable to depth N at the originating AS and conveyed with its
+`delegation` ({{conveyed-delegation}}) may be delegated a further N
+hops inside each Resource AS domain that honors it. A
 deployment that needs a global bound on delegation depth across domains
 constrains it out of band, through the resource-to-AS mapping and each
 Resource AS's local policy ({{pre-established-trust}}); this profile
@@ -1486,7 +1545,9 @@ the authenticated client `s6BhdRkqt3` ({{pre-established-trust}}).
 Only the agent may request a cross-domain projection
 ({{cross-domain-grant}}), so no delegation has occurred, and the
 approved agent remains recoverable at the home AS from the Mission
-Record identified by `mission.id`.
+Record identified by `mission.id`. The read entry keeps its
+`delegation` because the ceiling entry it derives from commits that
+`allowed_delegates` list ({{conveyed-delegation}}).
 
 ## Stage 3: The Resource AS Issues a Local Access Token
 
@@ -1664,6 +1725,16 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Changes a requirement (#1374): the Mission Issuer omits an entry's
+  `delegation` from the conveyed copy unless every retained origin of
+  its delegate eligibility is a committed `allowed_delegates` list and
+  the conveyed member is no broader than each approved entry's. The
+  grant conveys no provenance and no way to evaluate the issuer's
+  policy. The omission removes a nested `children` grant, never
+  changes which entries a grant carries, and leaves the Mission Record
+  and `authority_hash` unchanged. A Resource AS evaluates a conveyed
+  `sub_profile` against its own classification.
 
 - Changes a requirement (#1166, D510): the cross-domain grant names the
   requesting client's registration at the target Resource AS, as
