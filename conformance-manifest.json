@@ -19772,7 +19772,7 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "an action-bound approval recorded under one contract reference, presented for an action whose applicable entry references another, does not satisfy the approval gate"
+    "normative": "an action-bound approval recorded under one contract reference, presented for an action whose applicable entry references another, does not satisfy the approval gate even when both references resolve; under the AuthZEN profile the re-evaluation is denied out_of_scope"
    },
    "level": "cross-component",
    "coverage": "todo",
@@ -23370,6 +23370,94 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported finer contract or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses."
   },
   {
+   "id": "authzen.context-resource-contract.request-member",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "REQUIRED when a resource contract applies to the action",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision request for an action under a resource contract carries resource.properties.resource_contract with the id, version and digest of the contract the PEP will perform under"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.pep-trusted-derivation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The PEP establishes the reference from the applicable entry's reference, resolved against its own trusted contract declarations, and never from a value the caller asserts.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller-asserted contract reference never reaches the decision request; the presented reference is the applicable entry's, resolved against the PEP's own declarations"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.pdp-denies-unequal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The PDP MUST deny the action with `resource_contract_drift` unless the reference resolves under the PDP's own trusted declarations and equals, member for member, the reference of an applicable entry that authorizes the action.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented reference that is absent where a contract applies, does not resolve, or differs from every authorizing entry's reference is denied resource_contract_drift with no permit"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.binding-and-cache-key",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The reference is part of the authorization binding and the cache key ({{projections}}), so a permit is never reused under another contract.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "two requests that differ only in resource.properties.resource_contract have different cache keys, and a permit cached under one is not reused for the other"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
@@ -24921,6 +25009,50 @@
    ]
   },
   {
+   "id": "authzen.context-approval.contract-reference-bound",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The Mission checks then also establish that the approved Resource's `properties.resource_contract` equals the request's, member for member.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval whose approved Resource carries a resource_contract reference other than the re-evaluated request's does not satisfy approval_required"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-approval.contract-mismatch-out-of-scope",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "An approval given under one reference does not cover an action under another, even when both references resolve: the PDP MUST deny that re-evaluation with ARAP's `out_of_scope`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval given for an action under v1 (superseded, within retention) presented for the same action under v2 (current), with identical parameters, is denied out_of_scope with no permit and no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.context-history.no-caller-asserted-outcome",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
@@ -25117,7 +25249,7 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a PDP denial for a missing required or unresolvable contract reference carries resource_contract_drift, not out_of_authority, capability_drift or parameter_violation"
+    "normative": "a PDP denial for a missing required or unresolvable contract reference, or for a request reference absent or unequal to the entry's, carries resource_contract_drift, not out_of_authority, capability_drift or parameter_violation"
    },
    "level": "unit",
    "coverage": "todo",
@@ -25238,6 +25370,72 @@
     }
    ],
    "notes": "evaluate.test.ts proves the PDP echoes the request's parameter_digest into conditions.parameter_digest unchanged (equality, not a recomputation). The PEP's enforcement of the exact binding is proven by the reverification tests: server.ts's callReadTool/callWriteTool/callTransactionTool all read the digest from decision.context.conditions.parameter_digest and recompute-and-compare against authoritative state immediately before execution, refusing parameter_mismatch on any divergence (proven for both the write path, pre-existing, and the list-read path, #612 finding 1). Known limitation, unrelated to this row's PEP-enforcement text: the request-side carriage this profile's current examples show (action.properties.parameter_digest) differs from this deployment's context.parameter_digest placement; that request-shape divergence is pre-existing and out of this finding's scope (response-context only), flagged here rather than silently carried."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-equals-request",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "REQUIRED on a permit for an action to which a resource contract applies, and equal to the validated request's `resource.properties.resource_contract`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for an action under a resource contract carries conditions.resource_contract equal to the validated request's reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-pep-compares",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "At every use, the executing PEP MUST resolve this reference against its own current contract declarations and MUST NOT release an effect unless it resolves and equals the reference of the contract the PEP is about to perform the operation under.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a contract definition change after the decision and before dispatch, with identical parameters, and a permit whose condition names a contract other than the one the PEP would perform under, both release no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "A missing condition where a contract applies, an unresolvable reference, or an unequal one is Execution Evidence `suppressed` / `resource_contract_unresolvable`, not a PDP denial.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each use-time contract failure is recorded as Execution Evidence with outcome suppressed and error resource_contract_unresolvable, never as a PDP denial"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "authzen.response-context.valid-until-required-and-bounded",
@@ -41259,6 +41457,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-follows-runtime-version-states",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "Which versions a resource still performs, and for which entries, follows the version states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that does not resolve there authorizes nothing.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server performs an entry's operation under a superseded version only within its declared retention and never under a retired one; outside those states the entry authorizes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
