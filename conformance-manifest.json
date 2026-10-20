@@ -3042,6 +3042,12 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
    "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification."
@@ -3094,6 +3100,24 @@
     {
      "file": "src/services/authorization-server/test/submission-precedence.test.ts",
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
      "level": "endpoint",
      "surface": "par"
     }
@@ -3186,6 +3210,12 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
    "notes": "D559 (#1411): ruled qualified A + C."
@@ -3260,7 +3290,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members."
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering)."
   },
   {
    "id": "core.submission.size-bounds-evidence",
@@ -4904,7 +4934,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision."
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
   },
   {
    "id": "core.mission-record.authority-source-required",
