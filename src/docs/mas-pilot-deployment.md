@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `84bcbb4a`
+Every statement here is true of the reference implementation at `33f741b4`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -448,13 +448,27 @@ in-process configuration, which reads the deltas, denies
 `authority_contained` or `authority_discharged`. Containment is witnessed;
 discharge follows from the same projection and is not exercised here.
 
+**No missing-authority remediation from a projection.** An effective-set view
+gives no `insufficient_authorization` hint for an absent action unless it
+proves it holds the committed set: its `authority_hash` recomputes over its
+entries (`viewHoldsCommittedSet`, D335, the proof the PDP applies to the
+credential bound; `absenceMeansNeverGranted` in
+`services/mcp-payments/src/view-source.ts`). After a containment or a
+discharge, or when the Mission has entries for another audience, the Status
+view cannot prove it, so the refusal stands with no hint: a narrowed
+capability is restored only through Expansion. A Status view whose effective
+set is the committed set (one audience, nothing contained or discharged)
+proves it, and a never-granted action there keeps its hint. A loader with no
+remote source is read as the committed set, as before.
+
 Witnesses: `demo/test/mas-pilot-separated.test.ts` (each refusal asserts no
 committed effect and its carrier, the PDP's Decision Evidence or the PEP's
 Refusal Record):
 
 - `the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > permits a joined read on the Status view, with Join Disclosure, the MAS's own state version, and a permit capped by the signed fresh_until`
   (the Decision Evidence's `policy_view_id` commits the version and `authority_hash` a direct Status read returns);
-- `… > denies the action a containment at the MAS removed out_of_authority, the Status view's declared diagnostic, while the uncontained read still permits`;
+- `… > denies the action a containment at the MAS removed out_of_authority, the Status view's declared diagnostic, while the uncontained read still permits` (and gives no `insufficient_authorization`);
+- `… > proposes a never-granted action back on a Status view that proves it holds the committed set`;
 - `… > observes a revocation at the MAS within the signed bound: relied on until its fresh_until, then mission_inactive`;
 - `… > refuses the commit crossing of a Mission revoked after its prepare: the commit-phase decision reads the MAS now, and commits nothing`;
 - `the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an answer that does not verify (#818 slice 4b) > an unenrolled PDP reads no Subject or client, so the join denies mission_binding_failed and nothing is permitted`;
@@ -465,7 +479,8 @@ Refusal Record):
 Unit witnesses: `services/pdp/test/evaluate-own-read.test.ts` (the
 signed-ceiling cap and a passed one, the join without a disclosed
 `subject` or `client_id`), `services/mcp-payments/test/view-source.test.ts`
-(the PEP's one read and its lapsed list re-verification), and
+(the PEP's one read, its lapsed list re-verification, and the remediation
+guard with a complete view, an effective projection, and no remote source), and
 `demo/test/mas-pilot-separated-wiring.test.ts` (the class window, the
 commit-phase fresh read, the signed `iat` and `fresh_until`, and the
 refusal mapping).
