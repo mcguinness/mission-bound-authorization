@@ -1020,9 +1020,11 @@ function rejectUnsupportedResourceMatch(
  * #1440): a ceiling entry's `resource_match`, kept as written. Derivation, the
  * subset rule, governed removal and the approval floor's classification all
  * pair a ceiling entry with other resources through the shared matcher, so
- * both values Resource Access defines load. An unrecognized value, and a
- * `prefix` entry whose `resource` carries a query or names no `//` authority,
- * are refused at load naming the entry ({@link resourceMatchViolation}).
+ * both values Resource Access defines load, `prefix` only where no containment
+ * rule is configured ({@link rejectPrefixCeilingsUnderContainment}). An
+ * unrecognized value, and a `prefix` entry whose `resource` carries a query or
+ * names no `//` authority, are refused at load naming the entry
+ * ({@link resourceMatchViolation}).
  */
 function ceilingResourceMatch(
   file: string,
@@ -2072,6 +2074,46 @@ export const AUTHORITY_SOURCES: AuthoritySourceCatalogSeed = (() => {
     })),
   };
 })();
+
+/**
+ * @spec containment#overlay, resource-access#resource-matching (#1440): the
+ * kernel's containment paths pair a removal with an approved entry by that
+ * entry's exact `resource`, so a rule naming a service misses a finer entry
+ * approved beneath a `prefix` ceiling. Until containment pairs through the
+ * shared matcher (the follow-up to #1440), a deployment that configures any
+ * containment rule keeps every authorization-server ceiling entry `exact`: a
+ * `prefix` entry in policy.json, governed-policy.json or
+ * authority-sources.json refuses at load, naming the entry. With no
+ * containment rule configured, `prefix` ceilings load.
+ */
+function rejectPrefixCeilingsUnderContainment(): void {
+  if (CONTAINMENT_POLICY.rules.length === 0) return;
+  type Site = [file: string, ctx: string, entries: readonly CeilingEntry[]];
+  const ceilings: Site[] = [
+    ["policy.json", "policy.ceiling", POLICY.ceiling],
+    ...GOVERNED_POLICIES.map(
+      (p, i): Site => ["governed-policy.json", `governed-policy[${i}].ceiling`, p.ceiling],
+    ),
+    ...AUTHORITY_SOURCES.entries.map(
+      (s, i): Site => [
+        "authority-sources.json",
+        `authority-sources.sources[${i}].ceiling`,
+        s.ceiling,
+      ],
+    ),
+  ];
+  for (const [file, ctx, entries] of ceilings) {
+    entries.forEach((e, j) => {
+      if (e.resource_match === "prefix") {
+        throw new ConfigError(
+          file,
+          `${ctx}[${j}] has resource_match "prefix", but containment.json configures containment rules, which pair a removal with an approved entry by its exact resource and would miss an entry approved beneath a prefix ceiling (the follow-up to #1440); configure no containment rule, or keep every ceiling entry exact`,
+        );
+      }
+    });
+  }
+}
+rejectPrefixCeilingsUnderContainment();
 
 /**
  * @spec mission#caller-authorization-and-minimization — one registered RFC 7662

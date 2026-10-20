@@ -36,35 +36,77 @@ describe("config loaders admit or refuse resource_match at load (#1264, #1440)",
     vi.resetModules();
   });
 
-  /** A copy of the shipped config dir with the named file rewritten by `mutate`. */
-  function configDirWith(file: string, mutate: (parsed: unknown) => void): void {
+  /**
+   * A copy of the shipped config dir with the named file rewritten by
+   * `mutate`, and each file `also` names rewritten by its own function.
+   */
+  function configDirWith(
+    file: string,
+    mutate: (parsed: unknown) => void,
+    also: Record<string, (parsed: unknown) => void> = {},
+  ): void {
     dir = mkdtempSync(join(tmpdir(), "mission-config-1264-"));
     const configDir = join(dir, "config");
     cpSync(REAL_CONFIG_DIR, configDir, { recursive: true });
-    const filePath = join(configDir, file);
-    const parsed: unknown = JSON.parse(readFileSync(filePath, "utf8"));
-    mutate(parsed);
-    writeFileSync(filePath, JSON.stringify(parsed, null, 2));
+    for (const [name, rewrite] of [[file, mutate] as const, ...Object.entries(also)]) {
+      const filePath = join(configDir, name);
+      const parsed: unknown = JSON.parse(readFileSync(filePath, "utf8"));
+      rewrite(parsed);
+      writeFileSync(filePath, JSON.stringify(parsed, null, 2));
+    }
     previous = process.env.MISSION_CONFIG_DIR;
     process.env.MISSION_CONFIG_DIR = configDir;
     vi.resetModules();
   }
 
-  it("parseCeilingEntry (policy.json) loads a ceiling entry naming resource_match prefix and keeps the member (#1440)", async () => {
-    configDirWith("policy.json", (raw) => {
-      (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
-    });
+  /** containment.json with no rule: containment pairs exactly, so prefix ceilings load only without one. */
+  const NO_CONTAINMENT_RULES = {
+    "containment.json": (raw: unknown) => {
+      (raw as { rules: unknown[] }).rules = [];
+    },
+  };
+
+  it("parseCeilingEntry (policy.json) loads a ceiling entry naming resource_match prefix and keeps the member, where no containment rule is configured (#1440)", async () => {
+    configDirWith(
+      "policy.json",
+      (raw) => {
+        (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
+      },
+      NO_CONTAINMENT_RULES,
+    );
     const mod = await import("@mission/demo-data");
     expect(mod.DERIVATION_POLICY.ceiling[0]?.resource_match).toBe("prefix");
     expect(mod.DERIVATION_POLICY.ceiling[1]?.resource_match).toBeUndefined();
   });
 
-  it("loadCeilingEntries (governed-policy.json) loads a governed ceiling entry naming resource_match prefix and keeps the member (#1440)", async () => {
+  it("loadCeilingEntries (governed-policy.json) loads a governed ceiling entry naming resource_match prefix and keeps the member, where no containment rule is configured (#1440)", async () => {
+    configDirWith(
+      "governed-policy.json",
+      (raw) => {
+        (raw as { ceiling: Record<string, unknown>[] }[])[0].ceiling[0].resource_match = "prefix";
+      },
+      NO_CONTAINMENT_RULES,
+    );
+    const mod = await import("@mission/demo-data");
+    expect(mod.GOVERNED_POLICIES[0]?.ceiling[0]?.resource_match).toBe("prefix");
+  });
+
+  it("refuses a policy.json prefix ceiling entry at load while containment rules are configured, naming the entry and the reason (#1440)", async () => {
+    configDirWith("policy.json", (raw) => {
+      (raw as { ceiling: Record<string, unknown>[] }).ceiling[0].resource_match = "prefix";
+    });
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      /\[config:policy\.json\] policy\.ceiling\[0\] has resource_match "prefix", but containment\.json configures containment rules, which pair a removal with an approved entry by its exact resource/,
+    );
+  });
+
+  it("refuses a governed-policy.json prefix ceiling entry at load while containment rules are configured, naming the entry (#1440)", async () => {
     configDirWith("governed-policy.json", (raw) => {
       (raw as { ceiling: Record<string, unknown>[] }[])[0].ceiling[0].resource_match = "prefix";
     });
-    const mod = await import("@mission/demo-data");
-    expect(mod.GOVERNED_POLICIES[0]?.ceiling[0]?.resource_match).toBe("prefix");
+    await expect(import("@mission/demo-data")).rejects.toThrow(
+      /\[config:governed-policy\.json\] governed-policy\[0\]\.ceiling\[0\] has resource_match "prefix", but containment\.json configures containment rules/,
+    );
   });
 
   it("a ceiling loader refuses an unrecognized resource_match, naming the entry (#1440)", async () => {

@@ -4,7 +4,9 @@
  *
  * A configured `prefix` ceiling through the real authorization server, booted
  * over a copy of the shipped `config/` whose payments read ceiling entry is
- * `prefix`: the typed loader admits it, the approval decision derives a
+ * `prefix` and which configures no containment rule (containment pairs
+ * exactly, so the loader refuses a `prefix` ceiling beside one): the typed
+ * loader admits it, the approval decision derives a
  * narrower `exact` or `prefix` proposal under it and classifies the derived
  * entry through the shared matcher, and the issued token carries the derived
  * entry. The payments write ceiling stays `exact`, so a `prefix` request
@@ -22,6 +24,12 @@ const hoisted = await vi.hoisted(async () => {
   const policy = JSON.parse(readFileSync(file, "utf8")) as { ceiling: Record<string, unknown>[] };
   (policy.ceiling[0] as Record<string, unknown>).resource_match = "prefix";
   writeFileSync(file, JSON.stringify(policy, null, 2));
+  // Containment pairs a removal with an approved entry exactly, so a prefix
+  // ceiling loads only where no containment rule is configured (#1440).
+  const containment = join(dir, "containment.json");
+  const rules = JSON.parse(readFileSync(containment, "utf8")) as { rules: unknown[] };
+  rules.rules = [];
+  writeFileSync(containment, JSON.stringify(rules, null, 2));
   const previous = process.env.MISSION_CONFIG_DIR;
   process.env.MISSION_CONFIG_DIR = dir;
   return { dir, previous };
