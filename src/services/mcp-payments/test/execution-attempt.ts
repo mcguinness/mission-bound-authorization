@@ -35,6 +35,8 @@ export function testAttempt(input: {
     boundaryVersion: "payments-boundary-v1",
     // The payments service-level operation contract's target (#1276).
     operationTarget: CANONICAL_RESOURCE,
+    // The service-level contract reads no argument.
+    operationArguments: {},
     action: input.action,
     ...(input.authorizedParameterDigest !== undefined
       ? { authorizedParameterDigest: input.authorizedParameterDigest }

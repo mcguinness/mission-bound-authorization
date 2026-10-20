@@ -286,13 +286,18 @@ authority from `mission_resource_access` entries
 - every operation a mapped tool can perform at each audience in the
   root's `aud` MUST have an operation target, as that resource
   server's operation contract establishes it, that matches the
-  entry's `resource`
+  entry's `resource` under the entry's `resource_match`
   ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
-  "Resource Matching"). The root carries no resource member, so an
-  `aud` value equal to the entry's `resource` does not establish this
-  by itself. Where the entry's `resource` is finer than the targets a
-  tool can reach, the root carries argument constraints that confine
-  every target within it, or the issuer MUST NOT map the entry;
+  "Resource Matching"). This target restriction is part of the entry,
+  and the mapping preserves all of it for every tool and every
+  audience. The root carries no resource member, so an `aud` value
+  equal to the entry's `resource` does not establish this by itself.
+  Where the entry's `resource` is finer than the targets a tool can
+  reach, the root carries argument constraints that confine every
+  target within it. An issuer that cannot establish this for a tool
+  at every audience MUST NOT map the entry to that tool, and never
+  maps it with the restriction removed; a requested root that needs
+  such a tool is rejected ({{request-discovery}});
 - a tool's argument constraints map to the entry's `constraints`,
   compared under the specification-defined Common Constraint value-space rules
   ({{I-D.draft-mcguinness-oauth-mission}}) for specification-defined constraint
@@ -320,7 +325,7 @@ The root's authority MUST be within the Mission's approved authority
 under this mapping and the issuance profile's subset rule. An auditor
 verifies that a root is within the Authority Set by applying this same
 mapping in reverse: each root tool and argument constraint traces to a
-permitted entry action and constraint.
+permitted entry action, target restriction and constraint.
 
 # Requesting a Root and Discovery {#request-discovery}
 
@@ -866,6 +871,12 @@ this document, {{request-discovery}}.
   within the entry's `resource`; equal `resource` and `aud` values do
   not establish this alone, and an entry finer than the reachable
   targets is confined by argument constraints or not mapped (#1276).
+
+- Deriving the Root from the Authority Set: the preserved target
+  restriction includes the entry's `resource_match` and holds for every
+  tool and every audience; an issuer that cannot establish it for a
+  tool does not map the entry to that tool, and the reverse mapping
+  traces each tool to the entry's target restriction (#1276).
 
 # Acknowledgments
 {:numbered="false"}
