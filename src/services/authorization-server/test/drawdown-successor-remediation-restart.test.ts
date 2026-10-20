@@ -194,7 +194,7 @@ describe("drawdown successor remediation at build (@spec expansion#verification-
     }
   });
 
-  it("reports, and neither revokes nor expires, a drawdown whose actor names no client, whose successor and actor share a foreign issuer, whose successor alone is foreign, or whose predecessor is another issuer's", async () => {
+  it("reports, and neither revokes nor expires, a drawdown whose actor names no client, whose successor and actor share a foreign issuer, whose successor alone is foreign, whose predecessor is another issuer's or missing, which lacks its predecessor's client, or which the predecessor's supersession does not name", async () => {
     const dir = mkdtempSync(join(tmpdir(), "drawdown-remediation-provenance-"));
     dirs.push(dir);
     const file = join(dir, "kernel.db");
@@ -237,6 +237,21 @@ describe("drawdown successor remediation at build (@spec expansion#verification-
     const pForeign = seed.predecessor();
     const foreignPredecessor = seed.drawdown(pForeign.id, other);
     setIssuer(pForeign.id, FOREIGN);
+    // The predecessor link names no record.
+    const pUnlinked = seed.predecessor();
+    const unlinked = seed.drawdown(pUnlinked.id, other);
+    first.kernel.db.prepare("UPDATE missions SET predecessor = ? WHERE id = ?").run("msn_missing", unlinked);
+    // The successor does not carry its predecessor's client.
+    const pReassigned = seed.predecessor();
+    const reassigned = seed.drawdown(pReassigned.id, other);
+    first.kernel.db.prepare("UPDATE missions SET client_id = ? WHERE id = ?").run("another-client", reassigned);
+    // The predecessor's supersession names another Mission.
+    const pMisnamed = seed.predecessor();
+    const misnamed = seed.drawdown(pMisnamed.id, other);
+    const misnamedTermination = { ...(first.kernel.get(pMisnamed.id) as MissionRecord).termination, successor: "msn_other" };
+    first.kernel.db
+      .prepare("UPDATE missions SET termination_json = ? WHERE id = ?")
+      .run(JSON.stringify(misnamedTermination), pMisnamed.id);
     // A consistent target beside them, so the sweep demonstrably ran.
     const pTarget = seed.predecessor();
     const target = seed.drawdown(pTarget.id, other);
@@ -248,7 +263,7 @@ describe("drawdown successor remediation at build (@spec expansion#verification-
     try {
       const report = second.startupRemediation.drawdownSuccessors;
       expect(report.revoked).toEqual([target]);
-      for (const id of [noClient, foreignPair, foreignSuccessor, foreignPredecessor]) {
+      for (const id of [noClient, foreignPair, foreignSuccessor, foreignPredecessor, unlinked, reassigned, misnamed]) {
         expect(second.kernel.get(id), id).toEqual(before.get(id));
       }
       expect(report.unresolved).toEqual(
@@ -257,9 +272,12 @@ describe("drawdown successor remediation at build (@spec expansion#verification-
           { successorId: foreignPair, clientId: OTHER, reason: "the successor or its activation actor is not this issuer's" },
           { successorId: foreignSuccessor, clientId: OTHER, reason: "the successor or its activation actor is not this issuer's" },
           { successorId: foreignPredecessor, clientId: OTHER, reason: "the predecessor is not this issuer's" },
+          { successorId: unlinked, clientId: OTHER, reason: "the predecessor record is missing" },
+          { successorId: reassigned, clientId: OTHER, reason: "the successor does not carry the predecessor's client" },
+          { successorId: misnamed, clientId: OTHER, reason: "the predecessor's supersession does not name the successor" },
         ]),
       );
-      expect(report.unresolved).toHaveLength(4);
+      expect(report.unresolved).toHaveLength(7);
     } finally {
       second.kernel.close();
     }
