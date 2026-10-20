@@ -1713,6 +1713,9 @@ a delegation notice, and a `delegation` risk dimension. The client
 proposed `invoices.*`, which the authorization server narrowed to
 `invoices.read`, so the read element's `narrowed_from` renders that
 narrowing; the write entry is derived as proposed and carries none.
+This example chooses the `narrowed_from` member to show the
+proposed-versus-granted distinction inside the committed disclosure;
+this document defines no interoperable member by that name.
 The write entry warrants a material notice and an `irreversibility`
 risk dimension because posted journal entries are not automatically
 reversible; `constraint_provenance` attributes the `max_amount`
