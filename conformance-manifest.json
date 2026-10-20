@@ -67,8 +67,8 @@
     "content_sha256": "748baa5b01e2e8052eba9d7ba14358140eb6790f2f78990a4b466fcd75d8f5f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "9fe5cf73565c3055bfa4b232a69c36b73e0cc47a",
-    "content_sha256": "e165f0171e1a7827c7962d2a729b2e5782b74f27124073ef490e3712f40c5ece"
+    "revision": "cf223d11d0d6ef1830f83d5c69e85a6ef2851431",
+    "content_sha256": "72efbb9ffb822d64a1477beab65ad420d601e7ab492de836c0285ab1bffec15b"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
@@ -87,8 +87,8 @@
     "content_sha256": "3174fa1ab1b9b76c260e561a7d036e61f599d50f9543356ffa6f96d92d8ef946"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
+    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
+    "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "228b8f3a7696d06e1d52f149140f487d3bf2837d",
@@ -139,8 +139,8 @@
     "content_sha256": "96fe0378b56daecb3bebd073d4f9b723bac2a5d280d9380ce4e3d006e55c174d"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "9fed26c01952abd13356bc1f0f2e4c886a566b0355fee21148e5f0e67d74f3db"
+    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
+    "content_sha256": "0cf5d28c251f983b6739f42810e79f1e784fc35f029e2de7f5baf14889432579"
    }
   }
  },
@@ -2994,7 +2994,7 @@
    "id": "core.submission.proposal-checks-before-evidence",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-processing",
-   "text": "Validate any authority proposal: refuse an entry of a type the AS does not support, or one that fails its type's definition or an advertised schema, with `invalid_authorization_details`, and a proposed entry whose `resource` is not among the Intent's `target_resources`, with `invalid_request`",
+   "text": "Validate any authority proposal: refuse an entry of a type the AS does not support, or one that fails its type's definition or a schema advertised for it or established out of band, with `invalid_authorization_details`, and a proposed entry whose `resource` is not among the Intent's `target_resources`, with `invalid_request`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -42545,7 +42545,7 @@
    "id": "evidence.intent-admission.intent-hash-equality",
    "spec": "draft-mcguinness-mission-evidence-envelope.md",
    "anchor": "intent-admission-verification",
-   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 3",
+   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 4",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -51605,7 +51605,7 @@
    "id": "device-authorization.request.validate-before-device-code",
    "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
    "anchor": "request",
-   "text": "The AS MUST complete steps 1 to 5 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
+   "text": "The AS MUST complete steps 1 to 6 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
