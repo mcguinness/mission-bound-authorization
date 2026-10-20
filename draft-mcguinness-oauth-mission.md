@@ -2153,6 +2153,7 @@ The transitions are:
 | (none) | approval event | `active` | |
 | `active` | revoke | `terminated` | `revoked` |
 | `active` | `expires_at` reached | `terminated` | `expired` |
+{: title="Mission lifecycle transitions"}
 
 The Mission Lifecycle States registry ({{iana-lifecycle-states}})
 holds these states, and the Mission Termination Reasons registry
@@ -2888,6 +2889,7 @@ row names a type specification, it is the one for
 |---|---|---|
 | `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
 | per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
+{: title="Enforcement of an entry's resource, actions, and constraints"}
 
 ## Remediation Grains {#remediation-grains}
 
