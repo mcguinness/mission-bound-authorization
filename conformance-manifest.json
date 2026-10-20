@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7bbf402cf05aefed8d168a52fe525fb9769f3f68",
-    "content_sha256": "83299861b7862c0c09e0c8ed4684e9ccd92abcc6565fdd3ae2ef700e3f9ca5c0"
+    "revision": "e6c051cbc87b05b1f716b3fffdb5cc2b06fc9065",
+    "content_sha256": "b5dc8bdeb212bbb025a7e05a41a51e341c1de35bb206713aed99f2d6244f624e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -103,8 +103,8 @@
     "content_sha256": "8678e27c2e3a04e75bd7aaf5073b83036ac765a716a516887caa2ba031791f4d"
    },
    "draft-mcguinness-mission-capability-binding.md": {
-    "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
-    "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
+    "revision": "6e41fd77f3cf1e26452095429b90416ff33c9b2f",
+    "content_sha256": "530313aecfe059cff644c555e00e0fd4dddb909303cb3cfcbf2fac75707978c7"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
     "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
@@ -1845,6 +1845,138 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "capability-binding.approval.resolve-before-rendering",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "resolve each catalog-sourced action's binding from its trusted catalog or configuration together with the candidate Authority Set, before the approval rendering, so the Approver consents to the concrete bindings",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-what-each-action-authorizes",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "what invoking it authorizes, in terms the Approver can act on",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering presents, per bound action, the tool or operation identity, what it authorizes, its source, its publisher (or that the publisher is unknown or the identity is the source's own claim), and that a later definition change is refused; the visible facts agree with the committed binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.raw-metadata-insufficient",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "A digest or URI alone does not satisfy item 2. The validating server retains the exact machine binding, and renders catalog-supplied text, such as a tool's description, as inert content",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.revalidate-at-decision",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "at the approval decision, revalidate each binding against the current source before the Mission is created, treating a changed binding as a change to the derived Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.commit-consented-bindings",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "commit exactly the bindings of the candidate the Approver consented to, never a binding resolved afresh at the commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the committed capability_sources equal the bindings of the consented candidate, and no binding is resolved afresh at the commit"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.unrelated-edit-not-a-change",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "A catalog edit that changes neither is not a binding change, unless it changes another approval input",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded, and does when one was"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
   },
   {
    "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
