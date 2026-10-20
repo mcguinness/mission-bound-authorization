@@ -14430,7 +14430,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test. #818 slice 1 adds EvaluateOptions.missionBoundOnlyClasses, which the MAS pilot's gateway uses to deny a joined credential in the high-consequence classes before the join runs (src/services/pdp/test/evaluate-join-mapping.test.ts, src/demo/test/mas-pilot.test.ts). The reference claims no mas.enterprise capability and builds no Join Assertion, so this row stays todo."
   },
   {
    "id": "mas.join.assertion-below-tier",
@@ -14667,7 +14667,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "evaluate() (services/pdp/src/evaluate.ts step 4b) itself calls resolveBaselineJoin when the decision request carries context.mission_join, comparing the authenticated subject {iss, sub} (req.subject.id/properties.iss, already-verified request facts) against the loaded MissionView's own subject by byte-equality; a mismatch on either member denies mission_binding_failed as a genuine PDP Decision. Resolved IN the PDP (#557 review point 1), not by a PEP-side helper call the PDP never observes: the PEP no longer calls resolveBaselineJoin directly (src/services/mcp-payments/src/pep.ts)",
-    "local": "the same-namespace case only: an account-mapping contract for a differing AS/MAS subject namespace is not implemented (a deployment would supply an already-mapped subject to the resolver, per its own documented mapping)"
+    "local": "without a mapping contract the PDP compares the issuer-qualified pair by byte equality (the shared-namespace demo); under one (EvaluateOptions.joinMapping, #818) it first maps the subject qualified by context.credential.issuer, and a subject the contract does not resolve (uncovered, disabled, stale, or for another Mission Issuer) denies mission_binding_failed. The MAS pilot's contract store is src/demo/src/mas-pilot/mapping-contract.ts"
    },
    "level": "unit",
    "coverage": "tested",
@@ -14701,9 +14701,27 @@
      "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > denies mission_binding_failed when the authenticated subject does not match the Mission's subject",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > permits an estate credential whose issuer-qualified subject and client the contract maps to the Mission's own",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > denies mission_binding_failed for an estate subject the contract does not cover, even though its client maps",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > never conflates an estate subject whose sub string equals the Mission subject's: the contract maps it to another person",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. observation.local: cross-namespace account mapping is out of scope for this resolver (see PR body). #557 review point 1: the join relocated from a PEP-side helper call into evaluate() itself; evaluate-mission-join.test.ts exercises evaluate() directly with context.mission_join set, proving the PDP resolves this, not merely that the pure resolver function is correct in isolation."
+   "notes": "#557. observation.local: cross-namespace account mapping is out of scope for this resolver (see PR body). #557 review point 1: the join relocated from a PEP-side helper call into evaluate() itself; evaluate-mission-join.test.ts exercises evaluate() directly with context.mission_join set, proving the PDP resolves this, not merely that the pure resolver function is correct in isolation. #818 slice 1: the cross-namespace case is witnessed at the PDP (evaluate-join-mapping.test.ts) and end to end at the MAS pilot's gateway against a separate estate issuer (src/demo/test/mas-pilot.test.ts); each new test was proved by a defect that makes its assertion fail."
   },
   {
    "id": "mas.baseline-join.client-join",
@@ -14720,7 +14738,8 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_binding_failed -- never a default admission"
+    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_binding_failed -- never a default admission",
+    "local": "under a mapping contract (EvaluateOptions.joinMapping, #818) the compared client is the contract's resolution of the client qualified by context.credential.issuer, never the presented string; without one, the client is compared by equality (the shared-namespace demo)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -14754,9 +14773,15 @@
      "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > denies mission_binding_failed for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > never conflates an estate client whose identifier string equals the Mission's client_id: only the contract's resolution is compared",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin."
+   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin. #818 slice 1: an estate client registered under the Mission's own client_id string is denied at the PDP (evaluate-join-mapping.test.ts) and at the MAS pilot's gateway (src/demo/test/mas-pilot.test.ts)."
   },
   {
    "id": "mas.baseline-join.delegate-narrowing",
@@ -14951,9 +14976,15 @@
      "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > refuses unknown_mission, before any decision, for a referenced Mission that does not resolve at all",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > denies mission_binding_failed for an estate subject the contract does not cover, even though its client maps",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. DenialReason carries \"mission_binding_failed\" (services/pdp/src/evaluate.ts), the AuthZEN profile's classification for a failed external-binding join, which replaced the MAS-only mission_mismatch (#972 item 27b, D289); distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined."
+   "notes": "#557. DenialReason carries \"mission_binding_failed\" (services/pdp/src/evaluate.ts), the AuthZEN profile's classification for a failed external-binding join, which replaced the MAS-only mission_mismatch (#972 item 27b, D289); distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined. #818 slice 1: an unresolved mapping denies without falling back to the Mission's own identities (the proving defect substituted them)."
   },
   {
    "id": "mas.baseline-join.authority-from-mission",

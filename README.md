@@ -331,6 +331,10 @@ plus a runtime PEP and PDP on the payments resource. The abstract Mission
 substrate supplies no common token format or authority vocabulary; both
 deployments use the OAuth binding's Mission-bound tokens and
 `mission_resource_access` entries.
+[`src/docs/mas-pilot-deployment.md`](src/docs/mas-pilot-deployment.md)
+records the first evidence slice of the second reference path (#818):
+ordinary tokens from a separate estate issuer, joined to Missions at a
+gateway under a versioned mapping contract.
 [`conformance-manifest.json`](conformance-manifest.json) maps each
 inventoried requirement in its audited specification set to tested,
 partial, or todo coverage.

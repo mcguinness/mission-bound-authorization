@@ -55,6 +55,34 @@ sub-agent. Delegation itself is opt-in and off in both baselines.
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next designation.
 
+## `mas-pilot.json`
+
+The MAS pilot's deployment configuration (`@spec
+authority-server#mapping-contract`, #818, D284, D508): the estate
+authorization server's issuer, port, directory accounts, client
+registrations and resource vocabulary; the mapping cache's staleness bound;
+the action classes the gateway reserves for Mission-bound credentials; the
+initial mapping contract version; the route table; and the
+consequential-path inventory. Read by its own strict loader
+(`demo/src/mas-pilot/config.ts`), not at boot by `@mission/demo-data`: only
+the pilot composition reads it. [`docs/mas-pilot-deployment.md`](../docs/mas-pilot-deployment.md)
+is the pilot's contract.
+
+- **Owner.** The estate's identity owner for the accounts, clients and
+  mapping rows; the payments resource's operator for the inventory and the
+  reserved classes.
+- **Integrity.** Repository review and the strict loaders: the configuration
+  loader refuses unknown or missing members, a duplicate client, an estate
+  issuer equal to the Mission Issuer and a resource other than the payments
+  resource; the contract loader refuses an ambiguous mapping (a second row
+  for one issuer-qualified estate subject or client), a claimed
+  client-instance mapping and any failure semantics but
+  `mission_binding_failed`. Client secrets and signing keys are generated at
+  each boot and never configured.
+- **Updating.** A new contract version is installed into the running cache
+  (`MappingContractCache.install`), which refuses a version at or below the
+  installed one. The file's version is the one installed at composition.
+
 ## `scope-projection.json`
 
 The trusted scope-projection mapping (`@spec mission#scope-projection`, step
