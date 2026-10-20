@@ -1236,9 +1236,9 @@ The AS processes a submission in this order:
 3. Validate any authority proposal: refuse an entry of a type the AS
    does not support, or one that fails its type's definition or a
    schema advertised for it or established out of band, with
-   `invalid_authorization_details`, and a proposed entry whose
-   `resource` is not among the Intent's `target_resources`, with
-   `invalid_request` ({{authority-proposal}}).
+   `invalid_authorization_details`, and a proposed entry that carries a
+   `resource` member whose value is not among the Intent's
+   `target_resources`, with `invalid_request` ({{authority-proposal}}).
 4. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
 5. Apply any submission checks that configured admission policy or
@@ -1252,10 +1252,11 @@ The AS processes a submission in this order:
    presented entry under its type's rules
    ({{intent-submission-evidence}}).
 7. Apply admission policy and derive the Authority Set independently
-   ({{authorization-derivation}}), including each entry's
-   `target_resources` membership ({{derivation-modes}}) and, where a
-   proposal was submitted, that each derived entry is a same-type
-   subset of a proposed entry ({{authority-proposal}}).
+   ({{authorization-derivation}}), including the `target_resources`
+   membership of each entry that carries a `resource` member
+   ({{derivation-modes}}) and, where a proposal was submitted, that
+   each derived entry is a same-type subset of a proposed entry
+   ({{authority-proposal}}).
 8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
