@@ -37872,7 +37872,8 @@
    },
    "level": "endpoint",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "#1377. The reference declares no transformation capability for this type in any carrier, yet projects scope for it, so it does not apply this undeclared fallback. Inventory: src/docs/resource-access-transformation-capabilities.md (sections 1 and 4)."
   },
   {
    "id": "resource-access.conformance.rs-role-independent-of-as-duties",
@@ -39457,7 +39458,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped."
+   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped. #1377: the inventory of every rule a narrowing declaration would claim, which makes no declaration, is src/docs/resource-access-transformation-capabilities.md; any declaration awaits the owner ruling #1377 asks for."
   },
   {
    "id": "resource-access.transformation-capabilities.undeclared-per-carrier",
@@ -39481,7 +39482,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities)."
+   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities). #1377: no carrier declares any capability for this type, so no carrier order is exercised; inventory: src/docs/resource-access-transformation-capabilities.md (section 1)."
   },
   {
    "id": "resource-access.transformation-capabilities.scope-only-refusal-conditional",
@@ -39505,7 +39506,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped."
+   "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped. #1377: the reference projects this type without a declaration, so this undeclared-projection path is not implemented; inventory: src/docs/resource-access-transformation-capabilities.md (section 4)."
   },
   {
    "id": "resource-access.type.resource-absolute-uri",
