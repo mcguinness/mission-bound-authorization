@@ -7,14 +7,19 @@ import {
   activateGovernedPolicy,
   AGR_JWS_CTY,
   AGR_JWS_TYP,
+  type AgrAssertion,
   type ApprovalGovernanceRecord,
   ApprovalGovernanceError,
   approvalGovernanceRecordDigest,
+  assertAccountableApprover,
+  assertAssertionAuthority,
+  assertGovernedPolicyRecord,
   type AuthorityEntry,
   MissionKernel,
   type MissionRecord,
   recordGovernedPolicyConsent,
   signApprovalGovernanceRecord,
+  type UnsignedApprovalGovernanceRecord,
   validateMissionIntent,
   verifyApprovalGovernanceRecord,
 } from "../src/index.js";
@@ -154,10 +159,19 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
     expect(() => verifyAgainst({ ...record, envelope: { format: "jws-compact", value: envelopeWith(header, other) } })).toThrow(
       /signature does not verify/,
     );
+    const { cty: _c, ...noCty } = header;
+    const { typ: _t, ...noTyp } = header;
     for (const wrong of [
       { ...header, typ: "JWT" },
       { ...header, cty: "application/json" },
       { alg: "ES256", kid: "as-status" },
+      noCty,
+      noTyp,
+      { ...header, typ: "" },
+      { ...header, cty: "mission-approval-governance+json; charset=utf-8" },
+      { ...header, typ: "application/mission-approval-governance+jwt" },
+      { ...header, typ: "text/mission-approval-governance+jws" },
+      { ...header, typ: AGR_JWS_CTY, cty: AGR_JWS_TYP },
     ]) {
       expect(() => verifyAgainst({ ...record, envelope: { format: "jws-compact", value: envelopeWith(wrong) } })).toThrow(
         /typ and cty/,
@@ -165,6 +179,33 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
     }
     // A correctly formed envelope over the same record verifies.
     expect(() => verifyAgainst({ ...record, envelope: { format: "jws-compact", value: envelopeWith(header) } })).not.toThrow();
+  });
+
+  it("emits the typ and cty the registered media types abbreviate, with application/ omitted", () => {
+    const [h] = record.envelope.value.split(".") as [string];
+    const header = JSON.parse(Buffer.from(h, "base64url").toString("utf8")) as Record<string, unknown>;
+    expect(header.typ).toBe("mission-approval-governance+jws");
+    expect(header.cty).toBe("mission-approval-governance+json");
+  });
+
+  it("accepts the application/ forms and case variants of typ and cty, leaving the signed record and its digest as retained", () => {
+    for (const [typ, cty] of [
+      ["application/mission-approval-governance+jws", "application/mission-approval-governance+json"],
+      ["application/mission-approval-governance+jws", "mission-approval-governance+json"],
+      ["Mission-Approval-Governance+JWS", "APPLICATION/Mission-Approval-Governance+JSON"],
+    ]) {
+      const signed: ApprovalGovernanceRecord = {
+        ...record,
+        envelope: { format: "jws-compact", value: envelopeWith({ alg: "ES256", kid: "as-status", typ, cty }) },
+      };
+      const before = JSON.stringify(signed);
+      const digest = approvalGovernanceRecordDigest(signed);
+      expect(verifyAgainst(signed)).toBe(signed);
+      expect(JSON.stringify(signed)).toBe(before);
+      expect(approvalGovernanceRecordDigest(signed)).toBe(digest);
+      const [h] = signed.envelope.value.split(".") as [string];
+      expect(JSON.parse(Buffer.from(h, "base64url").toString("utf8"))).toMatchObject({ typ, cty });
+    }
   });
 
   it("rejects an unsupported envelope format rather than accepting it unverified", () => {
@@ -192,5 +233,161 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
     expect(resigned.envelope.value).not.toBe(record.envelope.value);
     expect(() => verifyAgainst(resigned)).not.toThrow();
     expect(approvalGovernanceRecordDigest(resigned)).not.toBe(expected);
+  });
+});
+
+/** Fixtures for the per-basis and per-kind rules, on typed `authority` objects. */
+const ALICE = { iss: "https://idp.test", sub: "alice" };
+const CFO = { iss: "https://idp.test", sub: "cfo" };
+const humanBy = (assertion_id: string, principal = ALICE, decision: "approve" | "deny" = "approve"): AgrAssertion => ({
+  assertion_id,
+  principal,
+  kind: "human",
+  decision,
+  decided_at: "2026-07-01T00:00:00.000Z",
+  authority: { auth_time: "2026-06-30T23:59:00.000Z", acr: "urn:example:acr:phr", amr: ["hwk"] },
+});
+const policyBy = (assertion_id: string, principal = CFO, policy_id = "urn:policy:dlg"): AgrAssertion => ({
+  assertion_id,
+  principal,
+  kind: "policy",
+  decision: "approve",
+  decided_at: "2026-07-01T00:00:00.000Z",
+  authority: { policy_id, version: "7", approved_at: "2026-06-01T00:00:00.000Z" },
+});
+const serviceBy = (assertion_id: string, principal = { iss: ISS, sub: "model:judge" }): AgrAssertion => ({
+  assertion_id,
+  principal,
+  kind: "service",
+  decision: "approve",
+  decided_at: "2026-07-01T00:00:00.000Z",
+  authority: { logic_id: "judge", logic_version: "3", model_id: "judge", model_version: "3" },
+});
+const recordWith = (assertions: AgrAssertion[]): UnsignedApprovalGovernanceRecord => {
+  const { envelope: _e, ...unsigned } = record;
+  return {
+    ...unsigned,
+    assertions,
+    evaluation: { ...unsigned.evaluation, contributing: assertions.map((a) => a.assertion_id) },
+  };
+};
+const directBasis = {
+  type: "direct" as const,
+  consent_principal: ALICE,
+  activation: { approval_event_id: "ape-direct" },
+  activation_actor: ALICE,
+  root_commitment: "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+};
+
+describe("accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion)", () => {
+  it("direct: accepts exactly one human approve assertion of consent_principal beside contributing policy and service assertions", () => {
+    const alice = humanBy("ast_alice");
+    expect(assertAccountableApprover(recordWith([alice, policyBy("ast_dlg"), serviceBy("ast_judge")]), directBasis)).toEqual(alice);
+  });
+
+  it("direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all", () => {
+    for (const assertions of [
+      [policyBy("ast_p", ALICE)],
+      [serviceBy("ast_s", ALICE)],
+      [humanBy("ast_1"), humanBy("ast_2")],
+      [humanBy("ast_1", ALICE, "deny")],
+      [humanBy("ast_1", CFO)],
+    ]) {
+      expect(() => assertAccountableApprover(recordWith(assertions), directBasis)).toThrow(
+        /direct record: exactly one approve assertion of kind human/,
+      );
+    }
+  });
+
+  it("governed_policy: counts only the consent principal's policy assertion that names the deciding policy", () => {
+    if (mission.approval_basis.type !== "governed_policy") throw new Error("basis");
+    const basis = mission.approval_basis;
+    const accountable = record.assertions.find((a) => a.kind === "policy") as AgrAssertion;
+    // The same human's policy assertion under another policy contributes without matching.
+    const other = { ...accountable, assertion_id: "ast_other", authority: { ...accountable.authority, policy_id: "urn:policy:other" } };
+    expect(assertAccountableApprover(recordWith([accountable, other]), basis)).toEqual(accountable);
+    // Two assertions naming the deciding policy, or a human approval in its place, are refused.
+    for (const assertions of [
+      [accountable, { ...accountable, assertion_id: "ast_twice" }],
+      [{ ...accountable, kind: "human" as const }],
+      [{ ...accountable, kind: "service" as const }],
+    ]) {
+      expect(() => assertAccountableApprover(recordWith(assertions), basis)).toThrow(
+        /governed_policy record: exactly one approve assertion of kind policy/,
+      );
+    }
+  });
+
+  it("other standing-consent bases: the approval_basis stands in, so no assertion is required or matched", () => {
+    for (const type of ["template", "policy_drawdown", "ceiling_drawdown"] as const) {
+      const basis = { ...directBasis, type, approved_at: "2026-06-01T00:00:00.000Z" } as never;
+      expect(assertAccountableApprover(recordWith([serviceBy("ast_judge")]), basis)).toBeUndefined();
+      expect(assertAccountableApprover(recordWith([policyBy("ast_dlg", ALICE), humanBy("ast_alice")]), basis)).toBeUndefined();
+    }
+  });
+});
+
+describe("assertion authority by kind (@spec approval-governance#assertion-authority)", () => {
+  const withAuthority = (a: AgrAssertion, authority: Record<string, unknown>): AgrAssertion =>
+    ({ ...a, authority }) as AgrAssertion;
+
+  it("accepts the typed members of each kind: human authentication, policy version and approval, service logic and model", () => {
+    for (const a of [
+      humanBy("ast_h"),
+      withAuthority(humanBy("ast_h_min"), { auth_time: "2026-06-30T23:59:00Z" }),
+      policyBy("ast_p"),
+      withAuthority(policyBy("ast_p_by"), { ...policyBy("x").authority, approved_by: CFO }),
+      serviceBy("ast_s"),
+      withAuthority(serviceBy("ast_s_rules"), { logic_id: "dlg-rules", logic_version: "12" }),
+    ]) {
+      expect(() => assertAssertionAuthority(a)).not.toThrow();
+    }
+  });
+
+  it("refuses a missing or mistyped member of each kind", () => {
+    const { auth_time: _t, ...noAuthTime } = humanBy("x").authority;
+    const { policy_id: _i, ...noPolicyId } = policyBy("x").authority;
+    const { version: _v, ...noVersion } = policyBy("x").authority;
+    const { approved_at: _a, ...noApprovedAt } = policyBy("x").authority;
+    const { logic_id: _l, ...noLogicId } = serviceBy("x").authority;
+    const { logic_version: _lv, ...noLogicVersion } = serviceBy("x").authority;
+    for (const [a, why] of [
+      [withAuthority(humanBy("h1"), noAuthTime), /auth_time/],
+      [withAuthority(humanBy("h2"), { auth_time: "yesterday" }), /auth_time/],
+      [withAuthority(humanBy("h3"), { auth_time: "2026-06-30T23:59:00Z", acr: 5 }), /acr/],
+      [withAuthority(humanBy("h4"), { auth_time: "2026-06-30T23:59:00Z", amr: "hwk" }), /amr/],
+      [withAuthority(policyBy("p1"), noPolicyId), /policy_id and version/],
+      [withAuthority(policyBy("p2"), noVersion), /policy_id and version/],
+      [withAuthority(policyBy("p3"), noApprovedAt), /approved_at/],
+      [withAuthority(policyBy("p4"), { ...policyBy("x").authority, approved_at: "2026-06-01" }), /approved_at/],
+      [withAuthority(serviceBy("s1"), noLogicId), /logic_id and logic_version/],
+      [withAuthority(serviceBy("s2"), noLogicVersion), /logic_id and logic_version/],
+      [withAuthority(serviceBy("s3"), { logic_id: "judge", logic_version: "3", model_id: "judge" }), /model_id and model_version/],
+      [{ ...humanBy("n1"), authority: null } as unknown as AgrAssertion, /not an object/],
+    ] as const) {
+      expect(() => assertAssertionAuthority(a)).toThrow(why);
+    }
+  });
+
+  it("refuses an approved_by that differs from the policy assertion's principal", () => {
+    const by = (approved_by: unknown) => withAuthority(policyBy("ast_p"), { ...policyBy("x").authority, approved_by });
+    expect(() => assertAssertionAuthority(by(CFO))).not.toThrow();
+    for (const other of [ALICE, { iss: "https://login.test", sub: "cfo" }, null, "cfo"]) {
+      expect(() => assertAssertionAuthority(by(other))).toThrow(/approved_by is not the assertion's principal/);
+    }
+  });
+
+  it("is enforced at the governed_policy commit gate, before the record is signed", () => {
+    if (mission.approval_basis.type !== "governed_policy") throw new Error("basis");
+    const { envelope: _e, ...unsigned } = record;
+    const accountable = unsigned.assertions[0] as AgrAssertion;
+    const withBy = (approved_by: unknown): UnsignedApprovalGovernanceRecord => ({
+      ...unsigned,
+      assertions: [withAuthority(accountable, { ...accountable.authority, approved_by })],
+    });
+    expect(() => assertGovernedPolicyRecord(withBy(accountable.principal), mission.approval_basis as never)).not.toThrow();
+    expect(() => assertGovernedPolicyRecord(withBy({ iss: ISS, sub: "mallory" }), mission.approval_basis as never)).toThrow(
+      /governed_policy record: assertion ast_policy authority: approved_by/,
+    );
   });
 });
