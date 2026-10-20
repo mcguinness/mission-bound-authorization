@@ -6886,6 +6886,14 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1410): Error and Challenge Mapping is four tables by
+  surface: failures on more than one surface first, then PAR and the
+  authorization endpoint, Token Exchange, and protected-resource
+  challenges. The early-PAR rule sits above the tables. Rows that state
+  a rule elsewhere cite it, the Mission Identifier mismatch refusal of
+  Establishing and Resolving a Binding has a row, and the list of rules
+  that name these codes is complete. No requirement changes.
+
 - Editorial (#1409): Terminology defines Authority Set derivation and
   derivation (one issuance operation). The Implementation Map lists
   termination on an authorized revocation among the Mission Issuer's
