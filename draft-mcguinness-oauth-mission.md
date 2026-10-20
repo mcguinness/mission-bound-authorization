@@ -6930,6 +6930,10 @@ Cross-Domain:
 
 -01
 
+- Direct Approval Steps (#1447, D584): the rendering rules point to
+  Mission Capability Binding for what the approval presents about a
+  catalog-sourced action's source binding.
+
 - Submission processing (#1411, D559): Submission Processing Order
   validates an authority proposal's type, schema, and
   `target_resources` membership after the Intent and before evidence,
