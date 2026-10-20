@@ -68,6 +68,7 @@ import {
   type WriteReservationScope,
 } from "./pep.js";
 import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
+import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 import {
@@ -118,6 +119,24 @@ export class TokenAudienceError extends Error {
  * issuer, audience, `cnf` and the proof are checked before this. A credential in
  * any other format throws: it is refused, not interpreted.
  */
+/**
+ * @spec authority-server#mission-join (#818 slice 3): the token profile an
+ * introspected opaque access token is validated under, as the boundary's
+ * audience rule names profiles (an alias declared for it applies).
+ */
+export const INTROSPECTED_TOKEN_PROFILE = "token-introspection";
+
+/** A compact JWS: three dot-separated segments whose first decodes as a protected header. */
+function isCompactJws(token: string): boolean {
+  if (token.split(".").length !== 3) return false;
+  try {
+    decodeProtectedHeader(token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function assertEstateAccessToken(typ: unknown, payload: JWTPayload): void {
   if (typeof typ !== "string" || typ.toLowerCase() !== "at+jwt") throw new Error("unsupported credential format");
   for (const claim of ["sub", "client_id", "jti"] as const) {
@@ -444,6 +463,14 @@ export interface McpServerDeps {
    * false: `issuer` is the Mission Issuer, unchanged.
    */
   ordinaryOnly?: boolean;
+  /**
+   * @spec authority-server#mission-join rule 8 (#818 slice 3; RFC 7662): an
+   * estate route (`ordinaryOnly`) that also accepts OPAQUE access tokens,
+   * validating each by introspection at `issuer` (`introspection.ts`). A
+   * compact JWS still takes the JWT path. Absent: opaque tokens are refused,
+   * as before.
+   */
+  introspection?: IntrospectionSettings;
   /** Transaction-assurance tier (M5); omit for a core-tier-only server. */
   transaction?: { engine: TransactionEngine; connectors: Connectors; evidence: EvidenceStore };
   /**
@@ -548,6 +575,8 @@ export class McpPaymentsServer {
   private readonly txnConsumption: TxnConsumptionStore;
   /** @spec RFC 9449 §11.1 — this resource's DPoP proof `jti` replay window. */
   private readonly dpopReplay: DpopProofReplay;
+  /** @spec RFC 7662 (#818 slice 3): the estate route's introspection adapter, when configured. */
+  private readonly introspector?: TokenIntrospector;
   constructor(private readonly deps: McpServerDeps) {
     if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
     const pinned = roleKeyResolvers(deps.keyRoles, {
@@ -561,6 +590,12 @@ export class McpPaymentsServer {
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
     this.dpopReplay = deps.dpopReplay ?? newDpopProofReplay();
+    if (deps.introspection) {
+      // Introspection reads an estate token's facts; only an estate route,
+      // whose issuer mints no Mission-bound credential, accepts one this way.
+      if (!deps.ordinaryOnly) throw new Error("introspection is configured only on an ordinaryOnly (estate) route");
+      this.introspector = new TokenIntrospector(deps.introspection, deps.issuer);
+    }
     assertPermitLifetimeCoverage(deps.enforcementScopeStatement ?? RUNTIME_POSTURE, deps.writeReservations);
   }
 
@@ -820,6 +855,12 @@ export class McpPaymentsServer {
     pop: DpopPresentation,
     admitsOrdinary: boolean,
   ): Promise<TokenFacts> {
+    // @spec authority-server#mission-join (#818 slice 3; RFC 7662): on an
+    // estate route that introspects, an opaque token's facts come from the
+    // estate's introspection response instead of a verified signature.
+    if (this.introspector && admitsOrdinary && !isCompactJws(accessToken)) {
+      return this.introspectedFactsFrom(this.introspector, accessToken, pop);
+    }
     const { payload, typ, cnfJkt, validated } = await this.verifyDpopBoundToken(accessToken, pop.proof, pop.htu, pop.htm);
     if (payload.mission !== undefined) return this.missionBoundFactsFrom(payload, typ, validated);
     if (!admitsOrdinary) throw new Error("token missing mission claim");
@@ -828,6 +869,39 @@ export class McpPaymentsServer {
     // else is refused here rather than read on a best-effort basis.
     if (this.deps.ordinaryOnly) assertEstateAccessToken(typ, payload);
     return this.ordinaryFactsFrom(payload, cnfJkt, validated);
+  }
+
+  /**
+   * @spec authority-server#mission-join rule 8 (#818 slice 3; RFC 7662): the
+   * ordinary facts of an opaque estate token, from its introspection: the same
+   * audience rule as a JWT (`aud` must name this boundary), the request's DPoP
+   * proof bound to the introspected `cnf.jkt` and to this token (`ath`), and
+   * the facts built exactly as the JWT path builds them, qualified by this
+   * route's own issuer (the estate), never by a value the response supplies.
+   */
+  private async introspectedFactsFrom(
+    introspector: TokenIntrospector,
+    accessToken: string,
+    pop: DpopPresentation,
+  ): Promise<OrdinaryTokenFacts> {
+    const introspected = await introspector.introspect(accessToken);
+    const payload: JWTPayload = {
+      iss: this.deps.issuer,
+      sub: introspected.sub,
+      client_id: introspected.clientId,
+      aud: introspected.aud,
+      exp: introspected.exp,
+      ...(introspected.scope !== undefined ? { scope: introspected.scope } : {}),
+    };
+    const validated = this.requireAudience(payload, INTROSPECTED_TOKEN_PROFILE, this.deps.issuer);
+    await this.verifyPresentation(accessToken, introspected.cnfJkt, pop);
+    // Admission re-reads the clock after its awaits: a token that expired
+    // while it was being introspected or its proof checked is refused here,
+    // not only at the PDP's own credential-expiry check (#1400 review).
+    if (introspected.exp * 1000 <= introspector.clock().getTime()) {
+      throw new TokenInactiveError("expired while being admitted");
+    }
+    return this.ordinaryFactsFrom(payload, introspected.cnfJkt, validated);
   }
 
   /**

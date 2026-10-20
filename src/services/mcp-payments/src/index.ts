@@ -247,3 +247,10 @@ export {
   type VerifiedCredentialClaims,
   type VerifiedMissionAccessClaims,
 } from "./token-verifier.js";
+export {
+  type IntrospectedToken,
+  type IntrospectionSettings,
+  IntrospectionUnavailableError,
+  TokenInactiveError,
+  TokenIntrospector,
+} from "./introspection.js";

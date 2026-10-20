@@ -7,9 +7,11 @@
  * its own client registry (client identifiers registered here and nowhere
  * else), and its own account directory. It issues ordinary RFC 9068 JWT access
  * tokens, DPoP-bound, carrying `scope`, `sub` and `client_id` and no `mission`
- * claim, through the authorization code grant with PKCE. RFC 7662
- * introspection is enabled, as the Enterprise profile's estate prerequisites
- * assume.
+ * claim, through the authorization code grant with PKCE. A client registered
+ * with `token_format: "opaque"` gets an opaque (non-JWT) access token instead,
+ * which a resource validates by RFC 7662 introspection: introspection is open
+ * only to the registered introspection clients, and RFC 7009 revocation lets a
+ * client revoke its own token.
  *
  * It is NOT the AS-native issuer reused: nothing here imports
  * `@mission/authorization-server`, and no Mission, kernel or approval exists
@@ -33,6 +35,15 @@ export interface EstateClientRegistration {
   scope: string;
   /** The resource indicators this client may obtain tokens for; any other is `invalid_target`. */
   resources: readonly string[];
+  /** The access token format the estate issues this client: an RFC 9068 JWT, or an opaque reference. */
+  token_format: "jwt" | "opaque";
+}
+
+/** A client the estate lets call its introspection endpoint (a resource server); it has no grants. */
+export interface EstateIntrospectionClient {
+  client_id: string;
+  /** Generated at each boot; never configured. */
+  client_secret: string;
 }
 
 export interface EstateAuthorizationServerOptions {
@@ -42,6 +53,8 @@ export interface EstateAuthorizationServerOptions {
   /** The estate account directory: account identifiers that can log in. */
   accounts: readonly string[];
   clients: readonly EstateClientRegistration[];
+  /** The resource servers allowed to introspect the estate's tokens. */
+  introspectionClients?: readonly EstateIntrospectionClient[];
   /** Resource indicator to the scope vocabulary the estate issues for it. */
   resourceServers: Readonly<Record<string, { scope: string }>>;
   /** Access token lifetime, seconds. Default 300. */
@@ -56,6 +69,10 @@ export interface EstateAuthorizationServer {
   jwks: { keys: Record<string, unknown>[] };
   /** The signing key's `kid`. */
   kid: string;
+  /** The estate's RFC 7662 introspection endpoint, as its metadata publishes it. */
+  introspectionEndpoint: string;
+  /** The estate's RFC 7009 revocation endpoint, as its metadata publishes it. */
+  revocationEndpoint: string;
   close: () => Promise<void>;
 }
 
@@ -72,19 +89,31 @@ export async function startEstateAuthorizationServer(
   const publicJwk = { ...(await exportJWK(signing.publicKey)), kid, alg: "ES256", use: "sig" };
   const accounts = new Set(opts.accounts);
   const registrations = new Map(opts.clients.map((c) => [c.client_id, c]));
+  const introspectors = new Set((opts.introspectionClients ?? []).map((c) => c.client_id));
 
   const provider = new Provider(opts.issuer, {
-    clients: opts.clients.map((c) => ({
-      client_id: c.client_id,
-      client_secret: c.client_secret,
-      grant_types: ["authorization_code"],
-      response_types: ["code"],
-      redirect_uris: [c.redirect_uri],
-      token_endpoint_auth_method: "client_secret_basic",
-      // The estate signs with ES256 only (its one key).
-      id_token_signed_response_alg: "ES256",
-      dpop_bound_access_tokens: true,
-    })),
+    clients: [
+      ...opts.clients.map((c) => ({
+        client_id: c.client_id,
+        client_secret: c.client_secret,
+        grant_types: ["authorization_code"],
+        response_types: ["code"],
+        redirect_uris: [c.redirect_uri],
+        token_endpoint_auth_method: "client_secret_basic",
+        // The estate signs with ES256 only (its one key).
+        id_token_signed_response_alg: "ES256",
+        dpop_bound_access_tokens: true,
+      })),
+      ...(opts.introspectionClients ?? []).map((c) => ({
+        client_id: c.client_id,
+        client_secret: c.client_secret,
+        grant_types: [],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "client_secret_basic",
+        id_token_signed_response_alg: "ES256",
+      })),
+    ] as never,
     jwks: { keys: [privateJwk as never] },
     cookies: { keys: [crypto.randomUUID()] },
     // Resource scopes come from each resource server's vocabulary below; the
@@ -103,7 +132,18 @@ export async function startEstateAuthorizationServer(
     features: {
       devInteractions: { enabled: false },
       dPoP: { enabled: true },
-      introspection: { enabled: true },
+      // Only a registered introspection client (a resource server) may
+      // introspect; a token's own client may not read its token's metadata.
+      introspection: {
+        enabled: true,
+        allowedPolicy: async (_ctx: KoaContextWithOIDC, client: { clientId: string }) => introspectors.has(client.clientId),
+      },
+      // A client revokes only its own tokens.
+      revocation: {
+        enabled: true,
+        allowedPolicy: async (_ctx: KoaContextWithOIDC, client: { clientId: string }, token: { clientId?: string | undefined }) =>
+          token.clientId === client.clientId,
+      },
       resourceIndicators: {
         enabled: true,
         // A request names its resource; none is assumed.
@@ -124,8 +164,9 @@ export async function startEstateAuthorizationServer(
               .join(" "),
             audience: resourceIndicator,
             accessTokenTTL: opts.accessTokenTtlSeconds ?? 300,
-            accessTokenFormat: "jwt",
-            jwt: { sign: { alg: "ES256" } },
+            ...(registration.token_format === "opaque"
+              ? { accessTokenFormat: "opaque" }
+              : { accessTokenFormat: "jwt", jwt: { sign: { alg: "ES256" } } }),
           } as ResourceServer;
         },
         useGrantedResource: () => true,
@@ -170,8 +211,11 @@ export async function startEstateAuthorizationServer(
     s.once("error", reject);
   });
 
+  const metadata = (await (await fetch(`${opts.issuer}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
   return {
     issuer: opts.issuer,
+    introspectionEndpoint: String(metadata.introspection_endpoint),
+    revocationEndpoint: String(metadata.revocation_endpoint),
     jwksUri: `${opts.issuer}/jwks`,
     jwks: { keys: [publicJwk] },
     kid,

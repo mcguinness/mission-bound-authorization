@@ -12,9 +12,10 @@
 import { randomBytes } from "node:crypto";
 import type { ActObject } from "@mission/actor-chain";
 import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { isSubsetEntry, isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import type { DelegateCandidate } from "./delegate-matcher.js";
-import { projectThroughEffective } from "./derive.js";
+import { type OriginProjection, projectThroughEffective } from "./derive.js";
+import { combineOrigins, type DelegationCandidate, retainedOrigins } from "./eligibility-provenance.js";
 import type { MissionKernel } from "./kernel.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
@@ -111,6 +112,69 @@ export function audienceScopedAuthority(
   targetAs: string,
 ): AuthorityEntry[] {
   return authoritySet.filter((e) => resourceToAs(e.resource) === targetAs);
+}
+
+/**
+ * @spec cross-domain#conveyed-delegation (#1374): whether the copy of
+ * `candidate.entry` a cross-domain grant conveys keeps its `delegation`
+ * member. The grant conveys no eligibility provenance, so a Resource AS would
+ * decide onward delegation under its own policy where the Mission Issuer's
+ * should govern. The member is kept only when the entry resolves to at least
+ * one approved entry, every retained origin is `list` (combined with
+ * {@link combineOrigins}, so a combination never selects the more permissive
+ * origin and an unresolved one stays unresolved), the conveyed member carries
+ * a committed `allowed_delegates` list, and the conveyed entry, its
+ * `delegation` included, is no broader than each approved entry it resolves
+ * to (so every inherited list restriction is preserved). An entry without
+ * `delegation` has nothing to omit.
+ */
+export function conveysDelegation(candidate: DelegationCandidate): boolean {
+  const { entry, approved } = candidate;
+  if (entry.delegation === undefined) return true;
+  if (approved.length === 0) return false;
+  if (combineOrigins(...approved.map((a) => a.origin)) !== "list") return false;
+  if (entry.delegation.allowed_delegates === undefined) return false;
+  return approved.every((a) => isSubsetEntry(entry, a.entry));
+}
+
+/**
+ * @spec cross-domain#conveyed-delegation (#1374): the copy of `carried` a
+ * cross-domain grant conveys. Each carried entry resolves, by identity, to the
+ * audience-scoped candidates it was taken from, and each candidate's approved
+ * entries resolve to the provenance retained with `record` at its derivation
+ * (as the delegation gate resolves them). An entry that keeps its `delegation`
+ * ({@link conveysDelegation}) is conveyed as it is; any other entry carrying
+ * `delegation` is conveyed as a copy without it, which also drops a nested
+ * `children` grant. An entry no candidate resolves (one an `authorityFilter`
+ * rebuilt) is unresolved and omits it.
+ *
+ * Only the conveyed copy changes: it runs after the delegation gate decided
+ * the current grant's eligibility against the approved record, so it never
+ * admits an entry the gate excluded, and the approved record and its
+ * `authority_hash` are never written.
+ */
+export function conveyedCopy(
+  record: MissionRecord,
+  candidates: ReadonlyArray<OriginProjection<AuthorityEntry>>,
+  carried: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  const origins = retainedOrigins(record.authority_set, record.eligibility_provenance);
+  const keeps = new Map<AuthorityEntry, boolean>();
+  for (const candidate of candidates) {
+    const resolved: DelegationCandidate = {
+      entry: candidate.entry,
+      approved: candidate.origins.map((origin) => {
+        const index = record.authority_set.indexOf(origin);
+        return { entry: origin, origin: index < 0 ? null : (origins[index] ?? null) };
+      }),
+    };
+    keeps.set(candidate.entry, (keeps.get(candidate.entry) ?? true) && conveysDelegation(resolved));
+  }
+  return carried.map((entry) => {
+    if (entry.delegation === undefined || keeps.get(entry) === true) return entry;
+    const { delegation: _omitted, ...conveyed } = entry;
+    return conveyed;
+  });
 }
 
 export interface IssueGrantInput {
@@ -259,10 +323,17 @@ async function mintCrossDomainGrant(
     delegation && delegation.depth > 0
       ? kernel.delegableEntries(record, candidates, delegation.delegate, delegation.depth)
       : scoped;
-  const carried = input.authorityFilter ? input.authorityFilter(delegable) : delegable;
-  if (carried.length === 0) {
+  const filtered = input.authorityFilter ? input.authorityFilter(delegable) : delegable;
+  if (filtered.length === 0) {
     throw new AuthorityNarrowedToEmptyError("no audience-scoped authority remains for this grant once narrowed");
   }
+  // @spec cross-domain#conveyed-delegation (#1374): in both branches, the copy
+  // the grant conveys keeps `delegation` only where every retained origin is a
+  // committed list. After the gate and the filter, so the current grant's
+  // eligibility is the gate's alone; before the requested-authority check, so
+  // a request that keeps an omitted `delegation` exceeds the conveyed copy
+  // under the subset rule ("introduces delegation the grantor lacks").
+  const carried = conveyedCopy(record, candidates, filtered);
   let granted = carried;
   if (input.requestedAuthority !== undefined) {
     if (!isSubsetSetIgnoringCapabilitySources(input.requestedAuthority, carried)) {

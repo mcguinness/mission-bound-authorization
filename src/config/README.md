@@ -65,7 +65,11 @@ sub-agent. Delegation itself is opt-in and off in both baselines.
 The MAS pilot's deployment configuration (`@spec
 authority-server#mapping-contract`, #818, D284, D508): the estate
 authorization server's issuer, port, directory accounts, client
-registrations and resource vocabulary; the mapping cache's staleness bound;
+registrations (each with the access token format the estate issues it,
+`jwt` or `opaque`) and resource vocabulary; the gateway's RFC 7662
+introspection of opaque tokens (`introspection`: its registered
+introspection client, call timeout and positive-cache bound); the mapping
+cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the
 grants a development bootstrap of the pilot's Resource-policy store writes
 (`resource_policy`, #828: tenants with their vendors and members, and
@@ -82,8 +86,9 @@ is the pilot's contract.
   administered with `pnpm resource-policy --iss <estate issuer>`).
 - **Integrity.** Repository review and the strict loaders: the configuration
   loader refuses unknown or missing members, a duplicate client, an estate
-  issuer equal to the Mission Issuer and a resource other than the payments
-  resource; the contract loader refuses an ambiguous mapping (a second row
+  issuer equal to the Mission Issuer, resource servers that omit the payments
+  resource, a token format other than `jwt` or `opaque`, and an introspection
+  client that is also one of the estate's own clients; the contract loader refuses an ambiguous mapping (a second row
   for one issuer-qualified estate subject or client), a claimed
   client-instance mapping and any failure semantics but
   `mission_binding_failed`; the Resource-policy grants are refused unless each
@@ -93,7 +98,10 @@ is the pilot's contract.
   boot and never configured.
 - **Updating.** A new contract version is installed into the running cache
   (`MappingContractCache.install`), which refuses a version at or below the
-  installed one. The file's version is the one installed at composition.
+  installed one. The file's version is the one installed at composition. The
+  introspection bounds apply at composition; lowering
+  `introspection.cache_max_seconds` shortens how long a token revoked at the
+  estate can still be accepted.
 
 ## `scope-projection.json`
 
