@@ -12,10 +12,13 @@
  *
  * Support is partial, and every unsupported form refuses:
  *
- * - Contracts: only an explicit service-level contract, `{ service: <URI> }`,
+ * - Contracts: an explicit service-level contract, `{ service: <URI> }`,
  *   which names the service identifier as the target of every operation it
- *   covers. A finer contract (one deriving the target from validated
- *   arguments) is `unsupported_contract`.
+ *   covers; and an argument-derived contract, `{ template: <URI Template> }`,
+ *   which derives a finer target from one of the operation's validated
+ *   arguments (the order or invoice the operation acts on). A caller that
+ *   supplies no arguments supports only the service-level form, and any other
+ *   form is `unsupported_contract`.
  * - Matching: only `exact` (the default when `resource_match` is absent), a
  *   literal comparison of the entry's JSON-decoded `resource` with the target.
  *   A `prefix` entry, or any `resource_match` value not recognized here, is
@@ -189,14 +192,32 @@ export function entryMatchesTarget(
 /**
  * An explicit service-level operation contract: the documented statement
  * that every operation it covers acts on the service identified by
- * `service`. It is the one contract form this implementation supports.
+ * `service`.
  */
 export interface ServiceLevelContract {
   readonly service: string;
 }
 
+/**
+ * An argument-derived operation contract: the documented statement that the
+ * target of every operation it covers is `template` with its one variable
+ * replaced by the operation's validated argument of that name, for example
+ * `https://api.example/orders/{order_id}` for the order an operation reads.
+ *
+ * `template` is an RFC 6570 URI Template of Level 1 holding exactly one
+ * expression, a simple string expansion (Section 3.2.2) whose `varname` uses
+ * only ALPHA, DIGIT and `_` (a subset of Section 2.3), placed in the path:
+ * the literal before it is a scheme, `://`, an authority and a `/`, with no
+ * `?` or `#`. An argument therefore never moves the target to another host
+ * and never reaches the query. No operator, modifier, list or second
+ * expression is supported: such a template is `unsupported_contract`.
+ */
+export interface ArgumentDerivedContract {
+  readonly template: string;
+}
+
 /** The contract forms this implementation can evaluate. */
-export type OperationContract = ServiceLevelContract;
+export type OperationContract = ServiceLevelContract | ArgumentDerivedContract;
 
 /** Why no operation target was established. Every reason refuses the operation. */
 export type OperationTargetRefusal =
@@ -204,7 +225,13 @@ export type OperationTargetRefusal =
   | "no_contract"
   /** A declared contract has a form this implementation does not support. */
   | "unsupported_contract"
-  /** The declared contracts yield more than one target. */
+  /**
+   * An argument-derived contract's argument is absent, null or empty: the
+   * operation names no object, and the service identifier is never
+   * substituted for it.
+   */
+  | "missing_argument"
+  /** The declared contracts yield more than one target, or the argument is a list rather than one value. */
   | "ambiguous"
   /** The contract yields a value that is not a well-formed operation target. */
   | "malformed";
@@ -228,27 +255,159 @@ export function resolveOperationTarget(candidates: readonly unknown[]): Operatio
   return isOperationTarget(only) ? { ok: true, target: only } : { ok: false, reason: "malformed" };
 }
 
+/** A template split at its one expression. */
+interface ParsedTemplate {
+  readonly before: string;
+  readonly varname: string;
+  readonly after: string;
+}
+
+/** `scheme "://" authority "/" path` with no `?`, `#` or brace: the literal before the variable. */
+const TEMPLATE_HEAD = /^[A-Za-z][A-Za-z0-9+\-.]*:\/\/[^/?#{}]*\/[^?#{}]*$/;
+/** The supported `varname`: ALPHA, DIGIT and `_` only. */
+const TEMPLATE_VARNAME = /^[A-Za-z0-9_]+$/;
+
+/**
+ * Split an argument-derived contract's template at its one expression, or
+ * `undefined` for any template outside the supported form: not a string, no
+ * expression or more than one, an operator, modifier or list in the
+ * expression, or the expression outside the path.
+ */
+function parseTemplate(template: unknown): ParsedTemplate | undefined {
+  if (typeof template !== "string") return undefined;
+  const open = template.indexOf("{");
+  const close = template.indexOf("}");
+  if (open < 0 || close < open) return undefined;
+  const before = template.slice(0, open);
+  const varname = template.slice(open + 1, close);
+  const after = template.slice(close + 1);
+  if (!TEMPLATE_HEAD.test(before) || !TEMPLATE_VARNAME.test(varname)) return undefined;
+  if (after.includes("{") || after.includes("}")) return undefined;
+  return { before, varname, after };
+}
+
+/**
+ * RFC 6570 simple string expansion of one value (Section 3.2.2): each
+ * character outside `unreserved` (RFC 3986 Section 2.3) is UTF-8 encoded and
+ * percent-encoded with uppercase hexadecimal digits (RFC 3986 Section 2.1),
+ * so `/`, `?`, `#` and `%` in an argument never act as delimiters. A value
+ * that is not well-formed UTF-16 (a lone surrogate) cannot be encoded.
+ */
+function expandValue(value: string): string | undefined {
+  try {
+    return encodeURIComponent(value).replace(
+      /[!'()*]/g,
+      (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+/** One expanded value: one or more `unreserved` characters or `pct-encoded` triplets. */
+const EXPANDED_VALUE = /^(?:[A-Za-z0-9\-._~]|%[0-9A-F]{2})+$/;
+
+/**
+ * A dot-segment (RFC 3986 Section 3.3) as the whole value: `.` and `..`
+ * name a different resource once dot-segments are removed (Section 5.2.4), so
+ * a value that is one is refused rather than matched as a literal.
+ */
+const isDotSegment = (value: string): boolean => value === "." || value === "..";
+
+/**
+ * Derive the target one argument-derived contract establishes from the
+ * operation's validated arguments. Only the argument the template names is
+ * read; any other argument, an `operation_target` or `resource` argument
+ * included, is never consulted.
+ */
+function deriveFromTemplate(
+  parsed: ParsedTemplate,
+  args: Readonly<Record<string, unknown>>,
+): OperationTargetResolution {
+  const value = Object.hasOwn(args, parsed.varname) ? args[parsed.varname] : undefined;
+  if (value === undefined || value === null || value === "") {
+    return { ok: false, reason: "missing_argument" };
+  }
+  if (Array.isArray(value)) return { ok: false, reason: "ambiguous" };
+  if (typeof value !== "string" || isDotSegment(value)) return { ok: false, reason: "malformed" };
+  const expanded = expandValue(value);
+  if (expanded === undefined) return { ok: false, reason: "malformed" };
+  const target = `${parsed.before}${expanded}${parsed.after}`;
+  return isOperationTarget(target) ? { ok: true, target } : { ok: false, reason: "malformed" };
+}
+
+/** Whether `contract` is exactly `{ <member>: <value> }`. */
+const isSingleMember = (contract: unknown, member: string): contract is Record<string, unknown> =>
+  isObject(contract) && Object.keys(contract).length === 1 && Object.hasOwn(contract, member);
+
 /**
  * Establish an operation's target from the contract (or contracts) its
- * trusted operation profile declares for it. Absent or empty is
- * `no_contract`; a contract other than `{ service: <URI> }` is
- * `unsupported_contract`; declarations naming different services are
- * `ambiguous`. Nothing here reads an entry, an audience, or a caller
- * argument.
+ * trusted operation profile declares for it, and, for an argument-derived
+ * contract, from the operation's validated arguments.
+ *
+ * Absent or empty is `no_contract`. A `{ service: <URI> }` contract yields its
+ * service whatever the arguments. A `{ template: <URI Template> }` contract
+ * yields the template expanded with the argument it names, and is
+ * `unsupported_contract` when `args` is not supplied: a caller that passes no
+ * arguments supports the service-level form only. An absent or empty argument
+ * is `missing_argument`, never a fallback to the service identifier; an
+ * argument carrying a list is `ambiguous`; a non-string or dot-segment
+ * argument is `malformed`. Any other contract form is `unsupported_contract`,
+ * and declarations yielding different targets are `ambiguous`. Nothing here
+ * reads an entry, an audience, or an argument the contract does not name.
  */
-export function establishOperationTarget(declared: unknown): OperationTargetResolution {
+export function establishOperationTarget(
+  declared: unknown,
+  args?: Readonly<Record<string, unknown>>,
+): OperationTargetResolution {
   if (declared === undefined || declared === null) return { ok: false, reason: "no_contract" };
   const contracts: readonly unknown[] = Array.isArray(declared) ? declared : [declared];
   const candidates: unknown[] = [];
   for (const contract of contracts) {
-    if (
-      !isObject(contract) ||
-      Object.keys(contract).length !== 1 ||
-      !Object.hasOwn(contract, "service")
-    ) {
-      return { ok: false, reason: "unsupported_contract" };
+    if (isSingleMember(contract, "service")) {
+      candidates.push(contract.service);
+      continue;
     }
-    candidates.push(contract.service);
+    const parsed = isSingleMember(contract, "template")
+      ? parseTemplate(contract.template)
+      : undefined;
+    if (parsed === undefined || args === undefined)
+      return { ok: false, reason: "unsupported_contract" };
+    const derived = deriveFromTemplate(parsed, args);
+    if (!derived.ok) return derived;
+    candidates.push(derived.target);
   }
   return resolveOperationTarget(candidates);
+}
+
+/**
+ * @spec authzen#pdp-request consistency check 11 (#1276, D457): whether
+ * `target` is a value `contract` establishes for some argument, so a PDP can
+ * hold a PEP to the targets its registered operation contracts establish. A
+ * service-level contract admits its service alone. An argument-derived
+ * contract admits the template expanded with one non-empty, non-dot-segment
+ * value in its canonical encoding (every `pct-encoded` triplet names a UTF-8
+ * octet outside `unreserved`, in uppercase), and nothing else. The comparison
+ * reads `target` as given, with no normalization. This is contract coverage,
+ * not entry matching: it grants no authority.
+ */
+export function contractCanEstablish(contract: unknown, target: unknown): boolean {
+  if (!isOperationTarget(target)) return false;
+  if (isSingleMember(contract, "service")) return contract.service === target;
+  const parsed = isSingleMember(contract, "template")
+    ? parseTemplate(contract.template)
+    : undefined;
+  if (parsed === undefined) return false;
+  const { before, after } = parsed;
+  if (target.length <= before.length + after.length) return false;
+  if (!target.startsWith(before) || !target.endsWith(after)) return false;
+  const expanded = target.slice(before.length, target.length - after.length);
+  if (!EXPANDED_VALUE.test(expanded)) return false;
+  let value: string;
+  try {
+    value = decodeURIComponent(expanded);
+  } catch {
+    return false;
+  }
+  return !isDotSegment(value) && expandValue(value) === expanded;
 }

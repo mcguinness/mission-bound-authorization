@@ -205,6 +205,8 @@ export {
   parseMissionReferenceField,
 } from "./mission-reference.js";
 export {
+  type ArgumentDerivedContract,
+  contractCanEstablish,
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,
   establishOperationTarget,
