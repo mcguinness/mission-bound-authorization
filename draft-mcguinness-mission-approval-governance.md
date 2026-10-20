@@ -607,45 +607,6 @@ Where the Mission populates `approval_basis.adjudication`, the
 accountable assertion's `kind` also equals `adjudication.kind`
 ({{issuance-relationship}}).
 
-# Evaluation and Atomic Commitment {#atomic-commitment}
-
-Where a deployment records the Approval Governance Record for an
-approval, the record and the Mission are one commit. Within that commit,
-the issuer:
-
-- validates the assertions ({{assertion-requirements}});
-- evaluates them under the referenced policy version;
-- where the record carries `approval_context_commitment`
-  ({{record-members}}), computes it from the Mission Record being
-  created;
-- signs the evaluated record ({{envelope}}); and
-- persists the signed record in the same commit as the Mission's
-  creation.
-
-Signing follows evaluation and precedes persistence, never the reverse,
-and `approval_context_commitment` is computed before signing. A value of
-`approval_context_commitment` computed after the commit is not covered
-by the record's signature and MUST NOT be added to a committed record.
-
-Where a deployment records the Approval Governance Record for an
-approval, the Mission Record MUST NOT be created `active` unless the
-evaluation's `decision` is `approved` and the signed record persists
-atomically with the Mission's creation. Failure to authenticate the
-contributing assertions, to complete the evaluation, or to persist the
-record MUST prevent activation; there is no Mission whose governance
-record was meant to exist and does not.
-
-A governance evaluation that denies creates no Mission and no committed
-record. Negative assertions retained inside a committed record document
-dissent ({{assertion-validation}}), and a wholly declined approval's
-evidence surface is consent evidence's declined outcome
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which exists
-without a Mission Record.
-
-A committed record is immutable. A subsequent governance action, such as
-a re-review or an incident finding, is a new record about a new event,
-never an edit.
-
 # Policy-Approval Recency {#policy-approval-recency}
 
 This section bounds staleness on the AGR `policy` assertion path: it
@@ -784,6 +745,45 @@ retained human-approval instant, but they gate different things:
   stands in for one, at evaluation; and
 - a profile's own maximum age governs whether the dispatch or drawdown
   may happen at all, independent of whether an AGR is ever recorded.
+
+# Evaluation and Atomic Commitment {#atomic-commitment}
+
+Where a deployment records the Approval Governance Record for an
+approval, the record and the Mission are one commit. Within that commit,
+the issuer:
+
+- validates the assertions ({{assertion-requirements}});
+- evaluates them under the referenced policy version;
+- where the record carries `approval_context_commitment`
+  ({{record-members}}), computes it from the Mission Record being
+  created;
+- signs the evaluated record ({{envelope}}); and
+- persists the signed record in the same commit as the Mission's
+  creation.
+
+Signing follows evaluation and precedes persistence, never the reverse,
+and `approval_context_commitment` is computed before signing. A value of
+`approval_context_commitment` computed after the commit is not covered
+by the record's signature and MUST NOT be added to a committed record.
+
+Where a deployment records the Approval Governance Record for an
+approval, the Mission Record MUST NOT be created `active` unless the
+evaluation's `decision` is `approved` and the signed record persists
+atomically with the Mission's creation. Failure to authenticate the
+contributing assertions, to complete the evaluation, or to persist the
+record MUST prevent activation; there is no Mission whose governance
+record was meant to exist and does not.
+
+A governance evaluation that denies creates no Mission and no committed
+record. Negative assertions retained inside a committed record document
+dissent ({{assertion-validation}}), and a wholly declined approval's
+evidence surface is consent evidence's declined outcome
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which exists
+without a Mission Record.
+
+A committed record is immutable. A subsequent governance action, such as
+a re-review or an incident finding, is a new record about a new event,
+never an edit.
 
 # Envelope and Verification {#envelope}
 
