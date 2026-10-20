@@ -50248,6 +50248,27 @@
    "notes": "#1177."
   },
   {
+   "id": "expansion.successor-expiry.completion-codes",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-expiry",
+   "text": "A deferred poll then answers `access_denied`, a code redemption `invalid_grant`, and a completion in the token-exchange response `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",

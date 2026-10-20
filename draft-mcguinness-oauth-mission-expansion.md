@@ -1078,8 +1078,9 @@ redemption, MUST carry the effective value in the issuance profile's
 `mission_expires_at` response member. Completion inherits the
 issuance profile's atomic creation-time check: where the
 submission's `intent.expires_at` passes while the expansion is
-pending, completion creates no successor Mission and the exchange
-fails with this document's denial semantics ({{denial-reasons}}).
+pending, completion creates no successor Mission. A deferred poll then
+answers `access_denied`, a code redemption `invalid_grant`, and a
+completion in the token-exchange response `invalid_request`.
 
 An auditor verifies the successor record by inequalities, never by
 matching a recomputed minimum:
