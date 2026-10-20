@@ -393,6 +393,31 @@ describe("delegate eligibility with retained provenance at the ICA continuation 
     expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
   });
 
+  it("a committed matcher carrying another member permits nothing (#1373): a record holding one, from before intake refused it, does not admit the delegate it names", async () => {
+    const clean = approve([entry(INHERIT, [READ], { max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] })]);
+    const planted = approve([entry(INHERIT, [READ], { max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] })]);
+    // Intake and derivation now refuse `org`, so the record is written as one
+    // committed before that refusal would hold it.
+    const record = as.kernel.get(planted.missionId);
+    const withOrg = record?.authority_set.map((e) => ({
+      ...e,
+      delegation: { ...e.delegation, allowed_delegates: [{ sub: "svc-c", org: "A" }] },
+    }));
+    as.kernel.db
+      .prepare("UPDATE missions SET authority_set_json = ? WHERE id = ?")
+      .run(JSON.stringify(withOrg), planted.missionId);
+    expect(as.kernel.get(planted.missionId)?.authority_set[0]?.delegation?.allowed_delegates).toEqual([
+      { sub: "svc-c", org: "A" },
+    ]);
+    permitted.add("svc-c");
+    const before = sideEffects(planted.missionId);
+    await refused(await continueAs(planted.root, "svc-c"));
+    expect(sideEffects(planted.missionId)).toEqual(before);
+    // Control: the same Mission without the member admits svc-c.
+    const { details } = await granted(await continueAs(clean.root, "svc-c"));
+    expect(details.map((d) => d.resource)).toEqual([INHERIT]);
+  });
+
   it("a Child Mission's proposal list over a policy-deferring parent entry only restricts: the policy still decides at the child's exchange", async () => {
     const { missionId: parentId } = approve([entry(INHERIT, [READ])]);
     const { child } = createChildMission(as.kernel, {
