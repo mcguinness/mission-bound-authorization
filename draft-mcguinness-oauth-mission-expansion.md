@@ -164,22 +164,19 @@ informative:
 --- abstract
 
 Mission-Bound Authorization for OAuth 2.0 commits a Mission's
-authority at a single approval event and defers widening: enlarging
-authority requires a new approval, a successor Mission. This document
-defines that successor mechanism as an optional, layered extension to
-the issuance profile. When an action falls outside an active Mission's
-Authority Set but the deployment's governance policy permits widening,
-a client initiates expansion through an {{RFC8693}} token exchange: it
-presents the predecessor Mission's sender-constrained Mission-bound
-access token as the `subject_token`, proving possession of the
-predecessor's authority, and a fresh approval records a successor
-Mission. The successor carries a `predecessor` member on its `mission`
-claim linking it to the Mission it replaces; when the successor
-activates the predecessor is `terminated` with reason `superseded`, so
-an expansion that never completes leaves the predecessor active. Expansion
-never widens authority without a new consent: the successor's authority
-comes only from its own approval. A deployment that never expands a
-Mission is unaffected by this document.
+authority at a single approval event. Enlarging that authority
+requires a new approval, recorded as a successor Mission. This
+document defines Mission Expansion, the optional extension that
+obtains that approval.
+
+A client requests expansion with an OAuth 2.0 Token Exchange that
+presents the predecessor Mission's sender-constrained access token. A
+fresh approval creates the successor, whose authority comes only from
+that approval and which carries a `predecessor` member linking it to
+the Mission it replaces. When the successor activates, the
+predecessor is terminated with reason `superseded`; an expansion that
+never completes leaves the predecessor active. A deployment that never
+expands a Mission is unaffected by this document.
 
 --- middle
 
@@ -189,97 +186,94 @@ Mission-Bound Authorization for OAuth 2.0
 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile") makes
 a Mission a first-class OAuth artifact: a structured, human-approved,
 integrity-bound task whose authority bounds and outlives every token
-an agent derives. It commits the Authority Set once, at the approval
-event, and deliberately defines no mid-stream authorization upgrade.
-As that profile states, widening authority requires a new approval, a
-successor Mission, as specified by this companion profile.
+an agent derives. The issuance profile commits the Authority Set once,
+at the approval event, and defines no mid-stream authorization
+upgrade. Widening authority requires a new approval and a successor
+Mission, as this document specifies.
 
-This document is that successor mechanism. A task an agent pursues
-does not always stay within the authority approved for it: the agent
-encounters an action the approved Authority Set does not cover, yet
-one the deployment's governance policy would permit under a fresh
-consent. Expansion is the governed path from that shortfall to a new
-approval. It does not patch or widen the existing Mission; it creates
-a new Mission, through the issuance profile's own flow, linked to the
-one it replaces.
+An agent's task does not always stay within the authority approved
+for it. The agent can meet an action that the approved Authority Set
+does not cover but that the deployment's governance policy would
+permit under a fresh consent. Expansion is the governed path from that
+shortfall to a new approval. It never patches or widens the existing
+Mission. It creates a new Mission through the issuance profile's own
+approval event, with its own integrity anchors and Mission record,
+linked to the Mission it replaces. The successor's authority comes
+only from that approval.
 
-The mechanism reuses the issuance profile end to end. An expansion
-carries a new Mission Intent in an {{RFC8693}} token exchange
-({{expansion-request}}) bound to the predecessor by possession of the
-predecessor's Mission-bound access token, leading to a fresh approval
-event ({{I-D.draft-mcguinness-oauth-mission}}) with its own
-integrity anchors and Mission record. The successor's
-authority comes only from that approval.
+This document adds three things to the issuance profile:
 
-This document adds exactly three things on top of the issuance
-profile: a way to bind an expansion request to the predecessor it
-expands; a `predecessor` lineage member on the resulting Mission; and
-the `superseded` termination reason for the predecessor, with the
-reconciliation rules that keep concurrent expansions consistent.
+- an expansion request, an {{RFC8693}} token exchange bound to the
+  predecessor by possession of the predecessor's Mission-bound access
+  token ({{expansion-request}});
+- a `predecessor` lineage member on the resulting Mission
+  ({{predecessor-member}}); and
+- the `superseded` termination reason for the predecessor
+  ({{superseded-state}}), with the reconciliation rules that keep
+  concurrent expansions consistent ({{reconciliation}}).
 
 ## Relationship to the Issuance Profile {#relationship}
 
 This document depends normatively on the issuance profile and is not
-implementable alone. It reuses, without restating, that profile's
-Mission Intent, submission via PAR, authority
-derivation, approval event with its integrity anchors, Mission record,
-the `mission` claim, the subset rule, and the lifecycle and issuance
-gating. It uses the terms Agent (Client), Subject, Approver, Mission
-Issuer, Mission Intent, Authority Set, Mission, and derived token as
-defined there.
+implementable alone. It reuses the following from that profile
+without restating them:
 
-Where this document refers to "the issuance profile" without a section,
-it means {{I-D.draft-mcguinness-oauth-mission}} as a whole.
+- the Mission Intent and its submission via PAR;
+- authority derivation and the subset rule;
+- the approval event and its integrity anchors;
+- the Mission record and the `mission` claim; and
+- the lifecycle and issuance gating.
 
-This document is optional. It is a layered extension to the issuance
-profile, not a change to it. A deployment that implements
-{{I-D.draft-mcguinness-oauth-mission}} and never expands a Mission is
-fully conformant to that profile and is unaffected by this document:
-it issues no expansion request, records no `predecessor` member, and
-never terminates a Mission with the `superseded` reason this document
-introduces. The issuance profile's lifecycle (`active`, and
-`terminated` with reason `revoked` or `expired`) is complete without
-expansion; the `superseded` reason defined here
-({{superseded-state}}) is relevant only when expansion is used.
+It uses the terms Agent (Client), Subject, Approver, Mission Issuer,
+Mission Intent, Authority Set, Mission, and derived token as defined
+there. "The issuance profile" without a section reference means
+{{I-D.draft-mcguinness-oauth-mission}} as a whole.
 
-A Mission Issuer claims conformance to this document only when it
-adjudicates expansion; otherwise it remains a plain issuance-profile
-Mission Issuer. Nothing here places a new requirement back on the
-issuance profile.
+This document is an optional, layered extension and changes nothing
+in the issuance profile. A deployment that implements the issuance
+profile and never expands a Mission is fully conformant to that
+profile and unaffected by this document: it issues no expansion
+request, records no `predecessor` member, and never terminates a
+Mission with reason `superseded`. The issuance profile's lifecycle
+(`active`, and `terminated` with reason `revoked` or `expired`) is
+complete without expansion. A Mission Issuer claims conformance to
+this document only when it adjudicates expansion ({{conformance}}).
 
 ## Scope {#scope}
 
 This document defines:
 
-- the expansion request: how a client initiates a successor Mission
-  and how that request is bound to the predecessor's grant
+- the expansion request and its binding to the predecessor
   ({{expansion-request}});
-- the `predecessor` lineage member on the successor's `mission` claim
-  and Mission record ({{predecessor-member}});
+- adjudication, completion, and successor activation
+  ({{adjudication}});
+- the `predecessor`, `related_to`, and `successor` lineage members
+  ({{predecessor-member}});
 - the predecessor's transition to `terminated` with reason
   `superseded` ({{superseded-state}});
-- replacement expansion as the mode, with branch expansion deferred
-  ({{replacement}});
+- replacement expansion, the only expansion mode ({{replacement}});
 - concurrent-expansion reconciliation, with a closed set of
-  reconciliation status codes ({{reconciliation}}); and
-- the expansion denial reasons ({{denial-reasons}}).
+  reconciliation status codes ({{reconciliation}});
+- creation idempotency for Mission-creation exchanges
+  ({{creation-idempotency}}); and
+- the expansion denial reasons and the Mission Denial Reasons
+  registry ({{denial-reasons}}).
 
-This document does NOT define:
+This document does not define:
 
 - a way to widen an existing Mission in place; expansion always
   creates a new Mission;
-- runtime per-action enforcement or the classification of a denial as
-  expansion-eligible; that is the runtime layer's concern
-  ({{eligibility}}, {{I-D.draft-mcguinness-mission-runtime}});
+- runtime per-action enforcement, or how a denial is classified as
+  expansion-eligible ({{eligibility}},
+  {{I-D.draft-mcguinness-mission-runtime}});
 - branch expansion, in which predecessor and successor both remain
   active ({{replacement}});
-- multi-hop or cross-domain expansion; an expansion is adjudicated by
-  the predecessor's Mission Issuer (its `issuer`); or
+- multi-hop or cross-domain expansion: the predecessor's Mission
+  Issuer (its `issuer`) adjudicates every expansion; or
 - policy-adjudicated expansion within a pre-consented authority
-  ceiling; that is progressive authorization, defined by an
-  experimental companion
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}). Under this
-  document alone, every expansion is adjudicated by a fresh human
+  ceiling, which the experimental progressive authorization companion
+  defines ({{I-D.draft-mcguinness-oauth-mission-progressive}}). Under
+  this document alone, every expansion is adjudicated by a fresh human
   approval.
 
 # Conventions and Terminology {#conventions-and-terminology}
@@ -308,6 +302,11 @@ Expansion request:
   presents the predecessor Mission's Mission-bound access token as the
   `subject_token`, asking the Mission Issuer to adjudicate a successor
   ({{expansion-request}}).
+
+Successor activation:
+: The single atomic step in which the successor Mission becomes
+  `active` and the predecessor becomes `terminated` with reason
+  `superseded` ({{successor-activation}}).
 
 # Protocol Overview {#overview}
 
@@ -339,57 +338,70 @@ Expansion request:
      |         predecessor superseded (atomic)
      v
 ~~~
+{: #fig-flow title="Expansion Protocol Flow"}
 
-The request is an {{RFC8693}} token exchange bound to the predecessor
-by possession of the predecessor's Mission-bound access token
-({{expansion-request}}), so the Mission Issuer adjudicates a successor
-of a specific predecessor rather than an unrelated new Mission. An
-expansion always widens authority, so a fresh consent supplies the
-broader authority, obtained through the deferred token response
-({{I-D.draft-gerber-oauth-deferred-token-response}}) or the
-deployment's interactive approval ({{completion-modes}}); a request
-that widens nothing is refused ({{verification-order}}). The
-successor's authority comes only from that consent. Supersession is
-deferred to activation: the successor activates and the predecessor
-becomes `terminated` with reason `superseded` atomically when the
-successor's authority is issued, so an expansion that never completes
-leaves the predecessor
-`active` ({{superseded-state}}).
+{{fig-flow}} shows the protocol:
+
+1. An action is denied because the requested authority is outside the
+   active Mission's Authority Set ({{eligibility}}).
+2. The client sends an expansion request: an {{RFC8693}} token
+   exchange that presents the predecessor's Mission-bound access token
+   and carries the successor's Mission Intent ({{expansion-request}}).
+   Possession of that token binds the request to one predecessor, so
+   the Mission Issuer adjudicates a successor of that predecessor
+   rather than an unrelated new Mission.
+3. The Mission Issuer verifies the request and derives the successor's
+   Authority Set ({{verification-order}}). A request that widens
+   nothing is refused.
+4. An expansion always widens authority, so a fresh consent supplies
+   the broader authority, obtained through the deferred token response
+   ({{I-D.draft-gerber-oauth-deferred-token-response}}) or the
+   deployment's interactive approval ({{completion-modes}}). The
+   successor's authority comes only from that consent.
+5. When the successor's authority is issued, the successor activates
+   and the predecessor becomes `terminated` with reason `superseded`,
+   atomically ({{successor-activation}}). An expansion that never
+   completes leaves the predecessor `active`.
 
 ## Eligibility {#eligibility}
 
 A client initiates expansion after an action is denied because the
 requested authority is outside the active Mission's Authority Set and
-the deployment's governance policy permits widening it. This document
-does not define how a denial is classified as expansion-eligible; that
-classification belongs to the component that denies the action.
+the deployment's governance policy permits widening it. The component
+that denies the action classifies the denial as expansion-eligible;
+this document does not define that classification.
 
-A Mission-aware Resource Server enforces the token's authority
-statelessly and refuses an out-of-bounds action with its usual
-insufficient-authority error ({{I-D.draft-mcguinness-oauth-mission}}).
-The runtime enforcement profile
-{{I-D.draft-mcguinness-mission-runtime}} is one source of an
-expansion-eligible denial: in that profile a deny is terminal for the
-attempted action, and the authority-expandable-denial escalation that
-turns such a deny into an expansion is named there as out of scope.
-This document defines that expansion. This document does not require any
-particular denial source: a client that knows, by any means, that an
-action needs authority the active Mission lacks MAY initiate expansion.
-Whether the Mission Issuer adjudicates a successor remains its decision
-({{adjudication}}); an eligible denial is not an authorization in favor
-of expansion.
+Denials come from different sources:
+
+- A Mission-aware resource server enforces the token's authority
+  statelessly and refuses an out-of-bounds action with its usual
+  insufficient-authority error ({{I-D.draft-mcguinness-oauth-mission}}).
+- Under the runtime enforcement profile
+  ({{I-D.draft-mcguinness-mission-runtime}}), a deny is terminal for
+  the attempted action, and that profile names the
+  authority-expandable-denial escalation, which turns such a deny into
+  an expansion, as out of its scope. This document defines that
+  expansion.
+
+This document does not require any particular denial source: a client
+that knows, by any means, that an action needs authority the active
+Mission lacks MAY initiate expansion. An eligible denial is not an
+authorization in favor of expansion; whether the Mission Issuer
+adjudicates a successor remains its decision ({{adjudication}}).
 
 ## Expansion Is Not Step-Up {#not-step-up}
 
-Expansion is a governance operation. It is distinct from
-authentication step-up {{RFC9470}}. A request denied because an `acr`
-or `amr` constraint requires fresh authentication is satisfied by
-step-up, not by expansion: the Authority Set does not change. A
-request denied because the requested authority is not in the active
-Mission's Authority Set requires expansion: the Authority Set must be
-enlarged through a new approval event. The two are not interchangeable;
-{{step-up-distinction}} treats the security consequence of conflating
-them.
+Expansion is distinct from authentication step-up {{RFC9470}}:
+
+- A request denied because an `acr` or `amr` constraint requires fresh
+  authentication is satisfied by step-up. The Authority Set does not
+  change.
+- A request denied because the requested authority is not in the
+  active Mission's Authority Set requires expansion. The Authority Set
+  is enlarged only through a new approval event.
+
+{{step-up-distinction}} describes the consequence of conflating the
+two.
 
 # The Expansion Request {#expansion-request}
 
