@@ -92,3 +92,35 @@ describe("delegatePermitted — an EMPTY matcher asserts no eligibility (never a
     expect(delegatePermitted(agent, [{}, { sub: "nobody" }])).toBe(false);
   });
 });
+
+describe("delegatePermitted: a malformed matcher permits nothing at runtime (fail closed, #1373)", () => {
+  // Intake, configuration load and derivation refuse these matchers, but a
+  // record committed before that refusal can still hold one.
+  it("does NOT match a matcher whose sub or sub_profile matches but which carries another member", () => {
+    const org = { org: "A" } as unknown as DelegateMatcher;
+    expect(delegatePermitted(agent, [{ sub: "subagent-1", ...org }])).toBe(false);
+    expect(delegatePermitted(agent, [{ sub_profile: "ai_agent", ...org }])).toBe(false);
+    expect(delegatePermitted(agent, [{ sub: "subagent-1", sub_profile: "ai_agent", ...org }])).toBe(false);
+    // Control: the same matchers without the member match.
+    expect(delegatePermitted(agent, [{ sub: "subagent-1" }])).toBe(true);
+    expect(delegatePermitted(agent, [{ sub_profile: "ai_agent" }])).toBe(true);
+    expect(delegatePermitted(agent, [{ sub: "subagent-1", sub_profile: "ai_agent" }])).toBe(true);
+  });
+
+  it("does NOT read past a non-string or empty sub or sub_profile beside a matching one", () => {
+    for (const matcher of [
+      { sub: 7, sub_profile: "ai_agent" },
+      { sub: "", sub_profile: "ai_agent" },
+      { sub: "subagent-1", sub_profile: null },
+      { sub: "subagent-1", sub_profile: "" },
+    ]) {
+      expect(delegatePermitted(agent, [matcher as unknown as DelegateMatcher]), JSON.stringify(matcher)).toBe(false);
+    }
+  });
+
+  it("does NOT let a malformed matcher fail the whole list open or closed: a well-formed matcher beside it still decides", () => {
+    const withOrg = { sub: "subagent-1", org: "A" } as unknown as DelegateMatcher;
+    expect(delegatePermitted(agent, [withOrg, { sub: "subagent-1" }])).toBe(true);
+    expect(delegatePermitted(agent, [withOrg, { sub: "nobody" }])).toBe(false);
+  });
+});

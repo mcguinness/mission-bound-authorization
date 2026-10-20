@@ -441,6 +441,29 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     }
   });
 
+  // @spec mission#subset (#1399, D538): a top-level member outside the type's
+  // own members and capability_sources is refused at intake by presence,
+  // before any interaction or Mission, never admitted and then dropped by
+  // derivation's rebuild.
+  it("refuses a proposal entry carrying an unsupported member, whatever its value, before any interaction, creating no Mission", async () => {
+    for (const invoice_ids of [["INV-7"], [], null, ""]) {
+      const before = as.kernel.allMissions().length;
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+        authorization_details: JSON.stringify([
+          { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], invoice_ids },
+        ]),
+      });
+      const body = (await res.json()) as { error: string; error_description?: string; request_uri?: string };
+      expect(res.status, JSON.stringify(invoice_ids)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/invoice_ids is not a supported member/);
+      expect(body.request_uri).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
   // @spec resource-access#entry-validation, mission#mission-intent (#1310,
   // D480): an entry's resource and each Intent target_resources value are one
   // RFC 3986 absolute URI under the shared check, refused at PAR before any
