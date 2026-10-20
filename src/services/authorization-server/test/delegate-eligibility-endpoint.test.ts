@@ -18,7 +18,7 @@
  */
 
 import { type Server } from "node:http";
-import { AUTHORITY_SOURCES } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, TOPOLOGY } from "@mission/demo-data";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -246,6 +246,13 @@ beforeAll(async () => {
     },
     continuationAssertionIssuers: [{ iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER, RAS_AUD] }],
     resourceToAs: (r) => (r === INHERIT || r === OVERLAP ? RAS_AUD : ISSUER),
+    // @spec cross-domain#pre-established-trust (#1166, D510); ICA -02 5.5.5 —
+    // the onward grant's client_id: the deployment's ap-agent registration at
+    // RAS_AUD, and equal-string registrations for the two delegates.
+    crossDomainClients: [
+      ...TOPOLOGY.crossDomainClients,
+      ...(["svc-b", "svc-c"] as const).map((c) => ({ targetAs: RAS_AUD, clientId: c, destinationClientId: c })),
+    ],
   });
   asServer = as.provider.listen(PORT);
   agentKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;

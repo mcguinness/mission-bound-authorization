@@ -247,6 +247,7 @@
   "revocation": {
     "actor": "s6BhdRkqt3",
     "operation": "revoke",
+    "authorization": "mission_lifecycle grant for this Mission",
     "reason": "Quarterly reconcile completed early"
   },
   "variants": [

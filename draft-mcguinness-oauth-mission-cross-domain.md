@@ -467,7 +467,11 @@ exists before the first grant is issued.
   and verification interoperate only if both domains fix the same one.
 - Client registration: the presenting client is registered with and
   authenticates to the Resource AS's token endpoint, as the grant
-  profile requires.
+  profile requires, and the originating AS holds a trusted,
+  destination-scoped mapping from each client that may request a
+  projection to its registration at each target Resource AS
+  ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section 5).
+  The two registrations can use the same identifier string.
 - Subject resolution: the account-linking policy by which the
   Resource AS resolves the conveyed Subject in its own namespace
   ({{validation-at-resource-as}}).
@@ -511,6 +515,11 @@ A Mission-bound cross-domain grant:
   ({{I-D.draft-mcguinness-mission-mandate}}) is never redeemable as a
   grant, and the `typ` is what a token endpoint separates them by;
 - MUST be audienced to the target Resource AS;
+- MUST name the requesting client's registration at the target
+  Resource AS in the claim its grant profile defines for it
+  (`client_id` for the RECOMMENDED profile,
+  {{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section
+  3.1), resolved as the checks below require;
 - MUST NOT have a lifetime exceeding 300 seconds (a short lifetime
   bounds cross-domain revocation latency; see
   {{cross-domain-revocation}});
@@ -593,10 +602,17 @@ assertion that carries no Mission binding ({{error-responses}}).
 Before issuing, the AS MUST verify:
 
 - that the Mission is `active`, failing otherwise with
-  `invalid_request` ({{Section 2.2.2 of RFC8693}}); and
+  `invalid_request` ({{Section 2.2.2 of RFC8693}});
 - that the target Resource AS is authorized for the requested
   resources under the Mission's Authority Set, failing otherwise
-  with `invalid_target` ({{RFC8693}}).
+  with `invalid_target` ({{RFC8693}}); and
+- that the destination-scoped mapping ({{pre-established-trust}})
+  resolves the client the AS authenticated on the exchange, the
+  actual authorized requesting client, to exactly one registration
+  at the target Resource AS, failing otherwise with `invalid_target`
+  ({{RFC8693}}). A missing or ambiguous mapping never falls back to
+  the client's identifier at the originating AS, and the Mission's
+  approved agent never substitutes for the requesting client.
 
 The token-exchange response carries `issued_token_type` of
 `urn:ietf:params:oauth:token-type:id-jag` (for the RECOMMENDED
@@ -686,6 +702,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   presenter holds the grant's bound key; it is not, by itself, client
   authentication at the Resource AS's own token endpoint and MUST NOT
   be treated as satisfying this requirement.
+- MUST verify that the grant's client claim (`client_id` for the
+  RECOMMENDED profile) identifies the client that authentication
+  established, refusing an absent or different value with
+  `invalid_grant`
+  ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section
+  4.4.1).
 - When issuing local access tokens for its resources, the Resource AS
   uses the subject-resolution rules of the underlying cross-domain
   grant and identity chaining specifications. The local token preserves
@@ -703,10 +725,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     the client identity established by the authentication above;
     where the local token is an RFC 9068-style JWT, that identifier
     is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section
-    2.2). It MUST NOT be the Mission's approved agent from the
-    originating domain, and the cross-domain grant's own `client_id`
-    claim ({{cross-domain-grant}}) MUST NOT be reinterpreted as this
-    local identifier under any profile. Where the Origin Principal
+    2.2). That identity MUST come from the Resource AS's own
+    authentication of the redeeming client; the Mission's approved
+    agent from the originating domain never substitutes for it. An
+    identifier string equal to the client's identifier at the
+    originating AS is not by itself a conflict: the same string can
+    name a registration in each domain. Where the Origin Principal
     profile is claimed, that approved agent's origin principal is
     instead conveyed to the local token through `mission.subject`
     ({{origin-principal}}); otherwise the approved agent remains
@@ -714,6 +738,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     identified by `mission.id` and `mission.issuer`. A resource
     server MAY impose stronger actor-chain requirements but MUST NOT
     reinterpret `client_id`.
+- MUST NOT issue a refresh token, or any equivalent renewal
+  authority, on a Mission-bound grant. This tightens
+  {{Section 4.4.3 of I-D.draft-ietf-oauth-identity-assertion-authz-grant}},
+  which recommends against returning a refresh token for an ID-JAG:
+  renewal returns to the originating AS for a new grant
+  ({{what-crosses}}).
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed. It MUST apply its own local
   authorization policy in addition: honoring a Mission does not
@@ -738,7 +768,9 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   "Delegation Within a Mission"); that chain identifies delegates
   within this domain only. The Mission's originating approved agent
   is recoverable from the Mission Record, not from `client_id` or
-  this domain's `act` chain.
+  this domain's `act` chain. Each such delegated token, and every
+  token descended from it, MUST NOT expire after the `exp` of the
+  original cross-domain grant.
 - SHOULD record, per minted local token, both sides of the
   derivation: the consumed grant's `jti` and conveyed
   `authorization_details`, and the local token's own identifier or
@@ -1040,6 +1072,7 @@ At issuance (the token exchange at the Mission Issuer,
 | The subject token does not resolve to a Mission | `invalid_request` |
 | The Mission is not `active` | `invalid_request` |
 | The target Resource AS is not authorized for the requested resources under the Authority Set | `invalid_target` |
+| The destination-scoped mapping has no registration, or more than one, for the requesting client at the target Resource AS | `invalid_target` |
 
 At redemption (the JWT-bearer grant at the Resource AS,
 {{validation-at-resource-as}}):
@@ -1047,7 +1080,7 @@ At redemption (the JWT-bearer grant at the Resource AS,
 | Condition | Error |
 |---|---|
 | Client authentication fails | `invalid_client` |
-| Untrusted issuer; the grant's `iss` not equal to its `mission.issuer`; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed `jti`; a malformed `mission` claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
+| Untrusted issuer; the grant's `iss` not equal to its `mission.issuer`; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a grant client claim absent or not identifying the authenticated client; a replayed `jti`; a malformed `mission` claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
 | The request names a resource outside the conveyed entries | `invalid_target` |
 
 A Resource AS rejecting a grant reveals no Mission state it does not
@@ -1107,6 +1140,10 @@ Mission Issuer of the issuance profile that additionally:
 - issues the Mission-bound cross-domain grant per
   {{cross-domain-grant}}, gated and counted as a derivation;
 - scopes every projection by audience ({{audience-scope}});
+- names the requesting client's registration at the target Resource
+  AS in the grant, resolved from its destination-scoped mapping with
+  no fallback to the client's identifier at the originating AS
+  ({{cross-domain-grant}});
 - fails issuance with the codes of {{error-responses}}; and
 - advertises cross-domain grant issuance per {{as-metadata}}.
 
@@ -1119,12 +1156,15 @@ A **Resource AS**:
 - bounds every local token by the grant that seeded it and issues it
   sender-constrained and short-lived ({{validation-at-resource-as}},
   {{cross-domain-revocation}});
+- issues no refresh token or equivalent renewal authority on the
+  grant ({{validation-at-resource-as}});
 - authenticates the redeeming client at redemption by its own
   mechanism, distinct from the grant's sender-constraint
   ({{validation-at-resource-as}});
-- sets each local token's `client_id` to the client identity that
-  authentication established, never the Mission's approved agent nor
-  the grant's own `client_id` claim ({{validation-at-resource-as}});
+- verifies that the grant's client claim identifies the client that
+  authentication established, and sets each local token's
+  `client_id` to that identity, never one taken from the Mission's
+  approved agent ({{validation-at-resource-as}});
 - fails redemption with the codes of {{error-responses}};
 - where it offers token introspection for its local tokens, follows
   {{introspection-at-resource-as}}; and
@@ -1178,10 +1218,14 @@ cross-domain grants, but it cannot revoke a token a Resource AS has
 already minted in another domain: that token remains valid until its
 own expiry.
 
-Cross-domain revocation latency is therefore the
-downstream token lifetime. The grant lifetime is the state lease the
-partner domain runs on: the longest a Resource AS may treat Mission
-state established at issuance as current
+Exposure measured from revocation is therefore bounded by the
+remaining lifetime of the outstanding grant. A grant redeemed late
+still yields a local token whose `exp` cannot exceed the grant's, and
+the Resource AS issues no renewal authority on the grant
+({{validation-at-resource-as}}), so the exposure can exceed one local
+token lifetime but not the grant's remaining lifetime. The grant
+lifetime is the state lease the partner domain runs on: the longest a
+Resource AS may treat Mission state established at issuance as current
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 The issuance profile's token introspection closes the revocation gap
@@ -1395,7 +1439,7 @@ audience-scoped authority for the ERP:
   "iss": "https://as.example.com",
   "aud": "https://ras.partner.example.com",
   "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
+  "client_id": "partner-agent-042",
   "iat": 1793606400,
   "exp": 1793606700,
   "jti": "idjag_4Kp9sT2vN7xR1mZ8bQ",
@@ -1426,11 +1470,14 @@ audience-scoped authority for the ERP:
 The ID-JAG is short-lived (300 s), explicitly typed
 (`oauth-id-jag+jwt` in its JWT header), and sender-constrained to the
 agent. Its `exp` does not exceed the Mission's `expires_at`
-({{cross-domain-grant}}). Only the agent may request a cross-domain
-projection ({{cross-domain-grant}}), so `client_id` (the requesting
-client) is the approved agent here too; no delegation has occurred,
-and the approved agent remains recoverable at the home AS from the
-Mission Record identified by `mission.id`.
+({{cross-domain-grant}}). Its `client_id` is the agent's
+registration at `ras.partner.example.com`, `partner-agent-042`,
+which the home AS resolves from its destination-scoped mapping for
+the authenticated client `s6BhdRkqt3` ({{pre-established-trust}}).
+Only the agent may request a cross-domain projection
+({{cross-domain-grant}}), so no delegation has occurred, and the
+approved agent remains recoverable at the home AS from the Mission
+Record identified by `mission.id`.
 
 ## Stage 3: The Resource AS Issues a Local Access Token
 
@@ -1442,8 +1489,9 @@ sender-constraint proof. It then issues its own access token for the
 ERP, preserving the `mission` claim unchanged and capping `exp` at the
 ID-JAG's `exp`. The agent redeems the ID-JAG under its own
 registration with `ras.partner.example.com`
-({{pre-established-trust}}), so `client_id` names that local
-registration, not the agent's home-domain `client_id`:
+({{pre-established-trust}}); the Resource AS checks that the
+grant's `client_id` names the client it authenticated, and the local
+token's `client_id` names that registration:
 
 ~~~ json
 {
@@ -1485,10 +1533,11 @@ AS-local `sub` is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document. `client_id` (`partner-agent-042`) is the
 Resource AS's own registration for the presenting client, per
-{{RFC8693}} Section 4.3 and {{RFC9068}} Section 2.2; it is not the
-Mission's approved agent (`s6BhdRkqt3`), which this local token does
-not carry. That identity remains recoverable at the home AS from the
-Mission Record identified by `mission.id`
+{{RFC8693}} Section 4.3 and {{RFC9068}} Section 2.2, established by
+its own authentication of the presenting client, never taken from
+the Mission's approved agent (`s6BhdRkqt3`), which this local token
+does not carry. That identity remains recoverable at the home AS from
+the Mission Record identified by `mission.id`
 ({{validation-at-resource-as}}).
 
 Revoking the Mission now stops new ID-JAGs, but the local token the
@@ -1602,6 +1651,28 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Changes a requirement (#1166, D510): the cross-domain grant names the
+  requesting client's registration at the target Resource AS, as
+  ID-JAG -04 Sections 3.1 and 5 define `client_id`, resolved from a
+  destination-scoped mapping; a missing or ambiguous mapping is
+  `invalid_target`, with no fallback to the home identifier. The
+  Resource AS checks the grant's client claim against the client it
+  authenticated (`invalid_grant` on mismatch, ID-JAG -04 Section
+  4.4.1). The prohibitions on the local identifier equaling the
+  approved agent and on reading the grant's `client_id` become an
+  identity-source rule: destination authentication establishes the
+  local identity, and an equal identifier string in both domains is
+  not a conflict.
+
+- Adds two requirements at the Resource AS: it issues no refresh
+  token or equivalent renewal authority on a Mission-bound grant,
+  tightening the recommendation of Section 4.4.3 of ID-JAG -04, and
+  a delegated token it issues, with every token descended from it,
+  expires no later than the original grant. Cross-Domain Revocation
+  Latency states the exposure measured from revocation as bounded by
+  the outstanding grant's remaining lifetime, replacing the claim that
+  latency is the downstream token lifetime (#1180).
 
 - Changes a requirement: grant issuance refuses a subject token that
   does not resolve to a Mission with `invalid_request`, where it was

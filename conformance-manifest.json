@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "cdfc088a6c87bc77317150efd28fb7b39246a2db",
-    "content_sha256": "c1f606897ad3d6d64c4a58c0a8022f1b475d0c893003bb690f69117d7b5e5cf1"
+    "revision": "d6f68cab958b0fb6c69201e20dec30032da359e9",
+    "content_sha256": "4709060708ca58f5593cc3a3c2a21b07744c8b9dfc94da9cd29eb32dd2b64860"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
@@ -35,8 +35,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "cf1df8b8a9cb1a34f14edd167fab926c9a0fe7b1",
-    "content_sha256": "186978cebc8cf52630af5a5fd106d718fd05d495ec5428e89a7bfa19dbe6fce1"
+    "revision": "93ec2cba54f5a58f8fb48255c25807f2130e48e2",
+    "content_sha256": "f12ed2bf343eaf2802f0b234b536e21700ba31fd84cc9e1e3ffe2194a4e095db"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "5a1e06044ef2d0ab5e1e29cdb4ec7efeff29e920",
@@ -2010,6 +2010,94 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1154 (D369)."
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.names-destination-client",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "MUST name the requesting client's registration at the target Resource AS in the claim its grant profile defines for it (`client_id` for the RECOMMENDED profile, {{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section 3.1), resolved as the checks below require;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the cross-domain grant's client_id is the requesting client's registration at the target Resource AS as the destination-scoped mapping resolves it, a distinct identifier where the mapping names one and the same string where both domains register the client under it; the Resource AS redeems that grant for the client it authenticates under that registration"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > resolves a distinct destination ID",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > resolves an equal-string registration",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > issue ID-JAG -> redeem at RAS -> post journal entry from the token alone",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.destination-client-unresolved-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "that the destination-scoped mapping ({{pre-established-trust}}) resolves the client the AS authenticated on the exchange, the actual authorized requesting client, to exactly one registration at the target Resource AS, failing otherwise with `invalid_target` ({{RFC8693}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a requesting client the destination-scoped mapping does not cover at the target Resource AS, or covers with two distinct registrations, is refused (invalid_target) rather than answered with the client's identifier at the originating AS; entries naming the same registration count once",
+    "local": "witnessed at the token endpoint on the continuation exchange (ICA -02 Section 5.5.5): a missing or an ambiguous mapping returns HTTP 400 with invalid_target, and the Mission records no new hop and no derivation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > a missing mapping is refused, never answered with the requesting client's identifier",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > two distinct registrations for one client and target are ambiguous and refused",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > entries that name the same registration count once",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (f6) the onward grant names the client's registration at the target RAS; a missing or ambiguous mapping is invalid_target, with no hop and no derivation (#1166, D510; ICA -02 5.5.5)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The resolver tests witness the missing, ambiguous and duplicate-entry cases of the mapping; the continuation test witnesses the token-endpoint error mapping. The reference implementation has no HTTP surface for the base refresh-token-mode grant exchange (the demo calls issueCrossDomainGrant directly), so the continuation exchange is the endpoint witness."
   },
   {
    "id": "cross-domain.error-responses.unresolved-subject-invalid-request",
@@ -14430,7 +14518,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
+   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test. #818 slice 1 adds EvaluateOptions.missionBoundOnlyClasses, which the MAS pilot's gateway uses to deny a joined credential in the high-consequence classes before the join runs (src/services/pdp/test/evaluate-join-mapping.test.ts, src/demo/test/mas-pilot.test.ts). The reference claims no mas.enterprise capability and builds no Join Assertion, so this row stays todo."
   },
   {
    "id": "mas.join.assertion-below-tier",
@@ -14667,7 +14755,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "evaluate() (services/pdp/src/evaluate.ts step 4b) itself calls resolveBaselineJoin when the decision request carries context.mission_join, comparing the authenticated subject {iss, sub} (req.subject.id/properties.iss, already-verified request facts) against the loaded MissionView's own subject by byte-equality; a mismatch on either member denies mission_binding_failed as a genuine PDP Decision. Resolved IN the PDP (#557 review point 1), not by a PEP-side helper call the PDP never observes: the PEP no longer calls resolveBaselineJoin directly (src/services/mcp-payments/src/pep.ts)",
-    "local": "the same-namespace case only: an account-mapping contract for a differing AS/MAS subject namespace is not implemented (a deployment would supply an already-mapped subject to the resolver, per its own documented mapping)"
+    "local": "without a mapping contract the PDP compares the issuer-qualified pair by byte equality (the shared-namespace demo); under one (EvaluateOptions.joinMapping, #818) it first maps the subject qualified by context.credential.issuer, and a subject the contract does not resolve (uncovered, disabled, stale, or for another Mission Issuer) denies mission_binding_failed. The MAS pilot's contract store is src/demo/src/mas-pilot/mapping-contract.ts"
    },
    "level": "unit",
    "coverage": "tested",
@@ -14701,9 +14789,27 @@
      "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > denies mission_binding_failed when the authenticated subject does not match the Mission's subject",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > permits an estate credential whose issuer-qualified subject and client the contract maps to the Mission's own",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > denies mission_binding_failed for an estate subject the contract does not cover, even though its client maps",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > never conflates an estate subject whose sub string equals the Mission subject's: the contract maps it to another person",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. observation.local: cross-namespace account mapping is out of scope for this resolver (see PR body). #557 review point 1: the join relocated from a PEP-side helper call into evaluate() itself; evaluate-mission-join.test.ts exercises evaluate() directly with context.mission_join set, proving the PDP resolves this, not merely that the pure resolver function is correct in isolation."
+   "notes": "#557. observation.local: cross-namespace account mapping is out of scope for this resolver (see PR body). #557 review point 1: the join relocated from a PEP-side helper call into evaluate() itself; evaluate-mission-join.test.ts exercises evaluate() directly with context.mission_join set, proving the PDP resolves this, not merely that the pure resolver function is correct in isolation. #818 slice 1: the cross-namespace case is witnessed at the PDP (evaluate-join-mapping.test.ts) and end to end at the MAS pilot's gateway against a separate estate issuer (src/demo/test/mas-pilot.test.ts); each new test was proved by a defect that makes its assertion fail."
   },
   {
    "id": "mas.baseline-join.client-join",
@@ -14720,7 +14826,8 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_binding_failed -- never a default admission"
+    "normative": "evaluate() (step 4b) resolves this itself, against req.context.actor.client_id (the already-authenticated OAuth client this envelope carries) and EvaluateOptions.delegatePolicy (forwarded from the deployment, #557 review point 1): joins directly when that client_id equals the Mission's own client_id; otherwise ONLY an explicit, enumerated DelegatePolicy entry for that exact client_id can join, and an unrecognized client with no policy at all, or a client absent from a configured policy, denies mission_binding_failed -- never a default admission",
+    "local": "under a mapping contract (EvaluateOptions.joinMapping, #818) the compared client is the contract's resolution of the client qualified by context.credential.issuer, never the presented string; without one, the client is compared by equality (the shared-namespace demo)"
    },
    "level": "unit",
    "coverage": "tested",
@@ -14754,9 +14861,15 @@
      "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > denies mission_binding_failed for a client that is neither the Mission's own client_id nor an authorized delegate, and never falls back to the unjoined authority",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > never conflates an estate client whose identifier string equals the Mission's client_id: only the contract's resolution is compared",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin."
+   "notes": "#557. #557 review point 1: resolved by evaluate() itself now, over EvaluateOptions.delegatePolicy; the PEP forwards PepDeps.masJoin.delegatePolicy unchanged but no longer calls resolveBaselineJoin. #818 slice 1: an estate client registered under the Mission's own client_id string is denied at the PDP (evaluate-join-mapping.test.ts) and at the MAS pilot's gateway (src/demo/test/mas-pilot.test.ts)."
   },
   {
    "id": "mas.baseline-join.delegate-narrowing",
@@ -14951,9 +15064,15 @@
      "name": "baseline MAS Join: mission_binding_failed (@spec authority-server#mission-join rule 6) > refuses unknown_mission, before any decision, for a referenced Mission that does not resolve at all",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-join-mapping.test.ts",
+     "name": "evaluate(): the join under a mapping contract (@spec authority-server#mission-join rules 3 and 4, #mapping-contract, #818) > denies mission_binding_failed for an estate subject the contract does not cover, even though its client maps",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. DenialReason carries \"mission_binding_failed\" (services/pdp/src/evaluate.ts), the AuthZEN profile's classification for a failed external-binding join, which replaced the MAS-only mission_mismatch (#972 item 27b, D289); distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined."
+   "notes": "#557. DenialReason carries \"mission_binding_failed\" (services/pdp/src/evaluate.ts), the AuthZEN profile's classification for a failed external-binding join, which replaced the MAS-only mission_mismatch (#972 item 27b, D289); distinct from two unrelated same-named bare strings elsewhere in the tree (see evaluate.ts's own disambiguating comment). #557 review point 1: this denial is now a PDP-side deny() (evaluateInner step 4b), not a PEP-side refuse() before evaluate() is ever called; res.decision is defined on this path, where it was previously undefined. #818 slice 1: an unresolved mapping denies without falling back to the Mission's own identities (the proving defect substituted them)."
   },
   {
    "id": "mas.baseline-join.authority-from-mission",
@@ -35591,7 +35710,7 @@
    "id": "cross-domain.resource-as.client-id-identifies-redeemer",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "validation-at-resource-as",
-   "text": "MUST identify, per the destination's own credential conventions, the client identity established by the authentication above; where the local token is an RFC 9068-style JWT, that identifier is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section 2.2). It MUST NOT be the Mission's approved agent from the originating domain, and the cross-domain grant's own `client_id` claim ({{cross-domain-grant}}) MUST NOT be reinterpreted as this local identifier under any profile. Where the Origin Principal profile is claimed, that approved agent's origin principal is instead conveyed to the local token through `mission.subject` ({{origin-principal}}); otherwise the approved agent remains recoverable only at the originating AS from the Mission Record identified by `mission.id` and `mission.issuer`.",
+   "text": "MUST identify, per the destination's own credential conventions, the client identity established by the authentication above; where the local token is an RFC 9068-style JWT, that identifier is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section 2.2). That identity MUST come from the Resource AS's own authentication of the redeeming client; the Mission's approved agent from the originating domain never substitutes for it.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35602,7 +35721,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Resource AS's minted local token identifies, as client_id (for an RFC 9068-style JWT local token), the client identity its own redemption-time authentication established, never the ID-JAG grant's own client_id (the originating agent) and never a value derived only from the presenter key without a matching registration; distinct registered destination clients each receive their own identifier"
+    "normative": "a Resource AS's minted local token identifies, as client_id (for an RFC 9068-style JWT local token), the client identity its own redemption-time authentication established, never a value taken from the Mission's approved agent and never a value derived only from the presenter key without a matching registration; distinct registered destination clients each receive their own identifier, and a destination registration whose identifier equals the client's identifier at the originating AS redeems under that same identifier"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -35624,9 +35743,49 @@
      "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1) > an equal-string registration redeems: the same identifier names the client in both domains",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "This RAS's client_id is minted only from a matched entry in its own jkt-keyed registration (RasConfig.registeredClients / registerClient()), never a config constant and never the grant's own client_id or the presenter key alone. The two-client mcp-saas test proves neither registered client's key nor identifier leaks onto the other's minted token."
+  },
+  {
+   "id": "cross-domain.resource-as.grant-client-id-matches-authenticated-client",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST verify that the grant's client claim (`client_id` for the RECOMMENDED profile) identifies the client that authentication established, refusing an absent or different value with `invalid_grant` ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section 4.4.1).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose client_id names a client other than the one the Resource AS authenticated, or that carries no client_id, is refused invalid_grant before its jti is consumed, so the same grant later redeems once the registration it names is the authenticated client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1) > a mismatched redemption is invalid_grant and does not consume the grant; the same grant redeems once the registration it names is the authenticated client",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1) > a grant with no client_id is invalid_grant",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "cross-domain.origin-principal.ras-co-resolution",
@@ -35954,6 +36113,119 @@
     }
    ],
    "notes": "#762 adds REQUIRED, runtime-validated, versioned RAS local policy after entitlement and before one-time grant consumption, on base and continuation paths. The configured ceiling supplies the deployment-policy term, preserving restrictions and surviving action bindings; unsupported or too-broad restrictions refuse rather than being discarded. The SaaS read/write pair demonstrates narrowed delegated details; the paired PDP test independently varies resource policy while Mission authority and entitlement remain fixed. Cross-Org already applied localCeiling; retargeting it to the shared primitive establishes one comparison invariant, not a newly demonstrated binding bug. #787 settles the ceiling's child-creation term: a ceiling-declared `child_creation_policy` binds under the lineage rule instead of being stripped, and the minted entry keeps the reference with its retained-action provenance (see cross-domain.resource-as.local-policy-bound). Per-token derivation evidence remains separately tracked as SHOULD/todo."
+  },
+  {
+   "id": "cross-domain.resource-as.no-renewal-authority",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST NOT issue a refresh token, or any equivalent renewal authority, on a Mission-bound grant.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Resource AS redeeming a Mission-bound cross-domain grant returns no refresh token and issues no other credential that renews local authority without a new grant from the originating AS",
+    "local": "the reference RAS's redemption result carries exactly access_token and expires_in, and its metadata lists only the JWT-bearer grant type"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "Resource AS issues no renewal authority on the grant (#1180) > the redemption response carries no refresh_token, and the Resource AS offers no refresh grant",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1180, D378. Partial by design: the witness proves the no-refresh_token facet of the redemption response and that the Resource AS offers no refresh grant, which D378 records as proving only that facet. The clause's \"any equivalent renewal authority\" is wider than any response-shape check can enumerate. Re-presenting the grant itself is refused separately by the one-time jti rule."
+  },
+  {
+   "id": "cross-domain.resource-as.delegated-descendant-expiry",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "Each such delegated token, and every token descended from it, MUST NOT expire after the `exp` of the original cross-domain grant.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "cross-domain.projection",
+     "core.delegation"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated token a Resource AS issues under a Mission-bound cross-domain grant, and every token descended from it, has an exp no later than the exp of the cross-domain grant the local authority was minted from"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1180, D378. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens. redeem() mints one local token per grant, and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own, which applies the issuance profile's delegation (core.delegation) in the partner domain; hence the all_of gate."
+  },
+  {
+   "id": "cross-domain.resource-as.local-token-exp-bounded-by-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "has an `exp` that MUST NOT exceed the grant's `exp`.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a local access token minted from a Mission-bound cross-domain grant has an exp no later than the grant's exp, including when the grant is redeemed so late that the Resource AS's own local token lifetime would outlive it"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "Resource AS issues no renewal authority on the grant (#1180) > delayed redemption: a grant redeemed just before its exp, after the Mission was revoked, yields a local token that expires no later than the grant",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1180, D378. The delayed-redemption witness redeems five seconds before the grant's exp, where the RAS's 120 s local lifetime would outlive the grant, and fails when the grant bound is dropped from the RAS expiry clamp. The older \"M9 scenario 12 > the local token dies with its lease (exp never exceeds the grant)\" test redeems immediately, inside the 300 s grant, and passes with that bound removed, so it is not cited."
+  },
+  {
+   "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-revocation",
+   "text": "A grant redeemed late still yields a local token whose `exp` cannot exceed the grant's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the Mission is revoked and the issuer refuses new grants, an outstanding grant redeemed just before its exp yields a local token that expires no later than the grant, so exposure measured from revocation can exceed one local token lifetime but ends by the grant's exp"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "Resource AS issues no renewal authority on the grant (#1180) > delayed redemption: a grant redeemed just before its exp, after the Mission was revoked, yields a local token that expires no later than the grant",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1180, D378 (the delayed-redemption witness). The test revokes the Mission, confirms the issuer refuses a new grant, redeems the outstanding grant five seconds before its exp, and shows the partner resource honoring the local token until the grant's exp and refusing it after; exposure from revocation exceeds the 120 s local lifetime. The rest of the sentence, that the Resource AS issues no renewal authority on the grant, is cross-domain.resource-as.no-renewal-authority."
   },
   {
    "id": "continuation.ica-transport.refusal-codes",
@@ -47338,7 +47610,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a client not authorized for the predecessor is refused before the creation_request_id lookup, even when it holds the predecessor's token and its key: no deferral or reservation is opened, and no successor is created or predecessor superseded",
-    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
+    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). A successor that another client's poll created before that check existed carries the predecessor's client, and its committed deferral is retained, so building the AS revokes each one the deferral consistently identifies (exactly one Mission carrying the deferral's predecessor and approval event, named by the predecessor's supersession, carrying its client, and no own-client deferral claiming that event), a suspended, committed but unreleased, or late-denied one included (the deferral's completion marker, not its state, selects it). The predecessor stays superseded, a completed or expired successor keeps its termination, a revoked successor's child cascades, a successor its own client approved is untouched, a later boot commits nothing, and the family-grant revocation of a successor the expiry clock terminated is attempted before the AS is returned even when nothing is revoked. The revoked successor's Token Exchange and refresh family are refused and its derivation gate throws, while an access token already issued for it still verifies offline until exp. A committed deferral from another client whose linkage is incomplete or contradicted is reported on the build result, not acted on (#1349). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -47353,6 +47625,24 @@
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
      "name": "expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326) > a retained deferral another client opened is refused invalid_grant at the poll before redeem, creating no successor and leaving the predecessor active; the predecessor's own deferral still completes on a poll that carries no subject_token",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-successor-remediation-restart.test.ts",
+     "name": "successor remediation at build (@spec expansion#verification-order step 4, #1349) > revokes the active, suspended, committed-but-unreleased and late-denied successors another client's deferral created; leaves own-client, terminal, later and unrelated Missions; repeats with no further commit",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "successor remediation (@spec expansion#verification-order step 4, #1349) > revokes a successor whose committed deferral another client opened, refusing its kernel gate, Token Exchange and refresh family while its issued access token still verifies offline until exp; the predecessor stays superseded and an own-client successor keeps refreshing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-successor-remediation-restart.test.ts",
+     "name": "successor remediation at build (@spec expansion#verification-order step 4, #1349) > attempts the family-grant revocation of a successor the expiry clock terminates before the AS is returned, when the sweep revokes nothing",
+     "level": "cross-component",
      "surface": "token-endpoint"
     }
    ]

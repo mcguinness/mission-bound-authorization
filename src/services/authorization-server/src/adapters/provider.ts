@@ -317,7 +317,7 @@ import {
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
 import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
-import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
+import { ID_JAG_TOKEN_TYPE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
   refusedMemberInRequest,
@@ -688,6 +688,13 @@ export interface AdapterOptions {
   familyStore?: DelegationFamilyStore;
   /** Trusted Continuation Assertion Issuers of ICAs (iss + jwks + the RAS audiences each attests for). */
   continuationAssertionIssuers?: ContinuationIssuer[];
+  /**
+   * @spec cross-domain#pre-established-trust (#1166, D510);
+   * id-continuation-assertion (ICA -02 5.5.5) — the destination-scoped mapping
+   * the onward grant's `client_id` is resolved from. Unset means no client is
+   * mapped, so every onward grant is refused `invalid_target`.
+   */
+  crossDomainClients?: DestinationClientRegistration[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;
   /**
@@ -2506,7 +2513,11 @@ export function newResourceServer(
  *    (HTTP 400 authorization_pending + deferral_code/expires_in/interval,
  *    Cache-Control: no-store). This is set directly on ctx because the OAuth
  *    error renderer (err_out) drops any member other than error/error_description.
- *  - Poll/redeem: `deferral_code` present -> `deferrals.redeem(code)`. Error
+ *    Only the Mission's own client may open one, and the deferral records that
+ *    client and its DPoP key (#1348).
+ *  - Poll/redeem: `deferral_code` present -> `deferrals.redeem(code)`, once
+ *    the poller is the recording client (else `invalid_grant`, as an unknown
+ *    code) and its proof is under the recorded key (else `invalid_dpop_proof`). Error
  *    states map to the RFC 8628-shaped OAuth errors (all HTTP 400); a
  *    DeferredToken mints a REAL resource-bound mission JWT (see mintDeferredToken).
  *
@@ -2551,6 +2562,29 @@ async function handleDeferredGrant(
       refuseTokenEndpointProof(ctx, verified);
       return;
     }
+    // Both checks run before redeem, so a refused poll leaves the deferral and
+    // the Mission's derivation count unchanged (#1348).
+    const recorded = deferrals.recorded(params.deferral_code);
+    if (recorded) {
+      // @spec DTR -00 Sections 5.5.1 and 5.6: a code issued to another client
+      // is answered as an unknown one, and so is a deferral whose recorded
+      // client is not the Mission's own client. Checked first, so a refusal
+      // to any other client never reveals that the code exists.
+      const mission = opts.kernel.get(recorded.missionId);
+      if (
+        recorded.clientId !== ctx.oidc.client?.clientId ||
+        (mission !== undefined && mission.client_id !== recorded.clientId)
+      ) {
+        throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+      }
+      // @spec DTR -00 Section 10.1: the code is this client's, so a proof
+      // under another key is invalid_dpop_proof; the deferral stays
+      // redeemable under the key that opened it.
+      if (recorded.jkt !== verified.proof.jkt) {
+        refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
+        return;
+      }
+    }
     const r = deferrals.redeem(params.deferral_code);
     if ("error" in r) {
       switch (r.error) {
@@ -2594,12 +2628,32 @@ async function handleDeferredGrant(
     // is refused here, before any deferral opens.
     const refusedMember = refusedMemberInRequest(intent.requested);
     if (refusedMember) throw new InvalidAuthorizationDetails(refusedMember);
+    // @spec DTR -00 Section 10.1 (#1348): the deferral is bound to this
+    // request's key, which every poll must prove. Required here because the
+    // poll requires it.
+    const proofJws = ctx.get("DPoP");
+    if (!proofJws) throw new errors.InvalidRequest("DPoP proof JWT required");
+    const verified = await verifyTokenEndpointDpop(opts, proofJws);
+    if (!verified.ok) {
+      refuseTokenEndpointProof(ctx, verified);
+      return;
+    }
+    // #1348: the deferred token is a token of this Mission, minted on its own
+    // grant, so only the Mission's own client may open a deferral on it. Another
+    // client gets the same answer as for an unknown Mission (the store's), and
+    // gets it before the store's subset check, so the refusal discloses neither
+    // the Mission's state nor its authority.
+    const clientId = ctx.oidc.client?.clientId as string;
+    if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
+      throw new errors.InvalidRequest("mission is not active");
+    }
     let pending;
     try {
       pending = deferrals.open({
         missionId: intent.mission_id,
         requested: intent.requested as AuthorityEntry[],
-        clientId: ctx.oidc.client?.clientId as string,
+        clientId,
+        jkt: verified.proof.jkt,
       });
     } catch (e) {
       // Requested authority exceeds the active Mission (or it is not active):

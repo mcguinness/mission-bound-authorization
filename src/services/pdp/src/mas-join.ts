@@ -80,6 +80,96 @@ export type BaselineJoinResult =
   | { ok: false; reason: "mission_binding_failed" };
 
 /**
+ * @spec authority-server#mission-join rules 3 and 4,
+ * authority-server#mapping-contract (#818): the authenticated subject and
+ * client a credential's own namespace names, mapped into the referenced
+ * Mission's namespace under the deployment's documented mapping contract.
+ */
+export interface JoinIdentityResolution {
+  subject: { iss: string; sub: string };
+  clientId: string;
+}
+
+/**
+ * @spec authority-server#mapping-contract (#818): one snapshot of a
+ * deployment's versioned mapping contract, as the join applies it where the
+ * acting credential's issuer is not the Mission's subject and client
+ * namespace (rule 3: "otherwise the deployment MUST document the mapping, and
+ * a subject the mapping does not cover fails the join"; rule 4: "Where the AS
+ * and MAS client namespaces differ, the deployment MUST record the client
+ * mapping in its mapping contract").
+ *
+ * A caller reads ONE snapshot per request and hands the same object to every
+ * consumer, so the PEP's actor-record lookup (rule 5) and credential bound
+ * (rule 8) and the PDP's subject and client join (rules 3 and 4) all apply one
+ * contract version. Every method fails closed: `undefined` is "unresolved,
+ * ambiguous, disabled or stale", never a fallback to bare string equality.
+ */
+export interface JoinMappingContract {
+  /** The contract's identifier and version, as its audit records name them. */
+  readonly id: string;
+  readonly version: number;
+  /**
+   * Rule 4's enumerated delegate policy as this contract version states it,
+   * keyed by the Mission-namespace client a delegate maps to. Absent: the
+   * caller's configured policy applies.
+   */
+  readonly delegatePolicy?: DelegatePolicy;
+  /**
+   * Whether this snapshot can resolve anything at `now`: installed and within
+   * its staleness bound. An unusable contract is an unresolved mapping, which
+   * fails the join with `mission_binding_failed` (@spec
+   * authority-server#mapping-contract);
+   * a caller never reports it as a credential that carries no authority.
+   */
+  usable(now: Date): boolean;
+  /**
+   * Rules 3 and 4: the PDP's mapping decision for one joined request. The
+   * credential's issuer qualifies BOTH the subject and the client: the same
+   * `sub` or `client_id` string under another issuer is a different identity.
+   * An implementation records an audit entry for each call.
+   */
+  resolveIdentity(input: {
+    subject: { iss: string; sub: string };
+    client: { iss: string; clientId: string };
+    missionIssuer: string;
+    now: Date;
+  }): JoinIdentityResolution | undefined;
+  /**
+   * Rule 5: the client half alone, the key the PEP's actor records use. No
+   * mapping decision is recorded: the PDP's `resolveIdentity` is the decision.
+   */
+  clientFor(client: { iss: string; clientId: string }, now: Date): string | undefined;
+  /**
+   * Rule 8, bound 1: the contract's scope mapping, "the
+   * `mission_resource_access` entries, by resource and actions, that each
+   * `scope` value of an ordinary token maps to, where a value the mapping does
+   * not cover maps to no entry". `undefined` when nothing maps.
+   */
+  credentialAuthority(input: {
+    issuer: string;
+    scope: string | undefined;
+    resource: string;
+    now: Date;
+  }): AuthorityEntry[] | undefined;
+}
+
+/**
+ * @spec authority-server#mapping-contract (#818): the contract a caller
+ * substitutes when its configured source has no usable snapshot: it resolves
+ * nothing, so the join fails closed rather than falling back to the
+ * shared-namespace comparison an unconfigured deployment uses.
+ */
+export const UNRESOLVED_JOIN_MAPPING: JoinMappingContract = {
+  id: "unresolved",
+  version: 0,
+  usable: () => false,
+  resolveIdentity: () => undefined,
+  clientFor: () => undefined,
+  credentialAuthority: () => undefined,
+};
+
+/**
  * @spec authority-server#mission-join rules 3, 4, 5, 6. Rule 3 (subject
  * join) is byte-equality on the issuer-qualified pair: a deployment whose AS
  * and MAS subject namespaces differ supplies an already-mapped `subject`

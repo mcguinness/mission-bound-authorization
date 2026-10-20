@@ -163,8 +163,15 @@ const TOKENS = [
 ];
 
 // The revocation at 08:53:20 is the Status lifecycle `revoke` by the
-// Mission's client.
-const REVOCATION = { actor: "s6BhdRkqt3", operation: "revoke", reason: "Quarterly reconcile completed early" };
+// Mission's client, under an explicit lifecycle authorization the scenario
+// grants it for this Mission (Status, Authorization): being the Mission's
+// client, holding its resource tokens, or a DPoP binding confers none.
+const REVOCATION = {
+  actor: "s6BhdRkqt3",
+  operation: "revoke",
+  authorization: "mission_lifecycle grant for this Mission",
+  reason: "Quarterly reconcile completed early",
+};
 
 // Named variants: flows that need a different Mission than the baseline's
 // one history. Each has its own Mission reference; none is inserted into
