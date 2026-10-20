@@ -739,15 +739,17 @@ approval the successor's authority requires, and both rest on the same
 possession-proven token exchange ({{expansion-request}}).
 
 Deferred:
-: When approval is asynchronous, the Mission Issuer returns the
-  deferred token response
+: When approval is asynchronous and the exchange opts in, the Mission
+  Issuer returns the deferred token response
   ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
   `authorization_pending` with a `deferral_code`, its `expires_in`, and
-  a polling `interval`. The Approver acts on the deployment's asynchronous review
-  surface, and the client polls. The poll resolves to the successor's
-  access token on approval, or to `access_denied` or `expired_token`.
-  This document references that substrate and does not redefine it.
+  a polling `interval`. The Approver acts on the deployment's
+  asynchronous review surface. The client polls with the substrate's
+  deferred grant type and the `deferral_code`; the poll resolves to the
+  successor's access token on approval, or to `access_denied` or
+  `expired_token`. This document references that substrate and does
+  not redefine it.
 
 Interactive:
 : When approval is interactive, the Mission Issuer answers the token
@@ -756,7 +758,14 @@ Interactive:
   carrying the continuation, the user agent completes the issuance
   profile's own approval ceremony
   ({{I-D.draft-mcguinness-oauth-mission}}), and the client redeems the
-  resulting authorization code for the successor's authority.
+    resulting authorization code for the successor's authority.
+
+An exchange opts in to deferred completion when its `completion_mode`
+includes `deferred`, the deferred token response's opt-in. The Mission
+Issuer MUST NOT return the deferred response to an exchange that does
+not opt in. It answers such an exchange with the interactive handoff
+({{interactive-handoff}}) or, where it offers no interactive
+completion, refuses it with `invalid_request`.
 
 This document defines no synchronous completion for an expansion that
 takes fresh consent. An expansion response is a successor or a
@@ -1694,7 +1703,9 @@ authorization, derivation, approval, output, or side effects of the
 creation MUST extend the fingerprint object with it. Attempt-specific
 material is excluded: the DPoP proof serialization and its `jti`, the
 client-authentication assertion serialization, the raw
-`subject_token` serialization, and `creation_request_id` itself.
+`subject_token` serialization, `completion_mode`, and
+`creation_request_id` itself. The completion mode recorded at
+initiation governs recovery ({{creation-recovery}}).
 
 ## The Durable Reservation {#creation-reservation}
 

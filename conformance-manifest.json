@@ -50202,6 +50202,52 @@
    "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
   },
   {
+   "id": "expansion.completion.deferred-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The Mission Issuer MUST NOT return the deferred response to an exchange that does not opt in.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an expansion exchange whose completion_mode does not include deferred never receives the deferred response; it receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request",
+    "local": "the reference AS defers every widening expansion exchange and never reads completion_mode"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.completion.deferred-poll-grant",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The client polls with the substrate's deferred grant type and the `deferral_code`",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deferred expansion is polled with the deferred token response's deferred grant type and its deferral_code, and the Mission Issuer serves that poll",
+    "local": "the reference AS serves the expansion poll on the token-exchange grant with deferral_code"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",
