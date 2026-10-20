@@ -2992,20 +2992,20 @@ third table.
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
 | Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{direct-approval-steps}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
-| Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe detail |
+| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe detail |
 {: title="Failures on more than one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
-| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
+| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) ({{submission-via-par}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) ({{authority-proposal}}) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
 | PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
-| Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: none unless a defined extension applies |
+| Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: none unless a defined extension applies |
 {: title="PAR and authorization endpoint failures"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -3023,10 +3023,10 @@ third table.
 |---|---|
 | Protected resource: a token lacking the `mission` claim, where the resource requires it ({{rs-enforcement}}) | `invalid_token` ({{Section 3.1 of RFC6750}}). Detail: none |
 | Protected resource: weak or stale authentication of the token's Subject, where the deployment conveys it ({{rs-enforcement}}) | `insufficient_user_authentication` ({{Section 3 of RFC9470}}). Detail: `acr_values` or `max_age` |
-| Protected resource: DPoP proof missing, invalid, or mismatched | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}). Detail: none |
+| Protected resource: DPoP proof missing, invalid, or mismatched ({{rs-enforcement}}) | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}). Detail: none |
 | Protected resource: DPoP nonce required, missing, or stale | `DPoP` `use_dpop_nonce` challenge ({{Section 9 of RFC9449}}). Detail: fresh nonce |
-| Protected resource: certificate-bound token's presented certificate mismatch | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}). Detail: none |
-| Protected resource: insufficient carried authority, or an unenforceable constraint | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
+| Protected resource: certificate-bound token's presented certificate mismatch ({{rs-enforcement}}) | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}). Detail: none |
+| Protected resource: insufficient carried authority, or an unenforceable constraint ({{rs-denials}}) | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Protected resource challenges"}
 
 In these tables, which evidence types are required follows
