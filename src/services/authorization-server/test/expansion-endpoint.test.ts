@@ -284,7 +284,7 @@ async function expandViaExchange(
     login_hint: "alice",
     mission_intent: intentJson(goal, actions, expiresAt),
     authorization_details: JSON.stringify(authority(actions)),
-    // @spec expansion#creation-request-id — REQUIRED on every initiation.
+    // @spec expansion#submission — REQUIRED on every initiation.
     creation_request_id: creationRequestId ?? crypto.randomUUID(),
     completion_mode: "deferred",
   });
@@ -461,7 +461,7 @@ describe("expansion wire: a predecessor that is not active (@spec expansion#pred
   }
 });
 
-describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#nothing-to-expand)", () => {
+describe("expansion wire: NON-WIDENING request is REFUSED (@spec expansion#verification-order)", () => {
   it("a pure subset request refuses (invalid_request + nothing_to_expand): predecessor stays active, nothing created or reserved, no derivation consumed", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
     const before = as.kernel.get(pred.missionId);

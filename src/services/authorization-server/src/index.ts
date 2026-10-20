@@ -764,7 +764,7 @@ export interface BuiltAs {
    */
   missionApprovalDeferrals?: MissionApprovalDeferralStore;
   /**
-   * @spec expansion#creation-request-id — the creation-idempotency store
+   * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
   creationIdempotency: CreationIdempotencyStore;
@@ -1517,7 +1517,7 @@ export async function buildAuthorizationServer(opts: {
     expansionRateLimit.windowSeconds,
     () => kernel.nowDate().getTime(),
   );
-  // @spec expansion#creation-request-id — the creation-idempotency store over
+  // @spec expansion#creation-idempotency — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).
   const creationIdempotency = new CreationIdempotencyStore(kernel);
