@@ -857,6 +857,31 @@ function intersectDelegation(
 }
 
 /**
+ * @spec expansion#reconciliation check 3 (#1177) — whether some operation
+ * could be authorized by both entries. `false` only where the two are
+ * provably disjoint: no shared action, resources neither of which lies within
+ * the other, `vendors` lists with no common member, `max_amount` caps in
+ * different currencies, or Common Constraints with an empty intersection. A
+ * member or constraint key this cannot evaluate only narrows its entry, so it
+ * never makes two entries overlap; but nothing else proves them disjoint, and
+ * the caller refuses rather than restore authority it cannot show is
+ * untouched.
+ */
+export function entriesMayOverlap(a: AuthorityEntry, b: AuthorityEntry): boolean {
+  if (!a.actions.some((action) => b.actions.includes(action))) return false;
+  if (!resourceWithin(a, b) && !resourceWithin(b, a)) return false;
+  const aVendors = a.constraints?.vendors;
+  const bVendors = b.constraints?.vendors;
+  if (aVendors && bVendors && !aVendors.some((v) => bVendors.includes(v))) return false;
+  const aCap = a.constraints?.max_amount;
+  const bCap = b.constraints?.max_amount;
+  if (aCap && bCap && aCap.currency !== bCap.currency) return false;
+  const common = intersectCommonConstraints(a.constraints, b.constraints);
+  if (!common.ok && !common.reason.startsWith("malformed")) return false;
+  return true;
+}
+
+/**
  * One candidate x effective pairing: the non-empty intersection FRAGMENT, or
  * null where no fragment can be a subset of both. Fail-closed-by-DROPPING and
  * total (never throws), unlike {@link intersect}, which is the derivation-time

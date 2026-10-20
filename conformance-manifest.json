@@ -53178,11 +53178,29 @@
    "assertion": "refusal",
    "observation": {
     "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction.",
-    "local": "the reference completes an expansion only on a deferred poll, so the code-redemption and token-exchange-response codes are not witnessed; the restriction is the predecessor's own overlay after the initiation snapshot; witnessed at the deferral store, not the wire"
+    "local": "the reference completes an expansion only on a deferred poll, so the code-redemption and token-exchange-response codes are not witnessed; the restriction is the predecessor's own overlay after the initiation snapshot; witnessed at the deferral store, not the wire; discharge is compared per entry, constraints included, so an entry latched after the snapshot refuses even when its authority lies within one latched before it"
    },
    "level": "endpoint",
    "coverage": "partial",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > refuses the completion when a same-action entry with other constraints is discharged after adjudication, though another was discharged before",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > completes when the successor carries only an entry whose constraints are disjoint from the one discharged after adjudication",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > refuses the completion when the successor's entry is broader than, and so overlaps, the entry discharged after adjudication",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/discharge.test.ts",
      "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > refuses the completion with access_denied and authority_restricted_since_approval when the successor carries an entry discharged after adjudication",
