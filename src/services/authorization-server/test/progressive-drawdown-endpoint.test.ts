@@ -21,7 +21,7 @@
 import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
 import { authorityHash, computeAnchor, type JsonValue } from "@mission/core";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -894,5 +894,22 @@ describe("default off (@spec progressive#in-ceiling-expansion)", () => {
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("authorization_pending");
     expect(asOff.kernel.get(m.missionId)?.state).toBe("active");
+  });
+});
+
+describe("a drawdown of floor-class authority (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255)", () => {
+  it("a drawdown of each action the approval floor classifies high-risk falls back to a fresh approval, never to policy", async () => {
+    // The actions the published floor classifies here in a class some floor applies to.
+    const invoking = new Set<string>(APPROVAL_FLOOR.floors.flatMap((f) => f.applies_to));
+    const actions = APPROVAL_FLOOR.classification
+      .filter((c) => c.resource === RESOURCE)
+      .flatMap((c) => Object.entries(c.actions).filter(([, cls]) => invoking.has(cls)).map(([action]) => action))
+      .sort();
+    expect(actions).toEqual(["payments:payment.execute", "payments:remittance.send"]);
+    for (const action of actions) {
+      const pred = await issueMission(READ, ceilingOf());
+      await expectFreshApproval(pred.missionId, pred.accessToken, [...READ, action]);
+      expect(successorsOf(pred.missionId)).toHaveLength(0);
+    }
   });
 });

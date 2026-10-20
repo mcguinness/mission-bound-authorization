@@ -25,6 +25,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import type { ApprovalFloorPolicy } from "@mission/demo-data";
 import {
   type ActivationPolicyRef,
   authorityHash,
@@ -217,8 +218,15 @@ export interface ProgressiveDrawdownOptions {
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
-/** Validate the typed deployment configuration; throws on any malformed member. */
-export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions): ProgressiveDrawdownOptions {
+/**
+ * Validate the typed deployment configuration; throws on any malformed member,
+ * and on a mapping that disagrees with the approval-authentication floor
+ * ({@link assertDrawdownClassesMeetApprovalFloor}).
+ */
+export function validateProgressiveDrawdownOptions(
+  o: ProgressiveDrawdownOptions,
+  approvalFloor: ApprovalFloorPolicy,
+): ProgressiveDrawdownOptions {
   if (!isPositiveInteger(o?.chainRateBound?.maxDrawdowns) || !isPositiveInteger(o.chainRateBound.windowSeconds)) {
     throw new Error("progressive chainRateBound needs positive integer maxDrawdowns and windowSeconds");
   }
@@ -233,7 +241,38 @@ export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions
   if (o.externalCommunicationActions !== undefined && !o.externalCommunicationActions.every((a) => typeof a === "string")) {
     throw new Error("progressive externalCommunicationActions must be action identifiers");
   }
+  assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion, mission#approval-authentication
+ * (#1255): the drawdown's published mapping agrees with the
+ * approval-authentication floor's classification. An action the floor
+ * classifies, at any resource, in a class some floor `applies_to` must not map
+ * in `actionClasses` to a class outside the fresh-approval set, or a drawdown
+ * would grant by policy alone authority whose approval the floor guards.
+ * `actionClasses` is keyed by action alone, so one floor-invoking
+ * classification of the action is enough to refuse. An action with no
+ * `actionClasses` entry needs nothing here: its drawdown falls back
+ * (`unclassified_action`). Throws, so the deployment does not start.
+ */
+export function assertDrawdownClassesMeetApprovalFloor(
+  o: ProgressiveDrawdownOptions,
+  approvalFloor: ApprovalFloorPolicy,
+): void {
+  const invoking = new Set<string>(approvalFloor.floors.flatMap((f) => f.applies_to));
+  for (const entry of approvalFloor.classification) {
+    for (const [action, floorClass] of Object.entries(entry.actions)) {
+      if (!invoking.has(floorClass) || !Object.hasOwn(o.actionClasses, action)) continue;
+      const mapped = o.actionClasses[action] as RuntimeActionClass;
+      if (!FRESH_APPROVAL_CLASSES.has(mapped)) {
+        throw new Error(
+          `progressive actionClasses: ${action} maps to ${mapped}, which a drawdown grants by policy, but the approval-authentication floor ${approvalFloor.policy_id} classifies it ${floorClass} at ${entry.resource}, which invokes a floor`,
+        );
+      }
+    }
+  }
 }
 
 /**
