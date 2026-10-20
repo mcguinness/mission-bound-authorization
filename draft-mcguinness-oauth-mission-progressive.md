@@ -62,6 +62,8 @@ normative:
     date: 2026
 
 informative:
+  RFC8693:
+  RFC9449:
   I-D.draft-mcguinness-mission-discovery:
     title: "Mission Open-World Discovery"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-discovery.html
@@ -324,6 +326,28 @@ through a chain of successor Missions:
 Every Mission in the chain stays within C, and each drawdown is
 bounded incrementally.
 
+## Example scenario {#example-scenario}
+
+The examples in this document follow one scenario, the
+`ceiling-drawdown` variant of the family's Q3 reconciliation baseline.
+At `2026-11-02T08:00:00Z`, `alice` (`user_3p2q8mN1a0kV7tR` at
+`https://idp.example.com`) approves Mission
+`msn_pasG9An7Ivj9cOdd3RqWWonuaLAbDHtM` at `https://as.example.com` for
+the reconciliation agent, the client `s6BhdRkqt3`. Its Authority Set
+allows only reading Q3 invoices at `https://erp.example.com`. Alice
+also consents to an authority ceiling that adds posting journal
+entries of at most USD 500 and correcting Q3 invoices, under the
+drawdown policy `q3-reconcile-drawdown` version `1`.
+
+The deployment's Mission Deployment Profile publishes a per-drawdown
+bound of one added action, a chain rate bound of two drawdowns per
+hour, and a 30-day ceiling review cadence. It maps `invoices.read` to
+the consequential read class, and `journal-entries.write` and
+`invoices.write` to the reversible consequential write class, so no
+ceiling action requires a fresh approval by class
+({{fresh-approval}}). The Mission has no Child Missions and its chain
+has no discharge or containment restrictions.
+
 # Progressive Authorization {#progressive-authorization}
 
 At the initial approval event ({{I-D.draft-mcguinness-oauth-mission}}),
@@ -382,6 +406,58 @@ in-ceiling expansion is policy-adjudicated
 A Mission that carries no `authority_ceiling` has no progressive
 authorization: every expansion of it is an ordinary, freshly approved
 expansion ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+
+The following is an example of the ceiling members the Mission Issuer
+records for the scenario's Mission at the initial approval
+({{example-scenario}}), other members omitted:
+
+~~~ json
+{
+  "authority_ceiling": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" } } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.write"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      } }
+  ],
+  "drawdown_policy": {
+    "id": "q3-reconcile-drawdown",
+    "version": "1",
+    "digest":
+      "sha-256:HS89ur28PoDZuYR2YEAPKaqYTIawABGKnIyjTWDQNGc"
+  },
+  "ceiling_hash":
+    "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw"
+}
+~~~
+
+The Mission's Authority Set is the first ceiling entry alone. The
+policy snapshot that `digest` commits has `content_type`
+`application/json` and consists of exactly the following bytes, which
+state the per-drawdown bound and the ceiling review cadence in seconds
+({{ceiling-review}}):
+
+~~~
+{"ceiling_review_cadence":2592000,"max_added_actions":1}
+~~~
 
 ## In-ceiling expansion {#in-ceiling-expansion}
 
@@ -562,6 +638,51 @@ lost response is recovered through `creation_request_id`
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
 Idempotency").
 
+In the example scenario ({{example-scenario}}), the agent finds an
+adjustment of USD 180 to post at 09:15:00. Its Mission lacks
+`journal-entries.write`, so the client requests an expansion as an
+{{RFC8693}} token exchange, proving possession of the Mission's access
+token with a DPoP proof {{RFC9449}}. The `mission_intent` carries the
+baseline Q3 Intent. The following is an example of the request; client
+authentication is omitted, and extra line breaks are for display only:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
+requested_token_type=
+  urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
+subject_token=<the%20Mission%27s%20access%20token>&
+subject_token_type=
+  urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
+mission_intent=%7B%22intent%22%3A%7B...%7D%7D&
+predecessor=msn_pasG9An7Ivj9cOdd3RqWWonuaLAbDHtM&
+creation_request_id=787d127f-df08-5d87-bf49-ed64a323194a
+~~~
+
+The derived successor Authority Set is the baseline's: the read entry
+and the journal-write entry, each a ceiling entry. It adds one action,
+within
+the per-drawdown bound, and leaves `invoices.write` undrawn. No
+condition of {{fresh-approval}} applies, so the drawdown policy
+adjudicates the request. The response carries the successor's access
+token:
+
+~~~ json
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
+  "issued_token_type":
+    "urn:ietf:params:oauth:token-type:access_token",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "mission_id": "msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb",
+  "mission_expires_at": "2026-12-31T23:59:59Z"
+}
+~~~
+
 ### The ceiling_drawdown approval basis {#ceiling-drawdown-basis}
 
 A policy-adjudicated in-ceiling successor is rooted in a
@@ -589,6 +710,40 @@ reservation and retains with the committed successor
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Creation
 Idempotency"). A retry recovers it; a reservation created after that
 key's tombstone expires receives a new one.
+
+The following is an example of the scenario's successor record
+({{example-scenario}}), other members omitted:
+
+~~~ json
+{
+  "id": "msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb",
+  "issuer": "https://as.example.com",
+  "predecessor": "msn_pasG9An7Ivj9cOdd3RqWWonuaLAbDHtM",
+  "subject": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_basis": {
+    "type": "ceiling_drawdown",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "activation": { "policy_id": "q3-reconcile-drawdown",
+      "policy_version": "1" },
+    "activation_actor": { "iss": "https://as.example.com",
+      "sub": "s6BhdRkqt3" },
+    "root_commitment":
+      "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw",
+    "approved_at": "2026-11-02T08:00:00Z"
+  },
+  "approval_event_id": "ape_1hJEKlr4vhnTLqwrYhpX",
+  "ceiling_hash":
+    "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw",
+  "created_at": "2026-11-02T09:15:00Z"
+}
+~~~
+
+`approved_at` is the instant of the ceiling consent, not of the
+drawdown. The successor carries the predecessor's `authority_ceiling`
+and `drawdown_policy` unchanged, so its `ceiling_hash` is the
+predecessor's.
 
 The child delegation profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
@@ -801,6 +956,27 @@ A consumer that does not implement this document treats
 `out_of_ceiling` as it treats any unrecognized reason code: the
 expansion stays denied.
 
+The expansion profile surfaces a denial on the token-exchange response
+as an OAuth error with the reason code in `mission_denial_reason`
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Expansion
+Denial Reasons"). In the example scenario ({{example-scenario}}), the
+agent finds an adjustment of USD 1,200 at 10:05:00, and the client
+requests an expansion of the successor whose journal-write entry
+allows USD 2,000. That entry is within no ceiling entry. The following
+is an example of the refusal; no Mission is created, and
+`msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb` stays `active`:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_request",
+  "mission_denial_reason": "out_of_ceiling"
+}
+~~~
+
 # Audit Linkage {#audit-linkage}
 
 Each policy-adjudicated in-ceiling expansion is an approval event and
@@ -971,6 +1147,13 @@ Denial Reasons Registry"):
 
 -01
 
+- Editorial: In-ceiling expansion in subsections, Relationship and
+  Terminology under the Introduction, a Protocol Overview, Security
+  Considerations in subsections, and the IANA request as a
+  registration template. Examples on the baseline fixture's
+  `ceiling-drawdown` variant: the ceiling members and policy snapshot,
+  a drawdown request and response, the successor record, and an
+  `out_of_ceiling` refusal. No normative change.
 - Relationship to the Expansion Profile: `superseded` is the
   expansion profile's termination reason, not a lifecycle state
   (#705).
