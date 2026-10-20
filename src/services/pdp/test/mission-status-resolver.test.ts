@@ -18,6 +18,7 @@ import {
   MissionStatusResolver,
   type MissionStatusResolverOptions,
   type MissionStatusResolution,
+  type ResolveOptions,
 } from "../src/mission-status-resolver.js";
 
 const ISSUER = "https://mas.pilot.example";
@@ -153,9 +154,14 @@ function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionSta
 const ref = { id: MISSION, issuer: ISSUER };
 
 /** A failure of `reason`, with nothing cached: the next read goes to the double and verifies. */
-async function expectRefusedUncached(r: MissionStatusResolver, reason: string, detail?: string | RegExp): Promise<void> {
+async function expectRefusedUncached(
+  r: MissionStatusResolver,
+  reason: string,
+  detail?: string | RegExp,
+  options: ResolveOptions = {},
+): Promise<void> {
   const before = requests.length;
-  const first = await r.resolve(ref);
+  const first = await r.resolve(ref, options);
   expect(first.ok).toBe(false);
   expect(first).toMatchObject({ reason });
   if (detail !== undefined) expect((first as { detail: string }).detail).toMatch(detail);
@@ -312,15 +318,25 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "unverifiable");
   });
 
-  it("refuses a response whose signed fresh_until has passed, or that carries none", async () => {
-    handler = respond((p) => {
-      mission(p).fresh_until = new Date((nowS() - 1) * 1000).toISOString();
-    });
-    await expectRefusedUncached(resolver(), "unverifiable", "fresh_until passed");
+  it("refuses a response that carries no signed fresh_until", async () => {
     handler = respond((p) => {
       delete mission(p).fresh_until;
     });
     await expectRefusedUncached(resolver(), "unverifiable");
+  });
+
+  it("refuses a response without exp (consumer check 9)", async () => {
+    handler = respond((p) => {
+      delete p.exp;
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
+  });
+
+  it("refuses a response without iat (consumer check 9)", async () => {
+    handler = respond((p) => {
+      delete p.iat;
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "signature or claims");
   });
 
   it("refuses a response observed in the future", async () => {
@@ -442,6 +458,51 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
   it("reports a source that does not answer at all as unavailable", async () => {
     const r = resolver({ statusUrl: () => "http://127.0.0.1:1/missions/x/status" });
     expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "transport" });
+  });
+});
+
+describe("MissionStatusResolver: an observation read now is held to the same reliance bounds as a cached one (@spec status#mission-status-caching)", () => {
+  /** A verified response observed `seconds` ago, its `exp` and `fresh_until` still ahead. */
+  const observedAgo = (seconds: number, version = 3) =>
+    respond((p) => {
+      p.iat = nowS() - seconds;
+      p.exp = nowS() + 40;
+      mission(p).version = version;
+    });
+
+  it("refuses stale a response read now whose signed fresh_until has passed, and caches nothing", async () => {
+    handler = respond((p) => {
+      mission(p).fresh_until = new Date((nowS() - 1) * 1000).toISOString();
+    });
+    await expectRefusedUncached(resolver(), "stale", "fresh_until passed");
+  });
+
+  it("refuses stale a 20-second-old observation read now when the caller relies on 5 seconds, and caches nothing", async () => {
+    handler = observedAgo(20);
+    await expectRefusedUncached(resolver(), "stale", "older than maxAgeSeconds", { maxAgeSeconds: 5 });
+    // Control: the same observation inside the caller's window is relied on.
+    handler = observedAgo(20);
+    expect(await resolver().resolve(ref, { maxAgeSeconds: 25 })).toMatchObject({ ok: true, source: "fetched" });
+  });
+
+  it("refuses stale a 20-second-old observation read now when the issuer's mission_max_stale_seconds is 10, with no caller window", async () => {
+    handler = observedAgo(20);
+    await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "stale", "older than mission_max_stale_seconds");
+  });
+
+  it("refuses stale an over-age observation on a fresh read, and leaves the cached answer as it was", async () => {
+    const r = resolver();
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "fetched", view: { version: 3 } });
+    handler = observedAgo(20, 4);
+    const before = requests.length;
+    expect(await r.resolve(ref, { fresh: true, maxAgeSeconds: 5 })).toMatchObject({
+      ok: false,
+      reason: "stale",
+      detail: "older than maxAgeSeconds",
+    });
+    expect(requests.length).toBe(before + 1);
+    expect(await r.resolve(ref)).toMatchObject({ ok: true, source: "cached", view: { version: 3 } });
+    expect(requests.length).toBe(before + 1);
   });
 });
 

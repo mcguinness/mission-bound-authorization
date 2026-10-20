@@ -111,7 +111,7 @@ export interface VerifiedMissionStatus {
  *
  * Verified means: a JWS of the Status media type, signed by one of `keys`,
  * issued by `expected.issuer`, audienced to `expected.audience` (the
- * enforcement scope), not expired, its `mission` object naming
+ * enforcement scope), carrying `iat` and `exp` and not expired, its `mission` object naming
  * `expected.missionId` under that same issuer, and carrying a signed
  * `mission.fresh_until`. `keys` are the declared state source's published
  * status-response keys; absent, nothing can be verified. Each caller adds the
@@ -132,6 +132,9 @@ export async function verifyMissionStatusResponse(
       audience: expected.audience,
       currentDate: now,
       clockTolerance: clockToleranceSeconds,
+      // Consumer check 9 compares both: a response without either is not
+      // one whose lifetime can be established, so it does not verify.
+      requiredClaims: ["exp", "iat"],
     });
     const mission = payload.mission;
     if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return undefined;

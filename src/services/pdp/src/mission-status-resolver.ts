@@ -30,13 +30,16 @@
  *   credential never leaves for another origin.
  * - Fail closed. Every failure is a typed result, never a throw, and never
  *   cached: no negative entry outlives the request that met it.
- * - Cached within the signed bounds. An answer is reused, keyed on the
- *   Mission under this resolver's one issuer and enforcement scope, only
- *   while every bound holds: before its signed `fresh_until` (no skew
- *   allowance, for any state), within `iat` plus the issuer's advertised
- *   `mission_max_stale_seconds`, and within the caller's own `maxAgeSeconds`
- *   (its action class's staleness window). `fresh: true` bypasses the cache
- *   and reads the source now. An older observation never replaces a newer one.
+ * - Relied on only within the signed bounds. Every observation `resolve`
+ *   returns, read now or reused from the cache, is within each bound at that
+ *   instant: before its signed `fresh_until`, within `iat` plus the issuer's
+ *   advertised `mission_max_stale_seconds`, and within the caller's own
+ *   `maxAgeSeconds` (its action class's staleness window), with no skew
+ *   allowance on the old side ({@link MissionStatusResolver.boundPassed}).
+ *   An observation read now that is already past one is refused `stale` and
+ *   not cached. The cache is keyed on the Mission under this resolver's one
+ *   issuer and enforcement scope; `fresh: true` bypasses it and reads the
+ *   source now. An older observation never replaces a newer one.
  *
  * The view: `authorization_details` is the audience-scoped EFFECTIVE set the
  * issuer projects, so it carries no containment or discharge delta; an entry
@@ -89,9 +92,11 @@ export interface ResolvedMission {
  * refused this PDP's credential (401 or 403). `not_found`: the issuer's
  * anti-oracle not-found, or a reference naming another issuer.
  * `unverifiable`: a response arrived and did not verify or did not carry a
- * usable view.
+ * usable view. `stale`: a response verified, but the observation it carries
+ * is already past a reliance bound (its signed `fresh_until`,
+ * `mission_max_stale_seconds`, or the caller's `maxAgeSeconds`).
  */
-export type MissionStatusFailure = "unavailable" | "unauthorized" | "not_found" | "unverifiable";
+export type MissionStatusFailure = "unavailable" | "unauthorized" | "not_found" | "unverifiable" | "stale";
 
 export interface UnresolvedMission {
   ok: false;
@@ -275,10 +280,17 @@ export class MissionStatusResolver {
     if (ref.id === "" || ref.id === "." || ref.id === "..") return fail("not_found", "reference names no Mission");
     if (options.fresh !== true) {
       const cached = this.cache.get(ref.id);
-      if (cached !== undefined && this.reusable(cached, options.maxAgeSeconds)) return { ...cached, source: "cached" };
+      if (cached !== undefined && this.boundPassed(cached, options.maxAgeSeconds) === undefined) {
+        return { ...cached, source: "cached" };
+      }
     }
     const read = await this.read(ref.id);
     if (!read.ok) return read;
+    // An answer read now is held to the same bounds as one reused from the
+    // cache: a verified but already-old observation is relied on for nothing,
+    // and is not cached.
+    const passed = this.boundPassed(read, options.maxAgeSeconds);
+    if (passed !== undefined) return fail("stale", passed);
     const held = this.cache.get(ref.id);
     // An older observation never replaces a newer one: a slow read that
     // completes after a later one does not roll the cached state back.
@@ -292,13 +304,26 @@ export class MissionStatusResolver {
     return { ...read, source: "fetched" };
   }
 
-  /** Whether a cached answer is still within every bound on reliance. */
-  private reusable(entry: CachedMission, maxAgeSeconds: number | undefined): boolean {
+  /**
+   * The ONE place the reliance bounds live, for an observation read now and
+   * one reused from the cache alike: the first bound it has passed at this
+   * instant, or `undefined` while it is within all of them. Before its
+   * signed `fresh_until` (@spec status#mission-status-caching "Hard stop",
+   * no skew allowance for any state); no older than `iat` plus the issuer's
+   * `mission_max_stale_seconds`; and no older than the caller's
+   * `maxAgeSeconds` where it gives one. No skew allowance on the old side,
+   * as the decision point's own window check (`ageMs > enforceableWindowMs`)
+   * allows none; an `iat` slightly in the future, accepted at verification,
+   * is younger than every bound.
+   */
+  private boundPassed(entry: CachedMission, maxAgeSeconds: number | undefined): string | undefined {
     const nowMs = this.now().getTime();
-    if (nowMs >= entry.freshUntilMs) return false;
-    if (nowMs > entry.observedAtMs + this.opts.maxStaleSeconds * 1000) return false;
-    if (maxAgeSeconds !== undefined && !(nowMs <= entry.observedAtMs + maxAgeSeconds * 1000)) return false;
-    return true;
+    if (nowMs >= entry.freshUntilMs) return "fresh_until passed";
+    if (nowMs > entry.observedAtMs + this.opts.maxStaleSeconds * 1000) return "older than mission_max_stale_seconds";
+    if (maxAgeSeconds !== undefined && !(nowMs <= entry.observedAtMs + maxAgeSeconds * 1000)) {
+      return "older than maxAgeSeconds";
+    }
+    return undefined;
   }
 
   /** One authenticated, bounded read of the Status operation, verified. */
@@ -345,15 +370,12 @@ export class MissionStatusResolver {
     // answers THIS request, never a replayed earlier one.
     if (payload.nonce !== nonce) return fail("unverifiable", "nonce");
     // Check 9's other half: an observation dated in the future is not one the
-    // issuer has made yet.
-    if (typeof payload.iat !== "number" || payload.iat * 1000 - now.getTime() > this.toleranceSeconds * 1000) {
-      return fail("unverifiable", "iat");
-    }
-    // @spec status#mission-status-caching "Hard stop": a response whose
-    // signed `fresh_until` has passed is relied on for nothing.
-    if (freshUntilMs <= now.getTime()) return fail("unverifiable", "fresh_until passed");
+    // issuer has made yet. `iat` is present and numeric: the verifier
+    // requires it. Its age is the reliance bounds' question (`boundPassed`).
+    const iatMs = (payload.iat as number) * 1000;
+    if (iatMs - now.getTime() > this.toleranceSeconds * 1000) return fail("unverifiable", "iat");
     const view = viewOf(missionId, this.opts.issuer, mission, payload.authorization_details);
     if (typeof view === "string") return fail("unverifiable", view);
-    return { ok: true, view, observedAtMs: payload.iat * 1000, freshUntilMs };
+    return { ok: true, view, observedAtMs: iatMs, freshUntilMs };
   }
 }
