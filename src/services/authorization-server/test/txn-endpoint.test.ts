@@ -56,6 +56,15 @@ const PORT = 14450;
 const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
+/**
+ * @spec resource-access#resource-access-type (#1266): the keys the shipped
+ * scope-projection mapping knows RESOURCE enforces, which a test's own
+ * mapping entry for RESOURCE carries over.
+ */
+const SCOPE_PROJECTION_KEYS_FOR_RESOURCE: string[] = (() => {
+  const m = SCOPE_PROJECTION.audiences[RESOURCE];
+  return m?.mode === "authorization_details" ? [...(m.mission_constraints_supported ?? [])] : [];
+})();
 /** The pending workflow's own lifetime, independent of any challenge exp. */
 const WORKFLOW_LIFETIME_S = 600;
 /** The deployment maximum for an issued transaction token. */
@@ -1210,6 +1219,9 @@ describe("terminal result ordering (@spec txn-authorization#failure-semantics)",
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(clockMs),
+      // @spec resource-access#resource-access-type (#1266): the shipped
+      // mapping names the keys the Challenge-Issuing Resource enforces.
+      scopeProjection: SCOPE_PROJECTION,
       txn: {
         challengeIssuers: new Map([
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
@@ -1345,6 +1357,9 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
+      // @spec resource-access#resource-access-type (#1266): the shipped
+      // mapping names the keys the Challenge-Issuing Resource enforces.
+      scopeProjection: SCOPE_PROJECTION,
       txn: {
         challengeIssuers: new Map([
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
@@ -1509,6 +1524,9 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
       dpopProofReplay: newDpopProofReplay(),
       subjectTokenLive: async () => true,
       now: () => new Date(),
+      // @spec resource-access#resource-access-type (#1266): the shipped
+      // mapping names the keys the Challenge-Issuing Resource enforces.
+      scopeProjection: SCOPE_PROJECTION,
       txn: {
         challengeIssuers: new Map([
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
@@ -2349,7 +2367,12 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
     const classify = (missionAware: boolean) => ({
       audiences: {
         ...SCOPE_PROJECTION.audiences,
-        [RESOURCE]: { version: "txn-1", mission_aware: missionAware, mode: "authorization_details" as const },
+        [RESOURCE]: {
+          version: "txn-1",
+          mission_aware: missionAware,
+          mode: "authorization_details" as const,
+          mission_constraints_supported: SCOPE_PROJECTION_KEYS_FOR_RESOURCE,
+        },
       },
     });
     const depsFor = (missionAware: boolean) => ({
@@ -2484,7 +2507,12 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
       scopeProjection: {
         audiences: {
           ...SCOPE_PROJECTION.audiences,
-          [RESOURCE]: { version: "txn-1", mission_aware: missionAware, mode: "authorization_details" as const },
+          [RESOURCE]: {
+          version: "txn-1",
+          mission_aware: missionAware,
+          mode: "authorization_details" as const,
+          mission_constraints_supported: SCOPE_PROJECTION_KEYS_FOR_RESOURCE,
+        },
         },
       },
       txn: {
@@ -2531,6 +2559,83 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
     const aware = await submitAsDelegate(true, "txn_routing_subject_actor_aware");
     expect(aware.status, JSON.stringify(aware.body)).toBe(200);
     expect(ars.getTask(taskFor("txn_routing_subject_actor_aware"))).toBeDefined();
+  });
+});
+
+describe("transaction tokens carry only constraints keys the Challenge-Issuing Resource is known to enforce (@spec resource-access#resource-access-type)", () => {
+  it("refuses invalid_target, opening no approval, a challenge whose entry carries a key the mapping does not know the resource enforces, and admits it under the shipped mapping", async () => {
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const rsPub = { ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK;
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const depsFor = (keys: string[]) => ({
+      issuer: ISSUER,
+      kernel: as.kernel,
+      clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+      publicJwks: asJwks,
+      dpopProofReplay: newDpopProofReplay(),
+      subjectTokenLive: async () => true,
+      now: () => new Date(),
+      scopeProjection: {
+        audiences: {
+          ...SCOPE_PROJECTION.audiences,
+          [RESOURCE]: {
+            version: "txn-keys-1",
+            mission_aware: true,
+            mode: "authorization_details" as const,
+            mission_constraints_supported: keys,
+          },
+        },
+      },
+      txn: {
+        challengeIssuers: new Map([
+          [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
+        ]) as ChallengeIssuers,
+        ars,
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        tokenKey: txnKeys.privateKey,
+        tokenKid: "keys-txn",
+        workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+        maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+        freshDecision: async () => ({ decision: "permit" as const }),
+      },
+    });
+    const mission = await freshMission();
+    const entries = remittanceEntry(mission.missionId);
+    const carried = Object.keys(entries[0]?.constraints ?? {});
+    expect(carried).toContain("max_amount");
+    const submit = async (keys: string[], txn: string) =>
+      callTransactionEndpoint(depsFor(keys), newTxnWorkflows(), {
+        transaction_challenge: await signChallenge(
+          {
+            txn,
+            authorization_details: entries,
+            iss: RESOURCE,
+            aud: ISSUER,
+            reason: "action_approval_required",
+            parameter_digest: `sha-256:${txn}`,
+            mission: mission.mission,
+          },
+          rsTxnKeys.privateKey,
+          "rs-txn",
+        ),
+        subject_token: mission.token,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      });
+
+    const refused = await submit(
+      SCOPE_PROJECTION_KEYS_FOR_RESOURCE.filter((k) => k !== "max_amount"),
+      "txn_keys_unvouched",
+    );
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect((refused.body as { error: string }).error).toBe("invalid_target");
+    expect((refused.body as { error_description: string }).error_description).toMatch(
+      /not known to enforce the constraints key max_amount/,
+    );
+    expect(ars.getTask(taskFor("txn_keys_unvouched"))).toBeUndefined();
+
+    const admitted = await submit(SCOPE_PROJECTION_KEYS_FOR_RESOURCE, "txn_keys_vouched");
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    expect(ars.getTask(taskFor("txn_keys_vouched"))).toBeDefined();
   });
 });
 

@@ -179,11 +179,18 @@ export const UNRESOLVED_JOIN_MAPPING: JoinMappingContract = {
  * evaluating the action against the referenced Mission's authority.
  */
 export function resolveBaselineJoin(input: BaselineJoinInput): BaselineJoinResult {
-  if (input.view.subject.iss !== input.subject.iss || input.view.subject.sub !== input.subject.sub) {
+  // @spec authority-server#join-disclosure, #mission-join rule 2 (#818): the
+  // Mission's Subject and client come from the issuer's Join Disclosure. A
+  // view without either (a PDP the issuer has not enrolled) has nothing to
+  // join against, so the join fails.
+  const missionSubject = input.view.subject;
+  const missionClientId = input.view.client_id;
+  if (missionSubject === undefined || missionClientId === undefined) return { ok: false, reason: "mission_binding_failed" };
+  if (missionSubject.iss !== input.subject.iss || missionSubject.sub !== input.subject.sub) {
     return { ok: false, reason: "mission_binding_failed" };
   }
 
-  if (input.view.client_id === input.clientId) {
+  if (missionClientId === input.clientId) {
     return { ok: true, disposition: "direct", authoritySet: input.view.authority_set };
   }
 

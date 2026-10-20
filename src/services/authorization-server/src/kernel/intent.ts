@@ -275,7 +275,7 @@ export class IntentError extends Error {
 export function validateMissionIntentSubmission(
   raw: string,
   bounds: SubmissionEvidenceBounds = {},
-  opts: IntentIntakeOptions = {},
+  opts: SubmissionIntakeOptions = {},
 ): MissionIntentSubmission {
   if (Buffer.byteLength(raw, "utf8") > MAX_INTENT_BYTES) {
     throw new IntentError("invalid_request", "mission_intent exceeds size bound");
@@ -313,8 +313,24 @@ export function validateMissionIntentSubmission(
     throw new IntentError("invalid_request", "intent must be a JSON object");
   }
   const intent = validateMissionIntentObject(obj.intent as Record<string, JsonValue>, opts);
-  const evidence = validateIntentSubmissionEvidence(obj.evidence, bounds);
+  const evidence = validateIntentSubmissionEvidence(obj.evidence, bounds, {
+    entries: opts.deferEvidenceEntries !== true,
+  });
   return { intent, ...(evidence ? { evidence } : {}) };
+}
+
+/** Options of {@link validateMissionIntentSubmission}. */
+export interface SubmissionIntakeOptions extends IntentIntakeOptions {
+  /**
+   * @spec mission#submission-processing (#1411): leave the evidence entry
+   * rules ({@link checkIntentSubmissionEvidenceEntries}) to
+   * {@link verifyIntentSubmissionEvidence}, so a carrier that follows the
+   * Submission Processing Order refuses an authority-proposal failure (step
+   * 3) and a missing required type (step 5) before an evidence entry
+   * failure (step 6). The envelope's evidence shape (an array, non-empty,
+   * within the entry-count bound) still runs at parse.
+   */
+  deferEvidenceEntries?: boolean;
 }
 
 /**
@@ -325,18 +341,20 @@ export function validateMissionIntentSubmission(
  * type or an entry failing its type's stage-1 validation is refused —
  * evidence presented for admission is never silently ignored. `evidence`,
  * when present, MUST be a non-empty array; entry count and per-entry size are
- * bounded. Returns undefined only for ABSENT evidence.
+ * bounded. Returns undefined only for ABSENT evidence. With `entries: false`
+ * only the envelope's evidence shape is checked, and the entry rules wait
+ * for {@link verifyIntentSubmissionEvidence}.
  */
 export function validateIntentSubmissionEvidence(
   raw: JsonValue | undefined,
   bounds: SubmissionEvidenceBounds = {},
+  opts: { entries?: boolean } = {},
 ): IntentSubmissionEvidenceEntry[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) {
     throw new IntentError("invalid_request", "evidence must be a JSON array");
   }
   const maxEntries = bounds.maxEvidenceEntries ?? DEFAULT_MAX_EVIDENCE_ENTRIES;
-  const maxEntryBytes = bounds.maxEvidenceEntryBytes ?? DEFAULT_MAX_EVIDENCE_ENTRY_BYTES;
   // @spec mission#submission-via-par — `evidence`, when present, is a
   // NON-EMPTY array: an empty array presents nothing and is refused rather
   // than silently normalized away.
@@ -346,7 +364,23 @@ export function validateIntentSubmissionEvidence(
   if (raw.length > maxEntries) {
     throw new IntentError("invalid_request", `evidence exceeds the entry-count bound (${maxEntries})`);
   }
-  for (const entry of raw) {
+  if (opts.entries !== false) checkIntentSubmissionEvidenceEntries(raw, bounds);
+  return raw as IntentSubmissionEvidenceEntry[];
+}
+
+/**
+ * @spec mission#intent-submission-evidence — the evidence entry rules, entry
+ * by entry: an entry that is not an object, lacks a `type`, or exceeds the
+ * per-entry size bound is refused `invalid_request`; an unknown type, or an
+ * entry failing its type's synchronous validation, is refused
+ * `invalid_mission_intent_evidence`.
+ */
+export function checkIntentSubmissionEvidenceEntries(
+  entries: readonly JsonValue[],
+  bounds: SubmissionEvidenceBounds = {},
+): void {
+  const maxEntryBytes = bounds.maxEvidenceEntryBytes ?? DEFAULT_MAX_EVIDENCE_ENTRY_BYTES;
+  for (const entry of entries) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
       throw new IntentError("invalid_request", "evidence entries must be objects");
     }
@@ -357,18 +391,27 @@ export function validateIntentSubmissionEvidence(
     if (Buffer.byteLength(JSON.stringify(e), "utf8") > maxEntryBytes) {
       throw new IntentError("invalid_request", `evidence entry exceeds the size bound (${maxEntryBytes} bytes)`);
     }
-    const impl = EVIDENCE_TYPE_REGISTRY.get(e.type);
-    if (!impl) {
-      throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${e.type}`);
-    }
     // Stage 1 only: the type's SYNCHRONOUS structural validation (closed
     // member set). Stage-2 verification (signature/freshness/binding) runs
     // later, via verifyIntentSubmissionEvidence — after the idempotency
     // recovery lookup on the exchanges, so an artifact that expired after a
     // completed operation cannot break that operation's recovery.
-    impl.validate(e);
+    dispatchEvidenceEntry(e);
   }
-  return raw as IntentSubmissionEvidenceEntry[];
+}
+
+/**
+ * @spec mission#intent-submission-evidence — type dispatch for one entry: an
+ * unknown type, or an entry failing its type's synchronous validation, is
+ * refused `invalid_mission_intent_evidence`.
+ */
+function dispatchEvidenceEntry(entry: Record<string, JsonValue>): IntentSubmissionEvidenceType {
+  const impl = EVIDENCE_TYPE_REGISTRY.get(String(entry.type));
+  if (!impl) {
+    throw new IntentError("invalid_mission_intent_evidence", `unknown evidence type: ${String(entry.type)}`);
+  }
+  impl.validate(entry);
+  return impl;
 }
 
 /**
@@ -394,8 +437,16 @@ export async function verifyIntentSubmissionEvidence(
   evidence: IntentSubmissionEvidenceEntry[] | undefined,
   ctx: Omit<IntentSubmissionEvidenceVerifyInput, "entry">,
   required: readonly string[] = [],
+  bounds: SubmissionEvidenceBounds = {},
 ): Promise<IntentSubmissionEvidenceFact[] | undefined> {
-  const presented = new Set((evidence ?? []).map((e) => e.type));
+  // A deferring carrier's entries are not yet checked: read a type only
+  // where an entry is an object with a string `type`.
+  const presented = new Set(
+    (evidence ?? []).flatMap((e) => {
+      const type = (e as unknown as { type?: unknown } | null)?.type;
+      return typeof type === "string" ? [type] : [];
+    }),
+  );
   for (const type of required) {
     if (!presented.has(type)) {
       throw new IntentError(
@@ -405,6 +456,10 @@ export async function verifyIntentSubmissionEvidence(
     }
   }
   if (!evidence || evidence.length === 0) return undefined;
+  // The entry rules for every entry before any verification: a carrier that
+  // deferred them at parse (@spec mission#submission-processing, #1411) runs
+  // them here; for any other carrier they repeat the parse-time result.
+  checkIntentSubmissionEvidenceEntries(evidence as unknown as JsonValue[], bounds);
   const facts: IntentSubmissionEvidenceFact[] = [];
   for (const entry of evidence) {
     const impl = EVIDENCE_TYPE_REGISTRY.get(entry.type);

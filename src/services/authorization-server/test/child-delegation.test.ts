@@ -1185,3 +1185,133 @@ describe("requires_action_approval Common Constraint (@spec txn-authorization#ap
     expect(isSubsetSet(gated(["payments:invoice.read"]), parent.authority_set)).toBe(true);
   });
 });
+
+describe("per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119)", () => {
+  const RA = "https://limit-a.example/mcp";
+  const RB = "https://limit-b.example/mcp";
+  type Snapshot = { version: string; content_type: string; content: string };
+  const stating = (member: Record<string, unknown>): Snapshot => ({
+    version: "1",
+    content_type: "application/json",
+    content: JSON.stringify({ rule: "children within the entry", ...member }),
+  });
+  /**
+   * A kernel at `deploymentCeiling` whose policy carries one delegable entry
+   * per element of `snapshots` (RA, then RB), each committing that snapshot as
+   * its child_creation_policy (undefined: none), and an approved parent.
+   */
+  function limitLineage(deploymentCeiling: number | null, snapshots: Array<Snapshot | undefined>) {
+    const registry: Record<string, Snapshot> = {};
+    const ceiling = snapshots.map((snapshot, i) => {
+      const children: Record<string, unknown> = { max_children: 5, allowed_child_actors: [{ sub_profile: "ai_agent" }] };
+      if (snapshot) {
+        const id = `urn:policy:child-limit-${i}`;
+        registry[id] = snapshot;
+        children.child_creation_policy = { id, version: "1", digest: activationPolicyDigest(ISS, snapshot) };
+      }
+      return {
+        type: "mission_resource_access",
+        resource: i === 0 ? RA : RB,
+        actions: ["res.read"],
+        delegation: { max_depth: 1, children },
+      };
+    });
+    const policy = { policy_version: "limit-policy", ceiling, derivation_limit_ceiling: deploymentCeiling };
+    const k = new MissionKernel({
+      issuer: ISS,
+      policy: policy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(policy.ceiling, ["parent-agent"], ["bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+      actorProfiles: aiAgents("limit-child"),
+      activationPolicies: registry,
+    });
+    const parent = k.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "root", target_resources: ceiling.map((e) => e.resource), expires_at: PARENT_EXP }),
+      ),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "bob" },
+      clientId: "parent-agent",
+      approvalEventId: `apev-limit-${seq++}`,
+    });
+    const child = (requested?: number, resources: string[] = [RA]) =>
+      createChildMission(k, {
+        parentId: parent.id,
+        intent: validateMissionIntent(
+          JSON.stringify({
+            goal: "sub",
+            target_resources: resources,
+            expires_at: PARENT_EXP,
+            ...(requested === undefined ? {} : { requested_derivation_limit: requested }),
+          }),
+        ),
+        childActor: { sub: "limit-child", sub_profile: "ai_agent" },
+      }).child;
+    return { k, parent, child };
+  }
+
+  it("a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own", () => {
+    const { child } = limitLineage(null, [stating({ derivation_limit_ceiling: 3 })]);
+    const unrequested = child();
+    expect(unrequested.derivation_limit).toBe(3);
+    expect(child(10).derivation_limit).toBe(3);
+    const smaller = child(2);
+    expect(smaller.derivation_limit).toBe(2);
+    expect(unrequested.derivation_count).toBe(0);
+    expect(smaller.derivation_count).toBe(0);
+  });
+
+  it("a deployment ceiling above the figure does not lift a child above it, and a stricter one narrows it", () => {
+    const raised = limitLineage(100, [stating({ derivation_limit_ceiling: 3 })]);
+    expect(raised.child().derivation_limit).toBe(3);
+    expect(raised.child(50).derivation_limit).toBe(3);
+    expect(limitLineage(2, [stating({ derivation_limit_ceiling: 3 })]).child().derivation_limit).toBe(2);
+  });
+
+  it("a figure stated as null, or not stated, guarantees no finite maximum (positive control)", () => {
+    for (const snapshot of [stating({ derivation_limit_ceiling: null }), stating({})]) {
+      const { child } = limitLineage(null, [snapshot]);
+      expect(child().derivation_limit).toBeNull();
+      expect(child(7).derivation_limit).toBe(7);
+    }
+  });
+
+  it("the strictest committed figure binds a child drawing on several entries", () => {
+    const { child } = limitLineage(null, [stating({ derivation_limit_ceiling: 3 }), stating({ derivation_limit_ceiling: 5 })]);
+    expect(child(undefined, [RA, RB]).derivation_limit).toBe(3);
+  });
+
+  it("a malformed committed figure denies creation policy_denied, committing nothing", () => {
+    for (const value of [0, -1, 2.5, "3", true]) {
+      const { k, child } = limitLineage(null, [stating({ derivation_limit_ceiling: value })]);
+      const before = k.allMissions().length;
+      try {
+        child();
+        expect.unreachable(JSON.stringify(value));
+      } catch (e) {
+        expect((e as ChildDelegationError).reason, JSON.stringify(value)).toBe("policy_denied");
+        expect((e as Error).message).toMatch(/states a malformed derivation_limit_ceiling/);
+      }
+      expect(k.allMissions().length).toBe(before);
+    }
+  });
+
+  it("an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read", () => {
+    // Under the policy the parent was approved under, that policy's ceiling is the figure.
+    expect(limitLineage(4, [undefined]).child().derivation_limit).toBe(4);
+    const { k, parent, child } = limitLineage(null, [undefined]);
+    expect(child().derivation_limit).toBeNull();
+    k.db.prepare("UPDATE missions SET policy_version = ? WHERE id = ?").run("older-policy", parent.id);
+    const before = k.allMissions().length;
+    try {
+      child();
+      expect.unreachable();
+    } catch (e) {
+      expect((e as ChildDelegationError).reason).toBe("policy_denied");
+      expect((e as Error).message).toMatch(/policy_version older-policy is not the policy this issuer holds/);
+    }
+    expect(k.allMissions().length).toBe(before);
+  });
+});

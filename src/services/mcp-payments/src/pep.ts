@@ -14,7 +14,10 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type CollectionMemberFacts,
+  type ConstraintFacts,
   type CredentialAuthorityEntry,
+  collectionMemberConstraintFacts,
   coveringCredentialEntries,
   credentialEntriesFromAuthority,
   entryMatchesTarget,
@@ -23,6 +26,7 @@ import {
   idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
+  MEMBER_FACT_CONSTRAINTS,
   type OperationContract,
   type OperationTargetResolution,
   type PropagatedMissionReference,
@@ -70,6 +74,7 @@ import {
   buildListEffectiveParams,
   type EffectiveParams,
   type ListEffectiveParams,
+  listMembers,
   parameterDigest,
 } from "./effective-params.js";
 import type {
@@ -84,6 +89,7 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
+import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 
@@ -514,6 +520,36 @@ function deriveVendorScope(
 }
 
 /**
+ * @spec resource-access#initial-common-constraints (#1266): whether any entry
+ * a bound `list_invoices` read could rely on (a Mission or credential entry
+ * naming the target and the action) carries a bound whose input is a member
+ * fact. Only then does the read evaluate, carry and bind its members: a read
+ * no such bound narrows keeps its decision bytes.
+ */
+function readsMemberFacts(
+  entries: ReadonlyArray<{ resource: string; resource_match?: unknown; actions: readonly string[]; constraints?: unknown }>,
+  target: string,
+  action: string,
+): boolean {
+  return entries.some(
+    (e) =>
+      entryMatchesTarget(e, target) &&
+      e.actions.includes(action) &&
+      MEMBER_FACT_CONSTRAINTS.some((key) => (e.constraints as Record<string, unknown> | undefined)?.[key] !== undefined),
+  );
+}
+
+/**
+ * The members of a collection read as the facts the Common Constraints read.
+ * A member that does not read (unreachable for members this PEP built) makes
+ * the whole list establish no member fact.
+ */
+function memberConstraintFacts(members: readonly CollectionMemberFacts[]): ConstraintFacts[] {
+  const facts = members.map(collectionMemberConstraintFacts);
+  return facts.every((f): f is ConstraintFacts => f !== undefined) ? facts : [];
+}
+
+/**
  * @spec authzen#response-context, runtime#decision-output: the permit's
  * decision CONDITIONS live NESTED inside `decision.context.conditions`
  * (never as flat top-level members): the declarative constraints on RELYING
@@ -731,6 +767,13 @@ export interface PepDeps {
    * a same-id different-issuer request rather than the wrong Mission.
    */
   loadView: (ref: MissionReference) => LoadedView | undefined;
+  /**
+   * @spec authority-server#mission-join rule 2 (#818, D560): a remote Mission
+   * view source, read once at the start of each enforcement; `loadView` then
+   * answers from that read (view-source.ts). Absent, the in-process loader
+   * is the only read, unchanged.
+   */
+  viewSource?: MissionViewSource;
   instanceEpoch: string;
   now?: () => Date;
   /** Trusted catalog serving this executor, never a caller-supplied digest. */
@@ -1384,6 +1427,8 @@ type TargetObject = {
     issued_at?: string;
     tenant?: string;
     data_classification?: string;
+    /** @spec resource-access#initial-common-constraints (#1266): a collection read's members, each with its own facts. */
+    members?: CollectionMemberFacts[];
   };
 };
 
@@ -1570,6 +1615,9 @@ export class Pep {
     if (!establishedBoundary.ok) return { permitted: false, refusal_reason: establishedBoundary.refusal_reason };
     const { boundary, version: boundaryVersion } = establishedBoundary;
     if (!mapping) return await this.refuse(boundary, token, "unknown_tool", tool);
+    // #818 (D560): the one remote view read, where the deployment has a
+    // remote source; acted on only at a view miss below.
+    const prepared = await prepareRequestView(this.deps.viewSource, token.mission, signals?.missionReference);
 
     let view: MissionView;
     let observation: MissionStateObservation;
@@ -1619,7 +1667,7 @@ export class Pep {
       }
 
       const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action);
+      if (!loaded) return await this.refuse(boundary, token, viewMissRefusal(prepared), mapping.action);
 
       // @spec authority-server#reference-verification — the locally loaded
       // Mission view is the PEP's own binding source; a credential whose
@@ -1654,7 +1702,7 @@ export class Pep {
       }
 
       const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
-      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action, undefined, propagated.id);
+      if (!loaded) return await this.refuse(boundary, token, viewMissRefusal(prepared), mapping.action, undefined, propagated.id);
 
       // Rule 8, bound 1: the acting credential's OWN authority, resolved by a
       // PEP-side deployment hook over TokenFacts (@spec
@@ -1719,7 +1767,7 @@ export class Pep {
         ? joinMapping.clientFor({ iss: token.credential?.issuer ?? "", clientId: token.clientId }, this.now())
         : token.clientId;
       delegateDepth =
-        depthClientId === undefined
+        depthClientId === undefined || loaded.view.client_id === undefined
           ? undefined
           : this.deps.masJoin.resolveDelegateDepth?.(
               { id: propagated.id, issuer: propagated.issuer },
@@ -1767,6 +1815,8 @@ export class Pep {
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: TargetObject = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
+    /** A bound list read's members, when a bound it could rely on reads a member fact (#1266). */
+    let listMemberFacts: CollectionMemberFacts[] | undefined;
     let targetVendorId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
@@ -1868,7 +1918,24 @@ export class Pep {
         if (requestedVendorId === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       }
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
-      listEffective = buildListEffectiveParams({ action: mapping.action, resource: operationTarget, ...scope });
+      // @spec resource-access#initial-common-constraints (#1266): a bound that
+      // reads a member fact (issuance, tenant, classification) is evaluated
+      // for every invoice the read returns, with that invoice's own facts.
+      // The members ride the decision request and bind into the digest, so a
+      // member added, removed or changed before release is a mismatch.
+      const reliedOn = [
+        ...view.authority_set,
+        ...((token.mission !== undefined ? token.credentialAuthority : carriedAuthority) ?? []),
+      ];
+      if (readsMemberFacts(reliedOn, operationTarget, mapping.action)) {
+        listMemberFacts = listMembers(this.deps.payments, scope.vendor_scope, requestedVendorId);
+      }
+      listEffective = buildListEffectiveParams({
+        action: mapping.action,
+        resource: operationTarget,
+        ...scope,
+        ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+      });
       listDigest = parameterDigest(listEffective);
       // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
       // additional authorization-enforcement control, not the binding itself:
@@ -1879,7 +1946,14 @@ export class Pep {
         // A named vendor_id binds through the SAME vendor-constraint check
         // every invoice-scoped action here uses (out-of-scope -> denied
         // out_of_authority at the FGA step below, same as get_invoice).
-        resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
+        resourceObj = {
+          type: "vendor",
+          id: requestedVendorId,
+          properties: {
+            vendor_id: requestedVendorId,
+            ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+          },
+        };
       } else {
         // Bulk form: bind the RESULT SET to the normalized scope, the
         // entry's own allowlist (never the unconstrained store) or, for an
@@ -1907,7 +1981,11 @@ export class Pep {
         resourceObj = {
           type: "vendor",
           id: representative,
-          properties: { vendor_id: representative, vendor_ids: scope.vendor_scope },
+          properties: {
+            vendor_id: representative,
+            vendor_ids: scope.vendor_scope,
+            ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+          },
         };
       }
     }
@@ -1957,6 +2035,9 @@ export class Pep {
         ...(recipients ? { recipients } : {}),
         tool,
       },
+      // @spec resource-access#initial-common-constraints (#1266): a bound list
+      // read's members, each evaluated with its own facts.
+      ...(listMemberFacts !== undefined ? { constraintMembers: memberConstraintFacts(listMemberFacts) } : {}),
     };
     if (token.mission !== undefined) {
       const covered =
@@ -2313,9 +2394,13 @@ export class Pep {
       // that is the family's monotonic trust ratchet (@spec containment);
       // handing back "here's how to ask again" for a deliberately narrowed
       // capability would contradict restore-only-via-Expansion.
+      // #818 slice 4b review: and only where absence from this view means
+      // never granted (view-source.ts); an effective projection that cannot
+      // prove the committed set gets the refusal with no hint.
       if (
         decision.context.denial_reason === "out_of_authority" &&
-        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action))
+        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action)) &&
+        absenceMeansNeverGranted(this.deps.viewSource, view)
       ) {
         result.insufficient_authorization = buildInsufficientAuthorization([
           { type: "mission_resource_access", resource: operationTarget, actions: [mapping.action] },
@@ -2407,17 +2492,16 @@ export class Pep {
             id: missionAnchor.id,
             issuer: missionAnchor.issuer,
           });
+          // #818 (D560): a remote source's read has lapsed; no observation.
+          if (!loaded && this.deps.viewSource) return undefined;
           const entry = loaded?.view.authority_set.find(
             (e) => entryMatchesTarget(e, listEffective.resource) && e.actions.includes(listEffective.action),
           );
           const requestedVendorId =
             listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
-          const fresh = buildListEffectiveParams({
-            action: listEffective.action,
-            resource: listEffective.resource,
-            ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
-          });
-          return parameterDigest(fresh);
+          return parameterDigest(
+            this.freshListParams(listEffective, deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds())),
+          );
         }
         return undefined;
       },
@@ -2738,22 +2822,51 @@ export class Pep {
       id: attempt.mission.id,
       issuer: attempt.mission.issuer,
     });
+    // #818 (D560): with a remote view source, a read that has lapsed leaves
+    // the scope's Mission binding unestablishable at use (@spec
+    // authzen#failure-condition-coverage `target_drift`), never recomputed
+    // from no view at all.
+    if (!loaded && this.deps.viewSource) {
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
+    }
     const entry = loaded?.view.authority_set.find(
       (e) => entryMatchesTarget(e, effective.resource) && e.actions.includes(effective.action),
     );
     const requestedVendorId =
       effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
-    const fresh = buildListEffectiveParams({
-      action: effective.action,
-      resource: effective.resource,
-      ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
-    });
+    const fresh = this.freshListParams(
+      effective,
+      deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
+    );
     const freshDigest = parameterDigest(fresh);
     if (freshDigest !== expectedDigest) {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
     return { ok: true, effectiveParameterDigest: freshDigest };
+  }
+
+  /**
+   * @spec runtime#read-binding, resource-access#initial-common-constraints
+   * (#1266): a bound list read's normal form recomputed from current state,
+   * over `scope` as just re-derived. The members are recomputed from the
+   * store exactly when the decided form bound them, so a member added,
+   * removed or changed since the decision changes the digest.
+   */
+  private freshListParams(
+    decided: ListEffectiveParams,
+    scope: { vendor_scope: string[]; vendor_scope_source: "requested" | "entry" | "all" },
+  ): ListEffectiveParams {
+    const requestedVendorId = decided.vendor_scope_source === "requested" ? decided.vendor_scope[0] : undefined;
+    return buildListEffectiveParams({
+      action: decided.action,
+      resource: decided.resource,
+      ...scope,
+      ...(decided.members !== undefined
+        ? { members: listMembers(this.deps.payments, scope.vendor_scope, requestedVendorId) }
+        : {}),
+    });
   }
 
   /**

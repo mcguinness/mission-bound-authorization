@@ -344,27 +344,31 @@ describe("the payments resource matches entries with the Resource Access matcher
     }
   });
 
-  it("a prefix entry or an unrecognized resource_match provides no authority at the resource, even naming the target itself", async () => {
+  it("an unrecognized resource_match, or a prefix entry whose resource carries a query, provides no authority at the resource, even naming the target itself", async () => {
     for (const mode of MODES) {
-      for (const resource_match of ["prefix", "glob"]) {
-        const prefixView = viewOf([missionEntry(CANONICAL_RESOURCE, { resource_match })]);
+      const variants: Array<[string, Record<string, unknown>]> = [
+        ["glob", { resource_match: "glob" }],
+        ["prefix with a query", { resource_match: "prefix", resource: `${CANONICAL_RESOURCE}?tenant=a` }],
+      ];
+      for (const [label, over] of variants) {
+        const prefixView = viewOf([missionEntry(CANONICAL_RESOURCE, over)]);
         const byMission = await build(mode, prefixView);
         try {
           const res = await byMission.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(prefixView));
-          expect(res, `${mode} ${resource_match}`).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+          expect(res, `${mode} ${label}`).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
         } finally {
           await byMission.close();
         }
         const byCredential = await build(mode, SERVICE_VIEW);
         try {
-          const unenforceable = [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, resource_match, actions: ALL_ACTIONS }];
+          const unenforceable = [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ALL_ACTIONS, ...over }];
           const res = await byCredential.server.callReadTool(
             "get_invoice",
             { invoice_id: "inv-1" },
             tokenFor(SERVICE_VIEW, unenforceable as unknown as TokenFacts["credentialAuthority"] & object),
           );
-          expect(res, `${mode} ${resource_match}`).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
-          expect(byCredential.decided, `${mode} ${resource_match}`).toHaveLength(0);
+          expect(res, `${mode} ${label}`).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+          expect(byCredential.decided, `${mode} ${label}`).toHaveLength(0);
         } finally {
           await byCredential.close();
         }
@@ -629,6 +633,158 @@ describe("the payments resource derives a finer operation target from validated 
         } finally {
           await x.close();
         }
+      }
+    }
+  });
+});
+
+const INVOICES = `${CANONICAL_RESOURCE}/invoices`;
+/** A sibling collection sharing the prefix's characters but not its path segment. */
+const ARCHIVE: OperationContract = { template: `${CANONICAL_RESOURCE}/invoices-archive/{invoice_id}` };
+const ARCHIVED1 = `${CANONICAL_RESOURCE}/invoices-archive/inv-1`;
+/** A target equal to the prefix's base. */
+const COLLECTION: OperationContract = { service: INVOICES };
+/** A target whose decoded dot-segment leaves /invoices for /admin once normalized. */
+const DOTTED_TARGET = `${INVOICES}/%2e%2e/admin`;
+const DOTTED: OperationContract = { service: DOTTED_TARGET };
+/** A target carrying a query beneath the base. */
+const QUERIED_TARGET = `${INVOICES}?status=payable`;
+const QUERIED: OperationContract = { service: QUERIED_TARGET };
+/** The invoice target with the scheme and host spelled in upper case. */
+const UPPER_TARGET = (() => {
+  const u = new URL(CANONICAL_RESOURCE);
+  return `${u.protocol.toUpperCase()}//${u.host.toUpperCase()}${u.pathname}/invoices/inv-1`;
+})();
+const UPPER: OperationContract = { service: UPPER_TARGET };
+/** The remote PDP's registration for the prefix witnesses: every contract they declare. */
+const PREFIX_CONTRACTS: readonly OperationContract[] = [...CONTRACTS, ARCHIVE, COLLECTION, DOTTED, QUERIED, UPPER];
+
+const prefixEntry = (resource: string) => missionEntry(resource, { resource_match: "prefix" });
+const prefixCredential = (...resources: string[]) =>
+  credentialAuthorityFrom(resources.map((resource) => ({ type: "mission_resource_access" as const, resource, resource_match: "prefix" as const, actions: ALL_ACTIONS })));
+
+describe("the payments resource matches prefix entries against the operation target (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276)", () => {
+  it("a prefix entry covers the target equal to its base and each target beneath it at a path-segment boundary, never a sibling sharing its characters; a base ending in / does not cover the bare path; an exact entry never covers a target beneath it", async () => {
+    for (const mode of MODES) {
+      const view = viewOf([prefixEntry(INVOICES)]);
+      const x = await build(mode, view, { profile: profileDeclaring(PAYMENTS_INVOICE_CONTRACT, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        // Beneath the base: each invoice is its own target, and the prefix in
+        // the Mission and in the credential covers both.
+        for (const id of ["inv-1", "inv-2"]) {
+          const res = await x.server.callReadTool("get_invoice", { invoice_id: id }, tokenFor(view, prefixCredential(INVOICES)));
+          expect(res.ok, `${mode} ${id}: ${JSON.stringify(res)}`).toBe(true);
+          expect(x.decided.at(-1)?.resource.properties, `${mode} ${id}`).toMatchObject({ operation_target: invoiceTarget(id) });
+        }
+        // The target equal to the base.
+        x.setProfile(profileDeclaring(COLLECTION, "get_invoice"));
+        const base = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, prefixCredential(INVOICES)));
+        expect(base.ok, `${mode} base: ${JSON.stringify(base)}`).toBe(true);
+        expect(x.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: INVOICES });
+        // A sibling sharing the characters: the credential's prefix refuses it
+        // before the PDP, and the Mission's is denied there.
+        x.setProfile(profileDeclaring(ARCHIVE, "get_invoice"));
+        const before = x.decided.length;
+        const sibling = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, prefixCredential(INVOICES)));
+        expect(sibling, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(x.decided, mode).toHaveLength(before);
+        const reached = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, [...prefixCredential(INVOICES), ...credentialFor(ARCHIVED1)]));
+        expect(reached, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(x.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: ARCHIVED1 });
+      } finally {
+        await x.close();
+      }
+      // A base ending in / covers the invoices beneath it, not the bare collection.
+      const slashView = viewOf([prefixEntry(`${INVOICES}/`)]);
+      const s = await build(mode, slashView, { profile: profileDeclaring(PAYMENTS_INVOICE_CONTRACT, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const token = tokenFor(slashView, prefixCredential(INVOICES));
+        const invoice = await s.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token);
+        expect(invoice.ok, `${mode}: ${JSON.stringify(invoice)}`).toBe(true);
+        s.setProfile(profileDeclaring(COLLECTION, "get_invoice"));
+        const bare = await s.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token);
+        expect(bare, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(s.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: INVOICES });
+      } finally {
+        await s.close();
+      }
+      // An exact entry naming the base never covers an invoice beneath it,
+      // in the Mission (denied at the PDP) or in the credential (refused before it).
+      const exactView = viewOf([missionEntry(INVOICES)]);
+      const e = await build(mode, exactView, { profile: profileDeclaring(PAYMENTS_INVOICE_CONTRACT, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const byMission = await e.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(exactView, prefixCredential(INVOICES)));
+        expect(byMission, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(e.decided, mode).toHaveLength(1);
+        const byCredential = await e.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(viewOf([prefixEntry(INVOICES)]), credentialFor(INVOICES)));
+        expect(byCredential, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(e.decided, mode).toHaveLength(1);
+      } finally {
+        await e.close();
+      }
+    }
+  });
+
+  it("normalizes before the prefix comparison: a target whose decoded dot-segment leaves the base is denied under it and admitted under the base it lands in, and scheme and host case do not move the boundary", async () => {
+    for (const mode of MODES) {
+      const ADMIN_BASE = `${CANONICAL_RESOURCE}/admin`;
+      // The credential names the dotted target exactly, so the Mission's prefix decides.
+      const underInvoices = viewOf([prefixEntry(INVOICES)]);
+      const x = await build(mode, underInvoices, { profile: profileDeclaring(DOTTED, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const res = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(underInvoices, credentialFor(DOTTED_TARGET)));
+        expect(res, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(x.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: DOTTED_TARGET });
+        // The credential's prefix normalizes too: refused before the PDP.
+        const before = x.decided.length;
+        const byCredential = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(viewOf([missionEntry(DOTTED_TARGET)]), prefixCredential(INVOICES)));
+        expect(byCredential, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(x.decided, mode).toHaveLength(before);
+      } finally {
+        await x.close();
+      }
+      const underAdmin = viewOf([prefixEntry(ADMIN_BASE)]);
+      const y = await build(mode, underAdmin, { profile: profileDeclaring(DOTTED, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const res = await y.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(underAdmin, prefixCredential(ADMIN_BASE)));
+        expect(res.ok, `${mode}: ${JSON.stringify(res)}`).toBe(true);
+        expect(y.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: DOTTED_TARGET });
+      } finally {
+        await y.close();
+      }
+      // Scheme and host case are normalized for the comparison; the target keeps its spelling.
+      const upperView = viewOf([prefixEntry(INVOICES)]);
+      const z = await build(mode, upperView, { profile: profileDeclaring(UPPER, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const res = await z.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(upperView, prefixCredential(INVOICES)));
+        expect(res.ok, `${mode}: ${JSON.stringify(res)}`).toBe(true);
+        expect(z.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: UPPER_TARGET });
+      } finally {
+        await z.close();
+      }
+    }
+  });
+
+  it("excludes the target's query from the prefix path comparison only: a target with a query beneath the base is covered, while an exact entry naming the base without the query is not", async () => {
+    for (const mode of MODES) {
+      const view = viewOf([prefixEntry(INVOICES)]);
+      const x = await build(mode, view, { profile: profileDeclaring(QUERIED, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const res = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, prefixCredential(INVOICES)));
+        expect(res.ok, `${mode}: ${JSON.stringify(res)}`).toBe(true);
+        expect(x.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: QUERIED_TARGET });
+      } finally {
+        await x.close();
+      }
+      // The query stays part of the target: an exact entry naming the base does not cover it.
+      const exactView = viewOf([missionEntry(INVOICES)]);
+      const y = await build(mode, exactView, { profile: profileDeclaring(QUERIED, "get_invoice"), operationContracts: PREFIX_CONTRACTS });
+      try {
+        const res = await y.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(exactView, prefixCredential(INVOICES)));
+        expect(res, mode).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+        expect(y.decided.at(-1)?.resource.properties, mode).toMatchObject({ operation_target: QUERIED_TARGET });
+      } finally {
+        await y.close();
       }
     }
   });

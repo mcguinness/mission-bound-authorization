@@ -11,6 +11,7 @@ import {
   validCommonConstraint,
 } from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
 
 /**
  * Provenance is compared between issuer-derived lineage sets, not config
@@ -213,6 +214,17 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
     !strings(e.actions)
   )
     return false;
+  // @spec resource-access#resource-access-type, resource-access#entry-validation
+  // (#1276): `resource_match` is one of the two values Resource Access
+  // defines, and a `prefix` entry's `resource` is a base the shared matcher
+  // can enforce (no query, a `//` authority).
+  if (
+    e.resource_match !== undefined &&
+    e.resource_match !== "exact" &&
+    e.resource_match !== "prefix"
+  )
+    return false;
+  if (e.resource_match === "prefix" && !isEnforceablePrefixBase(e.resource)) return false;
   if (e.constraints !== undefined) {
     if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints))
       return false;
@@ -409,7 +421,41 @@ export function conditionsNoBroader(
   });
 }
 
-/** @spec mission#subset — entry-wise subset test (resource byte-exact). */
+/**
+ * @spec resource-access#subset step 1 (#1276): whether `candidate`'s resource
+ * set is contained in `reference`'s, under the matcher of Resource Matching:
+ *
+ * - "an `exact` A under an `exact` B: A.`resource` equals B.`resource`
+ *   literally";
+ * - "an `exact` A under a `prefix` B: B's prefix matcher admits A.`resource`
+ *   as a target";
+ * - "a `prefix` A under a `prefix` B: B's prefix matcher admits A's
+ *   normalized base"; and
+ * - "a `prefix` A under an `exact` B: never contained".
+ *
+ * The prefix comparison is {@link prefixAdmits}, the resource servers' own
+ * ("the same matcher, over the same URI forms"), so every target A admits is
+ * also admitted by B. An absent `resource_match` is `exact`; any other value,
+ * or a `prefix` base the matcher cannot enforce, on either side, is never
+ * contained (conservative refusal). Resource containment alone never
+ * establishes authority containment.
+ */
+export function resourceWithin(
+  candidate: { readonly resource: unknown; readonly resource_match?: unknown },
+  reference: { readonly resource: unknown; readonly resource_match?: unknown },
+): boolean {
+  const a = candidate.resource_match === undefined ? "exact" : candidate.resource_match;
+  const b = reference.resource_match === undefined ? "exact" : reference.resource_match;
+  if (typeof candidate.resource !== "string" || typeof reference.resource !== "string")
+    return false;
+  if (b === "exact") return a === "exact" && candidate.resource === reference.resource;
+  if (b !== "prefix" || !isEnforceablePrefixBase(reference.resource)) return false;
+  if (a === "exact") return prefixAdmits(reference.resource, candidate.resource);
+  if (a !== "prefix" || !isEnforceablePrefixBase(candidate.resource)) return false;
+  return prefixAdmits(reference.resource, candidate.resource);
+}
+
+/** @spec mission#subset: entry-wise subset test (resource under {@link resourceWithin}). */
 export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
   // @spec mission#subset (#1399, D538): a top-level member outside the
   // supported set cannot be compared. An entry byte-identical to its
@@ -431,7 +477,7 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
     }
   }
   if (candidate.type !== granted.type) return false;
-  if (candidate.resource !== granted.resource) return false;
+  if (!resourceWithin(candidate, granted)) return false;
   if (!candidate.actions.every((a) => granted.actions.includes(a))) return false;
   const gCap = granted.constraints?.max_amount;
   const cCap = candidate.constraints?.max_amount;

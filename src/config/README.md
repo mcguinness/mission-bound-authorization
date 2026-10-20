@@ -68,7 +68,11 @@ authorization server's issuer, port, directory accounts, client
 registrations (each with the access token format the estate issues it,
 `jwt` or `opaque`) and resource vocabulary; the gateway's RFC 7662
 introspection of opaque tokens (`introspection`: its registered
-introspection client, call timeout and positive-cache bound); the mapping
+introspection client, call timeout and positive-cache bound); the separated
+MAS (`separated_mas`, #818 slice 4b: its host and port, the PDP principal
+that reads its Mission Status, the PDPs it enrolls for Join Disclosure by
+enforcement scope, and the state source's placement, which must be `pdp`,
+read timeout and response-size cap); the mapping
 cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the
 grants a development bootstrap of the pilot's Resource-policy store writes
@@ -87,8 +91,9 @@ is the pilot's contract.
 - **Integrity.** Repository review and the strict loaders: the configuration
   loader refuses unknown or missing members, a duplicate client, an estate
   issuer equal to the Mission Issuer, resource servers that omit the payments
-  resource, a token format other than `jwt` or `opaque`, and an introspection
-  client that is also one of the estate's own clients; the contract loader refuses an ambiguous mapping (a second row
+  resource, a token format other than `jwt` or `opaque`, an introspection
+  client that is also one of the estate's own clients, and a separated MAS
+  whose state source is placed anywhere but the PDP; the contract loader refuses an ambiguous mapping (a second row
   for one issuer-qualified estate subject or client), a claimed
   client-instance mapping and any failure semantics but
   `mission_binding_failed`; the Resource-policy grants are refused unless each
@@ -109,9 +114,21 @@ The trusted scope-projection mapping (`@spec mission#scope-projection`, step
 2: authenticated out-of-band configuration). For each target audience it
 records a `version`, the target's enforcement `mode` (`authorization_details`
 or `scope_only`), the REQUIRED `mission_aware` classification used by the
-delegated-routing rule (`@spec mission#rs-enforcement`), and, for a
+delegated-routing rule (`@spec mission#rs-enforcement`), for an
+`authorization_details` target the `mission_constraints_supported` keys it
+enforces (`@spec resource-access#resource-access-type`, #1266), and, for a
 `scope_only` target, the rights and independently enforced controls each
 `scope` value stands for.
+
+`mission_constraints_supported` mirrors the target's protected resource
+metadata member of the same name. A Mission-bound token issued for an
+`authorization_details` target carries an entry the target serves (one
+naming the target, one for a finer resource within it, or a `prefix` entry
+whose base contains it) only when every `constraints` key of the entry is
+listed; otherwise the issuance is refused `invalid_target`, never narrowed by
+dropping the key. A token with several such audiences meets each one's list.
+An absent list names no key, so any constrained entry that target serves is
+refused.
 
 - **Owner.** The deployment operator responsible for each target Resource
   Server owns that audience's entry, because it describes how that server
