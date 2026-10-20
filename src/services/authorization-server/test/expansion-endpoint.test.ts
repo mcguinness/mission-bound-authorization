@@ -2203,3 +2203,36 @@ describe("the deferred token response substrate for expansion (@spec expansion#c
     }
   });
 });
+
+describe("the per-predecessor, per-client expansion rate limit (@spec expansion#policy-probing, #1177)", () => {
+  it("refuses an authorized client's expansion requests for one predecessor beyond the bound with 429 temporarily_unavailable and Retry-After, whatever each would answer; another predecessor is unaffected", async () => {
+    const { max } = as.expansionRateLimiter;
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const wide = ["payments:invoice.read", "payments:remittance.send"];
+    // A refusal counts: a non-widening request answers nothing_to_expand.
+    const narrow = await expandViaExchange(pred.accessToken, "Read invoices only", ["payments:invoice.read"]);
+    expect(((await narrow.json()) as { mission_denial_reason?: string }).mission_denial_reason).toBe("nothing_to_expand");
+    // So do the request that opens the deferral and every retry that recovers it.
+    const creationRequestId = crypto.randomUUID();
+    for (let i = 1; i < max; i++) {
+      const res = await expandViaExchange(pred.accessToken, "Widen to add remittance", wide, creationRequestId);
+      const body = (await res.json()) as { error?: string };
+      expect(body.error, `request ${i + 1}: ${JSON.stringify(body)}`).toBe("authorization_pending");
+    }
+    const beyond = await expandViaExchange(pred.accessToken, "Widen to add remittance", wide, creationRequestId);
+    const bb = (await beyond.json()) as { error?: string; deferral_code?: string };
+    expect(beyond.status, JSON.stringify(bb)).toBe(429);
+    expect(bb.error).toBe("temporarily_unavailable");
+    expect(bb.deferral_code).toBeUndefined();
+    // The wait is the limiter's own: until the first counted request leaves
+    // the window, not the provider's default for a transient refusal.
+    const retryAfter = Number(beyond.headers.get("retry-after"));
+    expect(retryAfter).toBeGreaterThan(as.expansionRateLimiter.windowSeconds - 60);
+    expect(retryAfter).toBeLessThanOrEqual(as.expansionRateLimiter.windowSeconds);
+    expect(beyond.headers.get("cache-control")).toBe("no-store");
+
+    const other = await issuePredecessor(["payments:invoice.read"]);
+    const fresh = await expandViaExchange(other.accessToken, "Widen to add remittance", wide);
+    expect(((await fresh.json()) as { error?: string }).error).toBe("authorization_pending");
+  });
+});

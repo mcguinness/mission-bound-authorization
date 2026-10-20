@@ -2627,6 +2627,20 @@ export async function handleExpansionExchange(
     txError(ctx, 400, "invalid_request", "the acting client is not authorized to request expansion of this predecessor");
     return;
   }
+  // @spec expansion#policy-probing (#1177): every request the authorized
+  // client presents for this predecessor counts toward the bound, whatever it
+  // would answer (a recovery and a refusal included). Beyond it the request
+  // is refused like Deferred Mission Approval's queue bound, with HTTP 429 as
+  // the MAS answers its own rate limit.
+  const admitted = opts.expansionRateLimiter?.admit(
+    resolved.record.id,
+    (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
+  );
+  if (admitted && !admitted.ok) {
+    txError(ctx, 429, "temporarily_unavailable", "expansion requests for this predecessor exceed the rate limit");
+    ctx.set("Retry-After", String(admitted.retryAfterS));
+    return;
+  }
 
   // @spec expansion#request-binding — the non-authoritative `predecessor`
   // cross-check (audit only; subject_token is the selector, mirroring the

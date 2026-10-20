@@ -51613,6 +51613,50 @@
    "notes": "The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
   },
   {
+   "id": "mas.native.unresolved-reference-not-found",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "native-carriage",
+   "text": "the MAS MUST reject the submission with the `not_found` error code and a response identical in both cases",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.expansion-child-creation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an expansion or child-creation submission whose predecessor or parent does not exist, or is recorded under another client, is rejected not_found, and the two responses are identical"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177. The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
+   "id": "mas.native.refused-state-conflict",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "native-carriage",
+   "text": "the MAS MUST reject the submission with the `conflict` error code, returned with HTTP 409",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.expansion-child-creation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion or child-creation submission whose resolved predecessor or parent is in a state, or a serialization, that refuses the operation is rejected with conflict and HTTP 409, whatever OAuth code the profile uses on its token exchange"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177. The reference stack has no MAS submission endpoint. Todo until a MAS service exists (#972 item 13)."
+  },
+  {
    "id": "mas.reference.missing-required-refusal",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "reference-verification",
@@ -52975,6 +53019,29 @@
    "notes": "#1210 (D398)."
   },
   {
+   "id": "expansion.request-binding.record-presentation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "request-binding",
+   "text": "The Mission Issuer MUST record each expansion presentation and count it toward the deployment's anomaly detection",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every expansion exchange presented for a predecessor, whatever its outcome, is recorded and counted where the deployment's anomaly detection reads it",
+    "local": "the rate limiter counts each presentation by an authorized client, but the reference has no anomaly-detection record"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
    "id": "expansion.verification-order.possession-step",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "verification-order",
@@ -53673,6 +53740,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.policy-probing.rate-limit",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "policy-probing",
+   "text": "The Mission Issuer MUST rate-limit expansion requests per predecessor per client.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorized client's expansion requests for one predecessor beyond the deployment's bound are refused, whatever each would otherwise answer, while its requests for another predecessor are not",
+    "local": "30 requests per 600 s by default, counted after the acting-agent check and held in process memory; a request beyond the bound answers HTTP 429 temporarily_unavailable with Retry-After"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the per-predecessor, per-client expansion rate limit (@spec expansion#policy-probing, #1177) > refuses an authorized client's expansion requests for one predecessor beyond the bound with 429 temporarily_unavailable and Retry-After, whatever each would answer; another predecessor is unaffected",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-rate-limit.test.ts",
+     "name": "the expansion rate limiter (@spec expansion#policy-probing, #1177) > admits max requests per window for one predecessor and client, refuses the next with the seconds until a slot frees, and admits again once the oldest leaves the window",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-rate-limit.test.ts",
+     "name": "the expansion rate limiter (@spec expansion#policy-probing, #1177) > keeps each predecessor and client pair separate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1177."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",

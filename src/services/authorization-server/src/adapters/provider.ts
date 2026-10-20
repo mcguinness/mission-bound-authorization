@@ -304,6 +304,7 @@ import {
   EXPANSION_DEFERRAL_PREFIX,
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
+import type { ExpansionRateLimiter } from "../kernel/expansion.js";
 import {
   type ChildDenialReason,
   childMissionClaim,
@@ -651,6 +652,11 @@ export interface AdapterOptions {
    * widening exchange replies invalid_request.
    */
   expansionDeferrals?: ExpansionDeferralStore;
+  /**
+   * @spec expansion#policy-probing (#1177): the per-predecessor, per-client
+   * bound on expansion requests. Unset, expansion requests are unbounded.
+   */
+  expansionRateLimiter?: ExpansionRateLimiter;
   /**
    * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
    * store, served where the opt-in `deferred-approval` capability is on (the

@@ -555,3 +555,49 @@ export function successorWidensOnly(predecessor: AuthorityEntry[], successor: Au
   for (const a of predActions) if (!succActions.has(a)) return false;
   return true;
 }
+
+/** @spec expansion#policy-probing (#1177): the default bound, requests per window. */
+export const DEFAULT_EXPANSION_RATE_LIMIT = { max: 30, windowSeconds: 600 } as const;
+
+/**
+ * @spec expansion#policy-probing (#1177) — the per-predecessor, per-client
+ * bound on expansion requests. It caps both policy probing and the approval
+ * prompts one client can drive against an Approver. A sliding window held in
+ * process memory: each admitted request counts until `windowSeconds` pass,
+ * and a refused one counts nothing, so capacity returns as the window moves.
+ */
+export class ExpansionRateLimiter {
+  private readonly admitted = new Map<string, number[]>();
+
+  constructor(
+    readonly max: number,
+    readonly windowSeconds: number,
+    private readonly nowMs: () => number,
+  ) {}
+
+  /**
+   * Admit one request of `clientId` for `predecessorId`, or refuse it with the
+   * seconds until the oldest counted request leaves the window.
+   */
+  admit(predecessorId: string, clientId: string): { ok: true } | { ok: false; retryAfterS: number } {
+    const now = this.nowMs();
+    const horizon = now - this.windowSeconds * 1000;
+    const key = `${predecessorId}\n${clientId}`;
+    const recent = (this.admitted.get(key) ?? []).filter((t) => t > horizon);
+    if (recent.length >= this.max) {
+      this.admitted.set(key, recent);
+      return { ok: false, retryAfterS: Math.max(1, Math.ceil(((recent[0] as number) - horizon) / 1000)) };
+    }
+    recent.push(now);
+    this.admitted.set(key, recent);
+    if (this.admitted.size > 10_000) this.sweep(horizon);
+    return { ok: true };
+  }
+
+  /** Drop every key whose requests have all left the window. */
+  private sweep(horizon: number): void {
+    for (const [key, times] of this.admitted) {
+      if (!times.some((t) => t > horizon)) this.admitted.delete(key);
+    }
+  }
+}
