@@ -807,6 +807,18 @@ The JWS protected header MUST carry:
 A verifier MUST reject a JWS whose protected `typ` and `cty` are not
 exactly this pair (Sections 4.1.9 and 4.1.10 of {{RFC7515}}).
 
+The following is the decoded JWS protected header of the `envelope`
+value in {{record-example}}:
+
+~~~ json
+{
+  "alg": "ES256",
+  "kid": "as-key-2",
+  "typ": "application/mission-approval-governance+jws",
+  "cty": "application/mission-approval-governance+json"
+}
+~~~
+
 A verifier MUST perform the following steps, in order, and MUST NOT
 treat a record as verified if any step fails:
 
