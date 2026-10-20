@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "2fb012f255c63c3cb3e9403e39b003551389ea4e",
-    "content_sha256": "0e8be927b29036a2d4b257e67900e71da9ec3511a6964027bd1ac263a2d6dc9e"
+    "revision": "7bbf402cf05aefed8d168a52fe525fb9769f3f68",
+    "content_sha256": "83299861b7862c0c09e0c8ed4684e9ccd92abcc6565fdd3ae2ef700e3f9ca5c0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -95,12 +95,12 @@
     "content_sha256": "3174fa1ab1b9b76c260e561a7d036e61f599d50f9543356ffa6f96d92d8ef946"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
+    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
+    "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "9086861763e145f126c249098e2037dbf2cdd9e8",
-    "content_sha256": "38c57c936e0184e9c3299c6ab27f27b9e47bf6b39fd4cc3517230cb49c625654"
+    "revision": "caf2420b9b4551ae4462771b23322fd660cf1116",
+    "content_sha256": "8678e27c2e3a04e75bd7aaf5073b83036ac765a716a516887caa2ba031791f4d"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -147,8 +147,8 @@
     "content_sha256": "8ac6904ac2b8f0cab7e3b516c938a2459a64a1bde36c57dc075d63e4e8e1308d"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "9fed26c01952abd13356bc1f0f2e4c886a566b0355fee21148e5f0e67d74f3db"
+    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
+    "content_sha256": "0cf5d28c251f983b6739f42810e79f1e784fc35f029e2de7f5baf14889432579"
    }
   }
  },
@@ -3001,6 +3001,300 @@
    "tests": []
   },
   {
+   "id": "core.submission.proposal-checks-before-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Validate any authority proposal: refuse an entry of a type the AS does not support, or one that fails its type's definition or a schema advertised for it or established out of band, with `invalid_authorization_details`, and a proposed entry that carries a `resource` member whose value is not among the Intent's `target_resources`, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the intent object and before any evidence check"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification."
+  },
+  {
+   "id": "core.submission.earliest-step-precedence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "The AS MUST refuse a submission that fails more than one check with the error of the earliest failing step in this order",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission failing two checks is refused with the error of the earlier step of Submission Processing Order"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed Submission envelope together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls."
+  },
+  {
+   "id": "core.submission.precedence-proposal-over-missing-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a malformed proposal together with a missing required evidence type is refused at step 3, with `invalid_authorization_details`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with a malformed proposal and a missing required evidence type fails invalid_authorization_details, not invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-target-over-evidence-failure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a proposed entry outside `target_resources` together with a presented evidence entry that fails verification is refused at step 3, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with a proposed entry outside target_resources and an evidence entry failing verification fails invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-intent-over-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "an `intent` object that fails validation together with a malformed proposal is refused at step 2, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission whose intent fails validation and whose proposal is malformed fails invalid_request, not invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.derivation.candidate-complete-before-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "The candidate Authority Set is complete before the approval rendering",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Authority Set rendered for approval is the complete candidate set, not a partial one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. The test renders a two-entry derivation and compares the rendered set with the full derivation of the same Intent and proposal."
+  },
+  {
+   "id": "core.derivation.fixed-at-creation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "The approved Authority Set is fixed when the Mission Record is created, atomically with the approval decision",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > keeps the approved Authority Set fixed after creation: a later derivation-policy change does not recompute it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > concurrent duplicate decisions on one interaction commit one Mission, one grant identity and one binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering)."
+  },
+  {
    "id": "core.submission.size-bounds-evidence",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
@@ -3844,6 +4138,78 @@
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion)."
+  },
+  {
+   "id": "approval-governance.assertion.event-binding",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "Every assertion MUST be bound to this approval event: an assertion is made against this `approval_event_id`, this `intent_hash`, and this `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "replay",
+   "observation": {
+    "normative": "an assertion captured for another approval event, another Intent or another Authority Set is not counted toward the evaluation",
+    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. The reference binds a model output to the Authority Set the policy evaluated, before any narrowing; where a model narrows, that set differs from the record's mission.authority_hash, so the authority_hash clause is not witnessed as written (#1436 item 16)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion captured for another activation's approval event",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion bound to another Intent under the same approval event and Authority Set",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness."
+  },
+  {
+   "id": "approval-governance.assertion.policy-authorized",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "For a `policy` assertion, that means both that the policy its `authority` names was eligible to decide under `approval_policy` and that its principal was eligible to approve that policy version (or, where a consented root commits a separate evaluator that decides, that root)",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion counts only when the policy it names may decide under the record's approval_policy and its principal was eligible to approve that policy version; otherwise it does not contribute",
+    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. Human and service eligibility are not exercised by the reference."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an unauthorized human: no consent from them, and no activation once their authority is revoked",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > decides by the root itself or by the evaluator the root commits, with that policy's typed digest",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -4700,7 +5066,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision."
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -14961,6 +15327,90 @@
    "notes": "#557. Also proves the configuration gate: a deployment that never sets PepDeps.masJoin refuses every credential with no mission claim exactly as it did before this feature existed (unknown_mission), never a new implicit acceptance path. #557 stage C2 split an unusable reference from an unknown Mission; #972 item 13 (D289, #1100 review) puts a missing reference with the malformed one under mission_reference_conflict, and unknown_mission stays for a named Mission that does not resolve. The row's level stays unit: the endpoint and cross-component entries auto-skip without OpenFGA, so the claim rests on the always-run unit cases and those are additional coverage."
   },
   {
+   "id": "mas.baseline-join.resolve-at-mas",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "The PDP MUST resolve the referenced Mission through the MAS's Mission Status operation.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a joined decision is taken on the Mission as the MAS's signed Mission Status response reports it, read by the PDP over HTTP with no handle on the MAS's store: the Decision Evidence's policy_view_id commits the state version and authority_hash a direct Status read of the same Mission returns, and the Subject and client the join compares are the ones the MAS's Join Disclosure released (a PDP the MAS has not enrolled reads neither, and its join fails); with the MAS unreachable the PDP establishes no state, and once the MAS is back the same read verifies and permits",
+    "local": "the separated MAS pilot (src/demo/src/mas-pilot/separated.ts, D560): the MAS is the reference authorization server in its own process (mas-serve.ts); the PDP reads it through MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts), configured from the MAS's published metadata and status key, as the enrolled principal of config/mas-pilot.json separated_mas, under pdp placement. The in-process pilot, the shared demo and the AS-native target read Missions in process (D293) and are not cited here."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > permits a joined read on the Status view, with Join Disclosure, the MAS's own state version, and a permit capped by the signed fresh_until",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an answer that does not verify (#818 slice 4b) > an unenrolled PDP reads no Subject or client, so the join denies mission_binding_failed and nothing is permitted",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the MAS stops and starts (#818 slice 4b) > with the MAS down, a commit decision denies stale_state and an expired read refuses state_unavailable; restarted with its key ring and store, it reads again",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#818 slice 4b (D560): added with its witnesses on the separated pilot, each proved by a defect that makes its assertion fail: the own read's signed ceiling dropped (the positive join's permit outlives the signed window), the join guard for an undisclosed Subject or client removed (the unenrolled PDP), and the PEP's forwarded observation time kept when the PDP's own read fails (the MAS down). Rule 2's second sentence is mas.baseline-join.mas-state-source."
+  },
+  {
+   "id": "mas.baseline-join.mas-state-source",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-join",
+   "text": "The PDP MUST treat the MAS as the Mission state source under the runtime profile's state and freshness rules ({{I-D.draft-mcguinness-mission-runtime}}): fail closed when state cannot be established within the published staleness bound, and use an active freshness mechanism for the high-consequence classes.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.baseline-join"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP's state is its own read of the MAS: a revocation at the MAS is relied on as active only until the signed fresh_until of the earlier read and then denies mission_inactive; with the MAS unreachable a decision that must read it denies stale_state, never permits on the earlier read; and a commit-phase decision on a high-consequence class reads the MAS at decision time, so a Mission revoked after an earlier permitted crossing denies mission_inactive although that crossing's read is still within its window. No effect is committed on any refusal",
+    "local": "the separated MAS pilot (src/demo/src/mas-pilot/separated.ts, D560): the MAS is the reference authorization server in its own process (mas-serve.ts); the PDP reads it through MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts), configured from the MAS's published metadata and status key, as the enrolled principal of config/mas-pilot.json separated_mas, under pdp placement. The in-process pilot, the shared demo and the AS-native target read Missions in process (D293) and are not cited here. The active mechanism is a fresh read for every commit-phase decision (fresh: true)."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > observes a revocation at the MAS within the signed bound: relied on until its fresh_until, then mission_inactive",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the MAS stops and starts (#818 slice 4b) > with the MAS down, a commit decision denies stale_state and an expired read refuses state_unavailable; restarted with its key ring and store, it reads again",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > refuses the commit crossing of a Mission revoked after its prepare: the commit-phase decision reads the MAS now, and commits nothing",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#818 slice 4b (D560): added with its witnesses on the separated pilot, each proved by a defect that makes its assertion fail: the cache ignoring the signed fresh_until (the revocation), the PEP's forwarded observation time kept when the PDP's own read fails (the MAS down), and the commit-phase read served from cache or the PDP deciding on the PEP's view (the commit after a revocation)."
+  },
+  {
    "id": "mas.baseline-join.subject-join",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-join",
@@ -15338,9 +15788,21 @@
      "name": "composed stack: the MAS-governed channel joins an ordinary credential (#557) > permits a joined read end to end, with authority drawn from the referenced Mission",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > permits a joined read on the Status view, with Join Disclosure, the MAS's own state version, and a permit capped by the signed fresh_until",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-separated.test.ts",
+     "name": "the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > denies the action a containment at the MAS removed out_of_authority, the Status view's declared diagnostic, while the uncontained read still permits",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2's outside-the-Mission negative: this reference implementation's ordinary credentials carry no authorization_details member, so the substitution is attempted through the credential-authority evaluator instead (the acting credential's own authority names the action, the Mission does not), which is the same claim the clause makes. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit negative always runs. #825 PR 2b (D312): the ordinary credential's own authority (the resolver's entries) also reaches the PDP as `context.credential.authority`, a second bound the PDP enforces; the joined decision's authority still traces to the Mission's authority_set, and the credential's own coverage never substitutes for it."
+   "notes": "#557. Moved partial -> tested by #557 stage C2's outside-the-Mission negative: this reference implementation's ordinary credentials carry no authorization_details member, so the substitution is attempted through the credential-authority evaluator instead (the acting credential's own authority names the action, the Mission does not), which is the same claim the clause makes. The composed-stack entry shows the positive over the shipped configuration and auto-skips without OpenFGA; the unit negative always runs. #825 PR 2b (D312): the ordinary credential's own authority (the resolver's entries) also reaches the PDP as `context.credential.authority`, a second bound the PDP enforces; the joined decision's authority still traces to the Mission's authority_set, and the credential's own coverage never substitutes for it. #818 slice 4b (D560): two citations on the separated pilot, where the Mission is the MAS's audience-scoped Mission Status response: the positive join's Decision Evidence commits the Status response's authority_hash, and an action the credential's own scope still covers but a containment at the MAS removed from the Status set denies out_of_authority."
   },
   {
    "id": "mas.baseline-join.three-bound-intersection",
@@ -44869,7 +45331,7 @@
    "id": "evidence.intent-admission.intent-hash-equality",
    "spec": "draft-mcguinness-mission-evidence-envelope.md",
    "anchor": "intent-admission-verification",
-   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 3",
+   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 4",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -45600,6 +46062,42 @@
    "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version. #1436 ruling 3 (D568): typed members logic_id, logic_version, model_id, model_version; requoted; mutations: dropping the producer's logic pair, the logic check, or the model pairing."
   },
   {
+   "id": "approval-governance.record.contributing-excludes-deny",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "record-members",
+   "text": "a `deny` assertion never appears in `contributing`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evaluation.contributing never names a deny assertion, and every entry names an assertion the record carries",
+    "local": "The reference never produces a deny assertion; the refusal is witnessed at the validator and at the governed_policy gate function (assertGovernedPolicyRecord) on an injected record."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "evaluation contributing (@spec approval-governance#record-members) > lists the counted assertions; a recorded denial that did not block the approval is not contributing",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "evaluation contributing (@spec approval-governance#record-members) > is enforced at the governed_policy commit gate",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 6: contributing lists what the satisfied rule counted; a non-blocking denial is recorded but not counted, and a blocking one leaves no record. Mutations: admitting a deny as contributing; the commit gate skipping the check."
+  },
+  {
    "id": "approval-governance.assertion.policy-principal-approver",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-members",
@@ -45614,8 +46112,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root), never an identity for the policy itself",
-    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5)."
+    "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root; where several humans approved the version together, the one human the retained governance state names as accountable), never an identity for the policy itself",
+    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5), and has no jointly approved policy version."
    },
    "level": "unit",
    "coverage": "partial",
@@ -45927,6 +46425,29 @@
     }
    ],
    "notes": "#1436 ruling 4 (D568); mutation: the verifier rewriting the signed header to the normalized form."
+  },
+  {
+   "id": "approval-governance.re-check.steps",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "re-check",
+   "text": "A Relying Auditor re-checks an evaluation by replaying it from retained evidence",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id and the Mission's intent_hash, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
+    "local": "The reference implementation has no Relying Auditor role, so nothing exercises a re-check."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",
@@ -46596,6 +47117,35 @@
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
+  },
+  {
+   "id": "approval-governance.recency.exception-never-lengthens",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "text": "For a class with a declared exception, the maximum that applies is the smaller of that class's recency ceiling and the exception's maximum age",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a class's exception declares a longer maximum age than the class's recency ceiling, a policy approval older than the ceiling is refused for a Mission carrying the class"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > never lets an exception lengthen its class's recency ceiling: the smaller of the two applies",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",
@@ -54687,7 +55237,7 @@
    "id": "device-authorization.request.validate-before-device-code",
    "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
    "anchor": "request",
-   "text": "The AS MUST complete steps 1 to 5 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
+   "text": "The AS MUST complete steps 1 to 6 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {

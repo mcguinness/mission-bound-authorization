@@ -574,6 +574,26 @@ describe("MissionStatusResolver: the cache never outlives a signed bound (@spec 
   });
 });
 
+describe("MissionStatusResolver: a synchronous peek answers only from a read still within its bounds (#818, D560)", () => {
+  it("returns what an earlier resolve established, never reads the source, and returns nothing once a bound has passed", async () => {
+    handler = respond((p) => {
+      mission(p).fresh_until = new Date((nowS() + 20) * 1000).toISOString();
+    });
+    const r = resolver();
+    expect(r.peek(ref)).toBeUndefined();
+    await r.resolve(ref);
+    expect(requests.length).toBe(1);
+    expect(r.peek(ref)).toMatchObject({ ok: true, source: "cached", view: { id: MISSION } });
+    expect(r.peek({ id: MISSION, issuer: "https://other-mas.example" })).toBeUndefined();
+    clockMs += 6_000;
+    expect(r.peek(ref, 5)).toBeUndefined();
+    expect(r.peek(ref)).toMatchObject({ ok: true });
+    clockMs += 14_000;
+    expect(r.peek(ref)).toBeUndefined();
+    expect(requests.length).toBe(1);
+  });
+});
+
 describe("MissionStatusResolver: configuration", () => {
   it("refuses a configuration with no bound or no credential", () => {
     for (const extra of [{ maxStaleSeconds: 0 }, { timeoutMs: Number.NaN }, { maxResponseBytes: -1 }, { serviceToken: "" }]) {
