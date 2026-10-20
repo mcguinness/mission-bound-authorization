@@ -409,7 +409,7 @@ The following is an example of a decoded grant payload; the
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo",
+      "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs",
     "expires_at": "2026-12-31T23:59:59Z"
   },
   "authorization_details": [
