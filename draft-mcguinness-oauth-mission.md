@@ -1150,13 +1150,24 @@ request ({{discovery}} states the client-side rules and
 - Where a deployment designates a resource Mission-governed, its AS
   MUST NOT issue a token for that resource outside a Mission, except
   under documented policy exceptions.
-- If a client registered as Mission-governed sends an
-  `authorization_details` request that carries no `mission_intent`, the
-  AS MUST reject the request with the `invalid_request` error code, so
-  the client cannot drop the Intent from a request that still carries
-  `authorization_details`. A request carrying neither is an ordinary
-  request that this rule does not reach; designation is what keeps a
-  resource's tokens inside a Mission.
+- If a client registered as Mission-governed sends an authorization
+  request, through PAR or at the authorization endpoint, that carries
+  `authorization_details` but no `mission_intent`, the AS MUST reject
+  the request with the `invalid_request` error code, so the client
+  cannot drop the Intent from a request that still carries
+  `authorization_details`. The rule applies to that request until it
+  completes, including when the AS resumes it after an interaction. A
+  request carrying neither is an ordinary request that this rule does
+  not reach; designation is what keeps a resource's tokens inside a
+  Mission.
+
+A token request under an existing Mission-bound grant, such as a
+narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
+for a designation ({{designation}}), needs no `mission_intent` under
+the second rule. It creates no Mission submission, and every other
+check still applies to it: Issuance Gating ({{issuance-gating}}), the
+subset rule ({{subset}}), the first rule above, and the grant's
+binding to its Mission, client and sender.
 
 The following is an example of an authority proposal submitted alongside
 the example Intent of {{mission-intent}}. Derivation narrows
