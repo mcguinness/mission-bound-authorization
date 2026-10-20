@@ -1758,11 +1758,13 @@ requirements ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
 # Security Considerations {#security-considerations}
 
-Expansion's central guarantee is the issuance profile's, applied to
-the successor: a user's fresh approval bounds every token derived for
-the broadened task. The risks specific to expansion are in the
-predecessor binding, the predecessor-to-successor handoff, and the
-lineage link.
+The security considerations of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) apply, including its general
+OAuth guidance for the underlying credentials. Expansion's central
+guarantee is the issuance profile's, applied to the successor: a
+user's fresh approval bounds every token derived for the broadened
+task. The risks specific to expansion are in the predecessor binding,
+the predecessor-to-successor handoff, and the lineage link.
 
 ## Predecessor Confusion {#predecessor-confusion}
 
@@ -1795,13 +1797,13 @@ Mitigations:
   reusable bearer refresh credential, and possession is proven against
   the token's own confirmation key ({{request-binding}}): a bearer copy
   of the token, without its DPoP key or mTLS certificate, cannot carry
-  the proof. A refresh token MUST NOT be accepted as the `subject_token`
-  ({{submission}}).
+  the proof. A refresh token is never accepted as the
+  `subject_token` ({{submission}}).
 - The DPoP proof `jti` is single-use ({{RFC9449}}), so a captured proof
   cannot be replayed ({{verification-order}}).
 - The short-lived `subject_token` bounds the window in which even a
   key-holding attacker could act, and the possession proof is bound and
-  recorded at request time so a legitimate deferred completion is not
+  recorded at request time, so a legitimate deferred completion is not
   gated on that lifetime ({{deferred-window}}).
 
 ## Authority Comes Only from New Consent {#new-consent}
@@ -1819,7 +1821,7 @@ Mitigations:
   ({{predecessor-member}}).
 - The successor-expiry rule ({{successor-expiry}}) keeps the
   successor's `expires_at` from silently exceeding the predecessor's,
-  so expansion cannot launder a longer lifetime past the originally
+  so expansion cannot carry a longer lifetime past the originally
   approved horizon.
 
 ## Race against the Predecessor Lifecycle {#lifecycle-race}
@@ -1839,9 +1841,9 @@ Mitigations:
   completions that activate a successor of the same predecessor
   ({{reconciliation}}).
 - A failed check refuses with a reconciliation status
-  ({{reconciliation}}) that tells the client whether to discover an existing
-  successor or stop, without leaking the predecessor's new internal
-  state beyond that ({{reconciliation}}).
+  ({{reconciliation}}) that tells the client whether to discover an
+  existing successor or stop, without leaking the predecessor's new
+  internal state beyond that.
 
 ## Duplicate Creation {#duplicate-creation}
 
@@ -1855,7 +1857,7 @@ fresh, valid proof.
 
 Mitigations:
 
-- The REQUIRED `creation_request_id`, with its durable reservation
+- The required `creation_request_id`, with its durable reservation
   and uniqueness constraint, makes the retry recover the one
   committed operation, concurrent retries included
   ({{creation-idempotency}}, {{creation-reservation}}).
@@ -1898,10 +1900,10 @@ Mitigations:
   and the approval prompts a client can drive against an Approver
   (prompt fatigue). Every expansion presentation is recorded and
   counted toward anomaly detection ({{request-binding}}).
-- A denial reason MUST NOT disclose policy boundaries beyond the
-  adjudicated request ({{denial-reasons}}); a denial reports whether
-  the requested authority was approved, not the full surface of what
-  would have been.
+- A denial reason discloses no policy boundary beyond the adjudicated
+  request ({{denial-reasons}}): a denial reports whether the requested
+  authority was approved, not the full surface of what would have
+  been.
 
 ## Audit Linkage {#audit-linkage}
 
@@ -1912,26 +1914,23 @@ expansion. An implementation that omits the member breaks the chain
 and defeats it; the member is therefore mandatory on a successor
 ({{predecessor-member}}).
 
-General OAuth security guidance applies to the underlying credentials
-through the issuance profile.
-
 # Privacy Considerations {#privacy-considerations}
 
-The privacy surface expansion adds over the issuance profile is the
-lineage link and the authority detail disclosed when a task is
-broadened.
+The privacy considerations of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) apply. The privacy surface
+expansion adds is the lineage link and the authority detail disclosed
+when a task is broadened.
 
 ## Predecessor-Chain Correlation {#chain-correlation}
 
 The `predecessor` member that gives audit linkage ({{audit-linkage}})
-is also a correlation surface: it links a successor to its predecessor
-across distinct approval events, so a party that can read the chain can
-correlate the evolving task over time, which is more than any single
-Mission discloses. This is intrinsic to the governance value of
-expansion. Deployments SHOULD scope read access to the `predecessor`
-member, and to any Mission-state surface that exposes it, to parties
-with a governance need, rather than exposing the chain to every
-credential audience. The issuance profile's Mission Identifier
+is also a correlation surface. It links a successor to its predecessor
+across distinct approval events, so a party that can read the chain
+can correlate the evolving task over time, which is more than any
+single Mission discloses. Deployments SHOULD scope read access to the
+`predecessor` member, and to any Mission-state surface that exposes it,
+to parties with a governance need, rather than exposing the chain to
+every credential audience. The issuance profile's Mission Identifier
 correlation considerations apply to each Mission in the chain.
 
 ## Related-Work Correlation {#related-to-correlation}
@@ -1953,22 +1952,21 @@ treatment of consent disclosure.
 
 # IANA Considerations {#iana}
 
-The `predecessor` member of the `mission` claim
-({{predecessor-member}}) is not registered in a dedicated registry: it
-is carried inside the already-registered `mission` claim, an open
-object for which the issuance profile establishes no member registry.
-No new claim, parameter, or token-introspection registration is
-required for the lineage link.
+The `predecessor` member of the `mission` claim ({{predecessor-member}})
+is not registered in a dedicated registry: it is carried inside the
+already-registered `mission` claim, an open object for which the
+issuance profile establishes no member registry. No new claim,
+parameter, or token-introspection registration is required for the
+lineage link.
 
 This document defines two sets of symbolic codes: the expansion
-reconciliation status codes ({{reconciliation}}), a closed set
-conveyed in
-`mission_expansion_status`, and the expansion denial reasons
+reconciliation status codes ({{reconciliation}}), a closed set conveyed
+in `mission_expansion_status`, and the expansion denial reasons
 ({{denial-reasons}}), conveyed in the shared `mission_denial_reason`
 member. As members of the OAuth error response JSON body at the token
 endpoint, both are namespaced to their error responses and require no
 registration; their authorization error response parameter forms, used
-on the retained interactive path, are registered below.
+on the interactive path, are registered in {{iana-parameters}}.
 
 The reconciliation status codes remain specification-defined: the
 closed set is small and fully specified in {{reconciliation}}. A future
@@ -1977,11 +1975,9 @@ registry for it with a Specification Required {{RFC8126}} policy; until
 then this document is the value space.
 
 The denial reasons are registry-backed: this document establishes the
-Mission Denial Reasons registry ({{iana-denial-reasons}}), the one
-registry-backed carrier for adjudication-denial values across the
-family, seeds it with the four values it defines, and each further
-document that defines a value on the carrier requests its own
-registration in it.
+Mission Denial Reasons registry ({{iana-denial-reasons}}) and seeds it
+with the four values it defines. Each further document that defines a
+value on the carrier requests its own registration in it.
 
 ## Mission Termination Reasons Registration {#iana-lifecycle-registration}
 
@@ -1996,30 +1992,32 @@ Specification Required policy:
 
 ## Mission Denial Reasons Registry {#iana-denial-reasons}
 
-IANA is requested to create the "Mission Denial Reasons" registry.
-The registration policy is Specification
-Required {{RFC8126}}. A Designated Expert reviews a submission for the
-discipline {{denial-reasons}} requires: a `Value` matching
-`^[a-z][a-z0-9_]*$` not already registered, a `Semantics` sentence
-precise enough that a consumer can tell the denial from every other
-registered value, and a `Reference` that fixes which specification
-defines it. Registration does not require IETF review or a Standards
-Track document; a Specification Required reference that a Designated
-Expert can review against these criteria suffices.
+IANA is requested to create the "Mission Denial Reasons" registry. The
+registration policy is Specification Required {{RFC8126}}.
+Registration does not require IETF review or a Standards Track
+document; a Specification Required reference that a Designated Expert
+can review against the criteria below suffices.
+
+A Designated Expert reviews a submission for the discipline
+{{denial-reasons}} requires:
+
+- a `Value` matching `^[a-z][a-z0-9_]*$` not already registered;
+- a `Semantics` sentence precise enough that a consumer can tell the
+  denial from every other registered value; and
+- a `Reference` that fixes which specification defines it.
 
 The registry covers values of the `mission_denial_reason` parameter
-only ({{denial-reasons}}); the resource server `WWW-Authenticate`
-`mission_denial` attribute
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Resource Server
-Enforcement") and AuthZEN decision-context denial reasons
-({{I-D.draft-mcguinness-mission-authzen}}) are separate
+only ({{denial-reasons}}). The resource server `WWW-Authenticate`
+`mission_denial` attribute ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Resource Server Enforcement") and AuthZEN decision-context
+denial reasons ({{I-D.draft-mcguinness-mission-authzen}}) are separate
 specification-defined value spaces, outside this registry's scope. A
 companion that adds a denial value states whether it adds a row to
-this carrier's registry or defines a value in a separate space; a
+this carrier's registry or defines a value in a separate space. A
 shared spelling across carriers is a coincidence, never shared
 semantics, unless the defining documents state the mapping.
 
-A consumer MUST treat an unrecognized value as a denial with no further
+Consumers treat an unrecognized value as a denial with no further
 semantics ({{denial-reasons}}). A Designated Expert MUST reject a
 registration whose governing specification attempts to redefine this
 interaction rather than adding a value bound by it.
@@ -2045,8 +2043,7 @@ This document seeds the registry with the values it defines
 Each further document that defines a value on this carrier requests
 that value's registration in its own IANA considerations, carrying its
 Internet-Draft reference as a publication dependency under this
-registry's policy until it is published; Specification Required does
-not require Standards Track maturity of the registrant.
+registry's policy until it is published.
 
 ## OAuth Parameters Registration {#iana-parameters}
 
@@ -2055,53 +2052,49 @@ already-registered `mission_intent` request parameter and the
 already-registered token-exchange parameters `subject_token`,
 `subject_token_type`, `requested_token_type`, `actor_token`, and
 `actor_token_type`; none of these needs registration by this document.
-The deferred completion mode
-uses the deferred token response substrate
+The deferred completion mode uses the deferred token response
 ({{I-D.draft-gerber-oauth-deferred-token-response}}) and registers
-nothing here. This document removes the earlier revision's registration
-request for a `predecessor_token` parameter: the predecessor is
-resolved from `subject_token`, so no dedicated predecessor-token
-parameter exists.
+nothing here.
 
-This document registers the following parameters in the "OAuth
-Parameters" registry:
-
-- Name: `predecessor`
-- Parameter Usage Location: token request, authorization request
-- Change Controller: IETF
-- Reference: this document, {{submission}}
-
-- Name: `mission_expansion_status`
-- Parameter Usage Location: token response, authorization response
-- Change Controller: IETF
-- Reference: this document, {{reconciliation}}
-
-- Name: `mission_denial_reason`
-- Parameter Usage Location: token response, authorization response
-- Change Controller: IETF
-- Reference: this document, {{denial-reasons}}; also carried by the
-  child delegation profile
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
-
-- Name: `mission_continuation`
-- Parameter Usage Location: token response, authorization request
-- Change Controller: IETF
-- Reference: this document, {{interactive-handoff}}
-
-- Name: `creation_request_id`
-- Parameter Usage Location: token request
-- Change Controller: IETF
-- Reference: this document, {{submission}}, {{creation-idempotency}};
-  also carried by the child delegation profile
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
-
-The `predecessor` cross-check rides the token exchange request at the
-token endpoint and, on the retained interactive path, the authorization
-request; the reconciliation status and denial reason ride the token
-error response and, on the interactive path, the authorization error
-response. The `creation_request_id` identifier rides the token
-exchange request at the token endpoint in every completion mode and
+The `predecessor` cross-check is carried in the token exchange request
+at the token endpoint and, on the interactive path, in the
+authorization request. The reconciliation status and denial reason are
+carried in the token error response and, on the interactive path, in
+the authorization error response. The `creation_request_id` identifier
+is carried in the token exchange request in every completion mode and
 never appears on a front channel.
+
+This document requests registration of the following parameters in
+the "OAuth Parameters" registry ({{Section 11.2 of RFC6749}}):
+
+- Parameter name: `predecessor`
+- Parameter usage location: token request, authorization request
+- Change controller: IETF
+- Specification document(s): this document, {{submission}}
+
+- Parameter name: `mission_expansion_status`
+- Parameter usage location: token response, authorization response
+- Change controller: IETF
+- Specification document(s): this document, {{reconciliation}}
+
+- Parameter name: `mission_denial_reason`
+- Parameter usage location: token response, authorization response
+- Change controller: IETF
+- Specification document(s): this document, {{denial-reasons}}; also
+  carried by the child delegation profile
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+
+- Parameter name: `mission_continuation`
+- Parameter usage location: token response, authorization request
+- Change controller: IETF
+- Specification document(s): this document, {{interactive-handoff}}
+
+- Parameter name: `creation_request_id`
+- Parameter usage location: token request
+- Change controller: IETF
+- Specification document(s): this document, {{submission}},
+  {{creation-idempotency}}; also carried by the child delegation
+  profile ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 
 ## OAuth Extensions Error Registration {#iana-error-registration}
 
