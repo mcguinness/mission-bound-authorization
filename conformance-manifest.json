@@ -44392,19 +44392,12 @@
    "assertion": "refusal",
    "observation": {
     "normative": "approved_by is corroborated provenance from retained, authenticated governance state, never the asserting party's own statement",
-    "local": "Only its observable consequence is witnessed: an approved_by that differs from the principal the governance state names is refused. The reference never emits approved_by, so the source it is taken from has no witness."
+    "local": "No witness: no test distinguishes an approved_by taken from retained governance state from one the asserting party supplied (accepting both values from the asserting party would pass every current test), and the reference never emits approved_by. The equality with principal is witnessed on approval-governance.authority.approved-by-equals-principal."
    },
    "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
-     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses an approved_by that differs from the policy assertion's principal",
-     "level": "unit",
-     "surface": "governance-record"
-    }
-   ],
-   "notes": "#1436 ruling 3 (D568): any approved_by is corroborated provenance, never self-authenticating evidence."
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 ruling 3 (D568): any approved_by is corroborated provenance, never self-authenticating evidence. todo on owner review of #1442 at e7a3a2bd: the equality test it once cited compares approved_by only with the supplied principal and consults no governance state."
   },
   {
    "id": "approval-governance.envelope.verifier-steps",
