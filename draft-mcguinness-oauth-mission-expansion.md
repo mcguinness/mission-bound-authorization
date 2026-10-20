@@ -1171,9 +1171,10 @@ member.
   ({{I-D.draft-mcguinness-oauth-mission-signals}}), each inside
   `termination`.
 
-All three members are lineage and audit context only. Like the additional members of the
-`mission` claim, each of them MUST NOT grant or widen authority, and a consumer that does not understand one
-MUST ignore it. The successor's authority comes only from its own
+All three members are lineage and audit context only. Like the
+additional members of the `mission` claim, each of them MUST NOT grant
+or widen authority, and a consumer that does not understand one MUST
+ignore it. The successor's authority comes only from its own
 `authority_hash`, never from its predecessor.
 
 Each is a bare Mission Identifier string, not an object like the
@@ -1818,9 +1819,9 @@ establish:
 - fingerprint compatibility ({{creation-reservation}}).
 
 A retry of a deferred operation without the opt-in is refused with
-`invalid_request`. No key-rotation recovery path is defined: a requester that can no
-longer prove possession of the recorded `cnf` does not recover the
-operation.
+`invalid_request`. No key-rotation recovery path is defined: a requester
+that can no longer prove possession of the recorded `cnf` does not
+recover the operation.
 
 The idempotency lookup occurs after client authentication and
 possession verification and before the predecessor lifecycle gate
