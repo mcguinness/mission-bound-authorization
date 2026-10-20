@@ -1764,11 +1764,26 @@ resolves by fingerprint:
   ({{creation-recovery}});
 - same fingerprint, operation reserved: return the same continuation
   or deferral, or a retryable in-progress result;
-- same fingerprint, operation failed: return the recorded failure,
-  the error its completing step answered, directly or through the same
-  deferral's next poll; and
+- same fingerprint, operation failed: answer with the recorded
+  failure, as below; and
 - different fingerprint: refuse with `invalid_request`, since the
   identifier was reused for a different operation.
+
+A retry of a failed operation is answered by the failure and by the
+surface the retry reaches:
+
+- An operation in the deferred mode returns its deferral, whose next
+  poll answers as the deferred token response defines: `access_denied`
+  after a denial or a refused activation, with any reconciliation
+  status, and `expired_token` once the deferral has expired.
+- Any other operation answers the repeated token exchange directly:
+  `access_denied` after the Approver's denial and `expired_token` after
+  its continuation expired before activation ({{interactive-handoff}}).
+  After a refused activation it answers the error a completion in the
+  token-exchange response answers for the same failure
+  ({{reconciliation}}, {{successor-expiry}}), with any reconciliation
+  status, and a refusal the token exchange response itself carried is
+  repeated.
 
 ## Recovery Is Delivery {#creation-recovery}
 
@@ -1856,8 +1871,9 @@ no successor is created, and the predecessor remains `active` and
 untouched. The denial surfaces according to the completion mode
 ({{completion-modes}}):
 
-- on the token exchange response, as `invalid_request`
-  ({{Section 2.2.2 of RFC8693}});
+- on the token exchange response that adjudicates it, as
+  `invalid_request` ({{Section 2.2.2 of RFC8693}}); a retry of the
+  operation is answered as {{creation-reservation}} states;
 - on a deferred poll, as the deferred substrate's `access_denied`
   resolution; or
 - on the interactive path, through the approval's own decline path.

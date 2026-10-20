@@ -50316,7 +50316,7 @@
    "id": "expansion.creation.failed-retry-outcome",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "creation-reservation",
-   "text": "same fingerprint, operation failed: return the recorded failure, the error its completing step answered, directly or through the same deferral's next poll",
+   "text": "Any other operation answers the repeated token exchange directly: `access_denied` after the Approver's denial and `expired_token` after its continuation expired before activation",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -50327,8 +50327,8 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a retry of a denied, expired or refused expansion with the same creation_request_id and fingerprint creates nothing and receives the error the failed step answered (for example access_denied on a deferred poll, invalid_grant on a code redemption), directly or on the same deferral's next poll",
-    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
+    "normative": "a same-fingerprint retry of a failed interactive operation is answered on the token exchange: access_denied after the Approver's denial, expired_token after the continuation expired before activation, and after a refused activation the code a token-exchange-response completion answers for that failure, with any reconciliation status; it creates nothing",
+    "local": "the reference AS has no interactive path"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50372,6 +50372,28 @@
    "observation": {
     "normative": "a same-creation_request_id retry of an operation opened in the deferred mode whose completion_mode does not include deferred is refused invalid_request and receives no deferral",
     "local": "the reference AS never reads completion_mode, so it returns the same deferral (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-deferred",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "An operation in the deferred mode returns its deferral, whose next poll answers as the deferred token response defines",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed deferred expansion returns its deferral, whose next poll answers access_denied after a denial or a refused activation (with any reconciliation status) and expired_token once the deferral has expired; it creates nothing",
+    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
    },
    "level": "endpoint",
    "coverage": "todo",
