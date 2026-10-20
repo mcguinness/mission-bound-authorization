@@ -1206,21 +1206,24 @@ its authorization server supports, or both.<a href="#section-abstract-2" class="
                 <p id="section-toc.1-1.3.2.6.1"><a href="#section-3.6" class="auto internal xref">3.6</a>.  <a href="#name-protected-resource-metadata" class="internal xref">Protected Resource Metadata</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.7">
-                <p id="section-toc.1-1.3.2.7.1"><a href="#section-3.7" class="auto internal xref">3.7</a>.  <a href="#name-delegate-eligibility" class="internal xref">Delegate Eligibility</a></p>
+                <p id="section-toc.1-1.3.2.7.1"><a href="#section-3.7" class="auto internal xref">3.7</a>.  <a href="#name-resource-contracts" class="internal xref">Resource Contracts</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.8">
+                <p id="section-toc.1-1.3.2.8.1"><a href="#section-3.8" class="auto internal xref">3.8</a>.  <a href="#name-delegate-eligibility" class="internal xref">Delegate Eligibility</a></p>
 <ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.7.2.1">
-                    <p id="section-toc.1-1.3.2.7.2.1.1"><a href="#section-3.7.1" class="auto internal xref">3.7.1</a>.  <a href="#name-matching-allowed_delegates" class="internal xref">Matching <code>allowed_delegates</code></a></p>
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.8.2.1">
+                    <p id="section-toc.1-1.3.2.8.2.1.1"><a href="#section-3.8.1" class="auto internal xref">3.8.1</a>.  <a href="#name-matching-allowed_delegates" class="internal xref">Matching <code>allowed_delegates</code></a></p>
 </li>
                 </ul>
 </li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.8">
-                <p id="section-toc.1-1.3.2.8.1"><a href="#section-3.8" class="auto internal xref">3.8</a>.  <a href="#name-scope-projection" class="internal xref">Scope Projection</a></p>
-</li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.9">
-                <p id="section-toc.1-1.3.2.9.1"><a href="#section-3.9" class="auto internal xref">3.9</a>.  <a href="#name-transformation-capabilities" class="internal xref">Transformation Capabilities</a></p>
+                <p id="section-toc.1-1.3.2.9.1"><a href="#section-3.9" class="auto internal xref">3.9</a>.  <a href="#name-scope-projection" class="internal xref">Scope Projection</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.10">
-                <p id="section-toc.1-1.3.2.10.1"><a href="#section-3.10" class="auto internal xref">3.10</a>. <a href="#name-modeling-tools-and-function" class="internal xref">Modeling Tools and Function Calls</a></p>
+                <p id="section-toc.1-1.3.2.10.1"><a href="#section-3.10" class="auto internal xref">3.10</a>. <a href="#name-transformation-capabilities" class="internal xref">Transformation Capabilities</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.11">
+                <p id="section-toc.1-1.3.2.11.1"><a href="#section-3.11" class="auto internal xref">3.11</a>. <a href="#name-modeling-tools-and-function" class="internal xref">Modeling Tools and Function Calls</a></p>
 </li>
             </ul>
 </li>
@@ -1307,13 +1310,17 @@ Constraints with their subset and intersection rules
 </li>
         <li class="normal" id="section-1-3.3">
           <p id="section-1-3.3.1">resource server enforcement (<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a>) and delegate
-eligibility (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>); and<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
+eligibility (<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>);<a href="#section-1-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.4">
-          <p id="section-1-3.4.1">the conditions under which an entry can be projected to <code>scope</code>
-(<a href="#scope-projection" class="auto internal xref">Section 3.8</a>), and the type's declaration under the issuance
+          <p id="section-1-3.4.1">the resource contract reference an entry can commit at approval, and
+its exact preservation (<a href="#resource-contract" class="auto internal xref">Section 3.7</a>); and<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-3.5">
+          <p id="section-1-3.5.1">the conditions under which an entry can be projected to <code>scope</code>
+(<a href="#scope-projection" class="auto internal xref">Section 3.9</a>), and the type's declaration under the issuance
 profile's transformation-capability map
-(<a href="#transformation-capabilities" class="auto internal xref">Section 3.9</a>).<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
+(<a href="#transformation-capabilities" class="auto internal xref">Section 3.10</a>).<a href="#section-1-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-1-4">The issuance profile keeps the type-agnostic machinery: the approved-set
@@ -1484,29 +1491,29 @@ deployment policy, or by the resource's
 <code>delegation</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-3-2.12">
           <p id="section-3-2.12.1"><span class="bcp14">OPTIONAL</span>. An object. The delegation policy for this entry
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). When absent, this entry's authority is
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>). When absent, this entry's authority is
 non-delegable: it <span class="bcp14">MUST NOT</span> appear in a delegated token. This applies
 to the entry the authorization server evaluates for a delegated
 token, not to a copy a cross-domain grant conveys without the member
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). When present, it has these members:<a href="#section-3-2.12.1" class="pilcrow">¶</a></p>
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>). When present, it has these members:<a href="#section-3-2.12.1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3-2.12.2">
             <dt id="section-3-2.12.2.1">
 <code>max_depth</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-3-2.12.2.2">
               <p id="section-3-2.12.2.2.1"><span class="bcp14">REQUIRED</span>. An integer. The maximum delegation depth at which this
-entry's authority may be exercised (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>).<a href="#section-3-2.12.2.2.1" class="pilcrow">¶</a></p>
+entry's authority may be exercised (<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>).<a href="#section-3-2.12.2.2.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-3-2.12.2.3">
 <code>allowed_delegates</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-3-2.12.2.4">
               <p id="section-3-2.12.2.4.1"><span class="bcp14">RECOMMENDED</span>. An array of objects. The permitted delegates, each a
-<code>may_act</code>-style delegate matcher (<a href="#matching-allowed-delegates" class="auto internal xref">Section 3.7.1</a>):
+<code>may_act</code>-style delegate matcher (<a href="#matching-allowed-delegates" class="auto internal xref">Section 3.8.1</a>):
 <code>{ "sub": "&lt;client_id&gt;" }</code> for a specific delegate, or
 <code>{ "sub_profile": "&lt;actor-type&gt;" }</code> for an actor-type class.<a href="#section-3-2.12.2.4.1" class="pilcrow">¶</a></p>
 <p id="section-3-2.12.2.4.2">When absent, eligibility falls to the authorization server's
 delegation-authorization policy, applied at every exchange
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>): absence defers the decision to policy
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>): absence defers the decision to policy
 and never grants blanket eligibility. The member is <span class="bcp14">RECOMMENDED</span> so
 that eligibility is committed and rendered with the entry rather
 than left wholly to policy.<a href="#section-3-2.12.2.4.2" class="pilcrow">¶</a></p>
@@ -1517,6 +1524,41 @@ than left wholly to policy.<a href="#section-3-2.12.2.4.2" class="pilcrow">¶</a
 member is policy, not authority (<a href="#subset" class="auto internal xref">Section 3.3</a>): a derived entry's value
 for it <span class="bcp14">MUST NOT</span> be broader than the parent entry's, and a member the
 authorization server does not understand is carried unchanged.<a href="#section-3-2.12.3" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-3-2.13">
+<code>resource_contract</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-3-2.14">
+          <p id="section-3-2.14.1"><span class="bcp14">OPTIONAL</span>. An object. A reference to the resource contract under which
+the resource interprets the entry's <code>actions</code> and <code>constraints</code>
+(<a href="#resource-contract" class="auto internal xref">Section 3.7</a>). The entry's <code>type</code> stays
+<code>mission_resource_access</code>; the reference carries the version. When
+present, it has exactly these members:<a href="#section-3-2.14.1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3-2.14.2">
+            <dt id="section-3-2.14.2.1">
+<code>id</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-3-2.14.2.2">
+              <p id="section-3-2.14.2.2.1"><span class="bcp14">REQUIRED</span>. A string containing an absolute URI that names the
+contract across its versions.<a href="#section-3-2.14.2.2.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-3-2.14.2.3">
+<code>version</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-3-2.14.2.4">
+              <p id="section-3-2.14.2.4.1"><span class="bcp14">REQUIRED</span>. A non-empty string naming one version of the contract.<a href="#section-3-2.14.2.4.1" class="pilcrow">¶</a></p>
+</dd>
+            <dd class="break"></dd>
+<dt id="section-3-2.14.2.5">
+<code>digest</code>:</dt>
+            <dd style="margin-left: 1.5em" id="section-3-2.14.2.6">
+              <p id="section-3-2.14.2.6.1"><span class="bcp14">REQUIRED</span>. A string. The SHA-256 digest of the JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>
+serialization of that version's contract document, in the
+integrity-anchor encoded form
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>sha-256:</code> followed by
+the base64url encoding of the digest, without padding.<a href="#section-3-2.14.2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+</dl>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1593,16 +1635,21 @@ negative or fractional value is refused;<a href="#section-3.1-5.4.1" class="pilc
           <li class="normal" id="section-3.1-5.5">
             <p id="section-3.1-5.5.1">an <code>allowed_delegates</code> matcher carries neither <code>sub</code> nor
 <code>sub_profile</code>, or carries any other member
-(<a href="#matching-allowed-delegates" class="auto internal xref">Section 3.7.1</a>);<a href="#section-3.1-5.5.1" class="pilcrow">¶</a></p>
+(<a href="#matching-allowed-delegates" class="auto internal xref">Section 3.8.1</a>);<a href="#section-3.1-5.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.6">
-            <p id="section-3.1-5.6.1">its <code>time_window</code> Common Constraint has a <code>not_before</code> later than its
-<code>not_after</code>, a window that admits no instant; or<a href="#section-3.1-5.6.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-5.6.1">its <code>resource_contract</code> is not an object with exactly the members
+<code>id</code>, <code>version</code>, and <code>digest</code>, or one of them does not have the form
+<a href="#resource-access-type" class="auto internal xref">Section 3</a> gives it;<a href="#section-3.1-5.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.7">
-            <p id="section-3.1-5.7.1">its <code>recipient_domain</code> Common Constraint is not a DNS name in ASCII
+            <p id="section-3.1-5.7.1">its <code>time_window</code> Common Constraint has a <code>not_before</code> later than its
+<code>not_after</code>, a window that admits no instant; or<a href="#section-3.1-5.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.8">
+            <p id="section-3.1-5.8.1">its <code>recipient_domain</code> Common Constraint is not a DNS name in ASCII
 form, with each internationalized label in its A-label form, or ends
-in a dot.<a href="#section-3.1-5.7.1" class="pilcrow">¶</a></p>
+in a dot.<a href="#section-3.1-5.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.1-6">Letter case does not make a <code>recipient_domain</code> invalid; values compare
@@ -1612,7 +1659,7 @@ case-insensitively (<a href="#value-space-comparison" class="auto internal xref"
 <li class="normal" id="section-3.1-8.1">
             <p id="section-3.1-8.1.1">A <code>max_depth</code> of 0 admits the entry into no delegated token, since a
 delegated token's delegation depth is 1 or more
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>): the entry supplies no in-Mission delegated
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>): the entry supplies no in-Mission delegated
 authority. Any other <code>delegation</code> member stays intact; a member a
 companion profile defines there, such as a child-creation grant, keeps
 the bound that profile gives it.<a href="#section-3.1-8.1.1" class="pilcrow">¶</a></p>
@@ -1620,7 +1667,7 @@ the bound that profile gives it.<a href="#section-3.1-8.1.1" class="pilcrow">¶<
           <li class="normal" id="section-3.1-8.2">
             <p id="section-3.1-8.2.1">An empty <code>allowed_delegates</code> array permits no delegate. It differs
 from an absent member, which defers eligibility to the authorization
-server's delegation-authorization policy (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>).<a href="#section-3.1-8.2.1" class="pilcrow">¶</a></p>
+server's delegation-authorization policy (<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>).<a href="#section-3.1-8.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-8.3">
             <p id="section-3.1-8.3.1">An action value that a consumer does not recognize for the entry's
@@ -2173,6 +2220,12 @@ otherwise.<a href="#section-3.3-3.3.2.2.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </li>
+          <li id="section-3.3-3.4">
+            <p id="section-3.3-3.4.1"><strong>Contract.</strong> A carries <code>resource_contract</code> exactly when B does,
+and then with <code>id</code>, <code>version</code>, and <code>digest</code> each equal to B's
+(<a href="#resource-contract" class="auto internal xref">Section 3.7</a>). Removing, replacing, or adding a reference
+is never narrowing.<a href="#section-3.3-3.4.1" class="pilcrow">¶</a></p>
+</li>
         </ol>
 <p id="section-3.3-4">The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
@@ -2191,7 +2244,7 @@ for resource containment and <code>.*</code> action families for action containm
 (<a href="#resource-access-type" class="auto internal xref">Section 3</a>). Without them, comparison is flat: <code>resource</code>
 matches by literal equality and a literal action by array membership.<a href="#section-3.3-6" class="pilcrow">¶</a></p>
 <p id="section-3.3-7">The <code>delegation</code> member is policy, not authority, and is not part of
-this comparison (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). A derived entry's
+this comparison (<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>). A derived entry's
 <code>delegation</code>, when present, <span class="bcp14">MUST NOT</span> be broader than the parent entry's:<a href="#section-3.3-7" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3.3-8.1">
@@ -2200,7 +2253,7 @@ this comparison (<a href="#delegate-eligibility" class="auto internal xref">Sect
           <li class="normal" id="section-3.3-8.2">
             <p id="section-3.3-8.2.1">its <code>allowed_delegates</code> <span class="bcp14">MUST</span> be no wider than the parent entry's, and
 where the parent entry's eligibility inherits the authorization
-server's policy decision (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>), a derived list
+server's policy decision (<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>), a derived list
 only restricts that decision; and<a href="#section-3.3-8.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.3-8.3">
@@ -2276,7 +2329,7 @@ it narrows:<a href="#section-3.4-7" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.4-8.2">
             <p id="section-3.4-8.2.1">an Authority Set entry to a derived or delegated token
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>).<a href="#section-3.4-8.2.1" class="pilcrow">¶</a></p>
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>).<a href="#section-3.4-8.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.4-9">In either case, a <code>constraints</code> key that the authorization server does
@@ -2703,22 +2756,25 @@ or none:<a href="#section-3.5-6" class="pilcrow">¶</a></p>
 enforced as above;<a href="#section-3.5-7.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.5-7.2">
-            <p id="section-3.5-7.2.1"><code>delegation</code> has no resource-server enforcement role: the
-authorization server applies it at issuance
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>), so a resource server <span class="bcp14">MAY</span> disregard it,
-together with any member a companion profile adds to it;<a href="#section-3.5-7.2.1" class="pilcrow">¶</a></p>
+            <p id="section-3.5-7.2.1"><code>resource_contract</code> is enforced as <a href="#resource-contract" class="auto internal xref">Section 3.7</a> requires;<a href="#section-3.5-7.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.5-7.3">
-            <p id="section-3.5-7.3.1">a member that another specification defines for this type is
+            <p id="section-3.5-7.3.1"><code>delegation</code> has no resource-server enforcement role: the
+authorization server applies it at issuance
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>), so a resource server <span class="bcp14">MAY</span> disregard it,
+together with any member a companion profile adds to it;<a href="#section-3.5-7.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.5-7.4">
+            <p id="section-3.5-7.4.1">a member that another specification defines for this type is
 enforced as that specification requires, and leaves the entry fully
 enforceable when the resource server, or a runtime layer acting for
 it, implements that specification and fulfills every obligation it
-places on enforcement; and<a href="#section-3.5-7.3.1" class="pilcrow">¶</a></p>
+places on enforcement; and<a href="#section-3.5-7.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.5-7.4">
-            <p id="section-3.5-7.4.1">any other member, including one the resource server does not
+          <li class="normal" id="section-3.5-7.5">
+            <p id="section-3.5-7.5.1">any other member, including one the resource server does not
 recognize, makes the entry one the resource server cannot fully
-enforce.<a href="#section-3.5-7.4.1" class="pilcrow">¶</a></p>
+enforce.<a href="#section-3.5-7.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.5-8">An entry carrying the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field, which this
@@ -2749,12 +2805,106 @@ knowledge is established out of band.<a href="#section-3.6-2.2.1" class="pilcrow
 </dl>
 </section>
 </div>
-<div id="delegate-eligibility">
+<div id="resource-contract">
 <section id="section-3.7">
-        <h3 id="name-delegate-eligibility">
-<a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-delegate-eligibility" class="section-name selfRef">Delegate Eligibility</a>
+        <h3 id="name-resource-contracts">
+<a href="#section-3.7" class="section-number selfRef">3.7. </a><a href="#name-resource-contracts" class="section-name selfRef">Resource Contracts</a>
         </h3>
-<p id="section-3.7-1"><span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> gates a delegated token's carried
+<p id="section-3.7-1">An entry's <code>actions</code> and <code>constraints</code> carry meaning only at the
+resource that defines them (<a href="#resource-access-type" class="auto internal xref">Section 3</a>), and the resource
+can change that meaning while action names and parameter values stay
+the same. The <code>resource_contract</code> member fixes, at approval, the
+version of that meaning the entry was approved under.<a href="#section-3.7-1" class="pilcrow">¶</a></p>
+<p id="section-3.7-2">A <strong>resource contract</strong> is a JSON document, identified by an <code>id</code> and a
+<code>version</code>, whose bytes never change for that pair. It fixes the
+contract material that Mission-Bound Runtime Enforcement lists
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Resource
+Contract"), including the operation contract (<a href="#resource-matching" class="auto internal xref">Section 3.2</a>) of
+each operation it covers and the members of each action family it
+defines. That section also defines the version states and how a
+reference resolves. This section depends on those rules normatively;
+the dependency binds only a deployment that supports
+<code>resource_contract</code>. The contract assembles those definitions and overrides none of them: a Common
+Constraint keeps the semantics its definition gives it
+(<a href="#common-constraints" class="auto internal xref">Section 3.4</a>). A resource that changes any of that material
+publishes a new version with its own <code>digest</code>. The resource publishes
+its contracts and their references through its operation contract
+documentation or other deployment documentation; this document defines
+no metadata member or endpoint for them.<a href="#section-3.7-2" class="pilcrow">¶</a></p>
+<p id="section-3.7-3">The following entry references version <code>2026-10-01</code> of a payments
+contract:<a href="#section-3.7-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.7-4">
+<pre>
+{ "type": "mission_resource_access",
+  "resource": "https://payments.example/mcp",
+  "actions": ["execute_wire_transfer"],
+  "constraints": {
+    "max_amount": { "amount": "500.00", "currency": "USD" } },
+  "resource_contract": {
+    "id": "https://payments.example/contracts/payments",
+    "version": "2026-10-01",
+    "digest":
+      "sha-256:Tvvs9KfBVei4YUbtWRfmCKsquFxzgWvqxhSAsWPiu_o" } }
+</pre><a href="#section-3.7-4" class="pilcrow">¶</a>
+</div>
+<p id="section-3.7-5"><strong>Approval.</strong> The authorization server assembles the reference from
+trusted resource or deployment configuration, which states whether an
+entry's <code>resource</code> requires a reference and which contract version is
+current for it. A <code>resource_contract</code> a client proposes is a proposal,
+never an authoritative declaration. Before approval, the authorization
+server:<a href="#section-3.7-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.7-6.1">
+            <p id="section-3.7-6.1.1"><span class="bcp14">MUST</span> refuse, with the <code>invalid_authorization_details</code> error code, a
+proposed entry whose <code>resource_contract</code> does not equal, member for
+member, the reference of a contract its configuration names as current
+for the entry's <code>resource</code> and that defines every action and action
+family the entry lists; and<a href="#section-3.7-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.7-6.2">
+            <p id="section-3.7-6.2.1"><span class="bcp14">MUST</span>, where its configuration requires a reference for the entry's
+<code>resource</code> and the proposal carries none, record the current
+contract's reference in the entry, so that the Approver approves the
+entry with it.<a href="#section-3.7-6.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.7-7">A superseded or retired version is never current
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so no new approval
+references one. The reference is assembled from configuration, not
+narrowed: a policy ceiling a proposal is narrowed against need not
+carry one, and step 4 of <a href="#subset" class="auto internal xref">Section 3.3</a> applies to entries derived from an
+approved entry. An authorization server that does not implement this
+section refuses a proposed or carried entry that carries
+<code>resource_contract</code>, with the <code>invalid_authorization_details</code> error
+code, and never drops the member.<a href="#section-3.7-7" class="pilcrow">¶</a></p>
+<p id="section-3.7-8"><strong>Preservation.</strong> The reference is part of the entry, so
+<code>authority_hash</code> commits it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
+Every derivation, narrowing, and delegation of the entry preserves it
+exactly (<a href="#subset" class="auto internal xref">Section 3.3</a>), and scope projection never drops it
+(<a href="#scope-projection" class="auto internal xref">Section 3.9</a>). An entry approved without a reference gains one
+only through a new approval of an entry that carries it; a derivation
+never attaches the current contract to it.<a href="#section-3.7-8" class="pilcrow">¶</a></p>
+<p id="section-3.7-9"><strong>Enforcement.</strong> A resource server <span class="bcp14">MUST NOT</span> treat an entry carrying
+<code>resource_contract</code> as authorizing an operation unless it performs that
+operation under exactly the referenced contract: the one whose <code>id</code>,
+<code>version</code>, and <code>digest</code> all equal the reference's. Where the resource
+server's operation contract requires a reference for an operation, an
+applicable entry without one provides no authority for it. In both
+cases the entry is one the resource server cannot fully enforce
+(<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a>). The reference fixes meaning, not state: it
+supplies no observation of the resource, and it exempts no operation
+from the resource's other authorization checks. Which versions a
+resource still performs, and for which entries, follows the version
+states of <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>: a reference that
+does not resolve there authorizes nothing.<a href="#section-3.7-9" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="delegate-eligibility">
+<section id="section-3.8">
+        <h3 id="name-delegate-eligibility">
+<a href="#section-3.8" class="section-number selfRef">3.8. </a><a href="#name-delegate-eligibility" class="section-name selfRef">Delegate Eligibility</a>
+        </h3>
+<p id="section-3.8-1"><span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
 delegation depth <code>d</code> of the token being issued. That document's
 Delegation Constraints section defines <code>d</code> and how the authorization
@@ -2763,28 +2913,28 @@ self-exchange and cross-domain rules; the <code>act</code> claim attributes the
 chain and is not the authoritative count. For a
 <code>mission_resource_access</code> entry, the authorization server includes it in
 a delegated token issued at delegation depth <code>d</code> only if all of the
-following hold:<a href="#section-3.7-1" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-3.7-2">
-<li id="section-3.7-2.1">
-            <p id="section-3.7-2.1.1">the entry carries a <code>delegation</code> member (otherwise it is
-non-delegable, which is the default);<a href="#section-3.7-2.1.1" class="pilcrow">¶</a></p>
+following hold:<a href="#section-3.8-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.8-2">
+<li id="section-3.8-2.1">
+            <p id="section-3.8-2.1.1">the entry carries a <code>delegation</code> member (otherwise it is
+non-delegable, which is the default);<a href="#section-3.8-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.7-2.2">
-            <p id="section-3.7-2.2.1"><code>d</code> is less than or equal to the entry's <code>delegation.max_depth</code>; and<a href="#section-3.7-2.2.1" class="pilcrow">¶</a></p>
+          <li id="section-3.8-2.2">
+            <p id="section-3.8-2.2.1"><code>d</code> is less than or equal to the entry's <code>delegation.max_depth</code>; and<a href="#section-3.8-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.7-2.3">
-            <p id="section-3.7-2.3.1">the delegate is permitted by <code>delegation.allowed_delegates</code> or, when
+          <li id="section-3.8-2.3">
+            <p id="section-3.8-2.3.1">the delegate is permitted by <code>delegation.allowed_delegates</code> or, when
 that member is absent, by the authorization server's
 delegation-authorization policy, which the authorization server <span class="bcp14">MUST</span>
 apply at every exchange: an absent list of delegate matchers is a
-decision deferred to policy, never a blanket grant of eligibility.<a href="#section-3.7-2.3.1" class="pilcrow">¶</a></p>
+decision deferred to policy, never a blanket grant of eligibility.<a href="#section-3.8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-3.7-3">An entry failing any of these narrows out of the delegated token,
+<p id="section-3.8-3">An entry failing any of these narrows out of the delegated token,
 consistent with the subset rule (<a href="#subset" class="auto internal xref">Section 3.3</a>). Surviving entries are
 carried with their <code>delegation</code> member intact, so the next hop is
-evaluated the same way.<a href="#section-3.7-3" class="pilcrow">¶</a></p>
-<p id="section-3.7-4">A cross-domain grant separates two stages. Eligibility for the grant
+evaluated the same way.<a href="#section-3.8-3" class="pilcrow">¶</a></p>
+<p id="section-3.8-4">A cross-domain grant separates two stages. Eligibility for the grant
 itself is decided as above, against the approved entry in the Mission
 Record. The copy the grant conveys keeps <code>delegation</code> only as
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> allows, and an
@@ -2792,16 +2942,16 @@ omitted member ends onward delegation from that copy. Neither stage
 lets an entry without <code>delegation</code> in the Mission Record appear in a
 delegated token. The dependency on that profile, here and in the
 absent-member exception of <a href="#resource-access-type" class="auto internal xref">Section 3</a>, binds only an
-authorization server that issues cross-domain grants.<a href="#section-3.7-4" class="pilcrow">¶</a></p>
-<p id="section-3.7-5"><strong>Inherited eligibility.</strong> A derived entry's <code>allowed_delegates</code>
+authorization server that issues cross-domain grants.<a href="#section-3.8-4" class="pilcrow">¶</a></p>
+<p id="section-3.8-5"><strong>Inherited eligibility.</strong> A derived entry's <code>allowed_delegates</code>
 restricts eligibility; it never replaces an obligation the derivation
 inherits. An entry derived from a reference entry that has no
 <code>allowed_delegates</code> inherits the authorization server's policy
 decision, and so does every entry derived from it: a delegate is
 permitted only when the policy permits it and, where the entry carries
 a list, the list permits it too. When policy permits Bob and denies
-Carol, an entry whose list names Carol still cannot admit Carol.<a href="#section-3.7-5" class="pilcrow">¶</a></p>
-<p id="section-3.7-6">The obligation holds from the initial derivation. An approved entry
+Carol, an entry whose list names Carol still cannot admit Carol.<a href="#section-3.8-5" class="pilcrow">¶</a></p>
+<p id="section-3.8-6">The obligation holds from the initial derivation. An approved entry
 derived from a ceiling entry without <code>allowed_delegates</code> inherits the
 policy decision even when the approved proposal added a list, so the
 approved entry's own members do not reveal the obligation. The
@@ -2813,112 +2963,125 @@ against the approved entry in the Mission Record
 against a presented token alone. Where it cannot resolve either, the
 entry narrows out of the delegated token. A cross-domain grant conveys
 no such provenance; <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>
-specifies how its conveyed copy treats <code>delegation</code>.<a href="#section-3.7-6" class="pilcrow">¶</a></p>
+specifies how its conveyed copy treats <code>delegation</code>.<a href="#section-3.8-6" class="pilcrow">¶</a></p>
 <div id="matching-allowed-delegates">
-<section id="section-3.7.1">
+<section id="section-3.8.1">
           <h4 id="name-matching-allowed_delegates">
-<a href="#section-3.7.1" class="section-number selfRef">3.7.1. </a><a href="#name-matching-allowed_delegates" class="section-name selfRef">Matching <code>allowed_delegates</code></a>
+<a href="#section-3.8.1" class="section-number selfRef">3.8.1. </a><a href="#name-matching-allowed_delegates" class="section-name selfRef">Matching <code>allowed_delegates</code></a>
           </h4>
-<p id="section-3.7.1-1">Each <code>allowed_delegates</code> value is a delegate matcher: an object modeled
+<p id="section-3.8.1-1">Each <code>allowed_delegates</code> value is a delegate matcher: an object modeled
 on the actor object of the <code>may_act</code> claim (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-4.4" class="relref">Section 4.4</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>).
 Where <code>may_act</code> names a single party eligible to act on a token,
 <code>allowed_delegates</code> is a per-entry list of such matchers, generalized to
-actor-type classes:<a href="#section-3.7.1-1" class="pilcrow">¶</a></p>
+actor-type classes:<a href="#section-3.8.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.7.1-2.1">
-              <p id="section-3.7.1-2.1.1">A <code>{ "sub": ... }</code> matcher permits a specific delegate by client
-identifier.<a href="#section-3.7.1-2.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-3.8.1-2.1">
+              <p id="section-3.8.1-2.1.1">A <code>{ "sub": ... }</code> matcher permits a specific delegate by client
+identifier.<a href="#section-3.8.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
-            <li class="normal" id="section-3.7.1-2.2">
-              <p id="section-3.7.1-2.2.1">A <code>{ "sub_profile": ... }</code> matcher permits any actor of that type (for
+            <li class="normal" id="section-3.8.1-2.2">
+              <p id="section-3.8.1-2.2.1">A <code>{ "sub_profile": ... }</code> matcher permits any actor of that type (for
 example, <code>ai_agent</code>), as given by the <code>sub_profile</code> member of the
 actor's object in the <code>act</code> claim
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). An actor's <code>sub_profile</code> <span class="bcp14">MAY</span>
 carry multiple space-separated values; a <code>{ "sub_profile": ... }</code>
-matcher is satisfied when its value is among the actor's values.<a href="#section-3.7.1-2.2.1" class="pilcrow">¶</a></p>
+matcher is satisfied when its value is among the actor's values.<a href="#section-3.8.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-3.7.1-3">A delegate matcher that carries both <code>sub</code> and <code>sub_profile</code> is
+<p id="section-3.8.1-3">A delegate matcher that carries both <code>sub</code> and <code>sub_profile</code> is
 satisfied only when the delegate satisfies both. A delegate is permitted
 if it satisfies any of the entry's delegate matchers, so a deployment
-can permit a specific client, a class of actors, or both.<a href="#section-3.7.1-3" class="pilcrow">¶</a></p>
-<p id="section-3.7.1-4">The authorization server <span class="bcp14">MUST</span> authenticate the delegate at the Token
+can permit a specific client, a class of actors, or both.<a href="#section-3.8.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.8.1-4">The authorization server <span class="bcp14">MUST</span> authenticate the delegate at the Token
 Exchange and assert the actor's <code>sub</code> and <code>sub_profile</code> itself. A
 self-asserted <code>sub_profile</code> <span class="bcp14">MUST NOT</span> satisfy a delegate matcher;
-otherwise a client could claim any actor type to bypass the constraint.<a href="#section-3.7.1-4" class="pilcrow">¶</a></p>
-<p id="section-3.7.1-5">A <code>{ "sub": ... }</code> matcher is a client identifier in the issuing
+otherwise a client could claim any actor type to bypass the constraint.<a href="#section-3.8.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.8.1-5">A <code>{ "sub": ... }</code> matcher is a client identifier in the issuing
 authorization server's namespace and is not portable across a trust
 domain. How an authorization server in another trust domain (a "Resource
 AS") evaluates conveyed delegate matchers, failing closed and narrowing
 out any <code>sub</code> matcher it cannot resolve, is specified by
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>.<a href="#section-3.7.1-5" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>.<a href="#section-3.8.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
 </div>
 <div id="scope-projection">
-<section id="section-3.8">
+<section id="section-3.9">
         <h3 id="name-scope-projection">
-<a href="#section-3.8" class="section-number selfRef">3.8. </a><a href="#name-scope-projection" class="section-name selfRef">Scope Projection</a>
+<a href="#section-3.9" class="section-number selfRef">3.9. </a><a href="#name-scope-projection" class="section-name selfRef">Scope Projection</a>
         </h3>
-<p id="section-3.8-1"><span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> states the semantic subset
+<p id="section-3.9-1"><span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> states the semantic subset
 condition and issuance algorithm an authorization server applies before
 emitting <code>scope</code> for any <code>authorization_details</code> entry: the projected
 scope's effective rights, together with every independently mandatory
 control on the target's enforcement path, <span class="bcp14">MUST</span> be a subset of the rights
 the applicable entries grant. This section states when that condition
-holds for a <code>mission_resource_access</code> entry.<a href="#section-3.8-1" class="pilcrow">¶</a></p>
-<p id="section-3.8-2">A scope-projection mapping's entry for this type names, for a target
-resource server:<a href="#section-3.8-2" class="pilcrow">¶</a></p>
+holds for a <code>mission_resource_access</code> entry.<a href="#section-3.9-1" class="pilcrow">¶</a></p>
+<p id="section-3.9-2">A scope-projection mapping's entry for this type names, for a target
+resource server:<a href="#section-3.9-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.8-3.1">
-            <p id="section-3.8-3.1.1">the <code>scope</code> value or values it emits;<a href="#section-3.8-3.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-3.9-3.1">
+            <p id="section-3.9-3.1.1">the <code>scope</code> value or values it emits;<a href="#section-3.9-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.8-3.2">
-            <p id="section-3.8-3.2.1">the <code>resource</code> and <code>resource_match</code> the mapping covers;<a href="#section-3.8-3.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-3.9-3.2">
+            <p id="section-3.9-3.2.1">the <code>resource</code> and <code>resource_match</code> the mapping covers;<a href="#section-3.9-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.8-3.3">
-            <p id="section-3.8-3.3.1">the <code>actions</code> value or values each <code>scope</code> value stands for; and<a href="#section-3.8-3.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-3.9-3.3">
+            <p id="section-3.9-3.3.1">the <code>actions</code> value or values each <code>scope</code> value stands for;<a href="#section-3.9-3.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.8-3.4">
-            <p id="section-3.8-3.4.1">for every <code>constraints</code> key an entry may carry, whether the target
+          <li class="normal" id="section-3.9-3.4">
+            <p id="section-3.9-3.4.1">for every <code>constraints</code> key an entry may carry, whether the target
 independently and identically enforces that key on the
-<code>scope</code>-authorized path.<a href="#section-3.8-3.4.1" class="pilcrow">¶</a></p>
+<code>scope</code>-authorized path; and<a href="#section-3.9-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.9-3.5">
+            <p id="section-3.9-3.5.1">where an entry may carry <code>resource_contract</code>, the contract under which
+the target performs the operations each <code>scope</code> value permits.<a href="#section-3.9-3.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.8-4">Projecting a <code>mission_resource_access</code> entry's authority to <code>scope</code> is
-safe only when all of the following hold:<a href="#section-3.8-4" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-3.8-5">
-<li id="section-3.8-5.1">
-            <p id="section-3.8-5.1.1"><strong>The mapping covers the same resource set.</strong> The mapping's <code>scope</code>
+<p id="section-3.9-4">Projecting a <code>mission_resource_access</code> entry's authority to <code>scope</code> is
+safe only when all of the following hold:<a href="#section-3.9-4" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.9-5">
+<li id="section-3.9-5.1">
+            <p id="section-3.9-5.1.1"><strong>The mapping covers the same resource set.</strong> The mapping's <code>scope</code>
 value is defined over the entry's <code>resource</code> and <code>resource_match</code>. A
 <code>prefix</code> entry projects safely only when the mapping scopes the value
 to that same prefix, or to a narrower resource within it whose
 complete effective rights remain a subset of the entry's; a <code>scope</code>
 value the target's own interpretation extends to a broader ancestor
-resource is not a safe projection of a narrower <code>prefix</code> entry.<a href="#section-3.8-5.1.1" class="pilcrow">¶</a></p>
+resource is not a safe projection of a narrower <code>prefix</code> entry.<a href="#section-3.9-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.8-5.2">
-            <p id="section-3.8-5.2.1"><strong>The actions match without aggregation.</strong> Every action granted by
+          <li id="section-3.9-5.2">
+            <p id="section-3.9-5.2.1"><strong>The actions match without aggregation.</strong> Every action granted by
 the mapped <code>scope</code> value <span class="bcp14">MUST</span> be included in the applicable entry's
 <code>actions</code>; the value <span class="bcp14">MAY</span> grant a proper subset of them. A <code>scope</code>
 value that grants any additional action, including through an implied
 action family, an aggregate of unrelated actions, or the union of
 more than one entry's actions, fails this condition, because the
-target grants every action the union names, not only the entry's.<a href="#section-3.8-5.2.1" class="pilcrow">¶</a></p>
+target grants every action the union names, not only the entry's.<a href="#section-3.9-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.8-5.3">
-            <p id="section-3.8-5.3.1"><strong>Every carried <code>constraints</code> key is independently enforced.</strong> For
+          <li id="section-3.9-5.3">
+            <p id="section-3.9-5.3.1"><strong>Every carried <code>constraints</code> key is independently enforced.</strong> For
 every key in the entry's <code>constraints</code>, the mapping states that the
 target enforces that key, under a comparison at least as tight as the
 entry's value, on the <code>scope</code>-authorized path. An entry with no
 <code>constraints</code> satisfies this condition. A key the mapping does not
 name as independently enforced fails the condition for that entry, as
 an unenforced key fails closed at a resource server that consumes
-<code>authorization_details</code> directly.<a href="#section-3.8-5.3.1" class="pilcrow">¶</a></p>
+<code>authorization_details</code> directly.<a href="#section-3.9-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-3.9-5.4">
+            <p id="section-3.9-5.4.1"><strong>The contract is preserved.</strong> For an entry carrying
+<code>resource_contract</code>, the mapping states that the target performs
+every operation the mapped <code>scope</code> value permits under exactly the
+referenced contract (<a href="#resource-contract" class="auto internal xref">Section 3.7</a>). A <code>scope</code> value conveys
+no contract reference of its own. An entry without the member
+satisfies this condition only where the target requires no reference
+for those operations.<a href="#section-3.9-5.4.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-3.8-6">Advertising a key in <code>mission_constraints_supported</code>
+<p id="section-3.9-6">Advertising a key in <code>mission_constraints_supported</code>
 (<a href="#protected-resource-metadata" class="auto internal xref">Section 3.6</a>) is not evidence that a projection
 preserves the bound: condition 3 needs a control that holds on every
 operation the projected <code>scope</code> value permits, at a value at least as
@@ -2926,64 +3089,64 @@ tight as the entry's. For example, where a target enforces a fixed
 500.00 USD ceiling on every operation <code>payments.small</code> permits, an entry
 whose <code>max_amount</code> is 500.00 USD projects safely to <code>payments.small</code>. An
 entry whose <code>max_amount</code> is 200.00 USD does not, because the <code>scope</code>
-value does not convey the entry's value.<a href="#section-3.8-6" class="pilcrow">¶</a></p>
-<p id="section-3.8-7">An entry failing any condition <span class="bcp14">MUST NOT</span> be projected to <code>scope</code>. Per
+value does not convey the entry's value.<a href="#section-3.9-6" class="pilcrow">¶</a></p>
+<p id="section-3.9-7">An entry failing any condition <span class="bcp14">MUST NOT</span> be projected to <code>scope</code>. Per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>'s issuance algorithm, the
 authorization server then omits <code>scope</code> for that entry where the
 target's enforcement path consumes <code>authorization_details</code>, and refuses
 issuance to that target when it is <code>scope</code>-only (it consumes <code>scope</code> and
 not <code>authorization_details</code>) and no other carried entry supplies a safe
-projection.<a href="#section-3.8-7" class="pilcrow">¶</a></p>
+projection.<a href="#section-3.9-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transformation-capabilities">
-<section id="section-3.9">
+<section id="section-3.10">
         <h3 id="name-transformation-capabilities">
-<a href="#section-3.9" class="section-number selfRef">3.9. </a><a href="#name-transformation-capabilities" class="section-name selfRef">Transformation Capabilities</a>
+<a href="#section-3.10" class="section-number selfRef">3.10. </a><a href="#name-transformation-capabilities" class="section-name selfRef">Transformation Capabilities</a>
         </h3>
-<p id="section-3.9-1"><span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> requires an authorization server
+<p id="section-3.10-1"><span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> requires an authorization server
 to declare, for every <code>authorization_details</code> type it supports, whether
 it understands the type's narrowing, delegation, and scope-projection
 semantics. The declaration is made through deployment documentation or,
 where available, the machine-readable
-<code>mission_transformation_capabilities</code> carrier that document defines.<a href="#section-3.9-1" class="pilcrow">¶</a></p>
-<p id="section-3.9-2">For <code>mission_resource_access</code>, an authorization server that implements
-this document in full declares:<a href="#section-3.9-2" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-3.9-3">
-          <dt id="section-3.9-3.1">
+<code>mission_transformation_capabilities</code> carrier that document defines.<a href="#section-3.10-1" class="pilcrow">¶</a></p>
+<p id="section-3.10-2">For <code>mission_resource_access</code>, an authorization server that implements
+this document in full declares:<a href="#section-3.10-2" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-3.10-3">
+          <dt id="section-3.10-3.1">
 <code>narrowing</code>: <code>true</code>
 </dt>
-          <dd style="margin-left: 1.5em" id="section-3.9-3.2">
-            <p id="section-3.9-3.2.1">The subset rule of <a href="#subset" class="auto internal xref">Section 3.3</a>, over every member this document
+          <dd style="margin-left: 1.5em" id="section-3.10-3.2">
+            <p id="section-3.10-3.2.1">The subset rule of <a href="#subset" class="auto internal xref">Section 3.3</a>, over every member this document
 specifies, and the Common Constraint intersection rules of
 <a href="#common-constraints" class="auto internal xref">Section 3.4</a> are fully defined. An authorization server <span class="bcp14">MUST NOT</span> declare <code>narrowing</code> as <code>true</code> unless it implements these rules for
 every Common Constraint of <a href="#initial-common-constraints" class="auto internal xref">Section 3.4.1</a>. A Common
 Constraint registered later is not required by the declaration, but an
 authorization server that meets one it does not support fails closed
-(<a href="#common-constraints" class="auto internal xref">Section 3.4</a>).<a href="#section-3.9-3.2.1" class="pilcrow">¶</a></p>
+(<a href="#common-constraints" class="auto internal xref">Section 3.4</a>).<a href="#section-3.10-3.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.9-3.3">
+<dt id="section-3.10-3.3">
 <code>delegation</code>: <code>true</code>
 </dt>
-          <dd style="margin-left: 1.5em" id="section-3.9-3.4">
-            <p id="section-3.9-3.4.1">The delegation policy of <a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a> is fully defined; an
+          <dd style="margin-left: 1.5em" id="section-3.10-3.4">
+            <p id="section-3.10-3.4.1">The delegation policy of <a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a> is fully defined; an
 entry's <code>delegation</code> member states its own depth and eligibility
-bounds.<a href="#section-3.9-3.4.1" class="pilcrow">¶</a></p>
+bounds.<a href="#section-3.10-3.4.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
-<dt id="section-3.9-3.5">
+<dt id="section-3.10-3.5">
 <code>projection</code>: <code>true</code>
 </dt>
-          <dd style="margin-left: 1.5em" id="section-3.9-3.6">
-            <p id="section-3.9-3.6.1">A safe scope projection is defined, and decidable per entry, by
-<a href="#scope-projection" class="auto internal xref">Section 3.8</a>; it is not unconditionally available for every
+          <dd style="margin-left: 1.5em" id="section-3.10-3.6">
+            <p id="section-3.10-3.6.1">A safe scope projection is defined, and decidable per entry, by
+<a href="#scope-projection" class="auto internal xref">Section 3.9</a>; it is not unconditionally available for every
 entry, and that section's conditions apply to each entry before
-<code>scope</code> is emitted.<a href="#section-3.9-3.6.1" class="pilcrow">¶</a></p>
+<code>scope</code> is emitted.<a href="#section-3.10-3.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-3.9-4">An authorization server that implements only part of this document (for
+<p id="section-3.10-4">An authorization server that implements only part of this document (for
 example, <code>mission_resource_access</code> entries without ever emitting <code>scope</code>
 for them) leaves <code>projection</code> undeclared rather than declaring it
 <code>true</code>. <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>'s carried-as-approved
@@ -2997,55 +3160,55 @@ type: it carries <code>authorization_details</code> where the target consumes th
 refuses issuance to a <code>scope</code>-only target only when no other applicable
 carried entry supplies a safe projection, and answers an explicitly
 requested <code>scope</code> it cannot grant as
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> specifies.<a href="#section-3.9-4" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> specifies.<a href="#section-3.10-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="tools">
-<section id="section-3.10">
+<section id="section-3.11">
         <h3 id="name-modeling-tools-and-function">
-<a href="#section-3.10" class="section-number selfRef">3.10. </a><a href="#name-modeling-tools-and-function" class="section-name selfRef">Modeling Tools and Function Calls</a>
+<a href="#section-3.11" class="section-number selfRef">3.11. </a><a href="#name-modeling-tools-and-function" class="section-name selfRef">Modeling Tools and Function Calls</a>
         </h3>
-<p id="section-3.10-1">This section is non-normative. A tool an agent invokes, such as a Model
+<p id="section-3.11-1">This section is non-normative. A tool an agent invokes, such as a Model
 Context Protocol (MCP) tool or a function call, is modeled as a
 <code>mission_resource_access</code> entry. No separate entry type is needed: the
 subset and delegation rules apply unchanged, and derivation,
 <code>authority_hash</code>, and the Authority Set itself remain
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>'s.<a href="#section-3.10-1" class="pilcrow">¶</a></p>
-<p id="section-3.10-2">The mapping is:<a href="#section-3.10-2" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>'s.<a href="#section-3.11-1" class="pilcrow">¶</a></p>
+<p id="section-3.11-2">The mapping is:<a href="#section-3.11-2" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.10-3.1">
-            <p id="section-3.10-3.1.1"><code>resource</code> names the operation target that the tool provider's
+<li class="normal" id="section-3.11-3.1">
+            <p id="section-3.11-3.1.1"><code>resource</code> names the operation target that the tool provider's
 operation contract establishes for a call (<a href="#resource-matching" class="auto internal xref">Section 3.2</a>).
 The MCP authorization model (<span>[<a href="#MCP" class="cite xref">MCP</a>]</span>) makes an MCP server an
 OAuth 2.0 resource server, and a token is audience-bound to its
 URL; the server's contract can identify that URL or a finer target,
-such as a record a tool acts on.<a href="#section-3.10-3.1.1" class="pilcrow">¶</a></p>
+such as a record a tool acts on.<a href="#section-3.11-3.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.10-3.2">
-            <p id="section-3.10-3.2.1"><code>actions</code> are the tool names the task needs at that provider.
+          <li class="normal" id="section-3.11-3.2">
+            <p id="section-3.11-3.2.1"><code>actions</code> are the tool names the task needs at that provider.
 Authorizing a tool is authorizing its name as an action, which lines
 up with MCP filtering its tool list by the caller's granted authority
-and routing each tool call for authorization.<a href="#section-3.10-3.2.1" class="pilcrow">¶</a></p>
+and routing each tool call for authorization.<a href="#section-3.11-3.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.10-3.3">
-            <p id="section-3.10-3.3.1"><code>constraints</code> carry machine-actionable bounds on a tool's arguments,
+          <li class="normal" id="section-3.11-3.3">
+            <p id="section-3.11-3.3.1"><code>constraints</code> carry machine-actionable bounds on a tool's arguments,
 for example an amount ceiling or a recipient domain (the <code>max_amount</code>
 and <code>recipient_domain</code> Common Constraints, <a href="#common-constraints" class="auto internal xref">Section 3.4</a>).
 Like all <code>constraints</code>, they are committed by <code>authority_hash</code> and
 carried to the point of use, but the resource server, or a runtime
 enforcement layer acting for it, evaluates them against the concrete
 call arguments; the authorization server does not evaluate them at
-issuance (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.10-3.3.1" class="pilcrow">¶</a></p>
+issuance (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.11-3.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.10-4">In the examples in this section, each MCP server's operation contract
+<p id="section-3.11-4">In the examples in this section, each MCP server's operation contract
 identifies the server's URL as the operation target. Tool names as
 actions, and constraints on their arguments, determine the permitted
-calls.<a href="#section-3.10-4" class="pilcrow">¶</a></p>
-<p id="section-3.10-5">The following example shows the Authority Set of a Mission authorized to
+calls.<a href="#section-3.11-4" class="pilcrow">¶</a></p>
+<p id="section-3.11-5">The following example shows the Authority Set of a Mission authorized to
 read invoices and post small adjustments through a finance MCP server,
-and to send messages through a messaging MCP server:<a href="#section-3.10-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-3.10-6">
+and to send messages through a messaging MCP server:<a href="#section-3.11-5" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.11-6">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -3062,16 +3225,16 @@ and to send messages through a messaging MCP server:<a href="#section-3.10-5" cl
     "actions": ["send_message"],
     "constraints": { "recipient_domain": "example.com" } }
 ]
-</pre><a href="#section-3.10-6" class="pilcrow">¶</a>
+</pre><a href="#section-3.11-6" class="pilcrow">¶</a>
 </div>
-<p id="section-3.10-7">An entry's <code>constraints</code> bind every action it lists, so the read tool
+<p id="section-3.11-7">An entry's <code>constraints</code> bind every action it lists, so the read tool
 has an entry of its own, outside the <code>max_amount</code> bound that applies to
-the adjustment tool.<a href="#section-3.10-7" class="pilcrow">¶</a></p>
-<p id="section-3.10-8">Delegation to a sub-agent uses the same <code>delegation</code> member
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). The following example shows an Authority Set
+the adjustment tool.<a href="#section-3.11-7" class="pilcrow">¶</a></p>
+<p id="section-3.11-8">Delegation to a sub-agent uses the same <code>delegation</code> member
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>). The following example shows an Authority Set
 entry, approved with its <code>delegation</code> member, that a sub-agent of type
-<code>ai_agent</code> may exercise at depth 1 for the read tool only:<a href="#section-3.10-8" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-3.10-9">
+<code>ai_agent</code> may exercise at depth 1 for the read tool only:<a href="#section-3.11-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.11-9">
 <pre>
 { "type": "mission_resource_access",
   "resource": "https://finance.example.com/mcp",
@@ -3080,9 +3243,9 @@ entry, approved with its <code>delegation</code> member, that a sub-agent of typ
     "max_depth": 1,
     "allowed_delegates": [{ "sub_profile": "ai_agent" }]
   } }
-</pre><a href="#section-3.10-9" class="pilcrow">¶</a>
+</pre><a href="#section-3.11-9" class="pilcrow">¶</a>
 </div>
-<p id="section-3.10-10">This document does not define a typed, attenuable per-argument
+<p id="section-3.11-10">This document does not define a typed, attenuable per-argument
 constraint grammar for tools: one that narrows a tool's argument schema
 (for example, <code>amount</code> in a <code>range</code>, or <code>recipient</code> in a <code>one_of</code> set)
 as the grant is derived or delegated. Argument bounds here are the same
@@ -3090,8 +3253,8 @@ flat <code>constraints</code> used for any resource, evaluated at runtime.
 Structured per-argument attenuation
 (<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, with
 object-capability systems such as UCAN as prior art) would extend the
-delegation and subset model of this document (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>,
-<a href="#subset" class="auto internal xref">Section 3.3</a>) rather than introduce a new entry type.<a href="#section-3.10-10" class="pilcrow">¶</a></p>
+delegation and subset model of this document (<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>,
+<a href="#subset" class="auto internal xref">Section 3.3</a>) rather than introduce a new entry type.<a href="#section-3.11-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3109,12 +3272,17 @@ implements:<a href="#section-4-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4-3.1">
           <p id="section-4-3.1.1">schema validation of a proposed or carried entry against the type
-definition (<a href="#resource-access-type" class="auto internal xref">Section 3</a>); and<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
+definition (<a href="#resource-access-type" class="auto internal xref">Section 3</a>);<a href="#section-4-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-3.2">
-          <p id="section-4-3.2.1">the Transformation Capabilities declaration
-(<a href="#transformation-capabilities" class="auto internal xref">Section 3.9</a>), stating which of narrowing,
-delegation, and projection it claims for this type.<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-4-3.2.1">either the approval-time assembly and validation of a
+<code>resource_contract</code> reference, or refusal of every entry that carries
+one (<a href="#resource-contract" class="auto internal xref">Section 3.7</a>); and<a href="#section-4-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-4-3.3">
+          <p id="section-4-3.3.1">the Transformation Capabilities declaration
+(<a href="#transformation-capabilities" class="auto internal xref">Section 3.10</a>), stating which of narrowing,
+delegation, and projection it claims for this type.<a href="#section-4-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-4-4">For each capability it declares <code>true</code>, an authorization server also
@@ -3126,11 +3294,11 @@ rules (<a href="#subset" class="auto internal xref">Section 3.3</a>, <a href="#c
 </li>
         <li class="normal" id="section-4-5.2">
           <p id="section-4-5.2.1"><strong>delegation</strong>: the delegate eligibility test
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>); and<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.8</a>); and<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-5.3">
-          <p id="section-4-5.3.1"><strong>projection</strong>: the three per-entry, per-target safety conditions of
-<a href="#scope-projection" class="auto internal xref">Section 3.8</a> before emitting <code>scope</code>.<a href="#section-4-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-4-5.3.1"><strong>projection</strong>: the four per-entry, per-target safety conditions of
+<a href="#scope-projection" class="auto internal xref">Section 3.9</a> before emitting <code>scope</code>.<a href="#section-4-5.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-4-6">An authorization server that does not claim <code>projection</code> <span class="bcp14">MUST NOT</span> emit
@@ -3169,14 +3337,14 @@ parent's purpose never contemplated
           <p id="section-5-2.2.1"><strong>An unenforced constraint widens the grant.</strong> A resource server or
 scope projection that treats an unrecognized <code>constraints</code> key as
 absent, or as disclosure-only, grants more than the entry authorizes;
-<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a> and <a href="#scope-projection" class="auto internal xref">Section 3.8</a> require fail-closed
+<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a> and <a href="#scope-projection" class="auto internal xref">Section 3.9</a> require fail-closed
 handling instead.<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.3">
           <p id="section-5-2.3.1"><strong>A safe projection is per entry, not per type.</strong> That
 <code>mission_resource_access</code> defines a projection relation
-(<a href="#scope-projection" class="auto internal xref">Section 3.8</a>) does not make every entry of the type safely
-projectable: <a href="#scope-projection" class="auto internal xref">Section 3.8</a>'s three conditions must hold for the
+(<a href="#scope-projection" class="auto internal xref">Section 3.9</a>) does not make every entry of the type safely
+projectable: <a href="#scope-projection" class="auto internal xref">Section 3.9</a>'s four conditions must hold for the
 specific entry and mapping in force, and the type's general capability
 does not extend to an entry by default.<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
 </li>
@@ -3568,6 +3736,10 @@ and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pi
 <a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
@@ -3644,10 +3816,6 @@ and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pi
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
         <dd>
