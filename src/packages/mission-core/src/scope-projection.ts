@@ -22,6 +22,12 @@ import type { AuthorityEntry } from "./authority-entry.js";
 import { resourceWithin } from "./authority-subset.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
+import {
+  type ResourceContractRef,
+  resourceContractOf,
+  resourceContractViolation,
+  sameResourceContract,
+} from "./resource-contract.js";
 
 /**
  * @spec mission#scope-projection — the `scope` values with their own (OIDC)
@@ -78,6 +84,19 @@ export interface ScopeMandatoryControls {
 export interface ScopeValueMapping {
   rights: ScopeValueRights;
   mandatory_controls: ScopeMandatoryControls;
+  /**
+   * @spec resource-access#scope-projection (#249): "where an entry may carry
+   * `resource_contract`, the contract under which the target performs the
+   * operations each `scope` value permits". Absent, the mapping states no
+   * contract, and no entry carrying one projects to this value.
+   */
+  resource_contract?: ResourceContractRef;
+  /**
+   * @spec resource-access#scope-projection condition 4 (#249): the target
+   * requires a reference for the operations this value permits, so an entry
+   * without one does not project to it. Absent is `false`.
+   */
+  requires_resource_contract?: boolean;
 }
 
 /**
@@ -187,7 +206,30 @@ function parseControls(v: unknown, path: string): ScopeMandatoryControls {
 
 function parseScopeValue(v: unknown, path: string): ScopeValueMapping {
   const o = obj(v, path);
-  onlyMembers(o, ["rights", "mandatory_controls"], path);
+  onlyMembers(
+    o,
+    ["rights", "mandatory_controls", "resource_contract", "requires_resource_contract"],
+    path,
+  );
+  if (o.resource_contract !== undefined) {
+    const violation = resourceContractViolation(o.resource_contract);
+    if (violation !== undefined) {
+      throw new ScopeProjectionMappingError(
+        `${path}.resource_contract`,
+        `is malformed: ${violation}`,
+      );
+    }
+  }
+  if (
+    o.requires_resource_contract !== undefined &&
+    typeof o.requires_resource_contract !== "boolean"
+  ) {
+    throw new ScopeProjectionMappingError(
+      `${path}.requires_resource_contract`,
+      "must be a boolean",
+    );
+  }
+  const resourceContract = resourceContractOf(o.resource_contract);
   const r = obj(o.rights, `${path}.rights`);
   onlyMembers(r, ["type", "resource", "match", "actions"], `${path}.rights`);
   if (r.type !== "mission_resource_access") {
@@ -208,6 +250,8 @@ function parseScopeValue(v: unknown, path: string): ScopeValueMapping {
       o.mandatory_controls === undefined
         ? {}
         : parseControls(o.mandatory_controls, `${path}.mandatory_controls`),
+    ...(resourceContract !== undefined ? { resource_contract: resourceContract } : {}),
+    ...(o.requires_resource_contract === true ? { requires_resource_contract: true } : {}),
   };
 }
 
@@ -284,7 +328,11 @@ export function parseScopeProjectionMapping(raw: unknown): ScopeProjectionMappin
   return { audiences: out };
 }
 
-/** The entry members this projection understands; any other member fails closed. */
+/**
+ * The entry members this projection understands; any other member fails
+ * closed. `resource_contract` is understood only together with condition 4,
+ * which evaluates it ({@link scopeValueSafeForEntry}, #249).
+ */
 const KNOWN_ENTRY_MEMBERS = new Set([
   "type",
   "resource",
@@ -293,6 +341,7 @@ const KNOWN_ENTRY_MEMBERS = new Set([
   "constraints",
   "delegation",
   "capability_sources",
+  "resource_contract",
 ]);
 
 /**
@@ -315,6 +364,14 @@ const KNOWN_ENTRY_MEMBERS = new Set([
  *    `vendors`: control set within the entry set). Any other key fails
  *    closed; `requires_action_approval: false` is the omitted value and
  *    constrains nothing.
+ * 4. Contract (#249, D553): "For an entry carrying `resource_contract`, the
+ *    mapping states that the target performs every operation the mapped
+ *    `scope` value permits under exactly the referenced contract. A `scope`
+ *    value conveys no contract reference of its own. An entry without the
+ *    member satisfies this condition only where the target requires no
+ *    reference for those operations." The value's `resource_contract` must
+ *    equal the entry's member for member; an entry without one fails where
+ *    the value's `requires_resource_contract` is set.
  *
  * An entry carrying `capability_sources` fails: a `scope` cannot carry the
  * per-action tool-source binding the entry records. `delegation` is policy,
@@ -334,6 +391,12 @@ export function scopeValueSafeForEntry(value: ScopeValueMapping, entry: unknown)
   if (!Array.isArray(e.actions)) return false;
   const actions = e.actions as unknown[];
   if (!value.rights.actions.every((a) => actions.includes(a))) return false;
+  // 4. the contract is preserved: never dropped by projecting to `scope`.
+  if (e.resource_contract !== undefined) {
+    if (!sameResourceContract(e.resource_contract, value.resource_contract)) return false;
+  } else if (value.requires_resource_contract === true) {
+    return false;
+  }
   // 3. every carried constraint independently enforced at least as tightly.
   if (e.constraints === undefined) return true;
   if (e.constraints === null || typeof e.constraints !== "object" || Array.isArray(e.constraints))
