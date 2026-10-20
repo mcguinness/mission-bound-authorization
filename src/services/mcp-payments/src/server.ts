@@ -2108,6 +2108,11 @@ export class McpPaymentsServer {
 
     // The action-approval context the PDP re-evaluates is derived ONLY from
     // these typed, verified claims: the token carries no approval object.
+    // @spec authzen#context-approval (#249): the approved Resource is the
+    // challenged operation this resource retained, so its contract reference
+    // is the one the approval was given under.
+    const approvedContract = (pending.authorizationDetails[0] as { resource_contract?: unknown } | undefined)
+      ?.resource_contract;
     return {
       ok: true,
       approval: {
@@ -2115,6 +2120,7 @@ export class McpPaymentsServer {
         approved_at: new Date(credential.iatS * 1000).toISOString(),
         approved_until: new Date(credential.expS * 1000).toISOString(),
         parameter_digest: recomputed,
+        ...(approvedContract !== undefined ? { resource: { properties: { resource_contract: approvedContract } } } : {}),
       },
     };
   }
