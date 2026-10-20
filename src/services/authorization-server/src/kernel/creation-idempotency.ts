@@ -105,7 +105,8 @@ export type CreationOp = "child-creation" | "expansion" | "async-delegation" | "
  *    optional cross-check parameter alone.
  *  - `cnf`: the verified presenter confirmation (`{ jkt }` for DPoP; an mTLS
  *    binding would carry `{ "x5t#S256" }`).
- *  - `actor`: the verified acting-actor identity.
+ *  - `actor`: the verified `actor_token`'s `iss` and `sub`; absent where
+ *    client authentication alone identifies the acting agent (#1177).
  *  - `intent`: the parsed semantic Mission Intent object (the `intent` member
  *    of the Submission envelope).
  *  - `proposal`: the parsed `authorization_details` array, when present.
@@ -130,7 +131,7 @@ export interface MissionCreationFingerprintInput {
   client: string;
   source: string;
   cnf: { jkt: string };
-  actor: { iss: string; sub: string };
+  actor?: { iss: string; sub: string };
   intent: MissionIntent;
   proposal?: AuthorityEntry[];
   evidence?: IntentSubmissionEvidenceEntry[];
@@ -238,7 +239,7 @@ export function creationFingerprint(input: CreationFingerprintInput): string {
     client: input.client,
     source: input.source,
     cnf: input.cnf,
-    actor: input.actor,
+    ...(input.actor ? { actor: input.actor } : {}),
     intent: input.intent,
     ...(input.proposal ? { proposal: input.proposal } : {}),
     ...(input.evidence ? { evidence: input.evidence } : {}),

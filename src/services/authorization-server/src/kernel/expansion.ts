@@ -462,6 +462,35 @@ export function revokeDrawdownSuccessorsRequestedByAnotherClient(kernel: Mission
 }
 
 /**
+ * @spec expansion#reconciliation — the closed set of reconciliation statuses an
+ * expansion refusal carries in `mission_expansion_status`.
+ */
+export type ReconciliationStatus =
+  | "superseded_by_concurrent_expansion"
+  | "predecessor_state_changed"
+  | "predecessor_not_active"
+  | "authority_restricted_since_approval";
+
+/**
+ * @spec expansion#predecessor-active, expansion#reconciliation (#1177) — the
+ * status for a predecessor that is no longer `active`, from its OBSERVED
+ * record. A predecessor another expansion superseded answers
+ * `superseded_by_concurrent_expansion` (the attribution rule: its
+ * `termination` names that cause, so the client can discover the successor);
+ * any other terminal exit, or a predecessor that no longer resolves, answers
+ * `predecessor_state_changed`; a non-terminal non-active state such as
+ * `suspended` answers `predecessor_not_active`, which invites a retry.
+ */
+export function reconciliationStatusFor(observed: MissionRecord | undefined): ReconciliationStatus {
+  if (!observed || TERMINAL_STATES.has(observed.state)) {
+    return observed?.termination?.reason === "superseded"
+      ? "superseded_by_concurrent_expansion"
+      : "predecessor_state_changed";
+  }
+  return "predecessor_not_active";
+}
+
+/**
  * The successor's `mission` claim, adding the `predecessor` lineage member.
  */
 export function successorMissionClaim(

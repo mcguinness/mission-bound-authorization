@@ -1010,6 +1010,37 @@ describe("subject-token possession at the child-creation exchange (@spec child-d
     expect(res.error_description).toContain("predecessor");
     expect(as.kernel.findChildren(p.missionId)).toHaveLength(0);
   });
+
+  for (const opensWithActorToken of [false, true]) {
+    it(`the creation fingerprint's actor is the actor_token's iss and sub, absent without one: a retry of a creation opened ${opensWithActorToken ? "with" : "without"} an actor_token ${opensWithActorToken ? "omitting" : "adding"} one is a different request (@spec expansion#creation-fingerprint, #1177)`, async () => {
+      const p = await issueParentMission();
+      const actorToken = async (): Promise<Record<string, string>> => ({
+        actor_token: await new SignJWT({ cnf: { jkt: await calculateJwkThumbprint(await exportJWK(dpopKeys.publicKey)) } })
+          .setProtectedHeader({ alg: "ES256" })
+          .setIssuer("ap-agent")
+          .setSubject("ap-agent")
+          .setIssuedAt()
+          .setExpirationTime("2m")
+          .sign(dpopKeys.privateKey),
+        actor_token_type: JWT_TOKEN_TYPE,
+      });
+      const creationRequestId = crypto.randomUUID();
+      const params = async (withActorToken: boolean) =>
+        childParams(p.accessToken, { creation_request_id: creationRequestId, ...(withActorToken ? await actorToken() : {}) });
+
+      const created = await refusal(await send(await params(opensWithActorToken), await freshProof()));
+      expect(created.status, JSON.stringify(created)).toBe(200);
+      const same = await refusal(await send(await params(opensWithActorToken), await freshProof()));
+      expect(same.status, JSON.stringify(same)).toBe(200);
+
+      const other = await refusal(await send(await params(!opensWithActorToken), await freshProof()));
+      expect(other.status, JSON.stringify(other)).toBe(400);
+      expect(other.error).toBe("invalid_request");
+      expect(other.error_description).toContain("already used for a different creation request");
+      expect(other.access_token).toBeUndefined();
+      expect(as.kernel.findChildren(p.missionId)).toHaveLength(1);
+    });
+  }
 });
 
 describe("invalid or unacceptable subject and actor tokens at the child-creation exchange (@spec child-delegation#request-processing, RFC 8693 Section 2.2.2, #1178)", () => {

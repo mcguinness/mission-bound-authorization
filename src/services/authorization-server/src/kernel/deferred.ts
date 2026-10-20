@@ -31,7 +31,7 @@ import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
-import { createExpansion } from "./expansion.js";
+import { createExpansion, type ReconciliationStatus, reconciliationStatusFor } from "./expansion.js";
 import { IntentError } from "./intent.js";
 import {
   type CeilingConsent,
@@ -316,6 +316,9 @@ function migrateExpansionDeferrals(db: Database): void {
     "carryover_manifest_hash",
     // @spec progressive#ceiling-reconsent (#1413): the committed re-consent.
     "ceiling_reconsent_json",
+    // @spec expansion#reconciliation (#1177): the reconciliation status a
+    // refused completion recorded, repeated on every later poll of the deferral.
+    "refusal_status",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -769,7 +772,7 @@ export class ExpansionDeferralStore {
     | DeferralPending
     | DeferralSlowDown
     | { error: "expired_token" }
-    | { error: "access_denied" }
+    | { error: "access_denied"; status?: ReconciliationStatus }
     | { error: "invalid_grant" }
     | ExpansionDeferredResult {
     const row = this.db
@@ -863,29 +866,43 @@ export class ExpansionDeferralStore {
         interval: DEFERRAL_INTERVAL,
       };
     }
-    if (row.state === "access_denied") return { error: "access_denied" };
+    // @spec expansion#reconciliation (#1177): a refused deferral answers
+    // `access_denied` with the reconciliation status it recorded, if any, on
+    // every later poll. An Approver's denial records none.
+    if (row.state === "access_denied") {
+      return {
+        error: "access_denied",
+        ...(typeof row.refusal_status === "string" && row.refusal_status
+          ? { status: row.refusal_status as ReconciliationStatus }
+          : {}),
+      };
+    }
     if (row.redeemed === 1) return { error: "invalid_grant" };
+    // Record a refusal: `access_denied`, the deferred substrate's outcome for a
+    // request that resolved with an error (DTR -00 Section 5.5.1 step 4), with
+    // the reconciliation status when a reconciliation check failed.
+    const refuse = (status?: ReconciliationStatus): { error: "access_denied"; status?: ReconciliationStatus } => {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied', refusal_status = ? WHERE deferral_code = ?")
+        .run(status ?? null, deferralCode);
+      return { error: "access_denied", ...(status ? { status } : {}) };
+    };
 
     // @spec expansion#deferred-window check (a): re-verify predecessor STATE at
     // completion. A predecessor terminated/superseded during the window fails.
     const predecessor = this.kernel.get(row.predecessor_id as string);
-    if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+    const observedPredecessor = predecessor ? this.kernel.applyExpiry(predecessor) : undefined;
+    if (!observedPredecessor || observedPredecessor.state !== "active") {
+      return refuse(reconciliationStatusFor(observedPredecessor));
     }
     // @spec expansion#deferred-window check (a): containment that ADVANCED during
     // the window fails completion (the deferred approval MUST NOT bypass a
     // containment applied after the request). A predecessor already contained at
     // request time still expands (containment#restoration) because the version is
     // unchanged.
-    const currentCv = predecessor.containment?.containment_version ?? 0;
+    const currentCv = observedPredecessor.containment?.containment_version ?? 0;
     if (currentCv !== (row.pred_containment_version as number)) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+      return refuse();
     }
 
     const recorded = JSON.parse(row.intent_json as string) as {
@@ -924,8 +941,12 @@ export class ExpansionDeferralStore {
     let txOut:
       | { successor: MissionRecord; predecessorId: string; carryover?: ApplyCarryoverOutcome }
       | undefined;
+    // The in-transaction re-check refuses by returning undefined: the
+    // predecessor stopped being effectively active between check and commit.
+    let predecessorRefused = false;
     try {
       txOut = this.redeemInTransaction(row, intent, recorded, approver, submissionEvidence, creationRequestId);
+      predecessorRefused = txOut === undefined;
     } catch (e) {
       // @spec child-delegation#carryover-commit — a carryover refusal rolls the
       // WHOLE completion back: no partial successor, no surviving replacement
@@ -941,10 +962,11 @@ export class ExpansionDeferralStore {
       }
     }
     if (!txOut) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+      // An expiry or carryover refusal is not a reconciliation failure and
+      // carries no status (@spec expansion#successor-expiry).
+      if (!predecessorRefused) return refuse();
+      const now = this.kernel.get(row.predecessor_id as string);
+      return refuse(reconciliationStatusFor(now ? this.kernel.observe(now) : undefined));
     }
     this.kernel.publishPendingCommits();
     this.db.prepare("UPDATE expansion_deferrals SET completion_released = 1 WHERE deferral_code = ?").run(deferralCode);
