@@ -1725,7 +1725,7 @@ At a direct approval event the AS MUST, in order:
      the AS applied.
    - Mission Capability Binding
      ({{I-D.draft-mcguinness-mission-capability-binding}}) states
-     what the rendering presents for the source binding of a
+     what the rendering presents about the source binding of a
      catalog-sourced action.
 6. **Compute the integrity anchors** ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`

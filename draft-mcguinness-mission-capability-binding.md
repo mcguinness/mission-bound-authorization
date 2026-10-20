@@ -181,7 +181,9 @@ The terms Policy Enforcement Point (PEP), Policy Decision Point
 {{I-D.draft-mcguinness-mission-runtime}}. The AuthZEN request and
 response envelope, the `context` object, and the runtime denial
 classification are used as defined in
-{{I-D.draft-mcguinness-mission-authzen}}.
+{{I-D.draft-mcguinness-mission-authzen}}. The terms Approver and
+Authority Set are used as defined in
+{{I-D.draft-mcguinness-oauth-mission}}.
 
 Validating server:
 : The component that, at derivation, validates the Mission's
@@ -312,16 +314,16 @@ Where the issuance profile renders a candidate Authority Set for
 human approval ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Direct Approval Steps"), the validating server MUST:
 
-1. resolve each catalog-sourced action's binding from its trusted
-   catalog or configuration together with the candidate Authority
-   Set, before the approval rendering, so the Approver consents to
-   the concrete bindings;
+1. resolve each catalog-sourced action's binding from a catalog or
+   configuration the validating server trusts, together with the
+   candidate Authority Set, before the approval rendering, so the
+   Approver consents to the concrete bindings;
 2. present, for each bound action:
    - the tool or operation identity;
    - what invoking it authorizes, in terms the Approver can act on;
    - its source, and its publisher where the validating server has
      established one, or otherwise that the publisher is unknown or
-     that the identity is the source's own claim; and
+     that the named publisher is the source's own claim; and
    - that a later change to the capability's definition is refused
      ({{capability-verification}});
 3. at the approval decision, revalidate each binding against the
@@ -339,9 +341,10 @@ such as a tool's description, as inert content.
 For item 3, a binding changes when a bound capability's identity or
 extracted definition ({{capability-extraction}}) changes, or, where a
 `catalog_digest` was recorded, when the retrieved source changes. A
-catalog edit that changes neither is not a binding change, unless it
-changes another approval input. After approval, a changed definition
-is refused at decision time ({{capability-verification}}).
+catalog edit that changes neither is not a binding change; it still
+requires fresh consent where it changes another input that Changes
+Before the Decision covers. After approval, drift is refused at
+decision time ({{capability-verification}}).
 
 ## Decision-Time Verification {#capability-verification}
 
