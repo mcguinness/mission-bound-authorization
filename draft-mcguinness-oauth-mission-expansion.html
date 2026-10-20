@@ -1624,7 +1624,7 @@ nothing is refused.<a href="#section-3-3.3.1" class="pilcrow">¶</a></p>
         <li id="section-3-3.4">
           <p id="section-3-3.4.1">An expansion always widens authority, so a fresh consent supplies
 the broader authority, obtained through the deferred token response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>) or the
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>) or the
 deployment's interactive approval (<a href="#completion-modes" class="auto internal xref">Section 5.2</a>). The
 successor's authority comes only from that consent.<a href="#section-3-3.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -1844,7 +1844,7 @@ decision (<a href="#interactive-handoff" class="auto internal xref">Section 5.3<
 <a href="#example" class="auto internal xref">Appendix A</a>, with client authentication omitted (line breaks for
 display purposes only). The client also opts in to deferred completion
 with the deferred token response's <code>completion_mode</code> parameter
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00#section-4.1" class="relref">Section 4.1</a> of [<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>):<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00#section-4.1" class="relref">Section 4.1</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>):<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 <span id="name-expansion-request"></span><div id="fig-request">
 <figure id="figure-2">
           <div class="lang-http sourcecode" id="section-4.1-6.1">
@@ -2134,7 +2134,7 @@ possession-proven token exchange (<a href="#expansion-request" class="auto inter
           <dd style="margin-left: 1.5em" id="section-5.2-2.2">
             <p id="section-5.2-2.2.1">When approval is asynchronous and the exchange opts in, the Mission
 Issuer returns the deferred token response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>, profiled for
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>, profiled for
 Missions by <span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>):
 <code>authorization_pending</code> with a <code>deferral_code</code>, its <code>expires_in</code>, and
 a polling <code>interval</code>. The Approver acts on the deployment's
@@ -2224,7 +2224,7 @@ Cache-Control: no-store
           </figcaption></figure>
 </div>
 <p id="section-5.2-12">The following is an example of the client's poll with the deferred grant
-type (<span><a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00#section-5.5" class="relref">Section 5.5</a> of [<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>)
+type (<span><a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00#section-5.5" class="relref">Section 5.5</a> of [<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>)
 and a DPoP proof, with client authentication omitted (line breaks for
 display purposes only):<a href="#section-5.2-12" class="pilcrow">¶</a></p>
 <span id="name-deferred-poll"></span><div id="fig-poll">
@@ -4353,7 +4353,7 @@ already-registered token-exchange parameters <code>subject_token</code>,
 <code>subject_token_type</code>, <code>requested_token_type</code>, <code>actor_token</code>, and
 <code>actor_token_type</code>; none of these needs registration by this document.
 The deferred completion mode uses the deferred token response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>) and registers
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>) and registers
 nothing here.<a href="#section-16.3-1" class="pilcrow">¶</a></p>
 <p id="section-16.3-2">The <code>predecessor</code> cross-check is carried in the token exchange request
 at the token endpoint and, on the interactive path, in the
@@ -4524,9 +4524,9 @@ Error Registry" (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-11.4"
 <a href="#section-17.2" class="section-number selfRef">17.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-gerber-oauth-deferred-token-response">[I-D.draft-gerber-oauth-deferred-token-response]</dt>
+<dt id="I-D.draft-ietf-oauth-deferred-token-response">[I-D.draft-ietf-oauth-deferred-token-response]</dt>
         <dd>
-<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gerber-oauth-deferred-token-response-00</span>, <time datetime="2026-06-23" class="refDate">23 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
+<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-deferred-token-response-00</span>, <time datetime="2026-09-16" class="refDate">16 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-authority-server">[I-D.draft-mcguinness-mission-authority-server]</dt>
         <dd>

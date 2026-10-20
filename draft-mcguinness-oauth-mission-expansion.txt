@@ -328,9 +328,9 @@ Table of Contents
 
    4.  An expansion always widens authority, so a fresh consent supplies
        the broader authority, obtained through the deferred token
-       response ([I-D.draft-gerber-oauth-deferred-token-response]) or
-       the deployment's interactive approval (Section 5.2).  The
-       successor's authority comes only from that consent.
+       response ([I-D.draft-ietf-oauth-deferred-token-response]) or the
+       deployment's interactive approval (Section 5.2).  The successor's
+       authority comes only from that consent.
 
    5.  When the successor's authority is issued, the successor activates
        and the predecessor becomes terminated with reason superseded,
@@ -495,7 +495,7 @@ Table of Contents
    display purposes only).  The client also opts in to deferred
    completion with the deferred token response's completion_mode
    parameter (Section 4.1 of
-   [I-D.draft-gerber-oauth-deferred-token-response]):
+   [I-D.draft-ietf-oauth-deferred-token-response]):
 
    POST /token HTTP/1.1
    Host: as.example.com
@@ -728,7 +728,7 @@ Table of Contents
 
    Deferred:  When approval is asynchronous and the exchange opts in,
       the Mission Issuer returns the deferred token response
-      ([I-D.draft-gerber-oauth-deferred-token-response], profiled for
+      ([I-D.draft-ietf-oauth-deferred-token-response], profiled for
       Missions by [I-D.draft-mcguinness-oauth-mission-approval]):
       authorization_pending with a deferral_code, its expires_in, and a
       polling interval.  The Approver acts on the deployment's
@@ -807,7 +807,7 @@ Table of Contents
 
    The following is an example of the client's poll with the deferred
    grant type (Section 5.5 of
-   [I-D.draft-gerber-oauth-deferred-token-response]) and a DPoP proof,
+   [I-D.draft-ietf-oauth-deferred-token-response]) and a DPoP proof,
    with client authentication omitted (line breaks for display purposes
    only):
 
@@ -2427,7 +2427,7 @@ Table of Contents
    subject_token_type, requested_token_type, actor_token, and
    actor_token_type; none of these needs registration by this document.
    The deferred completion mode uses the deferred token response
-   ([I-D.draft-gerber-oauth-deferred-token-response]) and registers
+   ([I-D.draft-ietf-oauth-deferred-token-response]) and registers
    nothing here.
 
    The predecessor cross-check is carried in the token exchange request
@@ -2561,12 +2561,12 @@ Table of Contents
 
 17.2.  Informative References
 
-   [I-D.draft-gerber-oauth-deferred-token-response]
+   [I-D.draft-ietf-oauth-deferred-token-response]
               Jacobsen, F. K., de Oliveira Niero, G., and M. Gerber,
               "Deferred Token Response", Work in Progress, Internet-
-              Draft, draft-gerber-oauth-deferred-token-response-00, 23
-              June 2026, <https://datatracker.ietf.org/doc/html/draft-
-              gerber-oauth-deferred-token-response-00>.
+              Draft, draft-ietf-oauth-deferred-token-response-00, 16
+              September 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-oauth-deferred-token-response-00>.
 
    [I-D.draft-mcguinness-mission-authority-server]
               McGuinness, K., "Mission Authority Server", 2026,

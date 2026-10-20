@@ -1239,7 +1239,7 @@ profile") moves the issuance profile's approval event
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) to an asynchronous review
 surface: the client submits a proposed Mission, receives the deferred
 substrate's pending response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>), and polls until
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>), and polls until
 the approval resolves. When a reviewer will grant only a narrowed subset
 of the proposal, that profile resolves to <code>access_denied</code> and the client
 submits a fresh, narrower Mission Intent.<a href="#section-1-1" class="pilcrow">¶</a></p>
@@ -1268,7 +1268,7 @@ revisable-unaware client polling a deferred approval observes only the
 substrate's ordinary pending responses (<a href="#revision-required" class="auto internal xref">Section 5.1</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
 <p id="section-1-6">Like the deferred approval profile, this document tracks the
 in-progress deferred substrate
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>) and will track it
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>) and will track it
 as it evolves.<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1280,7 +1280,7 @@ as it evolves.<a href="#section-1-6" class="pilcrow">¶</a></p>
 <p id="section-2-1">This document depends normatively on the deferred approval profile
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>, on the issuance
 profile <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, and on the deferred
-substrate <span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>, and is
+substrate <span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>, and is
 not implementable alone. It reuses, without restating:<a href="#section-2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-2-2.1">
@@ -1351,7 +1351,7 @@ elapses (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="ci
       </ul>
 <p id="section-4-3">Client cancellation under the deferred substrate moves a <code>pending</code> or
 <code>revision_required</code> approval to <code>cancelled</code>
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). <code>approved</code>,
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>). <code>approved</code>,
 <code>denied</code>, <code>expired</code>, and <code>cancelled</code> are the terminal states. Resolving
 a deferred approval and replacing its proposed Mission with a revision
 are atomic with respect to each other: a concurrent approval of a
@@ -1481,7 +1481,7 @@ and, where it proposed concrete authority, the pushed
 it revises to drive that narrowing.<a href="#section-5.1-6" class="pilcrow">¶</a></p>
 <p id="section-5.1-7">The <code>mission_revision_handle</code> is not a token, grant, or continuation
 handle. It is sender-constrained to the same key as the <code>deferral_code</code>
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). Like the
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>). Like the
 <code>deferral_code</code>, the <code>mission_revision_handle</code> is pending-request state,
 not a grant (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval</a>]</span>).<a href="#section-5.1-7" class="pilcrow">¶</a></p>
 <p id="section-5.1-8">A client <span class="bcp14">MUST NOT</span> treat <code>mission_revision_required</code>, the rejected
@@ -1523,7 +1523,7 @@ approval;<a href="#section-5.2-2.1.2.3.1" class="pilcrow">¶</a></p>
 client <span class="bcp14">MUST</span> demonstrate possession of the same key that constrains
 the <code>deferral_code</code> under the deferred substrate's
 sender-constraint rules
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). The client
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>). The client
 demonstrates possession by presenting a DPoP proof on the PAR
 request keyed to that key or, where the deferred approval is bound
 by client authentication, by authenticating with the same
@@ -1997,7 +1997,7 @@ history under the same controls as other approval-event records.<a href="#sectio
       </h2>
 <p id="section-11-1">This document registers one value in the OAuth Completion Mode Values
 registry established by the deferred substrate
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>):<a href="#section-11-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>):<a href="#section-11-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11-2.1">
           <p id="section-11-2.1.1"><code>mission_revisable</code>: Change Controller IETF; Reference this document,
@@ -2063,9 +2063,9 @@ registry:<a href="#section-11-6" class="pilcrow">¶</a></p>
 <a href="#section-12.1" class="section-number selfRef">12.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-gerber-oauth-deferred-token-response">[I-D.draft-gerber-oauth-deferred-token-response]</dt>
+<dt id="I-D.draft-ietf-oauth-deferred-token-response">[I-D.draft-ietf-oauth-deferred-token-response]</dt>
         <dd>
-<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gerber-oauth-deferred-token-response-00</span>, <time datetime="2026-06-23" class="refDate">23 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
+<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-deferred-token-response-00</span>, <time datetime="2026-09-16" class="refDate">16 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission">[I-D.draft-mcguinness-oauth-mission]</dt>
         <dd>
