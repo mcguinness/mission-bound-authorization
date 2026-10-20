@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import type { OperationContract } from "@mission/core";
 import { evaluateRemote, remoteClaimChannel } from "./client.js";
 import { type ClaimChannel, claimChannelFor, type DecisionPoint } from "./decision-point.js";
 import type { DecisionFn, DecisionOptions, EvaluationRequest } from "./evaluate.js";
@@ -38,10 +39,16 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   /**
    * #1276, D457: the operation targets this PEP's contracts establish, as
    * the remote server registers them (`AuthorizedPep.operationTargets`).
-   * Absent, the registration names none, and the server admits only a target
-   * equal to `audience`.
+   * Absent, and with no `operationContracts`, the registration names none,
+   * and the server admits only a target equal to `audience`.
    */
   operationTargets?: readonly string[];
+  /**
+   * #1276, D457: the operation contracts this PEP declares, as the remote
+   * server registers them (`AuthorizedPep.operationContracts`), so it admits
+   * every target an argument-derived contract establishes.
+   */
+  operationContracts?: readonly OperationContract[];
   /**
    * @spec runtime#boundary-identifier (#853, D487): the boundaries the remote
    * server authorizes this PEP for, read on every request (for example from
@@ -85,7 +92,12 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   const server = await createPdpHttpServer({
     peps: new Map([[
       config.pepId,
-      { secret, scopes: config.scopes ?? [config.audience], ...(config.operationTargets ? { operationTargets: config.operationTargets } : {}) },
+      {
+        secret,
+        scopes: config.scopes ?? [config.audience],
+        ...(config.operationTargets ? { operationTargets: config.operationTargets } : {}),
+        ...(config.operationContracts ? { operationContracts: config.operationContracts } : {}),
+      },
     ]]),
     getOptions: config.getOptions,
     // The server binds the authenticated requester and its consumption-status

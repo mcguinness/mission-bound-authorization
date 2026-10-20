@@ -14,13 +14,17 @@
     "revision": "dade6c569d18a1e587f68885903447e8f9af5bb3",
     "content_sha256": "1fbb3409c45047fe17f65b591912c05c3ce6199f59db8160f87e5720381380ac"
    },
+   "draft-mcguinness-mission-metering.md": {
+    "revision": "6667b68f9afece5e490ea65022196e6c4991dd1b",
+    "content_sha256": "8cd8d68437668e5a6268b3ffa5e158017d5d71ef4129d4250ef70da2f3beb317"
+   },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
     "content_sha256": "065c797c3074eb766497180cf700fc267ecd227b45a399c1ad47330a226a7fa5"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "a642676d10e8e766b59b44f3e92e4bf2739879a3",
-    "content_sha256": "cda391b1925cfb0837b964692064a2349648c1784aaa42cd2524ab0011f66421"
+    "revision": "10e05d79c000dd30182270bc9f3765ccdfaffbb8",
+    "content_sha256": "58a1455a07f9e93758ddc802e98a41ca3b3b7affc4887847f13829741721241b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -74,6 +78,10 @@
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
     "content_sha256": "7b767e1bb56356fbbafd8237ba563fe816093fa499e8d3617ee2fd600ad8c0ca"
    },
+   "draft-mcguinness-oauth-mission-attenuation.md": {
+    "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
+    "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
+   },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
@@ -91,20 +99,20 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "228b8f3a7696d06e1d52f149140f487d3bf2837d",
-    "content_sha256": "dde493a296da308b2dce3d58678771929a4649af3f46598a5435e5b9c57c41b1"
+    "revision": "102070fe47f006ba57d9d3c9a99f921c1acc1982",
+    "content_sha256": "0a58266776c374a93c2296abe6df9424f2cab91af9ea2e296fdd7b351c8c9e62"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
-    "content_sha256": "a2906080c314e315896fa5211c425a8a0861be4cc819a3466188fb3d873ad65c"
+    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
+    "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
-    "content_sha256": "bb2e4b03cd8650b40d0c8404657f1bd9616b6632d63a5a03f2b19a44dc8d7f19"
+    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
+    "content_sha256": "03313926575c29814dc3d56328f76dc778a00ba9697df39c1a377588bd08e934"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -3725,7 +3733,7 @@
    "id": "core.approval-basis.adjudication-governance-record-override",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "issuance-relationship",
-   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
+   "text": "where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `adjudication.kind`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -18233,7 +18241,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v10, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), and declares each operation's execution capabilities (#817); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -21788,6 +21796,232 @@
    "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
   },
   {
+   "id": "runtime.execution-capabilities.declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Where the transaction-assurance tier covers an operation's class ({{runtime-conformance}}), its Operation Profile MUST declare these **execution capabilities**, each stated even where the answer is no:",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for every operation in a class the transaction-assurance tier covers, the published Operation Profile states durable idempotency (its holder, key, scope and retention, and what distinguishes a deliberately new operation with identical parameters from a retransmission), conditional-effect support, authoritative outcome lookup, the commit point, cancellation semantics, compensation authority, and the recovery from an unknown outcome, each even where the answer is no",
+    "local": "the reference publishes them per operation and phase as the Enforcement Scope Statement's extensions.execution_capabilities in its Protected Resource Metadata; a PDP-claim or PEP-reservation holder names its key, scope and retention through the class's transaction_assurance declaration or the operation's reversible_write_idempotency key control, and loadRuntimePosture refuses an unstated item or a holder the statement does not resolve"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > publishes the execution capabilities of every effectful operation the PEP serves, each under its own class and phase",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > the shipped statement declares every execution capability of each effectful payments operation and asserts no transaction claim",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a declaration that leaves an execution capability unstated, naming the entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a durable-idempotency holder the statement does not resolve",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. The payments statement declares all five effectful operations, the two high-consequence ones the tier covers and the three reversible writes it does not. Each test was proved by disabling the check it covers (the commit_point item, the PDP-claim and PEP-reservation holder checks, the shipped wire declaration)."
+  },
+  {
+   "id": "runtime.execution-capabilities.enforced-context-needs-conditional-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim the enforced property of Evaluation-Context Binding ({{evaluation-context-binding}}) for an operation whose Operation Profile declares no conditional-effect support.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims the enforced Evaluation-Context Binding property for an operation whose Operation Profile declares no conditional-effect support; a reread at the PEP alone reaches only the verified property",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting evaluation_context_enforced with conditional_effect none, and admits it with a declared precondition"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an enforced Evaluation-Context Binding claim with no declared conditional-effect support, and admits it with a declared precondition",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "Partial: the refusal is witnessed on the reference statement's per-operation assertion (proved by disabling the evaluation_context_enforced check). The Evaluation-Context Binding declaration that publishes the verified or enforced property per operation is #773's and does not exist in the reference, so no test reads the property from it."
+  },
+  {
+   "id": "runtime.execution-capabilities.exactly-once-needs-resource-idempotency",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim exactly-once execution for an operation whose Operation Profile declares no durable idempotency held by the resource.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims exactly-once execution for an operation unless its Operation Profile declares durable idempotency held by the resource; the PDP's idempotency claim or the PEP's reservation does not back the claim",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting exactly_once unless durable_idempotency.held_by is resource with a key, scope and retention, and the PDP module refuses to boot on such a configuration; the shipped statement asserts it nowhere"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an exactly-once claim with no durable idempotency held by the resource, and admits it once the resource holds a key, scope and retention",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > a configuration claiming exactly-once execution on the PDP's claim alone refuses the boot",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. Proved by disabling the exactly_once check (the unit test) and the loader's call to executionCapabilityFindings (the boot test)."
+  },
+  {
+   "id": "runtime.execution-capabilities.recovery-rests-on-declared-capability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the published statement declares a recovery from an unknown outcome only on a declared capability: re-presenting the effect only where the resource holds durable idempotency, resolving it by lookup only where an outcome lookup is declared, and otherwise holding it",
+    "local": "the reference loader refuses at load a resource_retransmission recovery without durable idempotency held by the resource, and an outcome_lookup recovery without a declared lookup; the shipped statement declares outcome_lookup or hold"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an unknown-outcome recovery that rests on no declared outcome lookup or resource idempotency",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The declaration facet of the clause; runtime.execution-capabilities.no-recovery-by-re-execution is the execution facet. Proved by disabling each of the two recovery checks in turn."
+  },
+  {
+   "id": "runtime.execution-capabilities.no-recovery-by-re-execution",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an executing deployment never recovers an unknown high-consequence outcome by executing the effect again, except as a retransmission that a resource with declared durable idempotency deduplicates",
+    "local": "witnessed where no lookup reaches the effect: after a restart the in-memory connectors cannot answer for the prior process's wire, the claim closes indeterminate, and a retry under the same key is refused duplicate_suppressed with no ledger entry"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+  },
+  {
+   "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Without one, the outcome stays undetermined, and its idempotency claim and any consumption reservation stay held until evidence resolves it",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for a high-consequence operation whose outcome no declared lookup establishes, the outcome stays undetermined and its idempotency claim and any consumption reservation stay held until evidence resolves it, never released by time",
+    "local": "the PDP's claim closes indeterminate at the reconciliation window's end and keeps refusing the key"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial: the idempotency-claim half is witnessed; consumption reservations are the metering companion's, which the reference does not implement. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again."
+  },
+  {
+   "id": "runtime.execution-capabilities.compensation-declaration-grants-no-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "the declaration names the action and grants no authority",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a declared compensating action is authorized only by its own Decision under current authority; the Operation Profile's compensation declaration never serves as authority for it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No payments operation declares a compensating action (compensation none throughout), so nothing exercises the rule. The compound-actions rows carry the compensate-phase Decision and compensates_evaluation_id."
+  },
+  {
    "id": "runtime.metering.unmetered-bound-refusal",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "metering",
@@ -23280,6 +23514,42 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The payments PEP sends the contract's target as resource.properties.operation_target on every decision request (T1, both modes); the PDP refuses a request lacking it (P5). Mutation M10 (PEP reads the caller's target) fails T1."
   },
   {
+   "id": "authzen.context-operation-target.pep-derives-from-contract-and-arguments",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-operation-target",
+   "text": "The authenticated PEP establishes the target from the trusted operation contract of the resource it enforces for and from the operation's validated arguments, as that section requires of a resource server.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the request's resource.properties.operation_target is the target the PEP's trusted contract establishes, from the validated argument an argument-derived contract names; requests for different objects under the same audience carry different targets"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). The decision request carries the invoice target beside the unchanged audience; a forged operation_target or resource argument never reaches it. Mutations: deriving from one fixed argument value and reading a caller-supplied operation_target each fail a witness."
+  },
+  {
    "id": "authzen.context-operation-target.pep-trusted-derivation",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-operation-target",
@@ -23311,9 +23581,15 @@
      "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The PEP derives the target from its Operation Profile contract and ignores a caller-supplied target or resource argument (T1). Mutations M10 and M15 fail T1 and T4."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The PEP derives the target from its Operation Profile contract and ignores a caller-supplied target or resource argument (T1). Mutations M10 and M15 fail T1 and T4. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, an operation_target or resource argument is ignored though the credential names it, and an invoice_id carrying delimiters stays one percent-encoded segment under /invoices/. Mutations: reading a caller-supplied operation_target and dropping the percent-encoding fail that witness."
   },
   {
    "id": "authzen.context-operation-target.pep-refuses-unestablishable",
@@ -23365,9 +23641,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a missing, empty, list-valued, dot-segment or ambiguous argument-derived target refuses before any decision request, though the Mission and the credential name both the service and the invoice",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported finer contract or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported contract form or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). A missing, empty, list-valued or dot-segment argument and declarations deriving different targets refuse target_unresolvable before any decision request. Mutations: a service-identifier fallback on a missing argument, a list's first value and a dropped dot-segment check each fail that witness."
   },
   {
    "id": "authzen.context-resource-contract.request-member",
@@ -24595,9 +24877,15 @@
      "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > refuses a target that breaks RFC 3986 absolute-URI syntax before evaluation as operation_target_invalid, in process and over the remote channel, though the Mission, the credential and the PEP's registered targets name the identical string",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > the remote PDP admits every target a registered argument-derived contract establishes, and refuses any other before evaluation as operation_target_invalid",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. The remote PDP refuses %zz, a trailing %, %4, a raw space, a non-ASCII character and an empty http host before evaluation (no FGA check, no Resource policy query) though the PEP is registered for each string and the Mission and credential name it (endpoint). Mutations (new URL() only; pct-encoded loosened to {0,2}, {1,2} or a trailing %; the host rule removed) fail that witness. Partial stays: the non-string, array and no-fallback clauses are witnessed at evaluate() only (P5)."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The remote PDP refuses a target outside the authenticated PEP's enforcement scope before evaluation (P10, endpoint). Absent, malformed and ambiguous targets are refused before evaluation at evaluate() only (P5, unit). Mutations M3b, M9 and M19 fail P5, P10 and P6. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. The remote PDP refuses %zz, a trailing %, %4, a raw space, a non-ASCII character and an empty http host before evaluation (no FGA check, no Resource policy query) though the PEP is registered for each string and the Mission and credential name it (endpoint). Mutations (new URL() only; pct-encoded loosened to {0,2}, {1,2} or a trailing %; the host rule removed) fail that witness. Partial stays: the non-string, array and no-fallback clauses are witnessed at evaluate() only (P5). #1276 argument-derived contracts: a remote PEP may be registered for operation contracts (AuthorizedPep.operationContracts); the remote PDP admits every target a registered contract establishes and refuses, before evaluation, the service identifier when only an argument-derived contract is registered, a second segment, a non-canonical encoding, a dot-segment and another collection, as operation_target_invalid. Mutations: ignoring registered contracts and accepting a non-canonical encoding fail that witness. Partial stays for the reasons above."
   },
   {
    "id": "authzen.parameter-digest.parameters-must-be-normalized-object",
@@ -26086,9 +26374,15 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a target change between the decision and the release suppresses an argument-derived permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). A contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect (get_invoice, lookup_vendor, hold_transfer). Mutation M14 fails T7."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). A contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect (get_invoice, lookup_vendor, hold_transfer). Mutation M14 fails T7. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). The use check re-derives an argument-derived target from the live contract and the arguments of the execution; a moved or removed contract suppresses the permit with target_drift and no effect, for a parameter-bound read and a write. Mutations: re-deriving without the arguments and accepting a moved target fail that witness."
   },
   {
    "id": "authzen.projections.operation-target-in-every-projection",
@@ -26122,9 +26416,36 @@
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > a key reused under a different operation identity is a conflict > a key reused for another operation target under the same audience, action, type/id and digest is idempotency_conflict, never a retransmission of the first permit (#1276)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same type and id, changed target: moving the contract changes the request's target, digest, operation identity and cache key while audience, action and type/id stay equal",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1. #1276 argument-derived contracts: two payments PEP requests for the same invoice under contracts deriving different targets carry the same audience, action and type/id, and differ in operation_target, parameter_digest, operation identity and cache key (computed with the PDP's projections). Still no PEP-side permit cache, so the row stays partial. Mutation: binding the service identifier rather than the target into the effective parameters fails that witness."
+  },
+  {
+   "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The PDP MUST verify that the renewal's Mission, subject, action, operation target and audience match the evaluation named by `prior_evaluation_id`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a duration-lease renewal whose Mission, subject, action, operation target or audience differs from the evaluation named by context.prior_evaluation_id does not continue that metered activity; one that matches in all five does"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457, D475). The reference implements no duration-lease renewal: nothing in src/ reads context.prior_evaluation_id or reports measured_duration, so no part of this check (the operation target included) has a witness. #1285 deferred the operation-target clause until a renewal path exists; the row stays todo until one is built."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -40689,6 +41010,43 @@
    "tests": []
   },
   {
+   "id": "resource-access.resource-matching.tool-call-target-from-arguments",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "for an RPC or tool call the resource server derives it from the operation and its validated arguments",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under a contract that derives a tool call's target from its arguments, the target is the one the contract derives from the validated argument it names: calls naming different objects under the same audience have different targets, and no other argument contributes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Each invoice is its own target beside the unchanged audience, and the PEP executes that invoice; an invoice_id carrying delimiters is percent-encoded as one segment. Mutations: deriving every call from one fixed argument value, dropping the percent-encoding and reading a caller-supplied operation_target each fail a witness. The SaaS resource supports the service-level form only."
+  },
+  {
    "id": "resource-access.resource-matching.target-independent",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-matching",
@@ -40721,9 +41079,21 @@
      "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > same audience, different target: a contract naming a finer service under the same audience is decided on that target, never on the audience",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a caller-supplied target never moves the derived target: operation_target and resource arguments are ignored, and an invoice_id carrying delimiters stays one segment under /invoices/",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > an argument-derived contract never falls back to the service identifier: entries naming only the service cover no invoice target, while the shipped service-level contract still permits them",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, a caller-supplied operation_target or resource argument never moves the target, though the credential names that value, and entries naming the service identifier never make the service the target of an invoice operation. Mutations: reading a caller-supplied operation_target and collapsing the argument-derived target to the service identifier each fail a witness."
   },
   {
    "id": "resource-access.resource-matching.refuse-unresolved-target",
@@ -40776,9 +41146,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool whose contract names a target that breaks RFC 3986 syntax as target_unresolvable, though the token's entry names the identical string",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a missing, empty, list-valued, dot-segment or ambiguous argument-derived target refuses before any decision request, though the Mission and the credential name both the service and the invoice",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable only through declarations naming different targets; finer contracts refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable through declarations naming different targets and, under an argument-derived contract, through a list-valued argument; template forms outside the supported one refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An absent, empty, list-valued or dot-segment argument, a tool with no such argument, and declarations deriving different targets refuse target_unresolvable before any decision request, though the Mission and the credential name the service and the invoice. Mutations: falling back to the service identifier on a missing argument, taking a list's first value and dropping the dot-segment check each fail that witness."
   },
   {
    "id": "resource-access.resource-matching.execute-matched-target",
@@ -40807,9 +41183,21 @@
      "name": "the payments resource executes only the authorized target (@spec resource-access#resource-matching, #1276) > a contract that moves or disappears between the decision and the release suppresses the permit with target_drift and no effect",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > a target change between the decision and the release suppresses an argument-derived permit with target_drift and no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An argument-derived target is re-derived at use from the live contract and the arguments of the execution: a contract that moves or disappears suppresses the permit with target_drift and no effect (get_invoice, hold_transfer), and a permitted call executes the invoice its target names. Mutations: re-deriving at use without the arguments, or accepting a moved target, fail T6."
   },
   {
    "id": "resource-access.resource-matching.no-metadata-fallback",
@@ -40850,9 +41238,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > an argument-derived contract never falls back to the service identifier: entries naming only the service cover no invoice target, while the shipped service-level contract still permits them",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457)."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, entries naming only the service identifier cover no invoice target, refused before the PDP or denied out_of_authority there, while the shipped service-level contract permits the same call. Mutation: collapsing the argument-derived target to the service identifier fails that witness."
   },
   {
    "id": "resource-access.resource-matching.operation-contract-content",
@@ -40882,9 +41276,15 @@
      "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource derives a finer operation target from validated arguments (@spec resource-access#resource-matching, authzen#context-operation-target, #1276) > same audience, different targets: under the invoice contract each invoice is its own target, and an entry naming one invoice never covers another",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The target rule and the refusal of an operation with no contract are witnessed here and by the resource-matching target rows; the supported resource_match values (exact only) by resource-access.rs-enforcement.resource-match-unrecognized-fail-closed; the constraint inputs by resource-access.resource-matching.contract-constraint-inputs. No test isolates the action identifier item, so the row stays partial."
+   "notes": "#1375. The target rule and the refusal of an operation with no contract are witnessed here and by the resource-matching target rows; the supported resource_match values (exact only) by resource-access.rs-enforcement.resource-match-unrecognized-fail-closed; the constraint inputs by resource-access.resource-matching.contract-constraint-inputs. No test isolates the action identifier item, so the row stays partial. #1276: the target derivation rule is also witnessed for an argument-derived contract (the invoice target from the validated invoice_id). The action identifier item stays unisolated, so the row stays partial."
   },
   {
    "id": "resource-access.resource-matching.contract-constraint-inputs",
@@ -41093,6 +41493,76 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04. Prefix matching is not implemented; a prefix entry provides no authority (#1276)."
+  },
+  {
+   "id": "attenuation.root-mapping.target-restriction-every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "every operation a mapped tool can perform at each audience in the root's `aud` MUST have an operation target, as that resource server's operation contract establishes it, that matches the entry's `resource` under the entry's `resource_match`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each tool a root maps from an entry reaches, at every audience the root names, only operation targets the entry's resource matches under its resource_match; an aud value equal to (or naming) a coarser identifier never widens a finer entry to it",
+    "local": "the reference carries the restriction in each tool identifier (<resource>#<action>), which the consumer reads back as an exact entry naming that resource and matches against the operation target, whatever the root's aud; the mapping never reads aud"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation-target-restriction.test.ts",
+     "name": "an attenuation root keeps a finer entry's target restriction at a coarser audience (@spec attenuation#root-mapping, #1276) > the root's tool names the entry's invoice, and at the service audience it covers that invoice alone, never the service or another invoice",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276 (D457), the attenuation target-restriction proof. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, covers that invoice alone at the payments resource: under the argument-derived invoice contract another invoice is refused out_of_authority, and under the shipped service-level contract the service target is refused out_of_authority too. Mutations: mapping each entry at the root's first aud instead of its resource fails the cross-component witness, and mapping every entry at the first entry's resource fails the unit witness. The root is presented at one of its two audiences; that aud is not the boundary at any audience rests on the construction (the mapping never reads aud) and on the first mutation. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
+  },
+  {
+   "id": "attenuation.root-mapping.refuse-unestablishable-tool",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "An issuer that cannot establish this for a tool at every audience MUST NOT map the entry to that tool, and never maps it with the restriction removed",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose target restriction a tool cannot carry is not mapped to that tool; the root is never minted with that tool narrowed, widened or relaxed to a different restriction",
+    "local": "the reference refuses the whole root mapping (throws) for an entry whose resource_match is present and not exact, and for an action whose tool identifier would read back as a different (resource, action) pair"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Kernel derivation refuses non-exact entries earlier (#1264), so the first guard is defense in depth until prefix lands (#1399)."
   },
   {
    "id": "resource-access.subset.same-matcher",
@@ -44494,7 +44964,7 @@
    "id": "approval-governance.envelope.typ-cty",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
-   "text": "a verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
+   "text": "A verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -50925,7 +51395,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50947,7 +51417,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -51035,7 +51505,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, and, where the token-exchange response completes it, invalid_request for a predecessor no longer `active` and invalid_grant for check 3",
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion",
     "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
    },
    "level": "endpoint",

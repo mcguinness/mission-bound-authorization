@@ -824,7 +824,7 @@ exchange is refused with `invalid_request`
 ({{Section 2.2.2 of RFC8693}}); a required DPoP proof that is missing,
 or a DPoP proof that fails its own validation, with `invalid_dpop_proof`
 ({{Section 5 of RFC9449}}); and any other failure with
-`invalid_request`, `invalid_grant`, or `invalid_token` as appropriate.
+`invalid_request` or `invalid_grant` as appropriate.
 An authorization server that requires a DPoP nonce answers a proof
 lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce`
 header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`. The child
@@ -2434,6 +2434,10 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Request Processing drops `invalid_token` from the token-endpoint
+  refusals: it is a resource server code that the token endpoint does
+  not define.
 
 - Child Actor Eligibility: an absent `allowed_child_actors` defers the
   child actor to the authorization server's child-creation policy and
