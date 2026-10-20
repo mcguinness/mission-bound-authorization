@@ -6713,6 +6713,13 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1380): four tables fit the 69-column text rendering.
+  The resource server enforcement table and the error mapping cite
+  their companion documents in a sentence beside the table instead of
+  in its cells, and the error mapping carries each optional detail in
+  its error cell. The remediation grains and the Role Mapping
+  scenarios are lists. No requirement changes.
+
 - Editorial (#1379): the Introduction says what a Mission is beside
   an OAuth grant, drawn from Design Context, and that under a profile
   the AS can bind a further grant lineage to the same Mission. The
