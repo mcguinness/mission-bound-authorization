@@ -7,7 +7,9 @@ import type { CapabilitySourceBinding } from "./capability-binding.js";
  * the actor (or actor class) a delegation right may be conferred on. Matched by
  * `sub` (exact) or `sub_profile` (class membership). Shared shape between the
  * core's `allowed_delegates` and the child-delegation companion's
- * `allowed_child_actors`.
+ * `allowed_child_actors`. It carries one or both of these members and no
+ * other; every admitting boundary refuses any other shape (#1373,
+ * `delegateMatcherListViolation`).
  */
 export interface DelegateMatcher {
   sub?: string;

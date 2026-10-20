@@ -11,6 +11,7 @@
 import {
   capabilitySourceIdentity,
   compareAmounts,
+  delegateMatcherListViolation,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
   isAbsoluteUri,
@@ -104,6 +105,37 @@ function assertWellFormedResources(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry resource ${JSON.stringify(entry.resource)} is not an RFC 3986 absolute URI`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): `narrowMatchers` and `narrowChildren` rebuild each matcher from
+ * `sub` and `sub_profile` alone, so an admitted matcher carrying any other
+ * member would lose it and widen the eligibility the entry commits. Every
+ * `allowed_delegates` and `allowed_child_actors` matcher is checked under the
+ * shared rule here, over the full ceiling and proposal, so a programmatic
+ * caller that bypasses intake and the config loader cannot have a member
+ * silently dropped.
+ */
+function assertWellFormedMatchers(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    const delegation = asJsonObject(entry.delegation as JsonValue | undefined);
+    if (!delegation) continue;
+    const children = asJsonObject(delegation.children);
+    const violation =
+      (delegation.allowed_delegates !== undefined
+        ? delegateMatcherListViolation(delegation.allowed_delegates, "delegation.allowed_delegates")
+        : undefined) ??
+      (children?.allowed_child_actors !== undefined
+        ? delegateMatcherListViolation(children.allowed_child_actors, "delegation.children.allowed_child_actors")
+        : undefined);
+    if (violation !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry ${violation}; refusing rather than silently dropping it`,
       );
     }
   }
@@ -344,6 +376,8 @@ export function deriveAuthoritySetWithProvenance(
   if (proposal) assertNoRefusedMembers(proposal);
   assertWellFormedResources(policy.ceiling);
   if (proposal) assertWellFormedResources(proposal);
+  assertWellFormedMatchers(policy.ceiling);
+  if (proposal) assertWellFormedMatchers(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
