@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-20T01:05:32Z
-Source repository commit: 04ea9599b243d4c4e223737b3fa2f56d5d065541
+Generated: 2026-10-20T04:28:59Z
+Source repository commit: 20e611556a43f8292f9473e9fce42563d941247c
 Member count: 7
 
 Reading order:
@@ -13804,9 +13804,12 @@ A.6.  Stage 5: Suspension, Resumption, and Revocation
    Section 8, which expires at 08:55:00.
 
    At 08:53:20 the agent revokes the Mission with the reason "Quarterly
-   reconcile completed early".  The AS commits terminated with reason
-   revoked as state version 4, and a receiver of the Mission Signals
-   profile learns of it from a Security Event Token
+   reconcile completed early", under an explicit lifecycle authorization
+   the deployment grants it for this Mission
+   ([I-D.draft-mcguinness-oauth-mission-status]); its resource tokens
+   and refresh token confer no such authority.  The AS commits
+   terminated with reason revoked as state version 4, and a receiver of
+   the Mission Signals profile learns of it from a Security Event Token
    ([I-D.draft-mcguinness-oauth-mission-signals]).  Revocation stops the
    Mission at the issuer (Section 7.3).  A later refresh is refused with
    the mission_error diagnostic (Section 7.2):
@@ -13826,9 +13829,12 @@ A.6.  Stage 5: Suspension, Resumption, and Revocation
 
    Revocation does not recall the token already issued.  The ERP,
    enforcing from the token alone, can honor the read-only token until
-   its exp at 08:55:00; a resource server that introspects, or that
-   obtains a point-of-use permit under the runtime profile, stops
-   honoring it on its next request.
+   its exp at 08:55:00.  A resource server that introspects at the
+   issuer on every request stops honoring it on its next request.  One
+   that obtains a point-of-use permit under the runtime profile
+   ([I-D.draft-mcguinness-mission-runtime]) stops within that
+   deployment's declared freshness and permit bounds, since a permit can
+   rest on a state observation taken before the revocation.
 
 Appendix B.  Design Context and Boundaries
 

@@ -9015,7 +9015,11 @@ AS derives nothing in between (<a href="#lifecycle" class="auto internal xref">S
 refreshes for the read-only token of the refresh example in
 <a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>, which expires at 08:55:00.<a href="#appendix-A.6-1" class="pilcrow">¶</a></p>
 <p id="appendix-A.6-2">At 08:53:20 the agent revokes the Mission with the reason "Quarterly
-reconcile completed early". The AS commits <code>terminated</code> with reason
+reconcile completed early", under an explicit lifecycle authorization
+the deployment grants it for this Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>); its resource tokens
+and refresh token confer no such authority. The AS commits
+<code>terminated</code> with reason
 <code>revoked</code> as state version 4, and a receiver of the Mission Signals
 profile learns of it from a Security Event Token
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). Revocation stops the
@@ -9038,9 +9042,12 @@ termination, although the token has not expired (<a href="#examples" class="auto
 <a href="#composite-active" class="auto internal xref">Section 11.2</a>).<a href="#appendix-A.6-4" class="pilcrow">¶</a></p>
 <p id="appendix-A.6-5">Revocation does not recall the token already issued. The ERP,
 enforcing from the token alone, can honor the read-only token until
-its <code>exp</code> at 08:55:00; a resource server that introspects, or that
-obtains a point-of-use permit under the runtime profile, stops
-honoring it on its next request.<a href="#appendix-A.6-5" class="pilcrow">¶</a></p>
+its <code>exp</code> at 08:55:00. A resource server that introspects at the
+issuer on every request stops honoring it on its next request. One
+that obtains a point-of-use permit under the runtime profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) stops within that
+deployment's declared freshness and permit bounds, since a permit can
+rest on a state observation taken before the revocation.<a href="#appendix-A.6-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
