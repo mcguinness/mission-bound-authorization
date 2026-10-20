@@ -720,7 +720,9 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   unambiguous operation target for the request),
   `capability_source_unresolvable`
   (the capability definition the PEP must present could not be
-  resolved),
+  resolved), `resource_contract_unresolvable` (the resource contract
+  the operation requires could not be resolved,
+  {{I-D.draft-mcguinness-mission-runtime}}),
   `decision_evidence_unverifiable` (the Decision Evidence for a permit
   was absent or did not verify, so no decision the PEP can rely on was
   obtained), `channel_failure`, `pdp_unreachable`, or
@@ -1251,7 +1253,9 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   so exactly-once could not be established),
   `capability_source_unresolvable` (the capability definition the
   permit was decided against could not be re-resolved at execution),
-  `obligation_unfulfilled` (a permit suppressed before release because
+  `resource_contract_unresolvable` (the resource contract the permit
+  was decided under did not resolve to the same contract at
+  execution), `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
   named in `obligation_outcomes`), and `kill_switch` (execution
   suppressed by an operator or safety control). A deployment MAY
@@ -2600,6 +2604,10 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record and Execution Evidence: `resource_contract_unresolvable`
+  records a resource contract the PEP could not resolve before the
+  decision request, or that did not resolve to the same contract at
+  execution (#249).
 - Decision Evidence, Refusal Record, and Execution Evidence: the
   `audience` member carries the runtime profile's boundary identifier,
   byte for byte; a component that cannot establish the boundary emits
