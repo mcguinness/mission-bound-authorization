@@ -139,6 +139,17 @@ describe("the SaaS resource gives each entry member its resource-server role (@s
     expect(saas.journalEntries()).toHaveLength(before + 1);
   });
 
+  it("refuses an entry whose actions carry a non-string or empty element beside the requested action, with no effect", async () => {
+    for (const element of [5, null, true, {}, [WRITE], ""]) {
+      await expectRefusedWithNoEffect([entry([READ, WRITE, element as unknown as string])]);
+    }
+    // Control: a clean covering entry beside it still authorizes the write.
+    const before = saas.journalEntries().length;
+    const res = await write(await mintedToken([entry([READ, WRITE, 5 as unknown as string]), entry([WRITE])]));
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(saas.journalEntries()).toHaveLength(before + 1);
+  });
+
   it("refuses an entry whose type it does not implement, though its resource and actions cover the request", async () => {
     const { type: _type, ...untyped } = entry([READ, WRITE]);
     for (const other of [entry([READ, WRITE], { type: "payment_initiation" }), untyped]) {

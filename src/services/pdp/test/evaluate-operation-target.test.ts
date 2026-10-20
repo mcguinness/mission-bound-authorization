@@ -397,4 +397,52 @@ describe("the PDP matches entries against the PEP-established operation target (
     expect(registered.decision, JSON.stringify(registered.context)).toBe(true);
     expect(refusals).toHaveLength(2);
   });
+
+  it("the remote PDP admits every target a registered argument-derived contract establishes, and refuses any other before evaluation as operation_target_invalid", async () => {
+    const INVOICES = { template: `${SERVICE}/invoices/{invoice_id}` };
+    const INV1 = `${SERVICE}/invoices/inv-1`;
+    const INV2 = `${SERVICE}/invoices/inv-2`;
+    const evaluations = { n: 0 };
+    const refusals: PdpRefusal[] = [];
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE], operationContracts: [INVOICES] }]]),
+      getOptions: () => options({ view: view([entry(SERVICE), entry(INV1), entry(INV2)]) }),
+      evaluateFn: async (r, o) => {
+        evaluations.n += 1;
+        return evaluateRequest(r, o);
+      },
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      refusals: (r) => refusals.push(r),
+    });
+    const server = handle;
+    const ask = (operation_target: string) =>
+      evaluateRemote(withCredential(read({ audience: AUDIENCE, operation_target })), { url: server.url, pepId: PEP_ID, secret: SECRET });
+
+    // Each invoice the contract establishes is within the PEP's scope; no finite list names them.
+    for (const target of [INV1, INV2]) {
+      const served = await ask(target);
+      expect(served.decision, `${target}: ${JSON.stringify(served.context)}`).toBe(true);
+    }
+    expect(evaluations.n).toBe(2);
+    expect(refusals).toHaveLength(0);
+
+    // Not one the contract establishes: the service identifier itself (only an
+    // argument-derived contract is registered), a second segment, a
+    // non-canonical encoding, a dot-segment and another collection, though
+    // the Mission names the service identifier and the audience is in scope.
+    const outside = [
+      SERVICE,
+      `${INV1}/lines`,
+      `${SERVICE}/invoices/inv%2d1`,
+      `${SERVICE}/invoices/..`,
+      `${SERVICE}/bills/inv-1`,
+    ];
+    for (const target of outside) {
+      const refused = await ask(target);
+      expect(refused.decision, target).toBe(false);
+      expect(refused.context, target).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 403 });
+    }
+    expect(evaluations.n).toBe(2);
+    expect(refusals.map((r) => r.denial_reason)).toEqual(outside.map(() => "operation_target_invalid"));
+  });
 });

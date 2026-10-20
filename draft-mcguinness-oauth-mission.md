@@ -5366,26 +5366,26 @@ Three rules apply to the declaration:
 This document requests registration of the following in the "OAuth
 Parameters" registry:
 
-- Name: `mission_intent`
-- Parameter Usage Location: authorization request
-- Change Controller: IETF
-- Specification Document(s): this document, {{submission-via-par}}
+- Parameter name: `mission_intent`
+- Parameter usage location: authorization request
+- Change controller: IETF
+- Specification document(s): this document, {{submission-via-par}}
 
-- Name: `mission_id`
-- Parameter Usage Location: token response
-- Change Controller: IETF
-- Specification Document(s): this document,
+- Parameter name: `mission_id`
+- Parameter usage location: token response
+- Change controller: IETF
+- Specification document(s): this document,
   {{mission-response-parameters}}
 
-- Name: `mission_error`
-- Parameter Usage Location: token response
-- Change Controller: IETF
-- Specification Document(s): this document, {{lifecycle}}
+- Parameter name: `mission_error`
+- Parameter usage location: token response
+- Change controller: IETF
+- Specification document(s): this document, {{lifecycle}}
 
-- Name: `mission_expires_at`
-- Parameter Usage Location: token response
-- Change Controller: IETF
-- Specification Document(s): this document,
+- Parameter name: `mission_expires_at`
+- Parameter usage location: token response
+- Change controller: IETF
+- Specification document(s): this document,
   {{mission-response-parameters}}
 
 PAR {{RFC9126}} carries authorization-request parameters without a
@@ -5406,12 +5406,12 @@ which no IANA registry exists; no action is required for it.
 This document requests registration of the following in the "OAuth
 Extensions Error" registry {{RFC6749}}:
 
-- Name: `invalid_mission_intent_evidence`
-- Usage Location: authorization endpoint, token endpoint
-- Protocol Extension: Intent Submission Evidence
+- Error name: `invalid_mission_intent_evidence`
+- Error usage location: authorization endpoint, token endpoint
+- Related protocol extension: Intent Submission Evidence
   ({{intent-submission-evidence}})
-- Change Controller: IETF
-- Specification Document(s): this document,
+- Change controller: IETF
+- Specification document(s): this document,
   {{intent-submission-evidence}}
 
 A code distinct from `invalid_request` lets a client tell a malformed

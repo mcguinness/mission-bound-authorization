@@ -1510,7 +1510,8 @@ extension: the per-class Evaluation-Context Binding declaration
 ({{evaluation-context-binding}}); the credential custody mode for a
 mediated class ({{custody}}); the transaction-assurance tier's Exact
 idempotency-claim domain per mediated action class or idempotency scope
-({{idempotency}}); the runtime enforcement evidence mechanism,
+({{idempotency}}) and its operations' execution capabilities
+({{execution-capabilities}}); the runtime enforcement evidence mechanism,
 retention window, and the locations of the deployment-published
 evidence signing key sets (the runtime evidence companion's PDP and
 PEP key sets, {{I-D.draft-mcguinness-mission-runtime-evidence}}, resolve
@@ -1561,7 +1562,7 @@ One bound is stated rather than implied: reconciliation detects
 divergence between decisions and outcomes; it never manufactures
 exactly-once execution, which exists only where the resource itself
 supports idempotency, as its Operation Profile records
-({{rs-runtime-profile}}).
+({{execution-capabilities}}).
 
 The enforcement scope is a deployment conformance statement, not a
 discovery-metadata extension. This document defines no
@@ -2530,6 +2531,64 @@ affecting the resource set. Other examples that materially change the
 resource set or disclosure risk include privacy-sensitive filters and
 aggregation level. Ordinary reads that do not change the resource set
 or disclosure risk can remain unbound.
+
+## Execution Capabilities {#execution-capabilities}
+
+A parameter digest, a single-use identifier, and an execution lease
+bound what a permit authorizes. They cannot show that a resource fact
+stayed unchanged until the effect, that a timed-out effect did not
+commit, or that an accepted effect can still be stopped. Those are
+properties of the resource, and the Operation Profile declares them, so
+a claim never rests on a property the resource lacks.
+
+Where the transaction-assurance tier covers an operation's class
+({{runtime-conformance}}), its Operation Profile MUST declare these
+**execution capabilities**, each stated even where the answer is no:
+
+- durable idempotency: the record that deduplicates a retransmission
+  of the operation across a restart (the resource's own, the PDP's
+  idempotency claim, or the PEP's reservation, {{idempotency}}), its
+  key, scope, and retention, and what distinguishes a deliberately new
+  operation with identical parameters from a retransmission;
+- conditional-effect support: the precondition the PEP carries to the
+  resource with the effect, such as `If-Match` or an expected version,
+  which the resource compares atomically with the effect;
+- authoritative outcome lookup: whether the resource reports if an
+  effect occurred, queried by an identifier recorded with the effect
+  ({{evidence}}), and how it is queried;
+- the commit point: the step after which the effect has occurred;
+- cancellation semantics: what stops the operation before its commit
+  point, and whether anything stops it after;
+- compensation authority: the identifier of the compensating action,
+  if any. A compensation is a new operation that obtains its own
+  Decision under current authority ({{compound-actions}}); the
+  declaration names the action and grants no authority; and
+- the recovery from an unknown outcome, which rests on these
+  capabilities as the rules below state.
+
+Each transaction claim rests on a declared capability:
+
+- A deployment MUST NOT claim the enforced property of
+  Evaluation-Context Binding ({{evaluation-context-binding}}) for an
+  operation whose Operation Profile declares no conditional-effect
+  support. A reread at the PEP alone reaches only the verified
+  property.
+- A deployment MUST NOT claim exactly-once execution for an operation
+  whose Operation Profile declares no durable idempotency held by the
+  resource.
+- For an operation in the high-consequence classes, the deployment
+  MUST NOT recover an unknown outcome by executing the effect again,
+  except by re-presenting it under the same key to a resource whose
+  declared durable idempotency deduplicates it. A declared outcome
+  lookup resolves the outcome from evidence instead ({{evidence}}).
+  Without one, the outcome stays undetermined, and its idempotency
+  claim and any consumption reservation stay held until evidence
+  resolves it ({{evidence}}, {{I-D.draft-mcguinness-mission-metering}}).
+
+These rules add no record type, denial reason, or error value. A
+deliberately new operation remains a new operation under a new key
+({{idempotency}}), and a refusal after a permit is Execution Evidence
+({{evidence}}).
 
 # Named Assurance Extensions {#named-assurance-extensions}
 
@@ -3909,6 +3968,16 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Execution Capabilities: where the transaction-assurance tier covers
+  an operation's class, its Operation Profile declares durable
+  idempotency, conditional-effect support, authoritative outcome
+  lookup, the commit point, cancellation, compensation authority, and
+  the recovery from an unknown outcome. The enforced
+  Evaluation-Context Binding property needs declared conditional-effect
+  support, exactly-once execution needs durable idempotency held by the
+  resource, and an unknown high-consequence outcome is never recovered
+  by executing the effect again, except as a retransmission the
+  resource deduplicates (#817).
 - Enforcement Boundary Identifier: each mediated resource entry of the
   Enforcement Scope Statement is an enforcement boundary with one
   identifier, which the PEP establishes from trusted routing or

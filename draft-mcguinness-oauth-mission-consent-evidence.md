@@ -1458,10 +1458,10 @@ IANA.
 This document requests registration of the following in the "OAuth
 Parameters" registry:
 
-- Name: `mission_shaping_evidence_hash`
-- Parameter Usage Location: authorization request
-- Change Controller: IETF
-- Specification Document(s): this document,
+- Parameter name: `mission_shaping_evidence_hash`
+- Parameter usage location: authorization request
+- Change controller: IETF
+- Specification document(s): this document,
   {{shaping-evidence-hash-parameter}}
 
 PAR {{RFC9126}} carries authorization-request parameters without a

@@ -149,7 +149,13 @@ import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
 import { newMissionId } from "./mission-id.js";
-import { type CeilingConsent, ceilingMembersOf, consentCeiling, serializeCeiling } from "./progressive.js";
+import {
+  type CeilingConsent,
+  ceilingMembersOf,
+  consentCeiling,
+  consentedDrawdownPolicy,
+  serializeCeiling,
+} from "./progressive.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -458,6 +464,14 @@ export interface StatusObservationOptions {
    * surface. Absent, `sub` is the Mission's client, as before.
    */
   actingParty?: string;
+  /**
+   * @spec authority-server#join-disclosure (#818): the authenticated caller
+   * is a PDP enrolled for the requested audience, so the `mission` object
+   * also discloses the Mission's `subject` (`iss`, `sub`) and `client_id`.
+   * The provider decides it from the deployment's enrollment configuration;
+   * absent, neither member is included and the response is unchanged.
+   */
+  joinDisclosure?: boolean;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -1033,6 +1047,17 @@ export class MissionKernel {
   }
 
   /**
+   * @spec progressive#progressive-authorization (#1255): refuse a consented
+   * drawdown policy this issuer does not hold at that version
+   * (`invalid_request`). The approval decision calls it before any write. It
+   * reads the issuer and registry the commit reads; the commit mints the
+   * reference again at its creation instant ({@link approve}).
+   */
+  assertDrawdownPolicyHeld(consent: CeilingConsent): void {
+    consentedDrawdownPolicy(this.opts.issuer, this.opts.activationPolicies, consent);
+  }
+
+  /**
    * @spec approval-governance#governed-policy: the governed policy
    * configuration, or undefined when the deployment leaves the basis off.
    */
@@ -1262,8 +1287,10 @@ export class MissionKernel {
    * computes before anything is written: the principal checks, the derived
    * Authority Set with its capability-source bindings, and the established
    * authority source and its ceiling. Every refusal of the approval happens
-   * here, except the progressive ceiling consent, which `approve` establishes
-   * at the commit's creation instant. The approval decision calls it once,
+   * here, except the progressive ceiling consent: the approval decision
+   * checks its entries and drawdown policy before any write
+   * ({@link assertDrawdownPolicyHeld}), and `approve` establishes it at the
+   * commit's creation instant. The approval decision calls it once,
    * saves the provider grant from
    * its result, then commits exactly that result through {@link approve},
    * which recomputes nothing.
@@ -1422,7 +1449,7 @@ export class MissionKernel {
     // approval event is recorded with its `ceiling_hash`, and its consent
     // instant is this event's own.
     const ceiling = input.ceiling
-      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt)
+      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt, input.approver)
       : undefined;
     // @spec mission#approval-basis — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
@@ -4130,6 +4157,13 @@ export class MissionKernel {
       sub: opts.actingParty ?? record.client_id,
       mission: {
         ...this.missionClaim(record),
+        // @spec authority-server#join-disclosure (#818): the Mission's
+        // Subject and client, for an enrolled joining PDP only. Entries keep
+        // their recorded `delegation` member on every audience-scoped
+        // response, so nothing else changes for the enrolled caller.
+        ...(opts.joinDisclosure
+          ? { subject: { iss: record.subject.iss, sub: record.subject.sub }, client_id: record.client_id }
+          : {}),
         // @spec mission-status#mission-status-response (#702) — OPTIONAL,
         // disclosed at the AS's discretion (issuance profile's introspection
         // disclosure footing); this reference AS discloses it on every

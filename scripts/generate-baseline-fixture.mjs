@@ -186,6 +186,7 @@ const VARIANTS = [
   { name: "mas-issued", issuer: "https://mas.example.com", id: MISSION_ID, differs_by: "The baseline task and Authority Set issued by a Mission Authority Server under its own issuer, with no proposal; its anchors use `iss` `https://mas.example.com`.", drafts: ["authority-server", "issuance-grant"] },
   { name: "cap-expansion", issuer: "https://mas.example.com", differs_by: "A Mission Authority Server Mission whose 1,200 USD adjustment leads to an approved expansion to a 2,000 USD cap.", drafts: ["authority-server"] },
   { name: "agr-backed-direct", differs_by: "Alice's approval is recorded through an Approval Governance Record.", drafts: ["approval-governance"] },
+  { name: "governed-policy-activation", differs_by: "Activated under `governed_policy`: Alice approved the policy `q3-close-agent` version 3 at 2026-10-30T16:00:00Z, and the policy activates the client's proposal of the baseline task at 08:00:00 with no fresh human decision.", drafts: ["approval-governance"] },
   { name: "metered-consumption", differs_by: "The Intent adds consumption bounds and the Authority Set adds a `reconciliation.run` entry.", drafts: ["metering"] },
   { name: "children-enabled", differs_by: "The invoice-read entry's `delegation` adds `children`.", drafts: ["child-delegation"] },
   { name: "write-delegable", differs_by: "The journal-write entry carries a `delegation` member.", drafts: ["attenuation"] },
@@ -194,7 +195,7 @@ const VARIANTS = [
   { name: "derivation-limited", differs_by: "The Intent requests a derivation limit of 200.", drafts: ["derivation-limits"] },
   { name: "cross-domain-partner", differs_by: "The Intent and Authority Set add the partner ERP `https://erp.partner.example.com`.", drafts: ["cross-domain"] },
   { name: "revision-read-only", differs_by: "A deferred, revised approval: the Approver refuses `journal-entries.write`, so the Mission holds only the invoice-read entry.", drafts: ["approval-revision"] },
-  { name: "ceiling-drawdown", differs_by: "Holds only the invoice-read entry, with Alice's consent to an authority ceiling (the baseline's two entries plus `invoices.write`) under drawdown policy `q3-reconcile-drawdown` version 1. A policy-adjudicated drawdown at 09:15:00 adds the journal-write entry and supersedes it with `msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb`, whose request at 09:18:00 for a 2,000 USD cap is refused `out_of_ceiling`.", drafts: ["progressive"] },
+  { name: "ceiling-drawdown", differs_by: "Holds only the invoice-read entry, with Alice's consent to an authority ceiling (the baseline's two entries plus `invoices.write`) under drawdown policy `q3-reconcile-drawdown` version 1. A policy-adjudicated drawdown at 09:15:00 adds the journal-write entry and supersedes it with `msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb`, whose request at 09:18:00 for a 2,000 USD cap falls back to a fresh human approval.", drafts: ["progressive"] },
 ];
 
 function build() {

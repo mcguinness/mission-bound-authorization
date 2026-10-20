@@ -542,6 +542,16 @@ export interface AdapterOptions {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
+   * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
+   * enforcement scope, the deployment configuration the MAS holds, keyed by
+   * the service principal's `principal_id`, each naming the enforcement
+   * scopes (the Status request's `audience`) it is enrolled for. A Status
+   * response to an enrolled principal for one of its scopes discloses the
+   * Mission's `subject` and `client_id`; every other response omits both.
+   * Absent (the default), no caller is enrolled.
+   */
+  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  /**
    * @spec status#lifecycle-authorization: the deployment-defined grants bound
    * to a client that authenticates to the Mission Lifecycle endpoint by
    * private-key JWT, keyed by `client_id`: `mission_lifecycle` for `revoke`,
@@ -3089,6 +3099,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
+   * @spec authority-server#join-disclosure (#818): whether the authenticated
+   * caller is a PDP enrolled for the requested enforcement scope, read from
+   * the deployment's enrollment configuration (`enrolledJoinPdps`). Both
+   * halves decide it: an enrolled principal asking for a scope it is not
+   * enrolled for, or naming no `audience` at all, is any other caller. An own
+   * property lookup, so no inherited name resolves an enrollment.
+   */
+  const enrolledJoinPdps = opts.enrolledJoinPdps ?? {};
+  const joinDisclosureFor = (principal: ServiceTokenPrincipal, audience: string | undefined): boolean =>
+    audience !== undefined &&
+    Object.hasOwn(enrolledJoinPdps, principal.principal_id) &&
+    (enrolledJoinPdps[principal.principal_id] ?? []).includes(audience);
+
+  /**
    * @spec status#lifecycle-authorization: the authorization this deployment
    * requires for a direct `resume`, in ONE place: a direct `resume` and a
    * `suspend` whose `on_expiry` is `resume` both call it, so scheduling a
@@ -3383,14 +3407,19 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
+      const statusAudience = str(ctx.query.audience);
       try {
         // A caller without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
-          ...optional("audience", str(ctx.query.audience)),
+          ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
           requester: principal.principal_id,
+          // @spec authority-server#join-disclosure (#818): set only for an
+          // enrolled PDP's own enforcement scope; every other request leaves
+          // the option out, so its response is unchanged.
+          ...(joinDisclosureFor(principal, statusAudience) ? { joinDisclosure: true } : {}),
         });
         ctx.status = 200;
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
@@ -5223,14 +5252,16 @@ async function decide(
 
   // @spec progressive#progressive-authorization: the authority ceiling and
   // drawdown policy the Approver consented on this approval surface, read only
-  // where the deployment selects Progressive authorization. Its entries are
-  // validated here, before any write; a malformed ceiling refuses
-  // `invalid_request`.
+  // where the deployment selects Progressive authorization. Its entries and
+  // its drawdown policy are validated here, before any write: a malformed
+  // ceiling, or a drawdown policy this issuer does not hold at that version,
+  // refuses `invalid_request`.
   const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
   let ceilingEntries: AuthorityEntry[] = [];
   if (ceiling) {
     try {
       ceilingEntries = consentedCeilingEntries(ceiling);
+      opts.kernel.assertDrawdownPolicyHeld(ceiling);
     } catch (e) {
       if (e instanceof IntentError) {
         await finish({ error: e.code, error_description: e.message });
@@ -5300,11 +5331,12 @@ async function decide(
   //
   // @spec mission#approval-event (step 7) (#916) — the order of writes. The
   // approval is prepared first, so every refusal (above, and in
-  // `prepareApproval`) happens before anything is written, except that a
-  // consented ceiling's drawdown policy reference, minted at the commit's
-  // creation instant, refuses after the grant save (an inert grant a retry
-  // overwrites); the ceiling's entries and their floor are checked above.
-  // The provider grant
+  // `prepareApproval`) happens before anything is written; a consented
+  // ceiling's entries, its drawdown policy and their floor are checked above.
+  // The commit revalidates the prepared authority source and mints the
+  // drawdown policy reference again at its creation instant, so a source or
+  // policy change after these checks refuses after the grant save (an inert
+  // grant a retry overwrites). The provider grant
   // is saved next, under an identity derived from this interaction, and the
   // record then commits already bound to it. A failure before that commit
   // leaves an inert grant (no code, no Mission, no index entry) that a retry
