@@ -4,6 +4,7 @@ import {
   delegateMatcherListViolation,
   entryWithinCeiling,
   isAuthorityEntry,
+  isSubsetEntry,
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
   narrowToCeiling,
@@ -280,6 +281,15 @@ describe("a foreign entry carrying an unsupported member is unsupported (@spec m
 
   it("isAuthorityEntry refuses an entry carrying an unsupported member", () => {
     expect(isAuthorityEntry(carrying)).toBe(false);
+  });
+
+  it("isSubsetEntry refuses a comparison involving an unsupported member, except a byte-identical pair (the equal-entry clause)", () => {
+    expect(isSubsetEntry(carrying, entry)).toBe(false);
+    expect(isSubsetEntry(entry, carrying)).toBe(false);
+    expect(isSubsetEntry({ ...carrying, actions: ["read"] }, carrying)).toBe(false);
+    expect(isSubsetSet([entry], [carrying])).toBe(false);
+    expect(isSubsetEntry(carrying, { ...carrying })).toBe(true);
+    expect(isSubsetEntry(entry, entry)).toBe(true);
   });
 
   it("narrowToCeiling retains no entry carrying an unsupported member, on either operand", () => {

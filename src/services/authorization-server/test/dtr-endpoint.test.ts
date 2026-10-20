@@ -35,6 +35,7 @@ import {
   type MatcherList,
   WELL_FORMED_MATCHER,
 } from "./malformed-matcher.helper.js";
+import { withStoredUnsupportedMember } from "./unknown-member.helper.js";
 import {
   buildAuthorizationServer,
   DEFERRED_GRANT_TYPE,
@@ -480,6 +481,25 @@ describe("requested entries carrying an unsupported member on the deferral initi
       expect(body.access_token).toBeUndefined();
       expect(count()).toBe(before);
     }
+  });
+
+  // The ceiling side: the deferred token carries the requested entries as
+  // submitted, without projection, so the subset check alone stands between a
+  // clean request and a token without the approved entry's restriction. The
+  // initiation answers a request the Mission does not cover with
+  // invalid_request, as for any other excess (AROP never widens).
+  it("refuses a clean request against a Mission whose approved entry carries an unsupported member with invalid_request, opening no deferral", async () => {
+    const count = () =>
+      (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+    const before = count();
+    const requested = subset(["payments:remittance.send"]);
+    const res = await withStoredUnsupportedMember(as.kernel.db, missionId, () => initiate(requested));
+    const body = (await res.json()) as { error?: string; deferral_code?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.deferral_code).toBeUndefined();
+    expect(body.access_token).toBeUndefined();
+    expect(count()).toBe(before);
   });
 });
 

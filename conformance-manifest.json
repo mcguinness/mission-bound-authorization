@@ -47774,7 +47774,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an entry carrying a top-level member the comparison cannot decide is refused, never admitted and then rebuilt without the member",
-    "local": "the reference AS decides by presence against one supported set for mission_resource_access (the type's own members and capability_sources): PAR and device submission refuse invalid_authorization_details before any request_uri, device_code or Mission; refresh narrowing refuses before rotation, saving no refresh token; the deferral initiation, dispatch handoff and async-delegation exchanges refuse before any deferral, grant, family or derivation count; direct derivation refuses over both the ceiling and the proposal; projection drops the pairing, issuing no fragment; and the RAS refuses a signed grant whose entry carries one with invalid_grant, minting no local token"
+    "local": "the reference AS decides by presence against one supported set for mission_resource_access (the type's own members and capability_sources): PAR and device submission refuse invalid_authorization_details before any request_uri, device_code or Mission; refresh narrowing refuses before rotation, saving no refresh token; the deferral initiation, dispatch handoff and async-delegation exchanges refuse before any deferral, grant, family or derivation count; the ICA continuation exchange refuses before any hop or derivation; direct derivation refuses over both the ceiling and the proposal; projection drops the pairing, issuing no fragment; the subset relation refuses any comparison involving one except a byte-identical pair, so an approved entry carrying one is never compared as if it were absent; and the RAS refuses a signed grant whose entry carries one with invalid_grant, minting no local token"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -47816,6 +47816,18 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (h2b) a requested entry carrying an unsupported top-level member -> invalid_authorization_details naming it, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (h2c) a request against a Mission whose approved entry carries an unsupported top-level member -> invalid_authorization_details, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/authorization-server/test/unknown-entry-member.test.ts",
      "name": "direct derivation (deriveAuthoritySet) refuses an entry carrying an unsupported member (#1399) > refuses a ceiling entry carrying an unsupported member, whatever its value",
      "level": "unit",
@@ -47852,7 +47864,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants) and projection. Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff and async tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema and the capability_sources type check. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
+   "notes": "#1399 (D538). One shared set (SUPPORTED_ENTRY_MEMBERS and unsupportedEntryMember in @mission/core, beside REFUSED_ENTRY_MEMBERS) backs every boundary that admits or rebuilds a mission_resource_access entry: the published schema (top level closed), the proposal validator and the requested-authority intakes (refusedMemberViolation), direct derivation, template consent, the config loaders, isAuthorityEntry (foreign grants), projection and isSubsetEntry. The ceiling side of an exchange that issues requested entries unprojected (the ICA continuation, the deferral initiation) rests on isSubsetEntry: a comparison involving an unsupported member is refused unless the two entries are byte-identical under the canonical form, which keeps the Subset Rule's equal-entry clause, since an identical candidate carries the member unchanged. The approved set is rebuilt member by member, so no intake produces that state; the ceiling witnesses write it into the stored record. The ICA witnesses and the stored-record helper are ported from a parallel build of #1399 (68d7d7b7). Proved by disabling each guard alone, each caught only by its own witnesses: the request-side validator branch (the PAR, device, refresh, deferral, handoff, async and ICA candidate tests fail; with it disabled the handoff and async exchanges are still refused by projection's drop, on the subset message, so those two catch it by the message), derivation's check (the three derivation tests), each projection guard (one test each), isAuthorityEntry (the RAS test and the mission-core helper tests), template consent, the config loader check, the closed schema, the capability_sources type check, and the isSubsetEntry guard (the ICA ceiling witness, the deferral initiation's ceiling witness and the helper test). The deferral initiation answers that ceiling case invalid_request, its error for any excess, so its witness (dtr-endpoint.test.ts) is not cited. Not cited, since their error or level differs from this row: the config loaders (a native configuration error naming the entry and the member) and the template admin plane (invalid_request), witnessed in unknown-entry-member.test.ts and template-dispatch-endpoint.test.ts. Positive controls: resource_match exact and capability_sources are still admitted and derived, and the same requests without the member are issued. Resource Access's entry-validation list names no top-level-member rule, so the row quotes the OAuth binding's Subset Rule posture. No vector case."
   },
   {
    "id": "core.self-exchange.result-subset",

@@ -411,6 +411,25 @@ export function conditionsNoBroader(
 
 /** @spec mission#subset — entry-wise subset test (resource byte-exact). */
 export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
+  // @spec mission#subset (#1399, D538): a top-level member outside the
+  // supported set cannot be compared. An entry byte-identical to its
+  // reference under the canonical form is a subset of it and carries the
+  // member unchanged; any other comparison involving one is refused, so a
+  // reference's restriction in such a member is never treated as absent by
+  // an exchange that issues the candidate without projecting it.
+  if (
+    unsupportedEntryMember(candidate) !== undefined ||
+    unsupportedEntryMember(granted) !== undefined
+  ) {
+    try {
+      return (
+        canonicalize(candidate as unknown as JsonValue) ===
+        canonicalize(granted as unknown as JsonValue)
+      );
+    } catch {
+      return false;
+    }
+  }
   if (candidate.type !== granted.type) return false;
   if (candidate.resource !== granted.resource) return false;
   if (!candidate.actions.every((a) => granted.actions.includes(a))) return false;
