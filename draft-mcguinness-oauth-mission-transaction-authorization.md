@@ -398,9 +398,15 @@ them. `authorization_details` carries exactly one operation-scoped
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}})
 or one compound-action detail whose specification-defined semantics make the
 operation atomic. The Operation Profile a TAS and the resource apply
-resolves deterministically from the challenge's `iss` and that entry's
-`type` member ({{RFC9396}}): a resource versions its Operation Profile
-by versioning `type`, and a TAS MUST retain and recognize a superseded
+resolves deterministically from the challenge's `iss` and that entry.
+A `mission_resource_access` entry's `type` member ({{RFC9396}}) is
+fixed and does not version the Operation Profile: where the entry
+carries a `resource_contract` reference, that reference names the
+version, and the runtime profile's resolution of it decides admission
+and completion ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"Resource Contract"); otherwise the version is the resource's current
+one at admission, which the workflow records. A resource therefore versions its Operation Profile
+independently of `type`, and a TAS MUST retain and recognize a superseded
 Operation Profile version for as long as a pending workflow still
 references it.
 
@@ -831,7 +837,11 @@ mismatch:
 Superseded Operation Profile version:
 : A new admission under a superseded version is refused; a superseded
   version resolves only for workflows admitted under it
-  ({{resource-challenge}}).
+  ({{resource-challenge}}). For an entry carrying a `resource_contract`
+  reference, the runtime profile's resolution of that reference decides
+  instead, and a reference that does not resolve is refused at
+  admission and at completion
+  ({{I-D.draft-mcguinness-mission-runtime}}).
 
 Effective Authority Set narrowed since admission:
 : Terminal refusal at step 5 of {{offline-verification}}; a
@@ -1137,7 +1147,7 @@ Failure vocabulary:
 | Requirement | This document |
 | --- | --- |
 | Challenge carrier | The signed challenge of {{resource-challenge}}, keys via `txn_challenge_jwks_uri` |
-| Operation identity | The `authorization_details` entry `type` and Operation Profile rules of {{resource-challenge}} |
+| Operation identity | The `authorization_details` entry, with its `resource_contract` reference where present, and the Operation Profile rules of {{resource-challenge}} |
 | Parameter commitment | `parameter_digest`, carried and verified per {{resource-challenge}} and {{offline-verification}} |
 | Workflow handle | `transaction_authorization_id` and the admission rules of {{two-phase-expiry}} |
 | Result class | `mission-txn-token+jwt` per {{transaction-token}} |
@@ -1212,6 +1222,12 @@ through exactly one execution or terminal refusal.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Operation Profile resolution: a `mission_resource_access` entry's
+  fixed `type` does not version the Operation Profile. A
+  `resource_contract` reference names the version where present, under
+  the runtime profile's resolution; otherwise the workflow records the
+  resource's current version at admission (#249).
 
 - `txn` consumption meets the Exact enforcement profile the runtime
   profile defines, rather than the metering companion's, which is no

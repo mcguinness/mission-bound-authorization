@@ -829,7 +829,9 @@ decision-API binding MAY carry ({{authzen}}); Resource policy MAY
 refuse an executor outside the deployment's trusted set.
 
 A capability sourced from a discovered catalog is additionally
-subject to the capability-drift rule of {{capability-drift}}.
+subject to the capability-drift rule of {{capability-drift}}, and an
+operation a resource contract covers to the rules of
+{{resource-contract}}.
 
 ### Capability Drift {#capability-drift}
 
@@ -850,6 +852,117 @@ authority and are covered by `authority_hash`
 ({{I-D.draft-mcguinness-oauth-mission}}). Cross-format
 canonicalization, signed capability manifests, and cross-catalog
 identity remain out of scope ({{deferred}}).
+
+### Resource Contract {#resource-contract}
+
+Capability Drift ({{capability-drift}}) detects a changed capability
+definition, and parameter binding ({{parameter-binding}}) freezes the
+request. Neither fixes the
+meaning a resource gives an action and its parameters, which can change
+while both stay the same. A **resource contract** fixes that meaning: an
+immutable, identified, and versioned document that an authority entry
+references at approval, so that the meaning the entry was approved under
+is the one enforced. The OAuth realization is the `resource_contract`
+member of a `mission_resource_access` entry, which the authorization
+server assembles from trusted configuration before approval and which
+derivation and delegation preserve exactly
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Resource Contracts").
+
+A resource contract assembles, for each operation it covers, the
+following definitions. It overrides none of them: each keeps the
+semantics its owner defines.
+
+- The action identifier, the operation-target rule, and the supported
+  `resource_match` values, from the operation contract
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+- The parameter schema, normalization, and the fields entering
+  `parameter_digest`, from the Operation Profile
+  ({{parameter-binding}}).
+- Each supported constraint's input and extraction rule, from the
+  Operation Profile; the constraint's own definition keeps its
+  comparison and satisfaction semantics.
+- The minimum action class and, for a compound action, its phase
+  ({{classification}}, {{compound-actions}}).
+- For a catalog-sourced capability, its extracted-definition digest
+  ({{I-D.draft-mcguinness-mission-capability-binding}}), whose drift
+  {{capability-drift}} governs.
+- Where claimed, the evaluation-context descriptor reference
+  ({{evaluation-context-binding}}).
+
+Resource policy, Mission state, entitlements, revocation, resolved
+resource facts, and the resource's execution guarantees are not contract
+material. They stay live inputs under their own rules, and a contract
+reference supplies no dispatch-time observation of any of them.
+
+A contract reference names one version by `id` (an absolute URI naming
+the contract across its versions), `version` (a non-empty string), and
+`digest` (the canonical-object digest of the contract document, with
+the construction and `sha-256:` encoding of {{parameter-digest}}): the
+shape of the evaluation-context descriptor reference
+({{evaluation-context-binding}}). Published contract bytes MUST remain
+immutable for a reference. A resource that changes any contract
+material MUST publish it as a new version with its own digest; an
+implementation change that leaves the material unchanged keeps the
+reference. There is no compatibility algorithm and no fallback: a
+reference resolves only to the contract it names, never to a newer or
+equivalent version.
+
+A resource that adopts resource contracts declares, in its Resource
+Server runtime profile ({{rs-runtime-profile}}), each contract version
+it serves, the operations each covers, the operations that require a
+reference, and each version's state:
+
+- **current**: resolves for every entry that references it. A new
+  approval references only a current version.
+- **superseded**: resolves only for an entry that already references
+  it, and only within the retention the profile declares for that
+  version.
+- **retired**: resolves for nothing. Its bytes MAY be kept for audit.
+
+A reference resolves when its version is in a state that resolves for
+the entry, the contract covers the operation, and the declared
+contract's `digest` equals the reference's. An unknown or unavailable
+version, a changed `digest`, a retired version, and a superseded
+version outside its retention do not resolve.
+
+Where the applicable authority entry references a contract, or the
+resource requires a reference for the operation:
+
+1. The PDP MUST refuse the action unless the entry carries a reference
+   that resolves. A missing reference refuses: it is never replaced by
+   the current contract, and an approval that committed no reference
+   gains one only through a new approval.
+2. A resolved contract, current or superseded, MUST NOT relax any other
+   decision input. Mission state ({{state-freshness}}), the current
+   effective authority ({{input-authority}}), and Resource policy
+   ({{input-resource-policy}}) are evaluated for the action as for any
+   other, and revocation applies unchanged. Retention keeps a
+   definition available; it keeps no authority, entitlement, or policy
+   outcome.
+3. The PEP MUST normalize the operation's parameters, and perform the
+   operation, under the resolved contract, never under another version
+   the resource serves.
+4. An action-bound approval ({{action-approval}}) binds the reference
+   together with the action and its parameters. An approval given under
+   one reference MUST NOT satisfy the approval requirement for an action
+   under another, and a reference that no longer resolves when the
+   decision is made refuses the action even though the approval and the
+   parameters are unchanged.
+5. The permit binds the reference ({{permit-binding}}). Immediately
+   before releasing the effect, in the same step as the
+   `parameter_digest` recomputation of {{execution-reverification}},
+   the executing PEP MUST resolve the permit's reference against the
+   resource's current declarations, and MUST refuse before any effect
+   unless it resolves to the contract the permit was decided under.
+
+A PEP that finds before requesting a decision that the reference does
+not resolve refuses there, with a pre-decision Refusal Record. A PDP
+refusal is a denial. A failure at use under an obtained permit
+suppresses the effect and is recorded as Execution Evidence, not as a
+PDP denial ({{I-D.draft-mcguinness-mission-runtime-evidence}}). The
+AuthZEN profile names the identifier on each carrier
+({{I-D.draft-mcguinness-mission-authzen}}).
 
 ### Resource Policy {#input-resource-policy}
 
@@ -1025,6 +1138,8 @@ Beyond the `parameter_digest`, the permit MUST also bind:
 - the resource, including the operation target an authority-entry
   match uses ({{input-authority}});
 - the authorizing authority entry, or an entry digest;
+- the resource contract reference, where a resource contract applies
+  to the action ({{resource-contract}});
 - the PDP's policy-view version; and
 - a permit lifetime control bounded by the Mission state freshness
   requirement ({{state-freshness}}).
@@ -1146,6 +1261,7 @@ refusal.
 | Re-presentation of a consumed single-use decision identifier | Refuse (fail closed) |
 | Required actor-delegation chain missing or malformed | Refuse |
 | Invoked capability identity outside the approved `actions` | Refuse |
+| A resource contract reference is missing where the resource requires one, or does not resolve ({{resource-contract}}) | Refuse; at use, refuse before releasing an effect |
 | Resource policy refuses the action | Refuse |
 | Request would broaden the Mission's authority | Refuse (expansion is out of scope) |
 
@@ -1814,7 +1930,8 @@ Five rules govern the approval's enforcement:
 4. Because the approval is bound to the concrete parameters, it MUST
    be reverified under the time-of-check to time-of-use rules of
    {{parameter-binding}}. A parameter change after approval
-   invalidates it.
+   invalidates it. Where a resource contract applies, the approval also
+   binds its reference ({{resource-contract}}).
 5. The surface that resolves an action-bound approval MUST NOT be invocable
    from the agent's tool plane or from any channel the agent drives. The
    resolving principal's identity and achieved authentication context MUST be
@@ -3739,6 +3856,11 @@ window; only a coupled resource-side precondition earns its enforced
 property. Uncovered facts and deployments not claiming the extension
 retain this residual and the operational mitigations above.
 
+A change to the operation's definition, rather than to its target, is a
+separate residual. Where a resource contract applies, the reference the
+approval, the permit, and the executing PEP bind refuses it
+({{resource-contract}}); elsewhere it remains operational.
+
 An idempotency key identifies one request, not the business event the
 request carries out ({{idempotency}}). Two requests that carry out the
 same event under different action names, parameters, or actors are
@@ -3968,6 +4090,16 @@ worked example shows the concrete record
 
 \[\[ To be removed from the final specification ]]
 
+- Resource Contract: an authority entry can reference, at approval, an
+  immutable and versioned resource contract that assembles the
+  operation's existing definitions. The PDP refuses a missing reference
+  where the resource requires one, and one that does not resolve:
+  unknown, unavailable, changed, retired, or superseded outside its
+  declared retention. A retained superseded version relaxes no other
+  input. The action-bound approval and the permit bind the reference,
+  and the executing PEP re-resolves it before releasing the effect.
+  There is no compatibility algorithm or latest-version fallback
+  (#249).
 - Execution Capabilities: where the transaction-assurance tier covers
   an operation's class, its Operation Profile declares durable
   idempotency, conditional-effect support, authoritative outcome
