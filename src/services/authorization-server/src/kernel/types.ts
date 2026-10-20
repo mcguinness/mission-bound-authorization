@@ -726,6 +726,13 @@ export interface MissionRecord {
    */
   ceiling_consented_at?: string;
   /**
+   * @spec progressive#ceiling-drawdown-basis, progressive#ceiling-reconsent
+   * (#1413): the Approver who consented the ceiling `ceiling_hash` commits,
+   * the `consent_principal` of every drawdown under it. Present beside
+   * `authority_ceiling` on records stored since #1413.
+   */
+  ceiling_consent_principal?: { iss: string; sub: string };
+  /**
    * @spec progressive#audit-linkage: the chain's cumulative count of
    * policy-adjudicated drawdowns, this record's own included. Present beside
    * `authority_ceiling`; 0 on the Mission whose approval consented the ceiling.

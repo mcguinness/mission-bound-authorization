@@ -2732,9 +2732,9 @@ export async function handleExpansionExchange(
 
   // @spec progressive#in-ceiling-expansion: where the deployment selects
   // Progressive authorization and the predecessor carries a consented ceiling,
-  // the ceiling adjudicates first. Out of ceiling refuses; a drawdown its
-  // policy authorizes completes here; any other in-ceiling request falls back
-  // to the fresh approval below.
+  // the ceiling adjudicates first. A drawdown its policy authorizes completes
+  // here; any other request, out-of-ceiling ones included, falls back to the
+  // fresh approval below, unless the deployment refuses beyond-ceiling ones.
   if (opts.progressive && active.authority_ceiling) {
     const handled = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
@@ -3005,7 +3005,13 @@ async function completeCeilingDrawdown(
     isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
   });
   if (adjudication.outcome === "out_of_ceiling") {
-    // Set on ctx directly: err_out would strip mission_denial_reason.
+    // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
+    // default it falls back to the fresh approval below, whose response carries
+    // no denial reason (#1415).
+    if (progressive.beyondCeiling !== "refuse") return false;
+    // The deployment's policy refuses it instead. `out_of_ceiling` is a MAY on
+    // that refusal, which this reference carries. Set on ctx directly: err_out
+    // would strip mission_denial_reason.
     ctx.status = 400;
     ctx.body = { error: "invalid_request", mission_denial_reason: "out_of_ceiling" };
     ctx.set("cache-control", "no-store");
