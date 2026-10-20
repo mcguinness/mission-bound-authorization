@@ -436,7 +436,12 @@ Each element of `assertions` is an object with these members:
     version its `authority` names (where a consented root commits a
     separate evaluator that decides, the human who approved that root),
     as the issuer's retained, authenticated governance state records.
-    The policy is the decision mechanism, never the principal.
+    Where several humans approved that version together, as under dual
+    control, it is the one human that state names as accountable for the
+    approval, as the issuance profile records one accountable Approver
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Single Accountable
+    Approver"). The policy is the decision mechanism, never the
+    principal.
   - For a `service` assertion, the service that produced the decision.
 
 `kind`:
