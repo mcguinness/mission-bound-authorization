@@ -12,11 +12,12 @@
  * validator restores it after steps 1 and 2 and runs checkRar's own checks
  * there, so client authentication still precedes every Mission refusal.
  *
- * Only a request with one non-empty `mission_intent`, one
- * `authorization_details` and no `request` is changed. Any other request,
- * including one that repeats either parameter, passes through for the
- * provider's own handling. An empty `mission_intent` is absent to the provider
- * (lib/helpers/params.js reads `params[prop] || undefined`), so its proposal
+ * The intake reads each parameter as the provider does: present only when
+ * non-empty (lib/helpers/params.js reads `params[prop] || undefined`). Only a
+ * request with one present `mission_intent`, one present
+ * `authorization_details` and no present `request` is changed. Any other
+ * request, including one that repeats a parameter, passes through for the
+ * provider's own handling, so a proposal beside an empty `mission_intent`
  * stays with the provider's own RAR check.
  *
  * The same trades the device intake makes (device-authorization.ts): the
@@ -49,6 +50,16 @@ export interface ParIntake {
 
 const intakes = new WeakMap<IncomingMessage, ParIntake>();
 
+/** One value of the parameter, present as the provider reads it; undefined otherwise. */
+function single(v: string | string[] | undefined): string | undefined {
+  return typeof v === "string" && v !== "" ? v : undefined;
+}
+
+/** Whether the provider reads the parameter as present (a repeated one counts). */
+function present(v: string | string[] | undefined): boolean {
+  return Array.isArray(v) || (v !== undefined && v !== "");
+}
+
 export async function pushedRequestIntake(ctx: KoaContextWithOIDC, next: () => Promise<void>): Promise<void> {
   if (ctx.method !== "POST" || !isParPath(ctx.path) || !ctx.is("application/x-www-form-urlencoded")) {
     return next();
@@ -61,9 +72,8 @@ export async function pushedRequestIntake(ctx: KoaContextWithOIDC, next: () => P
     return;
   }
   const form = parseForm(raw);
-  const proposal = form.authorization_details;
-  const missionIntent = form.mission_intent;
-  if (typeof missionIntent === "string" && missionIntent !== "" && typeof proposal === "string" && form.request === undefined) {
+  const proposal = single(form.authorization_details);
+  if (single(form.mission_intent) !== undefined && proposal !== undefined && !present(form.request)) {
     delete form.authorization_details;
     intakes.set(ctx.req, { proposal });
   }

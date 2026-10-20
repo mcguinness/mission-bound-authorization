@@ -238,6 +238,41 @@ describe("Submission Processing Order refusal precedence at PAR (@spec mission#s
       ["malformed proposal and evidence failing verification", { intent: INTENT, evidence: [FAILING_EVIDENCE] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
     ]);
   });
+
+  it("reads an empty request parameter as absent, as the provider does, and keeps the order", async () => {
+    const withEmptyRequest = await push(ISSUER, agentKey, { intent: INTENT }, VALID_PROPOSAL, { request: "" });
+    expect(withEmptyRequest.status, JSON.stringify(withEmptyRequest.body)).toBe(201);
+    const ordered = await push(ISSUER, agentKey, { intent: { ...INTENT, goal: 17 } }, MALFORMED_PROPOSAL, { request: "" });
+    expect(ordered.status, JSON.stringify(ordered.body)).toBe(400);
+    expect(ordered.error, JSON.stringify(ordered.body)).toBe("invalid_request");
+  });
+
+  it("reads an empty authorization_details parameter as no proposal, as the provider does", async () => {
+    const withEmptyProposal = await push(ISSUER, agentKey, { intent: INTENT }, undefined, { authorization_details: "" });
+    expect(withEmptyProposal.status, JSON.stringify(withEmptyProposal.body)).toBe(201);
+  });
+
+  it("validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound", async () => {
+    const untyped = { assertion: "x" };
+    const oversize = { type: EVIDENCE_TYPE, assertion: "A".repeat(17_000) };
+    await expectRefusals(ISSUER, agentKey, [
+      ["evidence entry without a type only", { intent: INTENT, evidence: [untyped] }, VALID_PROPOSAL, "invalid_request"],
+      ["evidence entry that is not an object only", { intent: INTENT, evidence: ["x"] }, VALID_PROPOSAL, "invalid_request"],
+      ["evidence entry over the size bound only", { intent: INTENT, evidence: [oversize] }, VALID_PROPOSAL, "invalid_request"],
+      ["malformed proposal and an evidence entry without a type", { intent: INTENT, evidence: [untyped] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+      ["malformed proposal and an evidence entry that is not an object", { intent: INTENT, evidence: ["x"] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+      ["malformed proposal and an evidence entry over the size bound", { intent: INTENT, evidence: [oversize] }, MALFORMED_PROPOSAL, "invalid_authorization_details"],
+    ]);
+  });
+
+  it("refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)", async () => {
+    const untyped = { assertion: "x" };
+    await expectRefusals(REQUIRED_ISSUER, requiredAgentKey, [
+      ["required type present and an entry without a type", { intent: INTENT, evidence: [VALID_EVIDENCE, untyped] }, VALID_PROPOSAL, "invalid_request"],
+      ["required type absent only", { intent: INTENT }, VALID_PROPOSAL, "invalid_mission_intent_evidence"],
+      ["required type absent and an entry without a type", { intent: INTENT, evidence: [untyped] }, VALID_PROPOSAL, "invalid_mission_intent_evidence"],
+    ]);
+  });
 });
 
 /** Push the demo proposal, render its approval, approve it, and return the rendered set and the record. */

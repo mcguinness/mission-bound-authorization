@@ -929,13 +929,13 @@ export class MissionKernel {
    * ({@link validateMissionIntentSubmission}). The returned `intent` is the
    * exact semantic object `intent_hash` commits; presented `evidence` is
    * typed, bounded, and never silently ignored. A carrier following the
-   * Submission Processing Order passes `deferEvidenceDispatch`
+   * Submission Processing Order passes `deferEvidenceEntries`
    * (@spec mission#submission-processing, #1411).
    */
   validateSubmission(
     raw: string,
     bounds?: SubmissionEvidenceBounds,
-    opts: Pick<SubmissionIntakeOptions, "deferEvidenceDispatch"> = {},
+    opts: Pick<SubmissionIntakeOptions, "deferEvidenceEntries"> = {},
   ): MissionIntentSubmission {
     return validateMissionIntentSubmission(raw, bounds, { ...opts, now: this.now() });
   }

@@ -1804,8 +1804,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
         }
         // @spec mission#submission-processing (#1411): the PAR intake lifted
         // the proposal, so the envelope and the Intent (steps 1 and 2) are
-        // validated before it (step 3), and evidence type dispatch waits for
-        // the evidence step (step 6). A lifted proposal is always restored and
+        // validated before it (step 3), and the evidence entry rules wait
+        // for the evidence step (step 6). A lifted proposal is always restored and
         // checked, even where the provider reads no `mission_intent`.
         const lifted =
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
@@ -1819,7 +1819,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceDispatch: true });
+          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
