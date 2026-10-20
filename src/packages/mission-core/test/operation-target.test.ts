@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CredentialAuthorityError,
+  contractCanEstablish,
   credentialAuthorityPermits,
   establishOperationTarget,
   isOperationTarget,
@@ -192,6 +193,172 @@ describe("establishing the target from the operation contract (@spec resource-ac
         reason: "malformed",
       });
     }
+  });
+});
+
+describe("an argument-derived contract establishes the target from the operation's validated arguments (@spec resource-access#resource-matching, #1276)", () => {
+  const ORDERS = { template: "https://api.example/orders/{order_id}" };
+  const FORGED = "https://attacker.example/orders/123";
+
+  it("expands the one argument the template names, percent-encoding every character outside unreserved, and reads no other argument", () => {
+    expect(
+      establishOperationTarget(ORDERS, {
+        order_id: "123",
+        operation_target: FORGED,
+        resource: FORGED,
+      }),
+    ).toEqual({ ok: true, target: T });
+    for (const [value, target] of [
+      // A delimiter in the argument never acts as one: the target stays one segment under /orders/.
+      ["../admin", "https://api.example/orders/..%2Fadmin"],
+      ["a/b?c#d", "https://api.example/orders/a%2Fb%3Fc%23d"],
+      ["%2F", "https://api.example/orders/%252F"],
+      ["a b", "https://api.example/orders/a%20b"],
+      ["é", "https://api.example/orders/%C3%A9"],
+      ["!*'()", "https://api.example/orders/%21%2A%27%28%29"],
+      ["A-z_0.9~", "https://api.example/orders/A-z_0.9~"],
+    ]) {
+      expect(establishOperationTarget(ORDERS, { order_id: value }), value).toEqual({
+        ok: true,
+        target,
+      });
+    }
+    // The literal after the expression stays: a sub-resource of the object.
+    expect(
+      establishOperationTarget(
+        { template: "https://api.example/orders/{order_id}/lines?view=full" },
+        { order_id: "7" },
+      ),
+    ).toEqual({ ok: true, target: "https://api.example/orders/7/lines?view=full" });
+  });
+
+  it("an absent, null or empty argument is missing_argument, never the service identifier", () => {
+    for (const args of [
+      {},
+      { order_id: undefined },
+      { order_id: null },
+      { order_id: "" },
+      { orderId: "123" },
+    ]) {
+      expect(establishOperationTarget(ORDERS, args), JSON.stringify(args)).toEqual({
+        ok: false,
+        reason: "missing_argument",
+      });
+    }
+    // An inherited property is not an argument.
+    expect(
+      establishOperationTarget(
+        ORDERS,
+        Object.create({ order_id: "123" }) as Record<string, unknown>,
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "missing_argument",
+    });
+  });
+
+  it("an argument carrying a list, or contracts deriving different targets, is ambiguous; contracts agreeing on one target are not", () => {
+    for (const order_id of [["123"], ["123", "124"], []]) {
+      expect(establishOperationTarget(ORDERS, { order_id }), JSON.stringify(order_id)).toEqual({
+        ok: false,
+        reason: "ambiguous",
+      });
+    }
+    expect(
+      establishOperationTarget([ORDERS, { template: "https://api.example/invoices/{order_id}" }], {
+        order_id: "123",
+      }),
+    ).toEqual({ ok: false, reason: "ambiguous" });
+    expect(
+      establishOperationTarget([ORDERS, { service: "https://api.example" }], { order_id: "123" }),
+    ).toEqual({
+      ok: false,
+      reason: "ambiguous",
+    });
+    expect(establishOperationTarget([ORDERS, { service: T }], { order_id: "123" })).toEqual({
+      ok: true,
+      target: T,
+    });
+  });
+
+  it("a non-string, dot-segment or unencodable argument is malformed", () => {
+    for (const order_id of [123, true, { id: "123" }, ".", "..", "\uD800"]) {
+      expect(establishOperationTarget(ORDERS, { order_id }), JSON.stringify(order_id)).toEqual({
+        ok: false,
+        reason: "malformed",
+      });
+    }
+    // A template whose literal breaks RFC 3986 yields no target.
+    expect(
+      establishOperationTarget(
+        { template: "https://api.example/a b/{order_id}" },
+        { order_id: "1" },
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "malformed",
+    });
+  });
+
+  it("a template outside the supported form is unsupported, and every template is unsupported to a caller that supplies no arguments", () => {
+    for (const template of [
+      "https://api.example/orders",
+      "https://api.example/orders/{order_id}/{line}",
+      "https://api.example/orders/{order_id,line}",
+      "https://api.example/orders/{+order_id}",
+      "https://api.example/orders{/order_id}",
+      "https://api.example/orders/{order_id*}",
+      "https://api.example/orders/{order_id:3}",
+      "https://{order_id}.example/orders",
+      "https://api.example{order_id}",
+      "https://api.example/orders?id={order_id}",
+      "https://api.example/orders/}{order_id}",
+      "urn:example:{order_id}",
+      42,
+    ]) {
+      expect(establishOperationTarget({ template }, { order_id: "123" }), String(template)).toEqual(
+        {
+          ok: false,
+          reason: "unsupported_contract",
+        },
+      );
+    }
+    expect(
+      establishOperationTarget({ template: ORDERS.template, service: T }, { order_id: "123" }),
+    ).toEqual({
+      ok: false,
+      reason: "unsupported_contract",
+    });
+    expect(establishOperationTarget(ORDERS)).toEqual({ ok: false, reason: "unsupported_contract" });
+    // The service-level contract needs no argument.
+    expect(establishOperationTarget({ service: T }, {})).toEqual({ ok: true, target: T });
+  });
+
+  it("contract coverage admits exactly the targets a contract establishes, read as given", () => {
+    for (const value of ["123", "../admin", "a b", "é", "!*'()"]) {
+      const derived = establishOperationTarget(ORDERS, { order_id: value });
+      expect(derived.ok && contractCanEstablish(ORDERS, derived.target), value).toBe(true);
+    }
+    expect(contractCanEstablish({ service: T }, T)).toBe(true);
+    for (const target of [
+      "https://api.example/orders/",
+      "https://api.example/orders/1/2",
+      "https://api.example/orders/a%2fb",
+      "https://api.example/orders/%41",
+      "https://api.example/orders/.",
+      "https://api.example/orders/..",
+      "https://api.example/orders/%C3",
+      "https://api.example/orders/%zz",
+      "https://api.example/orders/1?x",
+      "https://API.EXAMPLE/orders/1",
+      "https://api.example/admin",
+      "https://api.example",
+    ]) {
+      expect(contractCanEstablish(ORDERS, target), target).toBe(false);
+    }
+    expect(contractCanEstablish({ service: T }, `${T}/`)).toBe(false);
+    expect(contractCanEstablish({ template: "https://api.example/orders/{a}/{b}" }, T)).toBe(false);
+    expect(contractCanEstablish({ prefix: "https://api.example/orders" }, T)).toBe(false);
   });
 });
 
