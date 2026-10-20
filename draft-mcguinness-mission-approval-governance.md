@@ -50,6 +50,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8792:
   RFC9396:
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
@@ -200,6 +201,11 @@ no deferral substrate.
 # Conventions and Definitions {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
+
+All JSON shown in this document is non-normative and illustrative; the
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 This document uses JSON {{RFC8259}} as the data model for the Approval
 Governance Record. JCS canonicalization {{RFC8785}} applies wherever
@@ -1537,9 +1543,12 @@ first, over the entry exactly as presented
 `mission-intent-evidence`.
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "type": "mission-intent-admission-assertion",
-  "assertion": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FkbWlzc2lvbi5leGFtcGxlLmNvbSJ9.MEUCIQDx7vector"
+  "assertion": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FkbWlzc2\
+    lvbi5leGFtcGxlLmNvbSJ9.MEUCIQDx7vector"
 }
 ~~~
 
