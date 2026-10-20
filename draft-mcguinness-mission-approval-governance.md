@@ -1036,15 +1036,15 @@ The always-present members, reused unchanged across every vector:
   "issuer": "https://as.example.com",
   "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "intent_hash":
-    "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
   "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approver": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "client_id": "s6BhdRkqt3",
-  "created_at": "2026-10-15T14:32:11Z",
+  "created_at": "2026-11-02T08:00:00Z",
   "expires_at": "2026-12-31T23:59:59Z",
   "approval_basis": {
     "type": "direct",
@@ -1055,7 +1055,7 @@ The always-present members, reused unchanged across every vector:
       "sub": "user_3p2q8mN1a0kV7tR" },
     "adjudication": { "kind": "human" },
     "root_commitment":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "authority_source": { "type": "user_delegated" },
   "policy_version": "deploy-policy:v17",
@@ -1075,27 +1075,27 @@ conditional member added.
 2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
 om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
 onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
 rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+lient_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires_
 at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
--","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
-Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+-","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r
+0","issuer":"https://as.example.com","policy_version":"deploy-policy
 :v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8mN
 1a0kV7tR"}}}
 ~~~
 
 ~~~ text
-approval_context_commitment = sha-256:iRCrkxJWsQL1ZlXYQg1FUy2OIBKFpF
-n99tYA-2qlC48
+approval_context_commitment = sha-256:dPaMl8eUhPExoiVA2zHbz4wPzmDLVs
+fZnHDxCYHDGos
 ~~~
 
 **Vector 2: conditional `proposal_hash`.** This is the canonical
 Mission unchanged: the always-present members above plus
-`"proposal_hash": "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo"`.
+`"proposal_hash": "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"`.
 
 ~~~ text
 {"iss":"https://as.example.com","typ":"mission-approval-context-v1",
@@ -1103,23 +1103,23 @@ Mission unchanged: the always-present members above plus
 2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
 om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
 onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
 rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+lient_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires_
 at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
--","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
-Y","issuer":"https://as.example.com","policy_version":"deploy-policy
-:v17","proposal_hash":"sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNv
-SqMrYo","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8
+-","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r
+0","issuer":"https://as.example.com","policy_version":"deploy-policy
+:v17","proposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyM
+wroKGo","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8
 mN1a0kV7tR"}}}
 ~~~
 
 ~~~ text
-approval_context_commitment = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGy
-mVfrnMaIc8So0
+approval_context_commitment = sha-256:pGxfIDuyBPfgpyox3J6GP477CQfUE6
+FS9CfHirjwwvU
 ~~~
 
 **Vector 3: conditional `ceiling_hash`.** Diverges from the canonical
@@ -1162,23 +1162,23 @@ The manifest is the always-present members above plus this
 2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
 om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
 onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
 rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
 eiling_hash":"sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q","
-client_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires
+client_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires
 _at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc
-9-","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQq
-YY","issuer":"https://as.example.com","policy_version":"deploy-polic
+9-","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4
+r0","issuer":"https://as.example.com","policy_version":"deploy-polic
 y:v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8m
 N1a0kV7tR"}}}
 ~~~
 
 ~~~ text
-approval_context_commitment = sha-256:aj_DeEf0vbk7jZnXOMEFiFVSmD0SQg
-5MEXIMUXSWLFs
+approval_context_commitment = sha-256:JJtL7r3tCIBNt8YwLyFU4_qa4eHAhY
+qsIdFz_87yXlk
 ~~~
 
 **Vector 4: conditional `submission_evidence_commitment`.** Diverges
@@ -1217,7 +1217,7 @@ retained:
   { "type": "mission-intent-admission-assertion",
     "artifact_hash":
       "sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miFuC6-T7jXU2-R8",
-    "verified_at": "2026-10-15T14:31:50Z",
+    "verified_at": "2026-11-02T07:59:39Z",
     "facts": {
       "admission_issuer": "https://admission.example.com",
       "status": "active"
@@ -1230,12 +1230,12 @@ retained:
 1","value":[{"artifact_hash":"sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miF
 uC6-T7jXU2-R8","facts":{"admission_issuer":"https://admission.exampl
 e.com","status":"active"},"type":"mission-intent-admission-assertion
-","verified_at":"2026-10-15T14:31:50Z"}]}
+","verified_at":"2026-11-02T07:59:39Z"}]}
 ~~~
 
 ~~~ text
-submission_evidence_commitment = sha-256:TwDmwzJgsm8Ik86YuybyctIaMPZ
-K-aKeU6a2BF0kTi0
+submission_evidence_commitment = sha-256:jnXhfVteWUHvc1-wyJOMLaVFj-d
+8ewQWE4R7f0t5otY
 ~~~
 
 The manifest is the always-present members above plus this
@@ -1247,23 +1247,23 @@ The manifest is the always-present members above plus this
 2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
 om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
 onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
 rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+lient_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires_
 at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
--","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
-Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+-","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r
+0","issuer":"https://as.example.com","policy_version":"deploy-policy
 :v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8mN
-1a0kV7tR"},"submission_evidence_commitment":"sha-256:TwDmwzJgsm8Ik86
-YuybyctIaMPZK-aKeU6a2BF0kTi0"}}
+1a0kV7tR"},"submission_evidence_commitment":"sha-256:jnXhfVteWUHvc1-
+wyJOMLaVFj-d8ewQWE4R7f0t5otY"}}
 ~~~
 
 ~~~ text
-approval_context_commitment = sha-256:Msha2eEDtfucgANzT5nmO90gtCEXFQ
-FdRfVUGmOwCZE
+approval_context_commitment = sha-256:iYBvYGC_LpEQkhpPiIE3S1OFINjH2d
+K0jYMrCwWHvKE
 ~~~
 
 **Vector 5: mutated-member rejection.** Vector 2's manifest with one
@@ -1273,8 +1273,8 @@ requires a verifier to do when a recomputed digest disagrees with a
 disclosed one:
 
 ~~~ text
-recomputed = sha-256:3ZcZC8vR2HiCkgZqop_fUBaAwmj6hLknF8ey9g44dD8
-disclosed  = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGymVfrnMaIc8So0
+recomputed = sha-256:4Ev4vJSv_VYjxB48tuJTsYKTSU81jfQRD48pOjazBf0
+disclosed  = sha-256:pGxfIDuyBPfgpyox3J6GP477CQfUE6FS9CfHirjwwvU
 ~~~
 
 The two differ, so a verifier holding the mutated record and this
@@ -1285,10 +1285,10 @@ unchanged, committed under `typ` `mission-approval-context-v2`
 instead of `mission-approval-context-v1`:
 
 ~~~ text
-correct typ (v1) = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGymVfrnMaIc8S
-o0
-wrong typ (v2)   = sha-256:KSLVjgQRCWLHsswYmBJS2B_n0SPRAZjTvBnkIRqw-
-aw
+correct typ (v1) = sha-256:pGxfIDuyBPfgpyox3J6GP477CQfUE6FS9CfHirjww
+vU
+wrong typ (v2)   = sha-256:Al8UIKy7q4_WlWem_O_6kInpGUoOp_NvPQj_YNO4z
+AY
 ~~~
 
 The two differ. A verifier's recompute is always fixed to
