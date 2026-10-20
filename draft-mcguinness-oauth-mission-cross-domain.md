@@ -467,7 +467,11 @@ exists before the first grant is issued.
   and verification interoperate only if both domains fix the same one.
 - Client registration: the presenting client is registered with and
   authenticates to the Resource AS's token endpoint, as the grant
-  profile requires.
+  profile requires, and the originating AS holds a trusted,
+  destination-scoped mapping from each client that may request a
+  projection to its registration at each target Resource AS
+  ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section 5).
+  The two registrations can use the same identifier string.
 - Subject resolution: the account-linking policy by which the
   Resource AS resolves the conveyed Subject in its own namespace
   ({{validation-at-resource-as}}).
@@ -511,6 +515,11 @@ A Mission-bound cross-domain grant:
   ({{I-D.draft-mcguinness-mission-mandate}}) is never redeemable as a
   grant, and the `typ` is what a token endpoint separates them by;
 - MUST be audienced to the target Resource AS;
+- MUST name the requesting client's registration at the target
+  Resource AS in the claim its grant profile defines for it
+  (`client_id` for the RECOMMENDED profile,
+  {{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section
+  3.1), resolved as the checks below require;
 - MUST NOT have a lifetime exceeding 300 seconds (a short lifetime
   bounds cross-domain revocation latency; see
   {{cross-domain-revocation}});
@@ -593,10 +602,17 @@ assertion that carries no Mission binding ({{error-responses}}).
 Before issuing, the AS MUST verify:
 
 - that the Mission is `active`, failing otherwise with
-  `invalid_request` ({{Section 2.2.2 of RFC8693}}); and
+  `invalid_request` ({{Section 2.2.2 of RFC8693}});
 - that the target Resource AS is authorized for the requested
   resources under the Mission's Authority Set, failing otherwise
-  with `invalid_target` ({{RFC8693}}).
+  with `invalid_target` ({{RFC8693}}); and
+- that the destination-scoped mapping ({{pre-established-trust}})
+  resolves the client the AS authenticated on the exchange, the
+  actual authorized requesting client, to exactly one registration
+  at the target Resource AS, failing otherwise with `invalid_target`
+  ({{RFC8693}}). A missing or ambiguous mapping never falls back to
+  the client's identifier at the originating AS, and the Mission's
+  approved agent never substitutes for the requesting client.
 
 The token-exchange response carries `issued_token_type` of
 `urn:ietf:params:oauth:token-type:id-jag` (for the RECOMMENDED
@@ -686,6 +702,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   presenter holds the grant's bound key; it is not, by itself, client
   authentication at the Resource AS's own token endpoint and MUST NOT
   be treated as satisfying this requirement.
+- MUST verify that the grant's client claim (`client_id` for the
+  RECOMMENDED profile) identifies the client that authentication
+  established, refusing an absent or different value with
+  `invalid_grant`
+  ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section
+  4.4.1).
 - When issuing local access tokens for its resources, the Resource AS
   uses the subject-resolution rules of the underlying cross-domain
   grant and identity chaining specifications. The local token preserves
@@ -703,10 +725,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     the client identity established by the authentication above;
     where the local token is an RFC 9068-style JWT, that identifier
     is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section
-    2.2). It MUST NOT be the Mission's approved agent from the
-    originating domain, and the cross-domain grant's own `client_id`
-    claim ({{cross-domain-grant}}) MUST NOT be reinterpreted as this
-    local identifier under any profile. Where the Origin Principal
+    2.2). That identity MUST come from the Resource AS's own
+    authentication of the redeeming client; the Mission's approved
+    agent from the originating domain never substitutes for it. An
+    identifier string equal to the client's identifier at the
+    originating AS is not by itself a conflict: the same string can
+    name a registration in each domain. Where the Origin Principal
     profile is claimed, that approved agent's origin principal is
     instead conveyed to the local token through `mission.subject`
     ({{origin-principal}}); otherwise the approved agent remains
@@ -1048,6 +1072,7 @@ At issuance (the token exchange at the Mission Issuer,
 | The subject token does not resolve to a Mission | `invalid_request` |
 | The Mission is not `active` | `invalid_request` |
 | The target Resource AS is not authorized for the requested resources under the Authority Set | `invalid_target` |
+| The destination-scoped mapping has no registration, or more than one, for the requesting client at the target Resource AS | `invalid_target` |
 
 At redemption (the JWT-bearer grant at the Resource AS,
 {{validation-at-resource-as}}):
@@ -1055,7 +1080,7 @@ At redemption (the JWT-bearer grant at the Resource AS,
 | Condition | Error |
 |---|---|
 | Client authentication fails | `invalid_client` |
-| Untrusted issuer; the grant's `iss` not equal to its `mission.issuer`; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a replayed `jti`; a malformed `mission` claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
+| Untrusted issuer; the grant's `iss` not equal to its `mission.issuer`; wrong or missing `typ`; signature, audience, or expiry failure; a sender-constraint absent, unverifiable, or bound to a different client; a grant client claim absent or not identifying the authenticated client; a replayed `jti`; a malformed `mission` claim, or a grant carrying none where the deployment's pre-established trust requires Mission binding for the requested resources ({{validation-at-resource-as}}) | `invalid_grant` |
 | The request names a resource outside the conveyed entries | `invalid_target` |
 
 A Resource AS rejecting a grant reveals no Mission state it does not
@@ -1115,6 +1140,10 @@ Mission Issuer of the issuance profile that additionally:
 - issues the Mission-bound cross-domain grant per
   {{cross-domain-grant}}, gated and counted as a derivation;
 - scopes every projection by audience ({{audience-scope}});
+- names the requesting client's registration at the target Resource
+  AS in the grant, resolved from its destination-scoped mapping with
+  no fallback to the client's identifier at the originating AS
+  ({{cross-domain-grant}});
 - fails issuance with the codes of {{error-responses}}; and
 - advertises cross-domain grant issuance per {{as-metadata}}.
 
@@ -1132,9 +1161,10 @@ A **Resource AS**:
 - authenticates the redeeming client at redemption by its own
   mechanism, distinct from the grant's sender-constraint
   ({{validation-at-resource-as}});
-- sets each local token's `client_id` to the client identity that
-  authentication established, never the Mission's approved agent nor
-  the grant's own `client_id` claim ({{validation-at-resource-as}});
+- verifies that the grant's client claim identifies the client that
+  authentication established, and sets each local token's
+  `client_id` to that identity, never one taken from the Mission's
+  approved agent ({{validation-at-resource-as}});
 - fails redemption with the codes of {{error-responses}};
 - where it offers token introspection for its local tokens, follows
   {{introspection-at-resource-as}}; and
@@ -1345,8 +1375,12 @@ appendix across a trust boundary: from the home domain
 internal microservice call chain. It is illustrative and adds no
 normative requirements. The final intra-domain hop shows one
 deployment-local way to carry Mission context in a Transaction Token
-{{I-D.draft-ietf-oauth-transaction-tokens}}. Identifiers and hash
-values are illustrative and are not computed from the displayed JSON.
+{{I-D.draft-ietf-oauth-transaction-tokens}}. Identifiers are
+illustrative. The Mission's `intent_hash` and `authority_hash` are
+its integrity anchors ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Integrity Anchors") over the issuance profile example's
+Intent and Authority Set, each with the partner values the scenario
+names appended.
 
 The chain crosses boundaries in two distinct ways, and seeing why is
 the point of the example:
@@ -1370,21 +1404,22 @@ from Status or Signals.
 
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in a partner ERP
-under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`. Stage 0 (agent
+under Mission `msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY`. Stage 0 (agent
 identity) and Stage 1 (Mission creation at the home AS) are the base
 profile's single-domain walkthrough, extended here in one way: the
 Mission Intent's `target_resources` also names the partner ERP
 `https://erp.partner.example.com`, so the approved Authority Set
 additionally carries, for that resource, an `invoices.read` entry
-(delegable to `ai_agent` actors at depth 1) and a
-`journal-entries.write` entry capped at a `max_amount` of 500.00
-USD. The
+(for invoices issued in 2026-Q3, delegable to `ai_agent` actors at
+depth 1) and a `journal-entries.write` entry capped at a
+`max_amount` of 500.00 USD. The
 Mission was recorded `active` with `authority_hash`
-`sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg` and
+`sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM` and
 `intent_hash`
-`sha-256:SSDZGp4CRwv7ZL4_ttfKb-qTWn-aHy8Ffc8a_dE4Nkk` (illustrative;
-this Mission's Intent and Authority Set extend the single-domain
-walkthrough's, so its anchors differ from that example's). The partner ERP
+`sha-256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o` (this Mission
+is not the single-domain walkthrough's: its Intent and Authority Set
+extend that example's, so its identifier and anchors differ). The
+partner ERP
 is behind the Resource AS `ras.partner.example.com`, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.
@@ -1409,15 +1444,19 @@ audience-scoped authority for the ERP:
   "iss": "https://as.example.com",
   "aud": "https://ras.partner.example.com",
   "sub": "user_3p2q8mN1a0kV7tR",
-  "client_id": "s6BhdRkqt3",
-  "iat": 1793606400,
-  "exp": 1793606700,
+  "client_id": "partner-agent-042",
+  "iat": 1793606410,
+  "exp": 1793606710,
   "jti": "idjag_4Kp9sT2vN7xR1mZ8bQ",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 1,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -1429,10 +1468,10 @@ audience-scoped authority for the ERP:
         { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 ~~~
@@ -1440,11 +1479,14 @@ audience-scoped authority for the ERP:
 The ID-JAG is short-lived (300 s), explicitly typed
 (`oauth-id-jag+jwt` in its JWT header), and sender-constrained to the
 agent. Its `exp` does not exceed the Mission's `expires_at`
-({{cross-domain-grant}}). Only the agent may request a cross-domain
-projection ({{cross-domain-grant}}), so `client_id` (the requesting
-client) is the approved agent here too; no delegation has occurred,
-and the approved agent remains recoverable at the home AS from the
-Mission Record identified by `mission.id`.
+({{cross-domain-grant}}). Its `client_id` is the agent's
+registration at `ras.partner.example.com`, `partner-agent-042`,
+which the home AS resolves from its destination-scoped mapping for
+the authenticated client `s6BhdRkqt3` ({{pre-established-trust}}).
+Only the agent may request a cross-domain projection
+({{cross-domain-grant}}), so no delegation has occurred, and the
+approved agent remains recoverable at the home AS from the Mission
+Record identified by `mission.id`.
 
 ## Stage 3: The Resource AS Issues a Local Access Token
 
@@ -1456,8 +1498,9 @@ sender-constraint proof. It then issues its own access token for the
 ERP, preserving the `mission` claim unchanged and capping `exp` at the
 ID-JAG's `exp`. The agent redeems the ID-JAG under its own
 registration with `ras.partner.example.com`
-({{pre-established-trust}}), so `client_id` names that local
-registration, not the agent's home-domain `client_id`:
+({{pre-established-trust}}); the Resource AS checks that the
+grant's `client_id` names the client it authenticated, and the local
+token's `client_id` names that registration:
 
 ~~~ json
 {
@@ -1473,6 +1516,10 @@ registration, not the agent's home-domain `client_id`:
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 1,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -1484,25 +1531,26 @@ registration, not the agent's home-domain `client_id`:
         { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 ~~~
 
 The issuing `iss` is now the Resource AS, but `mission.issuer` remains
 the home AS. The token's `exp` (1793606690) is below the ID-JAG's
-(1793606700) and far below the Mission's `expires_at`. The Resource
+(1793606710) and far below the Mission's `expires_at`. The Resource
 AS-local `sub` is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document. `client_id` (`partner-agent-042`) is the
 Resource AS's own registration for the presenting client, per
-{{RFC8693}} Section 4.3 and {{RFC9068}} Section 2.2; it is not the
-Mission's approved agent (`s6BhdRkqt3`), which this local token does
-not carry. That identity remains recoverable at the home AS from the
-Mission Record identified by `mission.id`
+{{RFC8693}} Section 4.3 and {{RFC9068}} Section 2.2, established by
+its own authentication of the presenting client, never taken from
+the Mission's approved agent (`s6BhdRkqt3`), which this local token
+does not carry. That identity remains recoverable at the home AS from
+the Mission Record identified by `mission.id`
 ({{validation-at-resource-as}}).
 
 Revoking the Mission now stops new ID-JAGs, but the local token the
@@ -1527,8 +1575,8 @@ The agent calls the ERP resource server (`erp.partner.example.com`)
 with that token. The resource server validates the JWT and the `cnf`
 binding and enforces the `authorization_details` whose `resource`
 matches the operation target, `https://erp.partner.example.com`,
-permitting `invoices.read` and `journal-entries.write` up to a
-`max_amount` of 500.00 USD
+permitting `invoices.read` within the Q3 issuance window and
+`journal-entries.write` up to a `max_amount` of 500.00 USD
 ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). It treats the
 `mission` claim as an audit anchor; holding only this audience's
@@ -1572,10 +1620,10 @@ operation:
     "constraints": { "invoice_id": "inv_2026Q3_1042" }
   },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 ~~~
@@ -1599,7 +1647,7 @@ no call to `mission.issuer`.
 
 | Hop (mechanism) | Mission anchor | Authority or context | Expiry |
 |---|---|---|---|
-| ID-JAG (between domains) | unchanged | ERP: read + write | 1793606700 |
+| ID-JAG (between domains) | unchanged | ERP: read + write | 1793606710 |
 | Resource AS token | unchanged | ERP: read + write | 1793606690 |
 | Txn Token (within domain) | unchanged | one ledger lookup | 1793606520 |
 
@@ -1616,6 +1664,19 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Changes a requirement (#1166, D510): the cross-domain grant names the
+  requesting client's registration at the target Resource AS, as
+  ID-JAG -04 Sections 3.1 and 5 define `client_id`, resolved from a
+  destination-scoped mapping; a missing or ambiguous mapping is
+  `invalid_target`, with no fallback to the home identifier. The
+  Resource AS checks the grant's client claim against the client it
+  authenticated (`invalid_grant` on mismatch, ID-JAG -04 Section
+  4.4.1). The prohibitions on the local identifier equaling the
+  approved agent and on reading the grant's `client_id` become an
+  identity-source rule: destination authentication establishes the
+  local identity, and an equal identifier string in both domains is
+  not a conflict.
 
 - Adds two requirements at the Resource AS: it issues no refresh
   token or equivalent renewal authority on a Mission-bound grant,

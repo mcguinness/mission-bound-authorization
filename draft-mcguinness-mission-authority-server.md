@@ -141,6 +141,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC8725:
+  RFC8792:
   I-D.draft-mcguinness-oauth-mission-management:
     title: "Mission Management for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
@@ -402,7 +403,9 @@ claim it ({{limitations}}).
 {::boilerplate bcp14-tagged}
 
 All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 This document uses Mission, Mission Intent, Mission Issuer, Authority
 Set, Approver, Subject, `mission_id`, the integrity anchors, and the
@@ -585,6 +588,8 @@ and returns HTTP 202 with a pending-submission reference:
 The following example shows a submission and its response:
 
 ~~~ http-message
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 POST /mas/mission/submit HTTP/1.1
 Host: mas.example.com
 Content-Type: application/json
@@ -593,8 +598,14 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 500 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
@@ -608,7 +619,7 @@ Cache-Control: no-store
 {
   "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
   "status": "pending",
-  "expires_at": "2026-10-16T14:32:11Z"
+  "expires_at": "2026-11-03T07:59:00Z"
 }
 ~~~
 
@@ -702,7 +713,18 @@ Cache-Control: no-store
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"],
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
       "constraints": {
         "max_amount": { "amount": "500.00", "currency": "USD" }
       } }
@@ -1190,7 +1212,7 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://mas.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+        "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs"
     },
     "mission_state_observation": {
       "state": "active",
@@ -1199,7 +1221,7 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "mode": "cached",
       "freshness_at": "2026-11-02T08:14:00Z"
     },
-    "actor": { "client_id": "client_erp-recon-agent" },
+    "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
       "expires_at": "2026-11-02T09:14:00Z",
@@ -1735,19 +1757,19 @@ Assertion:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs"
   },
   "token": {
     "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
     "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
   },
   "join": {
-    "client_id": "client_erp-recon-agent",
+    "client_id": "s6BhdRkqt3",
     "disposition": "client"
   },
   "aud": "https://pdp.example.com",
-  "iat": 1793606400,
-  "exp": 1793608200
+  "iat": 1793607240,
+  "exp": 1793609040
 }
 ~~~
 
@@ -2028,7 +2050,7 @@ child's own `client_id`, never the parent's.
 ## Expansion Example {#native-example}
 
 The following example shows an expansion submission. Mid-task, the
-agent behind the Q3 reconciliation Mission finds a $1,200 adjustment,
+agent behind a Q3 reconciliation Mission finds a $1,200 adjustment,
 outside its approved $500 cap. It submits a Mission Intent for the
 broadened task whose body names the predecessor:
 
@@ -2045,7 +2067,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
     "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
-  "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  "predecessor": "msn_w9zhlsZxoTTlSeSsZOHDG7gr0Z0Ok-lZ"
 }
 ~~~
 
@@ -3344,6 +3366,10 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial (#1176): examples of the canonical Mission follow one
+  dated history; an example line too long for the page is folded per
+  RFC 8792. No requirement changes.
 
 - Progressive Adoption compares the four mechanisms of phases 3
   through 6 (mapping join, Join Assertion, MAS plus Issuance Grant,

@@ -7,20 +7,20 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "d6f68cab958b0fb6c69201e20dec30032da359e9",
-    "content_sha256": "4709060708ca58f5593cc3a3c2a21b07744c8b9dfc94da9cd29eb32dd2b64860"
+    "revision": "341757b237a77f48fe162f5d4c3aa065b09164c7",
+    "content_sha256": "42bb7813442ffb5a62b10f2c2069f969f8a9d6cad64c3f54293cfb3985334b61"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
-    "content_sha256": "ae89986f38d532ba29d87e8b863b32d352e7448dd3e0671f38f0c8322af22b2e"
+    "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
+    "content_sha256": "33e8ae6138b82668731a7d5e6cb125e183c49750144caa3438903e5c719c8cbc"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
-    "content_sha256": "3e7462342b75647433c40a7036f01662df07ef3001552b75ac2e1852707eb6d9"
+    "revision": "1df0e37958729923a4ea977df0da22b45c5bae4d",
+    "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "38a7f57daf01213bc3cb89732ae0980155011f3b",
-    "content_sha256": "36fcee97ecdb5710311c56671b389259fd55bf3934b4833d1f1f0f4ac507bd3b"
+    "revision": "5b8bffc4ebcd2f8f4eb4ba502178f91aab0161f9",
+    "content_sha256": "ffb7099651b674b77bddccab395bc28307c11dd180c4cc84a150a621a97a0c2d"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -35,28 +35,28 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "cb2d17c9638dc6278fb1dcdbdfa7abfe81c58745",
-    "content_sha256": "b9ca6eb7a58c14c8326c0d06aa31a5125b9605daf1490abd904e39bb0bdeaccf"
+    "revision": "def0268ec2c640bbf5e46f8bb00641bdd8a674f1",
+    "content_sha256": "8fd4b47be29ba74dee859a0b2d1f523c80c7527c76f10d250b82b422379b592d"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "5a1e06044ef2d0ab5e1e29cdb4ec7efeff29e920",
     "content_sha256": "545f44f278aeeb2531dff1abef79ce1d11a1822701c3f3f5e77a968b3e974306"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "bc20eb11b403f3abfc4f5d85f786e9e2f4953bd760fd5e5ec52cd3b7722858ae"
+    "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
+    "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "42a54d2831dfb7d84e3f5bed57b6e872f425e6cbb49f9a52c86b0bc3d75af0bf"
+    "revision": "abc971560d48cc58f47b2ce0a07ed3f9d48b0586",
+    "content_sha256": "454d12089e67988a3cc7ae14146af092ffcecfb7ce9b2dddf4c92590ac5f7547"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "2830e6028442e6c724b628fe4565a54f8aa91da38bace81b6044ed1a4afdfbf8"
+    "revision": "1d4585bfb2c7f9fc69052151907b4f80f30c4a6a",
+    "content_sha256": "bb1119dc5d934d1e9003732266ebb1991beeadc5401c6dc661efa8a8325df86f"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "f9c4eb28516517c5955734a70c61ae8c6d42309b",
-    "content_sha256": "7eca5ad85eb5212f6589d792f41a66503302228fb612edaebe98fb4c54f525f8"
+    "revision": "41c262683159cb44a0564ebfb9b8ca792a139b21",
+    "content_sha256": "9b98e096bbc02a37d0649ca04015bd4dec4db762c0f4f5b6b01cb16e317edeb4"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "8965a2cf509a35a8e1a834d1d9ef5804ec6f62c7",
@@ -67,48 +67,48 @@
     "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "482970ff6b3f8747e042ad20dc160e899c1fcf88",
-    "content_sha256": "f33ba81d7a861d8f97988f01c22dfdac67730ab55f4a75b58ad732a5075eebe8"
+    "revision": "68808ec081923670c5fec998dec10c336a34d756",
+    "content_sha256": "c5fbe127c972b65cd31648ededeaf8e97ad9d4deb98b88005af454c85800e76c"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "4e2f0ea1118418979179798fa3fa2deffd4f883a",
     "content_sha256": "2f4991ce177d9c6ce42a9632ec6077183ab6b1b27e5ed6e7407c76e6a6d36565"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "600914f9d4ff080f5fb1801931e3b47fad7f086c",
-    "content_sha256": "6ea434ad800a96d790d8ca39358688649050f14744c65fe3176cd31b11de3b9a"
+    "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
+    "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
     "content_sha256": "fde328e1de5cc5d286402164d12f799916c15b7b804348484ca941d943208740"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "6537beb53ead90ec3804f8888711a28fbc68abc0",
-    "content_sha256": "915888b4ae997213b0e3093f1750a7fcb1e81d7fd0e95dd5c2e441bf7f4157c6"
+    "revision": "f1560eb98139c1502d92a2e74e5dfadd6be6c9d9",
+    "content_sha256": "eab318b87d5f30101f06c053e37fbdc91330e48644fe785e5f664f23fca4e577"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "246cde5356cd616c113dd9a1d157ce877c36bbf5",
-    "content_sha256": "631a95e996b537443a13cccfb5c9e8d63a164c24676b1399bf3dc9f4da7d4395"
+    "revision": "44f6c5eb882d0156f5db6dad24e86587e79fd6c1",
+    "content_sha256": "e8817d91713df777b5f3437e3415f9d662859d35169b1e37081b3bb3480b01ef"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "e6697f44e4aae121741d1911d113618bfbac3059",
-    "content_sha256": "d88875b2ad94d43f21401d0f0e23bb669f0cc66ae639665a31ea3adebee25f12"
+    "revision": "ec04a53ff3746ed30019146c41613535a40221e8",
+    "content_sha256": "d26ab13e46780cb78fb0974509a0873982233906ee320c00ee544932190a7c75"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "4528548b9ad889e8e72080d9a042ca61370184dd",
-    "content_sha256": "c1fde7fd879dbd4cd458756d195a41f2c0f3f9850a168a1f30c860acc5e1d3d0"
+    "revision": "49a5798039f4432dd1c1aaaf088c3432e1a164d9",
+    "content_sha256": "174bfd11e6a7a8fe9f89c80c73eec080e1ead7927003b1dbd0f16cd7e8ae2928"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "997d908184de4ab2bc8be4ebe6fa7ec40eed10c9",
-    "content_sha256": "5fcca87b0e0a1460daf3b7282e00f491bf559ef5b5645e5fe8155b2064ae5e70"
+    "revision": "d08dd0e9e7d01bce036532b3ab014370e080b7b3",
+    "content_sha256": "094e45bbec1efc393bc66dcbd8b1753f05d7d33ca234d1d23403c17ea9d42186"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -131,8 +131,8 @@
     "content_sha256": "0af450d300a722cd9a6e2ae480ecab221646d2d1b2e9a15b5b630f8d48b425e0"
    },
    "draft-mcguinness-mission-mandate.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "9300a74faad9a069b145faa4ee4947dce000a12ec527ac4a73edbaf925e4e0e4"
+    "revision": "b37b5d37d2a8b43a8efcb02ff66713814e98291c",
+    "content_sha256": "d05b02b6664c2acfdd532b8bcbebf19af04ccbb55d5146149226bb8932b0be18"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
     "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
@@ -2010,6 +2010,94 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1154 (D369)."
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.names-destination-client",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "MUST name the requesting client's registration at the target Resource AS in the claim its grant profile defines for it (`client_id` for the RECOMMENDED profile, {{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section 3.1), resolved as the checks below require;",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the cross-domain grant's client_id is the requesting client's registration at the target Resource AS as the destination-scoped mapping resolves it, a distinct identifier where the mapping names one and the same string where both domains register the client under it; the Resource AS redeems that grant for the client it authenticates under that registration"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > resolves a distinct destination ID",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > resolves an equal-string registration",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > issue ID-JAG -> redeem at RAS -> post journal entry from the token alone",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ]
+  },
+  {
+   "id": "cross-domain.cross-domain-grant.destination-client-unresolved-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "cross-domain-grant",
+   "text": "that the destination-scoped mapping ({{pre-established-trust}}) resolves the client the AS authenticated on the exchange, the actual authorized requesting client, to exactly one registration at the target Resource AS, failing otherwise with `invalid_target` ({{RFC8693}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a requesting client the destination-scoped mapping does not cover at the target Resource AS, or covers with two distinct registrations, is refused (invalid_target) rather than answered with the client's identifier at the originating AS; entries naming the same registration count once",
+    "local": "witnessed at the token endpoint on the continuation exchange (ICA -02 Section 5.5.5): a missing or an ambiguous mapping returns HTTP 400 with invalid_target, and the Mission records no new hop and no derivation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > a missing mapping is refused, never answered with the requesting client's identifier",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > two distinct registrations for one client and target are ambiguous and refused",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-destination-client.test.ts",
+     "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > entries that name the same registration count once",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (f6) the onward grant names the client's registration at the target RAS; a missing or ambiguous mapping is invalid_target, with no hop and no derivation (#1166, D510; ICA -02 5.5.5)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The resolver tests witness the missing, ambiguous and duplicate-entry cases of the mapping; the continuation test witnesses the token-endpoint error mapping. The reference implementation has no HTTP surface for the base refresh-token-mode grant exchange (the demo calls issueCrossDomainGrant directly), so the continuation exchange is the endpoint witness."
   },
   {
    "id": "cross-domain.error-responses.unresolved-subject-invalid-request",
@@ -35634,7 +35722,7 @@
    "id": "cross-domain.resource-as.client-id-identifies-redeemer",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "validation-at-resource-as",
-   "text": "MUST identify, per the destination's own credential conventions, the client identity established by the authentication above; where the local token is an RFC 9068-style JWT, that identifier is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section 2.2). It MUST NOT be the Mission's approved agent from the originating domain, and the cross-domain grant's own `client_id` claim ({{cross-domain-grant}}) MUST NOT be reinterpreted as this local identifier under any profile. Where the Origin Principal profile is claimed, that approved agent's origin principal is instead conveyed to the local token through `mission.subject` ({{origin-principal}}); otherwise the approved agent remains recoverable only at the originating AS from the Mission Record identified by `mission.id` and `mission.issuer`.",
+   "text": "MUST identify, per the destination's own credential conventions, the client identity established by the authentication above; where the local token is an RFC 9068-style JWT, that identifier is `client_id` ({{RFC8693}} Section 4.3, {{RFC9068}} Section 2.2). That identity MUST come from the Resource AS's own authentication of the redeeming client; the Mission's approved agent from the originating domain never substitutes for it.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35645,7 +35733,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Resource AS's minted local token identifies, as client_id (for an RFC 9068-style JWT local token), the client identity its own redemption-time authentication established, never the ID-JAG grant's own client_id (the originating agent) and never a value derived only from the presenter key without a matching registration; distinct registered destination clients each receive their own identifier"
+    "normative": "a Resource AS's minted local token identifies, as client_id (for an RFC 9068-style JWT local token), the client identity its own redemption-time authentication established, never a value taken from the Mission's approved agent and never a value derived only from the presenter key without a matching registration; distinct registered destination clients each receive their own identifier, and a destination registration whose identifier equals the client's identifier at the originating AS redeems under that same identifier"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -35667,9 +35755,49 @@
      "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > end-to-end: the continuation ID-JAG redeems at the RAS (trusted as-continuation key) into a local token",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1) > an equal-string registration redeems: the same identifier names the client in both domains",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "This RAS's client_id is minted only from a matched entry in its own jkt-keyed registration (RasConfig.registeredClients / registerClient()), never a config constant and never the grant's own client_id or the presenter key alone. The two-client mcp-saas test proves neither registered client's key nor identifier leaks onto the other's minted token."
+  },
+  {
+   "id": "cross-domain.resource-as.grant-client-id-matches-authenticated-client",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST verify that the grant's client claim (`client_id` for the RECOMMENDED profile) identifies the client that authentication established, refusing an absent or different value with `invalid_grant` ({{I-D.draft-ietf-oauth-identity-assertion-authz-grant}}, Section 4.4.1).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a grant whose client_id names a client other than the one the Resource AS authenticated, or that carries no client_id, is refused invalid_grant before its jti is consumed, so the same grant later redeems once the registration it names is the authenticated client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1) > a mismatched redemption is invalid_grant and does not consume the grant; the same grant redeems once the registration it names is the authenticated client",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1) > a grant with no client_id is invalid_grant",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ]
   },
   {
    "id": "cross-domain.origin-principal.ras-co-resolution",

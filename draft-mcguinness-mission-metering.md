@@ -87,6 +87,7 @@ normative:
 
 informative:
   RFC7942:
+  RFC8792:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -377,6 +378,9 @@ the Mission Issuer ({{consent}}) and a child-creation rule
 
 {::boilerplate bcp14-tagged}
 
+An example line too long for the page is folded with the single
+backslash strategy of {{RFC8792}}.
+
 Consumption bound:
 : A cumulative bound on Mission activity that depletes as the Mission
   is used, as distinct from a per-action constraint that is evaluated
@@ -504,9 +508,17 @@ alongside
 the issuance profile's members:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "goal": "Reconcile Q3 invoices and post adjustments of at most \
+    USD 500 per journal entry.",
   "target_resources": ["https://erp.example.com"],
+  "task_bounds": [
+    "Read only invoices issued in 2026-Q3.",
+    "Post journal entries of at most USD 500 each."
+  ],
+  "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z",
   "max_budget": { "amount": "5000.00", "currency": "USD" },
   "max_calls": [
@@ -1161,7 +1173,7 @@ prior permit expires; the action is not parameter-bound, so no
   "action": { "name": "reconciliation.run" },
   "context": {
     "mission": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "id": "msn_YJRRFCK6J8RraBk7ryPypDdFbezmGlLg",
       "issuer": "https://as.example.com"
     },
     "mission_state_observation": {
@@ -1172,7 +1184,7 @@ prior permit expires; the action is not parameter-bound, so no
     "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z",
+      "expires_at": "2026-11-02T08:48:00Z",
       "authority": [
         {
           "type": "mission_resource_access",
@@ -1305,6 +1317,10 @@ this registry.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial (#1176): examples of the canonical Mission follow one
+  dated history; an example line too long for the page is folded per
+  RFC 8792. No requirement changes.
 
 - Duration-Lease Renewal: the renewal example carries
   `resource.properties.operation_target` (#1276).

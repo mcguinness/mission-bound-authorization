@@ -596,11 +596,11 @@ Under the OAuth binding, an operator gives an agent the task
    parameter ({{I-D.draft-mcguinness-mission-shaping}}; the OAuth
    binding).
 2. **Approve and record.** The authorization server derives and
-   discloses an Authority Set (read invoices, post adjustments under
-   a cap), and the Approver approves. The approval event creates the
-   Mission, `active` with an expiry, and commits `intent_hash`,
-   `authority_hash`, and, where a proposal was submitted,
-   `proposal_hash`; Consent Evidence commits what was shown
+   discloses an Authority Set (read invoices, post adjustments of at
+   most USD 500 per journal entry), and the Approver approves. The
+   approval event creates the Mission, `active` with an expiry, and
+   commits `intent_hash`, `authority_hash`, and, where a proposal was
+   submitted, `proposal_hash`; Consent Evidence commits what was shown
    ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 3. **Issue.** Tokens are derived under the subset rule, carry the
    `mission` claim, and derivation and refresh are refused once the
@@ -610,7 +610,7 @@ Under the OAuth binding, an operator gives an agent the task
    concrete parameters and to current Mission state
    ({{I-D.draft-mcguinness-mission-runtime}},
    {{I-D.draft-mcguinness-mission-authzen}}).
-5. **Delegate.** A sub-agent that verifies ledger entries receives a
+5. **Delegate.** A read-only invoice extraction sub-agent receives a
    child Mission with strictly narrower authority and lineage
    ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 6. **Govern.** Consumers observe state through Status and Signals;
@@ -906,8 +906,9 @@ the evidence surface crossing all of them:
 A Mission commits its authority and intent once, at approval, but an
 agent's work is open-ended: the actions a task will take are not known
 when it is approved. "Reconcile Q3 invoices" must authorize reading
-any invoice and posting any adjustment under the cap, because the
-specific ones cannot be enumerated in advance.
+any invoice issued in the quarter and posting any adjustment within
+the per-entry cap, because the specific ones cannot be enumerated in
+advance.
 
 So the Authority Set an Approver consents to is a **capability
 envelope, not a task specification**, and the gap between that

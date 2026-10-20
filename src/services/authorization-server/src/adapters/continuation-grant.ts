@@ -41,8 +41,10 @@ import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel
 import {
   ID_JAG_TOKEN_TYPE,
   AuthorityNarrowedToEmptyError,
+  DestinationClientUnresolvedError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
+  resolveDestinationClientId,
 } from "../kernel/cross-domain.js";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import {
@@ -722,6 +724,22 @@ export async function handleTokenExchangeGrant(
     txError(ctx, 400, "invalid_target", "no audience-scoped authority for the target Resource AS");
     return;
   }
+  // @spec id-continuation-assertion (ICA -02 5.5.5); cross-domain#cross-domain-grant
+  // (#1166, D510; ID-JAG -04 Sections 3.1, 4.4.1 and 5) — the onward grant's
+  // `client_id` is the current actor's registration at the target Resource AS,
+  // resolved from the destination-scoped mapping for the client this exchange
+  // authenticated. A missing or ambiguous mapping is invalid_target and is never
+  // answered with this AS's identifier for the client.
+  let destinationClientId: string;
+  try {
+    destinationClientId = resolveDestinationClientId(opts.crossDomainClients, client.clientId, audience);
+  } catch (e) {
+    if (e instanceof DestinationClientUnresolvedError) {
+      txError(ctx, 400, "invalid_target", "the client has no single registration at the target Resource AS");
+      return;
+    }
+    throw e;
+  }
   // @spec id-continuation-assertion — the onward act is the presented hop's
   // lineage with the current actor on top (ICA -02 5.5.5): each hop's
   // recorded actor from the root (the Mission's client, recorded at approval)
@@ -846,7 +864,7 @@ export async function handleTokenExchangeGrant(
     ({ grant } = await issueCrossDomainGrant(opts.kernel, signKey, signKid, {
       missionId: resolved.missionId,
       targetAs: audience,
-      clientId: client.clientId,
+      clientId: destinationClientId,
       cnfJkt: jkt,
       resourceToAs,
       sub: localSub,

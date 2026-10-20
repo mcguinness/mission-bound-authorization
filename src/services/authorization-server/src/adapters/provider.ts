@@ -317,7 +317,7 @@ import {
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
 import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
-import { ID_JAG_TOKEN_TYPE } from "../kernel/cross-domain.js";
+import { ID_JAG_TOKEN_TYPE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
   refusedMemberInRequest,
@@ -688,6 +688,13 @@ export interface AdapterOptions {
   familyStore?: DelegationFamilyStore;
   /** Trusted Continuation Assertion Issuers of ICAs (iss + jwks + the RAS audiences each attests for). */
   continuationAssertionIssuers?: ContinuationIssuer[];
+  /**
+   * @spec cross-domain#pre-established-trust (#1166, D510);
+   * id-continuation-assertion (ICA -02 5.5.5) — the destination-scoped mapping
+   * the onward grant's `client_id` is resolved from. Unset means no client is
+   * mapped, so every onward grant is refused `invalid_target`.
+   */
+  crossDomainClients?: DestinationClientRegistration[];
   /** Shared (iss, jti) ICA replay cache (from newReplayCache()). */
   continuationReplay?: ContinuationReplay;
   /**

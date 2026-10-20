@@ -1281,7 +1281,10 @@ function main() {
   // Chained sub-check (#1188): every sha-256 base64url value in the drafts
   // is canonically encoded (zero pad bits).
   const digests = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "check-canonical-digests.mjs")], { stdio: "inherit" });
-  process.exit((sub.status ?? 1) || (examples.status ?? 1) || (projection.status ?? 1) || (digests.status ?? 1));
+  // Chained sub-check (#1176 item 5): the baseline Mission fixture and its
+  // README's variant table are what the generator builds.
+  const baseline = spawnSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), "generate-baseline-fixture.mjs"), "--check"], { stdio: "inherit" });
+  process.exit((sub.status ?? 1) || (examples.status ?? 1) || (projection.status ?? 1) || (digests.status ?? 1) || (baseline.status ?? 1));
 }
 
 // Guarded the same way as generate-drafts-index.mjs and
