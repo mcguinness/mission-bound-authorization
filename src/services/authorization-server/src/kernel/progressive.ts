@@ -29,9 +29,11 @@ import type { ApprovalFloorPolicy } from "@mission/demo-data";
 import {
   type ActivationPolicyRef,
   authorityHash,
+  compareAmounts,
   computeAnchor,
   intentHash,
   isSubsetSetIgnoringCapabilitySources,
+  isValidAmount,
   type JsonValue,
   proposalHash,
 } from "@mission/core";
@@ -338,6 +340,7 @@ export type DrawdownFallbackReason =
   | "cross_domain"
   | "live_children"
   | "restricted_overlap"
+  | "entire_remaining_ceiling"
   | "per_drawdown_bound"
   | "chain_rate_bound";
 
@@ -362,6 +365,57 @@ function widenedPairs(requested: readonly AuthorityEntry[], effective: readonly 
     }
   }
   return out;
+}
+
+/**
+ * @spec progressive#drawdown-bounds (#1414 review): some authority the
+ * ceiling grants is shown to lie outside the successor's set taken as a
+ * whole. A witness is a request one ceiling entry admits (one of its actions,
+ * one of its vendors or any vendor, its full `max_amount` or any amount) that
+ * no successor entry authorizes on those dimensions. Every other member is
+ * assumed covered, so authority split across successor entries on any
+ * dimension counts as held: a witness found is genuine, and one missed only
+ * falls back to a fresh human approval. No witness, the drawdown activates the
+ * entire remaining ceiling.
+ */
+export function ceilingAuthorityLeftUndrawn(
+  requested: readonly AuthorityEntry[],
+  ceiling: readonly AuthorityEntry[],
+): boolean {
+  for (const c of ceiling) {
+    const vendors = c.constraints?.vendors;
+    const vendorPoints: Array<string | undefined> = vendors?.length ? vendors : [undefined];
+    for (const action of c.actions) {
+      for (const vendor of vendorPoints) {
+        if (!requested.some((s) => authorizesPoint(s, c, action, vendor))) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether successor entry `s` authorizes the request at action `action`,
+ * vendor `vendor` (undefined: a vendor the ceiling entry leaves open) and the
+ * ceiling entry's own `max_amount` (absent: an unbounded amount).
+ */
+function authorizesPoint(
+  s: AuthorityEntry,
+  c: AuthorityEntry,
+  action: string,
+  vendor: string | undefined,
+): boolean {
+  if (s.type !== c.type || s.resource !== c.resource || !s.actions.includes(action)) return false;
+  const vendors = s.constraints?.vendors;
+  if (vendors && (vendor === undefined || !vendors.includes(vendor))) return false;
+  const sCap = s.constraints?.max_amount;
+  const cCap = c.constraints?.max_amount;
+  if (sCap) {
+    if (!cCap || sCap.currency !== cCap.currency) return false;
+    if (!isValidAmount(sCap.amount) || !isValidAmount(cCap.amount)) return false;
+    if (compareAmounts(sCap.amount, cCap.amount) < 0) return false;
+  }
+  return true;
 }
 
 /** The Missions of an expansion chain, from `missionId` back to its root. */
@@ -459,6 +513,9 @@ export function adjudicateDrawdown(
   const chain = chainOf(kernel, predecessor.id);
   const restrictions = chainRestrictions(chain);
   if (requested.some((e) => restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
+  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
+  // policy; the final increment takes a fresh human approval.
+  if (!ceilingAuthorityLeftUndrawn(requested, ceiling)) return fallback("entire_remaining_ceiling");
   if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
   const windowStart = nowMs - options.chainRateBound.windowSeconds * 1000;
   const recent = chain.filter(

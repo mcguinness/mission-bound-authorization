@@ -32,7 +32,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
 import { IntentError } from "../src/kernel/intent.js";
-import { consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
+import { ceilingAuthorityLeftUndrawn, consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, LifecycleCommit, MissionRecord } from "../src/kernel/types.js";
 import {
   ApprovalSessionStore,
@@ -751,6 +751,101 @@ describe("fresh-approval fallback (@spec progressive#in-ceiling-expansion, progr
       "payments:payment.schedule",
       "payments:payment.schedule.cancel",
     ]);
+  });
+});
+
+describe("drawdown bounds (@spec progressive#drawdown-bounds)", () => {
+  // Ceiling and proposal entries keep the configured entry's delegation grant,
+  // which derivation carries onto the successor; only actions and constraints vary.
+  const entry = (actions: string[], constraints: Record<string, unknown>): AuthorityEntry =>
+    ({ ...(FULL_CEILING[0] as AuthorityEntry), actions, constraints }) as unknown as AuthorityEntry;
+  const ACME = { vendors: ["acme"] };
+  const cap = (amount: string) => ({ max_amount: { amount, currency: "USD" }, vendors: ["acme"] });
+
+  /** An expansion proposing exactly these entries. */
+  async function expandWith(subjectToken: string, entries: AuthorityEntry[]): Promise<Response> {
+    return tokenRequest({
+      ...expansionParams(subjectToken, crypto.randomUUID(), READ),
+      authorization_details: JSON.stringify(entries),
+    });
+  }
+
+  it("a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds", async () => {
+    // The ceiling's only authority beyond the Mission is invoice.list: one
+    // widened action, the chain's first drawdown, a consequential read.
+    const whole = await issueMission(READ, { ...ceilingOf(), authority_ceiling: [entry(READ_LIST, ACME)] });
+    await expectFreshApproval(whole.missionId, whole.accessToken, READ_LIST);
+    // The same request, with ceiling authority still undrawn after it, is adjudicated by policy.
+    const partial = await issueMission(READ, {
+      ...ceilingOf(),
+      authority_ceiling: [entry(READ_LIST, ACME), entry(["payments:payment.schedule"], cap("500.00"))],
+    });
+    await drawdown(partial.accessToken, crypto.randomUUID(), READ_LIST);
+  });
+
+  it("a drawdown narrower than a ceiling entry's constraint does not activate the entire remaining ceiling; at the ceiling's own constraint it does", async () => {
+    const ceiling = [entry(READ, ACME), entry(["payments:payment.schedule"], cap("500.00"))];
+    const narrow = await issueMission(READ, { ...ceilingOf(), authority_ceiling: ceiling });
+    const res = await expandWith(narrow.accessToken, [entry(READ, ACME), entry(["payments:payment.schedule"], cap("200.00"))]);
+    const body = (await res.json()) as Completed;
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(successorsOf(narrow.missionId).map((m) => m.id)).toEqual([body.mission_id]);
+
+    const full = await issueMission(READ, { ...ceilingOf(), authority_ceiling: ceiling });
+    const before = as.kernel.allMissions().length;
+    const fell = await expandWith(full.accessToken, [entry(READ, ACME), entry(["payments:payment.schedule"], cap("500.00"))]);
+    const fellBody = (await fell.json()) as { error?: string };
+    expect(fell.status, JSON.stringify(fellBody)).toBe(400);
+    expect(fellBody.error).toBe("authorization_pending");
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a ceiling entry's authority split across several successor entries counts as held: that final increment falls back", async () => {
+    const q3 = { resource_issued_after: "2026-07-01T00:00:00Z", resource_issued_before: "2026-09-30T23:59:59Z" };
+    const firstHalf = { ...ACME, resource_issued_after: "2026-07-01T00:00:00Z", resource_issued_before: "2026-08-16T00:00:00Z" };
+    const secondHalf = { ...ACME, resource_issued_after: "2026-08-16T00:00:00Z", resource_issued_before: "2026-09-30T23:59:59Z" };
+    const LIST = ["payments:invoice.list"];
+    const split = [entry(LIST, ACME), entry(READ, firstHalf), entry(READ, secondHalf)];
+    // The two windows together hold the ceiling's whole Q3 read grant. The
+    // two-action policy keeps the per-drawdown bound out of the way.
+    const whole = await issueMission(LIST, {
+      ...ceilingOf("drawdown-wide"),
+      authority_ceiling: [entry(LIST, ACME), entry(READ, { ...ACME, ...q3 })],
+    });
+    const before = as.kernel.allMissions().length;
+    const fell = await expandWith(whole.accessToken, split);
+    const fellBody = (await fell.json()) as { error?: string };
+    expect(fell.status, JSON.stringify(fellBody)).toBe(400);
+    expect(fellBody.error).toBe("authorization_pending");
+    expect(as.kernel.allMissions().length).toBe(before);
+    // With ceiling authority left over, the same split is adjudicated by policy.
+    const partial = await issueMission(LIST, {
+      ...ceilingOf("drawdown-wide"),
+      authority_ceiling: [
+        entry(LIST, ACME),
+        entry(READ, { ...ACME, ...q3 }),
+        entry(["payments:payment.schedule"], cap("500.00")),
+      ],
+    });
+    const res = await expandWith(partial.accessToken, split);
+    expect(res.status, JSON.stringify(await res.json())).toBe(200);
+  });
+
+  it("ceiling authority split across successor entries by vendor or amount counts as held (unit)", () => {
+    const at = (actions: string[], constraints: Record<string, unknown>) => entry(actions, constraints);
+    const ceiling = [at(READ, { vendors: ["acme", "globex"] })];
+    // One entry per vendor holds the two-vendor grant.
+    expect(ceilingAuthorityLeftUndrawn([at(READ, { vendors: ["acme"] }), at(READ, { vendors: ["globex"] })], ceiling)).toBe(false);
+    expect(ceilingAuthorityLeftUndrawn([at(READ, { vendors: ["acme"] })], ceiling)).toBe(true);
+    // An amount cap is held only up to its highest successor cap.
+    const capped = [at(["payments:payment.schedule"], cap("500.00"))];
+    expect(ceilingAuthorityLeftUndrawn([at(["payments:payment.schedule"], cap("200.00"))], capped)).toBe(true);
+    expect(
+      ceilingAuthorityLeftUndrawn(
+        [at(["payments:payment.schedule"], cap("200.00")), at(["payments:payment.schedule"], cap("500.00"))],
+        capped,
+      ),
+    ).toBe(false);
   });
 });
 
