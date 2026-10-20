@@ -1799,14 +1799,14 @@ the execution reference:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "emitter": { "id": "receipts.example.com", "role": "receipt_issuer" },
   "evidence": [
     {
       "type": "application/mission-decision-evidence+json",
       "digest":
-        "sha-256:fS_yB6-Yit7Gsz-6vw73q7YphoiRm3VwC-3Pk8xW9J0",
+        "sha-256:BZw6_RrU7bLAGRPMtog8mub_36PaiBEHp1Obw7OjzwY",
       "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
       "emitter": { "id": "pdp.example.com", "role": "pdp" }
     },
