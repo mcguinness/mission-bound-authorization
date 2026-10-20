@@ -1968,7 +1968,7 @@ async function evaluateInner(
   // it; it takes the request-fault classification ("or the request would
   // broaden it", @spec authzen#failure-condition-coverage), since continuing
   // another evaluation's activity would draw on a reservation this request
-  // was never issued. Run once the request would otherwise permit, like the
+  // was never issued. Run after the authority and constraint checks, like the
   // claim step, so a caller without authority learns nothing about leases.
   const lease = durationLeaseStep(req, opts.durationLeases, now().getTime());
   if (lease.kind === "refused") return deny("out_of_authority");

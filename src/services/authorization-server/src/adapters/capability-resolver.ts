@@ -33,7 +33,7 @@ export function trustedCapabilityResolver(
           const catalog = catalogs.find(c => c.service_id === service.id && c.resource === service.resource);
           for (const action of entry.actions) {
             const declared = service.actions?.find(a => a.id === action);
-            // @spec runtime#compound-actions — an action whose phases share one
+            // @spec runtime#compound-actions: an action whose phases share one
             // identifier serves SEVERAL tools, so it resolves one binding per
             // (action, tool): `normalizeCapabilitySources` keys uniqueness on
             // the (action, tool_id) pair, and the PDP's committed-binding check
