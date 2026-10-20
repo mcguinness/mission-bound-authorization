@@ -1425,7 +1425,7 @@ ordinary device authorization session. It applies the OAuth
 binding's Submission via PAR rules for the envelope's structure,
 closed top levels, and size bounds, and its Authority Proposal rules,
 reading "the same pushed request" as this request.<a href="#section-5-4" class="pilcrow">¶</a></p>
-<p id="section-5-5">The AS <span class="bcp14">MUST</span> complete steps 1 to 5 of the OAuth binding's Submission
+<p id="section-5-5">The AS <span class="bcp14">MUST</span> complete steps 1 to 6 of the OAuth binding's Submission
 Processing Order, and validate every proposed entry, before it issues
 a <code>device_code</code>, refusing a failure with the error code the OAuth
 binding's error mapping assigns to it at PAR, in an error response as
@@ -1433,7 +1433,7 @@ binding's error mapping assigns to it at PAR, in an error response as
 response, the client learns only the session outcomes of
 <a href="#outcomes" class="auto internal xref">Section 8.1</a>; the device grant has no front-channel step at which a
 later refusal could reach it with its code. Derivation and rendering
-(steps 6 and 7) run at the approval event (<a href="#approval" class="auto internal xref">Section 7</a>), where the
+(steps 7 and 8) run at the approval event (<a href="#approval" class="auto internal xref">Section 7</a>), where the
 Subject and authority source are established.<a href="#section-5-5" class="pilcrow">¶</a></p>
 </section>
 </div>
