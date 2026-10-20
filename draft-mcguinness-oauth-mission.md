@@ -1234,8 +1234,9 @@ The AS processes a submission in this order:
 2. Validate the `intent` object against the Mission Intent member
    definitions ({{mission-intent}}).
 3. Validate any authority proposal: refuse an entry of a type the AS
-   does not support, or one that fails its type's definition or an
-   advertised schema, with `invalid_authorization_details`, and a
+   does not support, or one that fails its type's definition or a
+   schema advertised for it or established out of band, with
+   `invalid_authorization_details`, and a
    proposed entry whose `resource` is not among the Intent's
    `target_resources`, with `invalid_request` ({{authority-proposal}}).
 4. Compute the provisional `intent_hash` over the `intent` object
@@ -1251,9 +1252,10 @@ The AS processes a submission in this order:
    presented entry under its type's rules
    ({{intent-submission-evidence}}).
 7. Apply admission policy and derive the Authority Set independently
-   ({{authorization-derivation}}), including each derived entry's
-   same-type subset of a proposed entry ({{authority-proposal}}) and
-   its `target_resources` membership ({{derivation-modes}}).
+   ({{authorization-derivation}}), including, where a proposal was
+   submitted, that each derived entry is a same-type subset of a
+   proposed entry ({{authority-proposal}}), and each entry's
+   `target_resources` membership ({{derivation-modes}}).
 8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
@@ -1330,7 +1332,7 @@ candidate Authority Set is complete before the approval rendering
 changed context. The approved Authority Set is fixed when the Mission
 Record is created, atomically with the approval decision
 ({{direct-approval-steps}}), under the derivation policy in force at
-that approval event.
+the approval event.
 
 In both modes the AS bounds every Authority Set entry by the Mission
 Intent: each entry that carries a `resource` member MUST have it among
