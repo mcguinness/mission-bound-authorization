@@ -326,9 +326,9 @@ human approval ({{I-D.draft-mcguinness-oauth-mission}}, Section
      ({{capability-verification}});
 3. at the approval decision, revalidate each binding against the
    current source before the Mission is created, treating a changed
-   binding as a change to the derived Authority Set under the
-   issuance profile's Changes Before the Decision
-   ({{I-D.draft-mcguinness-oauth-mission}}); and
+   binding as a change to the derived Authority Set
+   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Changes Before
+   the Decision"); and
 4. commit exactly the bindings of the candidate the Approver
    consented to, never a binding resolved afresh at the commit.
 
