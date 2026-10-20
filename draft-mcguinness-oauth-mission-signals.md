@@ -780,8 +780,11 @@ purposes independent of any consumer's enforcement posture.
 
 The ERP resource server (`erp.example.com`) consumes Mission lifecycle
 signals so it can stop honoring a Mission promptly rather than wait out
-token lifetimes. `alice` revokes her Q3 reconciliation Mission. The
-Mission Issuer commits the transition to `terminated` with reason
+token lifetimes. The agent `s6BhdRkqt3` revokes `alice`'s Q3
+reconciliation Mission under an explicit lifecycle authorization the
+deployment grants it for this Mission
+({{I-D.draft-mcguinness-oauth-mission-status}}). The Mission Issuer
+commits the transition to `terminated` with reason
 `revoked` and pushes a SET to the
 consumer's receiver ({{RFC8935}}). Decoded SET:
 
