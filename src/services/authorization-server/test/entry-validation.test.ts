@@ -170,6 +170,17 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
     await expectAccepted(entry({ delegation: { max_depth: 0, children: { max_children: 2 } } }));
   });
 
+  it("refuses an allowed_delegates matcher carrying neither sub nor sub_profile, or carrying another member", async () => {
+    await expectRefused(
+      entry({ delegation: { max_depth: 1, allowed_delegates: [{}] } }),
+      /delegation\.allowed_delegates entries must carry sub or sub_profile/,
+    );
+    await expectRefused(
+      entry({ delegation: { max_depth: 1, allowed_delegates: [{ sub_profile: "ai_agent", org: "A" }] } }),
+      /delegation\.allowed_delegates entries carry no member 'org'/,
+    );
+  });
+
   it("refuses a time_window whose not_before is later than its not_after, and accepts equal bounds", async () => {
     await expectRefused(
       entry({
