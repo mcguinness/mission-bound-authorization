@@ -686,9 +686,10 @@ Table of Contents
      "state": "terminated",
      "termination": {
        "reason": "revoked",
-       "terminated_at": "2026-11-02T08:30:00Z"
+       "terminated_at": "2026-11-02T08:53:20Z",
+       "version": 4
      },
-     "transitioned_at": "2026-11-02T08:30:00Z"
+     "transitioned_at": "2026-11-02T08:53:20Z"
    }
 
    Its JCS canonical bytes (one line; breaks are for display only):
@@ -696,10 +697,11 @@ Table of Contents
    {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
    4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"term
    inated","termination":{"reason":"revoked","terminated_at":"2026-11
-   -02T08:30:00Z"},"transitioned_at":"2026-11-02T08:30:00Z"}
+   -02T08:53:20Z","version":4},"transitioned_at":"2026-11-02T08:53:20
+   Z"}
 
    The committed digest is the SHA-256 of those bytes; its base64url
-   form is n7MnMBoJTOuPTZvgNvb5Kp3-iwVkP25t-9VdMU_uQCY.  The Signed
+   form is iyIviMAuD1vQLLQNYwWIl6Q6YuBA4vyt6L1i8ByAsu0.  The Signed
    Statement carries the digest bytes inline as its payload, with this
    protected header (Section 5.1, Section 7):
 
@@ -795,19 +797,19 @@ Table of Contents
      "aud": "https://erp.example.com",
      "entries_digest":
        "sha-256:Hilv4npLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o",
-     "issued_at": "2026-10-15T14:32:12Z"
+     "issued_at": "2026-11-02T08:14:00Z"
    }
 
    Its JCS canonical bytes (one line; breaks are for display only):
 
    {"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4np
-   LEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14:3
-   2:12Z","issuer":"https://as.example.com","mission_id":"msn_8RfX2Lq
+   LEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-11-02T08:1
+   4:00Z","issuer":"https://as.example.com","mission_id":"msn_8RfX2Lq
    v9TqMv4z7sA2bN1k0YpEdHc9-","token_digest":"sha-256:V1Wbh4Z3wK39B_Y
    mzHlvkGr7hEA1rUoJMuj00y0q-eE","token_digest_kind":"jti"}
 
    The committed digest is the SHA-256 of those bytes; its base64url
-   form is ilGnfpu7hz4kMZeqXWuxwNi0i_fO2vzjWGOY_i9yt4s.  The Signed
+   form is qSXEIPaVGlUC9JOE7XMZM7TzP-ljyAcPA7ui-zubEvA.  The Signed
    Statement carries the digest bytes inline as its payload, with
    payload-preimage-content-type application/mission-derivation-
    record+json and the same iss and sub as Section 5.3.1.1.
@@ -862,7 +864,7 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "policy_view_id":
          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
      },
@@ -886,7 +888,7 @@ Table of Contents
      "emitter": { "id": "pdp.example.com", "role": "pdp" },
      "evaluated_at": "2026-11-02T08:14:03Z",
      "entry_digest":
-       "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
+       "sha-256:udlEKpPuIOeI0ZXcDxTvNCw0LFrwGiPWa7UwX9sZf1c",
      "evidence_envelope": {
        "format": "jws-compact",
        "value":
@@ -901,16 +903,16 @@ Table of Contents
          mdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtY
          XhfYW1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZ
          CI6InBkcC5leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZ
-         XN0Ijoic2hhLTI1NjpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfT
-         E1oUFFzcWZOSktRIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxN
+         XN0Ijoic2hhLTI1Njp1ZGxFS3BQdUlPZUkwWlhjRHhUdk5DdzBMRnJ3R2lQV
+         2E3VXdYOXNaZjFjIiwiZXZhbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxN
          DowM1oiLCJldmFsdWF0aW9uX2lkIjoiZGVjXzhLMm5QNHFWOXJMM3RZNnNCM
          XpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJldmRfOU5xM1RtUjZ4TDJ2UDhrW
          TRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiYXV0aG9yaXR5X2hhc2giO
-         iJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTdzWDFjRjhnSDJ2S
-         jRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZc
+         iJzaGEtMjU2OmhqWGx3V0JZNjQtUlBzMVotRV9nYnlrbE5jVmlJNWM5aml5T
+         WJFNEt2Rk0iLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyYk4xazBZc
          EVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJwb
          2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZ
-         UY4akM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic
+         UY4akM1d0gwcFYyblIza1E0bVo3cyJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic
          2hhLTI1NjpXUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtd
          jNUZkNJIiwicmVzb3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiL
          CJ0eXBlIjoiam91cm5hbC1lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY
@@ -939,7 +941,7 @@ Table of Contents
    02T08:15:00Z"},"contributing_constraints":["mission_resource_acces
    s","max_amount"],"decision":"permit","emitter":{"id":"pdp.example.
    com","role":"pdp"},"entry_digest":"sha-
-   256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ","evaluated_at":"2
+   256:udlEKpPuIOeI0ZXcDxTvNCw0LFrwGiPWa7UwX9sZf1c","evaluated_at":"2
    026-11-
    02T08:14:03Z","evaluation_id":"dec_8K2nP4qV9rL3tY6sB1zN0eF7jB","ev
    idence_envelope":{"format":"jws-compact","value":"eyJhbGciOiJFUzI1
@@ -953,15 +955,15 @@ Table of Contents
    pbmdfY29uc3RyYWludHMiOlsibWlzc2lvbl9yZXNvdXJjZV9hY2Nlc3MiLCJtYXhfY
    W1vdW50Il0sImRlY2lzaW9uIjoicGVybWl0IiwiZW1pdHRlciI6eyJpZCI6InBkcC5
    leGFtcGxlLmNvbSIsInJvbGUiOiJwZHAifSwiZW50cnlfZGlnZXN0Ijoic2hhLTI1N
-   jpkUENOTEhzWnV6UFh1aGNvX3MyMVZUdkRJNGNhZ0lfTE1oUFFzcWZOSktRIiwiZXZ
+   jp1ZGxFS3BQdUlPZUkwWlhjRHhUdk5DdzBMRnJ3R2lQV2E3VXdYOXNaZjFjIiwiZXZ
    hbHVhdGVkX2F0IjoiMjAyNi0xMS0wMlQwODoxNDowM1oiLCJldmFsdWF0aW9uX2lkI
    joiZGVjXzhLMm5QNHFWOXJMM3RZNnNCMXpOMGVGN2pCIiwiZXZpZGVuY2VfaWQiOiJ
    ldmRfOU5xM1RtUjZ4TDJ2UDhrWTRzRDFlQjdqSDB3QzV1QSIsIm1pc3Npb24iOnsiY
-   XV0aG9yaXR5X2hhc2giOiJzaGEtMjU2OmwzS3ZaNG1QNXgwd1FyUjZ0WTJuRDliTTd
-   zWDFjRjhnSDJ2SjRrRTVwTlEiLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyY
+   XV0aG9yaXR5X2hhc2giOiJzaGEtMjU2OmhqWGx3V0JZNjQtUlBzMVotRV9nYnlrbE5
+   jVmlJNWM5aml5TWJFNEt2Rk0iLCJpZCI6Im1zbl84UmZYMkxxdjlUcU12NHo3c0EyY
    k4xazBZcEVkSGM5LSIsImlzc3VlciI6Imh0dHBzOi8vYXMuZXhhbXBsZS5jb20iLCJ
    wb2xpY3lfdmlld19pZCI6InNoYS0yNTY6a1AzeFI5c1E3bk0ydkw0dFk2YkQxZUY4a
-   kM1d0gwcFYyblIza1E0bVo3dCJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI1Njp
+   kM1d0gwcFYyblIza1E0bVo3cyJ9LCJwYXJhbWV0ZXJfZGlnZXN0Ijoic2hhLTI1Njp
    XUFZpNkVuUTdIOUZoLXFrOUFEeG1UZzh6cnVPZFZVWDFlc2wtdjNUZkNJIiwicmVzb
    3VyY2UiOnsiaWQiOiJqZV8yMDI2UTNfaW52Xzg0MjEiLCJ0eXBlIjoiam91cm5hbC1
    lbnRyeSJ9LCJzZXF1ZW5jZSI6NDIsInN1YmplY3QiOnsiaWQiOiJ1c2VyXzNwMnE4b
@@ -969,17 +971,17 @@ Table of Contents
    V0Mysvhkwe9Lx-
    4z5KuH6nIgB9chzIMoCu1IBtmPq0eCi5YKa5OfccHg"},"evidence_id":"evd_9N
    q3TmR6xL2vP8kY4sD1eB7jH0wC5uA","mission":{"authority_hash":"sha-
-   256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","id":"msn_8RfX2Lq
-   v9TqMv4z7sA2bN1k0YpEdHc9-
-   ","issuer":"https://as.example.com","policy_view_id":"sha-
-   256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7t"},"parameter_diges
+   256:hjXlwWBY64-RPs1Z-
+   E_gbyklNcViI5c9jiyMbE4KvFM","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEd
+   Hc9-","issuer":"https://as.example.com","policy_view_id":"sha-
+   256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"},"parameter_diges
    t":"sha-256:WPVi6EnQ7H9Fh-qk9ADxmTg8zruOdVUX1esl-
    v3TfCI","resource":{"id":"je_2026Q3_inv_8421","type":"journal-entr
    y"},"sequence":42,"subject":{"id":"user_3p2q8mN1a0kV7tR","type":"u
    ser"}}
 
    The committed digest is the SHA-256 of those bytes; its base64url
-   form is WmWZVqJc9U3SKX2ZuPbtWtc_kAgaIFtGh6L7gQuc284.  The Signed
+   form is Zg3R5DixyCYIXXoMU8ae68kZ5GDcHRG76ximop8KIf8.  The Signed
    Statement carries the digest bytes inline as its payload, with
    payload-preimage-content-type application/mission-decision-
    evidence+json in its protected header (Section 5.1).  A verifier that
@@ -1334,13 +1336,15 @@ Table of Contents
 
    At the approval event for Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the Mission Issuer records
-   Consent Evidence and registers it.  It does not put the disclosure in
-   the log; it signs a Signed Statement whose payload is the hash of the
-   Consent Evidence, carried inline, with the hash algorithm and the
-   evidence media type in the protected header (Section 5.1).  The sub
-   is the Mission feed, derived from the Mission issuer and id; the iss
-   is the Mission Issuer.  Protected header, in CBOR extended diagnostic
-   notation ([RFC8610], Appendix G):
+   Consent Evidence (the worked evidence cns_7rP2kL9mQ4 of
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]) and registers
+   it.  It does not put the disclosure in the log; it signs a Signed
+   Statement whose payload is the hash of the Consent Evidence, carried
+   inline, with the hash algorithm and the evidence media type in the
+   protected header (Section 5.1).  The sub is the Mission feed, derived
+   from the Mission issuer and id; the iss is the Mission Issuer.
+   Protected header, in CBOR extended diagnostic notation ([RFC8610],
+   Appendix G):
 
    {
      / alg /                    1: -7,   / ES256 /
@@ -1358,29 +1362,34 @@ Table of Contents
    The payload is the SHA-256 digest of the JCS canonical bytes of the
    retained Consent Evidence object, evidence_envelope included
    (Section 5.3), carried inline as the raw digest whose base64url form
-   is CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz, not that display
+   is ABgvgPAXUukhkxer0K6MzkH6XEL8VBc2WRwjXvt5Wa4, not that display
    string.  The Transparency Service appends the statement and returns a
    Receipt, a COSE_Sign1 with an inclusion proof in its unprotected
    header, which the Mission Issuer keeps with the evidence as a
    Transparent Statement.
 
    As the Mission proceeds, its other producers write to the same sub:
-   the Mission Issuer registers a derivation record when it derives the
-   agent's token (Section 5.3.2), the PDP registers a decision-evidence
+   the Mission Issuer registers a derivation record each time it derives
+   a token (Section 5.3.2), the PDP registers a decision-evidence
    commitment when it permits the journal-entries.write, and the Mission
-   Issuer registers a lifecycle-change commitment when alice later
-   completes the Mission.  Collecting the records registered under that
-   one sub (Section 5.6) gives the Mission's whole history, in order,
-   append-only:
+   Issuer registers a lifecycle-change commitment as the Mission is
+   suspended, resumed, and then revoked.  Collecting the records
+   registered under that one sub (Section 5.6) gives the Mission's whole
+   history, in order, append-only:
 
    sub =
    https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
      #1  approval-event        iss=as.example.com    t0
      #2  consent-evidence      iss=as.example.com    t0
-     #3  derivation-record     iss=as.example.com    t0
-     #4  decision-evidence     iss=pdp.example.com   t0+6h
-     #5  lifecycle: completed  iss=as.example.com    t0+6h
+     #3  derivation-record     iss=as.example.com    t0+5s
+     #4  derivation-record     iss=as.example.com    t0+10m05s
+     #5  derivation-record     iss=as.example.com    t0+14m
+     #6  decision-evidence     iss=pdp.example.com   t0+14m03s
+     #7  lifecycle: suspended  iss=as.example.com    t0+20m
+     #8  lifecycle: active     iss=as.example.com    t0+30m
+     #9  derivation-record     iss=as.example.com    t0+50m
+     #10 lifecycle: revoked    iss=as.example.com    t0+53m20s
 
    A compliance auditor in another domain, holding none of these
    deployments' logs, takes the Transparent Statement for #2, verifies

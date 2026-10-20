@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-20T00:43:26Z
-Source repository commit: 03c10a35665c9e5186f753301fc384e76c520d8f
+Generated: 2026-10-20T04:45:37Z
+Source repository commit: b02aa96f5c3f1876c0b07800f7b70f5ff88ac00e
 Member count: 7
 
 Reading order:
@@ -340,11 +340,11 @@ Table of Contents
        binding).
 
    2.  *Approve and record.* The authorization server derives and
-       discloses an Authority Set (read invoices, post adjustments under
-       a cap), and the Approver approves.  The approval event creates
-       the Mission, active with an expiry, and commits intent_hash,
-       authority_hash, and, where a proposal was submitted,
-       proposal_hash; Consent Evidence commits what was shown
+       discloses an Authority Set (read invoices, post adjustments of at
+       most USD 500 per journal entry), and the Approver approves.  The
+       approval event creates the Mission, active with an expiry, and
+       commits intent_hash, authority_hash, and, where a proposal was
+       submitted, proposal_hash; Consent Evidence commits what was shown
        ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
    3.  *Issue.* Tokens are derived under the subset rule, carry the
@@ -357,7 +357,7 @@ Table of Contents
        ([I-D.draft-mcguinness-mission-runtime],
        [I-D.draft-mcguinness-mission-authzen]).
 
-   5.  *Delegate.* A sub-agent that verifies ledger entries receives a
+   5.  *Delegate.* A read-only invoice extraction sub-agent receives a
        child Mission with strictly narrower authority and lineage
        ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
 
@@ -652,8 +652,9 @@ Table of Contents
    A Mission commits its authority and intent once, at approval, but an
    agent's work is open-ended: the actions a task will take are not
    known when it is approved.  "Reconcile Q3 invoices" must authorize
-   reading any invoice and posting any adjustment under the cap, because
-   the specific ones cannot be enumerated in advance.
+   reading any invoice issued in the quarter and posting any adjustment
+   within the per-entry cap, because the specific ones cannot be
+   enumerated in advance.
 
    So the Authority Set an Approver consents to is a *capability
    envelope, not a task specification*, and the gap between that
@@ -7621,6 +7622,8 @@ Table of Contents
      A.2.  Stage 1: Mission Creation
      A.3.  Stage 2: Mission-Bound Token Issuance
      A.4.  Stage 3: The Resource Server Enforces
+     A.5.  Stage 4: The Resource Server Refuses
+     A.6.  Stage 5: Suspension, Resumption, and Revocation
    Appendix B.  Design Context and Boundaries
      B.1.  Relationship to Existing OAuth Objects
      B.2.  Relationship to Adjacent Work
@@ -7972,7 +7975,9 @@ Table of Contents
    capitals, as shown here.
 
    All JSON shown in this document is non-normative and illustrative;
-   the member definitions in the surrounding text are authoritative.
+   the member definitions in the surrounding text are authoritative.  An
+   example line too long for the page is folded with the single
+   backslash strategy of [RFC8792].
 
    Agent (Client):  The OAuth client acting for the Mission's Subject,
       identified by client_id.  Agent identity is established per
@@ -8256,12 +8261,15 @@ Table of Contents
 
    The following is an example of a Mission Intent:
 
+   =============== NOTE: '\' line wrapping per RFC 8792 ===============
+
    {
-     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+     "goal": "Reconcile Q3 invoices and post adjustments of at most \
+       USD 500 per journal entry.",
      "target_resources": ["https://erp.example.com"],
      "task_bounds": [
        "Read only invoices issued in 2026-Q3.",
-       "Post journal entries under $500."
+       "Post journal entries of at most USD 500 each."
      ],
      "purpose": "urn:example:purpose:reconcile",
      "expires_at": "2026-12-31T23:59:59Z"
@@ -8381,9 +8389,12 @@ Table of Contents
    compact Intent and one evidence entry of an illustrative, deployment-
    defined type:
 
+   =============== NOTE: '\' line wrapping per RFC 8792 ===============
+
    {
      "intent": {
-       "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+       "goal": "Reconcile Q3 invoices and post adjustments of at most \
+         USD 500 per journal entry.",
        "target_resources": ["https://erp.example.com"],
        "expires_at": "2026-12-31T23:59:59Z"
      },
@@ -10017,8 +10028,8 @@ Table of Contents
      "sub": "user_3p2q8mN1a0kV7tR",
      "aud": "https://erp.example.com",
      "client_id": "s6BhdRkqt3",
-     "iat": 1797840000,
-     "exp": 1797840300,
+     "iat": 1793606405,
+     "exp": 1793606705,
      "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
      "authorization_details": [
        { "type": "mission_resource_access",
@@ -10670,7 +10681,7 @@ Table of Contents
      "sub": "user_3p2q8mN1a0kV7tR",
      "client_id": "s6BhdRkqt3",
      "aud": "https://erp.example.com",
-     "exp": 1797840300,
+     "exp": 1793606705,
      "authorization_details": [
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
@@ -10694,15 +10705,16 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "proposal_hash":
-         "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+         "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
        "state": "active"
      }
    }
 
-   The following is an example of the response for the same token after
-   the Mission is revoked (Section 11.2):
+   The following is an example of the response, after the Mission is
+   revoked, for an unexpired token the AS issued on refresh before the
+   revocation (Section 11.2):
 
    {
      "active": false,
@@ -10710,11 +10722,11 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "state": "terminated",
        "termination": {
          "reason": "revoked",
-         "terminated_at": "2026-11-02T08:30:00Z"
+         "terminated_at": "2026-11-02T08:53:20Z"
        }
      }
    }
@@ -11045,8 +11057,8 @@ Table of Contents
      "sub": "user_3p2q8mN1a0kV7tR",
      "aud": "https://erp.example.com",
      "client_id": "tool-runner-7",
-     "iat": 1797840600,
-     "exp": 1797840900,
+     "iat": 1793607005,
+     "exp": 1793607305,
      "jti": "at_3qX5bN7sR1tY8mZ9Kp2v",
      "authorization_details": [
        { "type": "mission_resource_access",
@@ -11450,12 +11462,21 @@ Table of Contents
 
    The following is an example of a Mission Record:
 
+   =============== NOTE: '\' line wrapping per RFC 8792 ===============
+
    {
      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
      "issuer": "https://as.example.com",
      "state": "active",
-     "intent": { "goal": "Reconcile Q3 invoices ...",
+     "intent": {
+       "goal": "Reconcile Q3 invoices and post adjustments of at most \
+         USD 500 per journal entry.",
        "target_resources": ["https://erp.example.com"],
+       "task_bounds": [
+         "Read only invoices issued in 2026-Q3.",
+         "Post journal entries of at most USD 500 each."
+       ],
+       "purpose": "urn:example:purpose:reconcile",
        "expires_at": "2026-12-31T23:59:59Z" },
      "proposed_authority": [
        { "type": "mission_resource_access",
@@ -11496,11 +11517,11 @@ Table of Contents
          } }
      ],
      "authority_hash":
-       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+       "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
      "intent_hash":
-       "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+       "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
      "proposal_hash":
-       "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+       "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
      "subject": { "iss": "https://idp.example.com",
        "sub": "user_3p2q8mN1a0kV7tR" },
      "approval_basis": {
@@ -11512,13 +11533,13 @@ Table of Contents
          "sub": "user_3p2q8mN1a0kV7tR" },
        "adjudication": { "kind": "human" },
        "root_commitment":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
      },
      "authority_source": { "type": "user_delegated" },
      "client_id": "s6BhdRkqt3",
      "policy_version": "deploy-policy:v17",
      "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-     "created_at": "2026-10-15T14:32:11Z",
+     "created_at": "2026-11-02T08:00:00Z",
      "expires_at": "2026-12-31T23:59:59Z"
    }
 
@@ -11545,11 +11566,11 @@ Table of Contents
      }
    }
 
-   The hash values above are illustrative: the test vectors (Appendix E)
-   compute anchors over a reduced Mission Intent and Authority Set, not
-   over these objects.  A companion that extends this example either
-   reproduces the recorded objects byte-exactly or states that its
-   example diverges and its anchors differ.
+   The first example's anchors are computed over its displayed intent,
+   proposed_authority and authority_set (Section 14.1); the excerpt's
+   root_commitment is illustrative.  A companion that extends this
+   example either reproduces the recorded objects byte-exactly or states
+   that its example diverges and its anchors differ.
 
 14.  Integrity and Commitments
 
@@ -13475,6 +13496,11 @@ Table of Contents
               DOI 10.17487/RFC8628, August 2019,
               <https://www.rfc-editor.org/rfc/rfc8628>.
 
+   [RFC8792]  Watsen, K., Auerswald, E., Farrel, A., and Q. Wu,
+              "Handling Long Lines in Content of Internet-Drafts and
+              RFCs", RFC 8792, DOI 10.17487/RFC8792, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8792>.
+
    [RFC8935]  Backman, A., Ed., Jones, M., Ed., Scurtescu, M., Ansari,
               M., and A. Nadalin, "Push-Based Security Event Token (SET)
               Delivery Using HTTP", RFC 8935, DOI 10.17487/RFC8935,
@@ -13493,11 +13519,12 @@ Table of Contents
 Appendix A.  End-to-End Example
 
    This appendix follows one Mission in a single trust domain through
-   Mission creation, token issuance, and resource server enforcement.
-   It is illustrative and adds no requirements.  The OAuth steps follow
-   this document; the identity setup follows
-   [I-D.draft-ietf-wimse-aims].  Identifiers and hash values are
-   illustrative, not computed from the displayed JSON.
+   Mission creation, token issuance, resource server enforcement, a
+   refusal, and revocation.  It is illustrative and adds no
+   requirements.  The OAuth steps follow this document; the identity
+   setup follows [I-D.draft-ietf-wimse-aims].  Identifiers are
+   illustrative; the hash values are computed over the displayed objects
+   (Section 14.1).
 
    The example uses the baseline issuance path: stateless enforcement
    bounded only by token lifetime.  Stage 3 notes where the optional
@@ -13524,13 +13551,16 @@ A.2.  Stage 1: Mission Creation
    through PAR (Section 4.1), carrying the Mission Intent and no
    evidence:
 
+   =============== NOTE: '\' line wrapping per RFC 8792 ===============
+
    {
      "intent": {
-       "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+       "goal": "Reconcile Q3 invoices and post adjustments of at most \
+         USD 500 per journal entry.",
        "target_resources": ["https://erp.example.com"],
        "task_bounds": [
          "Read only invoices issued in 2026-Q3.",
-         "Post journal entries under $500."
+         "Post journal entries of at most USD 500 each."
        ],
        "purpose": "urn:example:purpose:reconcile",
        "expires_at": "2026-12-31T23:59:59Z"
@@ -13560,6 +13590,40 @@ A.2.  Stage 1: Mission Creation
        } }
    ]
 
+   Both are parameters of one pushed authorization request ([RFC9126]),
+   with PKCE ([RFC7636]); client authentication is omitted, and extra
+   line breaks are for display purposes only:
+
+   POST /par HTTP/1.1
+   Host: as.example.com
+   Content-Type: application/x-www-form-urlencoded
+
+   response_type=code
+   &client_id=s6BhdRkqt3
+   &redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+   &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+   &code_challenge_method=S256
+   &mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Reconcile...
+   &authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+
+   The AS returns a request_uri:
+
+   HTTP/1.1 201 Created
+   Content-Type: application/json
+   Cache-Control: no-store
+
+   {
+     "request_uri": "urn:ietf:params:oauth:request_uri:6esc_11ACC5bwc",
+     "expires_in": 60
+   }
+
+   and the agent sends alice's user agent to the authorization endpoint
+   with it:
+
+   GET /authorize?client_id=s6BhdRkqt3&request_uri=urn%3Aietf%3Aparams
+     %3Aoauth%3Arequest_uri%3A6esc_11ACC5bwc HTTP/1.1
+   Host: as.example.com
+
    The AS (as.example.com) validates both, derives this Authority Set
    (each entry a same-type subset of a proposed entry, Section 4.2), and
    renders it for alice's consent:
@@ -13584,25 +13648,39 @@ A.2.  Stage 1: Mission Creation
        } }
    ]
 
-   After approval, the AS records Mission
-   msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9- in the active state with
-   authority_hash sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ,
-   intent_hash sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY, and
-   proposal_hash sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo.
+   alice approves at 08:00:00 UTC on 2026-11-02, and the AS records
+   Mission msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9- in the active state
+   (state version 1) with authority_hash sha-256:hjXlwWBY64-RPs1Z-
+   E_gbyklNcViI5c9jiyMbE4KvFM, intent_hash sha-256:6T-7s_f-
+   mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0, and proposal_hash sha-
+   256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo.
 
 A.3.  Stage 2: Mission-Bound Token Issuance
 
-   When the agent redeems the authorization code at the token endpoint,
-   the AS resolves the Mission from the grant (Section 6.10.1), checks
+   At 08:00:05 the agent redeems the authorization code with its PKCE
+   verifier and a DPoP proof ([RFC9449]):
+
+   POST /token HTTP/1.1
+   Host: as.example.com
+   Content-Type: application/x-www-form-urlencoded
+   DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+   grant_type=authorization_code
+   &code=SplxlOBeZQQYbYS6WxSbIA
+   &redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+   &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+
+   The AS resolves the Mission from the grant (Section 6.10.1), checks
    that it is active (Section 7), and issues a Mission-bound access
-   token for the ERP.  The token response carries the granted
-   authorization_details echo (Section 8) and the mission_id and
-   mission_expires_at response parameters (Section 6.10.4):
+   token for the ERP and a refresh token.  The token response carries
+   the granted authorization_details echo (Section 8) and the mission_id
+   and mission_expires_at response parameters (Section 6.10.4):
 
    {
      "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
      "token_type": "DPoP",
      "expires_in": 300,
+     "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
      "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
      "mission_expires_at": "2026-12-31T23:59:59Z",
      "authorization_details": [
@@ -13633,8 +13711,8 @@ A.3.  Stage 2: Mission-Bound Token Issuance
      "sub": "user_3p2q8mN1a0kV7tR",
      "aud": "https://erp.example.com",
      "client_id": "s6BhdRkqt3",
-     "iat": 1797840000,
-     "exp": 1797840300,
+     "iat": 1793606405,
+     "exp": 1793606705,
      "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
      "authorization_details": [
        { "type": "mission_resource_access",
@@ -13691,11 +13769,73 @@ A.4.  Stage 3: The Resource Server Enforces
    constraints.  Where the deployment runs the runtime profile
    ([I-D.draft-mcguinness-mission-runtime]), the resource server also
    obtains a point-of-use permit against current Mission state from a
-   policy decision point before executing the write.
+   policy decision point before executing the write.  The AuthZEN
+   profile's worked request ([I-D.draft-mcguinness-mission-authzen]) is
+   that check for a 423.50 USD posting at 08:14:03, made with a write-
+   only token the agent obtained by refresh at 08:14:00.
 
    The end-to-end example of the Mission Cross-Domain Projection profile
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) continues this
-   Mission to a partner ERP in another trust domain.
+   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) follows a Mission
+   like this one whose authority also covers a partner ERP in another
+   trust domain.
+
+A.5.  Stage 4: The Resource Server Refuses
+
+   The agent then asks the ERP to post a 780.00 USD adjustment with the
+   same write-only token.  The amount exceeds the entry's max_amount of
+   500.00 USD, so the ERP refuses it from the token alone as outside the
+   carried authority (Section 9).  This deployment accepts the agent
+   learning that more authority needs a new approval or an expansion
+   (Section 19.3.2), so the challenge carries mission_denial:
+
+   HTTP/1.1 403 Forbidden
+   WWW-Authenticate: DPoP error="insufficient_scope",
+     mission_denial="insufficient_authority"
+
+   A fresh token from the same Mission does not help: every token it
+   derives is a subset of the same Authority Set (Section 5.1).
+
+A.6.  Stage 5: Suspension, Resumption, and Revocation
+
+   The Mission is suspended at 08:20:00 and resumed at 08:30:00 (state
+   versions 2 and 3) through the lifecycle operations of the Mission
+   Status profile ([I-D.draft-mcguinness-oauth-mission-status]); the AS
+   derives nothing in between (Section 7).  At 08:50:00 the agent
+   refreshes for the read-only token of the refresh example in
+   Section 8, which expires at 08:55:00.
+
+   At 08:53:20 the agent revokes the Mission with the reason "Quarterly
+   reconcile completed early", under an explicit lifecycle authorization
+   the deployment grants it for this Mission
+   ([I-D.draft-mcguinness-oauth-mission-status]); its resource tokens
+   and refresh token confer no such authority.  The AS commits
+   terminated with reason revoked as state version 4, and a receiver of
+   the Mission Signals profile learns of it from a Security Event Token
+   ([I-D.draft-mcguinness-oauth-mission-signals]).  Revocation stops the
+   Mission at the issuer (Section 7.3).  A later refresh is refused with
+   the mission_error diagnostic (Section 7.2):
+
+   HTTP/1.1 400 Bad Request
+   Content-Type: application/json
+   Cache-Control: no-store
+
+   {
+     "error": "invalid_grant",
+     "mission_error": "revoked"
+   }
+
+   Introspection reports the 08:50:00 token inactive with the Mission's
+   termination, although the token has not expired (Section 11.5,
+   Section 11.2).
+
+   Revocation does not recall the token already issued.  The ERP,
+   enforcing from the token alone, can honor the read-only token until
+   its exp at 08:55:00.  A resource server that introspects at the
+   issuer on every request stops honoring it on its next request.  One
+   that obtains a point-of-use permit under the runtime profile
+   ([I-D.draft-mcguinness-mission-runtime]) stops within that
+   deployment's declared freshness and permit bounds, since a permit can
+   rest on a state observation taken before the revocation.
 
 Appendix B.  Design Context and Boundaries
 
@@ -14641,6 +14781,13 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Editorial (#1176): the examples of the canonical Mission follow
+      one dated history, with the Intent in full and anchors computed
+      over the displayed objects; an example line too long for the page
+      is folded per RFC 8792.  The end-to-end example continues through
+      the pushed request, code redemption with a refresh token, a
+      resource server refusal, and revocation.  No requirement changes.
 
    *  Editorial (#910): the approval rules for another principal and for
       an external Subject sit in a Subject Establishment subsection that
@@ -15982,7 +16129,7 @@ Table of Contents
    {
      "iss": "https://as.example.com",
      "aud": "https://erp.example.com",
-     "sub": "client_erp-recon-agent",
+     "sub": "s6BhdRkqt3",
      "nonce": "nonce_K9pV4nT2sR7mB1xQ",
      "iat": 1793606400,
      "exp": 1793606460,
@@ -15990,16 +16137,30 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "state": "active",
-       "version": 4,
+       "version": 1,
        "expires_at":  "2026-12-31T23:59:59Z",
        "fresh_until": "2026-11-02T08:00:45Z"
      },
      "authorization_details": [
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
-         "actions": ["invoices.read", "journal-entries.write"] }
+         "actions": ["invoices.read"],
+         "constraints": {
+           "resource_issued_after": "2026-07-01T00:00:00Z",
+           "resource_issued_before": "2026-09-30T23:59:59Z"
+         },
+         "delegation": {
+           "max_depth": 2,
+           "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+         } },
+       { "type": "mission_resource_access",
+         "resource": "https://erp.example.com",
+         "actions": ["journal-entries.write"],
+         "constraints": {
+           "max_amount": { "amount": "500.00", "currency": "USD" }
+         } }
      ]
    }
 
@@ -16378,19 +16539,18 @@ Table of Contents
    {
      "iss": "https://as.example.com",
      "aud": "https://erp.example.com",
-     "iat": 1793606400,
+     "iat": 1793606410,
      "token_introspection": {
        "active":  true,
        "client_id": "s6BhdRkqt3",
        "sub":     "user_3p2q8mN1a0kV7tR",
-       "scope":   "invoices.read",
        "mission": {
          "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
          "issuer": "https://as.example.com",
          "authority_hash":
-           "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+           "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
          "state":   "active",
-         "fresh_until": "2026-11-02T08:00:45Z"
+         "fresh_until": "2026-11-02T08:00:55Z"
        }
      }
    }
@@ -16829,8 +16989,8 @@ Table of Contents
 
    {
      "iss": "https://as.example.com",
-     "aud": "client_erp-recon-agent",
-     "sub": "client_erp-recon-agent",
+     "aud": "s6BhdRkqt3",
+     "sub": "s6BhdRkqt3",
      "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
      "iat": 1793609600,
      "exp": 1793609660,
@@ -16838,14 +16998,14 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "state": "terminated",
        "termination": {
          "reason": "revoked",
          "terminated_at": "2026-11-02T08:53:20Z",
-         "version": 7
+         "version": 4
        },
-       "version": 7,
+       "version": 4,
        "expires_at":  "2026-12-31T23:59:59Z",
        "fresh_until": "2026-11-02T08:54:05Z"
      }
@@ -16854,6 +17014,8 @@ Table of Contents
    The AS records the operation, actor, time, and any reason in its
    audit log; the response confirms the outcome through the updated
    state.
+
+   The next two examples use another Mission.
 
    Suspend request with a deadline, here also carrying the OPTIONAL
    expected_version guard against deciding over stale state
@@ -16865,11 +17027,11 @@ Table of Contents
    Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
    DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-   mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+   mission_id=msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5
    &operation=suspend
    &suspend_until=2026-11-09T08%3A15%3A00Z
    &on_expiry=revoke
-   &expected_version=5
+   &expected_version=1
    &reason=Pending+quarterly+access+review
    &nonce=nonce_4Dq2mV8kX1sB7nR3tW
 
@@ -16879,18 +17041,18 @@ Table of Contents
 
    {
      "iss": "https://as.example.com",
-     "aud": "client_erp-recon-agent",
-     "sub": "client_erp-recon-agent",
+     "aud": "s6BhdRkqt3",
+     "sub": "s6BhdRkqt3",
      "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
      "iat": 1793607600,
      "exp": 1793607660,
      "mission": {
-       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "state": "suspended",
-       "version": 6,
+       "version": 2,
        "suspend_until": "2026-11-09T08:15:00Z",
        "on_expiry": "revoke",
        "expires_at":  "2026-12-31T23:59:59Z",
@@ -22310,7 +22472,7 @@ Appendix B.  Policy View Worked Example
      "value": {
        "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "policy_version": "deploy-policy:v17",
        "compiler": {
          "profile": "https://as.example.com/policy-compiler",
@@ -22331,13 +22493,13 @@ Appendix B.  Policy View Worked Example
 
    {"iss":"https://as.example.com","typ":"mission-policy-view","value":
    {"artifact":{"digest":"sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ
-   4mZ7tX","encoding":"application/vnd.example.policy-engine+bin"},"aut
-   hority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","
+   4mZ7tU","encoding":"application/vnd.example.policy-engine+bin"},"aut
+   hority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","
    compiler":{"profile":"https://as.example.com/policy-compiler","versi
    on":"1.4.0"},"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","po
    licy_version":"deploy-policy:v17"}}
 
-   policy_view_id = sha-256:kFxuopgt9C4G7S4BhP7ayGhP49wG55HBnq0BzH09UZ8
+   policy_view_id = sha-256:RBI8j_YN5EWm4XNr7IMhvAeMxOuOkc-_mVMp1mBExP0
 
    Because the identifier is a content hash, any change to the manifest
    yields a different policy_view_id (Section 7.1).
@@ -23526,9 +23688,9 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "intent_hash":
-         "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+         "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
        "policy_version": "deploy-policy:v17",
        "policy_view_id":
          "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
@@ -23552,7 +23714,7 @@ Table of Contents
      },
      "credential": {
        "issuer": "https://as.example.com",
-       "expires_at": "2026-11-02T09:14:00Z"
+       "expires_at": "2026-11-02T08:19:00Z"
      },
      "resource": {
        "type": "journal-entry",
@@ -23576,7 +23738,7 @@ Table of Contents
      "emitter": { "id": "pdp.example.com", "role": "pdp" },
      "evaluated_at": "2026-11-02T08:14:03Z",
      "entry_digest":
-       "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
+       "sha-256:udlEKpPuIOeI0ZXcDxTvNCw0LFrwGiPWa7UwX9sZf1c",
      "evidence_envelope": {
        "format": "jws-compact",
        "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
@@ -23880,8 +24042,8 @@ Table of Contents
      "error":        "parameter_mismatch",
      "sequence":     44,
      "emitter":      { "id": "pep.example.com", "role": "executor" },
-     "attempted_at": "2026-11-02T09:03:28Z",
-     "outcome_at":   "2026-11-02T09:03:29Z",
+     "attempted_at": "2026-11-02T08:43:28Z",
+     "outcome_at":   "2026-11-02T08:43:29Z",
      "evidence_envelope": {
        "format": "jws-compact",
        "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
@@ -24245,14 +24407,14 @@ Table of Contents
        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
      },
      "emitter": { "id": "receipts.example.com", "role": "receipt_issuer" },
      "evidence": [
        {
          "type": "application/mission-decision-evidence+json",
          "digest":
-           "sha-256:fS_yB6-Yit7Gsz-6vw73q7YphoiRm3VwC-3Pk8xW9J0",
+           "sha-256:BZw6_RrU7bLAGRPMtog8mub_36PaiBEHp1Obw7OjzwY",
          "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
          "emitter": { "id": "pdp.example.com", "role": "pdp" }
        },
@@ -26638,7 +26800,7 @@ Table of Contents
 
    The policy_view_id values in this document's examples (sha-
    256:kP3xR9sQ...) differ from the runtime profile's worked
-   materialized-view value (sha-256:kFxuopgt...): the two manifests name
+   materialized-view value (sha-256:RBI8j_YN...): the two manifests name
    different compilers.  Both are valid views of the same Mission.
 
    For the ERP reconciliation Mission:
@@ -26702,12 +26864,15 @@ Table of Contents
        },
        "credential": {
          "issuer": "https://as.example.com",
-         "expires_at": "2026-11-02T09:14:00Z",
+         "expires_at": "2026-11-02T08:19:00Z",
          "authority": [
            {
              "type": "mission_resource_access",
              "resource": "https://erp.example.com",
-             "actions": ["journal-entries.write"]
+             "actions": ["journal-entries.write"],
+             "constraints": {
+               "max_amount": { "amount": "500.00", "currency": "USD" }
+             }
            }
          ]
        }
@@ -27002,12 +27167,15 @@ Table of Contents
            "actor": { "client_id": "s6BhdRkqt3" },
            "credential": {
              "issuer": "https://as.example.com",
-             "expires_at": "2026-11-02T09:14:00Z",
+             "expires_at": "2026-11-02T08:19:00Z",
              "authority": [
                {
                  "type": "mission_resource_access",
                  "resource": "https://erp.example.com",
-                 "actions": ["journal-entries.write"]
+                 "actions": ["journal-entries.write"],
+                 "constraints": {
+                   "max_amount": { "amount": "500.00", "currency": "USD" }
+                 }
                }
              ]
            }
@@ -27046,12 +27214,15 @@ Table of Contents
            "actor": { "client_id": "s6BhdRkqt3" },
            "credential": {
              "issuer": "https://as.example.com",
-             "expires_at": "2026-11-02T09:14:00Z",
+             "expires_at": "2026-11-02T08:19:00Z",
              "authority": [
                {
                  "type": "mission_resource_access",
                  "resource": "https://erp.example.com",
-                 "actions": ["journal-entries.write"]
+                 "actions": ["journal-entries.write"],
+                 "constraints": {
+                   "max_amount": { "amount": "500.00", "currency": "USD" }
+                 }
                }
              ]
            }

@@ -4495,7 +4495,7 @@ Appendix B.  Policy View Worked Example
      "value": {
        "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "policy_version": "deploy-policy:v17",
        "compiler": {
          "profile": "https://as.example.com/policy-compiler",
@@ -4516,13 +4516,13 @@ Appendix B.  Policy View Worked Example
 
    {"iss":"https://as.example.com","typ":"mission-policy-view","value":
    {"artifact":{"digest":"sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ
-   4mZ7tX","encoding":"application/vnd.example.policy-engine+bin"},"aut
-   hority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","
+   4mZ7tU","encoding":"application/vnd.example.policy-engine+bin"},"aut
+   hority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","
    compiler":{"profile":"https://as.example.com/policy-compiler","versi
    on":"1.4.0"},"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","po
    licy_version":"deploy-policy:v17"}}
 
-   policy_view_id = sha-256:kFxuopgt9C4G7S4BhP7ayGhP49wG55HBnq0BzH09UZ8
+   policy_view_id = sha-256:RBI8j_YN5EWm4XNr7IMhvAeMxOuOkc-_mVMp1mBExP0
 
    Because the identifier is a content hash, any change to the manifest
    yields a different policy_view_id (Section 7.1).

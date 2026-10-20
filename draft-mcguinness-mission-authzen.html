@@ -2674,7 +2674,7 @@ The AuthZEN <code>resource</code> object's <code>type</code> and <code>id</code>
 Resource-policy evaluation, not the operation target.<a href="#section-6.15-1" class="pilcrow">¶</a></p>
 <p id="section-6.15-2">The <code>policy_view_id</code> values in this document's examples
 (<code>sha-256:kP3xR9sQ...</code>) differ from the runtime profile's worked
-materialized-view value (<code>sha-256:kFxuopgt...</code>): the two manifests
+materialized-view value (<code>sha-256:RBI8j_YN...</code>): the two manifests
 name different compilers. Both are valid views of the same Mission.<a href="#section-6.15-2" class="pilcrow">¶</a></p>
 <p id="section-6.15-3">For the ERP reconciliation Mission:<a href="#section-6.15-3" class="pilcrow">¶</a></p>
 <div class="breakable lang-http-message sourcecode" id="section-6.15-4">
@@ -2738,12 +2738,15 @@ Authorization: ...
     },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z",
+      "expires_at": "2026-11-02T08:19:00Z",
       "authority": [
         {
           "type": "mission_resource_access",
           "resource": "https://erp.example.com",
-          "actions": ["journal-entries.write"]
+          "actions": ["journal-entries.write"],
+          "constraints": {
+            "max_amount": { "amount": "500.00", "currency": "USD" }
+          }
         }
       ]
     }
@@ -3077,12 +3080,15 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z",
+          "expires_at": "2026-11-02T08:19:00Z",
           "authority": [
             {
               "type": "mission_resource_access",
               "resource": "https://erp.example.com",
-              "actions": ["journal-entries.write"]
+              "actions": ["journal-entries.write"],
+              "constraints": {
+                "max_amount": { "amount": "500.00", "currency": "USD" }
+              }
             }
           ]
         }
@@ -3121,12 +3127,15 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z",
+          "expires_at": "2026-11-02T08:19:00Z",
           "authority": [
             {
               "type": "mission_resource_access",
               "resource": "https://erp.example.com",
-              "actions": ["journal-entries.write"]
+              "actions": ["journal-entries.write"],
+              "constraints": {
+                "max_amount": { "amount": "500.00", "currency": "USD" }
+              }
             }
           ]
         }

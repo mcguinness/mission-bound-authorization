@@ -528,12 +528,13 @@ Table of Contents
      "iat": 1793611740,
      "exp": 1793611800,
      "missions": [
-       { "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       { "id": "msn_hmJWfikLFPQykayEyxPaiqril0TBUnyM",
          "state": "active",
+         "version": 3,
          "subject": { "iss": "https://idp.example.com",
                       "sub": "user_3p2q8mN1a0kV7tR" },
          "client_id": "s6BhdRkqt3",
-         "created_at": "2026-10-15T14:32:11Z",
+         "created_at": "2026-11-02T08:00:00Z",
          "expires_at": "2026-12-31T23:59:59Z" }
      ]
    }
@@ -770,7 +771,7 @@ Table of Contents
      "exp": 1793612040,
      "operation": "revoke",
      "results": [
-       { "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       { "mission_id": "msn_hmJWfikLFPQykayEyxPaiqril0TBUnyM",
          "outcome": "applied" },
        { "mission_id": "msn_6VbT1yHn4RwQk9x3zE8sC5j2MpDfL0G-",
          "outcome": "already_terminal" },
