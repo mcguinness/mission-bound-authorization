@@ -107,7 +107,7 @@ Table of Contents
    Mission and must wait, sometimes for a long time, for a decision.
 
    This document supplies that.  It profiles OAuth Deferred Token
-   Response [I-D.draft-gerber-oauth-deferred-token-response] (the
+   Response [I-D.draft-ietf-oauth-deferred-token-response] (the
    "deferred substrate") so a Mission approval can be deferred and
    polled.
 
@@ -137,8 +137,8 @@ Table of Contents
 
    This profile tracks an in-progress substrate.  It depends normatively
    on OAuth Deferred Token Response
-   ([I-D.draft-gerber-oauth-deferred-token-response]), an early
-   Internet-Draft that is not ratified and whose details may change, so
+   ([I-D.draft-ietf-oauth-deferred-token-response]), an OAuth working
+   group Internet-Draft whose details may change before publication, so
    this profile is not yet a stable interface and will track the
    substrate as it evolves.  Synchronous Mission approval, which needs
    only the issuance profile, is the stable path; deploy deferred
@@ -178,7 +178,7 @@ Table of Contents
    Intent through PAR as the issuance profile requires, and includes
    deferred among the completion_mode values on the resulting token
    request, opting in to the deferred substrate
-   ([I-D.draft-gerber-oauth-deferred-token-response]).  When the Mission
+   ([I-D.draft-ietf-oauth-deferred-token-response]).  When the Mission
    Issuer cannot decide the approval immediately, for example because it
    routes the Proposed Mission to a human reviewer, it returns the
    substrate's deferred response (authorization_pending with a
@@ -198,7 +198,7 @@ Table of Contents
    1.  The client submits the Proposed Mission via PAR [RFC9126] and the
        authorization request completes into a deferred state per the
        deferred substrate
-       ([I-D.draft-gerber-oauth-deferred-token-response]).
+       ([I-D.draft-ietf-oauth-deferred-token-response]).
 
    2.  Before approval only the pending request exists.  The
        authorization artifact represents a pending authorization, never
@@ -297,8 +297,8 @@ Table of Contents
    recheck moves it to denied, never approved (Section 4.1).  The
    pending lifetime elapsing moves it to expired (Section 4.4), and
    client cancellation under the deferred substrate moves it to
-   cancelled ([I-D.draft-gerber-oauth-deferred-token-response]).
-   approved, denied, expired, and cancelled are terminal.
+   cancelled ([I-D.draft-ietf-oauth-deferred-token-response]). approved,
+   denied, expired, and cancelled are terminal.
 
           submit (PAR + deferred)
                    |
@@ -339,12 +339,12 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-approval-governance]) defines the
    Approval Governance Record for exactly that state, and it is
    ceremony-independent: a deployment records it for a deferred approval
-   under this profile precisely as for a synchronous one.  Where that
-   document's recording triggers hold for a deferred approval, the
-   issuer records the Approval Governance Record joined by
-   approval_event_id and committed atomically with the approval decision
-   it governs; the pending window changes when the decision happens,
-   never what is recorded about it.
+   under this profile precisely as for a synchronous one.  Where a
+   profile that adopts that document's recording triggers applies and a
+   trigger holds for a deferred approval, the issuer records the
+   Approval Governance Record joined by approval_event_id and committed
+   atomically with the approval decision it governs; the pending window
+   changes when the decision happens, never what is recorded about it.
 
 4.6.  Policy Completion
 
@@ -554,18 +554,18 @@ Table of Contents
 
    This document has no IANA actions.  The deferred completion mode and
    the deferred grant type are registered by the deferred substrate
-   ([I-D.draft-gerber-oauth-deferred-token-response]).
+   ([I-D.draft-ietf-oauth-deferred-token-response]).
 
 11.  References
 
 11.1.  Normative References
 
-   [I-D.draft-gerber-oauth-deferred-token-response]
+   [I-D.draft-ietf-oauth-deferred-token-response]
               Jacobsen, F. K., de Oliveira Niero, G., and M. Gerber,
               "Deferred Token Response", Work in Progress, Internet-
-              Draft, draft-gerber-oauth-deferred-token-response-00, 23
-              June 2026, <https://datatracker.ietf.org/doc/html/draft-
-              gerber-oauth-deferred-token-response-00>.
+              Draft, draft-ietf-oauth-deferred-token-response-00, 16
+              September 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-oauth-deferred-token-response-00>.
 
    [I-D.draft-mcguinness-mission-approval-governance]
               McGuinness, K., "Mission Approval Governance", 2026,
@@ -629,6 +629,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Approval Governance Record is recorded for a deferred approval
+      where a profile that adopts Mission Approval Governance's
+      recording triggers applies and a trigger holds, matching that
+      document's rule that the triggers bind only under an adopting
+      profile (#1436).
 
    *  Policy Completion: a pending approval can complete under Mission
       Approval Governance's governed_policy basis, with the deferral's

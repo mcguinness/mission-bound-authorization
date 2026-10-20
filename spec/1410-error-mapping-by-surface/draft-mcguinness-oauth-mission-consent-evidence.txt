@@ -1508,13 +1508,13 @@ Table of Contents
    This document requests registration of the following in the "OAuth
    Parameters" registry:
 
-   *  Name: mission_shaping_evidence_hash
+   *  Parameter name: mission_shaping_evidence_hash
 
-   *  Parameter Usage Location: authorization request
+   *  Parameter usage location: authorization request
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 4.6
+   *  Specification document(s): this document, Section 4.6
 
    PAR [RFC9126] carries authorization-request parameters without a
    distinct usage location, so the pushed parameter needs no separate
