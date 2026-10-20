@@ -1233,29 +1233,47 @@ The AS processes a submission in this order:
    ({{submission-via-par}}).
 2. Validate the `intent` object against the Mission Intent member
    definitions ({{mission-intent}}).
-3. Compute the provisional `intent_hash` over the `intent` object
+3. Validate any authority proposal: refuse an entry of a type the AS
+   does not support, or one that fails its type's definition or an
+   advertised schema, with `invalid_authorization_details`, and a
+   proposed entry whose `resource` is not among the Intent's
+   `target_resources`, with `invalid_request` ({{authority-proposal}}).
+4. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
-4. Apply any submission checks that configured admission policy or
+5. Apply any submission checks that configured admission policy or
    adopted profiles require before evidence verification, including
    when no `evidence` member is present. For example, the Submission
    Evidence companion resolves required evidence here and refuses a
    missing required type
    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
    "Required Evidence Is Resolved Before Derivation").
-5. Apply the evidence dispatch and refusal rules, verifying every
+6. Apply the evidence dispatch and refusal rules, verifying every
    presented entry under its type's rules
    ({{intent-submission-evidence}}).
-6. Apply admission policy and derive the Authority Set independently
-   ({{authorization-derivation}}).
-7. Render the Intent, the Authority Set, and the material verified
+7. Apply admission policy and derive the Authority Set independently
+   ({{authorization-derivation}}), including each derived entry's
+   same-type subset of a proposed entry ({{authority-proposal}}) and
+   its `target_resources` membership ({{derivation-modes}}).
+8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
    ({{approval-event}}).
-8. At activation, record the approved `intent`, `intent_hash`, the
+9. At activation, record the approved `intent`, `intent_hash`, the
    Authority Set, and the verified evidence facts as
    `submission_evidence` ({{mission-record}}).
 
-The material verified provenance of step 7 is part of the approval
+The AS MUST refuse a submission that fails more than one check with
+the error of the earliest failing step in this order. For example:
+
+- a malformed proposal together with a missing required evidence
+  type is refused at step 3, with `invalid_authorization_details`;
+- a proposed entry outside `target_resources` together with a
+  presented evidence entry that fails verification is refused at
+  step 3, with `invalid_request`; and
+- an `intent` object that fails validation together with a malformed
+  proposal is refused at step 2, with `invalid_request`.
+
+The material verified provenance of step 8 is part of the approval
 surface. Where a deployment commits the rendered approval surface,
 that commitment MUST cover the normalized provenance facts, at least
 as a digest of their canonical `submission_evidence` representation
