@@ -6930,6 +6930,14 @@ Cross-Domain:
 
 -01
 
+- Authority Proposal (#1448, D585): the Mission-governed client rule
+  reaches an authorization request, through PAR or at the
+  authorization endpoint, including a resumed one. A token request
+  under an existing Mission-bound grant needs no `mission_intent`
+  under it, and every other check still applies. Its Error and
+  Challenge Mapping row moves to the PAR and authorization endpoint
+  table.
+
 - Submission processing (#1411, D559): Submission Processing Order
   validates an authority proposal's type, schema, and
   `target_resources` membership after the Intent and before evidence,
