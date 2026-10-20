@@ -33,6 +33,7 @@ import {
   delegatedRoutingRefusal,
   isSubsetSetIgnoringCapabilitySources,
   type ScopeProjectionMapping,
+  unenforcedConstraintRefusal,
 } from "@mission/core";
 import { GateError, type MissionKernel } from "../kernel/kernel.js";
 import {
@@ -588,6 +589,15 @@ async function admit(
       fail(ctx, 400, "invalid_target", refusal);
       return;
     }
+  }
+  // @spec resource-access#resource-access-type (#1266): the transaction token
+  // is issued for the Challenge-Issuing Resource alone, so its entries carry
+  // only `constraints` keys the mapping knows that resource enforces, before
+  // the workflow is admitted or an approval opened.
+  const unenforced = unenforcedConstraintRefusal(deps.scopeProjection, [challenge.iss], requested);
+  if (unenforced) {
+    fail(ctx, 400, "invalid_target", unenforced);
+    return;
   }
 
   const nowS = Math.floor(deps.now().getTime() / 1000);

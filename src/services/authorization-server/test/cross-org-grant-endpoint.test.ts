@@ -74,8 +74,14 @@ const FULL_CEILING: AuthorityEntry[] = [
 const SCOPE_MAPPING = {
   audiences: {
     ...SCOPE_PROJECTION.audiences,
-    // Mission-aware: this destination processes the act chain the exchange mints.
-    [RESOURCE]: { version: "xorg-1", mission_aware: true, mode: "authorization_details" },
+    // Mission-aware: this destination processes the act chain the exchange
+    // mints, and enforces the max_amount its ceiling carries (#1266).
+    [RESOURCE]: {
+      version: "xorg-1",
+      mission_aware: true,
+      mode: "authorization_details",
+      mission_constraints_supported: ["max_amount"],
+    },
   } as Record<string, unknown>,
 };
 const READ_ONLY_CEILING: AuthorityEntry[] = [
@@ -590,7 +596,13 @@ describe("delegated routing on the cross-org exchange (@spec mission#rs-enforcem
   });
 
   it("mints the act-bearing token for an audience classified Mission-aware", async () => {
-    await withAudience({ version: "xorg-3", mission_aware: true, mode: "authorization_details" }, async () => {
+    const aware = {
+      version: "xorg-3",
+      mission_aware: true,
+      mode: "authorization_details",
+      mission_constraints_supported: ["max_amount"],
+    };
+    await withAudience(aware, async () => {
       const before = evidence.length;
       const { chain, leafKeys } = await buildChain();
       const res = await exchange({ subjectToken: present(chain), leafKeys });

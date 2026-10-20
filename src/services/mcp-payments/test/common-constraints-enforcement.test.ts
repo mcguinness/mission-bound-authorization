@@ -15,11 +15,13 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { IMPLEMENTED_COMMON_CONSTRAINTS } from "@mission/core";
+import { IMPLEMENTED_COMMON_CONSTRAINTS, SUPPORTED_CONSTRAINT_KEYS } from "@mission/core";
+import { AUTHORITY_SOURCES, DERIVATION_POLICY, GOVERNED_POLICIES, SCOPE_PROJECTION } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import {
+  buildListEffectiveParams,
   CANONICAL_RESOURCE,
   Connectors,
   createEphemeralEvidenceKeys,
@@ -28,6 +30,7 @@ import {
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
   PaymentsStore,
+  parameterDigest,
   Pep,
   TOOLS,
   type TokenFacts,
@@ -302,11 +305,11 @@ describe("the payments resource enforces tenant against its own ownership record
     expect(vendor.denial_reason).toBe("parameter_violation");
   });
 
-  it("refuses a resource whose record names no tenant (missing fact), and a collection read", async () => {
+  it("refuses a resource whose record names no tenant (missing fact), and a collection read with such a member", async () => {
     const h = harness({ mission: TENANT });
     expect((await read(h, "inv-initech")).denial_reason).toBe("parameter_violation");
     expect((await h.server.callReadTool("lookup_vendor", { vendor_id: "initech" }, h.token)).ok).toBe(false);
-    expect((await h.server.callReadTool("list_invoices", { vendor_id: "acme" }, h.token)).ok).toBe(false);
+    expect((await h.server.callReadTool("list_invoices", { vendor_id: "initech" }, h.token)).ok).toBe(false);
   });
 
   it("a client-supplied tenant cannot establish the fact: the argument is refused at intake", async () => {
@@ -615,6 +618,146 @@ describe("the payments resource enforces allowed_tools against the tool it dispa
   });
 });
 
+/**
+ * @spec resource-access#initial-common-constraints, resource-access#common-constraints
+ * (#1266): a collection read acts on every invoice it returns, so a bound
+ * whose input is a fact of the resource acted on (issuance, tenant,
+ * classification) reads each invoice's own record. Every member must satisfy
+ * it; a member outside the bound, or with no fact, makes the entry provide
+ * no authority for the read, which is refused whole and never narrowed to
+ * the members that pass (no partially narrowed result, as for `vendor_ids`).
+ */
+describe("the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints)", () => {
+  /** A vendor whose invoices all sit at Q3's inclusive bounds, labeled internal, and one with no invoices. */
+  const seedMembers = (h: Harness) =>
+    h.payments.seed(
+      [
+        { id: "hooli", name: "Hooli", status: "approved", tenant: "payments-demo" },
+        { id: "umbrella", name: "Umbrella", status: "approved", tenant: "payments-demo" },
+      ],
+      [
+        { id: "inv-h1", vendor_id: "hooli", amount: "10.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-07-01T02:00:00+02:00", classification: "internal" },
+        { id: "inv-h2", vendor_id: "hooli", amount: "10.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-09-30T23:59:59Z", classification: "internal" },
+      ],
+    );
+  const list = (h: Harness, vendorId?: string, beforeReverify?: () => void) =>
+    h.server.callReadTool("list_invoices", vendorId === undefined ? {} : { vendor_id: vendorId }, h.token, beforeReverify);
+  const ids = (result: unknown) => (result as Array<{ id: string }>).map((i) => i.id).sort();
+  const members = (h: Harness) => (h.lastResource()?.properties as Record<string, unknown>).members;
+
+  it("permits a read whose every member's record names the bound's tenant, carrying each member's facts, and returns exactly those members", async () => {
+    const h = harness({ mission: { tenant: "payments-demo" } });
+    const res = await list(h, "acme");
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(ids(res.result)).toEqual(["inv-early", "inv-edge", "inv-late", "inv-none", "inv-q3"]);
+    const carried = members(h) as Array<Record<string, unknown>>;
+    expect(carried.map((m) => m.id)).toEqual(["inv-early", "inv-edge", "inv-late", "inv-none", "inv-q3"]);
+    expect(carried.every((m) => m.tenant === "payments-demo")).toBe(true);
+  });
+
+  it("permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)", async () => {
+    const h = harness({ mission: { ...Q3, data_classification: ["internal"] } });
+    seedMembers(h);
+    const res = await list(h, "hooli");
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(ids(res.result)).toEqual(["inv-h1", "inv-h2"]);
+    expect(members(h)).toEqual([
+      { id: "inv-h1", issued_at: "2026-07-01T02:00:00+02:00", tenant: "payments-demo", data_classification: "internal" },
+      { id: "inv-h2", issued_at: "2026-09-30T23:59:59Z", tenant: "payments-demo", data_classification: "internal" },
+    ]);
+  });
+
+  it("refuses the whole read, returning nothing, when any one member's record is outside the bound", async () => {
+    for (const [mission, vendorId] of [
+      [Q3, "acme"], // inv-early and inv-late fall outside Q3; inv-q3 and inv-edge do not
+      [{ tenant: "payments-demo" }, undefined], // globex's invoice belongs to another tenant
+      [{ data_classification: ["internal"] }, undefined], // inv-globex is restricted
+    ] as const) {
+      const h = harness({ mission });
+      const res = await list(h, vendorId);
+      expect(res.ok, JSON.stringify(mission)).toBe(false);
+      expect(res.denial_reason, JSON.stringify(mission)).toBe("parameter_violation");
+      expect(res.result, JSON.stringify(mission)).toBeUndefined();
+    }
+  });
+
+  it("refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)", async () => {
+    // initech names no tenant; inv-none has no issuance instant and no label.
+    for (const [mission, vendorId] of [
+      [{ tenant: "payments-demo" }, "initech"],
+      [{ resource_issued_after: Q3.resource_issued_after }, "acme"],
+      [{ data_classification: ["internal"] }, "acme"],
+    ] as const) {
+      const h = harness({ mission });
+      const res = await list(h, vendorId);
+      expect(res.ok, JSON.stringify(mission)).toBe(false);
+      expect(res.denial_reason, JSON.stringify(mission)).toBe("parameter_violation");
+      expect(res.result, JSON.stringify(mission)).toBeUndefined();
+    }
+  });
+
+  it("an empty collection establishes no member fact: a read returning nothing is refused under a bound that reads one, and permitted without one (boundary)", async () => {
+    const bound = harness({ mission: { tenant: "payments-demo" } });
+    seedMembers(bound);
+    const refused = await list(bound, "umbrella");
+    expect(refused.ok).toBe(false);
+    expect(refused.denial_reason).toBe("parameter_violation");
+    expect(members(bound)).toEqual([]);
+    const open = harness({});
+    seedMembers(open);
+    const permitted = await list(open, "umbrella");
+    expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+    expect(permitted.result).toEqual([]);
+  });
+
+  it("refuses at release a read one of whose members changed, or that gained a member, after the decision, with no result", async () => {
+    const changed = harness({ mission: Q3 });
+    seedMembers(changed);
+    const moved = await list(changed, "hooli", () => changed.payments.setInvoiceIssuedAt("inv-h1", "2026-10-15T00:00:00Z"));
+    expect(moved.ok).toBe(false);
+    expect(moved.refusal_reason).toBe("parameter_mismatch");
+    expect(moved.result).toBeUndefined();
+    const grown = harness({ mission: Q3 });
+    seedMembers(grown);
+    const added = await list(grown, "hooli", () =>
+      grown.payments.seed([], [
+        { id: "inv-h3", vendor_id: "hooli", amount: "10.00", currency: "USD", payee_account: "acct", status: "payable", issued_at: "2026-10-15T00:00:00Z" },
+      ]),
+    );
+    expect(added.ok).toBe(false);
+    expect(added.refusal_reason).toBe("parameter_mismatch");
+    expect(added.result).toBeUndefined();
+  });
+
+  it("a credential bound reading a member fact is evaluated for each member at the PEP, before any decision", async () => {
+    const h = harness({ credential: { tenant: "payments-demo" } });
+    const refused = await list(h);
+    expect(refused.ok).toBe(false);
+    expect(refused.denial_reason).toBe("out_of_authority");
+    expect(h.decisions()).toBe(0);
+    const permitted = await list(h, "acme");
+    expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+    expect(h.decisions()).toBe(1);
+  });
+
+  it("a read no member-fact bound narrows carries no members, and its parameter digest is the list form without them", async () => {
+    const h = harness({ mission: { time_window: { not_before: "2020-01-01T00:00:00Z" } } });
+    const res = await list(h, "acme");
+    expect(res.ok, JSON.stringify(res)).toBe(true);
+    expect(members(h)).toBeUndefined();
+    expect(h.lastConditions()?.parameter_digest).toBe(
+      parameterDigest(
+        buildListEffectiveParams({
+          action: "payments:invoice.list",
+          resource: CANONICAL_RESOURCE,
+          vendor_scope: ["acme"],
+          vendor_scope_source: "requested",
+        }),
+      ),
+    );
+  });
+});
+
 describe("the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses an operation whose matched Mission entry carries a constraints key the resource does not understand", async () => {
     const h = harness({ mission: { x_region: "eu" } });
@@ -626,15 +769,48 @@ describe("the payments resource fails closed on a constraint it does not enforce
 });
 
 describe("protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata)", () => {
-  it("advertises exactly max_amount, vendors and the Common Constraints it enforces, and no other", () => {
+  it("advertises exactly the constraints keys it enforces, the set the Authorization Server admits, and no other", () => {
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain", "data_classification", "allowed_tools"].sort(),
+      [
+        "max_amount",
+        "vendors",
+        "requires_action_approval",
+        "terminal_when",
+        "resource_issued_after",
+        "resource_issued_before",
+        "tenant",
+        "time_window",
+        "recipient_domain",
+        "data_classification",
+        "allowed_tools",
+      ].sort(),
     );
     // The supported set the Authorization Server admits is the one this resource enforces.
+    expect([...supported].sort()).toEqual([...SUPPORTED_CONSTRAINT_KEYS].sort());
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", ...IMPLEMENTED_COMMON_CONSTRAINTS].sort(),
+      ["max_amount", "vendors", "requires_action_approval", "terminal_when", ...IMPLEMENTED_COMMON_CONSTRAINTS].sort(),
     );
+  });
+
+  it("the shipped scope-projection mapping vouches for this resource exactly the keys it advertises, and every shipped ceiling for it carries only those keys (#1266)", () => {
+    const supported = harness({}).server.protectedResourceMetadata().mission_constraints_supported as string[];
+    // The main authorization server's enforcement knowledge for this resource
+    // (@spec resource-access#resource-access-type) invents no support.
+    const m = SCOPE_PROJECTION.audiences[CANONICAL_RESOURCE];
+    expect(m?.mode).toBe("authorization_details");
+    const vouched = m?.mode === "authorization_details" ? (m.mission_constraints_supported ?? []) : [];
+    expect([...vouched].sort()).toEqual([...supported].sort());
+    const ceilings = [
+      ...DERIVATION_POLICY.ceiling,
+      ...AUTHORITY_SOURCES.entries.flatMap((source) => source.ceiling),
+      ...GOVERNED_POLICIES.flatMap((policy) => policy.ceiling),
+    ].filter((entry) => entry.resource === CANONICAL_RESOURCE);
+    expect(ceilings.length).toBeGreaterThan(0);
+    for (const entry of ceilings) {
+      const keys = Object.keys(entry.constraints ?? {});
+      expect(keys.filter((key) => !vouched.includes(key)), JSON.stringify(entry)).toEqual([]);
+    }
   });
 });

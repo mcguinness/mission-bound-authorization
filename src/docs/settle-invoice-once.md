@@ -2,7 +2,7 @@
 
 This walkthrough follows one wire for one invoice through the reference
 payments resource, from admission to settlement, and names the test that
-witnesses each failure case. It describes `payments-runtime-profile-v11`
+witnesses each failure case. It describes `payments-runtime-profile-v12`
 ([operation-profile-payments-v1.md](operation-profile-payments-v1.md)) as
 built and adds no requirement. Paths are relative to `src/`.
 
