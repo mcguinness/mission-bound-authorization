@@ -6825,6 +6825,11 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1401): Mission Authority, Mission-Bound Access Tokens,
+  Resource Server Enforcement, and the Mission Record have
+  subsections at their existing paragraph boundaries; no text moves.
+  No requirement changes.
+
 - Editorial (#1382): the OAuth Binding Mapping Assessment's
   capability table is a capability list, one entry per capability,
   which fits the text rendering. No requirement changes.
