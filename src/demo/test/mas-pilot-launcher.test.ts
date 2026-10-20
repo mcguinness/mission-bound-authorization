@@ -237,7 +237,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
         });
         mas.once("exit", (code) => reject(new Error(`the MAS exited ${code}`)));
       });
-      const launch = await launchMasPilot(
+      const launched = await launchMasPilot(
         masPilotLaunchOptions(
           {
             ...fgaEnv(),
@@ -248,7 +248,10 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
           },
           "separated",
         ),
-      );
+      ).catch((e: unknown) => e);
+      // It uses the running MAS: starting another on the MAS's address fails.
+      expect(launched, String(launched)).not.toBeInstanceOf(Error);
+      const launch = launched as MasPilotLaunch;
       try {
         expect(launch.masProcess).toBeUndefined();
         expect(launch.consoles.mas).toBeUndefined();
