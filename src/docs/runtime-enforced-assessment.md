@@ -526,8 +526,14 @@ What this composition does not cover:
 - **Idempotency domain.** The PDP holds none; the PEP's store is single
   process (the blocked `runtime.idempotency.*` rows, §6).
 - **Resources.** `Connectors` is an in-memory stub
-  (`src/services/mcp-payments/src/connectors.ts`) with no declared
-  conditional-effect, outcome-lookup or cancellation capability (#817).
+  (`src/services/mcp-payments/src/connectors.ts`). The statement's
+  `extensions.execution_capabilities` declares what each effectful
+  operation has (#817): no conditional effect, no compensation, an
+  in-memory outcome lookup by permit identifier, and idempotency held by
+  the PDP's claim or the PEP's reservation, never by the resource. No
+  operation asserts exactly-once execution or the enforced
+  Evaluation-Context Binding property, and no capable or weaker connector
+  pair is tested.
 - **Remote channel.** A reference adapter: no TLS, an in-memory nonce store,
   a per-assembly shared secret (`src/services/pdp/src/server.ts` header).
 - **Operational validation.** No load, partition, clock-fault or long-run
@@ -554,9 +560,13 @@ What this composition does not cover:
 - **#817, "Runtime adapters: declare and enforce resource-side execution
   capabilities" (open).** Parameter digests, single-use permits and leases do
   not prove that the resource stayed unchanged or that a timed-out effect did
-  not commit. No connector declares conditional effects, outcome lookup,
-  commit point or cancellation, so transaction-grade claims have no resource
-  witness.
+  not commit. Each effectful payments operation declares its
+  conditional effect, outcome lookup, commit point, cancellation and
+  compensation, and the loader refuses a transaction claim no declared
+  capability supports. The declarations are mostly no: no connector
+  carries a precondition or holds durable idempotency of its own, so
+  transaction-grade claims still have no resource witness. The capable and
+  weaker connectors and the recovery demonstration remain open.
 - **#594, "Ledger: missing tests and the per-requirement profiles field"
   (open).** It tracks the floor's missing tests, which are most of the `todo`
   rows in §6; it excludes #773's rows (the `runtime.evaluation-context-binding`
