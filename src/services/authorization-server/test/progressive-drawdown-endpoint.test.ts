@@ -752,16 +752,18 @@ describe("beyond the ceiling (@spec progressive#ceiling-test, progressive#denial
 });
 
 describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis)", () => {
-  const BOB = { iss: ISSUER, sub: "bob" };
+  // The ceiling was consented by the fixture Approver (bob); the Subject, also an
+  // activator of the source, approves the expansion: a different Approver.
+  const ALICE = { iss: ISSUER, sub: "alice" };
 
   it("without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it", async () => {
     const root = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING));
     const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
-    const approved = await approveAndPoll(await openFreshApproval(root.missionId, root.accessToken, BEYOND), BOB);
+    const approved = await approveAndPoll(await openFreshApproval(root.missionId, root.accessToken, BEYOND), ALICE);
     const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
     expect(s1.predecessor).toBe(root.missionId);
     expect(s1.approval_basis.type).toBe("direct");
-    expect(s1.approval_basis.consent_principal).toEqual(BOB);
+    expect(s1.approval_basis.consent_principal).toEqual(ALICE);
     expect(s1.authority_set.some((e) => e.actions.includes("payments:payment.schedule"))).toBe(true);
     expect(s1.authority_ceiling).toEqual(rootRecord.authority_ceiling);
     expect(s1.drawdown_policy).toEqual(rootRecord.drawdown_policy);
@@ -791,7 +793,7 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     const raised = [...READ_CEILING, { ...(FULL_CEILING[1] as AuthorityEntry), actions: ["payments:payment.schedule"] }];
     const approved = await approveAndPoll(
       await openFreshApproval(root.missionId, root.accessToken, BEYOND),
-      BOB,
+      ALICE,
       ceilingOf("drawdown-std", raised),
     );
     const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
@@ -805,13 +807,13 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     );
     expect(s1.ceiling_hash).not.toBe(rootRecord.ceiling_hash);
     expect(Date.parse(s1.ceiling_consented_at as string)).toBeGreaterThan(Date.parse(rootRecord.ceiling_consented_at as string));
-    expect(s1.ceiling_consent_principal).toEqual(BOB);
+    expect(s1.ceiling_consent_principal).toEqual(ALICE);
     // Under the lapsed consent this would fall back; under the re-consent it is drawn by policy.
     const drawn = await drawdown(approved.access_token, crypto.randomUUID(), [...READ_LIST, "payments:payment.schedule"]);
     const s2 = as.kernel.get(drawn.mission_id) as MissionRecord;
     expect(s2.approval_basis).toMatchObject({
       type: "ceiling_drawdown",
-      consent_principal: BOB,
+      consent_principal: ALICE,
       root_commitment: s1.ceiling_hash,
       approved_at: s1.ceiling_consented_at,
     });
@@ -833,7 +835,7 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     });
     const renewed = await approveAndPoll(
       await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]),
-      BOB,
+      ALICE,
       ceilingOf(),
     );
     // Policy-eligible but for the chain's containment restriction: still a fresh approval.
@@ -851,7 +853,7 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     const first = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
     const renewed = await approveAndPoll(
       await openFreshApproval(first.mission_id, first.access_token, [...READ_LIST, VENDOR]),
-      BOB,
+      ALICE,
       ceilingOf(),
     );
     expect((as.kernel.get(renewed.mission_id) as MissionRecord).drawdown_count).toBe(1);
