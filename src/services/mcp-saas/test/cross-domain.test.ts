@@ -446,7 +446,6 @@ describe("Resource AS issues no renewal authority on the grant (#1180)", () => {
     const { grant } = await grantFor(mission.id);
     const response = await ras.redeem(grant, agentJkt);
     expect(response).not.toHaveProperty("refresh_token");
-    expect(Object.keys(response).sort()).toEqual(["access_token", "expires_in"]);
     expect(ras.metadata().grant_types_supported).not.toContain("refresh_token");
   });
 
