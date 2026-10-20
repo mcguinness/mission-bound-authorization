@@ -8,6 +8,7 @@ import {
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
   narrowToCeiling,
+  resourceWithin,
   SUPPORTED_ENTRY_MEMBERS,
   unsupportedEntryMember,
 } from "../src/index.js";
@@ -296,5 +297,50 @@ describe("a foreign entry carrying an unsupported member is unsupported (@spec m
     expect(narrowToCeiling([carrying], [entry])).toEqual([]);
     expect(narrowToCeiling([{ ...carrying, actions: ["read"] }], [entry])).toEqual([]);
     expect(narrowToCeiling([entry], [carrying])).toEqual([]);
+  });
+});
+
+describe("resource containment under resource_match (@spec resource-access#subset, #1276)", () => {
+  const ORDERS = "https://api.example/orders";
+  const at = (resource: string, resource_match?: "exact" | "prefix"): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource,
+    ...(resource_match ? { resource_match } : {}),
+    actions: ["orders.read"],
+  });
+
+  it("resourceWithin applies the four resource_match pairings with the resource servers' prefix comparison", () => {
+    expect(resourceWithin(at(ORDERS), at(ORDERS, "exact"))).toBe(true);
+    expect(resourceWithin(at(`${ORDERS}/1`), at(ORDERS, "prefix"))).toBe(true);
+    expect(resourceWithin(at("https://API.EXAMPLE:443/orders/1"), at(ORDERS, "prefix"))).toBe(true);
+    expect(resourceWithin(at(`${ORDERS}x/1`), at(ORDERS, "prefix"))).toBe(false);
+    expect(resourceWithin(at(`${ORDERS}/2026`, "prefix"), at(ORDERS, "prefix"))).toBe(true);
+    expect(resourceWithin(at(ORDERS, "prefix"), at(`${ORDERS}/`, "prefix"))).toBe(false);
+    expect(resourceWithin(at(ORDERS, "prefix"), at(ORDERS))).toBe(false);
+    expect(resourceWithin(at(ORDERS, "prefix"), at(`${ORDERS}/2026`, "prefix"))).toBe(false);
+  });
+
+  it("isSubsetEntry never lets a prefix candidate pass under an exact reference naming the same resource", () => {
+    expect(isSubsetEntry(at(ORDERS, "prefix"), at(ORDERS))).toBe(false);
+    expect(isSubsetEntry(at(`${ORDERS}/1`), at(ORDERS, "prefix"))).toBe(true);
+    expect(narrowToCeiling([at(ORDERS, "prefix")], [at(ORDERS)])).toEqual([]);
+    expect(narrowToCeiling([at(`${ORDERS}/1`)], [at(ORDERS, "prefix")])).toEqual([
+      at(`${ORDERS}/1`),
+    ]);
+  });
+
+  it("an unrecognized resource_match, or a prefix base the matcher cannot enforce, is never contained and is not a supported entry", () => {
+    for (const odd of [
+      { ...at(ORDERS), resource_match: "glob" },
+      { ...at(ORDERS), resource_match: null },
+      at(`${ORDERS}?tenant=a`, "prefix"),
+      at("urn:example:orders", "prefix"),
+    ] as AuthorityEntry[]) {
+      expect(isAuthorityEntry(odd), JSON.stringify(odd)).toBe(false);
+      expect(isSubsetEntry(odd, odd), JSON.stringify(odd)).toBe(false);
+      expect(isSubsetEntry(at(ORDERS), odd), JSON.stringify(odd)).toBe(false);
+    }
+    expect(isAuthorityEntry(at(ORDERS, "prefix"))).toBe(true);
+    expect(isAuthorityEntry(at(ORDERS, "exact"))).toBe(true);
   });
 });

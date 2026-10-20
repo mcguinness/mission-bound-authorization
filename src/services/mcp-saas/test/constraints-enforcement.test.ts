@@ -8,11 +8,13 @@
  * error and has no effect. Entries are alternatives, so another applicable
  * entry the resource can fully enforce still authorizes on its own.
  *
- * Most cases run the whole pipeline (Mission AS approval, ID-JAG, RAS
- * redemption, SaaS tool call) with a RAS that emits whatever the grant
- * carries, so the SaaS guard is what each assertion exercises. Cases whose
- * token the pipeline cannot produce (a key no specification defines, a
- * malformed value) mint the RAS-issued token directly.
+ * The `vendors` cases run the whole pipeline (Mission AS approval, ID-JAG,
+ * RAS redemption, SaaS tool call), with a RAS that knows SaaS enforces
+ * exactly what its metadata advertises. That RAS never mints a key SaaS does
+ * not enforce (#1266), so cases about such a key (a `time_window`, a
+ * `max_amount`, a key no specification defines, a malformed value) mint the
+ * RAS-issued token directly, as a misconfigured or foreign issuer could:
+ * the SaaS guard is what each of those assertions exercises.
  */
 
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -66,9 +68,9 @@ beforeAll(async () => {
     statusKey: asKeys.privateKey,
     statusKid: "as-status",
   });
-  // No resourceConstraintsSupported: this RAS mints every key the grant
-  // carries, so a refusal below is the resource server's own.
+  // The RAS knows the keys SaaS enforces, as its metadata advertises them.
   ras = new ResourceAuthorizationServer({
+    resourceConstraintsSupported: { [SAAS_RESOURCE]: SAAS_ENFORCED_CONSTRAINTS },
     localCeiling: POLICY.ceiling.map((e) => ({ ...e, actions: [...e.actions] })),
     localPolicyVersion: POLICY.policy_version,
     issuer: RAS_ISS,
@@ -164,9 +166,9 @@ async function read(token: string, vendorId: unknown = "acme") {
 
 describe("the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement)", () => {
   it("refuses a journal write whose only covering entry carries a time_window, with no effect", async () => {
-    const token = await pipelineToken([entry([WRITE], CLOSED_WINDOW)]);
-    // The RAS minted the bound: the refusal below is the resource server's.
-    expect(claims(token).authorization_details).toEqual([entry([WRITE], CLOSED_WINDOW)]);
+    // The RAS, knowing SaaS does not enforce the key, never mints it (#1266).
+    await expect(pipelineToken([entry([WRITE], CLOSED_WINDOW)])).rejects.toMatchObject({ code: "invalid_grant" });
+    const token = await mintedToken([entry([WRITE], CLOSED_WINDOW)]);
     const before = saas.journalEntries().length;
     const res = await write(token);
     expect(res).toEqual({ ok: false, error: "out_of_authority" });
@@ -175,8 +177,8 @@ describe("the SaaS resource fails closed on a constraint it does not enforce (@s
 
   it("refuses a journal write whose only covering entry carries max_amount, which this resource does not enforce", async () => {
     const capped = { max_amount: { amount: "1000.00", currency: "USD" } };
-    const token = await pipelineToken([entry([WRITE], capped)]);
-    expect(claims(token).authorization_details).toEqual([entry([WRITE], capped)]);
+    await expect(pipelineToken([entry([WRITE], capped)])).rejects.toMatchObject({ code: "invalid_grant" });
+    const token = await mintedToken([entry([WRITE], capped)]);
     const before = saas.journalEntries().length;
     const res = await write(token);
     expect(res).toEqual({ ok: false, error: "out_of_authority" });
@@ -231,8 +233,7 @@ describe("the SaaS resource enforces vendors against the vendor the operation ad
 
 describe("applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement)", () => {
   it("authorizes through an unconstrained covering entry beside one it cannot enforce", async () => {
-    const token = await pipelineToken([entry([WRITE], CLOSED_WINDOW), entry([WRITE])]);
-    expect(claims(token).authorization_details).toEqual([entry([WRITE], CLOSED_WINDOW), entry([WRITE])]);
+    const token = await mintedToken([entry([WRITE], CLOSED_WINDOW), entry([WRITE])]);
     const before = saas.journalEntries().length;
     const res = await write(token);
     expect(res.ok, JSON.stringify(res)).toBe(true);
@@ -240,7 +241,7 @@ describe("applicable SaaS entries are alternatives, never combined (@spec resour
   });
 
   it("refuses a request that only an entry it cannot enforce covers, while another entry still authorizes its own action", async () => {
-    const token = await pipelineToken([entry([WRITE], CLOSED_WINDOW), entry([READ])]);
+    const token = await mintedToken([entry([WRITE], CLOSED_WINDOW), entry([READ])]);
     const before = saas.journalEntries().length;
     expect(await write(token)).toEqual({ ok: false, error: "out_of_authority" });
     expect(saas.journalEntries()).toHaveLength(before);

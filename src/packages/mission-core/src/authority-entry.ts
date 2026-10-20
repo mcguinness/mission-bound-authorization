@@ -67,6 +67,14 @@ export interface TerminalWhenCondition {
 export interface AuthorityEntry {
   type: "mission_resource_access";
   resource: string;
+  /**
+   * @spec resource-access#resource-access-type (#1276): `exact` (the default,
+   * and the reading when absent) or `prefix`. A derived entry carries
+   * `prefix` when its resource set is a prefix set, and omits the member
+   * otherwise. Containment between two entries' resource sets is
+   * `resourceWithin` (authority-subset.ts).
+   */
+  resource_match?: "exact" | "prefix";
   actions: string[];
   /**
    * @spec capability-binding#capability-source-binding — the capability-source

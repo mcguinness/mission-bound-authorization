@@ -11,20 +11,20 @@
     "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
-    "content_sha256": "33e8ae6138b82668731a7d5e6cb125e183c49750144caa3438903e5c719c8cbc"
+    "revision": "dade6c569d18a1e587f68885903447e8f9af5bb3",
+    "content_sha256": "1fbb3409c45047fe17f65b591912c05c3ce6199f59db8160f87e5720381380ac"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "6667b68f9afece5e490ea65022196e6c4991dd1b",
     "content_sha256": "8cd8d68437668e5a6268b3ffa5e158017d5d71ef4129d4250ef70da2f3beb317"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "1df0e37958729923a4ea977df0da22b45c5bae4d",
-    "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
+    "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
+    "content_sha256": "065c797c3074eb766497180cf700fc267ecd227b45a399c1ad47330a226a7fa5"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "10e05d79c000dd30182270bc9f3765ccdfaffbb8",
-    "content_sha256": "58a1455a07f9e93758ddc802e98a41ca3b3b7affc4887847f13829741721241b"
+    "revision": "67ec44100970a77f99311908804150d00b5affac",
+    "content_sha256": "00e698892a75e62714efab0c6b7d73c5b4417c59f8046a53975acb6ff25b53a9"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -67,16 +67,16 @@
     "content_sha256": "944c69c3032fb77891a69e6dc1b92aaa59dbc3f40cf738bbd5ec48165ded7c65"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "7687968173b35c13756a3aa2ec3741380803f387",
-    "content_sha256": "748baa5b01e2e8052eba9d7ba14358140eb6790f2f78990a4b466fcd75d8f5f9"
+    "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
+    "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "2fb012f255c63c3cb3e9403e39b003551389ea4e",
-    "content_sha256": "0e8be927b29036a2d4b257e67900e71da9ec3511a6964027bd1ac263a2d6dc9e"
+    "revision": "e5ebe01246eddcdcdc40fabe5e7bfbf6c0b8c951",
+    "content_sha256": "dcaccb58a3ca6ab40ee295e5e0a67afda8c76ccea82700c23572a91cd953b956"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
-    "content_sha256": "27edd07822a1d48d0d33f71a8708fc36836218a466d924f07d04eefdb85dcc1c"
+    "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
+    "content_sha256": "7b767e1bb56356fbbafd8237ba563fe816093fa499e8d3617ee2fd600ad8c0ca"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -236,6 +236,8 @@
    "runtime.history-input",
    "runtime.evaluation-context-binding",
    "runtime.discovered-catalog",
+   "runtime.resource-contract",
+   "resource-access.resource-contract",
    "runtime.materialized-policy-view",
    "containment.narrowing",
    "cross-domain.origin-principal",
@@ -7736,7 +7738,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since this deployment's derivation never produces a prefix entry."
+   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since this deployment's configured ceilings admit exact entries only, so its derivation never produces a prefix entry (#1276)."
   },
   {
    "id": "core.scope-projection.union-widening-fails",
@@ -15632,6 +15634,49 @@
    ]
   },
   {
+   "id": "txn-authorization.challenge.contract-reference-names-version",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "resource-challenge",
+   "text": "where the entry carries a `resource_contract` reference, that reference names the version, and the runtime profile's resolution of it decides admission and completion",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a challenge whose entry references a contract that does not resolve is refused at admission, and a workflow whose reference stops resolving is refused at completion; a resolving reference selects that version's Operation Profile"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "txn-authorization.challenge.version-recorded-at-admission",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "resource-challenge",
+   "text": "otherwise the version is the resource's current one at admission, which the workflow records",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an entry without a resource_contract reference, the workflow records the Operation Profile version current at admission and completes under it; the version is not read from the entry's fixed type"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. The reference TAS keys its Operation Profile registry on the entry type (kernel/operation-profile.ts), which this clause replaces."
+  },
+  {
    "id": "txn-authorization.redemption.subject-token-audience-pop",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "challenge-redemption",
@@ -18297,7 +18342,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v10, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), and declares each operation's execution capabilities (#817); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v12, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), declares each operation's execution capabilities (#817), and matches `prefix` entries with the Resource Access matcher (#1276); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -18935,9 +18980,15 @@
      "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > an entry spelled differently from the target never covers it: the credential's is refused before the PDP, and the Mission's is denied out_of_authority",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > a prefix entry covers its base and the targets beneath it at a path-segment boundary, after the one normalization, in the Mission and the credential bound alike (@spec resource-access#resource-matching, #1276)",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The credential bound matches the token's entries against the operation target (P2, unit); the payments PEP's credential pre-check refuses a differently spelled entry before the PDP (T5). Mutations M2 and M15 fail P2 and T4."
+   "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). The credential bound matches the token's entries against the operation target (P2, unit); the payments PEP's credential pre-check refuses a differently spelled entry before the PDP (T5). Mutations M2 and M15 fail P2 and T4. #1276: a prefix entry matches the target under Resource Matching's prefix rule at the PDP (unit); a plain string-prefix comparison, skipping dot-segment removal, decoding %2F, and skipping host case-folding each fail that witness."
   },
   {
    "id": "runtime.token-validation.channel-integrity-and-token-forwarding",
@@ -19644,6 +19695,270 @@
     }
    ],
    "notes": "Recorded capability comparison is wired end to end. The runtime.discovered-catalog claim also brings the three runtime.classification.* rows into scope; those remain todo."
+  },
+  {
+   "id": "runtime.resource-contract.bytes-immutable",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "Published contract bytes MUST remain immutable for a reference.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the contract document a resource publishes for an (id, version) has one digest for as long as the version is declared"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.new-version-on-change",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A resource that changes any contract material MUST publish it as a new version with its own digest",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a change to any listed contract material (operation contract, Operation Profile binding items, constraint extraction, class or phase, capability digest, evaluation-context descriptor reference) yields a new version with a different digest"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.declared-states",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A resource that adopts resource contracts declares, in its Resource Server runtime profile ({{rs-runtime-profile}}), each contract version it serves, the operations each covers, the operations that require a reference, and each version's state",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Resource Server runtime profile lists every served contract version with its covered operations, the operations requiring a reference, and its state (current, superseded with a declared retention, or retired)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.pdp-refuses-unresolved",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "The PDP MUST refuse the action unless the entry carries a reference that resolves.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action under an entry whose reference is unknown, unavailable, has a changed digest, names a retired version, or names a superseded version outside its retention is denied resource_contract_drift, with identical parameters; a v1 reference at a resource serving only v2 is denied"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.missing-reference-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A missing reference refuses: it is never replaced by the current contract, and an approval that committed no reference gains one only through a new approval.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the resource requires a reference for the operation, an action under an entry without one is denied, and no evaluated or recorded authority acquires the current contract's reference"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.superseded-within-retention",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "resolves only for an entry that already references it, and only within the retention the profile declares for that version",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action under an entry referencing a superseded version is decided normally within the declared retention (and permits where every other input permits), and is refused outside it"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.retained-relaxes-nothing",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A resolved contract, current or superseded, MUST NOT relax any other decision input.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under a retained superseded contract, an inactive Mission, narrowed or revoked authority, a lapsed entitlement, or a Resource-policy denial still refuses the action"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.pep-normalizes-under-resolved",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "The PEP MUST normalize the operation's parameters, and perform the operation, under the resolved contract, never under another version the resource serves.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an entry referencing a retained version, the decision request's normalized parameters and parameter_digest, and the performed operation, follow that version's Operation Profile, not the current one"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.approval-bound-to-reference",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "An approval given under one reference MUST NOT satisfy the approval requirement for an action under another",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action-bound approval recorded under one contract reference, presented for an action whose applicable entry references another, does not satisfy the approval gate even when both references resolve; under the AuthZEN profile the re-evaluation is denied out_of_scope"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.approval-time-pin-insufficient",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "a reference that no longer resolves when the decision is made refuses the action even though the approval and the parameters are unchanged",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a contract definition change after the action-bound approval and before the decision, with identical parameters, refuses the action with no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.executing-pep-reresolves",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "the executing PEP MUST resolve the permit's reference against the resource's current declarations, and MUST refuse before any effect unless it resolves to the contract the permit was decided under",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a contract definition change after the decision and before dispatch, with identical parameters, suppresses the effect: no effect is released and Execution Evidence records resource_contract_unresolvable"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.stage-carriers",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A failure at use under an obtained permit suppresses the effect and is recorded as Execution Evidence, not as a PDP denial",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a pre-decision contract failure yields a Refusal Record, a PDP failure a denial, and a failure at use Execution Evidence with outcome suppressed, each chosen by call site"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "runtime.decision-inputs.resource-policy-fail-closed",
@@ -20533,6 +20848,28 @@
     }
    ],
    "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test. #1276: the resource item includes the operation target an authority-entry match uses; no test establishes that a permit binds the target. #853: the list binds the boundary identifier in place of \"the credential audience or protected resource\"."
+  },
+  {
+   "id": "runtime.permit-binding.resource-contract",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "permit-binding",
+   "text": "the resource contract reference, where a resource contract applies to the action",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for an action under a resource contract binds its reference, so a permit decided under one reference is not usable for an operation under another"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -23189,9 +23526,15 @@
      "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > an entry spelled differently from the target never covers it: the credential's is refused before the PDP, and the Mission's is denied out_of_authority",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-operation-target.test.ts",
+     "name": "the PDP matches entries against the PEP-established operation target (@spec authzen#pdp-request, resource-access#resource-matching, #1276) > a prefix entry covers its base and the targets beneath it at a path-segment boundary, after the one normalization, in the Mission and the credential bound alike (@spec resource-access#resource-matching, #1276)",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1276 (D457) replaces authzen.pdp-request.audience-match-mandatory, which required the entry match against resource.properties.audience and was tested on the reference PDP's audience match. Those tests witness the retired operand, so they are not cited here. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. #1276 implementation (D457, payments-runtime-profile-v6). The PDP matches Mission and credential entries against operation_target with the literal exact matcher (unit witnesses at evaluate()); the payments PEP, in co-resident and remote modes, observes the outcome at the resource operation, not on a decision request the test inspects. prefix and unrecognized resource_match give no authority (refused, not implemented). Mutations M1 and M2 (match on audience) fail P1, A1 and P2."
+   "notes": "#1276 (D457) replaces authzen.pdp-request.audience-match-mandatory, which required the entry match against resource.properties.audience and was tested on the reference PDP's audience match. Those tests witness the retired operand, so they are not cited here. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. #1276 implementation (D457, payments-runtime-profile-v6). The PDP matches Mission and credential entries against operation_target with the literal exact matcher (unit witnesses at evaluate()); the payments PEP, in co-resident and remote modes, observes the outcome at the resource operation, not on a decision request the test inspects. A prefix entry matches at a path-segment boundary after the one normalization, in the Mission and the credential bound (#1276, unit witness at evaluate()); an unrecognized resource_match gives no authority. Mutations M1 and M2 (match on audience) fail P1, A1 and P2."
   },
   {
    "id": "authzen.pdp-request.no-audience-or-object-identity-match",
@@ -23420,6 +23763,94 @@
     }
    ],
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported contract form or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). A missing, empty, list-valued or dot-segment argument and declarations deriving different targets refuse target_unresolvable before any decision request. Mutations: a service-identifier fallback on a missing argument, a list's first value and a dropped dot-segment check each fail that witness."
+  },
+  {
+   "id": "authzen.context-resource-contract.request-member",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "REQUIRED when a resource contract applies to the action",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision request for an action under a resource contract carries resource.properties.resource_contract with the id, version and digest of the contract the PEP will perform under"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.pep-trusted-derivation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The PEP establishes the reference from the applicable entry's reference, resolved against its own trusted contract declarations, and never from a value the caller asserts.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller-asserted contract reference never reaches the decision request; the presented reference is the applicable entry's, resolved against the PEP's own declarations"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.pdp-denies-unequal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The PDP MUST deny the action with `resource_contract_drift` unless the reference resolves under the PDP's own trusted declarations and equals, member for member, the reference of an applicable entry that authorizes the action.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented reference that is absent where a contract applies, does not resolve, or differs from every authorizing entry's reference is denied resource_contract_drift with no permit"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.binding-and-cache-key",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The reference is part of the authorization binding and the cache key ({{projections}}), so a permit is never reused under another contract.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "two requests that differ only in resource.properties.resource_contract have different cache keys, and a permit cached under one is not reused for the other"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -24979,6 +25410,50 @@
    ]
   },
   {
+   "id": "authzen.context-approval.contract-reference-bound",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The Mission checks then also establish that the approved Resource's `properties.resource_contract` equals the request's, member for member.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval whose approved Resource carries a resource_contract reference other than the re-evaluated request's does not satisfy approval_required"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-approval.contract-mismatch-out-of-scope",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "An approval given under one reference does not cover an action under another, even when both references resolve: the PDP MUST deny that re-evaluation with ARAP's `out_of_scope`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval given for an action under v1 (superseded, within retention) presented for the same action under v2 (current), with identical parameters, is denied out_of_scope with no permit and no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.context-history.no-caller-asserted-outcome",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
@@ -25161,6 +25636,28 @@
    "tests": []
   },
   {
+   "id": "authzen.runtime-denial-classification.resource-contract-drift",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "`resource_contract_drift`: a resource contract applies to the action and the applicable entry's reference is missing or does not resolve under the resource's declared contract states",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP denial for a missing required or unresolvable contract reference, or for a request reference absent or unequal to the entry's, carries resource_contract_drift, not out_of_authority, capability_drift or parameter_violation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.requestable-denials.auto-approval-bounded",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "requestable-denials",
@@ -25274,6 +25771,72 @@
     }
    ],
    "notes": "evaluate.test.ts proves the PDP echoes the request's parameter_digest into conditions.parameter_digest unchanged (equality, not a recomputation). The PEP's enforcement of the exact binding is proven by the reverification tests: server.ts's callReadTool/callWriteTool/callTransactionTool all read the digest from decision.context.conditions.parameter_digest and recompute-and-compare against authoritative state immediately before execution, refusing parameter_mismatch on any divergence (proven for both the write path, pre-existing, and the list-read path, #612 finding 1). Known limitation, unrelated to this row's PEP-enforcement text: the request-side carriage this profile's current examples show (action.properties.parameter_digest) differs from this deployment's context.parameter_digest placement; that request-shape divergence is pre-existing and out of this finding's scope (response-context only), flagged here rather than silently carried."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-equals-request",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "REQUIRED on a permit for an action to which a resource contract applies, and equal to the validated request's `resource.properties.resource_contract`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for an action under a resource contract carries conditions.resource_contract equal to the validated request's reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-pep-compares",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "At every use, the executing PEP MUST resolve this reference against its own current contract declarations and MUST NOT release an effect unless it resolves and equals the reference of the contract the PEP is about to perform the operation under.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a contract definition change after the decision and before dispatch, with identical parameters, and a permit whose condition names a contract other than the one the PEP would perform under, both release no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "A missing condition where a contract applies, an unresolvable reference, or an unequal one is Execution Evidence `suppressed` / `resource_contract_unresolvable`, not a PDP denial.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each use-time contract failure is recorded as Execution Evidence with outcome suppressed and error resource_contract_unresolvable, never as a PDP denial"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "authzen.response-context.valid-until-required-and-bounded",
@@ -25749,6 +26312,50 @@
     }
    ],
    "notes": "Classified by call site, never by the reason string the two carriers share."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.resource-contract-two-carriers",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "`resource_contract_unresolvable` likewise appears on two carriers, the carrier recording whether the PEP found the contract unresolvable before the decision request or at use",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a contract the PEP cannot resolve before the decision request is a Refusal Record and one that stops resolving at use is Execution Evidence, both carrying resource_contract_unresolvable"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.resource-contract-not-parameter-or-target",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "A contract failure is never reported as a parameter deviation or as `target_drift`, even when the parameters and the target are unchanged.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a contract failure with unchanged parameters and target is never recorded as parameter_violation, parameter_mismatch or target_drift"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "authzen.failure-condition-coverage.target-drift-versus-parameter-mismatch",
@@ -29175,7 +29782,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve, or the PEP cannot establish one unambiguous operation target for the request), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve, or the PEP cannot establish one unambiguous operation target for the request), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `resource_contract_unresolvable` (the resource contract the operation requires could not be resolved, {{I-D.draft-mcguinness-mission-runtime}}), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -29187,7 +29794,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, resource_contract_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -29314,6 +29921,28 @@
     }
    ],
    "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
+  },
+  {
+   "id": "evidence.refusal.resource-contract-unresolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "`resource_contract_unresolvable` (the resource contract the operation requires could not be resolved",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP that cannot resolve the resource contract the operation requires before the decision request signs a Refusal Record with denial_reason resource_contract_unresolvable, with no decision request and no effect"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -30318,6 +30947,28 @@
     }
    ],
    "notes": "The capability snapshot is excluded from parameter_digest, so parameter_mismatch would assert a comparison that never failed."
+  },
+  {
+   "id": "evidence.execution.error-resource-contract-unresolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`resource_contract_unresolvable` (the resource contract the permit was decided under did not resolve at execution, or differs from the contract the operation would be performed under)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit whose contract no longer resolves at use, or differs from the contract the PEP is about to perform under, is suppressed with error resource_contract_unresolvable, never a parameter comparison"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "evidence.execution.duplicate-identifiers-are-distinct",
@@ -38313,8 +38964,22 @@
     "normative": "the AS refuses a `prefix`-match entry whose `resource` carries a query or fragment component."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "direct derivation (deriveAuthoritySet) refuses an unsupported resource_match (#1264) > refuses an unrecognized resource_match, or a prefix entry whose resource carries a query or names no // authority, in a ceiling entry or a submitted proposal (#1276)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276. PAR refuses a prefix entry whose resource carries a query (with that resource also an Intent target, so only this rule refuses it) with invalid_authorization_details before any interaction, creating no Mission; a fragment never passes the absolute-URI rule, so it is refused the same way. Direct derivation refuses the same entry in a ceiling or a proposal. Controls: the queried resource as an exact entry, and a prefix entry without a query, are admitted. Mutation: admitting the query fails both witnesses."
   },
   {
    "id": "resource-access.rs-enforcement.type-scoped-matching",
@@ -38377,7 +39042,7 @@
    "tests": [
     {
      "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
-     "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > a prefix entry or an unrecognized resource_match provides no authority at the resource, even naming the target itself",
+     "name": "the payments resource matches entries with the Resource Access matcher (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > an unrecognized resource_match, or a prefix entry whose resource carries a query, provides no authority at the resource, even naming the target itself",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -38388,7 +39053,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1276: a prefix entry (unimplemented) and an unrecognized resource_match provide no authority at the payments and SaaS resources; a credential carrying one is refused whole."
+   "notes": "#1276: an unrecognized resource_match provides no authority at the payments and SaaS resources, and a credential carrying one is refused whole. prefix is implemented (#1276), so the payments witness pairs the unrecognized value with a prefix entry the matcher cannot enforce (its resource carries a query), refused the same way. Mutation: reading an unrecognized value as exact in the shared matcher fails both witnesses."
   },
   {
    "id": "resource-access.rs-enforcement.prefix-normalization-before-comparison",
@@ -38410,8 +39075,22 @@
     "normative": "an RS applies the RFC 3986 normalization before the prefix comparison, never after."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches prefix entries against the operation target (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > normalizes before the prefix comparison: a target whose decoded dot-segment leaves the base is denied under it and admitted under the base it lands in, and scheme and host case do not move the boundary",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > a prefix entry covers the service-level target at its base and a finer declared target beneath it, never a sibling sharing its characters or a target a decoded dot-segment moves out; a prefix entry whose resource carries a query provides no authority (#1276)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1276: the shared matcher normalizes both operands (Resource Matching's five steps) before the prefix comparison. At the payments resource a target whose %2e%2e decodes to a dot-segment and leaves /invoices is denied under the /invoices prefix and admitted under /admin, where it lands, and a target with its scheme and host in upper case is admitted under the lower-case base; the SaaS resource refuses the dot-segment escape from /journal. Mutations: skipping dot-segment removal fails both witnesses, and skipping host case-folding fails the payments witness."
   },
   {
    "id": "resource-access.rs-enforcement.constraints-fail-closed",
@@ -38466,7 +39145,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Witnessed at the payments resource for a key the matched Mission entry carries (the PDP refuses it whole), and at the SaaS resource, which enforces only `vendors`, for registered keys it does not enforce (`time_window`, `max_amount`), an unregistered key and a malformed value (review on PR #1298). A payments credential carrying such a key is refused when it is read (parseCredentialAuthority), witnessed at helper level only, so the row stays partial."
+   "notes": "#1266. Witnessed at the payments resource for a key the matched Mission entry carries (the PDP refuses it whole), and at the SaaS resource, which enforces only `vendors`, for registered keys it does not enforce (`time_window`, `max_amount`), an unregistered key and a malformed value (review on PR #1298), on RAS-issued tokens minted directly, since a RAS that knows SaaS's metadata never mints such a key (#1266). A payments credential carrying such a key is refused when it is read (parseCredentialAuthority), witnessed at helper level only, so the row stays partial."
   },
   {
    "id": "resource-access.protected-resource-metadata.enforced-keys",
@@ -38486,14 +39165,14 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a resource advertising mission_constraints_supported names only constraints keys it enforces",
-    "local": "the payments resource names max_amount, vendors and each implemented Common Constraint, and no Common Constraint it does not enforce; the SaaS resource names only vendors, the one key it enforces"
+    "local": "the payments resource names max_amount, vendors, requires_action_approval and terminal_when (both enforced through its PDP) and each implemented Common Constraint, exactly the set the authorization server admits; the SaaS resource names only vendors, the one key it enforces"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > advertises exactly max_amount, vendors and the Common Constraints it enforces, and no other",
+     "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > advertises exactly the constraints keys it enforces, the set the Authorization Server admits, and no other",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -38504,7 +39183,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints from the metadata fails the test. SaaS (review on PR #1298): omitting the member fails its test."
+   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints, or terminal_when, from the payments metadata fails the test. SaaS (review on PR #1298): omitting the member fails its test."
   },
   {
    "id": "resource-access.rs-enforcement.no-disclosure-only-constraint",
@@ -38608,7 +39287,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read with such a member",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -38641,9 +39320,21 @@
      "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent issuance instant: an entry bounded by resource_issued_after covers nothing",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > an empty collection establishes no member fact: a read returning nothing is refused under a bound that reads one, and permitted without one (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). The row stays partial."
+   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). The row stays partial. #1266 round 2: a list read whose member lacks the fact, or that returns no member, refuses whole."
   },
   {
    "id": "resource-access.common-constraints.unsatisfiable-entry-no-authority",
@@ -38880,7 +39571,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an operation on a resource whose authoritative issuance instant precedes resource_issued_after is refused; one issued at or after it, the bound included, is permitted",
-    "local": "the payments resource reads the invoice record's issued_at; a record without one, a list read and a vendor read are refused under the bound"
+    "local": "the payments resource reads the invoice record's issued_at, and a list read reads each invoice it returns; a record without one, a list read with such a member, and a vendor read (a vendor record has no issuance instant) are refused under the bound"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -38908,9 +39599,21 @@
      "name": "the payments resource enforces resource_issued_after and resource_issued_before on the credential bound (@spec runtime#input-authority) > a credential narrower than its Mission is refused at the PEP, before any decision, outside its window",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read, returning nothing, when any one member's record is outside the bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266 slice 1. Proved by mutation: skipping the PDP gate, making the after-bound exclusive, letting a missing fact satisfy, and skipping the credential gate each fail these tests."
+   "notes": "#1266 slice 1. Proved by mutation: skipping the PDP gate, making the after-bound exclusive, letting a missing fact satisfy, and skipping the credential gate each fail these tests. #1266 round 2: a list read evaluates each member with its own facts (resource.properties.members, bound into parameter_digest) and refuses whole on any member; proved by mutation (any member instead of every, the PDP ignoring members, the PEP never or always carrying members, reverification reusing the decided members)."
   },
   {
    "id": "resource-access.common-constraints.issued-before-enforced",
@@ -39119,6 +39822,24 @@
      "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses a write whose invoice's issuance fact changed between decision and execution",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses at release a read one of whose members changed, or that gained a member, after the decision, with no result",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
    "notes": "#1375. One row for both issuance bounds, which read the same input."
@@ -39215,7 +39936,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an operation on a resource whose authoritative owning tenant differs from the tenant bound, or cannot be established, is refused; a client-supplied tenant cannot establish it",
-    "local": "the payments resource reads the vendor record's tenant (an invoice belongs to its vendor's tenant); a list read refuses under the bound, and a write whose vendor record changed refuses parameter_mismatch"
+    "local": "the payments resource reads the vendor record's tenant (an invoice belongs to its vendor's tenant), and a list read reads each invoice it returns; a list read with any member outside the bound or without a tenant refuses whole, and a write whose vendor record changed refuses parameter_mismatch"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -39228,7 +39949,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read with such a member",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -39249,9 +39970,21 @@
      "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > a credential bound to a tenant is refused at the PEP, before any decision, for another tenant's invoice",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member's record names the bound's tenant, carrying each member's facts, and returns exactly those members",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read, returning nothing, when any one member's record is outside the bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266 slice 2. Proved by mutation: ignoring the tenant fact, letting a missing fact satisfy, and the PEP omitting the store's tenant each fail these tests."
+   "notes": "#1266 slice 2. Proved by mutation: ignoring the tenant fact, letting a missing fact satisfy, and the PEP omitting the store's tenant each fail these tests. #1266 round 2: a list read evaluates each member with its own facts (resource.properties.members, bound into parameter_digest) and refuses whole on any member; proved by mutation (any member instead of every, the PDP ignoring members, the PEP never or always carrying members, reverification reusing the decided members)."
   },
   {
    "id": "resource-access.common-constraints.tenant-subset",
@@ -39358,13 +40091,25 @@
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read with such a member",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
      "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a write whose vendor's tenant changed between decision and execution",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member's record names the bound's tenant, carrying each member's facts, and returns exactly those members",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > a credential bound reading a member fact is evaluated for each member at the PEP, before any decision",
      "level": "endpoint",
      "surface": "resource-operation"
     }
@@ -39829,7 +40574,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an operation on data whose trusted classification label is not among the named values, or whose label cannot be established, is refused; a label named in the request cannot establish it",
-    "local": "the payments resource reads the invoice record's classification; vendor and list reads refuse under the bound, and a write whose invoice was relabeled refuses parameter_mismatch"
+    "local": "the payments resource reads the invoice record's classification, and a list read reads each invoice it returns; a vendor read (a vendor record has no label) and a list read with any member outside the bound or unlabeled refuse under the bound, and a write whose invoice was relabeled refuses parameter_mismatch"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -39863,9 +40608,21 @@
      "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > a credential bound to labels is refused at the PEP, before any decision, for another label",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read, returning nothing, when any one member's record is outside the bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266 slice 5. Proved by mutation: letting a missing label satisfy, the PDP or PEP dropping the store's label, and the credential gate losing the label each fail these tests."
+   "notes": "#1266 slice 5. Proved by mutation: letting a missing label satisfy, the PDP or PEP dropping the store's label, and the credential gate losing the label each fail these tests. #1266 round 2: a list read evaluates each member with its own facts (resource.properties.members, bound into parameter_digest) and refuses whole on any member; proved by mutation (any member instead of every, the PDP ignoring members, the PEP never or always carrying members, reverification reusing the decided members)."
   },
   {
    "id": "resource-access.common-constraints.data-classification-subset",
@@ -39975,6 +40732,18 @@
      "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses a write whose invoice was relabeled between decision and execution",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
    "notes": "#1375."
@@ -39999,7 +40768,7 @@
     "normative": "a label among the bound's values, compared as exact strings, satisfies data_classification; another label, or an empty bound, does not"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
@@ -40012,9 +40781,21 @@
      "name": "PDP enforces data_classification against the resource's label (@spec resource-access#initial-common-constraints) > refuses when the PEP established no label, and under an empty bound",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP evaluates each member of a collection against the member-fact bounds (@spec resource-access#initial-common-constraints) > data_classification over a collection: every member's label must be among the values, compared as exact strings",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP evaluates each member of a collection against the member-fact bounds (@spec resource-access#initial-common-constraints) > refuses when any one member is outside a bound, or lacks the fact it reads",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The PDP receives one label per decision, so the every-label clause is witnessed at the shared gate only (mission-core common-constraints.test.ts, data_classification enforcement); the row stays partial."
+   "notes": "#1375; #1266 round 2. The every-label clause is witnessed at the PDP over a collection's members, each carrying its own label (resource.properties.members): two labels both among the values permit, and one outside them refuses. Proved by mutation: evaluating any member instead of every member fails it."
   },
   {
    "id": "resource-access.common-constraints.allowed-tools-enforced",
@@ -40309,7 +41090,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only, because this deployment implements exact matching only and no issuance path can carry a prefix entry: since #1267 (#1264, D446), a resource_match other than exact is refused before approval or issuance, at PAR intake and in direct derivation (invalid_authorization_details) and by the policy.json, governed-policy.json and containment.json loaders (ConfigError), and the cross-org exchange's tool mapping emits none. Prefix matching itself is #1258's and #1266's. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only. Derivation implements prefix (#1276), but this deployment's configured ceilings admit exact entries only (the policy.json, governed-policy.json and containment.json loaders refuse prefix with a ConfigError, #1264), so no issuance path in this deployment carries a prefix entry, and the cross-org exchange's tool mapping emits none. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -40468,6 +41249,28 @@
    ]
   },
   {
+   "id": "resource-access.scope-projection.contract-preserved",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "For an entry carrying `resource_contract`, the mapping states that the target performs every operation the mapped `scope` value permits under exactly the referenced contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carrying resource_contract, or one without it for a target that requires a reference, is projected to scope only where the mapping states the target performs the scope's operations under exactly that contract; otherwise no scope is emitted for it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "transformation-capabilities",
@@ -40598,7 +41401,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The target never follows an agent argument or a presented entry naming another identifier. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, a caller-supplied operation_target or resource argument never moves the target, though the credential names that value, and entries naming the service identifier never make the service the target of an invoice operation. Mutations: reading a caller-supplied operation_target and collapsing the argument-derived target to the service identifier each fail a witness."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries match at a path-segment boundary after the one normalization (#1276). The target never follows an agent argument or a presented entry naming another identifier. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, a caller-supplied operation_target or resource argument never moves the target, though the credential names that value, and entries naming the service identifier never make the service the target of an invoice operation. Mutations: reading a caller-supplied operation_target and collapsing the argument-derived target to the service identifier each fail a witness."
   },
   {
    "id": "resource-access.resource-matching.refuse-unresolved-target",
@@ -40659,7 +41462,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). Ambiguity is reachable through declarations naming different targets and, under an argument-derived contract, through a list-valued argument; template forms outside the supported one refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An absent, empty, list-valued or dot-segment argument, a tool with no such argument, and declarations deriving different targets refuse target_unresolvable before any decision request, though the Mission and the credential name the service and the invoice. Mutations: falling back to the service identifier on a missing argument, taking a list's first value and dropping the dot-segment check each fail that witness."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries match at a path-segment boundary after the one normalization (#1276). Ambiguity is reachable through declarations naming different targets and, under an argument-derived contract, through a list-valued argument; template forms outside the supported one refuse as unsupported. #1296 review: a contract naming a value that is not an RFC 3986 absolute-URI (%zz, a trailing %, %4, an empty http host) establishes no target and refuses, though an entry names the identical string. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An absent, empty, list-valued or dot-segment argument, a tool with no such argument, and declarations deriving different targets refuse target_unresolvable before any decision request, though the Mission and the credential name the service and the invoice. Mutations: falling back to the service identifier on a missing argument, taking a list's first value and dropping the dot-segment check each fail that witness."
   },
   {
    "id": "resource-access.resource-matching.execute-matched-target",
@@ -40702,7 +41505,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An argument-derived target is re-derived at use from the live contract and the arguments of the execution: a contract that moves or disappears suppresses the permit with target_drift and no effect (get_invoice, hold_transfer), and a permitted call executes the invoice its target names. Mutations: re-deriving at use without the arguments, or accepting a moved target, fail T6."
+   "notes": "#1258 item 1 (D447). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries match at a path-segment boundary after the one normalization (#1276). The PEP re-establishes the target from the live profile before every release and suppresses a moved or unestablishable one (target_drift), for parameter-bound reads, a read with no parameter digest, and a write. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). An argument-derived target is re-derived at use from the live contract and the arguments of the execution: a contract that moves or disappears suppresses the permit with target_drift and no effect (get_invoice, hold_transfer), and a permitted call executes the invoice its target names. Mutations: re-deriving at use without the arguments, or accepting a moved target, fail T6."
   },
   {
    "id": "resource-access.resource-matching.no-metadata-fallback",
@@ -40751,7 +41554,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, entries naming only the service identifier cover no invoice target, refused before the PDP or denied out_of_authority there, while the shipped service-level contract permits the same call. Mutation: collapsing the argument-derived target to the service identifier fails that witness."
+   "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries match at a path-segment boundary after the one normalization (#1276). #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). Under it, entries naming only the service identifier cover no invoice target, refused before the PDP or denied out_of_authority there, while the shipped service-level contract permits the same call. Mutation: collapsing the argument-derived target to the service identifier fails that witness."
   },
   {
    "id": "resource-access.resource-matching.operation-contract-content",
@@ -40925,7 +41728,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level. #1296 review: the target's syntax check (RFC 3986 absolute-URI) is a match over the string as given and never produces another spelling; a helper test keeps %2F and %41 literal (mission-core operation-target.test.ts)."
+   "notes": "#1258 item 1 (D447 dispositions 2 and 3). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries match at a path-segment boundary after the one normalization (#1276). The SaaS witness carries an entry spelled with JSON escapes in the token's JSON text. Cases rm-exact-01..12 also run at helper level. #1296 review: the target's syntax check (RFC 3986 absolute-URI) is a match over the string as given and never produces another spelling; a helper test keeps %2F and %41 literal (mission-core operation-target.test.ts)."
   },
   {
    "id": "resource-access.resource-matching.exact-documented-spelling",
@@ -40971,9 +41774,22 @@
     "normative": "a /orders/ base admits itself and /orders/123 but neither /orders nor /ordersx"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 items 1 and 10 (D447 disposition 4). Cases rm-prefix-01..15. Prefix matching is not implemented; a prefix entry provides no authority at the reference resource servers (#1264, #1276)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches prefix entries against the operation target (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > a prefix entry covers the target equal to its base and each target beneath it at a path-segment boundary, never a sibling sharing its characters; a base ending in / does not cover the bare path; an exact entry never covers a target beneath it",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > a prefix entry covers the service-level target at its base and a finer declared target beneath it, never a sibling sharing its characters or a target a decoded dot-segment moves out; a prefix entry whose resource carries a query provides no authority (#1276)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 items 1 and 10 (D447 disposition 4). Cases rm-prefix-01..15 run at helper level. #1276: the payments resource, in both decision-channel modes, and the SaaS resource admit a prefix entry's base and each target beneath it at a path-segment boundary, and refuse a sibling sharing the base's characters (/invoices against /invoices-archive/inv-1, /journal against /journal-archive/entries) and the bare path under a base ending in /. Mutations: a plain string-prefix comparison, and coalescing a trailing-slash base, each fail both witnesses."
   },
   {
    "id": "resource-access.resource-matching.prefix-query-path-only",
@@ -40995,9 +41811,22 @@
     "normative": "a query does not affect the prefix path test but still takes part in target resolution, action and constraint enforcement; a query that selects another resource is resolved to it first"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04. Prefix matching is not implemented; a prefix entry provides no authority (#1276)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource matches prefix entries against the operation target (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276) > excludes the target's query from the prefix path comparison only: a target with a query beneath the base is covered, while an exact entry naming the base without the query is not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > rm-resolve-04: a query that selects another resource is resolved first, and the resolved target falls outside the prefix",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 10 (D447 disposition 3). #1276: at the payments resource a target carrying a query beneath a prefix base is covered, and the query stays part of the target, so an exact entry naming the base without it does not cover it. Partial: no reference operation contract resolves a query to another resource, so \"a query that selects another resource is resolved to that resource before matching\" is witnessed only at helper level (rm-resolve-04, through the case reader). Mutation: letting a query defeat the path comparison fails the payments witness, rm-prefix-15 and rm-resolve-04."
   },
   {
    "id": "attenuation.root-mapping.target-restriction-every-audience",
@@ -41067,7 +41896,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Kernel derivation refuses non-exact entries earlier (#1264), so the first guard is defense in depth until prefix lands (#1399)."
+   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping; re-proved by mutation (dropping the guard fails the prefix case)."
   },
   {
    "id": "resource-access.subset.same-matcher",
@@ -41089,9 +41918,16 @@
     "normative": "whenever the subset test finds a candidate's resource set within the reference's, every target the candidate admits is also admitted by the reference under enforcement"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 1 (D447 disposition 5). The reference compares exact resources literally, but no resource server implements operation-target matching, so consistency is not established."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > the subset test draws the resource servers' boundary: an exact candidate naming each resource-matching case's target is within the case's entry exactly when the matcher admits the target (@spec resource-access#subset, #1276)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1258 item 1 (D447 disposition 5). #1276: the subset rule's resource step (resourceWithin) calls prefixAdmits, the function the resource servers' matcher (matchResource) calls, over the same normalized forms. The witness runs every resource-matching case and requires an exact candidate naming the case's target to be within the case's entry exactly when the matcher admits the target. Partial: unit level; the property holds by construction for this implementation, and no endpoint compares an AS decision with an RS decision."
   },
   {
    "id": "resource-access.subset.exact-under-exact-literal",
@@ -41134,7 +41970,142 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1258 item 1 (D447). Helper-level witness (isSubsetEntry through the case reader); it establishes no endpoint behavior. Each cited case is proved by a defect: refusing identical resources fails sub-res-01, a case-insensitive comparison fails sub-res-02, and comparing without the query fails sub-res-03. The prefix combinations (sub-res-04..08) are skipped."
+   "notes": "#1258 item 1 (D447). Helper-level witness (isSubsetEntry through the case reader); it establishes no endpoint behavior. Each cited case is proved by a defect: refusing identical resources fails sub-res-01, a case-insensitive comparison fails sub-res-02, and comparing without the query fails sub-res-03. The prefix combinations (sub-res-04..08) run since #1276 and are cited on the three prefix rows that follow."
+  },
+  {
+   "id": "resource-access.subset.exact-under-prefix",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "an `exact` A under a `prefix` B: B's prefix matcher admits A.`resource` as a target",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an exact candidate is within a prefix reference exactly when the reference's prefix matcher admits the candidate's resource as a target"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-04: an exact candidate the prefix reference's matcher admits is within it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-05: an exact candidate extending the prefix reference within a segment is not within it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "derivation under prefix entries (@spec resource-access#subset, mission#derivation-modes, #1276) > derives an exact proposal beneath a prefix ceiling entry as the proposal's own exact resource, never the ceiling's base, and nothing for a sibling outside the boundary",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-prefix.test.ts",
+     "name": "a prefix Mission entry through approval and the effective-set projection (@spec resource-access#subset, issuance-grant#effective-set-projection, #1276) > approves a prefix proposal and an exact descendant under a prefix ceiling, each keeping its own resource and resource_match",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05, and pairing ceilings by equal resource string fails both derivation witnesses."
+  },
+  {
+   "id": "resource-access.subset.prefix-under-prefix",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "a `prefix` A under a `prefix` B: B's prefix matcher admits A's normalized base",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a prefix candidate is within a prefix reference exactly when the reference's prefix matcher admits the candidate's normalized base"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-06: a prefix candidate whose normalized base the prefix reference admits is within it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-07: a prefix candidate /orders is not within a prefix reference /orders/",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "derivation under prefix entries (@spec resource-access#subset, mission#derivation-modes, #1276) > carries prefix onto the derived entry: a prefix proposal within a prefix ceiling keeps its own base, and a configured mapping keeps a prefix ceiling entry unchanged",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. A derived prefix entry keeps its own base and resource_match. Mutations: coalescing a trailing-slash base fails sub-res-07, and dropping prefix from the derived entry fails the derivation witness."
+  },
+  {
+   "id": "resource-access.subset.prefix-under-exact-never",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "a `prefix` A under an `exact` B: never contained",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a prefix candidate is never within an exact reference, even one naming the same resource"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-res-08: a prefix candidate is never within an exact reference, even naming the same resource",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "derivation under prefix entries (@spec resource-access#subset, mission#derivation-modes, #1276) > narrows a prefix proposal to an exact ceiling entry naming its base, and derives nothing from a prefix proposal broader than every ceiling entry under another string",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-prefix.test.ts",
+     "name": "a prefix Mission entry through approval and the effective-set projection (@spec resource-access#subset, issuance-grant#effective-set-projection, #1276) > a prefix candidate through an exact effective entry naming its base narrows to that exact entry, and two disjoint resource sets yield no fragment",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. Derivation narrows a prefix proposal to an exact ceiling entry naming its base, and the effective-set projection narrows a prefix candidate to such an entry. Mutation: comparing an exact reference's string alone fails sub-res-08 and both witnesses, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry."
   },
   {
    "id": "resource-access.subset.false-equivalent-absent",
@@ -41276,6 +42247,184 @@
     }
    ],
    "notes": "#1258 item 8, #1277 review finding 2 (D454); #1275 (D457). Derivation keeps a candidate list as a restriction and records the entry's origin (policy where the reference entry has no list); narrowMatchers and matchersSubset stay structural, and a Child Mission keeps every origin of the parent entries it falls within. Eligibility is decided at each delegated issuance against the approved entry, its retained origin, every list and the current policy. Endpoint witnesses: the ICA continuation exchange (a proposal-added list, a Child Mission's list) and designation. A list requested at a later ICA exchange is no longer issued: the grant's conveyed copy of a policy-origin entry omits `delegation` (#1374), so that request is refused and witnesses nothing here. Proven by disabling the code it covers: recording every origin as list, dropping the policy check, dropping the proposal's list, or ignoring the parent's origin each fails its witness. Cases dg-inherit-01 and 04 run through the reader (kernel level)."
+  },
+  {
+   "id": "resource-access.subset.contract-preserved-exactly",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "A carries `resource_contract` exactly when B does, and then with `id`, `version`, and `digest` each equal to B's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived, refreshed, exchanged or delegated entry that removes, replaces or adds a resource_contract reference relative to its Mission entry is not a subset and is refused; one that carries it unchanged passes this step"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. Prove through every enabled transformation: derivation, refresh narrowing, Token Exchange delegation, async delegation and dispatch handoff."
+  },
+  {
+   "id": "resource-access.resource-contract.unconfigured-reference-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "MUST refuse, with the `invalid_authorization_details` error code, a proposed entry whose `resource_contract` does not equal, member for member, the reference of a contract its configuration names as current for the entry's `resource` and that defines every action and action family the entry lists",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, or a contract not defining an action the entry lists) is refused invalid_authorization_details and no Mission is created"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.assembled-from-configuration",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "MUST, where its configuration requires a reference for the entry's `resource` and the proposal carries none, record the current contract's reference in the entry, so that the Approver approves the entry with it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a resource whose configuration requires a reference, the approved Authority Set entry carries the configured current contract's id, version and digest even when the proposal carried none"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.authority-hash-commits",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "The reference is part of the entry, so `authority_hash` commits it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two Authority Sets that differ only in an entry's resource_contract member have different authority_hash values"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "An authorization server that does not implement this section refuses a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and never drops the member.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization server without resource contract support refuses an entry carrying resource_contract with invalid_authorization_details and never issues the entry with the member removed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. The reference AS refuses every member outside its supported set (#1399, PR #1421), which covers this member until the implementation admits it; a witness must name resource_contract."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-performs-only-referenced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "A resource server MUST NOT treat an entry carrying `resource_contract` as authorizing an operation unless it performs that operation under exactly the referenced contract",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an operation the resource would perform under a contract other than the entry's referenced one (another version, or the same version with a different digest) is refused with no effect, including a v1-referencing entry at a resource that serves only v2"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-missing-required-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "Where the resource server's operation contract requires a reference for an operation, an applicable entry without one provides no authority for it.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at a resource that requires a reference for the operation, an applicable entry without resource_contract authorizes nothing, and the request is refused unless another fully enforceable entry covers it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-follows-runtime-version-states",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "Which versions a resource still performs, and for which entries, follows the version states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that does not resolve there authorizes nothing.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server performs an entry's operation under a superseded version only within its declared retention and never under a retired one; outside those states the entry authorizes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -42193,15 +43342,81 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "for a resource whose enforced keys are known (by registration, deployment policy or its mission_constraints_supported), the authorization server emits no entry carrying another constraints key",
-    "local": "the RAS applies this by deployment policy (resourceConstraintsSupported): for a listed resource it drops whole an entry carrying an unlisted key, never stripping the key, and refuses invalid_grant without consuming the grant when no entry survives"
+    "normative": "a token carries no entry with a constraints key that any token audience whose resource tree overlaps the entry is not known to enforce (by registration, deployment policy or its mission_constraints_supported): the audience the entry names, an audience serving the finer resource it names, and an audience within a prefix entry's base",
+    "local": "the main authorization server reads its knowledge from the trusted scope-projection mapping's per-audience mission_constraints_supported (absent: no key), at every Mission-bound access-token mint and at the transaction token; it pairs an entry with every token audience whose resource tree overlaps it, under the Resource Access matcher (prefixAdmits), checks each one's own list, and refuses invalid_target, never dropping the key or omitting the entry; the RAS reads resourceConstraintsSupported and applies the same pairing over its listed resources: an entry must meet every overlapping listed resource's keys, one overlapping none (or no map) is known to be enforced nowhere, and either is dropped whole, refusing invalid_grant without consuming the grant when no entry survives"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > emits an entry whose every key the audience's mission_constraints_supported names, unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > refuses invalid_target, issuing no token, when an entry for the audience carries a key the audience is not known to enforce",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > a refresh re-checks against the current mapping: an audience whose key list no longer names a carried key refuses, and an audience with no list is known to enforce no key (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource rides in this token, and a token issued for that resource refuses it (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > refuses invalid_target an invoice-level exact entry under the audience carrying a key the audience does not list, and emits it once the list names the key",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > checks a prefix entry within the audience against the audience's list",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > checks a prefix entry whose base contains the audience against the audience's list",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > does not pair the audience with a sibling outside its segment boundary (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction tokens carry only constraints keys the Challenge-Issuing Resource is known to enforce (@spec resource-access#resource-access-type) > refuses invalid_target, opening no approval, a challenge whose entry carries a key the mapping does not know the resource enforces, and admits it under the shipped mapping",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole an entry carrying a key the resource does not list, keeps listed keys intact, and leaves an unlisted resource as narrowed",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole an entry carrying a key the resource does not list, and keeps listed keys intact",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole a constrained entry for a resource it has no enforcement knowledge of, and keeps an unconstrained one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an empty key list admits only a resource's unconstrained entries (boundary)",
      "level": "unit",
      "surface": "token-endpoint"
     },
@@ -42216,9 +43431,69 @@
      "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > malformed resourceConstraintsSupported configuration fails at startup",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > checks a finer exact entry and a prefix entry within a listed resource against that resource's keys",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > checks a prefix entry whose base contains listed resources against each one's keys",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > checks an entry overlapping two listed resources against both lists",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > does not pair a listed resource with a sibling outside its segment boundary (boundary)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type) > accepts a key list on an authorization_details audience, an empty one included, and keeps it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type) > refuses a malformed list, a repeated key, and the member on a scope-only audience",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the emission check pairs an entry with every audience whose resource tree overlaps it (@spec resource-access#resource-access-type, #1266) > a token with two overlapping audiences checks the entry against both lists",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the emission check pairs an entry with every audience whose resource tree overlaps it (@spec resource-access#resource-access-type, #1266) > an audience that is not a // base is paired by equality only (boundary)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > the shipped scope-projection mapping vouches for this resource exactly the keys it advertises, and every shipped ceiling for it carries only those keys (#1266)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/saas-shipped-constraints.test.ts",
+     "name": "shipped SaaS ceilings stay enforceable at the SaaS resource > the shipped scope-projection mapping vouches for the SaaS resource exactly the keys it advertises (#1266)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#1298 review (D475, D480). Partial by design, and the requirement stays a SHOULD (D480). Recorded departures: a resource not listed in the RAS's resourceConstraintsSupported keeps its narrowed entries unfiltered, and the main authorization server emits the keys its configured ceilings carry without per-resource enforcement knowledge (it does not filter by mission_constraints_supported). A resource server that cannot enforce a key still fails closed (resource-access.rs-enforcement.constraints-fail-closed). Unit-level RAS witnesses; mutations M8 (filter passes everything), M9 (strip the key instead of dropping the entry) and M10 (configuration validation skipped) each fail them."
+   "notes": "#1266 round 2 (D480 departures closed). An entry for another resource rides only in tokens its resource server never receives; it is checked when a token is issued for that resource (the boundary case). The cross-domain ID-JAG goes to the RAS, not to the resource server: the RAS's destination policy governs emission to the destination resource and is now fail-closed. Introspection discloses what was minted and emits nothing new. A scope-only target stays governed by the scope projection's independently enforced controls. The shipped mapping vouches exactly what each resource's metadata advertises (payments, SaaS). Mutations: dropping the AS refusal, checking every carried entry regardless of audience, letting an absent list pass, disabling the transaction-token check, loosening the mapping parser, the RAS passing an unlisted resource, the RAS passing an empty list, and the RAS stripping the key instead of dropping the entry each fail these tests. Review on PR #1427 (P2): the pairing was by equality, so an invoice-level or prefix entry under an audience skipped its list. Fixed with the overlap pairing over #1434's matcher. Mutations: pairing by equality only, checking only the first overlapping audience, a raw string prefix in place of prefixAdmits, dropping the prefix-contains clause, the RAS accepting any one overlapping list, and the RAS passing an entry that overlaps no listed resource each fail these tests. The transaction token admits only entries naming the Challenge-Issuing Resource exactly, so only the equality pairing is reachable there; the two-audience case is witnessed at the shared check."
   },
   {
    "id": "resource-access.scope-projection.narrower-resource",
@@ -42240,9 +43515,16 @@
     "normative": "a prefix entry projects to a narrower resource only when the value's complete effective rights stay within the entry; a broader ancestor is never safe"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 11. Prefix entries are not implemented; cases pj-05, pj-06 skipped."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > narrower resource: a prefix entry projects safely to a value over that prefix or a narrower resource within it, never a sibling, a dot-segment escape or an ancestor; an exact entry only to its own resource (#1276)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1258 item 11. #1276: the resource condition applies the subset rule's resource step to the mapping's declared rights, so a prefix entry projects to a value over that prefix or a narrower resource within it (pj-05's shape) and never to a sibling, a dot-segment escape or an ancestor (pj-06's shape). Unit level: the shipped configuration's ceilings are exact only, so no token-endpoint issuance carries a prefix entry. Mutation: restoring the byte-exact comparison fails the witness. Cases pj-05 and pj-06 stay skipped: the case reader has no projection executor."
   },
   {
    "id": "resource-access.rs-enforcement.no-fragment-combination",
@@ -42771,6 +44053,28 @@
     }
    ],
    "notes": "#1376 states the rule; #1373 (#1386, #1398) enforces it. Every clause is witnessed: neither member and another member are refused at PAR (entry-validation.test.ts) and by the intake validator and direct derivation (delegate-matcher-members.test.ts, which asserts invalid_authorization_details for both shapes in a proposal and a ceiling entry); no derived entry keeps the org reproduction's narrowed matcher; and the deferral, handoff and async-delegation exchanges refuse a requested entry carrying another member. The PAR witness here was proved by mutation, each alone: admitting an unknown member (expected 201 to be 400 for the org matcher) and admitting a matcher with neither member (expected 201 to be 400 for {}); the #1386 and #1398 witnesses were proved in those PRs. Not cited, since their error or surface differs from this row: the config loaders (a native configuration error naming the entry) and the template admin plane (invalid_request), and the allowed_child_actors cases, which are Child Delegation's list. No vector case: the reader's delegate-matcher and entry-validation executors run none for this rule yet."
+  },
+  {
+   "id": "resource-access.entry-validation.resource-contract-shape",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource_contract` is not an object with exactly the members `id`, `version`, and `digest`, or one of them does not have the form {{resource-access-type}} gives it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_contract is not an object with exactly id (an absolute URI), version (a non-empty string) and digest (the sha-256: integrity-anchor encoded form) is refused invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "resource-access.entry-validation.time-window-ordering",

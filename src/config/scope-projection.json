@@ -1,14 +1,28 @@
 {
   "audiences": {
     "http://localhost:4403/mcp": {
-      "version": "2026-09-29.2",
+      "version": "2026-10-20.1",
       "mission_aware": true,
-      "mode": "authorization_details"
+      "mode": "authorization_details",
+      "mission_constraints_supported": [
+        "max_amount",
+        "vendors",
+        "requires_action_approval",
+        "terminal_when",
+        "resource_issued_after",
+        "resource_issued_before",
+        "tenant",
+        "time_window",
+        "recipient_domain",
+        "data_classification",
+        "allowed_tools"
+      ]
     },
     "http://localhost:4406/mcp": {
-      "version": "2026-09-29.2",
+      "version": "2026-10-20.1",
       "mission_aware": false,
-      "mode": "authorization_details"
+      "mode": "authorization_details",
+      "mission_constraints_supported": ["vendors"]
     },
     "http://localhost:4499/mcp": {
       "version": "2026-09-29.2",
