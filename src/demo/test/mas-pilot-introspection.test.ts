@@ -141,6 +141,18 @@ d("MAS pilot introspection: opaque estate tokens at the gateway (#818 slice 3)",
     expect(last?.context.credential?.issuer).toBe(config.estate.issuer);
   });
 
+  it("bounds the opaque token by its introspected scope: an action that scope does not carry is refused out_of_authority, and a scope that carries it permits", async () => {
+    const narrow = await opaque("u-1001", "invoices.read");
+    const decided = requests.length;
+    const refused = await call(pilot, narrow, aliceMission, "lookup_vendor", { vendor_id: "acme" });
+    expect(refused.ok).toBe(false);
+    expect(refused.refusal_reason).toBe("out_of_authority");
+    expect(requests.length).toBe(decided);
+    const wide = await opaque("u-1001", "invoices.read vendors.read");
+    const permitted = await call(pilot, wide, aliceMission, "lookup_vendor", { vendor_id: "acme" });
+    expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+  });
+
   it("refuses a token the estate reports inactive, with no decision", async () => {
     const credential = await opaque();
     const unknown = { ...credential, token: `${credential.token}x` };
