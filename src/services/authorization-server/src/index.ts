@@ -211,6 +211,7 @@ export {
   provisionalIntentHash,
   registerIntentSubmissionEvidenceType,
   type SubmissionEvidenceBounds,
+  type SubmissionIntakeOptions,
   unregisterIntentSubmissionEvidenceType,
   validateAuthorityProposal,
   validateIntentSubmissionEvidence,
