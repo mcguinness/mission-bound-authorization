@@ -769,6 +769,9 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     expect(s1.drawdown_policy).toEqual(rootRecord.drawdown_policy);
     expect(s1.ceiling_hash).toBe(rootRecord.ceiling_hash);
     expect(s1.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
+    // The ceiling's consenting Approver (bob) is carried, not the successor's own (alice).
+    expect(s1.ceiling_consent_principal).toEqual(rootRecord.approval_basis.consent_principal);
+    expect(s1.ceiling_consent_principal).not.toEqual(ALICE);
     expect(s1.drawdown_count).toBe(rootRecord.drawdown_count);
     // A later request that keeps the beyond-ceiling authority is outside the ceiling.
     await openFreshApproval(s1.id, approved.access_token, [...READ_LIST, "payments:payment.schedule"]);
