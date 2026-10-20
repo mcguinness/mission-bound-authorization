@@ -195,6 +195,7 @@ const VARIANTS = [
   { name: "derivation-limited", differs_by: "The Intent requests a derivation limit of 200.", drafts: ["derivation-limits"] },
   { name: "cross-domain-partner", differs_by: "The Intent and Authority Set add the partner ERP `https://erp.partner.example.com`.", drafts: ["cross-domain"] },
   { name: "revision-read-only", differs_by: "A deferred, revised approval: the Approver refuses `journal-entries.write`, so the Mission holds only the invoice-read entry.", drafts: ["approval-revision"] },
+  { name: "ceiling-drawdown", differs_by: "Holds only the invoice-read entry, with Alice's consent to an authority ceiling (the baseline's two entries plus `invoices.write`) under drawdown policy `q3-reconcile-drawdown` version 1. A policy-adjudicated drawdown at 09:15:00 adds the journal-write entry and supersedes it with `msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb`, whose request at 09:18:00 for a 2,000 USD cap is refused `out_of_ceiling`.", drafts: ["progressive"] },
 ];
 
 function build() {
