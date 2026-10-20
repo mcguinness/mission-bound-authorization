@@ -15,13 +15,8 @@ import { join } from "node:path";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { afterAll, describe, expect, it } from "vitest";
 import { FIXTURE_BROWSER_LOGIN } from "./approval-fixture.js";
-import {
-  buildAuthorizationServer,
-  type BuiltAs,
-  createChildMission,
-  type MissionRecord,
-  validateMissionIntent,
-} from "../src/index.js";
+import { buildAuthorizationServer, type BuiltAs, createChildMission, validateMissionIntent } from "../src/index.js";
+import type { MissionRecord } from "../src/kernel/types.js";
 
 const ISSUER = "http://localhost:14849";
 const FAR_EXP = "2099-01-01T00:00:00Z";

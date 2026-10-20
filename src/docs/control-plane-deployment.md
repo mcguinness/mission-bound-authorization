@@ -285,3 +285,73 @@ after an out-of-band restore, and the fenced reconciliation policy that would
 decide when it is certain again, remain follow-on work. Multi-process
 serialization and claiming remain under #641's explicit deployment trigger;
 this slice adds no such claim.
+
+## Upgrading a kernel written before #1340
+
+Before #1340 (`fccc1fe1`), the expansion and child-creation exchanges and the
+deferred expansion poll did not check that the acting client is the
+predecessor's or parent's own client (#1326). A file-backed kernel written by
+such a build can hold Missions another client created. An in-memory kernel
+keeps nothing across a restart, so only a deployment that kept its kernel file
+is affected.
+
+Building the AS revokes each such Mission that retained provenance identifies,
+through the ordinary `revoke` transition, then drains the lifecycle outbox
+before it serves a request:
+
+- A Child Mission whose completed `creation_idempotency` row
+  (`op = 'child-creation'`) names a client other than the parent's
+  `client_id`. The child record names no creating client, so this row is the
+  only link.
+- An expansion successor created through another client's deferral. Its
+  `expansion_deferrals` row (`state = 'approved'`, `redeemed = 1`) records the
+  client that opened it and the approval event it completed under, and
+  deferral rows are never deleted. The successor carries the predecessor's
+  client, so its own record cannot show the defect. The AS acts only when
+  exactly one Mission carries the deferral's predecessor and approval event,
+  the predecessor's `superseded` termination names it, it carries the
+  predecessor's client, and no deferral the predecessor's own client opened
+  claims the same approval event.
+
+Revocation runs after the expiry clock, so an expired Mission records
+`expired`, and a terminal one keeps its recorded termination. The predecessor
+stays superseded: nothing is resurrected and no replacement approval is
+created. The cascade terminates the revoked Mission's children
+(`parent_terminated`), and the delegation-family grant revocations are
+attempted before the AS serves; a failed delivery stays pending for the next
+drain. A successor that its own client later approved from a
+revoked one is not a target, since the defect belongs to one creation
+operation. A later boot finds nothing left to revoke and commits nothing. A
+revocation that fails stops the build, so the AS never serves with an
+identified live Mission. `BuiltAs.startupRemediation` lists what was revoked
+and each committed deferral from another client whose successor could not be
+identified, and `server.ts` logs both. A reported deferral is left alone.
+
+Residuals:
+
+- **Purged child-creation rows.** A child-creation row is retained for the
+  creation idempotency horizon (86400 seconds by default) and can be lost
+  after it in two ways: `CreationIdempotencyStore.find` deletes an expired row
+  when its `(client_id, creation_request_id)` key is looked up, and an insert
+  that reuses the key deletes the expired row first. Neither needs a
+  replacement creation to succeed. A child whose row was gone before the first
+  boot of a build with #1340 cannot be identified, and the AS revokes no child
+  whose provenance is missing.
+- **Policy-adjudicated drawdown successors.** With Progressive drawdown on
+  (`progressive`, off in every shipped launcher), another client could also
+  complete an in-ceiling drawdown, which creates a successor without a
+  deferral. Its `approval_basis.activation_actor` and its `creation_idempotency`
+  row (`op = 'expansion'`) name the requesting client. This remediation does
+  not act on it.
+- **Credentials already issued.** Revocation is enforced wherever the AS or a
+  resource consults the Mission's state: issuance gating, refresh, Token
+  Exchange, introspection and Mission Status. A self-contained access token
+  issued before the boot still verifies at a token-only resource until its
+  `exp`, at most the declared 300-second access-token lifetime, and only while
+  its signing key survives: a key ring keeps it, keys generated at each boot do
+  not. A resource that reads Mission state sees the revocation within the
+  staleness bound it declares.
+
+An operator with authoritative backups or audit records of creation requests
+can identify a specific affected Mission and revoke it through the Lifecycle
+endpoint. Without them, an empty report does not prove the deployment clean.
