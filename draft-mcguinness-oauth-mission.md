@@ -2693,6 +2693,8 @@ An opaque Mission-bound token is enforced from its active
 introspection response or issuer-local resolution instead, under the
 same rules ({{introspected-consumption}}).
 
+## Enforcement Requirements {#rs-requirements}
+
 A resource server:
 
 1. MUST treat `authorization_details` as the authoritative expression
@@ -2740,6 +2742,8 @@ A resource server can also:
 - where the AS offers it, introspect the token ({{introspection}}) to
   observe Mission state per request.
 
+## Mission-Unaware Resource Servers {#rs-mission-unaware}
+
 A deployment MUST NOT route a delegated Mission-bound token to a
 Mission-unaware resource server, or to logging or audit
 infrastructure, that authorizes or logs the caller on `client_id`
@@ -2765,6 +2769,8 @@ Constrained authority that no safe projection carries is enforced
 only where a resource server, or a runtime layer, evaluates
 `authorization_details`.
 
+## Carried Authority {#rs-carried-authority}
+
 An entry whose type-defined enforcement a resource server cannot
 complete fails closed because a type-defined constraint narrows
 authority: treating an unenforceable key or member as absent, or
@@ -2783,6 +2789,8 @@ the token signature. Mission Approved-Set Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
 defines an independent check for a resource server that needs more
 than that assertion.
+
+## Denial Responses {#rs-denials}
 
 A resource server denial falls into one of four cases, each using the
 OAuth challenge for its own failure class ({{error-mapping}} gives
@@ -2845,6 +2853,8 @@ A value the client does not recognize is treated as
 attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment accepts learning the distinction
 ({{denial-disclosure}}).
+
+## Enforcement Responsibilities {#rs-responsibilities}
 
 Every bound this document defines is enforced by a party this document
 names. The following table summarizes which party enforces each bound a
