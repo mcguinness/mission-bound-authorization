@@ -689,9 +689,10 @@ one per record:
   "state": "terminated",
   "termination": {
     "reason": "revoked",
-    "terminated_at": "2026-11-02T08:30:00Z"
+    "terminated_at": "2026-11-02T08:53:20Z",
+    "version": 4
   },
-  "transitioned_at": "2026-11-02T08:30:00Z"
+  "transitioned_at": "2026-11-02T08:53:20Z"
 }
 ~~~
 
@@ -701,11 +702,12 @@ Its JCS canonical bytes (one line; breaks are for display only):
 {"issuer":"https://as.example.com","mission_id":"msn_8RfX2Lqv9TqMv
 4z7sA2bN1k0YpEdHc9-","salt":"q7hJ2mXv9pTzR4kW5nB8dQ","state":"term
 inated","termination":{"reason":"revoked","terminated_at":"2026-11
--02T08:30:00Z"},"transitioned_at":"2026-11-02T08:30:00Z"}
+-02T08:53:20Z","version":4},"transitioned_at":"2026-11-02T08:53:20
+Z"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `n7MnMBoJTOuPTZvgNvb5Kp3-iwVkP25t-9VdMU_uQCY`. The Signed
+form is `iyIviMAuD1vQLLQNYwWIl6Q6YuBA4vyt6L1i8ByAsu0`. The Signed
 Statement carries the digest bytes inline as its payload, with this
 protected header ({{hash-commitment}}, {{feed}}):
 
