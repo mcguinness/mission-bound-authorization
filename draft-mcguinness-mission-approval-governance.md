@@ -1131,6 +1131,28 @@ is testable, member by member:
 
 The AGR governs on any disagreement.
 
+The following example shows the members of a Consent Evidence object
+that correspond to the record in {{record-example}}, other members
+omitted:
+
+~~~ json
+{
+  "approver": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_authority": "dlg-matrix",
+  "approval_policy_version": "v7",
+  "approval_governance_digest":
+    "sha-256:j6eaQoHcHpH-fntRE1DkZgCDjBZZLxXrCwpHfTWCWnQ"
+}
+~~~
+
+The `approver` member is the principal of the accountable assertion,
+`ast_1`. There is no `co_approvals` member: the record's only other
+assertion, `ast_2`, is a `policy` assertion, which is never presented as
+a co-approval. The `approval_governance_digest` value stands for the
+record digest of the complete record, whose `envelope` value that
+example abbreviates.
+
 Where a deferred approval revises under Mission Approval Revision
 ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}) and the
 deployment records consent evidence, each `revision_required` outcome
