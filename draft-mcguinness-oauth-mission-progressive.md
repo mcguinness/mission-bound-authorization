@@ -295,11 +295,12 @@ through a chain of successor Missions:
    `out_of_ceiling` ({{ceiling-test}}).
 4. A request within the ceiling falls back to an ordinary, freshly
    approved expansion when it meets a fresh-approval condition
-   ({{fresh-approval}}), when the chain is past its ceiling review
-   cadence ({{ceiling-review}}), or when the drawdown policy does not
-   authorize it ({{policy-adjudication}}).
-5. Otherwise the drawdown policy adjudicates the request within the
-   per-drawdown and per-chain bounds ({{drawdown-bounds}}). If the
+   ({{fresh-approval}}), when it exceeds a drawdown bound or would
+   activate the entire remaining ceiling ({{drawdown-bounds}}), when
+   the chain is past its ceiling review cadence ({{ceiling-review}}),
+   or when the drawdown policy does not authorize it
+   ({{policy-adjudication}}).
+5. Otherwise the drawdown policy adjudicates the request. If the
    expansion profile's activation checks and any derivation limit
    admit it, the Mission Issuer creates the successor, supersedes the
    predecessor, and returns the successor's access token in the
@@ -583,16 +584,25 @@ a pre-consented ceiling cannot become a standing grant that a
 compromised agent reaches through unattended drawdowns.
 
 A single policy-adjudicated in-ceiling drawdown MUST NOT activate the
-entire remaining ceiling. The drawdown policy MUST bound each
-drawdown incrementally, by one or both of:
+entire remaining ceiling. A drawdown activates the entire remaining
+ceiling unless the Mission Issuer can show a request the ceiling
+admits that no entry of the successor's Authority Set authorizes: one
+of an `authority_ceiling` entry's actions, with resource and
+constraint values that entry admits ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Subset Rule"). The successor's entries are judged together,
+so ceiling authority it splits across several entries counts as held.
+Policy adjudication therefore never reaches the entire ceiling: the
+final increment always takes a fresh human approval.
+
+The drawdown policy MUST bound each drawdown incrementally, by one or
+both of:
 
 - a per-drawdown delta bound; or
 - narrowing the successor's Authority Set to what the triggering
   action needs.
 
 The concrete per-drawdown bound MUST be published in the Mission
-Deployment Profile. Reaching the ceiling therefore takes many
-bounded, individually adjudicated and recorded drawdowns, not one.
+Deployment Profile.
 
 Each in-ceiling drawdown creates a successor Mission, so a
 per-Mission bound would reset at every step. A deployment:
@@ -605,6 +615,11 @@ per-Mission bound would reset at every step. A deployment:
 - MUST record each policy-adjudicated expansion as an approval event
   whose decision mechanism is the drawdown policy that authorized it
   ({{audit-linkage}}).
+
+A drawdown that would activate the entire remaining ceiling, or that
+exceeds the per-drawdown bound or the chain rate bound, falls back to
+a fresh human approval, exactly as a request the drawdown policy does
+not authorize does ({{policy-adjudication}}).
 
 ### The Successor Mission {#drawdown-successor}
 
@@ -1063,6 +1078,9 @@ Authorization** is a conforming expansion-capable Mission Issuer
   drawdown never activates the entire remaining ceiling, and publish the
   concrete per-drawdown bound in the Mission Deployment Profile
   ({{drawdown-bounds}});
+- fall back to a fresh human approval for a drawdown that would
+  activate the entire remaining ceiling, or that exceeds the
+  per-drawdown bound or the chain rate bound ({{drawdown-bounds}});
 - enforce the prohibited-class rule, requiring a fresh human approval for
   a drawdown that grants irreversible, external-commitment, or
   privileged-administration authority, that satisfies the
@@ -1180,6 +1198,13 @@ Denial Reasons Registry"):
 
 -01
 
+- Drawdown Bounds: a drawdown that would activate the entire remaining
+  ceiling, or that exceeds the per-drawdown bound or the chain rate
+  bound, falls back to a fresh human approval. A drawdown activates the
+  entire remaining ceiling unless the Mission Issuer can show ceiling
+  authority that the successor's entries, judged together, do not
+  authorize, so the final increment always takes a fresh human approval
+  (#1414, D555).
 - Editorial: In-Ceiling Expansion in subsections, Relationship and
   Terminology under the Introduction, a Protocol Overview, Title Case
   headings, Security Considerations in subsections, and the IANA
