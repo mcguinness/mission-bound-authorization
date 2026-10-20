@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS txn_workflows (
   mission_id TEXT NOT NULL,
   action TEXT NOT NULL,
   operation_type TEXT NOT NULL,
+  profile_version TEXT NOT NULL,
   subject TEXT NOT NULL,
   subject_token_iss TEXT NOT NULL,
   subject_token_sub TEXT NOT NULL,
@@ -88,8 +89,16 @@ export interface TxnWorkflowRecord {
    * workflow that won admission has opened it; a poll before that is pending.
    */
   taskId: string;
-  /** The `authorization_details` entry's `type` at admission (profile version). */
+  /** The `authorization_details` entry's `type` at admission. */
   operationType: string;
+  /**
+   * @spec txn-authorization#resource-challenge (#249, D553): the Operation
+   * Profile version the workflow was admitted under: the version its
+   * `resource_contract` reference names, or "the resource's current one at
+   * admission, which the workflow records". Completion reads the operation
+   * under it, superseded or not.
+   */
+  profileVersion: string;
   subject: string;
   /**
    * @spec txn-authorization#subject-establishment — the issuer-qualified
@@ -132,6 +141,7 @@ interface Row {
   mission_id: string;
   action: string;
   operation_type: string;
+  profile_version: string;
   subject: string;
   subject_token_iss: string;
   subject_token_sub: string;
@@ -192,9 +202,9 @@ export class TxnWorkflowStore {
       .prepare(
         `INSERT INTO txn_workflows
            (id, challenge_iss, challenge_jti, client_id, cnf_jkt, txn, task_id, mission_id, action,
-            operation_type, subject, subject_token_iss, subject_token_sub, subject_policy, subject_token_jti, act_json, parameter_digest, challenge_json,
+            operation_type, profile_version, subject, subject_token_iss, subject_token_sub, subject_policy, subject_token_jti, act_json, parameter_digest, challenge_json,
             subject_token_exp, mission_exp, expires_at, state, issued_token, issued_jti, issued_exp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
          ON CONFLICT DO NOTHING`,
       )
       .run(
@@ -208,6 +218,7 @@ export class TxnWorkflowStore {
         record.missionId,
         record.action,
         record.operationType,
+        record.profileVersion,
         record.subject,
         record.subjectTokenIss,
         record.subjectTokenSub,
@@ -299,6 +310,7 @@ function toRecord(row: Row): TxnWorkflowRecord {
     missionId: row.mission_id,
     action: row.action,
     operationType: row.operation_type,
+    profileVersion: row.profile_version,
     subject: row.subject,
     subjectTokenIss: row.subject_token_iss,
     subjectTokenSub: row.subject_token_sub,

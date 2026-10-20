@@ -97,7 +97,7 @@ const policyDeniesTxns = new Set<string>();
 /** Every `txn` the fresh decision was asked about (it must run before issuance). */
 const freshDecisionCalls: string[] = [];
 /** What the fresh decision was handed, so a test can read the pinned snapshot. */
-const freshDecisionInputs: { txn: string; operationType: string; parameterDigest: string }[] = [];
+const freshDecisionInputs: { txn: string; operationType: string; profileVersion: string; parameterDigest: string }[] = [];
 /**
  * @spec txn-authorization#applicability — the approval basis the TAS computed
  * at step 4 for every approval it opened.
@@ -523,6 +523,7 @@ beforeAll(async () => {
         freshDecisionInputs.push({
           txn: input.txn,
           operationType: input.operationType,
+          profileVersion: input.profileVersion,
           parameterDigest: input.parameterDigest,
         });
         await freshDecisionHooks.get(input.txn)?.();
@@ -2228,12 +2229,13 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
     ).json()) as { transaction_authorization_id: string };
     expect(admitted.transaction_authorization_id).toBeDefined();
 
-    // The resource then versions its Operation Profile: the old type leaves
+    // The resource then supersedes its current Operation Profile version (the
+    // entry's fixed `type` does not version it, #249): the version leaves
     // ADMISSION eligibility. The registry retains it, because a workflow
-    // already references it.
-    operationProfiles.supersede(RESOURCE, "mission_resource_access");
+    // already recorded it.
+    operationProfiles.supersede(RESOURCE, missionResourceAccessProfile().version);
     try {
-      // A NEW challenge naming the superseded type is refused outright.
+      // A NEW challenge, with no current version to be admitted under, is refused outright.
       const stale = await submit(
         await signChallenge(
           {
@@ -2268,6 +2270,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
       expect(freshDecisionInputs.find((i) => i.txn === "txn_profile_v1")).toEqual({
         txn: "txn_profile_v1",
         operationType: "mission_resource_access",
+        profileVersion: missionResourceAccessProfile().version,
         parameterDigest: supersededDigest,
       });
     } finally {
