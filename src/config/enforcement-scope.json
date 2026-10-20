@@ -105,6 +105,70 @@
         "retention_posture": "permit_acceptance_window"
       }
     ],
+    "execution_capabilities": [
+      {
+        "operation": "payments:payment.schedule",
+        "action_class": "consequential_write",
+        "durable_idempotency": {"held_by": "pep_reservation", "new_operation": "a new action.properties.idempotency_key; a second active schedule for the invoice is refused schedule_exists"},
+        "conditional_effect": "none",
+        "outcome_lookup": {"identifier": "idempotency claim (idempotency scope, idempotency_key)", "method": "the PEP's write reservation, committed with the schedule in one local transaction"},
+        "commit_point": "the local transaction that records the schedule and completes its reservation",
+        "cancellation": "none before the commit point; after it, cancel_scheduled_payment withdraws the schedule as its own operation under its own Decision",
+        "compensation": "none",
+        "unknown_outcome_recovery": "outcome_lookup",
+        "asserted": []
+      },
+      {
+        "operation": "payments:payment.schedule.cancel",
+        "action_class": "consequential_write",
+        "durable_idempotency": {"held_by": "pep_reservation", "new_operation": "a new action.properties.idempotency_key; with no active schedule left it is refused schedule_not_found"},
+        "conditional_effect": "none",
+        "outcome_lookup": {"identifier": "idempotency claim (idempotency scope, idempotency_key)", "method": "the PEP's write reservation, committed with the cancellation in one local transaction"},
+        "commit_point": "the local transaction that cancels the schedule and completes its reservation",
+        "cancellation": "none",
+        "compensation": "none",
+        "unknown_outcome_recovery": "outcome_lookup",
+        "asserted": []
+      },
+      {
+        "operation": "payments:payment.execute",
+        "phase": "prepare",
+        "action_class": "consequential_write",
+        "durable_idempotency": "none",
+        "conditional_effect": "none",
+        "outcome_lookup": "none",
+        "commit_point": "the PEP's response; the simulated hold records no state",
+        "cancellation": "none",
+        "compensation": "none",
+        "unknown_outcome_recovery": "hold",
+        "asserted": []
+      },
+      {
+        "operation": "payments:payment.execute",
+        "phase": "commit",
+        "action_class": "irreversible_action",
+        "durable_idempotency": {"held_by": "pdp_claim", "new_operation": "a new action.properties.idempotency_key at the PDP claim; the PEP's operation key omits it, so a new identical wire is refused operation_already_claimed, and a settled invoice already_settled"},
+        "conditional_effect": "none",
+        "outcome_lookup": {"identifier": "evaluation_id", "method": "the ledger connector's committed entry for the permit identifier, held in memory for the process lifetime"},
+        "commit_point": "ledger connector acceptance",
+        "cancellation": "before the commit point, an expired execution lease or a failed reverification suppresses the effect; nothing stops it after",
+        "compensation": "none",
+        "unknown_outcome_recovery": "outcome_lookup",
+        "asserted": []
+      },
+      {
+        "operation": "payments:remittance.send",
+        "action_class": "external_commitment",
+        "durable_idempotency": {"held_by": "pdp_claim", "new_operation": "a new action.properties.idempotency_key at the PDP claim; the PEP's operation key omits it, so a new identical notice is refused operation_already_claimed"},
+        "conditional_effect": "none",
+        "outcome_lookup": {"identifier": "evaluation_id", "method": "the outbox connector's accepted entry for the permit identifier, held in memory for the process lifetime"},
+        "commit_point": "outbox connector acceptance",
+        "cancellation": "before the commit point, an expired execution lease or a failed reverification suppresses the effect; nothing stops it after",
+        "compensation": "none",
+        "unknown_outcome_recovery": "outcome_lookup",
+        "asserted": []
+      }
+    ],
     "outcome_reconciliation": {
       "window": "PT15M",
       "responsible_component": "mcp-payments-pep",
