@@ -1252,10 +1252,10 @@ The AS processes a submission in this order:
    presented entry under its type's rules
    ({{intent-submission-evidence}}).
 7. Apply admission policy and derive the Authority Set independently
-   ({{authorization-derivation}}), including, where a proposal was
-   submitted, that each derived entry is a same-type subset of a
-   proposed entry ({{authority-proposal}}), and each entry's
-   `target_resources` membership ({{derivation-modes}}).
+   ({{authorization-derivation}}), including each entry's
+   `target_resources` membership ({{derivation-modes}}) and, where a
+   proposal was submitted, that each derived entry is a same-type
+   subset of a proposed entry ({{authority-proposal}}).
 8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
