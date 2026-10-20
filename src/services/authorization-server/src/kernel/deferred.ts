@@ -51,6 +51,7 @@ CREATE TABLE deferrals (
   mission_id TEXT NOT NULL,
   requested_json TEXT NOT NULL,
   client_id TEXT NOT NULL,
+  jkt TEXT NOT NULL,
   approved_until TEXT,
   redeemed INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
@@ -118,9 +119,11 @@ export class DeferralStore {
    * that would widen the Mission is not an AROP case -- it requires Expansion
    * first, so this refuses with out_of_authority rather than deferring.
    * Idempotent submission (AROP): the same (mission, requested) returns the
-   * existing pending handle.
+   * existing pending handle. Records the opening client and its possession key
+   * (`jkt`), which the handler re-checks on every poll (#1348); whether the
+   * client may open a deferral on this Mission is the handler's check.
    */
-  open(input: { missionId: string; requested: AuthorityEntry[]; clientId: string }): DeferralPending {
+  open(input: { missionId: string; requested: AuthorityEntry[]; clientId: string; jkt: string }): DeferralPending {
     const mission = this.kernel.get(input.missionId);
     if (!mission || this.kernel.applyExpiry(mission).state !== "active") {
       throw new DeferralError("out_of_authority", "mission is not active");
@@ -138,19 +141,22 @@ export class DeferralStore {
     // dedup key is CLIENT-SCOPED: the same semantic request from two different
     // clients MUST open two deferrals (per-client scoping prevents cross-client
     // interference and replay). The previous {m, r} key omitted the client.
+    // Key-scoped as well (DTR -00 Section 5.4): a code is bound to the key of
+    // the request it answers, so a resubmission under another key opens a new
+    // deferral rather than returning a code that key cannot poll.
     const key = JSON.stringify({ m: input.missionId, r: input.requested, c: input.clientId });
     const existing = this.db
       .prepare(
-        "SELECT deferral_code FROM deferrals WHERE state = 'authorization_pending' AND requested_json = ? AND mission_id = ? AND client_id = ?",
+        "SELECT deferral_code FROM deferrals WHERE state = 'authorization_pending' AND requested_json = ? AND mission_id = ? AND client_id = ? AND jkt = ?",
       )
-      .get(key, input.missionId, input.clientId) as { deferral_code: string } | undefined;
+      .get(key, input.missionId, input.clientId, input.jkt) as { deferral_code: string } | undefined;
     const code = existing?.deferral_code ?? `dfr_${randomBytes(18).toString("base64url")}`;
     if (!existing) {
       this.db
         .prepare(
-          "INSERT INTO deferrals (deferral_code, state, mission_id, requested_json, client_id, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?)",
+          "INSERT INTO deferrals (deferral_code, state, mission_id, requested_json, client_id, jkt, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?)",
         )
-        .run(code, input.missionId, key, input.clientId, this.now().getTime());
+        .run(code, input.missionId, key, input.clientId, input.jkt, this.now().getTime());
     }
     return { error: "authorization_pending", deferral_code: code, expires_in: DEFERRAL_EXPIRES_IN, interval: DEFERRAL_INTERVAL };
   }
@@ -164,6 +170,14 @@ export class DeferralStore {
 
   deny(deferralCode: string): void {
     this.db.prepare("UPDATE deferrals SET state = 'access_denied' WHERE deferral_code = ?").run(deferralCode);
+  }
+
+  /** The Mission, client and possession key recorded at initiation (the handler re-checks the poller, #1348). */
+  recorded(deferralCode: string): { missionId: string; clientId: string; jkt: string } | undefined {
+    const row = this.db
+      .prepare("SELECT mission_id, client_id, jkt FROM deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as { mission_id: string; client_id: string; jkt: string } | undefined;
+    return row ? { missionId: row.mission_id, clientId: row.client_id, jkt: row.jkt } : undefined;
   }
 
   /**
