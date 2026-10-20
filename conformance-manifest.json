@@ -41258,12 +41258,20 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an entry carrying a member another specification defines for this type is enforced, not refused, when that specification's enforcement obligations are fulfilled"
+    "normative": "an entry carrying a member another specification defines for this type is enforced, not refused, when that specification's enforcement obligations are fulfilled",
+    "local": "The payments resource implements one member another specification defines for this type: Capability Binding's capability_sources. Its PEP presents the current per-tool binding, and its policy decision point, acting for it, compares that binding with the one the entry records: it permits when they agree and denies capability_drift when the served definition changed. The credential bound sets the member aside for that Mission-bound check. SaaS implements no extension member and refuses such an entry (resource-access.rs-enforcement.unknown-member-unenforceable)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members). #1362: SaaS implements no extension member, so it refuses an entry carrying `capability_sources` (witnessed under resource-access.rs-enforcement.unknown-member-unenforceable); that converse case is not a witness for this row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1277 review finding 1 (D454). Witnessed at the payments resource: an approved Mission entry carrying the capability_sources binding the AS recorded permits the invoice read through McpPaymentsServer, the retained decision evidence carries the compared binding, and once the served definition is edited the same entry denies capability_drift, so the member is enforced, not set aside. The entry is the Mission's approved entry, which the policy decision point evaluates for the resource under the runtime-enforced profile; the presented credential in this test carries no binding, and the credential bound's set-aside of one is witnessed only at unit level (parseCredentialAuthority). Proved by mutation in the policy decision point, each alone: denying every entry that records a binding for the action fails the permit (expected false to be true), and skipping the comparison fails the drift denial. Common Constraints are constraints keys, enforced under the constraints member rather than extension members, so their tests are not witnesses here. Case fc-09 stays skipped: the reader claims no rs.extension-members capability. #1362: SaaS refusing capability_sources is the converse case (resource-access.rs-enforcement.unknown-member-unenforceable)."
   },
   {
    "id": "resource-access.rs-enforcement.locations-unenforceable",
