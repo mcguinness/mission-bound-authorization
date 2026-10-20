@@ -1370,6 +1370,8 @@ The AS records the operation, actor, time, and any `reason` in its
 audit log; the response confirms the outcome through the updated
 `state`.
 
+The next two examples use another Mission.
+
 Suspend request with a deadline, here also carrying the OPTIONAL
 `expected_version` guard against deciding over stale state
 ({{idempotency}}):
@@ -1381,11 +1383,11 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+mission_id=msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5
 &operation=suspend
 &suspend_until=2026-11-09T08%3A15%3A00Z
 &on_expiry=revoke
-&expected_version=5
+&expected_version=1
 &reason=Pending+quarterly+access+review
 &nonce=nonce_4Dq2mV8kX1sB7nR3tW
 ~~~
@@ -1397,18 +1399,18 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "client_erp-recon-agent",
-  "sub": "client_erp-recon-agent",
+  "aud": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
   "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
   "iat": 1793607600,
   "exp": 1793607660,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "suspended",
-    "version": 6,
+    "version": 2,
     "suspend_until": "2026-11-09T08:15:00Z",
     "on_expiry": "revoke",
     "expires_at":  "2026-12-31T23:59:59Z",
