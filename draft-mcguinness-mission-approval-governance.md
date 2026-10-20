@@ -230,15 +230,15 @@ Approval Governance Record (AGR):
 
 Assertion:
 : One principal's authenticated decision statement carried in an AGR
-  ({{record}}).
+  ({{assertion-members}}).
 
 Accountable assertion:
 : The assertion that satisfies the accountable-approver rule
-  ({{assertion-requirements}}).
+  ({{accountable-assertion}}).
 
 Evaluation:
 : The issuer's determination of whether the recorded assertions satisfy
-  the referenced approval policy ({{record}}).
+  the referenced approval policy ({{record-members}}).
 
 Record digest:
 : The digest over a complete record, `envelope` included, that every
@@ -515,7 +515,7 @@ In this example:
 - The Mission Record's accountable `approval_basis.consent_principal` is
   Alice (`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`). `ast_1`
   is her own `approve` assertion, which satisfies the
-  accountable-approver rule of {{assertion-requirements}} directly.
+  accountable-approver rule of {{accountable-assertion}} directly.
 - `ast_2` is a `policy` assertion carrying its own provenance chain,
   recorded alongside the accountable approver's assertion rather than in
   place of it. Because a non-human assertion contributes, the record is
@@ -526,55 +526,63 @@ In this example:
 
 # Assertion Requirements {#assertion-requirements}
 
-These rules are the record's security core.
+These rules apply before commitment, while the record is part of the
+approval decision ({{atomic-commitment}}).
+
+## Assertion Validation {#assertion-validation}
+
+The following rules apply to the assertions in a record:
 
 - Every assertion that contributes to the evaluation MUST be
   authenticated: a `human` assertion with the authentication the
   issuance profile requires of an Approver at an approval event, a
-  `service` or `policy` assertion through an integrity-protected
-  channel or signature the issuer verifies.
-- Every assertion MUST be bound to this approval event: an assertion
-  is made against this `approval_event_id` and this `authority_hash`,
-  and an assertion captured for one event MUST NOT be replayed into
-  another.
+  `service` or `policy` assertion through an integrity-protected channel
+  or signature the issuer verifies.
+- Every assertion MUST be bound to this approval event: an assertion is
+  made against this `approval_event_id` and this `authority_hash`, and
+  an assertion captured for one event MUST NOT be replayed into another.
 - Every contributing assertion MUST be policy-authorized: the issuer
   verifies the asserting principal was eligible to assert under the
   referenced `approval_policy` version before counting it.
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
-- Exactly one assertion MUST match the Mission Record's accountable
-  `approval_basis.consent_principal` and carry an `approve` decision;
-  the record supports the approval it claims to govern or it does not
-  commit. The matching
-  assertion's `kind` MUST be `human` or `policy`: a `service`
-  assertion, including one a model produced, is a contributing
-  governance input, never the accountable approver's assertion. The
-  Mission's `approval_basis.type` fixes the accountable assertion:
 
-  - For `direct`, it MUST be the `human` assertion of
-    `consent_principal`, the human decision a `direct` approval event
-    carries ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and
-    `service` assertions can contribute without replacing it.
-  - For `governed_policy`, it is a `policy` assertion carrying the
-    deciding policy's provenance chain ({{governed-policy-record}}):
-    the policy is the decision mechanism and the matched principal
-    stays the human who approved it, subject to the high-risk-class
-    restriction of {{policy-approval-recency}}.
-  - For any other named standing-consent `approval_basis`
-    ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies
-    this rule through that record instead of a matching assertion:
-    `consent_principal`, `root_commitment`, and `approved_at`,
-    already fixed at the approval event and immutable, stand in place
-    of it, subject to the same high-risk-class restriction. The
-    record can still carry contributing `policy` and `service`
-    assertions.
+An assertion that fails authentication, event binding, or policy
+authorization MUST NOT contribute to the evaluation and MUST NOT be
+counted toward any policy rule.
 
-  No assertion is fabricated in the name of the activating policy or
-  the requesting actor to stand in for a fresh human decision that
-  did not occur.
-- An assertion that fails authentication, event binding, or policy
-  authorization MUST NOT contribute to the evaluation and MUST NOT
-  be counted toward any policy rule.
+## Accountable Assertion {#accountable-assertion}
+
+Exactly one assertion MUST match the Mission Record's accountable
+`approval_basis.consent_principal` and carry an `approve` decision; the
+record supports the approval it claims to govern or it does not commit.
+This is the accountable-approver rule. The matching assertion's `kind`
+MUST be `human` or `policy`: a `service` assertion, including one a
+model produced, is a contributing governance input, never the
+accountable approver's assertion.
+
+The Mission's `approval_basis.type` fixes the accountable assertion:
+
+- For `direct`, it MUST be the `human` assertion of `consent_principal`,
+  the human decision a `direct` approval event carries
+  ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and `service`
+  assertions can contribute without replacing it.
+- For `governed_policy`, it is a `policy` assertion carrying the
+  deciding policy's provenance chain ({{governed-policy-record}}): the
+  policy is the decision mechanism and the matched principal stays the
+  human who approved it, subject to the high-risk-class restriction of
+  {{policy-approval-recency}}.
+- For any other named standing-consent `approval_basis`
+  ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies this
+  rule through that record instead of a matching assertion:
+  `consent_principal`, `root_commitment`, and `approved_at`, already
+  fixed at the approval event and immutable, stand in place of it,
+  subject to the same high-risk-class restriction. The record can still
+  carry contributing `policy` and `service` assertions.
+
+No assertion is fabricated in the name of the activating policy or the
+requesting actor to stand in for a fresh human decision that did not
+occur.
 
 # Evaluation and Atomic Commitment {#atomic-commitment}
 
