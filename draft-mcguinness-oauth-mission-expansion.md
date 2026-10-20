@@ -1511,10 +1511,10 @@ alongside the error code of the step that completes it:
 - a deferred poll answers `access_denied`, the deferred token
   response's outcome for a request that resolved with an error;
 - an authorization code redemption answers `invalid_grant`; and
-- where the token-exchange response completes the expansion, a failed
-  first or second check, a predecessor no longer `active`, answers
-  `invalid_request` ({{predecessor-active}}), and a failed third check
-  answers `invalid_grant`.
+- where the token-exchange response completes the expansion, any failed
+  check answers `invalid_request` ({{Section 2.2.2 of RFC8693}}), as a
+  predecessor no longer `active` does at the request
+  ({{predecessor-active}}).
 
 The losing or otherwise stale expansion is rejected at completion; it
 activates no successor.
@@ -2455,6 +2455,10 @@ approved, not the predecessor's authority plus a delta.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- A failed check 3 where the token-exchange response completes an
+  expansion answers `invalid_request`, as Section 2.2.2 of RFC 8693
+  requires on that surface, instead of `invalid_grant`.
 
 - The deferred mode applies only to an exchange whose
   `completion_mode` includes `deferred`; any other exchange gets the
