@@ -306,8 +306,9 @@ this record exists:
 A profile MAY require this record; the Enterprise Mission Authority
 Profile does so under these recording triggers
 ({{I-D.draft-mcguinness-mission-authority-server}}). The triggers are
-defined here so that a profile cites one list. The record is REQUIRED
-for an approval event when any of the following holds:
+defined here so that a profile cites one list. Under a profile that
+adopts these recording triggers, the record is REQUIRED for an approval
+event when any of the following holds:
 
 1. the Mission Record's `approval_basis.consent_principal` differs
    from its `subject`;
@@ -317,8 +318,12 @@ for an approval event when any of the following holds:
 5. validating any assertion requires authority standing outside the
    Mission Record.
 
-Independently of any profile, every activation under `governed_policy`
-records an Approval Governance Record ({{governed-policy}}).
+A deployment that adopts no profile requiring the record has no
+obligation to record one merely because a trigger holds. Independently
+of any profile, every activation under `governed_policy` records an
+Approval Governance Record ({{governed-policy}}). Every Approval
+Governance Record a deployment records, whether required or not, MUST
+satisfy the requirements of this document.
 
 The Approver is always `approval_basis.consent_principal`
 ({{I-D.draft-mcguinness-oauth-mission}}), so a Mission whose Approver

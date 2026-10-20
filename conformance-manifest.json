@@ -3756,6 +3756,50 @@
    "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it."
   },
   {
+   "id": "approval-governance.triggers.required-under-adopting-profile",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "triggers",
+   "text": "Under a profile that adopts these recording triggers, the record is REQUIRED for an approval event when any of the following holds",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under a profile that adopts the recording triggers, an approval event for which any trigger holds commits an Approval Governance Record with the Mission; without such a profile a trigger alone creates no recording obligation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 ruling 1 (D568). The family's adopting profile is the Enterprise Mission Authority Profile, which records under these triggers. The reference implementation decides no recording trigger (it commits records only under governed_policy), so no surface can witness this row yet; it stays todo."
+  },
+  {
+   "id": "approval-governance.triggers.voluntary-record-conforms",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "triggers",
+   "text": "Every Approval Governance Record a deployment records, whether required or not, MUST satisfy the requirements of this document",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a record kept although no profile or basis requires it meets every requirement on the record (authenticated, event-bound, policy-authorized assertions; the accountable-approver rule for its basis; atomic commitment; the envelope); one that does not, does not commit"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet."
+  },
+  {
    "id": "approval-governance.assertion.direct-accountable-human",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-requirements",
