@@ -49083,8 +49083,14 @@
     "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "a child's derivation limit at the token exchange (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > records at most the entry's committed per-child figure over a higher deployment ceiling, whatever the child requests, each child starting its own count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
      "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
@@ -49110,7 +49116,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327). Partial: every clause is witnessed at the kernel (unit) level, and no endpoint witness exists, since no endpoint suite builds an AS whose policy commits a child_creation_policy. At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
+   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
