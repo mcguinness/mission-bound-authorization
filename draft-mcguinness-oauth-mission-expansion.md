@@ -965,9 +965,9 @@ The Mission Issuer:
   expired, or bound to another client, with `invalid_request`;
 - MUST take the predecessor, Intent, proposal, submission evidence,
   presenter confirmation, and actor context only from the recorded
-  operation, and MUST refuse a pushed request that supplies any of
-  them with a different value, accepting an equal `predecessor` as a
-  cross-check; and
+  operation, and MUST refuse with `invalid_request` a pushed request
+  that supplies any of them with a different value, accepting an equal
+  `predecessor` as a cross-check; and
 - validates the other authorization request parameters as for any
   pushed request.
 
@@ -1171,9 +1171,8 @@ member.
   ({{I-D.draft-mcguinness-oauth-mission-signals}}), each inside
   `termination`.
 
-All three members are lineage and audit context only. Consistent with
-the issuance profile's open-`mission`-claim rule, each of them MUST NOT
-grant or widen authority, and a consumer that does not understand one
+All three members are lineage and audit context only. Like the additional members of the
+`mission` claim, each of them MUST NOT grant or widen authority, and a consumer that does not understand one
 MUST ignore it. The successor's authority comes only from its own
 `authority_hash`, never from its predecessor.
 
@@ -2028,8 +2027,8 @@ A conforming **expansion client** MUST:
   {{submission}});
 - send the REQUIRED parameters of {{submission}}, including
   `creation_request_id`;
-- not retry an expansion refused with `predecessor_state_changed`
-  against that predecessor, and not retry a creation past the
+- not retry the same expansion against a predecessor after a
+  `predecessor_state_changed` refusal, and not retry a creation past the
   published retry horizon ({{reconciliation}},
   {{creation-retention}}); and
 - not initiate expansion for an authentication shortfall
@@ -2415,9 +2414,10 @@ Mission in place.
    names that Mission and that it is `active`, and derives the
    successor's Authority Set, which widens the predecessor's
    ({{verification-order}}).
-3. The widening requires fresh consent, and the deployment approves
-   asynchronously, so the Mission Issuer defers ({{fig-deferred}}) and
-   the client polls ({{fig-poll}}).
+3. The widening requires fresh consent, the deployment approves
+   asynchronously, and the request opted in to deferral, so the Mission
+   Issuer defers ({{fig-deferred}}) and the client polls
+   ({{fig-poll}}).
 4. `alice` approves the widened cap on the review surface. At 09:40:00
    UTC on 2026-11-02 the next poll activates the successor
    `msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX` and supersedes the
@@ -2445,7 +2445,9 @@ approved, not the predecessor's authority plus a delta.
   the deferred token response's deferred grant type.
 
 - A completion refused on a deferred poll answers `access_denied` with
-  the reconciliation status, as the deferred token response requires;
+  the reconciliation status, as the deferred token response requires,
+  replacing the `invalid_grant` the #1154 entry below records for a
+  deferred poll;
   a code redemption keeps `invalid_grant`, and
   `mission_expansion_status` is also carried on code redemption. When
   `intent.expires_at` passes while an expansion is pending, a poll
