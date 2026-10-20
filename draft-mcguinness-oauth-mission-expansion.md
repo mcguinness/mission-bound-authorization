@@ -609,8 +609,8 @@ front of the Approver, and who may trigger the atomic supersession),
 never the authority: no proof failure can widen anything.
 
 The Mission Issuer MUST record each expansion presentation and count it
-toward the deployment's anomaly detection, and the per-predecessor rate
-limit ({{policy-probing}}) applies unconditionally. The `subject_token`
+toward the deployment's anomaly detection, and the rate limit per
+predecessor and client ({{policy-probing}}) applies unconditionally. The `subject_token`
 is consumed only to resolve and bind the predecessor, never to
 refresh, so presenting it has no interaction with refresh token
 rotation or replay detection.
