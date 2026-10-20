@@ -1233,29 +1233,50 @@ The AS processes a submission in this order:
    ({{submission-via-par}}).
 2. Validate the `intent` object against the Mission Intent member
    definitions ({{mission-intent}}).
-3. Compute the provisional `intent_hash` over the `intent` object
+3. Validate any authority proposal: refuse an entry of a type the AS
+   does not support, or one that fails its type's definition or a
+   schema advertised for it or established out of band, with
+   `invalid_authorization_details`, and a proposed entry that carries a
+   `resource` member whose value is not among the Intent's
+   `target_resources`, with `invalid_request` ({{authority-proposal}}).
+4. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
-4. Apply any submission checks that configured admission policy or
+5. Apply any submission checks that configured admission policy or
    adopted profiles require before evidence verification, including
    when no `evidence` member is present. For example, the Submission
    Evidence companion resolves required evidence here and refuses a
    missing required type
    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
    "Required Evidence Is Resolved Before Derivation").
-5. Apply the evidence dispatch and refusal rules, verifying every
+6. Apply the evidence dispatch and refusal rules, verifying every
    presented entry under its type's rules
    ({{intent-submission-evidence}}).
-6. Apply admission policy and derive the Authority Set independently
-   ({{authorization-derivation}}).
-7. Render the Intent, the Authority Set, and the material verified
+7. Apply admission policy and derive the Authority Set independently
+   ({{authorization-derivation}}), including the `target_resources`
+   membership of each entry that carries a `resource` member
+   ({{derivation-modes}}) and, where a proposal was submitted, that
+   each derived entry is a same-type subset of a proposed entry
+   ({{authority-proposal}}).
+8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
    ({{approval-event}}).
-8. At activation, record the approved `intent`, `intent_hash`, the
+9. At activation, record the approved `intent`, `intent_hash`, the
    Authority Set, and the verified evidence facts as
    `submission_evidence` ({{mission-record}}).
 
-The material verified provenance of step 7 is part of the approval
+The AS MUST refuse a submission that fails more than one check with
+the error of the earliest failing step in this order. For example:
+
+- a malformed proposal together with a missing required evidence
+  type is refused at step 3, with `invalid_authorization_details`;
+- a proposed entry outside `target_resources` together with a
+  presented evidence entry that fails verification is refused at
+  step 3, with `invalid_request`; and
+- an `intent` object that fails validation together with a malformed
+  proposal is refused at step 2, with `invalid_request`.
+
+The material verified provenance of step 8 is part of the approval
 surface. Where a deployment commits the rendered approval surface,
 that commitment MUST cover the normalized provenance facts, at least
 as a digest of their canonical `submission_evidence` representation
@@ -1272,9 +1293,8 @@ entries of an AS-supported type ({{other-types}}).
 
 ## Derivation Modes {#derivation-modes}
 
-Derivation is mechanical. It happens once, at the approval event, under
-the derivation policy then in force, as one procedure whose candidate
-entries depend on whether an authority proposal was submitted:
+Derivation is mechanical: one procedure whose candidate entries depend
+on whether an authority proposal was submitted:
 
 - **Narrowing mode** (preferred where the client can author
   `authorization_details`): the client submitted an authority
@@ -1304,6 +1324,16 @@ entries depend on whether an authority proposal was submitted:
   consent to a pre-approved ceiling is the separate, experimental
   Mission Template profile
   ({{I-D.draft-mcguinness-oauth-mission-template}}), not this mode.
+
+Derivation can run provisionally during submission processing, where
+the inputs it needs are available ({{submission-processing}}). The
+candidate Authority Set is complete before the approval rendering
+({{direct-approval-steps}}), and a change that
+{{approval-context-changes}} covers is recomputed and approved over the
+changed context. The approved Authority Set is fixed when the Mission
+Record is created, atomically with the approval decision
+({{direct-approval-steps}}), under the derivation policy in force at
+the approval event.
 
 In both modes the AS bounds every Authority Set entry by the Mission
 Intent: each entry that carries a `resource` member MUST have it among
@@ -6887,6 +6917,16 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Submission processing (#1411, D559): Submission Processing Order
+  validates an authority proposal's type, schema, and
+  `target_resources` membership after the Intent and before evidence,
+  and refuses a submission that fails several checks with the error of
+  the earliest failing step. Derivation Modes states when Authority
+  Set derivation runs: provisionally during submission where its
+  inputs allow, complete before the approval rendering, recomputed on
+  a change before the decision, and fixed when the Mission Record is
+  created.
 
 - Editorial (#1410): Error and Challenge Mapping is four tables by
   surface: failures not confined to one surface first, then PAR and the
