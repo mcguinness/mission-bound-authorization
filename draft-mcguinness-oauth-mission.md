@@ -6891,6 +6891,16 @@ Cross-Domain:
 
 -01
 
+- Submission processing (#1411, D559): Submission Processing Order
+  validates an authority proposal's type, schema, and
+  `target_resources` membership after the Intent and before evidence,
+  and refuses a submission that fails several checks with the error of
+  the earliest failing step. Derivation Modes states when Authority
+  Set derivation runs: provisionally during submission where its
+  inputs allow, complete before the approval rendering, recomputed on
+  a change before the decision, and fixed when the Mission Record is
+  created.
+
 - Editorial (#1409): Terminology defines Authority Set derivation and
   derivation (one issuance operation). The Implementation Map lists
   termination on an authorized revocation among the Mission Issuer's
