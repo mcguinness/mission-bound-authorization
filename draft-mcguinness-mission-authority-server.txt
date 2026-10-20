@@ -3629,6 +3629,161 @@ A.3.  Progressive Adoption
        the MAS record, lifecycle, and authority model continue to govern
        the rest of the estate.
 
+   The following tables compare the four mechanisms by which phases 3
+   through 6 relate an acting credential to a Mission: the components
+   each changes, and what each establishes.  The cited sections define
+   each entry.  The Issuance Grant entries come from
+   [I-D.draft-mcguinness-oauth-mission-issuance-grant], the native
+   entries from the OAuth binding's issuance gating and Subject
+   establishment ([I-D.draft-mcguinness-oauth-mission]), and credential-
+   carried establishment from the runtime profile
+   ([I-D.draft-mcguinness-mission-runtime]).  The identity provider
+   (IdP) adapter is the component that applies the mapping contract's
+   subject and client mappings (Section 12.3).
+
+   +=========+=============+==============+=============+=============+
+   |Mechanism|AS           |PEP and PDP   |MAS          |IdP adapter  |
+   +=========+=============+==============+=============+=============+
+   |Mapping  |No code      |PEP: covers   |Records,     |Runs at each |
+   |join     |change       |every         |lifecycle,   |PDP          |
+   |(phase 3)|             |consequential |and signed   |             |
+   |         |             |path in scope,|Status with  |             |
+   |         |             |supplying the |join         |             |
+   |         |             |Mission       |disclosure   |             |
+   |         |             |reference and |             |             |
+   |         |             |the           |             |             |
+   |         |             |credential's  |             |             |
+   |         |             |own authority.|             |             |
+   |         |             |PDP: resolves |             |             |
+   |         |             |the Mission   |             |             |
+   |         |             |and verifies  |             |             |
+   |         |             |the joins     |             |             |
+   |         |             |(Section 6.1) |             |             |
+   +---------+-------------+--------------+-------------+-------------+
+   |Join     |No code      |PEP: also     |Adds the     |Moves to the |
+   |Assertion|change;      |obtains and   |join-        |MAS          |
+   |(phase 4)|configured   |forwards the  |assertion    |             |
+   |         |for          |assertion.    |endpoint,    |             |
+   |         |introspection|PDP: verifies |holding      |             |
+   |         |or           |it in place of|introspection|             |
+   |         |validatable  |the mapping   |credentials  |             |
+   |         |JWT access   |checks        |at the AS    |             |
+   |         |tokens,      |(Section 8.3) |             |             |
+   |         |sender-      |              |             |             |
+   |         |constrained  |              |             |             |
+   |         |issuance, and|              |             |             |
+   |         |reported cnf |              |             |             |
+   |         |(Section     |              |             |             |
+   |         |12.2)        |              |             |             |
+   +---------+-------------+--------------+-------------+-------------+
+   |MAS plus |Grant        |Credential-   |Adds grant   |Runs at the  |
+   |Issuance |validation,  |carried       |minting      |consuming AS,|
+   |Grant    |bounded      |establishment;|             |at redemption|
+   |(phase 5)|minting, and |the join does |             |             |
+   |         |Mission-state|not run       |             |             |
+   |         |gates; an AS |              |             |             |
+   |         |that already |              |             |             |
+   |         |supplies them|              |             |             |
+   |         |may need     |              |             |             |
+   |         |configuration|              |             |             |
+   |         |and          |              |             |             |
+   |         |integration  |              |             |             |
+   |         |rather than  |              |             |             |
+   |         |source       |              |             |             |
+   |         |changes      |              |             |             |
+   +---------+-------------+--------------+-------------+-------------+
+   |Native   |The OAuth    |Credential-   |Serves as the|Part of the  |
+   |Mission- |binding's own|carried       |AS's Mission |AS's Subject |
+   |aware    |issuance for |establishment;|store, or    |establishment|
+   |issuance |its resources|the join does |merges into  |             |
+   |(phase 6)|             |not run       |it           |             |
+   +---------+-------------+--------------+-------------+-------------+
+
+                Table 5: Components each mechanism changes
+
+   +=========+============+================+===============+===========+
+   |Mechanism|Binding     | Issuance and   | Identity      |Uncovered- |
+   |         |property    | runtime gates  | mapping       |path       |
+   |         |            |                |               |residual   |
+   +=========+============+================+===============+===========+
+   |Mapping  |credential- | Issuance:      | The mapping   |Ungoverned:|
+   |join     |correlated, | none           | contract's    |ordinary   |
+   |         |with its    | (Section 11).  | subject,      |OAuth alone|
+   |         |equivalence-| Runtime:       | client, and   |bounds use |
+   |         |class       | current        | scope         |(Section   |
+   |         |ambiguity   | state, the     | mappings and  |11)        |
+   |         |            | subject and    | delegate      |           |
+   |         |            | client joins,  | policy,       |           |
+   |         |            | and the        | failing       |           |
+   |         |            | three-bound    | closed when   |           |
+   |         |            | permit         | unresolved or |           |
+   |         |            | (Section 6.1)  | ambiguous     |           |
+   |         |            |                | (Section      |           |
+   |         |            |                | 12.3)         |           |
+   +---------+------------+----------------+---------------+-----------+
+   |Join     |Token-      | Issuance:      | The same      |As for the |
+   |Assertion|specific    | none for the   | contract,     |mapping    |
+   |         |credential- | acting token;  | evaluated at  |join       |
+   |         |correlated, | assertions     | the MAS over  |           |
+   |         |never       | only for an    | introspection |           |
+   |         |issuance    | active         | or validated  |           |
+   |         |            | Mission        | claims        |           |
+   |         |            | (Section       | (Section      |           |
+   |         |            | 8.1).          | 8.1); scope   |           |
+   |         |            | Runtime: as    | mapping stays |           |
+   |         |            | for the        | at the PEP    |           |
+   |         |            | mapping join,  | (Section 6.1) |           |
+   |         |            | with the       |               |           |
+   |         |            | assertion      |               |           |
+   |         |            | verified       |               |           |
+   +---------+------------+----------------+---------------+-----------+
+   |MAS plus |credential- | Issuance:      | The grant's   |Token-layer|
+   |Issuance |mission-    | grants only    | sub to a      |bounds     |
+   |Grant    |bound, with | for an active  | local         |only; an   |
+   |         |presenter-  | Mission;       | account, and  |issued     |
+   |         |key-bound   | redemption     | its           |token can  |
+   |         |where its   | and every      | authorization |run to its |
+   |         |confirmation| refresh gated  | details to    |expiry     |
+   |         |binding is  | with a         | served        |after      |
+   |         |in force end| Mission-state  | resources, at |revocation,|
+   |         |to end      | integration,   | redemption    |and the    |
+   |         |            | otherwise no   |               |AS's other |
+   |         |            | refresh        |               |tokens stay|
+   |         |            | tokens.        |               |ordinary   |
+   |         |            | Runtime:       |               |           |
+   |         |            | credential-    |               |           |
+   |         |            | carried        |               |           |
+   |         |            | establishment  |               |           |
+   +---------+------------+----------------+---------------+-----------+
+   |Native   |credential- | Issuance: the  | An external   |Token-layer|
+   |Mission- |mission-    | OAuth          | Subject       |bounds     |
+   |aware    |bound, with | binding's      | mapped        |only; an   |
+   |issuance |presenter-  | gates on       | injectively   |issued     |
+   |         |key-bound   | every          | to an AS-     |token can  |
+   |         |where its   | derivation,    | local sub at  |run to its |
+   |         |confirmation| refresh        | approval      |expiry     |
+   |         |binding is  | included.      |               |after      |
+   |         |in force end| Runtime:       |               |revocation |
+   |         |to end      | credential-    |               |           |
+   |         |            | carried        |               |           |
+   |         |            | establishment  |               |           |
+   +---------+------------+----------------+---------------+-----------+
+
+                  Table 6: What each mechanism establishes
+
+   Ordered by row, the tables describe an upgrade path in which each
+   step is independently useful.  The mapping join is the compatibility
+   case: correlation only, on the paths a PEP covers, with no AS change.
+   The Join Assertion binds that correlation to one sender-constrained
+   token and moves subject and client mapping to the MAS, still without
+   AS code change.  Where an AS supports the Issuance Grant, a
+   deployment can move that AS's paths there directly, restoring
+   Mission-bound credentials and the issuance gate for them; native
+   issuance applies where an AS becomes natively Mission-aware.  Rows
+   differ per authorization server and path, and a path claims only its
+   own row's property ([I-D.draft-mcguinness-mission-architecture],
+   Section "Mission Binding Properties").
+
    A deployment stops at the phase its risk warrants; nothing above the
    floor is required to begin.  The MAS remains the control plane of the
    family's delegated-authority layer
@@ -3708,6 +3863,13 @@ B.5.  Revoke
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Progressive Adoption compares the four mechanisms of phases 3
+      through 6 (mapping join, Join Assertion, MAS plus Issuance Grant,
+      and native Mission-aware issuance) in two informative tables: the
+      components each changes, and the binding property, gates, identity
+      mapping, and uncovered-path residual each has.  A paragraph orders
+      them as an upgrade path.  No requirement changed (#818, D508).
 
    *  Native-operation error mapping: a refusal of a predecessor or
       parent that is not active maps to conflict whatever OAuth code its
