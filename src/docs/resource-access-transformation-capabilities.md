@@ -118,7 +118,7 @@ rows and, for decimal amounts, by `compareAmounts`'s tests
 | A `constraints` key outside `SUPPORTED_CONSTRAINT_KEYS` (unknown, or a Common Constraint registered later), on the ceiling or the candidate | refused at intake, configuration load and derivation (`assertSupportedConstraints`); a projection fragment carrying one is dropped (`onlyProjectableConstraints`) | `SUPPORTED_CONSTRAINT_KEYS` (`authority-subset.ts`) | `unsupported-constraint-keys.test.ts` "configured-mapping mode refuses a Common Constraint registered after this implementation on a directly-supplied ceiling entry" and "submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine"; cases der-07, der-09, cc-unsupported-extension |
 | A key present only in the candidate narrows only when it has defined semantics | implemented | as above | cases der-08 (narrows), der-09 (refused) |
 | `locations` | refused, by presence | `REFUSED_ENTRY_MEMBERS`, `refusedEntryMember` (`authority-subset.ts`) | `rar-carriage.test.ts` "refuses a proposal entry carrying locations, whatever its value, before any interaction, creating no Mission"; case fc-08 |
-| An unknown top-level member | not implemented: admitted at intake (the published schema allows additional members, and `validateMissionResourceAccessSchema` refuses only `locations` by name), then dropped wherever an entry is rebuilt member by member (`intersect`, `intersectForProjection`, `parseCeilingEntry`); never refused | as named | none |
+| An unknown top-level member, on the ceiling or the candidate | refused, by presence, against the supported set (the type's own members and `capability_sources`): at intake (the published schema's top level is closed) and at every requested-authority exchange, refresh narrowing included, with `invalid_authorization_details`; at configuration load and template consent; and by derivation over the ceiling and the proposal. A projection pairing carrying one is dropped, and the subset relation refuses any comparison involving one except a byte-identical pair, so an exchange that issues requested entries unprojected never drops an approved entry's member (#1399, D538) | `SUPPORTED_ENTRY_MEMBERS`, `unsupportedEntryMember` (`authority-subset.ts`) | `unknown-entry-member.test.ts` "refuses a ceiling entry carrying an unsupported member, whatever its value" and "refuses a submitted proposal entry carrying an unsupported member, whatever its value"; `rar-carriage.test.ts` "refuses a proposal entry carrying an unsupported member, whatever its value, before any interaction, creating no Mission" |
 
 `capability_sources`, a member another specification defines for this type,
 is compared by `capabilitySourcesNoBroader` (`authority-subset.ts`).
@@ -194,7 +194,7 @@ initial Common Constraints, `vendors` and `terminal_when`, and the
 matchers are compared by `(sub, sub_profile)` identity, not by the actors
 they permit, so a candidate list narrower by containment is refused (§2.4).
 Outside that domain, `prefix` is refused, action families are admitted and
-compared literally, and an unknown top-level member is dropped.
+compared literally, and an unknown top-level member is refused.
 
 D414 selects the same shape for #819's first interoperable subset:
 "exact-resource matching, explicit actions and agreed typed constraints",
