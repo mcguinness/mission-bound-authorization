@@ -867,7 +867,17 @@ function intersectForProjection(
   effective: AuthorityEntry,
 ): AuthorityEntry | null {
   if (candidate.type !== effective.type) return null;
-  if (candidate.resource !== effective.resource) return null;
+  // @spec resource-access#subset step 1 (#1276): the fragment's resource set
+  // is the narrower of the two sides, so it stays a subset of both: the
+  // candidate's when it lies within the effective entry, the effective
+  // entry's when that lies within the candidate. Two disjoint sets yield no
+  // fragment. A `prefix` side keeps its `resource_match`; `exact` stays absent.
+  const narrower = resourceWithin(candidate, effective)
+    ? candidate
+    : resourceWithin(effective, candidate)
+      ? effective
+      : undefined;
+  if (narrower === undefined) return null;
   // @spec mission#subset (#1399, D538): a top-level member outside the
   // supported set, `locations` included, makes the pairing unprovable: the
   // member-by-member rebuild below would drop it and erase a restriction it
@@ -943,7 +953,12 @@ function intersectForProjection(
   // a candidate cannot introduce a binding the effective side does not carry.
   const sources = projectCapabilitySources(candidate, effective, actions);
   if (sources === null) return null;
-  const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
+  const entry: AuthorityEntry = {
+    type: candidate.type,
+    resource: narrower.resource,
+    ...(narrower.resource_match === "prefix" ? { resource_match: "prefix" as const } : {}),
+    actions,
+  };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   if (sources) entry.capability_sources = sources;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);
@@ -995,8 +1010,10 @@ function projectCapabilitySources(
  * issuance-grant#effective-set-projection — project a candidate Authority Set
  * through a TARGET's current effective set: ENTRY-WISE INTERSECTION. Each
  * candidate entry is paired against EVERY effective entry sharing its `type`
- * and `resource`, and each pairing contributes its non-empty intersection
- * fragment: actions intersected, `max_amount` the smaller (exact decimal
+ * whose resource set contains its own or lies within it (#1276: the same
+ * `resource` for two `exact` entries), and each pairing contributes its
+ * non-empty intersection fragment, over the narrower resource set: actions
+ * intersected, `max_amount` the smaller (exact decimal
  * comparison), `vendors` intersected, `requires_action_approval` OR-ed,
  * `delegation` carried only where both sides grant it and then narrowed. The
  * result satisfies BOTH authority-only comparisons via
