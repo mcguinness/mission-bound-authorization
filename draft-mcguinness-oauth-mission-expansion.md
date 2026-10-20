@@ -191,14 +191,14 @@ at the approval event, and defines no mid-stream authorization
 upgrade. Widening authority requires a new approval and a successor
 Mission, as this document specifies.
 
-An agent's task does not always stay within the authority approved
-for it. The agent can meet an action that the approved Authority Set
-does not cover but that the deployment's governance policy would
-permit under a fresh consent. Expansion is the governed path from that
-shortfall to a new approval. It does not modify or widen the existing Mission. It creates a new Mission through the issuance profile's own
-approval event, with its own integrity anchors and Mission Record,
-linked to the Mission it replaces. The successor's authority comes
-only from that approval.
+An agent's task does not always stay within the authority approved for
+it. The agent can meet an action that the approved Authority Set does
+not cover but that the deployment's governance policy would permit under
+a fresh consent. Expansion is the governed path from that shortfall to a
+new approval. It does not modify or widen the existing Mission. It
+creates a new Mission through the issuance profile's own approval event,
+with its own integrity anchors and Mission Record, linked to the Mission
+it replaces. The successor's authority comes only from that approval.
 
 The mechanism rests on three additions to the issuance profile:
 
@@ -493,14 +493,14 @@ endpoint with the following parameters:
   expand a Mission merely by naming its `mission_id`.
 
 `creation_request_id`:
-: REQUIRED. The creation idempotency identifier
+:  REQUIRED. The creation idempotency identifier
   ({{creation-idempotency}}): an ASCII string of at most 255 octets,
-  opaque to the Mission Issuer beyond equality, that identifies this
-  one Mission-creation operation across every completion mode. At
-  least 122 bits of client-generated randomness is RECOMMENDED; a
-  version 4 UUID {{RFC9562}} satisfies this. The identifier is a
-  deduplication handle, not a secret ({{duplicate-creation}}). The Mission Issuer MUST refuse an
-  exchange missing it with `invalid_request`.
+  opaque to the Mission Issuer beyond equality, that identifies this one
+  Mission-creation operation across every completion mode. At least 122
+  bits of client-generated randomness is RECOMMENDED; a version 4 UUID
+  {{RFC9562}} satisfies this. The identifier is a deduplication handle,
+  not a secret ({{duplicate-creation}}). The Mission Issuer MUST refuse
+  an exchange missing it with `invalid_request`.
 
 A `mission_intent` on a token exchange marks it as a Mission-creation
 exchange, and its `requested_token_type` selects the operation: the
@@ -610,9 +610,9 @@ never the authority: no proof failure can widen anything.
 
 The Mission Issuer MUST record each expansion presentation and count it
 toward the deployment's anomaly detection, and the rate limit per
-predecessor and client ({{policy-probing}}) applies unconditionally. The `subject_token`
-is consumed only to resolve and bind the predecessor, never to
-refresh, so presenting it has no interaction with refresh token
+predecessor and client ({{policy-probing}}) applies unconditionally. The
+`subject_token` is consumed only to resolve and bind the predecessor,
+never to refresh, so presenting it has no interaction with refresh token
 rotation or replay detection.
 
 Expansion therefore requires a sender-constrained Mission-bound access
@@ -823,8 +823,8 @@ Cache-Control: no-store
 ~~~
 {: #fig-deferred title="Deferred Response"}
 
-The following is an example of the client's poll with the deferred
-grant type ({{Section 5.5 of I-D.draft-gerber-oauth-deferred-token-response}})
+The following is an example of the client's poll with the deferred grant
+type ({{Section 5.5 of I-D.draft-gerber-oauth-deferred-token-response}})
 and a DPoP proof, with client authentication omitted (line breaks for
 display purposes only):
 
@@ -933,10 +933,11 @@ The client then sends a pushed authorization request
 - optionally, the `predecessor` cross-check ({{submission}}), which
   names the recorded predecessor.
 
-It carries no `mission_intent` and no `authorization_details`: the
-token exchange is this operation's carriage ({{submission}}). Client authentication at the pushed authorization request endpoint
-binds the handle to the client, so the handle alone does not give its
-holder the operation.
+It carries no `mission_intent` and no `authorization_details`: the token
+exchange is this operation's carriage ({{submission}}). Client
+authentication at the pushed authorization request endpoint binds the
+handle to the client, so the handle alone does not give its holder the
+operation.
 
 The following is an example of the pushed authorization request, with
 client authentication omitted (line breaks for display purposes
@@ -1041,23 +1042,24 @@ predecessor's transition to `terminated` with reason `superseded`
   {{predecessor-children}}.
 
 Until the successor activates, the predecessor remains `active`. An
-expansion that never completes, whose deferred approval lapses, or
-whose authorization code is never redeemed or expires, creates no
-successor and leaves the predecessor `active`. It therefore never leaves the task without authority or cascade-terminates the predecessor's
-Child Missions.
+expansion that never completes, whose deferred approval lapses, or whose
+authorization code is never redeemed or expires, creates no successor
+and leaves the predecessor `active`. It therefore never leaves the task
+without authority or cascade-terminates the predecessor's Child
+Missions.
 
 ## The Deferred Window {#deferred-window}
 
 A completion can occur later than the request, across a deferred or
 interactive approval window. Two rules govern that window:
 
-- The predecessor's Mission state MUST be re-verified at issuance
+-  The predecessor's Mission state MUST be re-verified at issuance
   (completion), not only at request time. A predecessor that was
   terminated during the window, or whose containment or discharge since
   adjudication restricts authority the successor carries, MUST fail
-  completion, per the compare-and-set of {{reconciliation}}. This preserves the
-  halt on new derivation that a terminal predecessor state effects: a
-  deferred approval MUST NOT become a bypass of it.
+  completion, per the compare-and-set of {{reconciliation}}. This
+  preserves the halt on new derivation that a terminal predecessor state
+  effects: a deferred approval MUST NOT become a bypass of it.
 - Expiry of the `subject_token` during the window MUST NOT gate
   completion. The predecessor binding and the possession proof are
   evaluated and recorded at request time ({{request-binding}}); the
@@ -1168,11 +1170,11 @@ member.
   ({{I-D.draft-mcguinness-oauth-mission-signals}}), each inside
   `termination`.
 
-All three members are lineage and audit context only. Consistent with the issuance profile's
-open-`mission`-claim rule, each of them MUST NOT grant or widen
-authority, and a consumer that does not understand one MUST ignore it.
-The successor's authority comes only from its own `authority_hash`,
-never from its predecessor.
+All three members are lineage and audit context only. Consistent with
+the issuance profile's open-`mission`-claim rule, each of them MUST NOT
+grant or widen authority, and a consumer that does not understand one
+MUST ignore it. The successor's authority comes only from its own
+`authority_hash`, never from its predecessor.
 
 Each is a bare Mission Identifier string, not an object like the
 `parent` member of a Child Mission
@@ -1186,10 +1188,10 @@ The lineage members have these properties:
 - **Cardinality.** A successor has at most one `predecessor`. An
   expansion chain is expressed by walking `predecessor` links from a
   successor back toward the original Mission.
-- **Immutability.** The `predecessor` member is set at the
-  successor's approval event and MUST NOT change thereafter. The Mission Record is immutable
-  except for its `state` and its `termination`, which a supersession
-  writes once on the predecessor with the `successor` link
+-  **Immutability.** The `predecessor` member is set at the successor's
+  approval event and MUST NOT change thereafter. The Mission Record is
+  immutable except for its `state` and its `termination`, which a
+  supersession writes once on the predecessor with the `successor` link
   ({{superseded-state}}).
 - **Origin.** The predecessor and successor share an `issuer`: an
   expansion is adjudicated by the predecessor's Mission Issuer. A
@@ -1346,22 +1348,26 @@ re-creation costs
 When the predecessor has non-terminal Child Missions, the expansion
 consent disclosure SHOULD surface that fact as a material notice: at
 minimum the count of live Child Missions and that supersession
-terminates them. Where a deployment provides this notice, the
-expansion consent event renders the cost above; that consent event is the only point in this document at which a human can witness the
-cascade before it happens.
+terminates them. Where a deployment provides this notice, the expansion
+consent event renders the cost above; that consent event is the only
+point in this document at which a human can witness the cascade before
+it happens.
 
-Where explicitly approved Child Mission Carryover is selected, the Mission
-Issuer MUST render and commit its complete manifest and exclusion policy,
-and recheck that snapshot at completion under the child profile's Carryover
-rules ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise
-the ordinary cascade notice and per-child re-creation above remain the minimum.
+Where explicitly approved Child Mission Carryover is selected, the
+Mission Issuer MUST render and commit its complete manifest and
+exclusion policy, and recheck that snapshot at completion under the
+child profile's Carryover rules
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise the
+ordinary cascade notice and per-child re-creation above remain the
+minimum.
 
 Carryover completes in the successor's activation step
 ({{successor-activation}}). When the approved operation includes Child
-Mission Carryover, the Mission Issuer MUST include replacement records, required old-child
-cascades, the committed outcome map, and durable recovery work in the
-same atomic operation. Publication follows commit and is repairable;
-constructing replacements first does not guarantee external event order
+Mission Carryover, the Mission Issuer MUST include replacement records,
+required old-child cascades, the committed outcome map, and durable
+recovery work in the same atomic operation. Publication follows commit
+and is repairable; constructing replacements first does not guarantee
+external event order
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 ## No Implicit Rollback {#no-rollback}
@@ -1489,12 +1495,13 @@ predecessor, the Mission Issuer MUST verify:
 2. no other replacement expansion has already activated a successor for
    this predecessor (equivalently, the predecessor has not already
    been terminated with reason `superseded`); and
-3. the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a
-   current containment or discharge restriction of the chain
+3.  the successor's complete Authority Set, including authority carried
+   forward from the predecessor, overlaps no authority under a current
+   containment or discharge restriction of the chain
    ({{I-D.draft-mcguinness-oauth-mission-containment}},
    {{I-D.draft-mcguinness-oauth-mission-discharge}}) that the
-   successor's approval did not explicitly restore with that
-   restriction disclosed.
+   successor's approval did not explicitly restore with that restriction
+   disclosed.
 
 If any check fails, the Mission Issuer MUST refuse the completion
 with the applicable reconciliation status from the closed set below,
@@ -1563,15 +1570,15 @@ The Mission Issuer conveys the reconciliation status in an OAuth error
 response member:
 
 `mission_expansion_status`:
-: A string carrying one reconciliation status from the closed set
+:  A string carrying one reconciliation status from the closed set
   above, returned by the step that failed. At the token endpoint (the
   token exchange response, a deferred token response poll, and an
   authorization code redemption), it is a member of the JSON error
-  response body, alongside the OAuth `error` member. On the interactive path's
-  front-channel authorization error response, which carries error
-  parameters rather than a JSON body, it is an error response
-  parameter of the same name. Adjudication denial reasons use the
-  separate `mission_denial_reason` member ({{denial-reasons}}).
+  response body, alongside the OAuth `error` member. On the interactive
+  path's front-channel authorization error response, which carries error
+  parameters rather than a JSON body, it is an error response parameter
+  of the same name. Adjudication denial reasons use the separate
+  `mission_denial_reason` member ({{denial-reasons}}).
 
 The following is an example of a resolving poll refused because a
 concurrent expansion of the same predecessor activated first:
@@ -1743,11 +1750,10 @@ refused. The
 enforce that uniqueness as a constraint; a read-before-insert check
 without one does not withstand concurrent retries.
 
-The reservation and the created Mission's identifier MUST be
-committed atomically with Mission creation; credential generation MAY
-follow the commit. When the Mission commits and the Mission Issuer fails before
-responding, the retry
-finds the committed operation and resumes delivery
+The reservation and the created Mission's identifier MUST be committed
+atomically with Mission creation; credential generation MAY follow the
+commit. When the Mission commits and the Mission Issuer fails before
+responding, the retry finds the committed operation and resumes delivery
 ({{creation-recovery}}), never creating again.
 
 A repeated presentation of the same `(client, creation_request_id)`
@@ -1879,15 +1885,14 @@ document defines four:
   predecessor, so an expansion response is never ambiguously a
   non-successor.
 
-Companion profiles register further values in the Mission Denial
-Reasons registry ({{iana-denial-reasons}}). For example, the experimental progressive authorization companion
-registers `out_of_ceiling`
+Companion profiles register further values in the Mission Denial Reasons
+registry ({{iana-denial-reasons}}). For example, the experimental
+progressive authorization companion registers `out_of_ceiling`
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), and the
-experimental template profile registers
-`out_of_template_ceiling` and `dispatch_prohibited_class`
-({{I-D.draft-mcguinness-oauth-mission-template}}). A consumer MUST
-treat an unrecognized reason code as a denial with no further
-semantics.
+experimental template profile registers `out_of_template_ceiling` and
+`dispatch_prohibited_class`
+({{I-D.draft-mcguinness-oauth-mission-template}}). A consumer MUST treat
+an unrecognized reason code as a denial with no further semantics.
 
 A Mission Issuer MUST NOT use a reason code to disclose policy
 boundaries beyond the adjudicated request ({{policy-probing}}).
@@ -2159,10 +2164,10 @@ risking approval fatigue, or conversely would treat a genuine
 authority shortfall as a mere re-authentication and silently widen
 nothing.
 
-Mitigation: a denial that is an authentication shortfall (`acr`,
-`amr`) is satisfied by step-up, and a client does not route it to
-expansion; a denial that is an authority shortfall is the one
-expansion addresses ({{not-step-up}}). The component that classifies the denial
+Mitigation: a denial that is an authentication shortfall (`acr`, `amr`)
+is satisfied by step-up, and a client does not route it to expansion; a
+denial that is an authority shortfall is the one expansion addresses
+({{not-step-up}}). The component that classifies the denial
 ({{eligibility}}) makes this distinction.
 
 ## Policy Probing {#policy-probing}
@@ -2484,8 +2489,8 @@ approved, not the predecessor's authority plus a delta.
   restriction authorizes that authority explicitly and discloses the
   discharged entry and its condition; the consent also surfaces the
   chain's outstanding containment restrictions.
-- Added explicitly approved carryover hooks for disclosure, atomic completion,
-  and the carried child's unchanged expiry ceiling (#576).
+-  Added explicitly approved carryover hooks for disclosure, atomic
+  completion, and the carried child's unchanged expiry ceiling (#576).
 
 # Acknowledgments {#acknowledgments}
 {:numbered="false"}
