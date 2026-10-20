@@ -21,7 +21,7 @@ stand-in, and the operator console holds per-boot credentials in memory.
 | The MAS | The reference authorization server (`buildPilotMas`, `demo/src/mas-pilot/mas-as.ts`) in the launcher's process, around the kernel the pilot reads. | The same server as its own process (`demo/src/mas-pilot/mas-serve.ts`), which the launcher starts with no IPC channel, or one already running (`MAS_PILOT_MAS_URL`, §3.7). |
 | How the pilot reads a Mission | The kernel's committed record (`composeMasPilot`). | The MAS's signed Mission Status over HTTP (`composeSeparatedMasPilot`, deployment §11). |
 | Operator console | One listener with both halves. | The MAS half in the MAS's process, the pilot half in the launcher's. |
-| A revocation is seen | At the next decision. | At the first decision after the signed `fresh_until` (60 s) of the last Status read passes. |
+| A revocation is seen | At the next decision. | Once the signed `fresh_until` (60 s) of the last Status read of the Mission passes; at the next decision for a Mission not read since. |
 | A contained action is refused | `authority_contained`. | `out_of_authority`, the Status view's declared diagnostic (deployment §11). |
 
 In both, the MAS listens on `separated_mas.host:port` (shipped:
