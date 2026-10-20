@@ -1001,38 +1001,43 @@ Example, over the worked disclosure of {{disclosure-vector}}:
 {
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
-    "id": "msn_4Xp8kQ2rW9vT6nL1yB5sD3zC7mF0jH",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "intent_hash":
-      "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "authority_hash":
-      "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "proposal_hash":
+      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
     "consent_rendering_hash":
-      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
+      "sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g"
   },
   "approver": {
     "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR"
   },
+  "client": {
+    "client_id": "s6BhdRkqt3"
+  },
   "authentication_context": {
     "acr": "urn:example:acr:phishing-resistant",
     "amr": ["pwd", "hwk"],
-    "auth_time": "2026-06-30T17:54:00Z"
+    "auth_time": "2026-11-02T07:59:00Z"
   },
-  "approved_at": "2026-06-30T17:55:00Z",
+  "approved_at": "2026-11-02T08:00:00Z",
   "decision": "approved",
   "acknowledgments": [
     { "condition": "irreversible_action",
       "applies_to": { "resource": "https://erp.example.com",
         "action": "journal-entries.write" },
-      "acknowledged_at": "2026-06-30T17:54:50Z" }
+      "acknowledged_at": "2026-11-02T07:59:50Z" }
   ],
   "approval_policy_version": "approval-policy:v12",
   "sequence": 88127,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
+      "sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g"
   },
   "evidence_envelope": {
     "format": "jws-compact",
