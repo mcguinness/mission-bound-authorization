@@ -10126,48 +10126,53 @@ audit companion is active, and Cross-Domain is not among them.<a href="#appendix
 <p id="appendix-G-1">[[ To be removed from the final specification ]]<a href="#appendix-G-1" class="pilcrow">¶</a></p>
 <p id="appendix-G-2">-01<a href="#appendix-G-2" class="pilcrow">¶</a></p>
 <p id="appendix-G-3"><strong>Breaking wire changes</strong><a href="#appendix-G-3" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="appendix-G-4.1">
+<ul class="compact">
+<li class="compact" id="appendix-G-4.1">
           <p id="appendix-G-4.1.1"><code>mission_intent</code> carries the Mission Intent Submission envelope,
 <code>intent</code> plus an optional typed <code>evidence</code> array; a bare Intent is
-refused. The authority proposal moves from the removed Intent member
-<code>proposed_authority</code> to the standard <code>authorization_details</code>
+refused, and unsupported, invalid, or missing required evidence is
+refused with the new <code>invalid_mission_intent_evidence</code> error code.
+PAR carries it on the authorization-code path; other grants need a
+companion (#1202). The authority proposal moves from the removed
+Intent member <code>proposed_authority</code> to the <code>authorization_details</code>
 parameter, committed by the new <code>proposal_hash</code>.<a href="#appendix-G-4.1.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-G-4.2">
+        <li class="compact" id="appendix-G-4.2">
           <p id="appendix-G-4.2.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
 renamed <code>target_resources</code> and <code>constraints</code> <code>task_bounds</code>;
 <code>controls</code> is removed, its <code>acr</code> replaced by the <code>acr_values</code> and
-<code>max_age</code> request parameters and its <code>max_derivations</code> by Derivation
-Limits' <code>requested_derivation_limit</code>. <code>success_criteria</code> is removed,
-and earlier Missions keep their recorded Intent. <code>goal_lang</code> is new
-(#534). The top level admits only members that this document or an
-implemented companion defines, and a new Mission Intent Members
-registry assigns short names. The test vectors are regenerated.<a href="#appendix-G-4.2.1" class="pilcrow">¶</a></p>
+<code>max_age</code> parameters and its <code>max_derivations</code> by Derivation Limits'
+<code>requested_derivation_limit</code>. <code>success_criteria</code> is removed, and
+earlier Missions keep their recorded Intent. <code>goal_lang</code> is new
+(#534). The top level admits only defined members, a Mission Intent
+Members registry assigns short names, and test vectors are
+regenerated.<a href="#appendix-G-4.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-G-4.3">
+        <li class="compact" id="appendix-G-4.3">
           <p id="appendix-G-4.3.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
 <code>expires_at</code>; <code>authority_hash</code> leaves the claim, and introspection
-can disclose it (#702). The
-Mission Record replaces <code>approver</code> with
+can disclose it (#702). The Mission Record replaces <code>approver</code> with
 <code>approval_basis.consent_principal</code> (#705) and adds <code>approval_basis</code>,
 <code>authority_source</code> (#316), <code>termination</code>, <code>proposed_authority</code>,
 <code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-G-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-G-4.4">
+        <li class="compact" id="appendix-G-4.4">
           <p id="appendix-G-4.4.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
 <code>revoked</code> and <code>expired</code> become termination reasons, and a consumer
 can read a legacy state that way during a transition (#705). New
 registries hold lifecycle states, any further one non-terminal
 (#170), and termination reasons.<a href="#appendix-G-4.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-G-4.5">
-          <p id="appendix-G-4.5.1">The token endpoint adds <code>mission_expires_at</code> and the <code>mission_error</code>
-diagnostic, and <code>mission_id</code> is recommended. Resource server
-challenges add <code>mission_denial</code> and use RFC 9470
-<code>insufficient_user_authentication</code>.<a href="#appendix-G-4.5.1" class="pilcrow">¶</a></p>
+        <li class="compact" id="appendix-G-4.5">
+          <p id="appendix-G-4.5.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
+which can precede the requested <code>intent.expires_at</code>, and the
+<code>mission_error</code> diagnostic; <code>mission_id</code> is recommended.
+Authorization details type metadata can declare
+<code>mission_transformation_capabilities</code>, and entry commitments use
+<code>mission-authority-entry</code>. Resource server challenges add
+<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-G-4.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-G-4.6">
+        <li class="compact" id="appendix-G-4.6">
           <p id="appendix-G-4.6.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
 unproven, or unacceptable subject or actor token (#1178) with
 <code>invalid_request</code>, unless its profile assigns a code; other grants
@@ -10178,67 +10183,52 @@ submitted; <code>invalid_target</code> covers scope-projection and routing
 failures; and <code>invalid_scope</code> covers an ungrantable <code>scope</code> and an
 <code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-G-4.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-G-4.7">
+        <li class="compact" id="appendix-G-4.7">
           <p id="appendix-G-4.7.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
-a designation, which the holder of a sender-constrained token
-obtains by Token Exchange naming the delegate as <code>audience</code>;
-delegation thus needs sender-constrained tokens.<a href="#appendix-G-4.7.1" class="pilcrow">¶</a></p>
+a designation, which only the holder of a sender-constrained token
+obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-G-4.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-G-4.8">
+          <p id="appendix-G-4.8.1">Instance context no longer identifies the instance through <code>act.sub</code>
+or <code>act.cnf</code>: the delegate's actor identity is established
+separately, the top-level <code>cnf</code> binds the presenting key, and a
+deployment can convey optional <code>client_instance</code> context under
+<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. The
+instance-delegate matcher example uses the <code>ai_agent</code> actor type
+instead of the retired <code>client_instance</code> actor type.<a href="#appendix-G-4.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="appendix-G-5"><strong>Model changes.</strong> Approval separates the accountable
-<code>consent_principal</code>, the <code>activation_actor</code>, and an optional <code>human</code>
-or <code>policy</code> <code>adjudication</code> (#701), and a <code>direct</code> approval is always
-human (#1185). Approval activates authority that its recorded source
-already holds (#316). Companion standing-consent bases activate
-instances without a fresh human approval, each at its own approval
-event (#1078), recording <code>approved_at</code> (#580), the activation's own
-<code>approval_event_id</code> (#1017), and, where a policy adjudicates
-activation, an activation policy reference. Derivation is mechanical,
-in narrowing and configured-mapping modes, and a model's output can
-only refuse or narrow; outside a mapping, <code>purpose</code> can only lead to
-refusal or stricter treatment (#1102), and the prose members carry no
-machine semantics (#313). The Mission claim is minimal (above). A
-Mission has zero or more grant bindings, each to exactly one Mission
-and never acquired through consent reuse (#700, #1259), and an
-effective expiry no later than <code>intent.expires_at</code>. Authority is
-type-agnostic, with scope projection, per-type capabilities declared
-as <code>mission_transformation_capabilities</code>, and the
-<code>mission-authority-entry</code> commitment; opaque tokens use introspection
-or issuer-local resolution (#1203); and PAR carriage covers the
-authorization-code path, with other grants left to companion profiles
-(#1202).<a href="#appendix-G-5" class="pilcrow">¶</a></p>
-<p id="appendix-G-6"><strong>Material moved to companions.</strong> Resource Access takes the
-<code>mission_resource_access</code> type, Common Constraints, tool modeling, and
-<code>mission_constraints_supported</code> (#637, #645, #698). Intent Submission
-Evidence takes the verification framework, while the <code>evidence</code> member
-stays. Approved-Set Verification takes complete-set verification, and
-Derivation Limits the derivation limit and <code>derivations_remaining</code>.
-Metering registers its Intent members, and Approval Governance holds
-the governance record's assertion rules.<a href="#appendix-G-6" class="pilcrow">¶</a></p>
-<p id="appendix-G-7"><strong>Security and privacy.</strong> Delegation hardening, including
-<code>allowed_delegates</code> narrowing issuer policy (#1258); Approver
-authentication strength, kept off derived tokens and out of OpenID
-Connect results for another Subject (#826); no ordinary held
-credential for a Mission's task (#1205); refresh tokens bound per
-client type (#1204); no authority from an entry a resource server
-cannot fully enforce (#1258); issuer-checked Mission resolution
-(#725); third-party data subjects (#344); key retention to the audit
-horizon; Commitment Mechanisms (#1261); and Security Considerations
-trimmed toward the Mission Security Model (#877).<a href="#appendix-G-7" class="pilcrow">¶</a></p>
-<p id="appendix-G-8"><strong>Editorial and structure.</strong> The reading-path reorder (#910) and the
-Sections 1-2 reading path (#1379), with an Implementation Map and new
-appendices; the OAuth RFC conventions review; the density and
-readability passes, with lowercase role nouns (#876); examples
-aligned to the canonical Mission (#1176); and the OAuth Binding
-Mapping Assessment, moved here from the substrate (#708).<a href="#appendix-G-8" class="pilcrow">¶</a></p>
-<p id="appendix-G-9"><strong>References.</strong> draft-klrc-aiagent-auth is replaced by
-<span>[<a href="#I-D.draft-ietf-wimse-aims" class="cite xref">I-D.draft-ietf-wimse-aims</a>]</span>, draft-zehavi-oauth-rar-metadata by
-<span>[<a href="#I-D.draft-ietf-oauth-rar-metadata-remediation" class="cite xref">I-D.draft-ietf-oauth-rar-metadata-remediation</a>]</span>, and
-draft-mcguinness-oauth-client-instance-assertion by
-<span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span> and
-<span>[<a href="#I-D.draft-mcguinness-oauth-client-attesters" class="cite xref">I-D.draft-mcguinness-oauth-client-attesters</a>]</span>. MCP, ISO 4217,
-RFC 3986, and draft-mcguinness-oauth-ai-agent-instance are removed.
-RFC 6750 and RFC 9700 are normative, and the OAuth Actor Profile is
+<p id="appendix-G-5"><strong>Model changes.</strong> Approval separates <code>consent_principal</code>,
+<code>activation_actor</code>, and optional <code>adjudication</code> (#701): <code>direct</code>
+approval is human (#1185), approval activates only authority its
+source holds (#316), and standing-consent bases activate instances at
+their own approval events (#1078). Derivation is mechanical; <code>purpose</code>
+and model output only refuse or narrow (#1102). Each grant lineage
+binds to one Mission, never through consent reuse (#700, #1259).
+Authority is type-agnostic, with scope projection; opaque tokens use
+introspection or issuer-local resolution (#1203).<a href="#appendix-G-5" class="pilcrow">¶</a></p>
+<p id="appendix-G-6"><strong>Moved to companions.</strong> Resource Access (the <code>mission_resource_access</code>
+type, Common Constraints, tool modeling, and
+<code>mission_constraints_supported</code>; #637, #645, #698); Intent Submission
+Evidence (the verification framework; <code>evidence</code> stays); Approved-Set
+Verification; Derivation Limits (with <code>derivations_remaining</code>);
+Metering's Intent members; and Approval Governance's assertion rules.<a href="#appendix-G-6" class="pilcrow">¶</a></p>
+<p id="appendix-G-7"><strong>Security and privacy.</strong> Delegation hardening and no authority from
+an entry a resource server cannot fully enforce (#1258); Approver
+authentication kept off derived tokens and out of OpenID Connect
+results for another Subject (#826); no held credential for a Mission's
+task (#1205); refresh tokens bound per client type (#1204);
+issuer-checked Mission resolution (#725); third-party data subjects
+(#344); key retention to the audit horizon.<a href="#appendix-G-7" class="pilcrow">¶</a></p>
+<p id="appendix-G-8"><strong>Editorial and structure.</strong> The reading path (#910, #1379),
+conventions and readability passes (#876), canonical-Mission examples
+(#1176), and the Mapping Assessment, moved from the substrate (#708).<a href="#appendix-G-8" class="pilcrow">¶</a></p>
+<p id="appendix-G-9"><strong>References.</strong> The WIMSE AIMS draft, the RAR metadata remediation
+draft, and Client Instance ID with Client Attesters replace
+draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
+draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
+3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
+6750 and RFC 9700 are normative, and the OAuth Actor Profile
 informative.<a href="#appendix-G-9" class="pilcrow">¶</a></p>
 <p id="appendix-G-10">-00<a href="#appendix-G-10" class="pilcrow">¶</a></p>
 <ul class="normal">

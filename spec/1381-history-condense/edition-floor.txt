@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-20T05:37:24Z
-Source repository commit: f9e3a5095bf5fdf4fe267ef03f9a862be10aa2da
+Generated: 2026-10-20T06:05:01Z
+Source repository commit: 50f55d5fc9070196c57925b39679f428902568ee
 Member count: 7
 
 Reading order:
@@ -14783,38 +14783,39 @@ Appendix G.  Document History
 
    *  mission_intent carries the Mission Intent Submission envelope,
       intent plus an optional typed evidence array; a bare Intent is
-      refused.  The authority proposal moves from the removed Intent
-      member proposed_authority to the standard authorization_details
+      refused, and unsupported, invalid, or missing required evidence is
+      refused with the new invalid_mission_intent_evidence error code.
+      PAR carries it on the authorization-code path; other grants need a
+      companion (#1202).  The authority proposal moves from the removed
+      Intent member proposed_authority to the authorization_details
       parameter, committed by the new proposal_hash.
-
    *  Intent members, with no aliases (#636, #706, #117): resources is
       renamed target_resources and constraints task_bounds; controls is
-      removed, its acr replaced by the acr_values and max_age request
-      parameters and its max_derivations by Derivation Limits'
+      removed, its acr replaced by the acr_values and max_age parameters
+      and its max_derivations by Derivation Limits'
       requested_derivation_limit. success_criteria is removed, and
       earlier Missions keep their recorded Intent. goal_lang is new
-      (#534).  The top level admits only members that this document or
-      an implemented companion defines, and a new Mission Intent Members
-      registry assigns short names.  The test vectors are regenerated.
-
+      (#534).  The top level admits only defined members, a Mission
+      Intent Members registry assigns short names, and test vectors are
+      regenerated.
    *  The baseline mission claim carries id, issuer, and an optional
       expires_at; authority_hash leaves the claim, and introspection can
       disclose it (#702).  The Mission Record replaces approver with
       approval_basis.consent_principal (#705) and adds approval_basis,
       authority_source (#316), termination, proposed_authority,
       proposal_hash, and submission_evidence.
-
    *  The lifecycle states are active and terminated; the -00 states
       revoked and expired become termination reasons, and a consumer can
       read a legacy state that way during a transition (#705).  New
       registries hold lifecycle states, any further one non-terminal
       (#170), and termination reasons.
-
-   *  The token endpoint adds mission_expires_at and the mission_error
-      diagnostic, and mission_id is recommended.  Resource server
-      challenges add mission_denial and use RFC 9470
-      insufficient_user_authentication.
-
+   *  The token endpoint adds mission_expires_at, the effective expiry,
+      which can precede the requested intent.expires_at, and the
+      mission_error diagnostic; mission_id is recommended.
+      Authorization details type metadata can declare
+      mission_transformation_capabilities, and entry commitments use
+      mission-authority-entry.  Resource server challenges add
+      mission_denial and use RFC 9470 insufficient_user_authentication.
    *  A Token Exchange refuses an inactive Mission (#1154) and an
       invalid, unproven, or unacceptable subject or actor token (#1178)
       with invalid_request, unless its profile assigns a code; other
@@ -14824,71 +14825,52 @@ Appendix G.  Document History
       submitted; invalid_target covers scope-projection and routing
       failures; and invalid_scope covers an ungrantable scope and an
       openid request whose Approver is not the Subject (#826).
-
    *  Delegation by designation (#1268): the delegate's subject_token is
-      a designation, which the holder of a sender-constrained token
-      obtains by Token Exchange naming the delegate as audience;
-      delegation thus needs sender-constrained tokens.
+      a designation, which only the holder of a sender-constrained token
+      obtains, by Token Exchange naming the delegate as audience.
+   *  Instance context no longer identifies the instance through act.sub
+      or act.cnf: the delegate's actor identity is established
+      separately, the top-level cnf binds the presenting key, and a
+      deployment can convey optional client_instance context under
+      [I-D.draft-mcguinness-oauth-client-instance-id].  The instance-
+      delegate matcher example uses the ai_agent actor type instead of
+      the retired client_instance actor type.
 
-   *Model changes.* Approval separates the accountable
-   consent_principal, the activation_actor, and an optional human or
-   policy adjudication (#701), and a direct approval is always human
-   (#1185).  Approval activates authority that its recorded source
-   already holds (#316).  Companion standing-consent bases activate
-   instances without a fresh human approval, each at its own approval
-   event (#1078), recording approved_at (#580), the activation's own
-   approval_event_id (#1017), and, where a policy adjudicates
-   activation, an activation policy reference.  Derivation is
-   mechanical, in narrowing and configured-mapping modes, and a model's
-   output can only refuse or narrow; outside a mapping, purpose can only
-   lead to refusal or stricter treatment (#1102), and the prose members
-   carry no machine semantics (#313).  The Mission claim is minimal
-   (above).  A Mission has zero or more grant bindings, each to exactly
-   one Mission and never acquired through consent reuse (#700, #1259),
-   and an effective expiry no later than intent.expires_at.  Authority
-   is type-agnostic, with scope projection, per-type capabilities
-   declared as mission_transformation_capabilities, and the mission-
-   authority-entry commitment; opaque tokens use introspection or
-   issuer-local resolution (#1203); and PAR carriage covers the
-   authorization-code path, with other grants left to companion profiles
-   (#1202).
+   *Model changes.* Approval separates consent_principal,
+   activation_actor, and optional adjudication (#701): direct approval
+   is human (#1185), approval activates only authority its source holds
+   (#316), and standing-consent bases activate instances at their own
+   approval events (#1078).  Derivation is mechanical; purpose and model
+   output only refuse or narrow (#1102).  Each grant lineage binds to
+   one Mission, never through consent reuse (#700, #1259).  Authority is
+   type-agnostic, with scope projection; opaque tokens use introspection
+   or issuer-local resolution (#1203).
 
-   *Material moved to companions.* Resource Access takes the
-   mission_resource_access type, Common Constraints, tool modeling, and
-   mission_constraints_supported (#637, #645, #698).  Intent Submission
-   Evidence takes the verification framework, while the evidence member
-   stays.  Approved-Set Verification takes complete-set verification,
-   and Derivation Limits the derivation limit and derivations_remaining.
-   Metering registers its Intent members, and Approval Governance holds
-   the governance record's assertion rules.
+   *Moved to companions.* Resource Access (the mission_resource_access
+   type, Common Constraints, tool modeling, and
+   mission_constraints_supported; #637, #645, #698); Intent Submission
+   Evidence (the verification framework; evidence stays); Approved-Set
+   Verification; Derivation Limits (with derivations_remaining);
+   Metering's Intent members; and Approval Governance's assertion rules.
 
-   *Security and privacy.* Delegation hardening, including
-   allowed_delegates narrowing issuer policy (#1258); Approver
-   authentication strength, kept off derived tokens and out of OpenID
-   Connect results for another Subject (#826); no ordinary held
-   credential for a Mission's task (#1205); refresh tokens bound per
-   client type (#1204); no authority from an entry a resource server
-   cannot fully enforce (#1258); issuer-checked Mission resolution
-   (#725); third-party data subjects (#344); key retention to the audit
-   horizon; Commitment Mechanisms (#1261); and Security Considerations
-   trimmed toward the Mission Security Model (#877).
+   *Security and privacy.* Delegation hardening and no authority from an
+   entry a resource server cannot fully enforce (#1258); Approver
+   authentication kept off derived tokens and out of OpenID Connect
+   results for another Subject (#826); no held credential for a
+   Mission's task (#1205); refresh tokens bound per client type (#1204);
+   issuer-checked Mission resolution (#725); third-party data subjects
+   (#344); key retention to the audit horizon.
 
-   *Editorial and structure.* The reading-path reorder (#910) and the
-   Sections 1-2 reading path (#1379), with an Implementation Map and new
-   appendices; the OAuth RFC conventions review; the density and
-   readability passes, with lowercase role nouns (#876); examples
-   aligned to the canonical Mission (#1176); and the OAuth Binding
-   Mapping Assessment, moved here from the substrate (#708).
+   *Editorial and structure.* The reading path (#910, #1379),
+   conventions and readability passes (#876), canonical-Mission examples
+   (#1176), and the Mapping Assessment, moved from the substrate (#708).
 
-   *References.* draft-klrc-aiagent-auth is replaced by
-   [I-D.draft-ietf-wimse-aims], draft-zehavi-oauth-rar-metadata by
-   [I-D.draft-ietf-oauth-rar-metadata-remediation], and draft-
-   mcguinness-oauth-client-instance-assertion by
-   [I-D.draft-mcguinness-oauth-client-instance-id] and
-   [I-D.draft-mcguinness-oauth-client-attesters].  MCP, ISO 4217, RFC
-   3986, and draft-mcguinness-oauth-ai-agent-instance are removed.  RFC
-   6750 and RFC 9700 are normative, and the OAuth Actor Profile is
-   informative.
+   *References.* The WIMSE AIMS draft, the RAR metadata remediation
+   draft, and Client Instance ID with Client Attesters replace draft-
+   klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and draft-
+   mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC 3986,
+   and draft-mcguinness-oauth-ai-agent-instance are removed; RFC 6750
+   and RFC 9700 are normative, and the OAuth Actor Profile informative.
 
    -00
 
