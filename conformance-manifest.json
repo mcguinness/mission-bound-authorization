@@ -51202,11 +51202,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response"
+    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response",
+    "local": "the deferred-poll arm is witnessed: an approval whose effective expiry has already passed at the creation commit (the reference's stand-in for an intent.expires_at that passed while pending) creates no successor, leaves the predecessor active, and the poll answers access_denied; the code-redemption arm has no interactive path in the reference, and the token-exchange-response arm (a progressive drawdown) has no witness"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > @spec mission#approval-event: a ceiling that passes while the approval pends creates NO Mission (access_denied)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Mutation-proved 2026-10-20: making the creation refusal in the expansion deferral's redeem answer invalid_grant fails the cited assertion (expected 'invalid_grant' to be 'access_denied'); restored, it passes."
   },
   {
    "id": "expansion.submission.child-actor-refused",
