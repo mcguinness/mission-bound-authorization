@@ -26,6 +26,7 @@ import {
   authorityHash,
   canonicalize,
   computeAnchor,
+  entryDelegateMatcherViolation,
   intentHash,
   type JsonValue,
   MISSION_TEMPLATE_TYP,
@@ -239,6 +240,15 @@ export function createTemplate(
     if (member !== undefined) {
       throw new TemplateError(`ceiling[${i}] carries ${member}, which the mission_resource_access type does not use`);
     }
+  });
+  // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+  // (#1373): a template ceiling entry whose `allowed_delegates` or
+  // `allowed_child_actors` carries a malformed delegate matcher is refused at
+  // consent, naming the entry, rather than stored and refused only when a
+  // dispatch derives from it.
+  input.ceiling.forEach((entry, i) => {
+    const violation = entryDelegateMatcherViolation(entry);
+    if (violation !== undefined) throw new TemplateError(`ceiling[${i}] ${violation}`);
   });
   if (input.per_instance_lifetime_s <= 0 || !Number.isFinite(input.per_instance_lifetime_s)) {
     throw new TemplateError("per_instance_lifetime_s must be a positive number of seconds");

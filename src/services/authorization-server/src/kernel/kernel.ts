@@ -1901,6 +1901,14 @@ export class MissionKernel {
     return rows.map(rowToRecord);
   }
 
+  /** Every Mission whose approval basis is of `type`, oldest first (the startup remediation of #1372 reads `ceiling_drawdown`). */
+  missionsByApprovalBasis(type: ApprovalBasis["type"]): MissionRecord[] {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE json_extract(approval_basis_json, '$.type') = ? ORDER BY created_at, id")
+      .all(type) as Array<Record<string, unknown>>;
+    return rows.map(rowToRecord);
+  }
+
   get(id: string): MissionRecord | undefined {
     const row = this.db.prepare("SELECT * FROM missions WHERE id = ?").get(id) as
       | Record<string, unknown>
