@@ -637,9 +637,12 @@ The following rules apply to the assertions in a record:
   made against this `approval_event_id`, this `intent_hash`, and this
   `authority_hash`, and an assertion captured for one event MUST NOT be
   replayed into another.
-- Every contributing assertion MUST be policy-authorized: the issuer
-  verifies the asserting principal was eligible to assert under the
-  referenced `approval_policy` version before counting it.
+- Every contributing assertion MUST be policy-authorized: before
+  counting it, the issuer verifies that the asserting principal was
+  eligible to assert under the referenced `approval_policy` version. For
+  a `policy` assertion, that means both that the policy its `authority`
+  names was eligible to decide under `approval_policy` and that its
+  principal was eligible to approve that policy version.
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
 

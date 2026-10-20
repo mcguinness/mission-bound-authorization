@@ -3880,6 +3880,42 @@
    "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness."
   },
   {
+   "id": "approval-governance.assertion.policy-authorized",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "For a `policy` assertion, that means both that the policy its `authority` names was eligible to decide under `approval_policy` and that its principal was eligible to approve that policy version",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion counts only when the policy it names may decide under the record's approval_policy and its principal was eligible to approve that policy version; otherwise it does not contribute",
+    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. Human and service eligibility are not exercised by the reference."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an unauthorized human: no consent from them, and no activation once their authority is revoked",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > decides by the root itself or by the evaluator the root commits, with that policy's typed digest",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks."
+  },
+  {
    "id": "core.approval-basis.adjudication-no-flatten",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
