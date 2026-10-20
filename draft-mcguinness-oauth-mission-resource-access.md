@@ -59,6 +59,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -72,14 +80,6 @@ informative:
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -1040,11 +1040,14 @@ version of that meaning the entry was approved under.
 
 A **resource contract** is a JSON document, identified by an `id` and a
 `version`, whose bytes never change for that pair. It fixes the
-operation contract ({{resource-matching}}) of each operation it covers,
-including the members of each action family it defines, and, where the
-deployment adopts Mission-Bound Runtime Enforcement, the further
-material that document lists ({{I-D.draft-mcguinness-mission-runtime}}).
-It assembles those definitions and overrides none of them: a Common
+contract material that Mission-Bound Runtime Enforcement lists
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Resource
+Contract"), including the operation contract ({{resource-matching}}) of
+each operation it covers and the members of each action family it
+defines. That section also defines the version states and how a
+reference resolves. This section depends on those rules normatively;
+the dependency binds only a deployment that supports
+`resource_contract`. The contract assembles those definitions and overrides none of them: a Common
 Constraint keeps the semantics its definition gives it
 ({{common-constraints}}). A resource that changes any of that material
 publishes a new version with its own `digest`. The resource publishes
@@ -1113,9 +1116,9 @@ cases the entry is one the resource server cannot fully enforce
 ({{rs-enforcement}}). The reference fixes meaning, not state: it
 supplies no observation of the resource, and it exempts no operation
 from the resource's other authorization checks. Which versions a
-resource still performs, and for which entries, is set by
-{{I-D.draft-mcguinness-mission-runtime}} where the deployment adopts
-it.
+resource still performs, and for which entries, follows the version
+states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that
+does not resolve there authorizes nothing.
 
 ## Delegate Eligibility {#delegate-eligibility}
 
