@@ -133,11 +133,34 @@ export function consentedCeilingEntries(consent: CeilingConsent): AuthorityEntry
 }
 
 /**
+ * @spec progressive#progressive-authorization: the consented drawdown
+ * policy's reference, minted over the snapshot this issuer holds, or
+ * undefined when the consent names none. A policy this issuer does not hold
+ * at that version is refused `invalid_request`: the approval cannot commit
+ * content the issuer cannot evaluate. The approval decision checks it before
+ * any write, with the ceiling's entries (#1255).
+ */
+export function consentedDrawdownPolicy(
+  iss: string,
+  registry: ActivationPolicyRegistry | undefined,
+  consent: CeilingConsent,
+): ActivationPolicyRef | undefined {
+  if (consent.drawdown_policy === undefined) return undefined;
+  const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };
+  const drawdownPolicy =
+    typeof id === "string" && typeof version === "string"
+      ? mintActivationPolicyRef(iss, registry, id, version)
+      : undefined;
+  if (!drawdownPolicy) {
+    throw new IntentError("invalid_request", "drawdown_policy names no policy this issuer holds at that version");
+  }
+  return drawdownPolicy;
+}
+
+/**
  * @spec progressive#progressive-authorization: validate a consented ceiling
- * and commit it. Each entry has an Authority Set entry's shape; the drawdown
- * policy reference is minted over the snapshot this issuer holds, and a
- * policy it does not hold at that version is refused: the approval cannot
- * commit content the issuer cannot evaluate.
+ * and commit it. Each entry has an Authority Set entry's shape, and the
+ * drawdown policy reference is minted by {@link consentedDrawdownPolicy}.
  */
 export function consentCeiling(
   iss: string,
@@ -146,17 +169,7 @@ export function consentCeiling(
   consentedAt: string,
 ): MissionCeiling {
   const ceiling = consentedCeilingEntries(consent);
-  let drawdownPolicy: ActivationPolicyRef | undefined;
-  if (consent.drawdown_policy !== undefined) {
-    const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };
-    drawdownPolicy =
-      typeof id === "string" && typeof version === "string"
-        ? mintActivationPolicyRef(iss, registry, id, version)
-        : undefined;
-    if (!drawdownPolicy) {
-      throw new IntentError("invalid_request", "drawdown_policy names no policy this issuer holds at that version");
-    }
-  }
+  const drawdownPolicy = consentedDrawdownPolicy(iss, registry, consent);
   return {
     authority_ceiling: ceiling,
     ...(drawdownPolicy ? { drawdown_policy: drawdownPolicy } : {}),
