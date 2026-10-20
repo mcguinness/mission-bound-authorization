@@ -2475,7 +2475,7 @@ carries here, and <code>mission-unwind-plan</code>
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "workflow_id": "wf_invoice_recon_2026q3",
   "step_id": "post_journal_entry",
@@ -2486,13 +2486,13 @@ carries here, and <code>mission-unwind-plan</code>
   "outcome_state": "unknown",
   "unwind_plan_hash":
     "sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c",
-  "occurred_at": "2026-11-02T08:16:00Z"
+  "occurred_at": "2026-11-02T08:21:00Z"
 }
 </pre><a href="#section-11-4" class="pilcrow">¶</a>
 </div>
 <p id="section-11-5">A later record for the same step carries the compensate decision.
 Review confirmed that the posting committed before the Mission was
-revoked; a pre-provisioned remedial Mission that is <code>active</code>
+suspended; a pre-provisioned remedial Mission that is <code>active</code>
 authorizes the reversing entry (<a href="#compensation-authority" class="auto internal xref">Section 9.1</a>). The
 record links the review record above and the original runtime
 enforcement evidence in <code>linked_evidence</code>, carries the compensated
@@ -2506,14 +2506,14 @@ decision's <code>evaluation_id</code> in <code>compensates_evaluation_id</code>,
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "workflow_id": "wf_invoice_recon_2026q3",
   "step_id": "post_journal_entry",
   "mission_state": "terminated",
   "mission_termination": {
     "reason": "revoked",
-    "terminated_at": "2026-11-02T08:30:00Z"
+    "terminated_at": "2026-11-02T08:53:20Z"
   },
   "state_source": "status",
   "orchestration_decision": "compensate",

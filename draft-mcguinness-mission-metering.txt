@@ -338,6 +338,9 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
+   An example line too long for the page is folded with the single
+   backslash strategy of [RFC8792].
+
    Consumption bound:  A cumulative bound on Mission activity that
       depletes as the Mission is used, as distinct from a per-action
       constraint that is evaluated independently on each action.
@@ -495,9 +498,17 @@ Table of Contents
    Example Mission Intent carrying three of the four bounds alongside
    the issuance profile's members:
 
+   =============== NOTE: '\' line wrapping per RFC 8792 ===============
+
    {
-     "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+     "goal": "Reconcile Q3 invoices and post adjustments of at most \
+       USD 500 per journal entry.",
      "target_resources": ["https://erp.example.com"],
+     "task_bounds": [
+       "Read only invoices issued in 2026-Q3.",
+       "Post journal entries of at most USD 500 each."
+     ],
+     "purpose": "urn:example:purpose:reconcile",
      "expires_at": "2026-12-31T23:59:59Z",
      "max_budget": { "amount": "5000.00", "currency": "USD" },
      "max_calls": [
@@ -1165,7 +1176,7 @@ Table of Contents
      "action": { "name": "reconciliation.run" },
      "context": {
        "mission": {
-         "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+         "id": "msn_YJRRFCK6J8RraBk7ryPypDdFbezmGlLg",
          "issuer": "https://as.example.com"
        },
        "mission_state_observation": {
@@ -1176,7 +1187,7 @@ Table of Contents
        "actor": { "client_id": "s6BhdRkqt3" },
        "credential": {
          "issuer": "https://as.example.com",
-         "expires_at": "2026-11-02T09:14:00Z",
+         "expires_at": "2026-11-02T08:48:00Z",
          "authority": [
            {
              "type": "mission_resource_access",
@@ -1415,9 +1426,18 @@ Table of Contents
               RFC 7942, DOI 10.17487/RFC7942, July 2016,
               <https://www.rfc-editor.org/rfc/rfc7942>.
 
+   [RFC8792]  Watsen, K., Auerswald, E., Farrel, A., and Q. Wu,
+              "Handling Long Lines in Content of Internet-Drafts and
+              RFCs", RFC 8792, DOI 10.17487/RFC8792, June 2020,
+              <https://www.rfc-editor.org/rfc/rfc8792>.
+
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Editorial (#1176): examples of the canonical Mission follow one
+      dated history; an example line too long for the page is folded per
+      RFC 8792.  No requirement changes.
 
    *  Duration-Lease Renewal: the renewal example carries
       resource.properties.operation_target (#1276).
