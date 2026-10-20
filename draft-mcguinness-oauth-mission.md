@@ -523,21 +523,11 @@ is a task whose purpose, authority, and bounds the Approver can
 evaluate together ({{approval-comprehension}}).
 
 Optional companions can reduce repeated approvals through standing
-consent ({{standing-consent-bases}}), for example:
-
-- Mission Template ({{I-D.draft-mcguinness-oauth-mission-template}})
-  creates bounded instances of recurring tasks.
-- Progressive Authorization
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}) permits
-  successor Missions within a previously approved authority ceiling
-  as a task evolves.
-- Mission Approval Governance
-  ({{I-D.draft-mcguinness-mission-approval-governance}}) lets a
-  policy version a human approved decide an agent's own proposals.
-
-The template, ceiling, or policy still needs a meaningful human
-approval, and no such mechanism removes its profile's human-approval
-requirement for high-consequence authority.
+consent ({{standing-consent-bases}}): for example, a template, an
+authority ceiling, or a policy that a human approved once governs
+later Missions. The template, ceiling, or policy still needs a
+meaningful human approval, and no such mechanism removes its
+profile's human-approval requirement for high-consequence authority.
 
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
@@ -3866,13 +3856,20 @@ with no fresh human approval per instance; each instance is still
 created at its own approval event ({{approval-event}}). The following
 `type` values are such bases:
 
-- `template` ({{I-D.draft-mcguinness-oauth-mission-template}})
+- `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
+  bounded instances of a recurring task;
 - `policy_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): Child
+  Missions that a parent agent requests and a policy adjudicates with
+  no human interaction, rooted in the Parent Mission's accountable
+  human;
 - `ceiling_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}})
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}): successor
+  Missions within a previously approved authority ceiling as a task
+  evolves; and
 - `governed_policy`
-  ({{I-D.draft-mcguinness-mission-approval-governance}})
+  ({{I-D.draft-mcguinness-mission-approval-governance}}): an agent's
+  own proposals, decided by a policy version that a human approved.
 
 For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
