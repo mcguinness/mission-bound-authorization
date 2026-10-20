@@ -6842,6 +6842,11 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1404): Mission Intent, Conformance, Standing-Consent
+  Bases, and Authorization Details Types have subsections at their
+  existing paragraph boundaries; Standing-Consent Bases' two run-in
+  labels become its subsection headings. No requirement changes.
+
 - Editorial (#1401): Mission Authority, Mission-Bound Access Tokens,
   Resource Server Enforcement, and the Mission Record have
   subsections at their existing paragraph boundaries; no text moves.
