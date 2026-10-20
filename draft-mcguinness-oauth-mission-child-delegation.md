@@ -1591,8 +1591,8 @@ Authority Set the strict-subset check ran against
 is not that commitment. The expansion profile's child-cascade consent
 notice is where this cost can be surfaced to the Approver, at the same
 consent event that approves the successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
-deferred window").
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Child
+Missions of the Predecessor").
 
 Cascade under this profile is issuer-committed. The Mission Issuer
 MUST implement the `immediate` cascade mode and record the mode on the
