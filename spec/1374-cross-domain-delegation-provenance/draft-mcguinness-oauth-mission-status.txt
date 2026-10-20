@@ -460,13 +460,13 @@ Table of Contents
    Cache-Control: no-store
    Pragma: no-cache
 
-   eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+   eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 
    Decoded JWS header:
 
    {
      "alg": "ES256",
-     "kid": "sa-key-2026-q3",
+     "kid": "as-key-2026-q3",
      "typ": "mission-status-response+jwt"
    }
 
@@ -797,7 +797,7 @@ Table of Contents
      "error": "not_found",
      "error_description":
        "Mission reference is not found or not visible.",
-     "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+     "nonce": "nonce_zsPy4APqVNO96xAT"
    }
 
    The body MUST contain error and error_description, and MUST
@@ -1329,7 +1329,7 @@ Table of Contents
    Content-Type: application/mission-status-response+jwt
    Cache-Control: no-store
 
-   eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+   eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 
    Decoded JWS payload:
 

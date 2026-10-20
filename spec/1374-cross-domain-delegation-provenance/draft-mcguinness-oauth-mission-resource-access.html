@@ -1233,6 +1233,9 @@ its authorization server supports, or both.<a href="#section-abstract-2" class="
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
                 <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-resource-boundary-canonical" class="internal xref">Resource Boundary Canonicalization</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-action-family-growth" class="internal xref">Action Family Growth</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
@@ -1444,6 +1447,13 @@ not one action.<a href="#section-3-2.8.2.3.1" class="pilcrow">¶</a></p>
               <p id="section-3-2.8.2.4.1">An authorization server <span class="bcp14">SHOULD</span> treat deriving a family as high-risk
 breadth.<a href="#section-3-2.8.2.4.1" class="pilcrow">¶</a></p>
 </li>
+            <li class="normal" id="section-3-2.8.2.5">
+              <p id="section-3-2.8.2.5.1">A resource that documents an action family <span class="bcp14">SHOULD</span> treat the family's
+membership as part of its authorization contract, and <span class="bcp14">SHOULD</span> place
+an action that confers materially different authority under a new
+family or namespace version rather than under an existing family
+(<a href="#action-family-growth" class="auto internal xref">Section 5.2</a>).<a href="#section-3-2.8.2.5.1" class="pilcrow">¶</a></p>
+</li>
           </ul>
 </dd>
         <dd class="break"></dd>
@@ -1561,6 +1571,63 @@ component; the authorization server refuses such an entry with the
 <code>resource</code> identifies where an entry applies. The authorization server
 refuses an entry carrying <code>locations</code> with the
 <code>invalid_authorization_details</code> error code.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.1-4">The authorization server also refuses an entry with the
+<code>invalid_authorization_details</code> error code when:<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.1-5.1">
+            <p id="section-3.1-5.1.1">its <code>resource</code> is not an <code>absolute-URI</code> (<span><a href="https://rfc-editor.org/rfc/rfc3986#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC3986" class="cite xref">RFC3986</a>]</span>),
+so no entry's <code>resource</code> carries a fragment component;<a href="#section-3.1-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.2">
+            <p id="section-3.1-5.2.1">its <code>resource</code> is an <code>http</code> or <code>https</code> URI without the <code>//</code> authority
+form naming a non-empty host;<a href="#section-3.1-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.3">
+            <p id="section-3.1-5.3.1">its <code>actions</code> array is empty, or one of its values is neither an
+action identifier nor an action family (<a href="#resource-access-type" class="auto internal xref">Section 3</a>);<a href="#section-3.1-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.4">
+            <p id="section-3.1-5.4.1">its <code>delegation.max_depth</code> is not a non-negative integer, so a
+negative or fractional value is refused;<a href="#section-3.1-5.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.5">
+            <p id="section-3.1-5.5.1">an <code>allowed_delegates</code> matcher carries neither <code>sub</code> nor
+<code>sub_profile</code>, or carries any other member
+(<a href="#matching-allowed-delegates" class="auto internal xref">Section 3.7.1</a>);<a href="#section-3.1-5.5.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.6">
+            <p id="section-3.1-5.6.1">its <code>time_window</code> Common Constraint has a <code>not_before</code> later than its
+<code>not_after</code>, a window that admits no instant; or<a href="#section-3.1-5.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.7">
+            <p id="section-3.1-5.7.1">its <code>recipient_domain</code> Common Constraint is not a DNS name in ASCII
+form, with each internationalized label in its A-label form, or ends
+in a dot.<a href="#section-3.1-5.7.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.1-6">Letter case does not make a <code>recipient_domain</code> invalid; values compare
+case-insensitively (<a href="#value-space-comparison" class="auto internal xref">Section 3.4.2</a>).<a href="#section-3.1-6" class="pilcrow">¶</a></p>
+<p id="section-3.1-7">The following values are valid and carry a defined meaning:<a href="#section-3.1-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.1-8.1">
+            <p id="section-3.1-8.1.1">A <code>max_depth</code> of 0 admits the entry into no delegated token, since a
+delegated token's delegation depth is 1 or more
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>): the entry supplies no in-Mission delegated
+authority. Any other <code>delegation</code> member stays intact; a member a
+companion profile defines there, such as a child-creation grant, keeps
+the bound that profile gives it.<a href="#section-3.1-8.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-8.2">
+            <p id="section-3.1-8.2.1">An empty <code>allowed_delegates</code> array permits no delegate. It differs
+from an absent member, which defers eligibility to the authorization
+server's delegation-authorization policy (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>).<a href="#section-3.1-8.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-8.3">
+            <p id="section-3.1-8.3.1">An action value that a consumer does not recognize for the entry's
+<code>resource</code> grants nothing. It does not make the entry unenforceable:
+the entry's other actions remain enforceable (<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a>).<a href="#section-3.1-8.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 <div id="decimal-values">
 <section id="section-3.1.1">
           <h4 id="name-decimal-values">
@@ -1635,7 +1702,33 @@ target; and<a href="#section-3.2-3.3.1" class="pilcrow">¶</a></p>
 different target never authorizes the execution.<a href="#section-3.2-3.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.2-4">An operation contract preserves every resource distinction the
+<p id="section-3.2-4"><strong>Operation contract.</strong> An operation contract is the resource server's
+documented, trusted statement of how it authorizes an operation. For
+each operation it covers, it establishes:<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.2-5.1">
+            <p id="section-3.2-5.1.1">the rule that derives the operation target from the operation's
+validated inputs;<a href="#section-3.2-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-5.2">
+            <p id="section-3.2-5.2.1">the <code>resource_match</code> values the resource server supports for that
+target;<a href="#section-3.2-5.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-5.3">
+            <p id="section-3.2-5.3.1">the action identifier the operation exercises
+(<a href="#resource-access-type" class="auto internal xref">Section 3</a>); and<a href="#section-3.2-5.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.2-5.4">
+            <p id="section-3.2-5.4.1">for each <code>constraints</code> key the operation supports, the authoritative
+input that key's predicate reads (<a href="#common-constraints" class="auto internal xref">Section 3.4</a>).<a href="#section-3.2-5.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.2-6">A resource URL or a protected resource metadata identifier alone is not
+an operation contract. A deployment that adopts Mission-Bound Runtime
+Enforcement <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> records an
+operation's action identifier and constraint inputs in that document's
+Operation Profile.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
+<p id="section-3.2-7">An operation contract preserves every resource distinction the
 deployment's authorization constrains; it cannot collapse <code>/orders/123</code>
 and <code>/admin</code> to the server's root identifier to obtain a match. There is
 no fallback to the protected resource's metadata identifier: an
@@ -1644,9 +1737,9 @@ identifier as its target, but an absent or ambiguous contract is not
 such a definition. Validating the metadata identifier
 (<span><a href="https://rfc-editor.org/rfc/rfc9728#section-3.3" class="relref">Section 3.3</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>) and the token's audience remain separate
 checks, and matching never rewrites a recorded entry or its integrity
-commitments.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
-<p id="section-3.2-5">The following tables show one RPC operation and how entries match its
-target:<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+commitments.<a href="#section-3.2-7" class="pilcrow">¶</a></p>
+<p id="section-3.2-8">The following tables show one RPC operation and how entries match its
+target:<a href="#section-3.2-8" class="pilcrow">¶</a></p>
 <span id="name-an-rpc-operation-and-its-ta"></span><table class="center" id="table-1">
           <caption>
 <a href="#table-1" class="selfRef">Table 1</a>:
@@ -1763,16 +1856,16 @@ target:<a href="#section-3.2-5" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-3.2-8">These are resource matches only; actions and constraints are checked
-separately.<a href="#section-3.2-8" class="pilcrow">¶</a></p>
-<p id="section-3.2-9"><strong>Exact matching.</strong> Under <code>exact</code>, the entry's <code>resource</code>, after JSON
+<p id="section-3.2-11">These are resource matches only; actions and constraints are checked
+separately.<a href="#section-3.2-11" class="pilcrow">¶</a></p>
+<p id="section-3.2-12"><strong>Exact matching.</strong> Under <code>exact</code>, the entry's <code>resource</code>, after JSON
 decoding, and the operation target are compared character for character,
 including any query component. The comparison applies no case folding,
 default-port removal, percent-decoding, query removal, or trailing-slash
 equivalence, and a matcher <span class="bcp14">MUST NOT</span> normalize either operand by parsing
 and reserializing it. Equivalent URI spellings therefore do not match,
 so an issuer <span class="bcp14">SHOULD</span> emit an <code>exact</code> <code>resource</code> in the resource server's
-documented target spelling.<a href="#section-3.2-9" class="pilcrow">¶</a></p>
+documented target spelling.<a href="#section-3.2-12" class="pilcrow">¶</a></p>
 <span id="name-exact-matching"></span><table class="center" id="table-3">
           <caption>
 <a href="#table-3" class="selfRef">Table 3</a>:
@@ -1877,31 +1970,31 @@ documented target spelling.<a href="#section-3.2-9" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-3.2-11"><strong>Prefix matching.</strong> For prefix purposes, a <code>resource</code> with an empty
+<p id="section-3.2-14"><strong>Prefix matching.</strong> For prefix purposes, a <code>resource</code> with an empty
 path and one whose path is <code>/</code> denote the same base: <code>https://a.example</code>
-and <code>https://a.example/</code> authorize the same set.<a href="#section-3.2-11" class="pilcrow">¶</a></p>
-<p id="section-3.2-12">Resource containment under a <code>prefix</code> reference is compared after
+and <code>https://a.example/</code> authorize the same set.<a href="#section-3.2-14" class="pilcrow">¶</a></p>
+<p id="section-3.2-15">Resource containment under a <code>prefix</code> reference is compared after
 normalizing both URIs with these steps from <span><a href="https://rfc-editor.org/rfc/rfc3986#section-6.2.2" class="relref">Section 6.2.2</a> of [<a href="#RFC3986" class="cite xref">RFC3986</a>]</span>
-(syntax-based) and <span><a href="https://rfc-editor.org/rfc/rfc3986#section-6.2.3" class="relref">Section 6.2.3</a> of [<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> (scheme-based):<a href="#section-3.2-12" class="pilcrow">¶</a></p>
-<ol start="1" type="1" class="normal type-1" id="section-3.2-13">
-<li id="section-3.2-13.1">
-            <p id="section-3.2-13.1.1">lowercase the scheme and host;<a href="#section-3.2-13.1.1" class="pilcrow">¶</a></p>
+(syntax-based) and <span><a href="https://rfc-editor.org/rfc/rfc3986#section-6.2.3" class="relref">Section 6.2.3</a> of [<a href="#RFC3986" class="cite xref">RFC3986</a>]</span> (scheme-based):<a href="#section-3.2-15" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3.2-16">
+<li id="section-3.2-16.1">
+            <p id="section-3.2-16.1.1">lowercase the scheme and host;<a href="#section-3.2-16.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.2-13.2">
-            <p id="section-3.2-13.2.1">remove a default port;<a href="#section-3.2-13.2.1" class="pilcrow">¶</a></p>
+          <li id="section-3.2-16.2">
+            <p id="section-3.2-16.2.1">remove a default port;<a href="#section-3.2-16.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.2-13.3">
-            <p id="section-3.2-13.3.1">uppercase the hexadecimal digits of any percent-encoding
-(<span><a href="https://rfc-editor.org/rfc/rfc3986#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC3986" class="cite xref">RFC3986</a>]</span>), so <code>%2f</code> and <code>%2F</code> are equivalent;<a href="#section-3.2-13.3.1" class="pilcrow">¶</a></p>
+          <li id="section-3.2-16.3">
+            <p id="section-3.2-16.3.1">uppercase the hexadecimal digits of any percent-encoding
+(<span><a href="https://rfc-editor.org/rfc/rfc3986#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC3986" class="cite xref">RFC3986</a>]</span>), so <code>%2f</code> and <code>%2F</code> are equivalent;<a href="#section-3.2-16.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.2-13.4">
-            <p id="section-3.2-13.4.1">decode percent-encoded octets of unreserved characters; and<a href="#section-3.2-13.4.1" class="pilcrow">¶</a></p>
+          <li id="section-3.2-16.4">
+            <p id="section-3.2-16.4.1">decode percent-encoded octets of unreserved characters; and<a href="#section-3.2-16.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.2-13.5">
-            <p id="section-3.2-13.5.1">remove dot-segments.<a href="#section-3.2-13.5.1" class="pilcrow">¶</a></p>
+          <li id="section-3.2-16.5">
+            <p id="section-3.2-16.5.1">remove dot-segments.<a href="#section-3.2-16.5.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-3.2-14">After normalization, a target is within a <code>prefix</code> entry when it has the
+<p id="section-3.2-17">After normalization, a target is within a <code>prefix</code> entry when it has the
 entry's scheme and authority and its path equals the base path or
 extends it at a path-segment boundary. If the base path ends in <code>/</code>, a
 descendant's path begins with the complete base path; otherwise it
@@ -1910,25 +2003,25 @@ admits itself and <code>/orders/123</code>, but neither <code>/orders</code> nor
 The target's query is excluded from this path comparison only: it still
 participates in establishing the target and in action and constraint
 enforcement, and a query that selects another resource is resolved to
-that resource before matching.<a href="#section-3.2-14" class="pilcrow">¶</a></p>
-<p id="section-3.2-15">This normalization applies to comparison only, never to hashing:
+that resource before matching.<a href="#section-3.2-17" class="pilcrow">¶</a></p>
+<p id="section-3.2-18">This normalization applies to comparison only, never to hashing:
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>'s anchor computation remains
-byte-exact over the recorded values and is untouched by this rule.<a href="#section-3.2-15" class="pilcrow">¶</a></p>
-<p id="section-3.2-16">The authorization server's containment test (<a href="#subset" class="auto internal xref">Section 3.3</a>) and the
+byte-exact over the recorded values and is untouched by this rule.<a href="#section-3.2-18" class="pilcrow">¶</a></p>
+<p id="section-3.2-19">The authorization server's containment test (<a href="#subset" class="auto internal xref">Section 3.3</a>) and the
 resource server's request matching (<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a>) <span class="bcp14">MUST</span> apply the
 single URI normalization defined in this section, so issuance and
-enforcement draw the same boundary.<a href="#section-3.2-16" class="pilcrow">¶</a></p>
-<p id="section-3.2-17">The normalization <span class="bcp14">MUST</span> run before the prefix comparison, never after,
+enforcement draw the same boundary.<a href="#section-3.2-19" class="pilcrow">¶</a></p>
+<p id="section-3.2-20">The normalization <span class="bcp14">MUST</span> run before the prefix comparison, never after,
 and the boundary <span class="bcp14">MUST</span> be evaluated on the same normalized form a
-downstream component will act on.<a href="#section-3.2-17" class="pilcrow">¶</a></p>
-<p id="section-3.2-18">An empty path and <code>/</code> denote the same base; beyond that equivalence, a
+downstream component will act on.<a href="#section-3.2-20" class="pilcrow">¶</a></p>
+<p id="section-3.2-21">An empty path and <code>/</code> denote the same base; beyond that equivalence, a
 URI matcher <span class="bcp14">MUST NOT</span> coalesce <code>//</code> or trailing-slash differences of its
-own, since the normalization does not.<a href="#section-3.2-18" class="pilcrow">¶</a></p>
-<p id="section-3.2-19">The normalization lowercases the host but does not define Unicode to
+own, since the normalization does not.<a href="#section-3.2-21" class="pilcrow">¶</a></p>
+<p id="section-3.2-22">The normalization lowercases the host but does not define Unicode to
 A-label (IDNA) conversion, so a deployment that accepts non-ASCII hosts
-<span class="bcp14">MUST</span> ensure both sides compare the same form.<a href="#section-3.2-19" class="pilcrow">¶</a></p>
-<p id="section-3.2-20">The following table shows how operation targets match a <code>prefix</code> entry
-whose <code>resource</code> is <code>https://api.example/orders</code>:<a href="#section-3.2-20" class="pilcrow">¶</a></p>
+<span class="bcp14">MUST</span> ensure both sides compare the same form.<a href="#section-3.2-22" class="pilcrow">¶</a></p>
+<p id="section-3.2-23">The following table shows how operation targets match a <code>prefix</code> entry
+whose <code>resource</code> is <code>https://api.example/orders</code>:<a href="#section-3.2-23" class="pilcrow">¶</a></p>
 <span id="name-prefix-matching-for-https-a"></span><table class="center" id="table-4">
           <caption>
 <a href="#table-4" class="selfRef">Table 4</a>:
@@ -2002,8 +2095,8 @@ whose <code>resource</code> is <code>https://api.example/orders</code>:<a href="
             </tr>
           </tbody>
         </table>
-<p id="section-3.2-22"><a href="#resource-boundary-canonicalization" class="auto internal xref">Section 5.1</a> analyzes why each of these rules
-matters.<a href="#section-3.2-22" class="pilcrow">¶</a></p>
+<p id="section-3.2-25"><a href="#resource-boundary-canonicalization" class="auto internal xref">Section 5.1</a> analyzes why each of these rules
+matters.<a href="#section-3.2-25" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="subset">
@@ -2142,6 +2235,15 @@ reference value, used by the subset comparison of <a href="#subset" class="auto 
             <p id="section-3.4-3.3.1"><strong>Intersection rule</strong>: how two values for the same key combine; the
 result <span class="bcp14">MUST</span> be no broader than either operand.<a href="#section-3.4-3.3.1" class="pilcrow">¶</a></p>
 </li>
+          <li class="normal" id="section-3.4-3.4">
+            <p id="section-3.4-3.4.1"><strong>Input</strong>: what the constraint reads at the point of use, which an
+operation contract identifies for each operation
+(<a href="#resource-matching" class="auto internal xref">Section 3.2</a>).<a href="#section-3.4-3.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.4-3.5">
+            <p id="section-3.4-3.5.1"><strong>Predicate</strong>: the condition the input meets when the operation is
+within the bound.<a href="#section-3.4-3.5.1" class="pilcrow">¶</a></p>
+</li>
         </ul>
 <p id="section-3.4-4"><a href="#subset" class="auto internal xref">Section 3.3</a> applies a constraint's subset rule. Its intersection rule
 applies where a derivation combines two bounds for the same key, as in
@@ -2150,25 +2252,34 @@ appendix of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xre
 not require a derivation to run a particular intersection algorithm, and
 a ceiling whose specification defines a refusal rule is enforced by that
 rule, not silently intersected.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
-<p id="section-3.4-5">A <code>constraints</code> member whose name is a specification-defined Common
+<p id="section-3.4-5">At the point of use (<a href="#rs-enforcement" class="auto internal xref">Section 3.5</a>), the resource server applies
+the predicate of each Common Constraint an applicable entry carries to
+that constraint's input. Any fact a predicate needs that is missing or
+malformed makes the entry provide no authority. An operation contract
+may leave a constraint unsupported for that operation. The resource
+server <span class="bcp14">MUST</span> treat an applicable entry whose constraint it cannot
+evaluate or satisfy as providing no authority. It <span class="bcp14">MUST</span> refuse the
+request unless another applicable entry independently authorizes the
+whole request with every constraint satisfied.<a href="#section-3.4-5" class="pilcrow">¶</a></p>
+<p id="section-3.4-6">A <code>constraints</code> member whose name is a specification-defined Common
 Constraint is interpreted per its definition. Any other member name
 remains deployment-defined and is interpreted only within the issuing
 deployment; a consumer that does not recognize it <span class="bcp14">MUST</span> fail closed
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-5" class="pilcrow">¶</a></p>
-<p id="section-3.4-6">The same duty binds the authorization server when it narrows. The
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-6" class="pilcrow">¶</a></p>
+<p id="section-3.4-7">The same duty binds the authorization server when it narrows. The
 authorization server derives a candidate entry from a ceiling entry when
-it narrows:<a href="#section-3.4-6" class="pilcrow">¶</a></p>
+it narrows:<a href="#section-3.4-7" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.4-7.1">
-            <p id="section-3.4-7.1.1">a client's authority proposal to the Authority Set
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); or<a href="#section-3.4-7.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-3.4-8.1">
+            <p id="section-3.4-8.1.1">a client's authority proposal to the Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); or<a href="#section-3.4-8.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.4-7.2">
-            <p id="section-3.4-7.2.1">an Authority Set entry to a derived or delegated token
-(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>).<a href="#section-3.4-7.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-3.4-8.2">
+            <p id="section-3.4-8.2.1">an Authority Set entry to a derived or delegated token
+(<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>).<a href="#section-3.4-8.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-3.4-8">In either case, a <code>constraints</code> key that the authorization server does
+<p id="section-3.4-9">In either case, a <code>constraints</code> key that the authorization server does
 not implement narrowing for, whether a registered Common Constraint or a
 deployment-defined key, and whether it appears in the ceiling entry or
 in the candidate, <span class="bcp14">MUST NOT</span> be dropped while the entry survives. The
@@ -2181,11 +2292,11 @@ is different: it is narrowed or omitted, and the granted
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Carrying the entry forward
 with the key dropped would widen effective authority past the ceiling,
 as an unenforced key would at the resource server
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-8" class="pilcrow">¶</a></p>
-<p id="section-3.4-9">This type defines no interoperable cumulative use counter. A deployment
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-3.4-9" class="pilcrow">¶</a></p>
+<p id="section-3.4-10">This type defines no interoperable cumulative use counter. A deployment
 that adopts Mission Metering (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>)
 applies its accounting and settlement rules, and can embed the metering
-policy decision point in the resource server.<a href="#section-3.4-9" class="pilcrow">¶</a></p>
+policy decision point in the resource server.<a href="#section-3.4-10" class="pilcrow">¶</a></p>
 <div id="initial-common-constraints">
 <section id="section-3.4.1">
           <h4 id="name-initial-common-constraints">
@@ -2214,6 +2325,14 @@ comparison (no conversion is defined).<a href="#section-3.4.1-2.2.2.2.1" class="
 the smaller <code>amount</code>; differing currencies have no intersection and
 the combination fails.<a href="#section-3.4.1-2.2.2.3.1" class="pilcrow">¶</a></p>
 </li>
+                <li class="normal" id="section-3.4.1-2.2.2.4">
+                  <p id="section-3.4.1-2.2.2.4.1">Input: the action's amount and its currency, as the operation
+contract identifies them.<a href="#section-3.4.1-2.2.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.2.2.5">
+                  <p id="section-3.4.1-2.2.2.5.1">Predicate: the input currency equals <code>currency</code>, and the input
+amount is less than or equal to <code>amount</code> in decimal value space.<a href="#section-3.4.1-2.2.2.5.1" class="pilcrow">¶</a></p>
+</li>
               </ul>
 </dd>
             <dd class="break"></dd>
@@ -2230,6 +2349,13 @@ the combination fails.<a href="#section-3.4.1-2.2.2.3.1" class="pilcrow">¶</a><
 </li>
                 <li class="normal" id="section-3.4.1-2.4.2.3">
                   <p id="section-3.4.1-2.4.2.3.1">Intersection: the later instant.<a href="#section-3.4.1-2.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.4.2.4">
+                  <p id="section-3.4.1-2.4.2.4.1">Input: the recorded issuance instant of the resource the operation
+acts on.<a href="#section-3.4.1-2.4.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.4.2.5">
+                  <p id="section-3.4.1-2.4.2.5.1">Predicate: the input is at or after the value.<a href="#section-3.4.1-2.4.2.5.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </dd>
@@ -2250,6 +2376,13 @@ resource issuance, not token issuance.<a href="#section-3.4.1-2.6.1" class="pilc
                 <li class="normal" id="section-3.4.1-2.6.2.3">
                   <p id="section-3.4.1-2.6.2.3.1">Intersection: the earlier instant.<a href="#section-3.4.1-2.6.2.3.1" class="pilcrow">¶</a></p>
 </li>
+                <li class="normal" id="section-3.4.1-2.6.2.4">
+                  <p id="section-3.4.1-2.6.2.4.1">Input: the recorded issuance instant of the resource the operation
+acts on.<a href="#section-3.4.1-2.6.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.6.2.5">
+                  <p id="section-3.4.1-2.6.2.5.1">Predicate: the input is at or before the value.<a href="#section-3.4.1-2.6.2.5.1" class="pilcrow">¶</a></p>
+</li>
               </ul>
 </dd>
             <dd class="break"></dd>
@@ -2267,6 +2400,13 @@ resource issuance, not token issuance.<a href="#section-3.4.1-2.6.1" class="pilc
                 <li class="normal" id="section-3.4.1-2.8.2.3">
                   <p id="section-3.4.1-2.8.2.3.1">Intersection: the common value when the two are equal; otherwise
 there is no intersection and the combination fails.<a href="#section-3.4.1-2.8.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.8.2.4">
+                  <p id="section-3.4.1-2.8.2.4.1">Input: the authoritative tenant of the resource the operation acts
+on.<a href="#section-3.4.1-2.8.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.8.2.5">
+                  <p id="section-3.4.1-2.8.2.5.1">Predicate: the input equals the value.<a href="#section-3.4.1-2.8.2.5.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </dd>
@@ -2289,6 +2429,14 @@ it.<a href="#section-3.4.1-2.10.2.2.1" class="pilcrow">¶</a></p>
                   <p id="section-3.4.1-2.10.2.3.1">Intersection: the narrower value when one is equal to or a subdomain
 of the other; otherwise there is no intersection and the combination
 fails.<a href="#section-3.4.1-2.10.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.10.2.4">
+                  <p id="section-3.4.1-2.10.2.4.1">Input: every final recipient of the action, after routing and list
+expansion.<a href="#section-3.4.1-2.10.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.10.2.5">
+                  <p id="section-3.4.1-2.10.2.5.1">Predicate: the domain of every input recipient is equal to the value
+or a subdomain of it.<a href="#section-3.4.1-2.10.2.5.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </dd>
@@ -2316,6 +2464,13 @@ and therefore broader than any present reference bound.<a href="#section-3.4.1-2
 <code>not_after</code>); an empty overlap has no intersection and the
 combination fails.<a href="#section-3.4.1-2.12.2.3.1" class="pilcrow">¶</a></p>
 </li>
+                <li class="normal" id="section-3.4.1-2.12.2.4">
+                  <p id="section-3.4.1-2.12.2.4.1">Input: the enforcement point's own clock at the time of use.<a href="#section-3.4.1-2.12.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.12.2.5">
+                  <p id="section-3.4.1-2.12.2.5.1">Predicate: the input is at or after <code>not_before</code> and at or before
+<code>not_after</code>, for each member present.<a href="#section-3.4.1-2.12.2.5.1" class="pilcrow">¶</a></p>
+</li>
               </ul>
 </dd>
             <dd class="break"></dd>
@@ -2336,6 +2491,14 @@ of the reference array's, compared as exact strings.<a href="#section-3.4.1-2.14
                 <li class="normal" id="section-3.4.1-2.14.2.3">
                   <p id="section-3.4.1-2.14.2.3.1">Intersection: the common members; an empty result has no
 intersection and the combination fails.<a href="#section-3.4.1-2.14.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.14.2.4">
+                  <p id="section-3.4.1-2.14.2.4.1">Input: the authoritative classification labels of all data the
+operation reads or writes.<a href="#section-3.4.1-2.14.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.14.2.5">
+                  <p id="section-3.4.1-2.14.2.5.1">Predicate: every input label is among the values, compared as exact
+strings.<a href="#section-3.4.1-2.14.2.5.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </dd>
@@ -2359,6 +2522,15 @@ of the reference array's, compared as exact strings.<a href="#section-3.4.1-2.16
                   <p id="section-3.4.1-2.16.2.3.1">Intersection: the common members; an empty result has no
 intersection and the combination fails.<a href="#section-3.4.1-2.16.2.3.1" class="pilcrow">¶</a></p>
 </li>
+                <li class="normal" id="section-3.4.1-2.16.2.4">
+                  <p id="section-3.4.1-2.16.2.4.1">Input: the identity of the capability the enforcement point
+dispatches or verifies for the action. Mission Capability Binding
+<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span> defines one way
+to verify that identity against the capability's approved source.<a href="#section-3.4.1-2.16.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.16.2.5">
+                  <p id="section-3.4.1-2.16.2.5.1">Predicate: the input is among the values, compared as exact strings.<a href="#section-3.4.1-2.16.2.5.1" class="pilcrow">¶</a></p>
+</li>
               </ul>
 </dd>
             <dd class="break"></dd>
@@ -2381,7 +2553,40 @@ reference (narrowing may add the requirement, never remove it).<a href="#section
                 <li class="normal" id="section-3.4.1-2.18.2.3">
                   <p id="section-3.4.1-2.18.2.3.1">Intersection: the logical OR of the two values.<a href="#section-3.4.1-2.18.2.3.1" class="pilcrow">¶</a></p>
 </li>
+                <li class="normal" id="section-3.4.1-2.18.2.4">
+                  <p id="section-3.4.1-2.18.2.4.1">Input: none when the value is <code>false</code>; when it is <code>true</code>, the
+action-bound approval presented for the action.<a href="#section-3.4.1-2.18.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-3.4.1-2.18.2.5">
+                  <p id="section-3.4.1-2.18.2.5.1">Predicate: when the value is <code>true</code>, an action-bound approval is
+present and is:<a href="#section-3.4.1-2.18.2.5.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.4.1-2.18.2.5.2.1">
+                      <p id="section-3.4.1-2.18.2.5.2.1.1">verified by a trusted enforcement point;<a href="#section-3.4.1-2.18.2.5.2.1.1" class="pilcrow">¶</a></p>
+</li>
+                    <li class="normal" id="section-3.4.1-2.18.2.5.2.2">
+                      <p id="section-3.4.1-2.18.2.5.2.2.1">fresh within a maximum age the deployment states;<a href="#section-3.4.1-2.18.2.5.2.2.1" class="pilcrow">¶</a></p>
+</li>
+                    <li class="normal" id="section-3.4.1-2.18.2.5.2.3">
+                      <p id="section-3.4.1-2.18.2.5.2.3.1">bound to the action, the resource, and the action's parameters;<a href="#section-3.4.1-2.18.2.5.2.3.1" class="pilcrow">¶</a></p>
+</li>
+                    <li class="normal" id="section-3.4.1-2.18.2.5.2.4">
+                      <p id="section-3.4.1-2.18.2.5.2.4.1">never resolvable through approval authority the agent supplies;
+and<a href="#section-3.4.1-2.18.2.5.2.4.1" class="pilcrow">¶</a></p>
+</li>
+                    <li class="normal" id="section-3.4.1-2.18.2.5.2.5">
+                      <p id="section-3.4.1-2.18.2.5.2.5.1">consumed as a decision input, not as a bearer grant.<a href="#section-3.4.1-2.18.2.5.2.5.1" class="pilcrow">¶</a></p>
+</li>
+                  </ul>
+</li>
               </ul>
+<p id="section-3.4.1-2.18.3">Mission-Bound Runtime Enforcement
+<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span> and the Mission Transaction
+Authorization Profile
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-transaction-authorization" class="cite xref">I-D.draft-mcguinness-oauth-mission-transaction-authorization</a>]</span>
+define ways to obtain and verify such an approval, and the AuthZEN
+profile <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span> carries one as
+decision input.<a href="#section-3.4.1-2.18.3" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 </dl>
@@ -2415,10 +2620,12 @@ case-insensitively and on whole labels, so <code>mail.example.com</code> is
 within <code>example.com</code> and <code>example.net</code> is not.<a href="#section-3.4.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
-<p id="section-3.4.2-3">A Common Constraint definition <span class="bcp14">MUST</span> fix its subset and intersection in
-value-space terms, so that independent deployments compute the same
-result for the same values and the subset rule of <a href="#subset" class="auto internal xref">Section 3.3</a> is
-reproducible.<a href="#section-3.4.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.4.2-3">A predicate compares its input with the constraint value under the same
+rules.<a href="#section-3.4.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.4.2-4">A Common Constraint definition <span class="bcp14">MUST</span> fix its subset rule, intersection
+rule, and predicate in value-space terms, so that independent
+deployments compute the same result for the same values and inputs, and
+the subset rule of <a href="#subset" class="auto internal xref">Section 3.3</a> is reproducible.<a href="#section-3.4.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2471,7 +2678,8 @@ understand or cannot enforce. The resource server then authorizes the
 request only through another applicable entry that it can fully enforce
 and that covers the whole request on its own: the entry's <code>resource</code>
 matches the target, the action is among its <code>actions</code>, and every key in
-its <code>constraints</code> is satisfied. The resource server:<a href="#section-3.5-3" class="pilcrow">¶</a></p>
+its <code>constraints</code> is satisfied (<a href="#common-constraints" class="auto internal xref">Section 3.4</a>). The resource
+server:<a href="#section-3.5-3" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3.5-4.1">
             <p id="section-3.5-4.1.1"><span class="bcp14">MUST NOT</span> combine parts of several entries to authorize one request, or
@@ -2710,13 +2918,22 @@ an unenforced key fails closed at a resource server that consumes
 <code>authorization_details</code> directly.<a href="#section-3.8-5.3.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-3.8-6">An entry failing any condition <span class="bcp14">MUST NOT</span> be projected to <code>scope</code>. Per
+<p id="section-3.8-6">Advertising a key in <code>mission_constraints_supported</code>
+(<a href="#protected-resource-metadata" class="auto internal xref">Section 3.6</a>) is not evidence that a projection
+preserves the bound: condition 3 needs a control that holds on every
+operation the projected <code>scope</code> value permits, at a value at least as
+tight as the entry's. For example, where a target enforces a fixed
+500.00 USD ceiling on every operation <code>payments.small</code> permits, an entry
+whose <code>max_amount</code> is 500.00 USD projects safely to <code>payments.small</code>. An
+entry whose <code>max_amount</code> is 200.00 USD does not, because the <code>scope</code>
+value does not convey the entry's value.<a href="#section-3.8-6" class="pilcrow">¶</a></p>
+<p id="section-3.8-7">An entry failing any condition <span class="bcp14">MUST NOT</span> be projected to <code>scope</code>. Per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>'s issuance algorithm, the
 authorization server then omits <code>scope</code> for that entry where the
 target's enforcement path consumes <code>authorization_details</code>, and refuses
 issuance to that target when it is <code>scope</code>-only (it consumes <code>scope</code> and
 not <code>authorization_details</code>) and no other carried entry supplies a safe
-projection.<a href="#section-3.8-6" class="pilcrow">¶</a></p>
+projection.<a href="#section-3.8-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transformation-capabilities">
@@ -2833,7 +3050,10 @@ and to send messages through a messaging MCP server:<a href="#section-3.10-5" cl
 [
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
-    "actions": ["query_invoices", "post_adjustment"],
+    "actions": ["query_invoices"] },
+  { "type": "mission_resource_access",
+    "resource": "https://finance.example.com/mcp",
+    "actions": ["post_adjustment"],
     "constraints": {
       "max_amount": { "amount": "500.00", "currency": "USD" }
     } },
@@ -2844,11 +3064,14 @@ and to send messages through a messaging MCP server:<a href="#section-3.10-5" cl
 ]
 </pre><a href="#section-3.10-6" class="pilcrow">¶</a>
 </div>
-<p id="section-3.10-7">Delegation to a sub-agent uses the same <code>delegation</code> member
+<p id="section-3.10-7">An entry's <code>constraints</code> bind every action it lists, so the read tool
+has an entry of its own, outside the <code>max_amount</code> bound that applies to
+the adjustment tool.<a href="#section-3.10-7" class="pilcrow">¶</a></p>
+<p id="section-3.10-8">Delegation to a sub-agent uses the same <code>delegation</code> member
 (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>). The following example shows an Authority Set
 entry, approved with its <code>delegation</code> member, that a sub-agent of type
-<code>ai_agent</code> may exercise at depth 1 for the read tool only:<a href="#section-3.10-7" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-3.10-8">
+<code>ai_agent</code> may exercise at depth 1 for the read tool only:<a href="#section-3.10-8" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-3.10-9">
 <pre>
 { "type": "mission_resource_access",
   "resource": "https://finance.example.com/mcp",
@@ -2857,9 +3080,9 @@ entry, approved with its <code>delegation</code> member, that a sub-agent of typ
     "max_depth": 1,
     "allowed_delegates": [{ "sub_profile": "ai_agent" }]
   } }
-</pre><a href="#section-3.10-8" class="pilcrow">¶</a>
+</pre><a href="#section-3.10-9" class="pilcrow">¶</a>
 </div>
-<p id="section-3.10-9">This document does not define a typed, attenuable per-argument
+<p id="section-3.10-10">This document does not define a typed, attenuable per-argument
 constraint grammar for tools: one that narrows a tool's argument schema
 (for example, <code>amount</code> in a <code>range</code>, or <code>recipient</code> in a <code>one_of</code> set)
 as the grant is derived or delegated. Argument bounds here are the same
@@ -2868,7 +3091,7 @@ Structured per-argument attenuation
 (<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, with
 object-capability systems such as UCAN as prior art) would extend the
 delegation and subset model of this document (<a href="#delegate-eligibility" class="auto internal xref">Section 3.7</a>,
-<a href="#subset" class="auto internal xref">Section 3.3</a>) rather than introduce a new entry type.<a href="#section-3.10-9" class="pilcrow">¶</a></p>
+<a href="#subset" class="auto internal xref">Section 3.3</a>) rather than introduce a new entry type.<a href="#section-3.10-10" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -3018,6 +3241,25 @@ one rule (<a href="#resource-matching" class="auto internal xref">Section 3.2</a
 for interoperation.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
+<div id="action-family-growth">
+<section id="section-5.2">
+        <h3 id="name-action-family-growth">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-action-family-growth" class="section-name selfRef">Action Family Growth</a>
+        </h3>
+<p id="section-5.2-1">An action family (<a href="#resource-access-type" class="auto internal xref">Section 3</a>) authorizes every action
+under its name, including an action the resource adds after approval. A
+durable approval naming <code>invoices.*</code> therefore authorizes an <code>invoices</code>
+action the resource defines later, which can confer more authority than
+any action the Approver saw.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">The family guidance in <a href="#resource-access-type" class="auto internal xref">Section 3</a> narrows this risk but
+does not remove it. It is a recommendation to the resource and does not
+freeze an existing family's membership, and this document defines no
+rule that binds an entry to the action semantics its resource
+documented at approval. An Approver or authorization server that needs
+a fixed set of actions approves or derives literal actions rather than
+a family.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="privacy-considerations">
@@ -3092,12 +3334,18 @@ registered;<a href="#section-7.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.2">
             <p id="section-7.3-2.2.1">gives a JSON value syntax (<span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span>) precise enough for independent
-implementations to agree on; and<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
+implementations to agree on;<a href="#section-7.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-2.3">
             <p id="section-7.3-2.3.1">states a subset rule and an intersection rule, both in value-space
 terms (<a href="#value-space-comparison" class="auto internal xref">Section 3.4.2</a>), with the intersection of any two
-valid values never broader than either operand.<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
+valid values never broader than either operand; and<a href="#section-7.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-2.4">
+            <p id="section-7.3-2.4.1">states the input the constraint reads at the point of use and the
+predicate that input meets, in value-space terms, precisely enough for
+independent resource servers to agree on which operations are within
+the bound.<a href="#section-7.3-2.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-7.3-3">A specification-defined name is coordinated through this registry. Any
@@ -3120,18 +3368,25 @@ reference value.<a href="#section-7.3-5.3.1" class="pilcrow">¶</a></p>
 result no broader than either operand.<a href="#section-7.3-5.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-5.5">
-            <p id="section-7.3-5.5.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
-registration.<a href="#section-7.3-5.5.1" class="pilcrow">¶</a></p>
+            <p id="section-7.3-5.5.1"><strong>Input</strong>: what the constraint reads at the point of use.<a href="#section-7.3-5.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.3-5.6">
-            <p id="section-7.3-5.6.1"><strong>Reference</strong>: the specification defining the key.<a href="#section-7.3-5.6.1" class="pilcrow">¶</a></p>
+            <p id="section-7.3-5.6.1"><strong>Predicate</strong>: the condition the input meets when an operation is
+within the bound.<a href="#section-7.3-5.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-5.7">
+            <p id="section-7.3-5.7.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-7.3-5.7.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-7.3-5.8">
+            <p id="section-7.3-5.8.1"><strong>Reference</strong>: the specification defining the key.<a href="#section-7.3-5.8.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-7.3-6">The initial contents of the registry are the Common Constraints of
 <a href="#initial-common-constraints" class="auto internal xref">Section 3.4.1</a>. For every entry, the Change Controller
 is IETF and the Reference is <a href="#initial-common-constraints" class="auto internal xref">Section 3.4.1</a> of this
-document, which holds the full Subset Rule and Intersection Rule text;
-the table summarizes them.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
+document, which holds the full Subset Rule, Intersection Rule, Input,
+and Predicate text; the tables summarize them.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 <span id="name-initial-mission-common-cons"></span><table class="center" id="table-5">
           <caption>
 <a href="#table-5" class="selfRef">Table 5</a>:
@@ -3220,6 +3475,84 @@ the table summarizes them.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
+<span id="name-initial-mission-common-const"></span><table class="center" id="table-6">
+          <caption>
+<a href="#table-6" class="selfRef">Table 6</a>:
+<a href="#name-initial-mission-common-const" class="selfRef">Initial Mission Common Constraints registry: inputs and predicates</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Key Name</th>
+              <th class="text-left" rowspan="1" colspan="1">Input</th>
+              <th class="text-left" rowspan="1" colspan="1">Predicate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>max_amount</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The action's amount and currency</td>
+              <td class="text-left" rowspan="1" colspan="1">Same currency; input amount &lt;= bound</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>resource_issued_after</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The resource's recorded issuance instant</td>
+              <td class="text-left" rowspan="1" colspan="1">Input &gt;= value</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>resource_issued_before</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The resource's recorded issuance instant</td>
+              <td class="text-left" rowspan="1" colspan="1">Input &lt;= value</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>tenant</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The resource's authoritative tenant</td>
+              <td class="text-left" rowspan="1" colspan="1">Equal</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>recipient_domain</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">Every final recipient</td>
+              <td class="text-left" rowspan="1" colspan="1">Every domain equal or a subdomain</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>time_window</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The enforcement point's clock at use</td>
+              <td class="text-left" rowspan="1" colspan="1">Within the window, inclusive</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>data_classification</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The labels of all data read or written</td>
+              <td class="text-left" rowspan="1" colspan="1">Every label among the values</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>allowed_tools</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">The dispatched or verified capability identity</td>
+              <td class="text-left" rowspan="1" colspan="1">Among the values</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>requires_action_approval</code>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">When <code>true</code>, the action-bound approval</td>
+              <td class="text-left" rowspan="1" colspan="1">When <code>true</code>, a verified, fresh, bound approval</td>
+            </tr>
+          </tbody>
+        </table>
 </section>
 </div>
 </section>
@@ -3300,9 +3633,25 @@ the table summarizes them.<a href="#section-7.3-6" class="pilcrow">¶</a></p>
 <a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-authzen">[I-D.draft-mcguinness-mission-authzen]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement: AuthZEN Profile"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-capability-binding">[I-D.draft-mcguinness-mission-capability-binding]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Capability Binding"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-transaction-authorization">[I-D.draft-mcguinness-oauth-mission-transaction-authorization]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Transaction Authorization Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>

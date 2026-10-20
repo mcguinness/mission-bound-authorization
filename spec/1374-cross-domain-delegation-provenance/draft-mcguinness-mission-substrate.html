@@ -2493,14 +2493,14 @@ governance and the exact property each surface proves; and<a href="#section-7.1-
 retention.<a href="#section-7.1-3.9.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
-<p id="section-7.1-4">The Statement <span class="bcp14">MUST</span> then include a capability table with one row for
-each capability in <a href="#capabilities" class="auto internal xref">Section 5</a>.  Each row <span class="bcp14">MUST</span> say <code>supplied</code> or
-<code>not supplied</code>: a capability is supplied in a named scope when the
-row's stated activation conditions hold, or it is not supplied.
+<p id="section-7.1-4">The Statement <span class="bcp14">MUST</span> then include a capability list with one entry for
+each capability in <a href="#capabilities" class="auto internal xref">Section 5</a>.  Each entry <span class="bcp14">MUST</span> say <code>supplied</code>
+or <code>not supplied</code>: a capability is supplied in a named scope when the
+entry's stated activation conditions hold, or it is not supplied.
 There is no third state.  An activation condition states separately
 what a specification defines, what an implementation supports, what
 a deployment enables, and where the resulting property applies.  A
-supplied row <span class="bcp14">MUST</span>:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
+supplied entry <span class="bcp14">MUST</span>:<a href="#section-7.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7.1-5.1">
             <p id="section-7.1-5.1.1">cite the binding sections that satisfy the capability;<a href="#section-7.1-5.1.1" class="pilcrow">¶</a></p>
@@ -2531,81 +2531,77 @@ incomparable, invalid, or unavailable input; and<a href="#section-7.1-5.5.1" cla
 extension; a deployment profile declares which extensions and
 activation conditions are active.<a href="#section-7.1-6" class="pilcrow">¶</a></p>
 <p id="section-7.1-7">The following is a non-normative skeleton:<a href="#section-7.1-7" class="pilcrow">¶</a></p>
-<span id="name-illustrative-mission-substr"></span><table class="center" id="table-3">
-          <caption>
-<a href="#table-3" class="selfRef">Table 3</a>:
-<a href="#name-illustrative-mission-substr" class="selfRef">Illustrative Mission Substrate Statement capability table</a>
-          </caption>
-<thead>
-            <tr>
-              <th class="text-left" rowspan="1" colspan="1">Capability</th>
-              <th class="text-left" rowspan="1" colspan="1">Claim</th>
-              <th class="text-left" rowspan="1" colspan="1">Activation</th>
-              <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
-              <th class="text-left" rowspan="1" colspan="1">Limitations</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">always</td>
-              <td class="text-left" rowspan="1" colspan="1">Controller permission decisions</td>
-              <td class="text-left" rowspan="1" colspan="1">Previously issued resource credentials expire independently</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">Status extension active</td>
-              <td class="text-left" rowspan="1" colspan="1">Status responses</td>
-              <td class="text-left" rowspan="1" colspan="1">Maximum staleness is deployment-configured</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-              <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">Approved Context is descriptive</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
-              <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">No authority comparison relation is defined</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">always</td>
-              <td class="text-left" rowspan="1" colspan="1">Native authorization artifact</td>
-              <td class="text-left" rowspan="1" colspan="1">Covers correlation, not context disclosure</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">Verified join active</td>
-              <td class="text-left" rowspan="1" colspan="1">Join assertions</td>
-              <td class="text-left" rowspan="1" colspan="1">Joining authority is the Controller</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
-              <td class="text-left" rowspan="1" colspan="1">supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">Signed receipt profile active</td>
-              <td class="text-left" rowspan="1" colspan="1">Signed receipts</td>
-              <td class="text-left" rowspan="1" colspan="1">Proves approval as of issuance, not current state</td>
-            </tr>
-            <tr>
-              <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
-              <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">--</td>
-              <td class="text-left" rowspan="1" colspan="1">Governance record is Controller-local</td>
-            </tr>
-          </tbody>
-        </table>
-<p id="section-7.1-9">A real Statement also carries each supplied row's temporal elements
-and failure behavior; the skeleton omits those columns for width.<a href="#section-7.1-9" class="pilcrow">¶</a></p>
+<span class="break"></span><div id="illustrative-statement-capabilities">
+<dl class="dlNewline" id="section-7.1-8">
+          <dt id="section-7.1-8.1">Lifecycle-Gated Authorization:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.2">
+            <p id="section-7.1-8.2.1">Claim: supplied<a href="#section-7.1-8.2.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.2.2">Activation: always<a href="#section-7.1-8.2.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.2.3">Scope and defining sections: Controller permission decisions<a href="#section-7.1-8.2.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.2.4">Limitations: Previously issued resource credentials expire
+independently<a href="#section-7.1-8.2.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.3">State-Observable:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.4">
+            <p id="section-7.1-8.4.1">Claim: supplied<a href="#section-7.1-8.4.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.4.2">Activation: Status extension active<a href="#section-7.1-8.4.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.4.3">Scope and defining sections: Status responses<a href="#section-7.1-8.4.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.4.4">Limitations: Maximum staleness is deployment-configured<a href="#section-7.1-8.4.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.5">Structured Authority:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.6">
+            <p id="section-7.1-8.6.1">Claim: not supplied<a href="#section-7.1-8.6.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.6.2">Activation: --<a href="#section-7.1-8.6.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.6.3">Scope and defining sections: --<a href="#section-7.1-8.6.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.6.4">Limitations: Approved Context is descriptive<a href="#section-7.1-8.6.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.7">Monotonic Derivation:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.8">
+            <p id="section-7.1-8.8.1">Claim: not supplied<a href="#section-7.1-8.8.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.8.2">Activation: --<a href="#section-7.1-8.8.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.8.3">Scope and defining sections: --<a href="#section-7.1-8.8.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.8.4">Limitations: No authority comparison relation is defined<a href="#section-7.1-8.8.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.9">Credential-Bound:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.10">
+            <p id="section-7.1-8.10.1">Claim: supplied<a href="#section-7.1-8.10.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.10.2">Activation: always<a href="#section-7.1-8.10.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.10.3">Scope and defining sections: Native authorization artifact<a href="#section-7.1-8.10.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.10.4">Limitations: Covers correlation, not context disclosure<a href="#section-7.1-8.10.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.11">Authorized Context Correlation:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.12">
+            <p id="section-7.1-8.12.1">Claim: supplied<a href="#section-7.1-8.12.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.12.2">Activation: Verified join active<a href="#section-7.1-8.12.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.12.3">Scope and defining sections: Join assertions<a href="#section-7.1-8.12.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.12.4">Limitations: Joining authority is the Controller<a href="#section-7.1-8.12.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.13">Independently Verifiable:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.14">
+            <p id="section-7.1-8.14.1">Claim: supplied<a href="#section-7.1-8.14.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.14.2">Activation: Signed receipt profile active<a href="#section-7.1-8.14.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.14.3">Scope and defining sections: Signed receipts<a href="#section-7.1-8.14.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.14.4">Limitations: Proves approval as of issuance, not current state<a href="#section-7.1-8.14.4" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-7.1-8.15">Portable Evidence:</dt>
+          <dd style="margin-left: 1.5em" id="section-7.1-8.16">
+            <p id="section-7.1-8.16.1">Claim: not supplied<a href="#section-7.1-8.16.1" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.16.2">Activation: --<a href="#section-7.1-8.16.2" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.16.3">Scope and defining sections: --<a href="#section-7.1-8.16.3" class="pilcrow">¶</a></p>
+<p id="section-7.1-8.16.4">Limitations: Governance record is Controller-local<a href="#section-7.1-8.16.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</div>
+<p id="section-7.1-9">A real Statement also carries each supplied entry's temporal elements
+and failure behavior; the skeleton omits them for brevity.<a href="#section-7.1-9" class="pilcrow">¶</a></p>
 <p id="section-7.1-10">Text outside the Statement cannot silently broaden a capability claim.
 If another specification adds a capability, that specification <span class="bcp14">MUST</span>
 publish an updated Statement or a Statement extension that identifies
@@ -2951,9 +2947,9 @@ not need it.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2">The family's earlier documents, including the OAuth binding
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), use the vocabulary this
 contract was generalized from.  The terms correspond as follows:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
-<span id="name-family-vocabulary-mapping"></span><table class="center" id="table-4">
+<span id="name-family-vocabulary-mapping"></span><table class="center" id="table-3">
         <caption>
-<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#table-3" class="selfRef">Table 3</a>:
 <a href="#name-family-vocabulary-mapping" class="selfRef">Family vocabulary mapping</a>
         </caption>
 <thead>
@@ -3047,19 +3043,25 @@ reference to it; no change is ever made solely to move words.<a href="#appendix-
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">Family Use names the accountable human by the OAuth binding's
-record member <code>approval_basis.consent_principal</code>, following that
-binding's removal of the record's <code>approver</code> alias (#705).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.1.1">The Mission Substrate Statement's capability table is a capability
+list with one entry per capability, which fits the text rendering.
+Each entry states what a row stated, with the same obligations
+(#1382).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Family Use maps the kernel's Approver to the family's accountable
+          <p id="appendix-C-2.2.1">Family Use names the accountable human by the OAuth binding's
+record member <code>approval_basis.consent_principal</code>, following that
+binding's removal of the record's <code>approver</code> alias (#705).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">Family Use maps the kernel's Approver to the family's accountable
 owner (<code>consent_principal</code>) and, under a standing-consent basis, to
 the policy ceremony that decides an instance (<code>adjudication</code>), and
 maps the approval event to the creation of a Mission under any
-approval basis (#1078).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+approval basis (#1078).<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">Removed the normative dependency on the OAuth binding (#708): the
+        <li class="normal" id="appendix-C-2.4">
+          <p id="appendix-C-2.4.1">Removed the normative dependency on the OAuth binding (#708): the
 OAuth Binding Mapping Assessment moved to the OAuth binding's own
 text, which now publishes it about itself; the Family Use appendix
 is now informative throughout, with no assessment of its own; the
@@ -3067,7 +3069,7 @@ front matter's reference to the OAuth binding moved from normative
 to informative; and this document's Default Commitment Construction
 section gained its own neutral, binding-independent worked example
 so the construction no longer leans on the OAuth binding's vectors.
-No kernel or capability requirement changed.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+No kernel or capability requirement changed.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

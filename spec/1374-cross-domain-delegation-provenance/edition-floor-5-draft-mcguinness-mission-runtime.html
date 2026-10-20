@@ -1782,8 +1782,10 @@ A state source is a component, reachable under the deployment's own
 trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
-status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. A materialized
+status or event feed (such as the lifecycle events of
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>), or a short-lived
+derived credential whose lifetime is the deployment's accepted state
+lease. A materialized
 policy view (<a href="#policy-view" class="auto internal xref">Section 7.1</a>) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.<a href="#section-2.5-1" class="pilcrow">¶</a></p>
@@ -4269,7 +4271,7 @@ of decision-relevant resource-resolved facts and their granularity
         <li class="normal" id="section-8-3.7">
           <p id="section-8-3.7.1">for each Common Constraint or other registered constraint the
 operation's authority entries can carry
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): the authoritative
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>): the authoritative
 operation input or derived attribute that satisfies it, and the
 extraction and normalization rule mapping that input into the
 constraint's own value domain.  The constraint's defining
@@ -6207,6 +6209,10 @@ any decision-API wire members are defined by the decision-API binding
 <dt id="I-D.draft-mcguinness-oauth-mission-discharge">[I-D.draft-mcguinness-oauth-mission-discharge]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Entry Discharge for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-discharge.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-signals">[I-D.draft-mcguinness-oauth-mission-signals]</dt>
         <dd>
