@@ -18,6 +18,7 @@ import {
   isActivationPolicyRef,
   isImplementedCommonConstraint,
   refusedEntryMember,
+  resourceMatchViolation,
   SUPPORTED_CONSTRAINT_KEYS,
   type JsonValue,
   unsupportedEntryMember,
@@ -96,9 +97,11 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   properties: {
     type: { const: MISSION_RESOURCE_ACCESS_TYPE },
     resource: { type: "string", format: "uri" },
-    // @spec resource-access#resource-matching (#1264, D446): this
-    // authorization server implements exact matching only.
-    resource_match: { const: "exact" },
+    // @spec resource-access#resource-access-type (#1276): the two values
+    // Resource Access defines. A `prefix` entry's `resource` carries no
+    // query and names a `//` authority, which
+    // validateMissionResourceAccessSchema enforces.
+    resource_match: { enum: ["exact", "prefix"] },
     // @spec resource-access#entry-validation (#1278): this type does not use
     // the RFC 9396 common `locations` field; its presence, whatever its value,
     // fails the schema.
@@ -271,12 +274,15 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   if (!isAbsoluteUri(e.resource)) {
     return `resource ${JSON.stringify(e.resource)} is not an RFC 3986 absolute URI`;
   }
-  // @spec resource-access#resource-matching (#1264, D446): this authorization
-  // server implements `exact` resource matching only. Any other value is
-  // refused at intake, never admitted and then rebuilt as an exact entry.
-  if (e.resource_match !== undefined && e.resource_match !== "exact") {
-    return `resource_match ${JSON.stringify(e.resource_match)} is not supported; this authorization server implements exact resource matching only`;
-  }
+  // @spec resource-access#resource-access-type, resource-access#entry-validation
+  // (#1276): `exact` or `prefix`, and "A `resource` value under `prefix` MUST
+  // NOT carry a query or fragment component; the authorization server
+  // refuses such an entry with the `invalid_authorization_details` error
+  // code." The shared rule also refuses a `prefix` base with no `//`
+  // authority, where the matcher draws no boundary. Refused at intake, never
+  // admitted and then rebuilt as an exact entry.
+  const matchViolation = resourceMatchViolation(e);
+  if (matchViolation !== undefined) return matchViolation;
   if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
     return "actions must be a non-empty array of strings";
   }

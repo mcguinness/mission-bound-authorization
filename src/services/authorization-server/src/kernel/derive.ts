@@ -19,6 +19,8 @@ import {
   isSubsetEntry,
   isSubsetSet,
   refusedEntryMember,
+  resourceMatchViolation,
+  resourceWithin,
   SUPPORTED_CONSTRAINT_KEYS,
   unsupportedEntryMember,
 } from "@mission/core";
@@ -55,23 +57,54 @@ import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } fr
  * the config loader and PAR intake gates entirely.
  */
 /**
- * @spec resource-access#resource-matching (#1264, D446): derivation
- * implements `exact` resource matching only, and `intersect` rebuilds each
- * entry without `resource_match`. An entry naming any other value is refused
- * here, over the full ceiling and proposal, so a programmatic caller that
- * bypasses intake and the config loader cannot have a `prefix` entry
- * silently derived as an exact one.
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1264, D446, #1276): derivation implements both `resource_match` values,
+ * and `intersect` carries `prefix` onto the derived entry. An entry naming
+ * any other value, or a `prefix` entry whose `resource` the shared matcher
+ * cannot enforce (a query, or no `//` authority), is refused here, over the
+ * full ceiling and proposal, so a programmatic caller that bypasses intake
+ * and the config loader cannot have it derived as an exact entry.
  */
-function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
+function assertSupportedResourceMatch(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
-    const match = (entry as { resource_match?: unknown }).resource_match;
-    if (match !== undefined && match !== "exact") {
-      throw new IntentError(
-        "invalid_authorization_details",
-        `resource_match ${JSON.stringify(match)} is not supported; this authorization server implements exact resource matching only`,
-      );
+    const violation = resourceMatchViolation(entry);
+    if (violation !== undefined) {
+      throw new IntentError("invalid_authorization_details", violation);
     }
   }
+}
+
+/**
+ * @spec resource-access#subset step 1, mission#derivation-modes (#1276): the
+ * `resource` and `resource_match` an entry derived from `proposal` under
+ * `ceiling` carries, or null when the pair derives nothing. The derived
+ * resource set is the narrower of the two, so it is "a same-type subset of a
+ * proposed entry" and of the ceiling entry, and its `resource` is always the
+ * proposal's own string, which intake held to the Intent's
+ * `target_resources` by exact equality:
+ *
+ * - the proposal within the ceiling ({@link resourceWithin}): the proposal's
+ *   resource set (an `exact` proposal under a `prefix` ceiling admitting it,
+ *   or a `prefix` proposal within a `prefix` ceiling);
+ * - the ceiling within the proposal under the same string (a `prefix`
+ *   proposal over an `exact` ceiling naming its base): the ceiling's `exact`
+ *   resource.
+ *
+ * A ceiling narrower than the proposal under a different string derives
+ * nothing from this pair: its `resource` is not one intake checked against
+ * `target_resources`.
+ */
+function derivedResource(
+  proposal: AuthorityEntry,
+  ceiling: AuthorityEntry,
+): Pick<AuthorityEntry, "resource" | "resource_match"> | null {
+  const carried = (e: AuthorityEntry) =>
+    e.resource_match === "prefix"
+      ? { resource: e.resource, resource_match: "prefix" as const }
+      : { resource: e.resource };
+  if (resourceWithin(proposal, ceiling)) return carried(proposal);
+  if (ceiling.resource === proposal.resource && resourceWithin(ceiling, proposal)) return carried(ceiling);
+  return null;
 }
 
 /**
@@ -382,8 +415,8 @@ export function deriveAuthoritySetWithProvenance(
   // with any proposal element would otherwise never reach `intersect` below).
   assertSupportedConstraints(policy.ceiling);
   if (proposal) assertSupportedConstraints(proposal);
-  assertExactResourceMatch(policy.ceiling);
-  if (proposal) assertExactResourceMatch(proposal);
+  assertSupportedResourceMatch(policy.ceiling);
+  if (proposal) assertSupportedResourceMatch(proposal);
   assertNoRefusedMembers(policy.ceiling);
   if (proposal) assertNoRefusedMembers(proposal);
   assertWellFormedResources(policy.ceiling);
@@ -434,8 +467,13 @@ export function deriveAuthoritySetWithProvenance(
   const provenance: RetainedOrigin[] = [];
   const childActorProvenance: RetainedOrigin[] = [];
   proposals.forEach((proposal, p) => {
+    // @spec resource-access#subset step 1 (#1276): a ceiling entry governs a
+    // proposal entry when the pair derives a resource set
+    // ({@link derivedResource}): the same `exact` string, a `prefix` ceiling
+    // admitting the proposal, or an `exact` ceiling naming a `prefix`
+    // proposal's base.
     const matchingCeilings = hasProposal
-      ? policy.ceiling.filter((c) => c.resource === proposal.resource)
+      ? policy.ceiling.filter((c) => derivedResource(proposal, c) !== null)
       : [proposal];
     // An already-derived proposal entry contributes the origin it carries; a
     // client proposal contributes none of its own.
@@ -484,6 +522,8 @@ export function deriveAuthoritySetWithProvenance(
  * `approve`, before `authority_hash`.
  */
 function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): AuthorityEntry | null {
+  const resource = derivedResource(proposal, ceiling);
+  if (resource === null) return null;
   const actions = proposal.actions.filter((a) => ceiling.actions.includes(a));
   if (actions.length === 0) return null;
   // @spec mission#common-constraints — both operands already passed
@@ -491,7 +531,7 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   // ceiling and proposal arrays, before this filtering), so neither can carry
   // an unsupported key here. Not re-checked per pair: this function is only
   // ever called from that loop, over entries it already validated.
-  const entry: AuthorityEntry = { type: "mission_resource_access", resource: ceiling.resource, actions };
+  const entry: AuthorityEntry = { type: "mission_resource_access", ...resource, actions };
   const constraints: NonNullable<AuthorityEntry["constraints"]> = {};
   const ceilCap = ceiling.constraints?.max_amount;
   const propCap = proposal.constraints?.max_amount;

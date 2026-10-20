@@ -994,11 +994,17 @@ interface LoadedPolicy {
 }
 
 /**
- * @spec resource-access#resource-matching (#1264, D446): this deployment
- * implements `exact` resource matching only. An entry naming any other
- * `resource_match` (`prefix`, or an unknown value) is refused at load rather
- * than rebuilt without the member, which would silently change its matching
- * semantics: narrower for a ceiling entry, wider for a containment removal.
+ * @spec resource-access#resource-matching (#1264, D446, #1276): this
+ * deployment's configured entries are `exact` only. The matcher, the subset
+ * rule and derivation implement `prefix` (#1276), but configured ceilings
+ * also reach paths that compare resources as strings: a governed policy's
+ * removal (`removeAuthority`) and the approval floor's classification would
+ * not reach a descendant of a `prefix` ceiling entry, and a containment
+ * removal names an approved entry's own `resource`. An entry naming any other
+ * `resource_match` (`prefix`, or an unknown value) is therefore refused at
+ * load rather than rebuilt without the member, which would silently change
+ * its matching semantics: narrower for a ceiling entry, wider for a
+ * containment removal.
  */
 function rejectUnsupportedResourceMatch(
   file: string,
@@ -1008,7 +1014,7 @@ function rejectUnsupportedResourceMatch(
   if (e.resource_match !== undefined && e.resource_match !== "exact") {
     throw new ConfigError(
       file,
-      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment implements exact resource matching only`,
+      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment's configured entries are exact only`,
     );
   }
 }
