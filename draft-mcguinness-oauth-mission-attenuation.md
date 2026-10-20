@@ -592,15 +592,15 @@ closed.
 # Worked Example {#example}
 
 An orchestrator agent (`s6BhdRkqt3`), acting for `alice` under Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` to reconcile Q3 invoices, holds a
+`msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns` to reconcile Q3 invoices, holds a
 Mission-bound attenuation root. Its authority covers reading Q3 invoices
-and posting journal entries under $500; `del_max_depth` allows two
-levels of offline narrowing (illustrative; this Mission's Authority Set
-extends the single-domain walkthrough's, its write entry also carrying
-a `delegation` member with `max_depth` 2, so both mapped entries are
-delegable to depth 2 under the root-shaping rules of {{root-mapping}}
-and its `authority_hash` differs from that example's). Decoded root
-token:
+and posting journal entries of at most USD 500; `del_max_depth` allows
+two levels of offline narrowing (illustrative; this Mission's Authority
+Set extends the single-domain walkthrough's, its write entry also
+carrying a `delegation` member with `max_depth` 2, so both mapped
+entries are delegable to depth 2 under the root-shaping rules of
+{{root-mapping}} and its `authority_hash` differs from that example's).
+Decoded root token:
 
 ~~~ json
 {
@@ -608,17 +608,17 @@ token:
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
   "aud": "https://erp.example.com",
-  "iat": 1793606400,
-  "exp": 1793606700,
+  "iat": 1793609400,
+  "exp": 1793609700,
   "jti": "aat_root_7M2R4kP9sT1x",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "del_depth": 0,
   "del_max_depth": 2,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:X1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9bM7s"
+      "sha-256:RWSQPa3ifNhS35OyuUXMW3c3lduo-DkQ68-itStel6I"
   },
   "authorization_details": [
     { "type": "attenuating_agent_token",
@@ -656,18 +656,18 @@ is one line, wrapped here for display):
      DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
-  "iat": 1793606430,
-  "exp": 1793606640,
+  "iat": 1793609430,
+  "exp": 1793609640,
   "jti": "aat_child_2Yt7Qv9Lq",
   "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s" },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
   "del_depth": 1,
   "del_max_depth": 2,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:X1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR6tY2nD9bM7s"
+      "sha-256:RWSQPa3ifNhS35OyuUXMW3c3lduo-DkQ68-itStel6I"
   },
   "authorization_details": [
     { "type": "attenuating_agent_token",
@@ -680,7 +680,7 @@ is one line, wrapped here for display):
 ~~~
 
 The `mission` claim is unchanged, the child's `aud` equals the root's,
-its `exp` (1793606640) ends before the root's (1793606700), within the
+its `exp` (1793609640) ends before the root's (1793609700), within the
 per-hop bound, the write tool is gone, and the read constraint is
 unchanged (a permitted narrowing). The child's `cnf.jkt` is the JWK
 thumbprint {{RFC7638}} of the delegate extractor's own key, which its
@@ -695,16 +695,16 @@ child's signature under the root's `cnf` key, `par_hash`, the depth,
 capability monotonicity, and the `aud` and `exp` bounds), verifies the
 proof-of-possession under the child's `cnf` key, and, because this is
 Mission-bound, checks on this presentation that
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` is `active` within the
+`msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns` is `active` within the
 deployment's declared freshness bound ({{kill-switch}}). A write attempt
 by the extractor fails on capability monotonicity:
-`erp.journal-entries.write` is not in its tools. And when `alice` revokes
-the Mission, the next presentation fails the state check and the whole
+`erp.journal-entries.write` is not in its tools. And when the Mission is
+revoked, the next presentation fails the state check and the whole
 chain stops, even though no issuer ever saw the child and the child's
 `exp` has not passed.
 
 For contrast, suppose the extractor presents a chain whose child
-carries `"exp": 1793606760`, sixty seconds past the root's. The
+carries `"exp": 1793609760`, sixty seconds past the root's. The
 per-hop bound check ({{mission-binding-check}}) fails before any tool
 or Mission-state evaluation: a child that outlives its parent breaks
 the chain's transitive expiry bound, so the gateway refuses the whole
