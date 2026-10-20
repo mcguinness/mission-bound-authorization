@@ -6864,6 +6864,18 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1409): Terminology defines Authority Set derivation and
+  derivation (one issuance operation). The Implementation Map lists
+  termination on an authorized revocation among the Mission Issuer's
+  duties, points the client to the rules in Authorization Server
+  Metadata, and says that this document defines no
+  `authorization_details` type, that each Authority Set entry is of an
+  AS-supported type such as `mission_resource_access`, and that a
+  Mission-aware Resource Server enforces each entry under its type.
+  The Introduction's chain drops its continuation-transport example;
+  eleven cross-references name the sections that hold their content;
+  two tables gain captions. No requirement changes.
+
 - Editorial (#1404): Mission Intent, Conformance, Standing-Consent
   Bases, and Authorization Details Types have subsections at their
   existing paragraph boundaries; Standing-Consent Bases' two run-in
