@@ -3859,10 +3859,10 @@
    "assertion": "replay",
    "observation": {
     "normative": "an assertion captured for another approval event, another Intent or another Authority Set is not counted toward the evaluation",
-    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone."
+    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. The reference binds a model output to the Authority Set the policy evaluated, before any narrowing; where a model narrows, that set differs from the record's mission.authority_hash, so the authority_hash clause is not witnessed as written (#1436 item 16)."
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -3883,7 +3883,7 @@
    "id": "approval-governance.assertion.policy-authorized",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-validation",
-   "text": "For a `policy` assertion, that means both that the policy its `authority` names was eligible to decide under `approval_policy` and that its principal was eligible to approve that policy version",
+   "text": "For a `policy` assertion, that means both that the policy its `authority` names was eligible to decide under `approval_policy` and that its principal was eligible to approve that policy version (or, where a consented root commits a separate evaluator that decides, that root)",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -44320,8 +44320,8 @@
    "surface": "governance-record",
    "assertion": "refusal",
    "observation": {
-    "normative": "evaluation.contributing lists only assertions the record carries and the satisfied rule counted; a record whose contributing names a deny assertion does not commit",
-    "local": "The reference never produces a deny assertion; the refusal is witnessed at the validator and at the governed_policy commit gate on an injected record."
+    "normative": "evaluation.contributing never names a deny assertion, and every entry names an assertion the record carries",
+    "local": "The reference never produces a deny assertion; the refusal is witnessed at the validator and at the governed_policy gate function (assertGovernedPolicyRecord) on an injected record."
    },
    "level": "unit",
    "coverage": "partial",

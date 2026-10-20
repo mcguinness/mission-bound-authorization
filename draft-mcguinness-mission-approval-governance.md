@@ -400,10 +400,11 @@ protection.
 
     `contributing`:
     : REQUIRED. An array of the `assertion_id` values the evaluation
-      counted toward the rule the approval satisfied. A denial that did
-      not block the approval is recorded but not counted, and a blocking
-      denial leaves no committed record ({{atomic-commitment}}), so a
-      `deny` assertion never appears in `contributing`.
+      counted toward the rule the approval satisfied. A denial the
+      policy evaluated that did not block the approval is recorded but
+      not contributing, and a blocking denial leaves no committed record
+      ({{atomic-commitment}}), so a `deny` assertion never appears in
+      `contributing`.
 
 `approval_context_commitment`:
 : OPTIONAL. A string. The Approval Context Commitment over the governed
@@ -653,7 +654,8 @@ The following rules apply to the assertions in a record:
   eligible to assert under the referenced `approval_policy` version. For
   a `policy` assertion, that means both that the policy its `authority`
   names was eligible to decide under `approval_policy` and that its
-  principal was eligible to approve that policy version.
+  principal was eligible to approve that policy version (or, where a
+  consented root commits a separate evaluator that decides, that root).
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
 
@@ -677,19 +679,28 @@ contributing.
         "sub": "user_3p2q8mN1a0kV7tR" },
       "kind": "human", "decision": "approve",
       "decided_at": "2026-11-02T08:00:00Z",
-      "authority": { "auth_time": "2026-11-02T07:59:00Z" } },
+      "authority": {
+        "acr": "urn:example:acr:phishing-resistant",
+        "amr": ["pwd", "hwk"],
+        "auth_time": "2026-11-02T07:59:00Z" } },
     { "assertion_id": "ast_2",
       "principal": { "iss": "https://idp.example.com",
         "sub": "user_t1yd3CZCLPOis5n" },
       "kind": "human", "decision": "approve",
       "decided_at": "2026-11-02T07:58:10Z",
-      "authority": { "auth_time": "2026-11-02T07:58:00Z" } },
+      "authority": {
+        "acr": "urn:example:acr:phishing-resistant",
+        "amr": ["pwd", "hwk"],
+        "auth_time": "2026-11-02T07:58:00Z" } },
     { "assertion_id": "ast_3",
       "principal": { "iss": "https://idp.example.com",
         "sub": "user_Kq-iUUKDYl8jhWF" },
       "kind": "human", "decision": "deny",
       "decided_at": "2026-11-02T07:57:40Z",
-      "authority": { "auth_time": "2026-11-02T07:57:30Z" },
+      "authority": {
+        "acr": "urn:example:acr:phishing-resistant",
+        "amr": ["pwd", "hwk"],
+        "auth_time": "2026-11-02T07:57:30Z" },
       "reason": "Asks for a lower journal-entry cap." }
   ],
   "evaluation": {
@@ -901,10 +912,13 @@ the issuer:
 - persists the signed record in the same commit as the Mission's
   creation.
 
-Signing follows evaluation and precedes persistence, never the reverse,
-and `approval_context_commitment` is computed before signing. A value of
-`approval_context_commitment` computed after the commit is not covered
-by the record's signature and MUST NOT be added to a committed record.
+The only order the commit fixes is evaluate, then sign, then persist,
+with `approval_context_commitment` computed before signing; the other
+checks this document requires, including those of
+{{governed-policy-activation}}, complete before signing, in whatever
+order their inputs allow. A value of `approval_context_commitment`
+computed after the commit is not covered by the record's signature and
+MUST NOT be added to a committed record.
 
 Where a deployment records the Approval Governance Record for an
 approval, the Mission Record MUST NOT be created `active` unless the
@@ -1018,12 +1032,13 @@ steps:
 1. Verify the record ({{envelope}}).
 2. Obtain the retained snapshot of the `approval_policy` version the
    record names, and recompute `approval_policy.digest` over it
-   ({{approval-policy}}). A mismatch ends the re-check.
+   ({{approval-policy}}). A mismatch means the evaluation is not
+   re-checked.
 3. Apply the snapshot's rule to the recorded assertions, and confirm
    that it approves, counting exactly the assertions `contributing`
    lists ({{record-members}}).
-4. For each counted `policy` assertion, apply the recency rules of
-   {{policy-approval-recency}} as the snapshot declares them, with
+4. Apply the recency rules of {{policy-approval-recency}}, as the
+   snapshot or the declaration it commits states them, with
    `evaluation.evaluated_at` as the evaluation instant.
 
 A re-check does not re-authenticate an assertion: the record carries an
