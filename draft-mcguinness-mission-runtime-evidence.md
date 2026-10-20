@@ -1401,8 +1401,8 @@ the release before acting:
   "error":        "parameter_mismatch",
   "sequence":     44,
   "emitter":      { "id": "pep.example.com", "role": "executor" },
-  "attempted_at": "2026-11-02T09:03:28Z",
-  "outcome_at":   "2026-11-02T09:03:29Z",
+  "attempted_at": "2026-11-02T08:43:28Z",
+  "outcome_at":   "2026-11-02T08:43:29Z",
   "evidence_envelope": {
     "format": "jws-compact",
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
