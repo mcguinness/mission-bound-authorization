@@ -98,7 +98,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC8126:
-  I-D.draft-gerber-oauth-deferred-token-response:
+  I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
@@ -528,9 +528,9 @@ The child-creation token exchange carries:
   `invalid_request`.
 
 The parent redeems this token exchange at the token endpoint under the
-child-creation grant type ({{grant-type}}). The presence of
-`child_actor` marks the exchange as a child creation; an exchange
-carrying both `child_actor` and the expansion profile's `predecessor`
+child-creation grant type ({{grant-type}}). Its JWT
+`requested_token_type` marks the exchange as a child creation, which
+carries `child_actor`; an exchange carrying both `child_actor` and the expansion profile's `predecessor`
 cross-check ({{I-D.draft-mcguinness-oauth-mission-expansion}}) MUST be
 refused with `invalid_request`, since the operations do not combine.
 
@@ -654,7 +654,7 @@ Deferred:
 : When a deployment requires a fresh approval for child creation and
   approval is asynchronous, the Mission Issuer returns the deferred
   token response of the family's Mission Deferred Approval substrate
-  ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
+  ({{I-D.draft-ietf-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
   `authorization_pending` with a polling `interval`. The Approver acts
   asynchronously; the requester polls; the poll resolves to the child

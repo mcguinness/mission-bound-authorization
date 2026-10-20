@@ -11,10 +11,10 @@ separately in [notes/oauth-wg-submission-set.md](notes/oauth-wg-submission-set.m
 ## Dependency stability
 
 <!-- external-normative-ids: BEGIN (generated; validated by scripts/check-family-manifest.mjs) -->
-- I-D.draft-gerber-oauth-deferred-token-response (cited normatively by: oauth-mission-approval, oauth-mission-approval-revision)
 - I-D.draft-hardt-httpbis-signature-key (cited normatively by: mission-aauth-management)
 - I-D.draft-hardt-oauth-aauth-protocol (cited normatively by: aauth-mission-expiry, mission-aauth, mission-aauth-management)
 - I-D.draft-ietf-cose-hash-envelope (cited normatively by: mission-audit)
+- I-D.draft-ietf-oauth-deferred-token-response (cited normatively by: oauth-mission-approval, oauth-mission-approval-revision)
 - I-D.draft-ietf-oauth-identity-assertion-authz-grant (cited normatively by: oauth-mission-cross-domain)
 - I-D.draft-ietf-oauth-identity-chaining (cited normatively by: oauth-mission-cross-domain)
 - I-D.draft-ietf-oauth-rar-metadata-remediation (cited normatively by: mission-authzen)
@@ -40,11 +40,12 @@ Delegation capability; **status-list** depends on the OAuth Status
 List (a working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
-and in the RFC Editor queue; **approval**, **attenuation**,
-**cross-org-delegation**, **aauth**, **aauth-expiry**, and
-**aauth-management** track unratified individual drafts (OAuth
-Deferred Token Response, Attenuating Agent Tokens, the AAuth protocol,
-and, for **aauth-management**, HTTP Signature Keys);
+and in the RFC Editor queue; **approval** and **approval-revision**
+track OAuth Deferred Token Response (a working-group document);
+**attenuation**, **cross-org-delegation**, **aauth**, **aauth-expiry**,
+and **aauth-management** track unratified individual drafts
+(Attenuating Agent Tokens, the AAuth protocol, and, for
+**aauth-management**, HTTP Signature Keys);
 **authority-server** confines its Internet-Draft
 references (client instance assertion and the AI agent instance
 profile) to the
