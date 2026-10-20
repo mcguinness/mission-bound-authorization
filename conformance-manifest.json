@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "9086861763e145f126c249098e2037dbf2cdd9e8",
-    "content_sha256": "38c57c936e0184e9c3299c6ab27f27b9e47bf6b39fd4cc3517230cb49c625654"
+    "revision": "caf2420b9b4551ae4462771b23322fd660cf1116",
+    "content_sha256": "8678e27c2e3a04e75bd7aaf5073b83036ac765a716a516887caa2ba031791f4d"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -4138,6 +4138,78 @@
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion)."
+  },
+  {
+   "id": "approval-governance.assertion.event-binding",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "Every assertion MUST be bound to this approval event: an assertion is made against this `approval_event_id`, this `intent_hash`, and this `authority_hash`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "replay",
+   "observation": {
+    "normative": "an assertion captured for another approval event, another Intent or another Authority Set is not counted toward the evaluation",
+    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. The reference binds a model output to the Authority Set the policy evaluated, before any narrowing; where a model narrows, that set differs from the record's mission.authority_hash, so the authority_hash clause is not witnessed as written (#1436 item 16)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion captured for another activation's approval event",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion bound to another Intent under the same approval event and Authority Set",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness."
+  },
+  {
+   "id": "approval-governance.assertion.policy-authorized",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "For a `policy` assertion, that means both that the policy its `authority` names was eligible to decide under `approval_policy` and that its principal was eligible to approve that policy version (or, where a consented root commits a separate evaluator that decides, that root)",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion counts only when the policy it names may decide under the record's approval_policy and its principal was eligible to approve that policy version; otherwise it does not contribute",
+    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. Human and service eligibility are not exercised by the reference."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses an unauthorized human: no consent from them, and no activation once their authority is revoked",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > decides by the root itself or by the evaluator the root commits, with that policy's typed digest",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -45990,6 +46062,42 @@
    "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version. #1436 ruling 3 (D568): typed members logic_id, logic_version, model_id, model_version; requoted; mutations: dropping the producer's logic pair, the logic check, or the model pairing."
   },
   {
+   "id": "approval-governance.record.contributing-excludes-deny",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "record-members",
+   "text": "a `deny` assertion never appears in `contributing`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "evaluation.contributing never names a deny assertion, and every entry names an assertion the record carries",
+    "local": "The reference never produces a deny assertion; the refusal is witnessed at the validator and at the governed_policy gate function (assertGovernedPolicyRecord) on an injected record."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "evaluation contributing (@spec approval-governance#record-members) > lists the counted assertions; a recorded denial that did not block the approval is not contributing",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "evaluation contributing (@spec approval-governance#record-members) > is enforced at the governed_policy commit gate",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 6: contributing lists what the satisfied rule counted; a non-blocking denial is recorded but not counted, and a blocking one leaves no record. Mutations: admitting a deny as contributing; the commit gate skipping the check."
+  },
+  {
    "id": "approval-governance.assertion.policy-principal-approver",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-members",
@@ -46004,8 +46112,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root), never an identity for the policy itself",
-    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5)."
+    "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root; where several humans approved the version together, the one human the retained governance state names as accountable), never an identity for the policy itself",
+    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5), and has no jointly approved policy version."
    },
    "level": "unit",
    "coverage": "partial",
@@ -46317,6 +46425,29 @@
     }
    ],
    "notes": "#1436 ruling 4 (D568); mutation: the verifier rewriting the signed header to the normalized form."
+  },
+  {
+   "id": "approval-governance.re-check.steps",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "re-check",
+   "text": "A Relying Auditor re-checks an evaluation by replaying it from retained evidence",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id and the Mission's intent_hash, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
+    "local": "The reference implementation has no Relying Auditor role, so nothing exercises a re-check."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",
@@ -46986,6 +47117,35 @@
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
+  },
+  {
+   "id": "approval-governance.recency.exception-never-lengthens",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "text": "For a class with a declared exception, the maximum that applies is the smaller of that class's recency ceiling and the exception's maximum age",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a class's exception declares a longer maximum age than the class's recency ceiling, a policy approval older than the ceiling is refused for a Mission carrying the class"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > never lets an exception lengthen its class's recency ceiling: the smaller of the two applies",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",
