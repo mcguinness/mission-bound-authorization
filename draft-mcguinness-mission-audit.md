@@ -1380,11 +1380,13 @@ https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
   #1  approval-event        iss=as.example.com    t0
   #2  consent-evidence      iss=as.example.com    t0
   #3  derivation-record     iss=as.example.com    t0+5s
-  #4  derivation-record     iss=as.example.com    t0+14m
-  #5  decision-evidence     iss=pdp.example.com   t0+14m03s
-  #6  lifecycle: suspended  iss=as.example.com    t0+20m
-  #7  lifecycle: active     iss=as.example.com    t0+30m
-  #8  lifecycle: revoked    iss=as.example.com    t0+53m20s
+  #4  derivation-record     iss=as.example.com    t0+10m05s
+  #5  derivation-record     iss=as.example.com    t0+14m
+  #6  decision-evidence     iss=pdp.example.com   t0+14m03s
+  #7  lifecycle: suspended  iss=as.example.com    t0+20m
+  #8  lifecycle: active     iss=as.example.com    t0+30m
+  #9  derivation-record     iss=as.example.com    t0+50m
+  #10 lifecycle: revoked    iss=as.example.com    t0+53m20s
 ~~~
 
 A compliance auditor in another domain, holding none of these
