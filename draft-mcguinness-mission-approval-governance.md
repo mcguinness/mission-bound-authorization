@@ -766,14 +766,26 @@ retained human-approval instant, but they gate different things:
 
 # Envelope and Verification {#envelope}
 
-An Approval Governance Record carries its integrity protection in an
-`envelope` member: REQUIRED, an object with `format` (a string,
-required) and `value` (a string, required). The default `format` is
-`jws-compact`, a JWS Compact Serialization {{RFC7515}} over the JCS
+The `envelope` member ({{record-members}}) is an object with `format` (a
+string, required) and `value` (a string, required). The default `format`
+is `jws-compact`: a JWS Compact Serialization {{RFC7515}} over the JCS
 {{RFC8785}} canonical bytes of the record with the `envelope` member
 removed, signed by the Mission Issuer under a key resolvable in its
-published key material. The signed record, `envelope` included, is
-the retained, registrable form.
+published key material. The signed record, `envelope` included, is the
+retained, registrable form.
+
+This document defines only the `jws-compact` format; an implementation
+MUST reject an envelope whose `format` is unsupported rather than
+accepting it unverified.
+
+The JWS protected header MUST carry:
+
+- a `kid` resolvable in the Mission Issuer's published key material;
+- a `typ` of `application/mission-approval-governance+jws`; and
+- a `cty` of `application/mission-approval-governance+json` ({{iana}}).
+
+A verifier MUST reject a JWS whose protected `typ` and `cty` are not
+exactly this pair (Sections 4.1.9 and 4.1.10 of {{RFC7515}}).
 
 A verifier MUST perform the following steps, in order, and MUST NOT
 treat a record as verified if any step fails:
@@ -789,8 +801,8 @@ treat a record as verified if any step fails:
    payload; a record that differs from that payload is
    unauthenticated regardless of whether the signature itself
    verifies.
-5. Validate the mission binding of {{record}} against the Mission
-   Record it is retained with.
+5. Validate the mission binding of {{record-members}} against the
+   Mission Record it is retained with.
 
 Where the record carries `approval_context_commitment`, the `mission`
 member carries no Mission `id`, so a verifier recomputes the commitment
@@ -798,23 +810,15 @@ from the Mission Record this record is retained with, the record step 5
 resolves, and rejects the reference on a mismatch
 ({{approval-context-computation}}).
 
-The JWS protected header MUST carry a `kid` resolvable in the Mission
-Issuer's published key material, a `typ` of
-`application/mission-approval-governance+jws`, and a `cty` of
-`application/mission-approval-governance+json` ({{iana}}); a verifier
-MUST reject a JWS whose protected `typ` and `cty` are not exactly
-this pair ({{RFC7515}}, Sections 4.1.9 and 4.1.10). This
-document defines only the `jws-compact` format; an implementation
-MUST reject an envelope whose `format` is unsupported rather than
-accepting it unverified.
-
 The **record digest** is the digest, in the encoded form
 {{conventions-and-definitions}} fixes, over the JCS {{RFC8785}}
-canonical bytes of the complete record, `envelope` included. It is
-the one byte sequence every external binding names: audit
-registration hashes exactly these bytes ({{audit-evidence}}), and
-consent evidence's `approval_governance_digest` equals exactly this
-value ({{consent-evidence-relationship}}).
+canonical bytes of the complete record, `envelope` included. It is the
+one byte sequence every external binding names:
+
+- audit registration hashes exactly these bytes ({{audit-evidence}});
+  and
+- consent evidence's `approval_governance_digest` equals exactly this
+  value ({{consent-evidence-relationship}}).
 
 # Governed Policy Approval {#governed-policy}
 

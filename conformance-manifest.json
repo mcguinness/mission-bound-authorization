@@ -43067,7 +43067,7 @@
    "id": "approval-governance.envelope.typ-cty",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
-   "text": "a verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
+   "text": "A verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
