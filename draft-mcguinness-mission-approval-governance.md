@@ -327,8 +327,12 @@ there is no human decision for this list to be degenerate about
 
 # The Approval Governance Record {#record}
 
-An Approval Governance Record is a JSON object with these members,
-plus the integrity `envelope` {{envelope}} defines.
+An Approval Governance Record is a JSON object. {{record-members}} and
+{{assertion-members}} define its members. {{assertion-requirements}} and
+{{atomic-commitment}} define how the issuer builds and commits it, and
+{{envelope}} defines its integrity protection.
+
+## Record Members {#record-members}
 
 `approval_event_id`:
 : REQUIRED. A string. The approval event's identifier, equal to the
@@ -338,106 +342,126 @@ plus the integrity `envelope` {{envelope}} defines.
 `mission`:
 : REQUIRED. An object binding the record to the approved Mission:
   `issuer` (the Mission Issuer), `intent_hash`, and `authority_hash`,
-  each equal to the committed Mission Record member of the same
-  name. A record whose binding does not match the Mission Record it
-  is retained with is invalid.
-
-`approval_context_commitment`:
-: OPTIONAL. A string. The Approval Context Commitment over the
-  governed Mission's immutable creation facts
-  ({{approval-context-commitment}}), in the encoded form
-  {{conventions-and-definitions}} fixes. It is a member of this
-  record, never of the Mission Record: the profile adds no Mission
-  Record member ({{approval-context-computation}}). An issuer that
-  records it computes it in the same commit that creates the Mission
-  and persists this record, before the record is signed
-  ({{atomic-commitment}}), so the signed payload commits to it. The
-  `mission` member above carries no Mission `id`, so a verifier
-  recomputes this value from the Mission Record this record is
-  retained with, the record the mission binding check already
-  resolves ({{envelope}}, step 5), and rejects the reference on a
-  mismatch ({{approval-context-computation}}). Its presence is what
-  lets this record and another authenticated artifact disclosing the
-  same commitment be matched to one approval transaction without
-  either re-deriving the other's fields.
+  each equal to the committed Mission Record member of the same name. A
+  record whose binding does not match the Mission Record it is retained
+  with is invalid.
 
 `approval_policy`:
-: REQUIRED. An object identifying the governing
-  delegation-of-authority policy: `id` (an identifier), `version` (a
-  string), and `digest` (an integrity anchor over the retained policy
-  snapshot, in the encoded form {{conventions-and-definitions}}
-  fixes). The digest preimage is the issuance profile's
-  integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}})
-  with `typ` `mission-approval-policy`, `iss` the Mission issuer, and
-  `value` an object of `content_type` (the snapshot's media type) and
-  `content` (the base64url, no-padding encoding of the snapshot
-  bytes), canonicalized with JCS {{RFC8785}}: the `typ`
-  domain-separates this anchor from every other anchor in the family,
-  and the issuer binding prevents cross-issuer replay. The snapshot
-  bytes and their media type, or the referenced policy version they
-  represent, MUST be retained for the Mission's audit horizon
-  ({{I-D.draft-mcguinness-oauth-mission}}), so an independent auditor
-  reproduces the digest exactly and re-checks the evaluation against
-  the policy that governed it. Threshold, quorum, veto, and separation-of-duty semantics live
-  in the referenced policy; any human-readable summary of them in
-  deployment tooling is advisory and carries no semantics in this
-  record.
+: REQUIRED. An object identifying the governing delegation-of-authority
+  policy: `id` (an identifier), `version` (a string), and `digest` (an
+  integrity anchor over the retained policy snapshot, in the encoded
+  form {{conventions-and-definitions}} fixes). {{approval-policy}}
+  defines the digest and the snapshot's retention.
 
 `assertions`:
-: REQUIRED. An array of one or more decision assertions. Each
-  carries:
-
-    `assertion_id`:
-    : REQUIRED. A string, unique within the record.
-
-    `principal`:
-    : REQUIRED. An object with `iss` and `sub`.
-
-    `kind`:
-    : REQUIRED. A string, one of `human`, `service`, or `policy`.
-
-    `decision`:
-    : REQUIRED. A string, one of `approve` or `deny`.
-
-    `decided_at`:
-    : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
-
-    `authority`:
-    : REQUIRED. A reference to the provenance under which this
-      principal was authorized to decide. For a `human` assertion,
-      the authentication context of the assertion. For a `policy`
-      assertion, the deciding policy's identifier and version, and
-      `approved_at`: the family's provenance chain for non-human
-      adjudication, in which the policy decides the instance because a
-      human approved the policy. For a `service` assertion, the
-      identifier and version of the logic that produced the decision,
-      including the model's identifier and version where a model
-      produced it.
-
-      `approved_at` is an RFC 3339 timestamp: the human approval
-      instant of that exact policy version, not the assertion
-      instant. `decided_at` records when the policy asserted;
-      `approved_at` records when a human approved the version it
-      asserts under. The issuer MUST verify `approved_at` from
-      retained, authenticated governance state for the named
-      `policy_id` and `version`; it MUST NOT accept `approved_at` as
-      the assertion's own uncorroborated clock value
-      ({{policy-approval-recency}}).
-
-    `reason`:
-    : OPTIONAL. A string.
+: REQUIRED. An array of one or more decision assertions
+  ({{assertion-members}}).
 
 `evaluation`:
-: REQUIRED. An object recording the outcome: `decision` (a string,
-  `approved`, the only value a committed record carries, since a
-  record exists only for an approval that committed,
-  {{atomic-commitment}}), `evaluated_at` (an RFC 3339 timestamp),
-  and `contributing` (an array of the `assertion_id` values the
-  evaluation relied on).
+: REQUIRED. An object recording the outcome, with these members:
+
+    `decision`:
+    : A string. `approved` is the only value a committed record carries,
+      since a record exists only for an approval that committed
+      ({{atomic-commitment}}).
+
+    `evaluated_at`:
+    : An RFC 3339 timestamp.
+
+    `contributing`:
+    : An array of the `assertion_id` values the evaluation relied on.
+
+`approval_context_commitment`:
+: OPTIONAL. A string. The Approval Context Commitment over the governed
+  Mission's immutable creation facts ({{approval-context-commitment}}),
+  in the encoded form {{conventions-and-definitions}} fixes. It is a
+  member of this record, never of the Mission Record: the profile adds
+  no Mission Record member ({{approval-context-computation}}). An issuer
+  that records it computes it in the same commit that creates the
+  Mission and persists this record, before the record is signed
+  ({{atomic-commitment}}), so the signed payload commits to it. Its
+  presence lets this record and another authenticated artifact
+  disclosing the same commitment be matched to one approval transaction
+  without either re-deriving the other's fields. A verifier checks it
+  against the Mission Record ({{envelope}}).
 
 `envelope`:
-: REQUIRED. An object. Integrity protection over the members above,
-  in the form {{envelope}} defines.
+: REQUIRED. An object. Integrity protection over the members above, in
+  the form {{envelope}} defines.
+
+## Assertion Members {#assertion-members}
+
+Each element of `assertions` is an object with these members:
+
+`assertion_id`:
+: REQUIRED. A string, unique within the record.
+
+`principal`:
+: REQUIRED. An object with `iss` and `sub`.
+
+`kind`:
+: REQUIRED. A string, one of `human`, `service`, or `policy`.
+
+`decision`:
+: REQUIRED. A string, one of `approve` or `deny`.
+
+`decided_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
+
+`authority`:
+: REQUIRED. A reference to the provenance under which this principal was
+  authorized to decide:
+
+  - For a `human` assertion, the authentication context of the
+    assertion.
+  - For a `policy` assertion, the deciding policy's identifier and
+    version, and `approved_at`: the family's provenance chain for
+    non-human adjudication, in which the policy decides the instance
+    because a human approved the policy.
+  - For a `service` assertion, the identifier and version of the logic
+    that produced the decision, including the model's identifier and
+    version where a model produced it.
+
+`reason`:
+: OPTIONAL. A string.
+
+A `policy` assertion's `approved_at` is an RFC 3339 timestamp: the human
+approval instant of that exact policy version, not the assertion
+instant. `decided_at` records when the policy asserted; `approved_at`
+records when a human approved the version it asserts under. The issuer
+MUST verify `approved_at` from retained, authenticated governance state
+for the named `policy_id` and `version`; it MUST NOT accept
+`approved_at` as the assertion's own uncorroborated clock value
+({{policy-approval-recency}}).
+
+## Approval Policy Reference {#approval-policy}
+
+The `approval_policy.digest` preimage is the issuance profile's
+integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}}),
+canonicalized with JCS {{RFC8785}}, with these members:
+
+- `typ`: `mission-approval-policy`, which domain-separates this anchor
+  from every other anchor in the family;
+- `iss`: the Mission Issuer, which prevents cross-issuer replay; and
+- `value`: an object of `content_type` (the snapshot's media type) and
+  `content` (the base64url, no-padding encoding of the snapshot bytes).
+
+The snapshot bytes and their media type, or the referenced policy
+version they represent, MUST be retained for the Mission's audit horizon
+({{I-D.draft-mcguinness-oauth-mission}}), so an independent auditor
+reproduces the digest exactly and re-checks the evaluation against the
+policy that governed it.
+
+Threshold, quorum, veto, and separation-of-duty semantics live in the
+referenced policy; any human-readable summary of them in deployment
+tooling is advisory and carries no semantics in this record.
+
+## Example {#record-example}
+
+The following is an example of an Approval Governance Record. Its
+Mission, `msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj`, is not the issuance
+profile's Worked Example Mission, but it shares that Mission's Intent
+and Authority Set, and so its anchors.
 
 ~~~ json
 {
@@ -486,18 +510,19 @@ plus the integrity `envelope` {{envelope}} defines.
 }
 ~~~
 
-The example's Mission, `msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj`, is not
-the issuance profile's canonical Worked Example Mission, though it
-shares that Mission's Intent and Authority Set and so its anchors.
-Its record's accountable `approval_basis.consent_principal` is Alice
-(`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`); `ast_1` is
-that principal's own `approve` assertion, satisfying the
-accountable-approver rule of {{assertion-requirements}} directly.
-`ast_2` is a `policy` assertion carrying its own provenance chain,
-recorded alongside rather than in place of the accountable
-approver's assertion. The `envelope`
-member's `value` is the JWS whose payload is the JCS canonical bytes
-of this object with `envelope` itself removed ({{envelope}}).
+In this example:
+
+- The Mission Record's accountable `approval_basis.consent_principal` is
+  Alice (`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`). `ast_1`
+  is her own `approve` assertion, which satisfies the
+  accountable-approver rule of {{assertion-requirements}} directly.
+- `ast_2` is a `policy` assertion carrying its own provenance chain,
+  recorded alongside the accountable approver's assertion rather than in
+  place of it. Because a non-human assertion contributes, the record is
+  required under the third recording trigger ({{triggers}}).
+- The `envelope` member's `value` is the JWS whose payload is the JCS
+  canonical bytes of this object with `envelope` itself removed
+  ({{envelope}}).
 
 # Assertion Requirements {#assertion-requirements}
 
@@ -739,6 +764,12 @@ treat a record as verified if any step fails:
    verifies.
 5. Validate the mission binding of {{record}} against the Mission
    Record it is retained with.
+
+Where the record carries `approval_context_commitment`, the `mission`
+member carries no Mission `id`, so a verifier recomputes the commitment
+from the Mission Record this record is retained with, the record step 5
+resolves, and rejects the reference on a mismatch
+({{approval-context-computation}}).
 
 The JWS protected header MUST carry a `kid` resolvable in the Mission
 Issuer's published key material, a `typ` of
