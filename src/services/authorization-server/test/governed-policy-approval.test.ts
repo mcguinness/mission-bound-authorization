@@ -344,9 +344,18 @@ describe("governed policy root and record (@spec approval-governance#governed-po
       edit(copy.assertions[0] as never);
       return copy;
     };
+    // A human or service assertion in its place fails the accountable-approver
+    // rule itself, even with an authority valid for its own kind that also
+    // carries the deciding policy's members.
     for (const bad of [
-      variant((a) => (a.kind = "human")),
-      variant((a) => (a.kind = "service")),
+      variant((a) => Object.assign(a, { kind: "human", authority: { ...a.authority, auth_time: iso(T0) } })),
+      variant((a) =>
+        Object.assign(a, { kind: "service", authority: { ...a.authority, logic_id: "risk-model", logic_version: "3" } }),
+      ),
+    ]) {
+      expect(() => assertGovernedPolicyRecord(bad, basis)).toThrow(/exactly one approve assertion of kind policy/);
+    }
+    for (const bad of [
       variant((a) => (a.principal = { iss: ISS, sub: "bob" })),
       variant((a) => (a.authority.policy_id = "urn:policy:other")),
       variant((a) => (a.authority.version = "2")),
@@ -774,7 +783,7 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
       kind: "service",
       decision: "approve",
       decided_at: mission.created_at,
-      authority: { model_id: "risk-model", model_version: "3" },
+      authority: { logic_id: "risk-model", logic_version: "3", model_id: "risk-model", model_version: "3" },
       reason: "narrowed",
     });
     expect(record.evaluation.contributing).toEqual(["ast_policy", "ast_model_1"]);
