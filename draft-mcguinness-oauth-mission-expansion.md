@@ -771,7 +771,8 @@ includes `deferred`, the deferred token response's opt-in. The Mission
 Issuer MUST NOT return the deferred response to an exchange that does
 not opt in. It answers such an exchange with the interactive handoff
 ({{interactive-handoff}}) or, where it offers no interactive
-completion, refuses it with `invalid_request`.
+completion, refuses it with `invalid_request` and records no
+operation ({{creation-reservation}}).
 
 This document defines no synchronous completion for an expansion that
 takes fresh consent. An expansion response is a successor or a
@@ -1812,10 +1813,14 @@ establish:
 - the recorded source Mission;
 - the same authorized acting agent;
 - possession of the recorded sender-constraint identity, the stored
-  `cnf` of {{creation-fingerprint}}; and
+  `cnf` of {{creation-fingerprint}};
+- for an operation in the deferred mode, a `completion_mode` that
+  includes `deferred`, the opt-in the deferred response requires
+  ({{completion-modes}}); and
 - fingerprint compatibility ({{creation-reservation}}).
 
-No key-rotation recovery path is defined: a requester that can no
+A retry of a deferred operation without the opt-in is refused with
+`invalid_request`. No key-rotation recovery path is defined: a requester that can no
 longer prove possession of the recorded `cnf` does not recover the
 operation.
 

@@ -50216,7 +50216,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an expansion exchange whose completion_mode does not include deferred never receives the deferred response; it receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request",
+    "normative": "an expansion exchange, or a retry of a deferred one, whose completion_mode does not include deferred never receives the deferred response: a new exchange receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request with no operation recorded, and a retry of a deferred operation receives invalid_request",
     "local": "the reference AS defers every widening expansion exchange and never reads completion_mode"
    },
    "level": "endpoint",
