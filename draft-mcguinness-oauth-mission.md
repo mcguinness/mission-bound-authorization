@@ -1236,9 +1236,9 @@ The AS processes a submission in this order:
 3. Validate any authority proposal: refuse an entry of a type the AS
    does not support, or one that fails its type's definition or a
    schema advertised for it or established out of band, with
-   `invalid_authorization_details`, and a
-   proposed entry whose `resource` is not among the Intent's
-   `target_resources`, with `invalid_request` ({{authority-proposal}}).
+   `invalid_authorization_details`, and a proposed entry whose
+   `resource` is not among the Intent's `target_resources`, with
+   `invalid_request` ({{authority-proposal}}).
 4. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
 5. Apply any submission checks that configured admission policy or
