@@ -1007,6 +1007,29 @@ one byte sequence every external reference names:
 - consent evidence's `approval_governance_digest` equals exactly this
   value ({{consent-evidence-relationship}}).
 
+# Re-checking an Evaluation {#re-check}
+
+A Relying Auditor re-checks an evaluation by confirming that it follows
+from the retained policy and the recorded assertions. Conformance
+requires it to obtain the retained policy version before treating the
+evaluation as re-checked ({{conformance}}). The re-check has these
+steps:
+
+1. Verify the record ({{envelope}}).
+2. Obtain the retained snapshot of the `approval_policy` version the
+   record names, and recompute `approval_policy.digest` over it
+   ({{approval-policy}}). A mismatch ends the re-check.
+3. Apply the snapshot's rule to the recorded assertions, and confirm
+   that it approves, counting exactly the assertions `contributing`
+   lists ({{record-members}}).
+4. For each counted `policy` assertion, apply the recency rules of
+   {{policy-approval-recency}} as the snapshot declares them, with
+   `evaluation.evaluated_at` as the evaluation instant.
+
+A re-check does not re-authenticate an assertion: the record carries an
+assertion's authentication context ({{assertion-authority}}), not the
+authentication itself.
+
 # Governed Policy Approval {#governed-policy}
 
 This document defines the `governed_policy` standing-consent basis on
@@ -1524,7 +1547,7 @@ A Recording Issuer MUST:
 A Relying Auditor MUST verify the envelope by byte equality, MUST
 validate the mission binding, and MUST obtain the retained policy
 version before treating the evaluation as re-checked ({{envelope}},
-{{approval-policy}}).
+{{approval-policy}}, {{re-check}}).
 
 # Security Considerations {#security-considerations}
 
