@@ -288,6 +288,25 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     }
   });
 
+  // @spec mission#subset (#1399, D538): a template ceiling entry carrying an
+  // unsupported member is refused at consent, naming the entry, rather than
+  // stored and dropped when a dispatch derives from it.
+  it("refuses a template whose ceiling entry carries an unsupported member, naming the entry, and creates no template", async () => {
+    for (const invoice_ids of [["INV-7"], null]) {
+      const body = readOnlyTemplateBody();
+      const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) => (i === 0 ? { ...e, invoice_ids } : e));
+      const res = await createTemplateAdmin({ ...body, ceiling });
+      const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+      expect(res.status, JSON.stringify(out)).toBe(400);
+      expect(out.error).toBe("invalid_request");
+      expect(out.error_description).toBe(
+        "ceiling[0] carries invoice_ids, which is not a supported member of the mission_resource_access type",
+      );
+      expect(out.template_id).toBeUndefined();
+      expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+    }
+  });
+
   // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
   // (#1373): a template ceiling entry whose delegate matcher carries a member
   // other than `sub` and `sub_profile`, or neither, is refused at consent,
