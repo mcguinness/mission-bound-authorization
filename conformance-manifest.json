@@ -35158,7 +35158,7 @@
    "id": "progressive.drawdown-derivation.no-fork",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Concurrent derivation under the predecessor and competing or duplicate drawdowns MUST NOT fork or replenish the remaining allowance",
+   "text": "Concurrent derivation under the predecessor and competing or duplicate drawdown requests MUST NOT fork or replenish the remaining allowance",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -35169,7 +35169,7 @@
    "surface": "token-endpoint",
    "assertion": "concurrency",
    "observation": {
-    "normative": "competing or duplicate drawdowns from one predecessor, run concurrently with predecessor derivations, leave total committed derivations across the predecessor and its successors within the inherited limit",
+    "normative": "competing or duplicate drawdown requests from one predecessor, run concurrently with predecessor derivations, leave total committed derivations across the predecessor and its successors within the inherited limit",
     "local": "Concurrent identical drawdowns create one successor. Not witnessed: competing drawdowns or predecessor derivations interleaved with a drawdown."
    },
    "level": "concurrency",
@@ -35218,7 +35218,7 @@
    "id": "progressive.drawdown-derivation.exhaustion-refuses",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits refuses a derivation ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\"), with `invalid_grant` and its `mission_error` diagnostic, creating no successor, superseding no predecessor, and counting nothing",
+   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown request as Mission Derivation Limits refuses a derivation ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\"), with `invalid_grant` and its `mission_error` diagnostic, creating no successor, superseding no predecessor, and counting nothing",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35229,7 +35229,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "with limit 10 and 10 committed derivations, or a tighter effective limit of 8 with 8, the drawdown is refused invalid_grant; no successor exists, the predecessor stays active, and neither count changes",
+    "normative": "with limit 10 and 10 committed derivations, or a tighter effective limit of 8 with 8, the drawdown request is refused invalid_grant; no successor exists, the predecessor stays active, and neither count changes",
     "local": "Limit 2 with 2 committed, and a tighter request of 1 with 1 committed, are refused invalid_grant with mission_error derivations_exhausted inside the creation step, creating no successor and changing no count. Proved by removing the check."
    },
    "level": "endpoint",
@@ -36089,7 +36089,7 @@
    "id": "progressive.in-ceiling.successor-carries-ceiling",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "An in-ceiling successor MUST carry the predecessor's `authority_ceiling` and `drawdown_policy` unchanged or narrowed",
+   "text": "A policy-adjudicated successor MUST carry the predecessor's `authority_ceiling` and `drawdown_policy` unchanged or narrowed",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36100,7 +36100,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an in-ceiling successor records the predecessor's authority_ceiling and drawdown_policy unchanged or narrowed, under the same ceiling_hash or, when narrowed, a recomputed one",
+    "normative": "a policy-adjudicated successor records the predecessor's authority_ceiling and drawdown_policy unchanged or narrowed, under the same ceiling_hash or, when narrowed, a recomputed one",
     "local": "A policy-adjudicated successor carries both unchanged under the same ceiling_hash. A successor created by the fresh-approval fallback carries no ceiling (createExpansion records none), so the chain's progressive authorization ends there until an approval consents a ceiling again; narrowing is not implemented."
    },
    "level": "endpoint",
@@ -36263,7 +36263,7 @@
    "id": "progressive.drawdown-bounds.entire-ceiling-defined",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown request activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the requested successor Authority Set authorizes",
+   "text": "A drawdown request would activate the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36274,7 +36274,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a drawdown is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
+    "normative": "a drawdown request is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
     "local": "ceilingAuthorityLeftUndrawn searches the ceiling's actions, vendors and amount caps for a request no successor entry authorizes, assuming every other member covered: a witness found is genuine, and a missed one falls back."
    },
    "level": "endpoint",
@@ -36514,7 +36514,7 @@
    "id": "progressive.in-ceiling.chain-rate-bound",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "MUST rate-bound policy-adjudicated expansions per expansion chain, keyed by the chain's root Mission and counted across `predecessor` links per unit time",
+   "text": "MUST rate-bound policy-adjudicated drawdowns per expansion chain, keyed by the chain's root Mission and counted across `predecessor` links per unit time",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36544,7 +36544,7 @@
    "id": "progressive.in-ceiling.recorded-as-approval-event",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "MUST record each policy-adjudicated expansion as an approval event whose decision mechanism is the drawdown policy that authorized it",
+   "text": "MUST record each policy-adjudicated drawdown as an approval event whose decision mechanism is the drawdown policy that authorized it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36631,7 +36631,7 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Mission record of a ceiling-bearing chain carries drawdown_count: zero at the ceiling consent, one more on each committed ceiling_drawdown successor",
+    "normative": "every Mission record of a ceiling-bearing chain carries drawdown_count: zero on the chain's root Mission, one more on each committed ceiling_drawdown successor",
     "local": "Carried as the record member drawdown_count: 0 on the Mission that consented the ceiling and the predecessor's count plus one on each policy-adjudicated successor."
    },
    "level": "endpoint",
@@ -36746,7 +36746,7 @@
    "id": "progressive.audit.resource-declaration-digest",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record of a drawdown request whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
+   "text": "The record of a policy-adjudicated drawdown whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36757,7 +36757,7 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a drawdown adjudicated against a resource's content-addressed self-declaration records that declaration's digest as resource_declaration_digest"
+    "normative": "a policy-adjudicated drawdown whose adjudication evaluated a resource's content-addressed self-declaration records that declaration's digest as resource_declaration_digest"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -36834,7 +36834,7 @@
    "id": "progressive.ceiling-review.no-adjudication-past-cadence",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "The Mission Issuer MUST NOT policy-adjudicate an in-ceiling drawdown request for a chain whose most recent human approval of the ceiling is older than that cadence",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate an in-ceiling drawdown request for a chain whose ceiling consent, the initial consent or the latest re-consent, is older than that cadence",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -36845,7 +36845,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an in-ceiling drawdown in a chain whose ceiling consent is older than the review cadence is not adjudicated by policy and falls back to a fresh human approval",
+    "normative": "an in-ceiling drawdown request in a chain whose ceiling consent is older than the review cadence is not adjudicated by policy and falls back to a fresh human approval",
     "local": "The cadence is the drawdown policy snapshot's ceiling_review_cadence_s, measured from the ceiling's retained consent instant. The reference has no review approval, so that instant is the approval that consented the ceiling."
    },
    "level": "endpoint",
