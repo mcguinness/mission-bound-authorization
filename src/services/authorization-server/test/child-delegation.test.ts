@@ -1299,8 +1299,9 @@ describe("per-child derivation limit from the committed policy state (@spec chil
   });
 
   it("an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read", () => {
+    // Under the policy the parent was approved under, that policy's ceiling is the figure.
+    expect(limitLineage(4, [undefined]).child().derivation_limit).toBe(4);
     const { k, parent, child } = limitLineage(null, [undefined]);
-    // Positive control: under the policy the parent was approved under, the current ceiling applies.
     expect(child().derivation_limit).toBeNull();
     k.db.prepare("UPDATE missions SET policy_version = ? WHERE id = ?").run("older-policy", parent.id);
     const before = k.allMissions().length;
