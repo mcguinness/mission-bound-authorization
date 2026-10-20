@@ -79,8 +79,8 @@
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "04a2c0f01078c59fabc6a768055a1de99cfecaf4",
-    "content_sha256": "f200829411b753abb3555d38757e25f1948498e5b62e4d9624b8d76645d5d144"
+    "revision": "9d61842777ef55834a198434289e0eed4d88fb16",
+    "content_sha256": "91355a5e310223dda4d4d9513b2a98923dc568f716a8ab6e72a7d597a4088b6f"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -99,12 +99,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "720fe3d7033e467c0b7d23fcbcce86247662d3ced385b023b7cd1ead4b4cfac4"
+    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
+    "content_sha256": "a2906080c314e315896fa5211c425a8a0861be4cc819a3466188fb3d873ad65c"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "d3b998ee50ff458b459b91a8eded3595cb20733d13db19803bf658b92b1f4dee"
+    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
+    "content_sha256": "bb2e4b03cd8650b40d0c8404657f1bd9616b6632d63a5a03f2b19a44dc8d7f19"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -135,8 +135,8 @@
     "content_sha256": "d05b02b6664c2acfdd532b8bcbebf19af04ccbb55d5146149226bb8932b0be18"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "96fe0378b56daecb3bebd073d4f9b723bac2a5d280d9380ce4e3d006e55c174d"
+    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
+    "content_sha256": "479c860ed0ba047bf6dc585382ab316fbf3b5cebcf4a2a2d7845211743669978"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
@@ -6686,7 +6686,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -35687,12 +35687,12 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
-   "id": "progressive.in-ceiling.out-of-ceiling-refused",
+   "id": "progressive.ceiling-test.beyond-ceiling-not-policy",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
-   "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer MUST refuse, with `out_of_ceiling` ({{denial-reason}}), a requested authority that is not within the consented `authority_ceiling`",
+   "anchor": "ceiling-test",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate a requested authority that is not within the consented `authority_ceiling`",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "progressive.ceiling-drawdown"
@@ -35701,20 +35701,391 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion of a Mission carrying a ceiling whose requested successor Authority Set is not a subset of the ceiling is refused with mission_denial_reason out_of_ceiling, creating no successor and leaving the predecessor active",
-    "local": "Refused invalid_request on the token exchange, with nothing reserved; the draft fixes the reason, not the OAuth error code. The reference does not route such a request to a fresh human approval that could raise the ceiling."
+    "normative": "a request outside the consented ceiling never completes as a policy-adjudicated drawdown",
+    "local": "adjudicateDrawdown returns out_of_ceiling before any policy check; the adapter then takes the fresh-approval path, or refuses where the deployment's beyondCeiling is refuse."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "out of ceiling (@spec progressive#in-ceiling-expansion, progressive#denial-reason) > refuses a successor outside the consented ceiling with out_of_ceiling: no successor, the predecessor untouched, nothing reserved",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a deployment whose policy refuses beyond-ceiling expansions refuses, creating and reserving nothing; this reference carries out_of_ceiling on that refusal",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by restoring the default refusal (#1413 mutation M1)."
+  },
+  {
+   "id": "progressive.ceiling-test.beyond-ceiling-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "Such a request falls back to an ordinary, freshly human-approved expansion",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a request outside the ceiling is taken to an ordinary fresh human approval, which completes a successor on approval",
+    "local": "The deferred fresh-approval path (authorization_pending with a deferral_code); the no-re-consent test completes it through approval and the poll."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.refusal-may-carry-reason",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "A refusal MAY carry `out_of_ceiling`",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Issuer whose policy refuses a request outside the ceiling may carry out_of_ceiling on the refusal; omitting it also conforms",
+    "local": "This reference carries it on the refusal its beyondCeiling = refuse option produces: an implementation choice, not a conformance requirement (#1415, D555)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a deployment whose policy refuses beyond-ceiling expansions refuses, creating and reserving nothing; this reference carries out_of_ceiling on that refusal",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.no-reason-on-fallback",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "a response that starts the human approval never carries it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the response that starts the fresh human approval for a request outside the ceiling carries no out_of_ceiling",
+    "local": "The deferred response body carries error, deferral_code, expires_in and interval only."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason) > a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.no-implicit-raise",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "Approving that authority does not raise the ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successor approved with authority beyond the ceiling records the predecessor's ceiling unchanged",
+    "local": "successorCeilingMembers carries the predecessor's members when the approval carries no re-consent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.carry-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Without an explicit re-consent, the successor MUST carry the predecessor's `authority_ceiling`, `drawdown_policy` and `ceiling_hash` unchanged, together with the instant and the Approver of the ceiling consent they commit",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successor of a fresh human approval without a re-consent records the predecessor's authority_ceiling, drawdown_policy, ceiling_hash and ceiling consent instant and Approver unchanged; a later drawdown names that Approver and instant",
+    "local": "createExpansion spreads successorCeilingMembers(predecessor); the consenting Approver is kept as ceiling_consent_principal."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by dropping the carry (M2) and by reading the drawdown's consent_principal from the predecessor's basis (M4)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.beyond-stays-outside",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Authority approved beyond the ceiling stays outside it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a later expansion that retains authority approved beyond the ceiling is outside the ceiling and is not policy-adjudicated",
+    "local": "The ceiling test runs over the complete requested successor Authority Set."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.reconsent-recorded",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "the successor MUST record the re-consented `authority_ceiling` and the selected `drawdown_policy` under a recomputed `ceiling_hash`, with the re-consent's instant and Approver as those of the ceiling consent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successor of an approval that re-consents a ceiling records the re-consented ceiling and policy under the ceiling_hash computed over them, the re-consent's instant and Approver, and a later drawdown names them",
+    "local": "ExpansionDeferralStore.approve commits the re-consent (consentCeiling) at the decision, held to the approval floor with the successor's authority; redemption records it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by ignoring the re-consent (M3) and by not storing it at approval (M7)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.cadence-restarts",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "The ceiling review cadence restarts from that instant",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a re-consent, a drawdown is adjudicated by policy against the re-consent's instant even though the earlier consent's cadence has lapsed",
+    "local": "The witness lets a one-second cadence lapse, re-consents under a 30-day policy, and draws down by policy."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.disclosure",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "The consent disclosure MUST render the re-consented ceiling and policy as at the initial approval",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval that re-consents a ceiling renders the re-consented ceiling and drawdown policy to the Approver",
+    "local": "The reference has no rendering surface for the deferral approval; as for progressive.ceiling.consent-disclosure."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.chain-restrictions-carry",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Either way the expansion chain continues: its root, `predecessor` links, rate-bound window, cumulative drawdown count, and every discharge and containment restriction carry forward, and a re-consent clears none of them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a re-consent clears no containment or discharge restriction of the chain",
+    "local": "Restrictions are read through predecessor links (chainRestrictions), which a human-approved successor keeps."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Witnessed for containment; the discharge facet has no witness through a re-consent. Proved by stopping the chain walk at a human-approved successor (M6)."
+  },
+  {
+   "id": "progressive.ceiling-reconsent.chain-count-and-window-carry",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-reconsent",
+   "text": "Either way the expansion chain continues: its root, `predecessor` links, rate-bound window, cumulative drawdown count, and every discharge and containment restriction carry forward, and a re-consent clears none of them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a re-consent the chain's cumulative drawdown count continues and the rate-bound window still counts drawdowns before it",
+    "local": "successorCeilingMembers carries drawdown_count; the rate window counts ceiling_drawdown successors along predecessor links."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent continues the chain's drawdown count and rate window",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by resetting the count (M5) and by stopping the chain walk (M6)."
+  },
+  {
+   "id": "progressive.ceiling-drawdown-basis.consent-principal-is-ceiling-approver",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "`consent_principal`: the Approver who consented the ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a drawdown's consent_principal is the Approver who consented the ceiling, including after a successor another Approver approved",
+    "local": "ceilingConsentPrincipal reads ceiling_consent_principal, falling back to approval_basis for records stored before #1413."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by reading the predecessor's approval_basis instead (M4)."
   },
   {
    "id": "progressive.in-ceiling.successor-carries-ceiling",
@@ -35870,14 +36241,188 @@
    "assertion": "refusal",
    "observation": {
     "normative": "no single policy-adjudicated drawdown activates all of the ceiling that remains beyond the predecessor's authority",
-    "local": "Enforced only through the per-drawdown bound: a bound at least as large as the remaining ceiling would let one drawdown activate all of it, and the reference adds no separate check."
+    "local": "A separate check (activatesEntireCeiling) compares the successor's set with the ceiling one action at a time under the subset relation; it applies whatever the per-drawdown bound allows."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414: the final-increment test proves the separate check (disabling it lets the drawdown complete by policy)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.entire-ceiling-defined",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
+    "local": "ceilingAuthorityLeftUndrawn searches the ceiling's actions, vendors and amount caps for a request no successor entry authorizes, assuming every other member covered: a witness found is genuine, and a missed one falls back."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a drawdown narrower than a ceiling entry's constraint does not activate the entire remaining ceiling; at the ceiling's own constraint it does",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a ceiling entry's authority split across several successor entries counts as held: that final increment falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414 review: proved by restoring the per-entry comparison (the split test and the unit test fail), by disabling the check, and by matching actions only."
+  },
+  {
+   "id": "progressive.drawdown-bounds.split-authority-held",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "The successor's entries are judged together, so ceiling authority it splits across several entries counts as held",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a successor that holds a ceiling entry's authority split across several entries (by issuance window, vendor or amount) holds it: the final increment falls back rather than completing by policy",
+    "local": "The endpoint witness splits the Q3 issuance window across two entries; the unit witness splits two vendors and two amount caps, which the demo deployment's single-vendor derivation ceiling cannot reach end to end."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a ceiling entry's authority split across several successor entries counts as held: that final increment falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > ceiling authority split across successor entries by vendor or amount counts as held (unit)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414 review finding: restoring the per-entry comparison fails both witnesses."
+  },
+  {
+   "id": "progressive.drawdown-bounds.entire-ceiling-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown within the per-drawdown and rate bounds that would activate the entire remaining ceiling is not adjudicated by policy; it falls back to a fresh human approval, and the same request with ceiling authority left over is adjudicated",
+    "local": "Fallback reason entire_remaining_ceiling; the response is the deferred authorization_pending, with no successor created."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.per-drawdown-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown over the per-drawdown bound falls back to a fresh human approval",
+    "local": "Fallback reason per_drawdown_bound against the policy snapshot's max_added_actions."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.rate-bound-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown over the chain rate bound falls back to a fresh human approval",
+    "local": "Fallback reason chain_rate_bound, counting ceiling_drawdown successors of the chain within the window."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > the chain's rate bound stops policy adjudication once reached",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -50160,7 +50705,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50182,7 +50727,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50204,7 +50749,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (`predecessor_state_changed` for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
+    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (a terminal-exit code chosen by Reconciliation's attribution rule for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
     "local": "the error code and the absence of any successor are witnessed; the reference does not attach mission_expansion_status on this request-time check (pre-existing)"
    },
    "level": "endpoint",
@@ -50259,7 +50804,7 @@
    "id": "expansion.reconciliation.completion-refusal-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "If any check fails, the Mission Issuer MUST refuse the completion with `invalid_grant` and the applicable reconciliation status from the closed set below",
+   "text": "If any check fails, the Mission Issuer MUST refuse the completion with the applicable reconciliation status from the closed set below, alongside the error code of the step that completes it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -50270,8 +50815,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused `invalid_grant` with the reconciliation status on a code redemption or deferred poll, and `invalid_request` for a predecessor no longer `active` where the token-exchange response completes it",
-    "local": "the reference's deferred poll answers a predecessor revoked during the window with access_denied rather than invalid_grant and a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, and, where the token-exchange response completes it, invalid_request for a predecessor no longer `active` and invalid_grant for check 3",
+    "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50436,7 +50981,7 @@
    "id": "expansion.interactive.no-second-code-after-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "interactive-handoff",
-   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation with `invalid_request`, and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -50447,7 +50992,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused with invalid_request and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50992,6 +51537,204 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1178 (#1249 review): preserves RFC 9449 Section 8's challenge under the invalid_dpop_proof mapping. The reference AS requires no authorization-server DPoP nonce, so nothing witnesses it."
+  },
+  {
+   "id": "expansion.completion.deferred-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The Mission Issuer MUST NOT return the deferred response to an exchange that does not opt in.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an expansion exchange, or a retry of a deferred one, whose completion_mode does not include deferred never receives the deferred response: a new exchange receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request with no operation recorded, and a retry of a deferred operation receives invalid_request",
+    "local": "the reference AS defers every widening expansion exchange and never reads completion_mode"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.completion.deferred-poll-grant",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "completion-modes",
+   "text": "The client polls with the substrate's deferred grant type and the `deferral_code`",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client polls a deferred expansion with the deferred token response's deferred grant type and its deferral_code",
+    "local": "the reference AS serves, and its clients use, the token-exchange grant with deferral_code for the expansion poll (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1177."
+  },
+  {
+   "id": "expansion.successor-expiry.completion-codes",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "successor-expiry",
+   "text": "A deferred poll then answers `access_denied`, a code redemption `invalid_grant`, and a completion in the token-exchange response `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.submission.child-actor-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "submission",
+   "text": "The Mission Issuer MUST refuse with `invalid_request` a token exchange that carries both a `predecessor` cross-check and the child-delegation profile's `child_actor`, and an expansion exchange that carries `child_actor`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange (requested_token_type access token) that carries child_actor, or any token exchange carrying both predecessor and child_actor, is refused invalid_request and creates nothing",
+    "local": "the reference AS selects by requested_token_type and ignores child_actor on an access-token exchange"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.lineage.related-to-record-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "predecessor-member",
+   "text": "It is a member of the Mission Record and is not carried on the `mission` claim.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission's related_to appears on its Mission record and never on the mission claim of a token derived under it",
+    "local": "the reference AS records related_to only in carryover replacement records"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "Any other operation answers the repeated token exchange directly: `access_denied` after the Approver's denial and `expired_token` after its continuation expired before activation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed interactive operation is answered on the token exchange: access_denied after the Approver's denial, expired_token after the continuation expired before activation, and after a refused activation the code a token-exchange-response completion answers for that failure, with any reconciliation status; it creates nothing",
+    "local": "the reference AS has no interactive path"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.not-step-up.client-no-expansion-for-authn",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "not-step-up",
+   "text": "A client MUST NOT initiate expansion for a denial that is an authentication shortfall.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a denial caused by an acr or amr constraint leads the client to step-up authentication, never to an expansion request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation-revalidation.deferred-retry-opt-in",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-revalidation",
+   "text": "A retry of a deferred operation without the opt-in is refused with `invalid_request`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a same-creation_request_id retry of an operation opened in the deferred mode whose completion_mode does not include deferred is refused invalid_request and receives no deferral",
+    "local": "the reference AS never reads completion_mode, so it returns the same deferral (#1177)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
+   "id": "expansion.creation.failed-retry-deferred",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "An operation in the deferred mode returns its deferral, whose next poll answers as the deferred token response defines",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a same-fingerprint retry of a failed deferred expansion returns its deferral, whose next poll answers access_denied after a denial or a refused activation (with any reconciliation status) and expired_token once the deferral has expired; it creates nothing",
+    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",

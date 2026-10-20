@@ -33,6 +33,12 @@ import { evaluateApprovalFloor } from "./approval-floor.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
 import { createExpansion } from "./expansion.js";
 import { IntentError } from "./intent.js";
+import {
+  type CeilingConsent,
+  consentCeiling,
+  consentedCeilingEntries,
+  type ReconsentedCeiling,
+} from "./progressive.js";
 import type { MissionKernel } from "./kernel.js";
 import type {
   AuthorityEntry,
@@ -308,6 +314,8 @@ function migrateExpansionDeferrals(db: Database): void {
     "carryover_plan_json",
     "carryover_manifest_json",
     "carryover_manifest_hash",
+    // @spec progressive#ceiling-reconsent (#1413): the committed re-consent.
+    "ceiling_reconsent_json",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -343,6 +351,14 @@ export interface ExpansionApproval {
    * floor; without it such an approval refuses.
    */
   authentication?: { surface: "browser"; acr: string; auth_time: number };
+  /**
+   * @spec progressive#ceiling-reconsent (#1413) — a ceiling and drawdown
+   * policy the Approver explicitly re-consents at this approval, separately
+   * from approving the successor's authority. Absent, the chain's ceiling
+   * members carry unchanged. Only a chain that carries a ceiling can
+   * re-consent one.
+   */
+  ceiling?: CeilingConsent;
 }
 
 /**
@@ -603,19 +619,42 @@ export class ExpansionDeferralStore {
     // forward, leaving every entry's actions unchanged), and every action is
     // classified. A refusal records nothing and leaves the deferral pending.
     const pending = this.db
-      .prepare("SELECT intent_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'")
-      .get(deferralCode) as { intent_json: string } | undefined;
+      .prepare(
+        "SELECT intent_json, predecessor_id FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
+      )
+      .get(deferralCode) as { intent_json: string; predecessor_id: string } | undefined;
+    let reconsent: ReconsentedCeiling | undefined;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
       const successor = this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
+      // @spec progressive#ceiling-reconsent (#1413): a re-consent is a
+      // ceiling consent, so its entries are validated here and classified with
+      // the successor's authority, as at the initial approval (#1255).
+      const predecessor = this.kernel.get(pending.predecessor_id);
+      const ceilingEntries = approval.ceiling ? consentedCeilingEntries(approval.ceiling) : [];
+      if (approval.ceiling && !predecessor?.authority_ceiling) {
+        throw new IntentError("invalid_request", "the expansion chain carries no ceiling to re-consent");
+      }
       const authentication = approval.authentication;
       const floor = evaluateApprovalFloor(
         this.approvalFloor,
-        successor,
+        [...successor, ...ceilingEntries],
         authentication ? { acr: authentication.acr, auth_time: authentication.auth_time } : {},
         { interactive: authentication?.surface === "browser", nowSeconds: Math.floor(this.now().getTime() / 1000) },
       );
       if (floor.outcome === "refused") throw new ApprovalFloorRefusedError(floor.reason);
+      if (approval.ceiling && predecessor) {
+        // Committed at this decision: the policy digest over the snapshot held
+        // now, and this decision's instant as the ceiling consent instant.
+        const { drawdown_count: _count, ...committed } = consentCeiling(
+          predecessor.issuer,
+          this.kernel.activationPolicies(),
+          approval.ceiling,
+          this.now().toISOString(),
+          approval.approver,
+        );
+        reconsent = committed;
+      }
     }
     // @spec child-delegation#carryover-manifest — the approval event COMMITS
     // the exact manifest: the deterministic per-child approval identifiers
@@ -635,7 +674,7 @@ export class ExpansionDeferralStore {
     }
     this.db
       .prepare(
-        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
       .run(
         JSON.stringify(approval.approver),
@@ -643,6 +682,7 @@ export class ExpansionDeferralStore {
         approval.approvedUntil,
         manifestJson,
         manifestHash,
+        reconsent ? JSON.stringify(reconsent) : null,
         deferralCode,
       );
   }
@@ -961,6 +1001,9 @@ export class ExpansionDeferralStore {
         approvedUntil: row.approved_until as string,
         ...(submissionEvidence?.length ? { submissionEvidence } : {}),
         ...(batch ? { successorId: batch.manifest.successor.mission_id } : {}),
+        ...(row.ceiling_reconsent_json
+          ? { ceilingReconsent: JSON.parse(row.ceiling_reconsent_json as string) as ReconsentedCeiling }
+          : {}),
       });
       if (creationRequestId) {
         this.creationIdempotency.completeInCallerTx(
