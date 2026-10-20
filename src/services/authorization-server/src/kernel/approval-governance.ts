@@ -313,6 +313,22 @@ export function assertAccountableApprover(
 }
 
 /**
+ * @spec approval-governance#record-members: `evaluation.contributing` lists
+ * the assertions the evaluation counted toward the rule the approval
+ * satisfied. Every entry names an assertion the record carries, and a `deny`
+ * assertion is never among them: a blocking denial leaves no committed record,
+ * and one that did not block is recorded but not counted.
+ */
+export function assertContributing(record: UnsignedApprovalGovernanceRecord): void {
+  const byId = new Map(record.assertions.map((a) => [a.assertion_id, a]));
+  for (const id of record.evaluation.contributing) {
+    const a = byId.get(id);
+    if (!a) throw new ApprovalGovernanceError(`evaluation counts an assertion the record does not carry: ${id}`);
+    if (a.decision === "deny") throw new ApprovalGovernanceError(`evaluation counts deny assertion ${id} as contributing`);
+  }
+}
+
+/**
  * @spec approval-governance#assertion-requirements,
  * approval-governance#governed-policy-record: the record under
  * `governed_policy`. Its accountable assertion
@@ -320,7 +336,7 @@ export function assertAccountableApprover(
  * `approval_basis.consent_principal` that names the deciding policy's `id` and
  * `version`, with `approved_at` equal to `approval_basis.approved_at`. The
  * record's `approval_policy` is the consented root, the evaluation approved,
- * and it relies on the accountable assertion. A record failing any of these
+ * and it counts the accountable assertion. A record failing any of these
  * does not commit.
  */
 export function assertGovernedPolicyRecord(
@@ -343,8 +359,10 @@ export function assertGovernedPolicyRecord(
     fail("approval_policy.digest is not the consented root's commitment");
   }
   if (record.evaluation.decision !== "approved") fail("evaluation did not approve");
-  if (!record.evaluation.contributing.every((id) => ids.includes(id))) {
-    fail("evaluation relies on an assertion the record does not carry");
+  try {
+    assertContributing(record);
+  } catch (e) {
+    fail((e as Error).message);
   }
   const a = assertAccountableApprover(record, basis) as AgrAssertion;
   if (a.authority.policy_id !== basis.adjudication.policy.id || a.authority.version !== basis.adjudication.policy.version) {
@@ -354,7 +372,7 @@ export function assertGovernedPolicyRecord(
     fail("the accountable assertion's approved_at is not approval_basis.approved_at");
   }
   if (!record.evaluation.contributing.includes(a.assertion_id)) {
-    fail("the evaluation does not rely on the accountable assertion");
+    fail("the evaluation does not count the accountable assertion");
   }
 }
 

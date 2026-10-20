@@ -251,6 +251,24 @@ describe("pilot configuration: the estate's development Resource-policy grants (
     expect(() => parseMasPilotConfig(subjectAsClient)).toThrow(/authorized_reader or authorized_payer for a subject/);
   });
 
+  it("loads the shipped separated MAS: its PDP enrolled for the payments enforcement scope, the state source placed with the PDP (#818 slice 4b)", () => {
+    const separated = loadMasPilotConfig().separated_mas;
+    expect(separated.state_source.placement).toBe("pdp");
+    expect(separated.enrolled_pdps).toContainEqual({ principal_id: separated.pdp_principal_id, enforcement_scopes: [RESOURCE] });
+  });
+
+  it("refuses a separated MAS whose state source is placed anywhere but the PDP, a non-positive bound, or an unknown member (#818 slice 4b)", () => {
+    const separated = raw().separated_mas as Record<string, unknown> & { state_source: Record<string, unknown> };
+    const withSeparated = (over: Record<string, unknown>) => ({ ...raw(), separated_mas: { ...separated, ...over } });
+    expect(() => parseMasPilotConfig(withSeparated({ state_source: { ...separated.state_source, placement: "pep" } }))).toThrow(
+      /placement must be "pdp"/,
+    );
+    expect(() => parseMasPilotConfig(withSeparated({ state_source: { ...separated.state_source, timeout_ms: 0 } }))).toThrow(
+      /timeout_ms must be a positive integer/,
+    );
+    expect(() => parseMasPilotConfig(withSeparated({ extra: true }))).toThrow(/unknown member extra/);
+  });
+
   it("refuses a member or an entitlement naming both a subject and a client", () => {
     const bothMember = withPolicy({ tenants: [{ tenant: "t", vendors: ["acme"], members: [{ sub: "u-1001", client: "x" }] }], entitlements: [] });
     const bothEntitlement = withPolicy({ tenants, entitlements: [{ sub: "u-1001", client: "x", relation: "authorized_reader", vendor: "acme" }] });

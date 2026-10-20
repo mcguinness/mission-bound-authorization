@@ -271,6 +271,20 @@ export class MissionStatusResolver {
   }
 
   /**
+   * The cached answer for the referenced Mission, only while it is within
+   * every reliance bound at this instant ({@link boundPassed}); `undefined`
+   * otherwise. Synchronous and never reads the source: a caller that must
+   * answer without awaiting (#818, D560) relies on what an earlier
+   * {@link resolve} established, and on nothing once that has lapsed.
+   */
+  peek(ref: { id: string; issuer: string }, maxAgeSeconds?: number): ResolvedMission | undefined {
+    if (ref.issuer !== this.opts.issuer) return undefined;
+    const cached = this.cache.get(ref.id);
+    if (cached === undefined || this.boundPassed(cached, maxAgeSeconds) !== undefined) return undefined;
+    return { ...cached, source: "cached" };
+  }
+
+  /**
    * The referenced Mission's state and view, from the cache within its
    * bounds or from the issuer now. Never throws.
    */

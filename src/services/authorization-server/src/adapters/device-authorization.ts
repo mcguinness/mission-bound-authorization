@@ -121,7 +121,8 @@ function refuse(ctx: KoaContextWithOIDC, description: string): void {
   ctx.body = { error: "invalid_request", error_description: description };
 }
 
-async function readForm(req: IncomingMessage): Promise<string | undefined> {
+/** The request's form body, or undefined when it exceeds the provider's own bound. */
+export async function readForm(req: IncomingMessage): Promise<string | undefined> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {

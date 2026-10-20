@@ -60,6 +60,44 @@ sub-agent. Delegation itself is opt-in and off in both baselines.
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next designation.
 
+## `mas-join.json`
+
+The shared demo stack's MAS join (`@spec authority-server#mission-join`,
+`authority-server#mapping-contract`, #557, #818): the resources whose route
+admits an ordinary credential and joins it to a Mission
+(`governed_resources`); the delegate policy (`delegates`, each client with
+its depth ceiling); the scope mapping, which is the credential-authority
+adapter (`scope_actions`, each `scope` value to the actions it carries at the
+payments resource; a value it does not cover maps to nothing); and the
+mapping contract the join applies (`mapping_contract`). The contract states,
+in a closed vocabulary that names the one behavior this join implements:
+the subject mapping (`identity`: the credential's issuer-qualified subject
+compared with the Mission's by byte equality, the issuing authorization
+server being the Mission Issuer); the client mapping (`identity`, or a
+delegate in `delegates`); how an entry's `delegation` is evaluated
+(`client_id_matchers`: an exact `sub` matcher in `allowed_delegates` names a
+joining client, a profile matcher admits none, and `max_depth` is evaluated
+against the deployment's actor records); client-instance identity (neither
+supported nor required); the version identifier (`contract_id`, `version`);
+the audit record (`decision_evidence`: the PDP's signed Decision Evidence of
+each join decision, with the acting subject and client and either the
+`join_view_id` commitment or the `mission_binding_failed` denial; a join
+request refused before any decision is recorded in the PEP's signed Refusal
+Record instead); and the
+failure semantics (`mission_binding_failed`). Read by `@mission/demo-data`
+(`parseMasJoinPolicy`).
+
+- **Owner.** The deployment's identity owner for the mappings and delegate
+  policy; the payments resource's operator for the governed resources and
+  the scope mapping.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown and missing members, any mapping value this join does not
+  implement, a client instance, and a non-positive version. A composition
+  that would mount the join route refuses to start when no contract is
+  declared, before it connects to anything.
+- **Updating.** Edit, bump `mapping_contract.version` with any change to the
+  mapping, review, and restart the stack.
+
 ## `mas-pilot.json`
 
 The MAS pilot's deployment configuration (`@spec
@@ -68,7 +106,11 @@ authorization server's issuer, port, directory accounts, client
 registrations (each with the access token format the estate issues it,
 `jwt` or `opaque`) and resource vocabulary; the gateway's RFC 7662
 introspection of opaque tokens (`introspection`: its registered
-introspection client, call timeout and positive-cache bound); the mapping
+introspection client, call timeout and positive-cache bound); the separated
+MAS (`separated_mas`, #818 slice 4b: its host and port, the PDP principal
+that reads its Mission Status, the PDPs it enrolls for Join Disclosure by
+enforcement scope, and the state source's placement, which must be `pdp`,
+read timeout and response-size cap); the mapping
 cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the
 grants a development bootstrap of the pilot's Resource-policy store writes
@@ -87,8 +129,9 @@ is the pilot's contract.
 - **Integrity.** Repository review and the strict loaders: the configuration
   loader refuses unknown or missing members, a duplicate client, an estate
   issuer equal to the Mission Issuer, resource servers that omit the payments
-  resource, a token format other than `jwt` or `opaque`, and an introspection
-  client that is also one of the estate's own clients; the contract loader refuses an ambiguous mapping (a second row
+  resource, a token format other than `jwt` or `opaque`, an introspection
+  client that is also one of the estate's own clients, and a separated MAS
+  whose state source is placed anywhere but the PDP; the contract loader refuses an ambiguous mapping (a second row
   for one issuer-qualified estate subject or client), a claimed
   client-instance mapping and any failure semantics but
   `mission_binding_failed`; the Resource-policy grants are refused unless each
