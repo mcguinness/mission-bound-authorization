@@ -46040,7 +46040,7 @@
    "id": "approval-governance.re-check.steps",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "re-check",
-   "text": "A Relying Auditor re-checks an evaluation by confirming that it follows from the retained policy and the recorded assertions",
+   "text": "A Relying Auditor re-checks an evaluation by replaying it from retained evidence",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -46051,13 +46051,13 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a re-check verifies the record, recomputes approval_policy.digest over the retained snapshot, re-applies the snapshot's rule to the recorded assertions (approving with exactly the contributing set), and re-applies the recency rules at evaluation.evaluated_at; a digest mismatch ends it",
+    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id and the Mission's intent_hash, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
     "local": "The reference implementation has no Relying Auditor role, so nothing exercises a re-check."
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword."
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",

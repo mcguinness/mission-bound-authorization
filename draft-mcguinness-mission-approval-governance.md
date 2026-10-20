@@ -1023,23 +1023,40 @@ one byte sequence every external reference names:
 
 # Re-checking an Evaluation {#re-check}
 
-A Relying Auditor re-checks an evaluation by confirming that it follows
-from the retained policy and the recorded assertions. Conformance
-requires it to obtain the retained policy version before treating the
-evaluation as re-checked ({{conformance}}). The re-check has these
-steps:
+A Relying Auditor re-checks an evaluation by replaying it from retained
+evidence: the policy and any evaluator that decided, the inputs they
+evaluated, and the recorded assertions. Conformance requires it to
+obtain the retained policy version before treating the evaluation as
+re-checked ({{conformance}}). The re-check has these steps:
 
 1. Verify the record ({{envelope}}).
 2. Obtain the retained snapshot of the `approval_policy` version the
    record names, and recompute `approval_policy.digest` over it
-   ({{approval-policy}}). A mismatch means the evaluation is not
-   re-checked.
-3. Apply the snapshot's rule to the recorded assertions, and confirm
-   that it approves, counting exactly the assertions `contributing`
-   lists ({{record-members}}).
-4. Apply the recency rules of {{policy-approval-recency}}, as the
+   ({{approval-policy}}).
+3. Where that snapshot commits a separate evaluator that decides, as a
+   `governed_policy` root can ({{governed-policy-root}}), obtain the
+   retained snapshot of that evaluator and recompute its activation
+   policy reference digest ({{I-D.draft-mcguinness-oauth-mission}},
+   Section "Activation Policy Commitment").
+4. Obtain the inputs the deciding policy or evaluator evaluated, as the
+   issuer recorded them ({{I-D.draft-mcguinness-oauth-mission}}, Section
+   "Principals and Approval Basis"). These include each model output in
+   full, with its verdict and any narrowing, which the matching
+   `service` assertion records only by identifier. Confirm that each
+   input carries this record's `approval_event_id` and the Mission's
+   `intent_hash`, and that each contributing `service` assertion
+   corresponds to one of them.
+5. Re-run the deciding policy or evaluator, at its exact version, over
+   those inputs and the recorded assertions, and confirm that it
+   approves, counting exactly the assertions `contributing` lists
+   ({{record-members}}).
+6. Apply the recency rules of {{policy-approval-recency}}, as the
    snapshot or the declaration it commits states them, with
    `evaluation.evaluated_at` as the evaluation instant.
+
+Where a snapshot, the evaluator, or an input cannot be obtained, a
+recomputed digest does not match, a binding does not hold, or the replay
+reaches a different outcome, the evaluation is not re-checked.
 
 A re-check does not re-authenticate an assertion: the record carries an
 assertion's authentication context ({{assertion-authority}}), not the
