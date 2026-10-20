@@ -55,6 +55,7 @@ function contract(
     id: "double",
     version: 1,
     calls: 0,
+    usable: () => true,
     resolveIdentity(input: Parameters<JoinMappingContract["resolveIdentity"]>[0]): JoinIdentityResolution | undefined {
       c.calls += 1;
       const subject = subjects[`${input.subject.iss} ${input.subject.sub}`];

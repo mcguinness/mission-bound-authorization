@@ -46,7 +46,9 @@ interface Credential {
 }
 
 /** A pilot whose decision requests are recorded, so "reached the PDP" is observable. */
-async function composeRecorded(): Promise<{ pilot: MasPilot; requests: EvaluationRequest[]; evidence: EvidenceStore }> {
+async function composeRecorded(
+  extra: { mappingNow?: () => Date } = {},
+): Promise<{ pilot: MasPilot; requests: EvaluationRequest[]; evidence: EvidenceStore }> {
   const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const requests: EvaluationRequest[] = [];
@@ -58,6 +60,7 @@ async function composeRecorded(): Promise<{ pilot: MasPilot; requests: Evaluatio
     evidence,
     fga: alwaysAllowFga,
     modelId: "mas-pilot-model",
+    ...extra,
   });
   return { pilot, requests, evidence };
 }
@@ -395,13 +398,105 @@ describe("MAS pilot: a newer contract version moves a reassigned account (#818, 
     const onDana = await call(pilot, credential, danaMission, "get_invoice", { invoice_id: "inv-1" });
     expect(onDana.ok, JSON.stringify(onDana)).toBe(true);
   });
+});
 
-  it("an invalidated mapping fails closed: with no contract snapshot the credential maps to no authority, before any decision", async () => {
-    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1002", "invoices.read");
-    expect((await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
-    pilot.mapping.invalidate();
-    const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
+/** The shipped contract at a later version, under a new export identifier. */
+function contractVersion(pilot: MasPilot, version: number): Record<string, unknown> {
+  return {
+    ...(pilot.config.mapping_contract as Record<string, unknown>),
+    version,
+    provenance: {
+      source: "estate-directory-export",
+      export_id: `estate-dir-2026-10-19-${String(version).padStart(3, "0")}`,
+      exported_at: "2026-10-19T09:00:00Z",
+    },
+  };
+}
+
+describe("MAS pilot: a committed containment narrows a joined Mission (#818 review P1)", () => {
+  let pilot: MasPilot;
+  beforeAll(async () => {
+    ({ pilot } = await composeRecorded());
+  }, 30_000);
+  afterAll(async () => {
+    await pilot?.close();
+  });
+
+  it("denies authority_contained for the action a containment removed, while the uncontained read still permits", async () => {
+    const missionId = approve(pilot, "alice", { label: "contained" });
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read vendors.read");
+    expect((await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" })).ok).toBe(true);
+    const contained = pilot.kernel.contain(missionId, {
+      event: { type: "anomaly.detected", source: "svc:soc", observed_at: new Date().toISOString(), event_id: "mas-pilot-contain-1" },
+      remove: [{ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    expect(contained.record.containment?.contained).toEqual([{ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]);
+    const after = await call(pilot, credential, missionId, "get_invoice", { invoice_id: "inv-1" });
+    expect(after.ok).toBe(false);
+    expect(after.denial_reason).toBe("authority_contained");
+    const vendor = await call(pilot, credential, missionId, "lookup_vendor", { vendor_id: "acme" });
+    expect(vendor.ok, JSON.stringify(vendor)).toBe(true);
+  });
+});
+
+describe("MAS pilot: an unavailable mapping fails the join, not the credential bound (#818 review P2)", () => {
+  let pilot: MasPilot;
+  let requests: EvaluationRequest[];
+  let aliceMission: string;
+  // The mapping cache's clock runs this far behind the PEP's and PDP's, so an
+  // install can be stamped already past the staleness bound.
+  let mappingSkewMs = 0;
+  beforeAll(async () => {
+    ({ pilot, requests } = await composeRecorded({ mappingNow: () => new Date(Date.now() - mappingSkewMs) }));
+    aliceMission = approve(pilot, "alice", { label: "unavailable-mapping" });
+  }, 30_000);
+  afterAll(async () => {
+    await pilot?.close();
+  });
+
+  const lastIdentityOutcome = () => {
+    const record = [...pilot.mapping.audit()].reverse().find((r) => r.kind === "identity");
+    return record?.kind === "identity" ? record.outcome : undefined;
+  };
+
+  it("control: a usable contract whose scope mapping does not cover the action refuses out_of_authority before any decision", async () => {
+    // invoices.read maps to the invoice actions only, not the vendor read.
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    const decided = requests.length;
+    const res = await call(pilot, credential, aliceMission, "lookup_vendor", { vendor_id: "acme" });
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("out_of_authority");
+    expect(res.denial_reason).toBeUndefined();
+    expect(requests.length).toBe(decided);
+  });
+
+  it("an invalidated contract denies mission_binding_failed at the PDP's join, and a newly installed version permits the same request", async () => {
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    pilot.mapping.invalidate();
+    const decided = requests.length;
+    const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("mission_binding_failed");
+    expect(requests.length).toBe(decided + 1);
+    expect(lastIdentityOutcome()).toBe("no_snapshot");
+    expect(pilot.mapping.install(contractVersion(pilot, 2))).toEqual({ ok: true, version: 2 });
+    const retry = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
+    expect(retry.ok, JSON.stringify(retry)).toBe(true);
+  });
+
+  it("a contract past its staleness bound denies mission_binding_failed at the PDP's join, and a fresh version permits the same request", async () => {
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
+    mappingSkewMs = (pilot.config.mapping_cache.max_stale_seconds + 1) * 1000;
+    expect(pilot.mapping.install(contractVersion(pilot, 3))).toEqual({ ok: true, version: 3 });
+    mappingSkewMs = 0;
+    const decided = requests.length;
+    const res = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
+    expect(res.ok).toBe(false);
+    expect(res.denial_reason).toBe("mission_binding_failed");
+    expect(requests.length).toBe(decided + 1);
+    expect(lastIdentityOutcome()).toBe("stale");
+    expect(pilot.mapping.install(contractVersion(pilot, 4))).toEqual({ ok: true, version: 4 });
+    const retry = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
+    expect(retry.ok, JSON.stringify(retry)).toBe(true);
   });
 });

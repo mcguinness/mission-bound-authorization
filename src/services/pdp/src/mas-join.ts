@@ -116,6 +116,14 @@ export interface JoinMappingContract {
    */
   readonly delegatePolicy?: DelegatePolicy;
   /**
+   * Whether this snapshot can resolve anything at `now`: installed and within
+   * its staleness bound. An unusable contract is an unresolved mapping, which
+   * fails the join with `mission_binding_failed` (@spec
+   * authority-server#mapping-contract);
+   * a caller never reports it as a credential that carries no authority.
+   */
+  usable(now: Date): boolean;
+  /**
    * Rules 3 and 4: the PDP's mapping decision for one joined request. The
    * credential's issuer qualifies BOTH the subject and the client: the same
    * `sub` or `client_id` string under another issuer is a different identity.
@@ -155,6 +163,7 @@ export interface JoinMappingContract {
 export const UNRESOLVED_JOIN_MAPPING: JoinMappingContract = {
   id: "unresolved",
   version: 0,
+  usable: () => false,
   resolveIdentity: () => undefined,
   clientFor: () => undefined,
   credentialAuthority: () => undefined,

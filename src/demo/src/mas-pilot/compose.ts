@@ -45,7 +45,8 @@ import {
   TransactionEngine,
   type WriteReservationStore,
 } from "@mission/mcp-payments";
-import { type DecisionFn, deriveJoinDelegation, type Fga, type MissionView, RUNTIME_POSTURE } from "@mission/pdp";
+import { type DecisionFn, type Fga, RUNTIME_POSTURE } from "@mission/pdp";
+import { kernelMissionView } from "../kernel-mission-view.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
 import {
   type EstateAuthorizationServer,
@@ -63,6 +64,12 @@ export interface MasPilotOptions {
   modelId: string;
   config?: MasPilotConfig;
   now?: () => Date;
+  /**
+   * The mapping cache's own clock, which stamps each install and so starts
+   * its staleness bound. Defaults to `now`. A test sets it behind `now` to
+   * install a snapshot that is already stale.
+   */
+  mappingNow?: () => Date;
 }
 
 export interface MasPilot {
@@ -85,25 +92,15 @@ export interface MasPilot {
   close: () => Promise<void>;
 }
 
-/** The pilot's Mission view loader: the kernel's committed record, keyed by the canonical pair. */
+/**
+ * The pilot's Mission view loader: the kernel's committed record through the
+ * shared projection (`kernel-mission-view.ts`), containment and discharge
+ * deltas included, keyed by the canonical pair.
+ */
 function missionLoader(kernel: MissionKernel): (ref: MissionReference) => LoadedView | undefined {
   return (ref) => {
-    const record = kernel.get(ref.id);
-    if (!record || record.issuer !== ref.issuer) return undefined;
-    const fresh = kernel.applyExpiry(record);
-    const view: MissionView = {
-      id: fresh.id,
-      issuer: fresh.issuer,
-      state: fresh.state,
-      version: fresh.version,
-      authority_hash: fresh.authority_hash,
-      authority_set: fresh.authority_set.map((e) => ({
-        ...e,
-        ...(e.delegation !== undefined ? { join_delegation: deriveJoinDelegation(e.delegation) } : {}),
-      })),
-      subject: fresh.subject,
-      client_id: fresh.client_id,
-    };
+    const view = kernelMissionView(kernel, ref.id);
+    if (!view || view.issuer !== ref.issuer) return undefined;
     return {
       view,
       observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() },
@@ -177,9 +174,10 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
     const unused = await generateKeyPair("ES256", { extractable: true });
     const missionIssuerJwks = { keys: [{ ...(await exportJWK(unused.publicKey)), kid: unusedKid, alg: "ES256" }] };
 
+    const mappingNow = opts.mappingNow ?? opts.now;
     const mapping = new MappingContractCache({
       maxStaleSeconds: config.mapping_cache.max_stale_seconds,
-      ...(opts.now ? { now: opts.now } : {}),
+      ...(mappingNow ? { now: mappingNow } : {}),
     });
     const installed = mapping.install(config.mapping_contract);
     if (!installed.ok) throw new Error(installed.reason);

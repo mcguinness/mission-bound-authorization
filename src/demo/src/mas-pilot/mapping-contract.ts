@@ -271,6 +271,10 @@ class MappingSnapshot implements JoinMappingContract {
     return age >= 0 && age <= this.maxStaleMs;
   }
 
+  usable(now: Date): boolean {
+    return this.fresh(now);
+  }
+
   private ref(): { id: string; version: number; export_id: string } {
     return { id: this.id, version: this.version, export_id: this.doc.provenance.export_id };
   }

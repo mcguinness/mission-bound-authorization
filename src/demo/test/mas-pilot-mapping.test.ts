@@ -181,6 +181,20 @@ describe("mapping contract cache: versions and freshness (@spec authority-server
     expect(cache.current().resolveIdentity(ask("u-1001", "estate-bot", ESTATE, c.now()))?.subject.sub).toBe("alice");
   });
 
+  it("reports a snapshot usable within the staleness bound and unusable once stale, invalidated, or never installed", () => {
+    const c = clock();
+    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: c.now });
+    expect(cache.current().usable(c.now())).toBe(false);
+    cache.install(doc());
+    expect(cache.current().usable(c.now())).toBe(true);
+    c.advance(301);
+    expect(cache.current().usable(c.now())).toBe(false);
+    cache.install(doc({ version: 2 }));
+    expect(cache.current().usable(c.now())).toBe(true);
+    cache.invalidate();
+    expect(cache.current().usable(c.now())).toBe(false);
+  });
+
   it("an invalidated cache resolves nothing, and records each refused decision", () => {
     const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());

@@ -44,7 +44,6 @@ import {
   type RuntimePosture,
   stalenessBound,
   stateSourcePlacement,
-  deriveJoinDelegation,
   type Fga,
   fgaResourcePolicy,
   issuerLocalClients,
@@ -99,6 +98,7 @@ import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResou
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
 import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
+import { kernelMissionView } from "./kernel-mission-view.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -1047,47 +1047,9 @@ export async function composeStack(opts: {
   // Exposed on ComposedStack for inspection (agent-run.ts's kill-switch poll);
   // callers that need a PDP decision use `loadView` below instead, which pairs
   // this with the freshness of the read.
-  const viewFor = (missionId: string): MissionView | undefined => {
-    const r = kernel.get(missionId);
-    if (!r) return undefined;
-    const fresh = kernel.applyExpiry(r);
-    // @spec discharge#runtime, discharge#visibility (#1144, D335): the committed
-    // discharge DELTA beside the committed set, so the PDP refuses a discharged
-    // entry at the point of use (`authority_discharged`, step 5b) and reads a
-    // credential's discharge condition through its source entries (step 5c).
-    // The PDP cannot detect a missing delta, so this loader supplies it.
-    const dischargedDigests = kernel.dischargedEntryDigests(fresh);
-    return {
-      id: fresh.id,
-      issuer: fresh.issuer,
-      state: fresh.state,
-      version: fresh.version,
-      authority_hash: fresh.authority_hash,
-      // @spec authority-server#mission-join rule 5 (#557 review point 2):
-      // this is the canonical Mission loader, so it is where a kernel
-      // AuthorityEntry's own `delegation` policy gets mapped to the PDP's
-      // `join_delegation` member via the shared deterministic adapter,
-      // rather than that member existing only in hand-built test fixtures.
-      authority_set: fresh.authority_set.map((e) => ({
-        ...e,
-        ...(e.delegation !== undefined ? { join_delegation: deriveJoinDelegation(e.delegation) } : {}),
-      })),
-      subject: fresh.subject,
-      client_id: fresh.client_id,
-      // The containment DELTA (not a filtered set), so the PDP distinguishes
-      // never-approved (out_of_authority) from approved-then-contained
-      // (authority_contained).
-      ...(fresh.containment
-        ? {
-            containment: {
-              version: fresh.containment.containment_version,
-              contained: fresh.containment.contained,
-            },
-          }
-        : {}),
-      ...(dischargedDigests.length > 0 ? { discharged: { entry_digests: dischargedDigests } } : {}),
-    };
-  };
+  // The committed record's projection, containment and discharge deltas
+  // included, shared with the MAS pilot (`kernel-mission-view.ts`).
+  const viewFor = (missionId: string): MissionView | undefined => kernelMissionView(kernel, missionId);
 
   // @spec runtime#state-freshness, authzen#context-audience-freshness: this
   // deployment's trusted state source is the one config/enforcement-scope.json

@@ -1545,6 +1545,11 @@ export class Pep {
     // @spec authority-server#mapping-contract (#818): the one contract
     // snapshot this joined request applies, forwarded to the PDP below.
     let joinMapping: JoinMappingContract | undefined;
+    // @spec authority-server#mapping-contract (#818 review P2): set when that
+    // snapshot cannot resolve anything (absent, invalidated or stale). The
+    // mapping is unresolved, so the join fails `mission_binding_failed` at the
+    // PDP; this PEP never reports it as a credential with no authority.
+    let joinMappingUnavailable = false;
     // @spec authzen#context-credential (#825, D312) — the credential's own
     // authority as the PDP receives it: the Mission-bound credential's
     // verified entries, or, on the baseline-Join path, the entries the
@@ -1619,14 +1624,23 @@ export class Pep {
       // from the same snapshot the PDP's join applies, for the credential's
       // own verified issuer and `scope`.
       joinMapping = this.deps.masJoin.mappingContract?.();
-      const ordinaryAuthority = joinMapping
-        ? joinMapping.credentialAuthority({
-            issuer: token.credential?.issuer ?? "",
-            scope: token.mission ? undefined : token.scope,
-            resource: CANONICAL_RESOURCE,
-            now: this.now(),
-          })
-        : this.deps.masJoin.resolveOrdinaryAuthority?.(token);
+      // @spec authority-server#mapping-contract (#818 review P2): a contract
+      // with no usable snapshot is an unresolved mapping, not a credential
+      // without authority. The request carries an empty credential authority
+      // (nothing is mapped) to the PDP, whose join denies it
+      // `mission_binding_failed`; a usable contract whose scope mapping
+      // grants nothing for this action stays `out_of_authority` below.
+      joinMappingUnavailable = joinMapping !== undefined && !joinMapping.usable(this.now());
+      const ordinaryAuthority = joinMappingUnavailable
+        ? []
+        : joinMapping
+          ? joinMapping.credentialAuthority({
+              issuer: token.credential?.issuer ?? "",
+              scope: token.mission ? undefined : token.scope,
+              resource: CANONICAL_RESOURCE,
+              now: this.now(),
+            })
+          : this.deps.masJoin.resolveOrdinaryAuthority?.(token);
       if (!ordinaryAuthority) return await this.refuse(boundary, token, "out_of_authority", mapping.action, loaded.view);
       // The same entries reach the PDP as the credential bound, so a remote
       // PDP enforces them too rather than only this non-empty gate. Entries
@@ -1907,8 +1921,15 @@ export class Pep {
         await this.recordRefusal(boundary, token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
         return { permitted: false, denial_reason: "out_of_authority" };
       }
-    } else if (carriedAuthority !== undefined && coveringCredentialEntries(carriedAuthority, establishedFacts).length === 0) {
+    } else if (
+      !joinMappingUnavailable &&
+      carriedAuthority !== undefined &&
+      coveringCredentialEntries(carriedAuthority, establishedFacts).length === 0
+    ) {
       // The Mission's view itself is never filtered by the credential (D340).
+      // An unavailable mapping contract skips this gate only so the PDP's join
+      // reports it (`mission_binding_failed`); its empty credential authority
+      // still permits nothing there (#818 review P2).
       return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
     }
 
