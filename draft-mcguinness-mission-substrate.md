@@ -1068,9 +1068,8 @@ Portable Evidence:
 {: #illustrative-statement-capabilities newline="true"}
 
 A real Statement also states each supplied entry's temporal elements
-and failure behavior, in the entry or in one statement that covers
-every entry.  For the skeleton, one sentence after the list would
-serve: "Each supplied entry's temporal elements are inherited from
+and failure behavior, in the entry or once for every entry.  For the
+skeleton, one sentence after the list would serve: "Each supplied entry's temporal elements are inherited from
 the reliance floor of {{bounded-reliance}}, and absent, stale,
 unknown, incomparable, invalid, or unavailable input refuses the
 decision."
