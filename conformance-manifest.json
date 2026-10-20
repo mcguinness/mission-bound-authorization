@@ -50335,6 +50335,27 @@
    "tests": []
   },
   {
+   "id": "expansion.not-step-up.client-no-expansion-for-authn",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "not-step-up",
+   "text": "A client MUST NOT initiate expansion for a denial that is an authentication shortfall.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a denial caused by an acr or amr constraint leads the client to step-up authentication, never to an expansion request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",

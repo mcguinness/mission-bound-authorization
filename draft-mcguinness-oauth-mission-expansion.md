@@ -395,8 +395,11 @@ Expansion is distinct from authentication step-up {{RFC9470}}:
   authentication is satisfied by step-up. The Authority Set does not
   change.
 - A request denied because the requested authority is not in the
-  active Mission's Authority Set requires expansion. The Authority Set
+    active Mission's Authority Set requires expansion. The Authority Set
   is enlarged only through a new approval event.
+
+A client MUST NOT initiate expansion for a denial that is an
+authentication shortfall.
 
 {{step-up-distinction}} describes the consequence of conflating the
 two.
@@ -2140,9 +2143,9 @@ authority shortfall as a mere re-authentication and silently widen
 nothing.
 
 Mitigation: a denial that is an authentication shortfall (`acr`,
-`amr`) is satisfied by step-up and MUST NOT be routed to expansion; a
-denial that is an authority shortfall is the one expansion addresses
-({{not-step-up}}). The component that classifies the denial
+`amr`) is satisfied by step-up, and a client does not route it to
+expansion; a denial that is an authority shortfall is the one
+expansion addresses ({{not-step-up}}). The component that classifies the denial
 ({{eligibility}}) makes this distinction.
 
 ## Policy Probing {#policy-probing}
