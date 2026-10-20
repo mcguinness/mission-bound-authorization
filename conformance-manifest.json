@@ -50313,6 +50313,28 @@
    "tests": []
   },
   {
+   "id": "expansion.creation.failed-retry-outcome",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-reservation",
+   "text": "same fingerprint, operation failed: return the recorded failure, directly or through the same deferral's next poll (`access_denied` after a denial or a refused activation, `expired_token` after the deadline)",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a retry of a denied, expired or refused expansion with the same creation_request_id and fingerprint creates nothing and receives the recorded failure, directly or on the same deferral's next poll",
+    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",

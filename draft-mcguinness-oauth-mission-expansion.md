@@ -1733,7 +1733,10 @@ initiation governs recovery ({{creation-recovery}}).
 
 A reservation is the durable record binding the authenticated client,
 the `creation_request_id`, and the fingerprint. It is created in a
-`reserved` state and moves to `completed` or `failed`. The
+`reserved` state, which covers a pending completion, and moves to
+`completed` when the successor activates or to `failed` when the
+operation is denied, its deadline passes, or its activation is
+refused. The
 `(client, creation_request_id)` pair is unique, and the store MUST
 enforce that uniqueness as a constraint; a read-before-insert check
 without one does not withstand concurrent retries.
@@ -1750,8 +1753,12 @@ resolves by fingerprint:
 
 - same fingerprint, operation completed: recover it
   ({{creation-recovery}});
-- same fingerprint, operation reserved or pending: return the same
-  continuation, or a retryable in-progress result; and
+- same fingerprint, operation reserved: return the same continuation
+  or deferral, or a retryable in-progress result;
+- same fingerprint, operation failed: return the recorded failure,
+  directly or through the same deferral's next poll (`access_denied`
+  after a denial or a refused activation, `expired_token` after the
+  deadline); and
 - different fingerprint: refuse with `invalid_request`, since the
   identifier was reused for a different operation.
 
