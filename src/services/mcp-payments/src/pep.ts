@@ -331,17 +331,21 @@ export interface ActionMapping {
   /**
    * @spec resource-access#resource-matching (#1276, D447, D457): this
    * operation's documented, trusted operation contract: how the PEP
-   * establishes its target before any authority is matched. The payments
-   * contract is service-level: every payments tool acts on the service
-   * {@link CANONICAL_RESOURCE} names, and actions and constraints determine
-   * the permitted operations within it
-   * (`src/docs/operation-profile-payments-v1.md`).
+   * establishes its target before any authority is matched. The shipped
+   * payments contract is service-level: every payments tool acts on the
+   * service {@link CANONICAL_RESOURCE} names, and actions and constraints
+   * determine the permitted operations within it
+   * (`src/docs/operation-profile-payments-v1.md`). An invoice-scoped tool may
+   * instead declare the argument-derived {@link PAYMENTS_INVOICE_CONTRACT},
+   * whose target is the invoice its validated `invoice_id` names.
    *
    * Absent means no contract: the operation is refused before any decision
    * request, never matched against the protected resource's metadata
-   * identifier or the token's audience by default. A finer contract form is
-   * unsupported and refuses too, and declarations naming different targets
-   * are ambiguous and refuse. Never read from an agent argument.
+   * identifier or the token's audience by default. An unsupported contract
+   * form, an argument-derived contract whose argument is missing, malformed
+   * or a list, and declarations naming different targets all refuse. The
+   * contract itself is never read from an agent argument, and an argument the
+   * contract does not name never contributes to the target.
    */
   target?: OperationContract | readonly OperationContract[];
   needsInvoice: boolean;
@@ -426,6 +430,32 @@ export function recipientParams(
  * Declared per tool below, never assumed for a tool that omits it.
  */
 const PAYMENTS_SERVICE_CONTRACT: OperationContract = Object.freeze({ service: CANONICAL_RESOURCE });
+
+/**
+ * @spec resource-access#resource-matching, authzen#context-operation-target
+ * (#1276, D447, D457): the argument-derived invoice contract, a finer
+ * contract an invoice-scoped tool may declare in place of the service-level
+ * one. The operation's target is the invoice its validated `invoice_id`
+ * names, `<canonical resource URI>/invoices/<invoice_id>`, with the
+ * identifier percent-encoded as one path segment (RFC 6570 simple
+ * expansion), so an `exact` entry naming that URI covers that invoice alone
+ * and an entry naming the service identifier does not cover it. The PEP
+ * derives it from the intake-validated arguments only, never from an entry,
+ * the token's audience or an argument the template does not name, and
+ * re-derives it from the live profile before every release.
+ *
+ * No shipped `TOOL_ACTIONS` row declares it: under the `exact` matcher a
+ * deployment that declares it for a tool needs entries naming the invoice
+ * URIs, so the shipped profile keeps the service-level contract and its
+ * decision bytes. Declared here, beside {@link PAYMENTS_SERVICE_CONTRACT},
+ * for a deployment's Operation Profile (`PepDeps.operationProfile`) to
+ * select, and registered with a remote PDP as an operation contract
+ * (`AuthorizedPep.operationContracts`) so consistency check 11 admits the
+ * targets it establishes.
+ */
+export const PAYMENTS_INVOICE_CONTRACT: OperationContract = Object.freeze({
+  template: `${CANONICAL_RESOURCE}/invoices/{invoice_id}`,
+});
 
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: false, bindsVendorScope: true },
@@ -600,9 +630,11 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // execute the operation on the target it matched: matching a different
     // target never authorizes the execution." The target is re-established
     // from the LIVE Operation Profile at every use, exactly as the phase is,
-    // and compared with the target the permit was decided on. A contract that
-    // moved, or that no longer establishes one target, refuses: a permit is
-    // never carried to another target, cacheable reads included.
+    // and, for an argument-derived contract, from the arguments the operation
+    // executes with; it is compared with the target the permit was decided
+    // on. A contract that moved, or that no longer establishes one target,
+    // refuses: a permit is never carried to another target, cacheable reads
+    // included.
     //
     // `target_drift` is the closed set's value for a bound decision input
     // that "differs or cannot be established at use"; the Runtime Evidence
@@ -611,7 +643,7 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // item, not a new value).
     name: "operation_target",
     failure: (attempt, { profile }) => {
-      const current = establishOperationTarget(profile?.target);
+      const current = establishOperationTarget(profile?.target, attempt.operationArguments);
       return current.ok && current.target === attempt.operationTarget ? undefined : "target_drift";
     },
   },
@@ -1084,6 +1116,15 @@ export interface ExecutionAttempt {
    * before every release.
    */
   operationTarget: string;
+  /**
+   * @spec resource-access#resource-matching, authzen#permit-binding-split
+   * (#1276, D457): the validated arguments the operation executes with, as
+   * this PEP derived {@link operationTarget} from them (a frozen copy). The
+   * `operation_target` use check derives the target again from the live
+   * contract and these arguments, so an argument-derived target is held to
+   * the arguments of the execution, not only to the contract.
+   */
+  operationArguments: Readonly<Record<string, unknown>>;
   action: string;
   /**
    * The tool whose crossing this attempt is about to make. The PEP re-derives
@@ -1426,14 +1467,18 @@ export class Pep {
   }
 
   /**
-   * @spec resource-access#resource-matching (#1276, D447, D457): the
-   * operation target this surface establishes for `tool`, from the trusted
-   * contract its LIVE Operation Profile declares, independently of any
-   * presented entry, the token's audience, and the caller's arguments. A
-   * missing, unsupported or ambiguous contract establishes none.
+   * @spec resource-access#resource-matching, authzen#context-operation-target
+   * (#1276, D447, D457): the operation target this surface establishes for
+   * `tool`, from the trusted contract its LIVE Operation Profile declares
+   * and, for an argument-derived contract, the one validated argument that
+   * contract names; independently of any presented entry, the token's
+   * audience, and every other argument (an agent-supplied `operation_target`
+   * or `resource` argument is never read). A missing, unsupported or
+   * ambiguous contract, or a missing, malformed or list-valued argument,
+   * establishes none.
    */
-  operationTargetFor(tool: string): OperationTargetResolution {
-    return establishOperationTarget(this.toolAction(tool)?.target);
+  operationTargetFor(tool: string, args: Readonly<Record<string, unknown>>): OperationTargetResolution {
+    return establishOperationTarget(this.toolAction(tool)?.target, args);
   }
 
   /** The permit `conditions` members this PEP recognizes (@spec authzen#response-context). */
@@ -1705,12 +1750,13 @@ export class Pep {
 
     // @spec resource-access#resource-matching (#1276, D447, D457): "Before
     // matching authority, the resource server establishes the operation's
-    // target". From the tool's trusted contract only: never an entry, the
-    // token's audience, or an argument (an agent-supplied `operation_target`
-    // or `resource` argument is never read). No one target, no operation:
-    // refused before any decision request, with no fallback to this
-    // resource's metadata identifier.
-    const established = this.operationTargetFor(tool);
+    // target". From the tool's trusted contract and, where that contract is
+    // argument-derived, the one validated argument it names: never an entry,
+    // the token's audience, or any other argument (an agent-supplied
+    // `operation_target` or `resource` argument is never read). No one
+    // target, no operation: refused before any decision request, with no
+    // fallback to this resource's metadata identifier.
+    const established = this.operationTargetFor(tool, args);
     if (!established.ok) return await this.refuse(boundary, token, "operation_target_unresolvable", mapping.action, view);
     const operationTarget = established.target;
 
@@ -2301,6 +2347,7 @@ export class Pep {
       audience: boundary,
       ...(permitVersion !== undefined ? { boundaryVersion: permitVersion } : {}),
       operationTarget,
+      operationArguments: Object.freeze({ ...args }),
       action: mapping.action,
       tool,
       // @spec authzen#response-context — the permit's own bound conditions,
