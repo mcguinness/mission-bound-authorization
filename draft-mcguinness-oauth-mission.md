@@ -3982,12 +3982,21 @@ surface that references a Mission from outside carries it as
 The following is an example of a Mission Record:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
   "state": "active",
-  "intent": { "goal": "Reconcile Q3 invoices ...",
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 500 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z" },
   "proposed_authority": [
     { "type": "mission_resource_access",
@@ -4028,11 +4037,11 @@ The following is an example of a Mission Record:
       } }
   ],
   "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
   "intent_hash":
-    "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
   "proposal_hash":
-    "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+    "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approval_basis": {
@@ -4044,13 +4053,13 @@ The following is an example of a Mission Record:
       "sub": "user_3p2q8mN1a0kV7tR" },
     "adjudication": { "kind": "human" },
     "root_commitment":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "authority_source": { "type": "user_delegated" },
   "client_id": "s6BhdRkqt3",
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-  "created_at": "2026-10-15T14:32:11Z",
+  "created_at": "2026-11-02T08:00:00Z",
   "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
@@ -4080,11 +4089,11 @@ is the workload principal, `client_id` is the agent, and
 }
 ~~~
 
-The hash values above are illustrative: the test vectors
-({{test-vectors}}) compute anchors over a reduced Mission Intent and
-Authority Set, not over these objects. A companion that extends this
-example either reproduces the recorded objects byte-exactly or states
-that its example diverges and its anchors differ.
+The first example's anchors are computed over its displayed `intent`,
+`proposed_authority` and `authority_set` ({{integrity-anchors}}); the
+excerpt's `root_commitment` is illustrative. A companion that extends
+this example either reproduces the recorded objects byte-exactly or
+states that its example diverges and its anchors differ.
 
 # Integrity and Commitments {#integrity-and-commitments}
 
