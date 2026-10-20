@@ -13,7 +13,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `e259a09f`
+Every statement here is true of the reference implementation at `3c7a35e6`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -378,18 +378,22 @@ store.
 
 | Property | How |
 |---|---|
-| One verifier | `verifyMissionStatusResponse` (`services/pdp/src/state-observation.ts`), the function `verifyStateAssertion` also runs: the Status `typ`, a declared key, `iss`, `aud` equal to the enforcement scope, `exp`, the requested Mission under that issuer, a signed `fresh_until`. |
-| Its own checks | The request's `nonce` echoed; `iat` not in the future; `fresh_until` not passed; `state` one of `active`, `suspended`, `terminated`; `version`, `authority_hash`, `subject`, `client_id` and each entry (with its `delegation`) well formed. A reference naming another issuer is never read; the identifier travels as one percent-encoded path segment, and a dot segment is never requested. |
+| One verifier | `verifyMissionStatusResponse` (`services/pdp/src/state-observation.ts`), the function `verifyStateAssertion` also runs: the Status `typ`, a declared key, `iss`, `aud` equal to the enforcement scope, `exp` and `iat` both required (a response without either does not verify, on this path and the PEP-carried assertion's), not expired, the requested Mission under that issuer, a signed `fresh_until`. |
+| Its own checks | The request's `nonce` echoed; `iat` not in the future; `state` one of `active`, `suspended`, `terminated`; `version`, `authority_hash`, `subject`, `client_id` and each entry (with its `delegation`) well formed. A reference naming another issuer is never read; the identifier travels as one percent-encoded path segment, and a dot segment is never requested. |
 | Keys | The issuer's published JWKS, restricted to the declared status `kid`s (`declaredStatusKeys`): a key published for another purpose verifies nothing. |
 | Authentication | This PDP's service credential holding `mission_status`, in `x-service-token`, as the reference Status route requires. |
 | Bounds | One deadline covers connecting, the headers and the body; the body is counted against a byte cap as it arrives; a redirect is never followed. |
-| Fail closed | A typed failure (`unavailable`, `unauthorized`, `not_found`, `unverifiable`), never thrown and never cached. |
-| Cache | Reused only before the signed `fresh_until` (no skew allowance), within `iat` plus the issuer's `mission_max_stale_seconds`, and within the caller's `maxAgeSeconds`; `fresh: true` reads the source whatever the cache holds; an older observation never replaces a newer one. |
+| Fail closed | A typed failure (`unavailable`, `unauthorized`, `not_found`, `unverifiable`, `stale`), never thrown and never cached. |
+| Reliance bounds | Every observation the resolver returns, read now (a `fresh: true` read included) or reused from the cache, is before its signed `fresh_until`, within `iat` plus the issuer's `mission_max_stale_seconds`, and within the caller's `maxAgeSeconds`, with no skew allowance on the old side. One function holds the three bounds for both paths (`boundPassed`); an observation read now that has passed one verified but is refused `stale`, and is not cached. |
+| Cache | Keyed on the Mission within one resolver; `fresh: true` reads the source whatever the cache holds; an older observation never replaces a newer one. |
 | View | The audience-scoped effective set; each `delegation` mapped to `join_delegation` by `deriveJoinDelegation`; `subject` and `client_id` only where disclosed; no containment or discharge delta. |
 
 Witnesses: `services/pdp/test/mission-status-resolver.test.ts` (a Status
-server double: every answer that must establish nothing, the cache bounds,
-the configuration), and `services/authorization-server/test/mission-status-resolver-as.test.ts`
+server double: every answer that must establish nothing, a response without
+`exp` or `iat`, an observation read now that is past a reliance bound, the
+cache bounds, the configuration), the PEP-carried assertion signed without
+`exp` or `iat` in `services/pdp/test/evaluate-authzen-members.test.ts`
+(`AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > an assertion signed without exp, or without iat, denies stale_state`), and `services/authorization-server/test/mission-status-resolver-as.test.ts`
 (the reference authorization server over HTTP, configured from its published
 metadata: the Join Disclosure an enrolled PDP reads and one it does not, a
 revocation seen at once on a fresh read and after the signed bound on a
@@ -449,10 +453,11 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   services/mcp-payments/test/estate-route.test.ts services/mcp-payments/test/estate-route-introspection.test.ts \
   services/mcp-payments/test/token-introspection.test.ts services/pdp/test/evaluate-join-mapping.test.ts \
   services/authorization-server/test/status-join-disclosure.test.ts \
-  services/authorization-server/test/mission-status-resolver-as.test.ts services/pdp/test/mission-status-resolver.test.ts
+  services/authorization-server/test/mission-status-resolver-as.test.ts services/pdp/test/mission-status-resolver.test.ts \
+  services/pdp/test/evaluate-authzen-members.test.ts
 ```
 
-§10's three files need no OpenFGA. The reference authorization server binds
+§10's four files need no OpenFGA. The reference authorization server binds
 `localhost:14826` in `status-join-disclosure.test.ts` and `localhost:14827` in
 `mission-status-resolver-as.test.ts`; the Status server double and the
 forwarding proxy bind ephemeral ports.
