@@ -885,7 +885,7 @@ In the ERP examples in this document, the operation contract identifies
 constraints determine the permitted operations within that service.
 
 Under the Q3 reconciliation Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the approved agent
+`msn_M9nCx5pbv3KEbM7Xz7gT0_OB9bKOSUZ-`, the approved agent
 `s6BhdRkqt3`, acting for `alice`, spawns a read-only invoice
 extraction sub-agent and presents a child-creation token exchange whose
 `subject_token` is the parent's Mission-bound access token, proving
@@ -907,7 +907,7 @@ subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
   access_token&
 mission_intent=%7B%22intent%22%3A
   %7B...read-only%20Q3%20invoice%20extraction...%7D%7D&
-parent=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
+parent=msn_M9nCx5pbv3KEbM7Xz7gT0_OB9bKOSUZ-&
 child_actor=%7B%22sub%22%3A%22subagent-invoice-extractor%22%2C
   %22sub_profile%22%3A%22ai_agent%22%7D&
 creation_request_id=812d8100-565d-5f56-9cd3-66783a16259e&
@@ -946,10 +946,10 @@ parent. The decoded child access token:
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "parent": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "id": "msn_M9nCx5pbv3KEbM7Xz7gT0_OB9bKOSUZ-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4",
+        "sha-256:w0XsO5uq3Llq9CfyNmFh5ENxJsi8walVugiCwWxeIEQ",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate"
@@ -1084,10 +1084,10 @@ Example:
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "parent": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "id": "msn_M9nCx5pbv3KEbM7Xz7gT0_OB9bKOSUZ-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4",
+        "sha-256:w0XsO5uq3Llq9CfyNmFh5ENxJsi8walVugiCwWxeIEQ",
       "depth": 1,
       "delegation_id": "dlg_7pQ4m",
       "cascade_mode": "immediate",
@@ -2082,16 +2082,16 @@ Example:
 {
   "evidence_id": "chd_8K2nP4qV",
   "parent": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_M9nCx5pbv3KEbM7Xz7gT0_OB9bKOSUZ-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4"
+      "sha-256:w0XsO5uq3Llq9CfyNmFh5ENxJsi8walVugiCwWxeIEQ"
   },
   "child": {
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g"
+      "sha-256:5TEV3V5Ej6aOjuCIytX7jc1YWyWEF-nN_6ILcAbW3-M"
   },
   "child_actor": {
     "sub": "subagent-invoice-extractor",
@@ -2101,7 +2101,7 @@ Example:
     "result": "strict_subset"
   },
   "fanout": {
-    "active_children": 2,
+    "active_children": 1,
     "max_children": 5
   },
   "cascade_mode": "immediate",

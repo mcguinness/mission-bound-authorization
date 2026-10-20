@@ -21,10 +21,14 @@
  *   such a token, so it admits no estate credential.
  * - The PEP and PDP: the reference `Pep` and decision point, sharing one
  *   payments store. Every crossing on either route goes through the PEP.
- *
- * The decision point, its Resource policy and the FGA client are injected:
- * the slice's tests pass the reference fixtures, and an OpenFGA-backed
- * composition is a later slice.
+ * - The Resource policy (#828, #818 slice 2): stored OpenFGA entitlements the
+ *   decision point reads with no Mission input, for principals under the
+ *   ESTATE issuer: the subject and client the resource authenticated, never
+ *   the identities the mapping contract maps them to. The store is attached
+ *   (configured store and model, nothing written) or bootstrapped for
+ *   development (a fresh store seeded from `config/mas-pilot.json`
+ *   `resource_policy` and the payments store's invoice ownership). The PEP's
+ *   Mission-authority check reads the same store.
  */
 
 import { exportJWK, generateKeyPair } from "jose";
@@ -33,8 +37,9 @@ import { AUTHORITY_SOURCES, CONTAINMENT_POLICY, DERIVATION_POLICY, TOPOLOGY } fr
 import {
   ActorRecords,
   Connectors,
+  createEphemeralEvidenceKeys,
   createHttpMcpChannel,
-  type EvidenceStore,
+  EvidenceStore,
   type HttpMcpChannel,
   type LoadedView,
   McpPaymentsServer,
@@ -45,8 +50,16 @@ import {
   TransactionEngine,
   type WriteReservationStore,
 } from "@mission/mcp-payments";
-import { type DecisionFn, type Fga, RUNTIME_POSTURE } from "@mission/pdp";
+import {
+  type EvaluationRequest,
+  type Fga,
+  fgaResourcePolicy,
+  issuerLocalClients,
+  issuerLocalPrincipals,
+  RUNTIME_POSTURE,
+} from "@mission/pdp";
 import { kernelMissionView } from "../kernel-mission-view.js";
+import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "../resource-policy-store.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
 import {
   type EstateAuthorizationServer,
@@ -56,12 +69,16 @@ import {
 import { MappingContractCache } from "./mapping-contract.js";
 
 export interface MasPilotOptions {
-  /** The decision point entry the PEP submits to (it closes over the PDP's emission path). */
-  decide: DecisionFn;
-  /** The PEP's evidence store, wired to the same signing material as `decide`. */
-  evidence: EvidenceStore;
-  fga: Fga;
-  modelId: string;
+  /** The OpenFGA the Resource policy and the Mission-authority check read. */
+  openfga: { apiUrl: string; presharedKey: string; caCertPath?: string };
+  /**
+   * @spec runtime#input-resource-policy (#828): attach to a configured
+   * Resource-policy store, or bootstrap a development one. No default
+   * (`resource-policy-store.ts`).
+   */
+  resourcePolicyStore: ResourcePolicyStore;
+  /** Observes each decision request the PEP submits, before the PDP decides it (tests). */
+  observeDecisionRequest?: (request: EvaluationRequest) => void;
   config?: MasPilotConfig;
   now?: () => Date;
   /**
@@ -84,6 +101,10 @@ export interface MasPilot {
   payments: PaymentsStore;
   /** The payments connectors: the wires and emails the resource actually committed. */
   connectors: Connectors;
+  /** The PEP's evidence store: every Decision Evidence and Refusal Record it retained. */
+  evidence: EvidenceStore;
+  /** The Resource-policy store: its ids, so a restart can attach, and whether it was bootstrapped. */
+  resourcePolicy: { fga: Fga; storeId: string; modelId: string; development: boolean };
   pep: Pep;
   /** The MAS-governed route that admits estate credentials. */
   gateway: HttpMcpChannel;
@@ -193,14 +214,41 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
         { id: "inv-2", vendor_id: "acme", amount: "900.00", currency: "USD", payee_account: "acct-acme-001", status: "payable" },
       ],
     );
+
+    // @spec runtime#input-resource-policy (#828): the independently
+    // administered Resource policy. Attached, the store is used as it stands;
+    // bootstrapped for development, it is seeded with the estate's grants and
+    // the invoice ownership above, nothing derived from a Mission or a token.
+    const store = await openResourcePolicyStore(opts.openfga, opts.resourcePolicyStore);
+    if (store.development) {
+      await seedDevelopmentResourcePolicy(store.fga, config.estate.issuer, payments.listInvoices(), config.resource_policy);
+    }
+    // The principals are issuer-local to the ESTATE: the subject and client
+    // the gateway authenticated (the request's `subject` and
+    // `context.actor.client_id`). A Mission-side identity, the mapping
+    // contract's output, is never a Resource-policy principal here: the
+    // policy stays a bound independent of the join (MAS rule 8).
+    const resourcePolicy = fgaResourcePolicy(store.fga, {
+      principals: issuerLocalPrincipals(config.estate.issuer),
+      clients: issuerLocalClients(config.estate.issuer),
+    });
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const observe = opts.observeDecisionRequest;
+
     const loadView = missionLoader(kernel);
     const actorRecords = new ActorRecords();
     const pep = new Pep({
-      decide: opts.decide,
+      decide: observe
+        ? async (request, decisionOptions) => {
+            observe(request);
+            return keys.decide(request, decisionOptions);
+          }
+        : keys.decide,
       payments,
-      evidence: opts.evidence,
-      fga: opts.fga,
-      modelId: opts.modelId,
+      evidence,
+      fga: store.fga,
+      modelId: store.modelId,
       loadView,
       instanceEpoch: "mas-pilot-epoch",
       ...(opts.now ? { now: opts.now } : {}),
@@ -216,7 +264,7 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
     });
     opened.push(() => writeReservations.close());
     const connectors = new Connectors();
-    const transaction = { engine: new TransactionEngine("mas-pilot-epoch"), connectors, evidence: opts.evidence };
+    const transaction = { engine: new TransactionEngine("mas-pilot-epoch"), connectors, evidence };
 
     // The gateway's resource server: the estate issuer's keys only, and every
     // credential it verifies is ordinary.
@@ -259,6 +307,8 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
       actorRecords,
       payments,
       connectors,
+      evidence,
+      resourcePolicy: { fga: store.fga, storeId: store.storeId, modelId: store.modelId, development: store.development },
       pep,
       gateway,
       resourceRoute,

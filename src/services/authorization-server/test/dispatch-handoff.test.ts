@@ -25,7 +25,13 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, demoReconciliationTemplate, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import {
+  CANONICAL_RESOURCE,
+  DERIVATION_POLICY,
+  demoReconciliationTemplate,
+  DEV_SERVICE_TOKEN,
+  TOPOLOGY,
+} from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   decodeJwt,
@@ -38,6 +44,13 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
+import {
+  delegationWithMatcher,
+  MATCHER_LIST_CASES,
+  MATCHER_REPRODUCTION,
+  type MatcherList,
+  WELL_FORMED_MATCHER,
+} from "./malformed-matcher.helper.js";
 import { INVALID_SUBJECT_TOKENS, resignWithCnf } from "./subject-possession.helper.js";
 import { CHILD_GRANT_TYP, CHILD_JWT_BEARER_GRANT_TYPE } from "../src/adapters/child-grant.js";
 import {
@@ -159,11 +172,14 @@ interface Instance {
 /**
  * A fresh template (its own max_active and rate) and one dispatched instance.
  * `agents` replaces the template's `allowed_recipients` Agents; naming only the
- * Dispatcher makes it a self-dispatching template (#1195).
+ * Dispatcher makes it a self-dispatching template (#1195). `delegation`, when
+ * given, is set on the template's first ceiling entry, so the instance carries
+ * a delegation right.
  */
-async function dispatchInstance(agents?: string[]): Promise<Instance> {
+async function dispatchInstance(agents?: string[], delegation?: AuthorityEntry["delegation"]): Promise<Instance> {
   const template = demoReconciliationTemplate(ISSUER);
   if (agents) template.recipients = { ...template.recipients, agents };
+  if (delegation) template.ceiling = template.ceiling.map((e, i) => (i === 0 ? { ...e, delegation } : e));
   const created = await fetch(`${ISSUER}/templates`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
@@ -685,6 +701,36 @@ describe("Dispatch Handoff: exchange refusals (@spec mission-template#dispatch-h
       expect(body.error).toBe("invalid_authorization_details");
       expect(body.error_description).toMatch(/locations must be absent/);
       expect(body.access_token).toBeUndefined();
+    }
+  });
+
+  // @spec resource-access#matching-allowed-delegates (#1373): the projection
+  // rebuilds each delegate matcher from `sub` and `sub_profile`, so a requested
+  // matcher carrying another member is refused rather than issued without it.
+  // The instance's template grants delegation, so the same request with a
+  // well-formed matcher is within the presented token and the effective set:
+  // the matcher check alone stands between the malformed request and a grant
+  // carrying the matcher without `org`.
+  it("a requested entry whose delegate matcher carries an unrecognized member is refused invalid_authorization_details, issuing no handoff grant", async () => {
+    // The policy entry the template's first ceiling entry narrows grants this
+    // delegation; copied verbatim, the template stays within policy.
+    const instance = await dispatchInstance(undefined, DERIVATION_POLICY.ceiling[0].delegation);
+    expect(instance.authority[0]?.delegation, "the instance carries the template's delegation").toBeDefined();
+    const requestWith = (matcher: Readonly<Record<string, string>>, list: MatcherList) =>
+      JSON.stringify(narrowOf(instance.authority).map((e) => ({ ...e, delegation: delegationWithMatcher(matcher, list) })));
+    for (const [list, description] of MATCHER_LIST_CASES) {
+      const res = await handoff(instance.token, { authorization_details: requestWith(MATCHER_REPRODUCTION, list) });
+      const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe(description);
+      expect(body.access_token).toBeUndefined();
+    }
+    // Positive control: with a well-formed matcher, the same request is issued a grant.
+    for (const [list] of MATCHER_LIST_CASES) {
+      const ok = await handoff(instance.token, { authorization_details: requestWith(WELL_FORMED_MATCHER, list) });
+      const okb = (await ok.json()) as { access_token?: string };
+      expect(ok.status, JSON.stringify(okb)).toBe(200);
     }
   });
 });

@@ -33,6 +33,28 @@
   },
   "mapping_cache": { "max_stale_seconds": 300 },
   "mission_bound_only_classes": ["irreversible_action", "external_commitment", "privileged_administration"],
+  "resource_policy": {
+    "tenants": [
+      {
+        "tenant": "estate-payments",
+        "vendors": ["acme", "globex"],
+        "members": [
+          { "sub": "u-1001" },
+          { "sub": "u-1002" },
+          { "sub": "alice" },
+          { "client": "estate-ap-bot-7f3" },
+          { "client": "estate-extractor-2c1" }
+        ]
+      }
+    ],
+    "entitlements": [
+      { "sub": "u-1001", "relation": "authorized_reader", "vendor": "acme" },
+      { "sub": "u-1002", "relation": "authorized_reader", "vendor": "acme" },
+      { "sub": "alice", "relation": "authorized_reader", "vendor": "acme" },
+      { "client": "estate-ap-bot-7f3", "relation": "authorized_client", "vendor": "acme" },
+      { "client": "estate-extractor-2c1", "relation": "authorized_client", "vendor": "acme" }
+    ]
+  },
   "mapping_contract": {
     "contract_id": "mas-pilot-identity",
     "version": 1,

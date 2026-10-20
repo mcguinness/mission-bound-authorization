@@ -201,6 +201,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -508,8 +516,10 @@ A state source is a component, reachable under the deployment's own
 trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
-status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. A materialized
+status or event feed (such as the lifecycle events of
+{{I-D.draft-mcguinness-oauth-mission-signals}}), or a short-lived
+derived credential whose lifetime is the deployment's accepted state
+lease. A materialized
 policy view ({{policy-view}}) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.
@@ -2446,7 +2456,7 @@ implementers of the same operation bind the same bytes:
   ({{evaluation-context-binding}});
 - for each Common Constraint or other registered constraint the
   operation's authority entries can carry
-  ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the authoritative
   operation input or derived attribute that satisfies it, and the
   extraction and normalization rule mapping that input into the
   constraint's own value domain.  The constraint's defining
@@ -3812,7 +3822,7 @@ in this manifest ({{policy-view}}).
   "value": {
     "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "policy_version": "deploy-policy:v17",
     "compiler": {
       "profile": "https://as.example.com/policy-compiler",
@@ -3834,15 +3844,15 @@ line breaks, adding no characters, to recover the canonical form:
 ~~~ text
 {"iss":"https://as.example.com","typ":"mission-policy-view","value":
 {"artifact":{"digest":"sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ
-4mZ7tX","encoding":"application/vnd.example.policy-engine+bin"},"aut
-hority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","
+4mZ7tU","encoding":"application/vnd.example.policy-engine+bin"},"aut
+hority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","
 compiler":{"profile":"https://as.example.com/policy-compiler","versi
 on":"1.4.0"},"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","po
 licy_version":"deploy-policy:v17"}}
 ~~~
 
 ~~~ text
-policy_view_id = sha-256:kFxuopgt9C4G7S4BhP7ayGhP49wG55HBnq0BzH09UZ8
+policy_view_id = sha-256:RBI8j_YN5EWm4XNr7IMhvAeMxOuOkc-_mVMp1mBExP0
 ~~~
 
 Because the identifier is a content hash, any change to the manifest

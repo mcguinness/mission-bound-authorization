@@ -544,7 +544,7 @@ Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 Pragma: no-cache
 
-eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 ~~~
 
 Decoded JWS header:
@@ -552,7 +552,7 @@ Decoded JWS header:
 ~~~ json
 {
   "alg": "ES256",
-  "kid": "sa-key-2026-q3",
+  "kid": "as-key-2026-q3",
   "typ": "mission-status-response+jwt"
 }
 ~~~
@@ -563,7 +563,7 @@ Decoded JWS payload:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "client_erp-recon-agent",
+  "sub": "s6BhdRkqt3",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
   "iat": 1793606400,
   "exp": 1793606460,
@@ -571,16 +571,30 @@ Decoded JWS payload:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "active",
-    "version": 4,
+    "version": 1,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:00:45Z"
   },
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"] }
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ]
 }
 ~~~
@@ -821,7 +835,7 @@ Cache-Control: no-store
   "error": "not_found",
   "error_description":
     "Mission reference is not found or not visible.",
-  "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+  "nonce": "nonce_zsPy4APqVNO96xAT"
 }
 ~~~
 
@@ -910,19 +924,18 @@ for a token whose Mission is `active`:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1793606400,
+  "iat": 1793606410,
   "token_introspection": {
     "active":  true,
     "client_id": "s6BhdRkqt3",
     "sub":     "user_3p2q8mN1a0kV7tR",
-    "scope":   "invoices.read",
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+        "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
       "state":   "active",
-      "fresh_until": "2026-11-02T08:00:45Z"
+      "fresh_until": "2026-11-02T08:00:55Z"
     }
   }
 }
@@ -1322,7 +1335,7 @@ HTTP/1.1 200 OK
 Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 
-eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 ~~~
 
 Decoded JWS payload:
@@ -1330,8 +1343,8 @@ Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "client_erp-recon-agent",
-  "sub": "client_erp-recon-agent",
+  "aud": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
   "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
   "iat": 1793609600,
   "exp": 1793609660,
@@ -1339,14 +1352,14 @@ Decoded JWS payload:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
       "terminated_at": "2026-11-02T08:53:20Z",
-      "version": 7
+      "version": 4
     },
-    "version": 7,
+    "version": 4,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:54:05Z"
   }
@@ -1356,6 +1369,8 @@ Decoded JWS payload:
 The AS records the operation, actor, time, and any `reason` in its
 audit log; the response confirms the outcome through the updated
 `state`.
+
+The next two examples use another Mission.
 
 Suspend request with a deadline, here also carrying the OPTIONAL
 `expected_version` guard against deciding over stale state
@@ -1368,11 +1383,11 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: DPoP eyJhbGciOiJFUzI1NiIsImtpZCI6...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
-mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
+mission_id=msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5
 &operation=suspend
 &suspend_until=2026-11-09T08%3A15%3A00Z
 &on_expiry=revoke
-&expected_version=5
+&expected_version=1
 &reason=Pending+quarterly+access+review
 &nonce=nonce_4Dq2mV8kX1sB7nR3tW
 ~~~
@@ -1384,18 +1399,18 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "client_erp-recon-agent",
-  "sub": "client_erp-recon-agent",
+  "aud": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
   "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
   "iat": 1793607600,
   "exp": 1793607660,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "suspended",
-    "version": 6,
+    "version": 2,
     "suspend_until": "2026-11-09T08:15:00Z",
     "on_expiry": "revoke",
     "expires_at":  "2026-12-31T23:59:59Z",

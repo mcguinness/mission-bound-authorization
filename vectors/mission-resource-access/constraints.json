@@ -1242,6 +1242,255 @@
       "refs": [
         "#1258 item 11"
       ]
+    },
+    {
+      "id": "cc-satisfaction-absent-amount",
+      "description": "An entry bounded by max_amount, with no amount established for the action",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.enforcement",
+        "constraint.max_amount"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "payments:payment.execute",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "payments:payment.execute"
+            ],
+            "constraints": {
+              "max_amount": {
+                "amount": "500.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "a missing input makes the entry provide no authority"
+      },
+      "refs": [
+        "#1375"
+      ]
+    },
+    {
+      "id": "cc-satisfaction-absent-tenant",
+      "description": "An entry bounded by tenant, with no tenant established for the resource",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.enforcement",
+        "constraint.tenant"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "tenant": "acme"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "a missing input makes the entry provide no authority"
+      },
+      "refs": [
+        "#1375"
+      ]
+    },
+    {
+      "id": "cc-satisfaction-absent-issuance",
+      "description": "An entry bounded by resource_issued_after, with no issuance instant recorded for the resource",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.enforcement",
+        "constraint.resource_issued_after"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "resource_issued_after": "2026-07-01T00:00:00Z"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "a missing input makes the entry provide no authority"
+      },
+      "refs": [
+        "#1375"
+      ]
+    },
+    {
+      "id": "cc-satisfaction-alternative",
+      "description": "Entry X needs a tenant that is not established; entry Y alone covers the request",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants",
+        "constraint.tenant"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "tenant": "acme"
+            }
+          },
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "allow",
+        "reason": "X provides no authority; Y independently authorizes the whole request"
+      },
+      "refs": [
+        "#1375"
+      ]
+    },
+    {
+      "id": "cc-satisfaction-no-alternative",
+      "description": "Two entries, one needing a tenant and one an issuance instant, neither established",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants",
+        "constraint.tenant",
+        "constraint.resource_issued_after"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "invoices.read",
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "tenant": "acme"
+            }
+          },
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "invoices.read"
+            ],
+            "constraints": {
+              "resource_issued_after": "2026-07-01T00:00:00Z"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "no applicable entry independently authorizes the request"
+      },
+      "refs": [
+        "#1375"
+      ]
+    },
+    {
+      "id": "cc-satisfaction-fragments",
+      "description": "One entry satisfies the tenant and another the amount; neither satisfies both",
+      "role": "resource-server",
+      "requires": [
+        "operation-target",
+        "rs.alternative-grants",
+        "constraint.tenant",
+        "constraint.max_amount"
+      ],
+      "check": "rs-authorize",
+      "input": {
+        "target": "https://erp.example.com",
+        "action": "payments:payment.execute",
+        "tenant": "acme",
+        "amount": {
+          "amount": "700.00",
+          "currency": "USD"
+        },
+        "entries": [
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "payments:payment.execute"
+            ],
+            "constraints": {
+              "tenant": "acme",
+              "max_amount": {
+                "amount": "500.00",
+                "currency": "USD"
+              }
+            }
+          },
+          {
+            "type": "mission_resource_access",
+            "resource": "https://erp.example.com",
+            "actions": [
+              "payments:payment.execute"
+            ],
+            "constraints": {
+              "tenant": "other",
+              "max_amount": {
+                "amount": "1000.00",
+                "currency": "USD"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "deny",
+        "reason": "fragments of entries never combine"
+      },
+      "refs": [
+        "#1375"
+      ]
     }
   ]
 }

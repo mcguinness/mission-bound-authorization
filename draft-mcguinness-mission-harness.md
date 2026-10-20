@@ -764,18 +764,19 @@ approval ({{I-D.draft-mcguinness-mission-runtime}}) before it
 runs. Its earlier place in the queue is not a standing approval across
 a Mission non-active interval.
 
-Example: a queued `journal-entries.write` posting under the Q3
-invoice-reconciliation Mission, retried once. `expires_at` is present
-because the posting is in a high-consequence action class:
+Example: a queued `journal-entries.write` posting under a Q3
+invoice-reconciliation Mission (not the issuance profile's worked
+example), retried once. `expires_at` is present because the posting
+is in a high-consequence action class:
 
 ~~~ json
 {
   "queue_item_id": "queue_journal_post_7",
   "mission_binding": {
-    "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "mission_id": "msn_ozWdThJGIbqzWd0NzyTCY9qv3zFUReI9",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "status_checked_at": "2026-11-01T22:00:00Z",
     "status_expires_at": "2026-11-01T22:05:00Z",
     "state": "active",
@@ -1437,10 +1438,10 @@ Example:
   "event_id": "hrn_7pQ4mN9s",
   "event_type": "resume_suppressed",
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_ozWdThJGIbqzWd0NzyTCY9qv3zFUReI9",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "session_id": "sess_agent_42",
   "work_item": "queue_invoice_retry_9",
@@ -1526,7 +1527,7 @@ path.
 # Worked Example {#example}
 
 An agent reconciling Q3 invoices under Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` runs as an overnight background
+`msn_ozWdThJGIbqzWd0NzyTCY9qv3zFUReI9` runs as an overnight background
 job, so its session outlives `alice`'s attention. Two harness moments
 matter.
 

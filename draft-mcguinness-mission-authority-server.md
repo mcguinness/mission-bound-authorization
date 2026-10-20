@@ -141,6 +141,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC8725:
+  RFC8792:
   I-D.draft-mcguinness-oauth-mission-management:
     title: "Mission Management for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-management.html
@@ -402,7 +403,9 @@ claim it ({{limitations}}).
 {::boilerplate bcp14-tagged}
 
 All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 This document uses Mission, Mission Intent, Mission Issuer, Authority
 Set, Approver, Subject, `mission_id`, the integrity anchors, and the
@@ -585,6 +588,8 @@ and returns HTTP 202 with a pending-submission reference:
 The following example shows a submission and its response:
 
 ~~~ http-message
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 POST /mas/mission/submit HTTP/1.1
 Host: mas.example.com
 Content-Type: application/json
@@ -593,8 +598,14 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 500 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
   }
 }
@@ -608,7 +619,7 @@ Cache-Control: no-store
 {
   "submission_id": "sub_4qV9rL3tY6sB1zN0eF7jB8K2nP",
   "status": "pending",
-  "expires_at": "2026-10-16T14:32:11Z"
+  "expires_at": "2026-11-03T07:59:00Z"
 }
 ~~~
 
@@ -702,7 +713,18 @@ Cache-Control: no-store
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"],
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
       "constraints": {
         "max_amount": { "amount": "500.00", "currency": "USD" }
       } }
@@ -1190,7 +1212,7 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://mas.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+        "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs"
     },
     "mission_state_observation": {
       "state": "active",
@@ -1199,7 +1221,7 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "mode": "cached",
       "freshness_at": "2026-11-02T08:14:00Z"
     },
-    "actor": { "client_id": "client_erp-recon-agent" },
+    "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
       "expires_at": "2026-11-02T09:14:00Z",
@@ -1735,19 +1757,19 @@ Assertion:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs"
   },
   "token": {
     "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
     "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
   },
   "join": {
-    "client_id": "client_erp-recon-agent",
+    "client_id": "s6BhdRkqt3",
     "disposition": "client"
   },
   "aud": "https://pdp.example.com",
-  "iat": 1793606400,
-  "exp": 1793608200
+  "iat": 1793607240,
+  "exp": 1793609040
 }
 ~~~
 
@@ -2028,7 +2050,7 @@ child's own `client_id`, never the parent's.
 ## Expansion Example {#native-example}
 
 The following example shows an expansion submission. Mid-task, the
-agent behind the Q3 reconciliation Mission finds a $1,200 adjustment,
+agent behind a Q3 reconciliation Mission finds a $1,200 adjustment,
 outside its approved $500 cap. It submits a Mission Intent for the
 broadened task whose body names the predecessor:
 
@@ -2045,7 +2067,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
     "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
-  "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  "predecessor": "msn_w9zhlsZxoTTlSeSsZOHDG7gr0Z0Ok-lZ"
 }
 ~~~
 
@@ -2719,29 +2741,109 @@ The contextual-governance kernel maps as follows:
    the same integrity and access controls as the Mission record; and
    MUST retain both for the declared audit horizon.
 
-The capability table has one row per capability. Every supplied row
-states its activation conditions, and states its temporal and failure
-elements in its cells or by express inheritance of the Bounded
-Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}).
+The capability list has one entry per capability. Every supplied
+entry states its activation conditions, and states its temporal and
+failure elements in the entry or by express inheritance of the
+Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}).
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always for MAS-native authority operations; a Mission-joining PDP for joined decisions | A current-state check at each such operation or decision ({{lifecycle-and-state}}, {{mission-join}}) | The unchanged authorization server gates neither issuance nor refresh; the token-layer residual runs to expiry |
-| State-Observable | supplied | always | Signed Mission Status with the `mission_max_stale_seconds` bound ({{lifecycle-and-state}}, {{discovery}}) | Consumers fail closed past the declared freshness bound |
-| Structured Authority | supplied | always | The OAuth binding's Authority Set, held at the MAS and evaluated at the joining PDP ({{mission-join}}) | Semantics cover only declared authority-detail types and mappings |
-| Monotonic Derivation | supplied | native child creation ({{native-child}}) | The no-broader-than relation at child creation | Enforcement and expansion are never derivation; unchanged AS tokens are outside the claim |
-| Credential-Bound | supplied | the Join Assertion endpoint ({{join-assertion}}) | A signed assertion binds one token's digest and `cnf` thumbprint to the Mission; fact semantics: verified party correlation | Does not prove the authorization server issued the token under the Mission; mapping-join-only deployments are outside this row |
-| Authorized Context Correlation | supplied | always | The mapping join and the Join Assertion, with the MAS and its joining PDPs as joining authority ({{mission-join}}, {{join-assertion}}) | Proves the credential belongs to the Mission's parties, never that it was issued for the Mission ({{join-scope}}) |
-| Independently Verifiable | supplied | signed Mission Status ({{lifecycle-and-state}}) | Record and state as of the response's freshness window; Join Assertions add token correlation | Proves neither AS issuance under the Mission nor current state after the observation window |
-| Portable Evidence | supplied | Consent Evidence, a Mission Mandate, or Audit Transparency adopted | The adopted profile's artifact and verification procedure | The base MAS audit log is Controller-local |
-{: title="Standalone MAS Mission substrate capabilities"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
 
-Unless a row states otherwise, each supplied row's temporal elements
-inherit the signed Status freshness contract: facts are current as of
-the response's `mission_max_stale_seconds` window, assertion lifetime
-is capped by the introspected token's remaining lifetime, and the
-residual after non-active is bounded by the consumer's declared
-staleness bound.
+  Activation: always for MAS-native authority operations; a
+  Mission-joining PDP for joined decisions
+
+  Scope and defining sections: A current-state check at each such
+  operation or decision ({{lifecycle-and-state}}, {{mission-join}})
+
+  Limitations: The unchanged authorization server gates neither issuance
+  nor refresh; the token-layer residual runs to expiry
+
+State-Observable:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: Signed Mission Status with the
+  `mission_max_stale_seconds` bound ({{lifecycle-and-state}},
+  {{discovery}})
+
+  Limitations: Consumers fail closed past the declared freshness bound
+
+Structured Authority:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The OAuth binding's Authority Set, held
+  at the MAS and evaluated at the joining PDP ({{mission-join}})
+
+  Limitations: Semantics cover only declared authority-detail types and
+  mappings
+
+Monotonic Derivation:
+: Claim: supplied
+
+  Activation: native child creation ({{native-child}})
+
+  Scope and defining sections: The no-broader-than relation at child
+  creation
+
+  Limitations: Enforcement and expansion are never derivation; unchanged
+  AS tokens are outside the claim
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: the Join Assertion endpoint ({{join-assertion}})
+
+  Scope and defining sections: A signed assertion binds one token's
+  digest and `cnf` thumbprint to the Mission; fact semantics: verified
+  party correlation
+
+  Limitations: Does not prove the authorization server issued the token
+  under the Mission; mapping-join-only deployments are outside this row
+
+Authorized Context Correlation:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The mapping join and the Join Assertion,
+  with the MAS and its joining PDPs as joining authority
+  ({{mission-join}}, {{join-assertion}})
+
+  Limitations: Proves the credential belongs to the Mission's parties,
+  never that it was issued for the Mission ({{join-scope}})
+
+Independently Verifiable:
+: Claim: supplied
+
+  Activation: signed Mission Status ({{lifecycle-and-state}})
+
+  Scope and defining sections: Record and state as of the response's
+  freshness window; Join Assertions add token correlation
+
+  Limitations: Proves neither AS issuance under the Mission nor current
+  state after the observation window
+
+Portable Evidence:
+: Claim: supplied
+
+  Activation: Consent Evidence, a Mission Mandate, or Audit Transparency
+  adopted
+
+  Scope and defining sections: The adopted profile's artifact and
+  verification procedure
+
+  Limitations: The base MAS audit log is Controller-local
+{: #standalone-mas-mission-substrate-capabilities newline="true"}
+
+Unless an entry states otherwise, each supplied entry's temporal
+elements inherit the signed Status freshness contract: facts are
+current as of the response's `mission_max_stale_seconds` window,
+assertion lifetime is capped by the introspected token's remaining
+lifetime, and the residual after non-active is bounded by the
+consumer's declared staleness bound.
 
 Failure behavior is uniformly fail-closed. An unresolvable Mission, a
 stale or failed Status response, a join failure
@@ -2752,7 +2854,7 @@ consumes a Join Assertion and finds it invalid denies with
 `mission_binding_failed`
 ({{join-assertion-pdp}}), never falling back to the mapping join.
 
-The following qualifications apply to individual rows:
+The following qualifications apply to individual entries:
 
 - Structured Authority includes each supported type's own constraint
   vocabulary; for `mission_resource_access`, that vocabulary is the
@@ -3344,6 +3446,14 @@ shows the denial:
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial (#1382): the Mission Substrate Statement's capability
+  table is a capability list, one entry per capability, which fits
+  the text rendering. No requirement changes.
+
+- Editorial (#1176): examples of the canonical Mission follow one
+  dated history; an example line too long for the page is folded per
+  RFC 8792. No requirement changes.
 
 - Progressive Adoption compares the four mechanisms of phases 3
   through 6 (mapping join, Join Assertion, MAS plus Issuance Grant,

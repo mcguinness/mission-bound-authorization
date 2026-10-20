@@ -89,6 +89,74 @@ export function refusedEntryMember(entry: unknown): string | undefined {
 }
 
 /**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): the members a delegate matcher carries, in
+ * `delegation.allowed_delegates` and `delegation.children.allowed_child_actors`
+ * alike. This is the SINGLE matcher rule every boundary that admits an entry
+ * consults: the proposal intakes' schema check, the typed config loaders and
+ * the foreign-grant validator (through {@link isAuthorityEntry}), derivation,
+ * and the requested-authority exchanges and template consent (through
+ * {@link entryDelegateMatcherViolation}). A member outside this set cannot be
+ * interpreted, and a member-by-member rebuild would drop it and widen the
+ * eligibility the entry commits, so it is refused rather than admitted.
+ */
+export const DELEGATE_MATCHER_MEMBERS: readonly string[] = Object.freeze(["sub", "sub_profile"]);
+
+/**
+ * The violation for the delegate-matcher list `value` at `path`, or
+ * undefined. A matcher is refused when it is not an object, carries a member
+ * outside {@link DELEGATE_MATCHER_MEMBERS}, carries neither member, or
+ * carries one that is not a non-empty string. The caller maps a violation to
+ * its boundary's own error.
+ */
+export function delegateMatcherListViolation(value: unknown, path: string): string | undefined {
+  if (!Array.isArray(value)) return `${path} must be an array`;
+  for (const m of value) {
+    if (m === null || typeof m !== "object" || Array.isArray(m)) {
+      return `${path} entries must be objects`;
+    }
+    const matcher = m as Record<string, unknown>;
+    const unknown = Object.keys(matcher).find((k) => !DELEGATE_MATCHER_MEMBERS.includes(k));
+    if (unknown !== undefined) return `${path} entries carry no member '${unknown}'`;
+    if (matcher.sub === undefined && matcher.sub_profile === undefined) {
+      return `${path} entries must carry sub or sub_profile`;
+    }
+    for (const member of DELEGATE_MATCHER_MEMBERS) {
+      const v = matcher[member];
+      if (v === undefined) continue;
+      if (typeof v !== "string") return `${path}.${member} must be a string`;
+      if (v.length === 0) return `${path}.${member} must not be empty`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * {@link delegateMatcherListViolation} over the two matcher lists `entry`
+ * carries, `delegation.allowed_delegates` then
+ * `delegation.children.allowed_child_actors`, or undefined. Each list is read
+ * where its parent is an object; the parent's own shape is left to the
+ * boundary's other checks. For a boundary that holds a whole entry, not a
+ * list: the requested-authority exchanges and template consent.
+ */
+export function entryDelegateMatcherViolation(entry: unknown): string | undefined {
+  const delegation = asJsonObject(asJsonObject(entry as JsonValue)?.delegation);
+  if (!delegation) return undefined;
+  const children = asJsonObject(delegation.children);
+  return (
+    (delegation.allowed_delegates !== undefined
+      ? delegateMatcherListViolation(delegation.allowed_delegates, "delegation.allowed_delegates")
+      : undefined) ??
+    (children?.allowed_child_actors !== undefined
+      ? delegateMatcherListViolation(
+          children.allowed_child_actors,
+          "delegation.children.allowed_child_actors",
+        )
+      : undefined)
+  );
+}
+
+/**
  * Validate the subset engine's supported input before a foreign grant can use
  * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member is unsupported,
  * decided by presence: a destination redeeming a signed grant from a
@@ -157,19 +225,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       return false;
     if (Object.keys(d).some((k) => !["max_depth", "allowed_delegates", "children"].includes(k)))
       return false;
-    const matchers = (v: unknown) =>
-      Array.isArray(v) &&
-      v.every(
-        (m) =>
-          m &&
-          typeof m === "object" &&
-          !Array.isArray(m) &&
-          Object.keys(m).every((k) => k === "sub" || k === "sub_profile") &&
-          (m.sub !== undefined || m.sub_profile !== undefined) &&
-          (m.sub === undefined || (typeof m.sub === "string" && m.sub.length > 0)) &&
-          (m.sub_profile === undefined ||
-            (typeof m.sub_profile === "string" && m.sub_profile.length > 0)),
-      );
+    const matchers = (v: unknown) => delegateMatcherListViolation(v, "matchers") === undefined;
     if (d.allowed_delegates !== undefined && !matchers(d.allowed_delegates)) return false;
     if (d.children !== undefined) {
       const c = d.children as Record<string, unknown> | null;

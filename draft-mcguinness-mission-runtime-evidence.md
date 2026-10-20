@@ -1025,9 +1025,9 @@ envelopes with unsupported formats.
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "intent_hash":
-      "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "policy_version": "deploy-policy:v17",
     "policy_view_id":
       "sha-256:kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s"
@@ -1051,7 +1051,7 @@ envelopes with unsupported formats.
   },
   "credential": {
     "issuer": "https://as.example.com",
-    "expires_at": "2026-11-02T09:14:00Z"
+    "expires_at": "2026-11-02T08:19:00Z"
   },
   "resource": {
     "type": "journal-entry",
@@ -1075,7 +1075,7 @@ envelopes with unsupported formats.
   "emitter": { "id": "pdp.example.com", "role": "pdp" },
   "evaluated_at": "2026-11-02T08:14:03Z",
   "entry_digest":
-    "sha-256:dPCNLHsZuzPXuhco_s21VTvDI4cagI_LMhPQsqfNJKQ",
+    "sha-256:udlEKpPuIOeI0ZXcDxTvNCw0LFrwGiPWa7UwX9sZf1c",
   "evidence_envelope": {
     "format": "jws-compact",
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBkcC1rZXkt..."
@@ -1401,8 +1401,8 @@ the release before acting:
   "error":        "parameter_mismatch",
   "sequence":     44,
   "emitter":      { "id": "pep.example.com", "role": "executor" },
-  "attempted_at": "2026-11-02T09:03:28Z",
-  "outcome_at":   "2026-11-02T09:03:29Z",
+  "attempted_at": "2026-11-02T08:43:28Z",
+  "outcome_at":   "2026-11-02T08:43:29Z",
   "evidence_envelope": {
     "format": "jws-compact",
     "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6InBlcC1rZXkt..."
@@ -1799,14 +1799,14 @@ the execution reference:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "emitter": { "id": "receipts.example.com", "role": "receipt_issuer" },
   "evidence": [
     {
       "type": "application/mission-decision-evidence+json",
       "digest":
-        "sha-256:fS_yB6-Yit7Gsz-6vw73q7YphoiRm3VwC-3Pk8xW9J0",
+        "sha-256:BZw6_RrU7bLAGRPMtog8mub_36PaiBEHp1Obw7OjzwY",
       "evidence_id": "evd_9Nq3TmR6xL2vP8kY4sD1eB7jH0wC5uA",
       "emitter": { "id": "pdp.example.com", "role": "pdp" }
     },
