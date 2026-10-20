@@ -1048,8 +1048,9 @@ interactive approval window. Two rules govern that window:
 
 - The predecessor's Mission state MUST be re-verified at issuance
   (completion), not only at request time. A predecessor that was
-  terminated or contained during the window MUST fail completion, per
-  the compare-and-set of {{reconciliation}}. This preserves the
+  terminated during the window, or whose containment or discharge since
+  adjudication restricts authority the successor carries, MUST fail
+  completion, per the compare-and-set of {{reconciliation}}. This preserves the
   halt on new derivation that a terminal predecessor state effects: a
   deferred approval MUST NOT become a bypass of it.
 - Expiry of the `subject_token` during the window MUST NOT gate
