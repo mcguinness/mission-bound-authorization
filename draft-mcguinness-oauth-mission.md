@@ -1472,6 +1472,8 @@ apparatus is type-agnostic toward every supported type:
 - evaluating the entry against a concrete request is the runtime
   layer's responsibility ({{runtime-boundary}}), not the AS's.
 
+### Declared Transformation Capabilities {#transformation-capabilities}
+
 The subset rule is fully defined only for a type whose specification
 defines it. For every supported type, the AS declares three
 independent transformation capabilities; understanding one
@@ -1523,6 +1525,8 @@ three OPTIONAL boolean members, `narrowing`, `delegation`, and
 `projection`; an absent member leaves that capability undeclared by
 this carrier, falling through to the next carrier in the order
 above.
+
+### Policy-Language Types {#policy-language-types}
 
 Type-agnosticism lets policy-language profiles compose without this
 document defining them: for example, an entry carrying a Cedar policy
