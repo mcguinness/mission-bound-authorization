@@ -67,8 +67,8 @@
     "content_sha256": "748baa5b01e2e8052eba9d7ba14358140eb6790f2f78990a4b466fcd75d8f5f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b3bb3ee8d83454cad7a59349de9e9cc0f134cd1c",
-    "content_sha256": "b5b0f2e926915a920b0def153fdaf8e6f104d5aa5f3f90ee3a9184ad7145415e"
+    "revision": "9fe5cf73565c3055bfa4b232a69c36b73e0cc47a",
+    "content_sha256": "e165f0171e1a7827c7962d2a729b2e5782b74f27124073ef490e3712f40c5ece"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
@@ -2989,6 +2989,167 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "core.submission.proposal-checks-before-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Validate any authority proposal: refuse an entry of a type the AS does not support, or one that fails its type's definition or an advertised schema, with `invalid_authorization_details`, and a proposed entry whose `resource` is not among the Intent's `target_resources`, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the intent object and before any evidence check"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.earliest-step-precedence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "The AS MUST refuse a submission that fails more than one check with the error of the earliest failing step in this order",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission failing two checks is refused with the error of the earlier step of Submission Processing Order"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-proposal-over-missing-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a malformed proposal together with a missing required evidence type is refused at step 3, with `invalid_authorization_details`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with a malformed proposal and a missing required evidence type fails invalid_authorization_details, not invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-target-over-evidence-failure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a proposed entry outside `target_resources` together with a presented evidence entry that fails verification is refused at step 3, with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with a proposed entry outside target_resources and an evidence entry failing verification fails invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-intent-over-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "an `intent` object that fails validation together with a malformed proposal is refused at step 2, with `invalid_request`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission whose intent fails validation and whose proposal is malformed fails invalid_request, not invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.derivation.candidate-complete-before-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "The candidate Authority Set is complete before the approval rendering",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Authority Set rendered for approval is the complete candidate set, not a partial one"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.derivation.fixed-at-creation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "The approved Authority Set is fixed when the Mission Record is created, atomically with the approval decision",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D559 (#1411): ruled qualified A + C."
   },
   {
    "id": "core.submission.size-bounds-evidence",
