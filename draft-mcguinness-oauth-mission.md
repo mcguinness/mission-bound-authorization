@@ -469,10 +469,17 @@ times. The following table lists where each implementer reads next.
 
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
-| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
+| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}}, {{discovery}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection, and terminate the Mission on an authorized revocation | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{revocation}}, {{mission-record}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
+
+This document defines no `authorization_details` type
+({{other-types}}). Each Authority Set entry is of a type the AS
+supports, such as `mission_resource_access`
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and a
+Mission-aware Resource Server enforces each applicable entry its tokens
+carry under that entry's type ({{rs-requirements}}).
 
 Some duties apply only when their condition holds:
 
