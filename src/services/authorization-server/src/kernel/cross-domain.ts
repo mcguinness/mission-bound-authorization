@@ -41,6 +41,70 @@ export class RequestedAuthorityExceededError extends Error {}
  */
 export class AuthorityNarrowedToEmptyError extends Error {}
 
+/**
+ * @spec cross-domain#pre-established-trust, #cross-domain-grant (#1166, D510)
+ * — one entry of the originating AS's destination-scoped mapping: a
+ * requesting client's registration at a target Resource AS (ID-JAG -04
+ * Section 5). The two identifiers can be the same string.
+ */
+export interface DestinationClientRegistration {
+  /** The target Resource AS's issuer identifier. */
+  targetAs: string;
+  /** The requesting client's identifier at this (the originating) AS. */
+  clientId: string;
+  /** That client's registration at the target Resource AS. */
+  destinationClientId: string;
+}
+
+/**
+ * @spec cross-domain#cross-domain-grant (#1166, D510); id-continuation-assertion
+ * (ICA -02 5.5.5) — the destination-scoped mapping names no registration, or
+ * more than one, for the requesting client at the target Resource AS. Refused
+ * `invalid_target`; never answered with the client's identifier at this AS.
+ */
+export class DestinationClientUnresolvedError extends Error {
+  constructor(
+    readonly reason: "missing" | "ambiguous",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * @spec cross-domain#cross-domain-grant (#1166, D510; ID-JAG -04 Sections 3.1
+ * and 5) — resolve the authenticated requesting client's registration at the
+ * target Resource AS, the value the grant carries as `client_id`. Entries that
+ * name the same registration count once; distinct registrations for one client
+ * and target are ambiguous. There is no default: an absent mapping refuses.
+ */
+export function resolveDestinationClientId(
+  registrations: readonly DestinationClientRegistration[] | undefined,
+  requestingClientId: string,
+  targetAs: string,
+): string {
+  const ids = [
+    ...new Set(
+      (registrations ?? [])
+        .filter((r) => r.clientId === requestingClientId && r.targetAs === targetAs)
+        .map((r) => r.destinationClientId),
+    ),
+  ];
+  if (ids.length === 0) {
+    throw new DestinationClientUnresolvedError(
+      "missing",
+      `no registration for client ${requestingClientId} at ${targetAs}`,
+    );
+  }
+  if (ids.length > 1) {
+    throw new DestinationClientUnresolvedError(
+      "ambiguous",
+      `more than one registration for client ${requestingClientId} at ${targetAs}`,
+    );
+  }
+  return ids[0] as string;
+}
+
 export function audienceScopedAuthority(
   authoritySet: AuthorityEntry[],
   resourceToAs: (resource: string) => string,
@@ -53,8 +117,11 @@ export interface IssueGrantInput {
   missionId: string;
   targetAs: string;
   /**
-   * @spec cross-domain / ID-JAG §3.1: the client at the requesting AS that acts
-   * for the subject. Emitted as the grant's `client_id` claim.
+   * @spec cross-domain#cross-domain-grant (#1166, D510; ID-JAG -04 Section
+   * 3.1): the requesting client's registration at the target Resource AS, as
+   * {@link resolveDestinationClientId} resolves it. Emitted as the grant's
+   * `client_id` claim, which the Resource AS checks against the client it
+   * authenticates (ID-JAG -04 Section 4.4.1).
    */
   clientId: string;
   /** Presenting client's DPoP key thumbprint (sender-constraint, cnf.jkt). */
@@ -231,7 +298,8 @@ async function mintCrossDomainGrant(
     authorization_details: granted,
     cnf: { jkt: input.cnfJkt },
     sub: input.sub !== undefined ? input.sub : record.subject.sub,
-    // @spec ID-JAG §3.1: the acting client at the requesting AS.
+    // @spec ID-JAG -04 §3.1 (#1166, D510): the requesting client's
+    // registration at the target Resource AS.
     client_id: input.clientId,
   };
   // @spec id-continuation-assertion: opt-in continuation claims.

@@ -67,6 +67,7 @@ informative:
   RFC9493:
   RFC9635:
   RFC8628:
+  RFC8792:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -645,7 +646,9 @@ token on its next request after revocation, through the composite
 {::boilerplate bcp14-tagged}
 
 All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 Agent (Client):
 : The OAuth client acting for the Mission's Subject, identified by
@@ -931,12 +934,15 @@ those a companion profile the AS implements defines
 The following is an example of a Mission Intent:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "goal": "Reconcile Q3 invoices and post adjustments of at most \
+    USD 500 per journal entry.",
   "target_resources": ["https://erp.example.com"],
   "task_bounds": [
     "Read only invoices issued in 2026-Q3.",
-    "Post journal entries under $500."
+    "Post journal entries of at most USD 500 each."
   ],
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z"
@@ -1049,9 +1055,12 @@ compact Intent and one evidence entry of an illustrative,
 deployment-defined type:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
@@ -2642,8 +2651,8 @@ The following is an example of a decoded Mission-bound token payload:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606405,
+  "exp": 1793606705,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -3159,7 +3168,7 @@ projection omits them.
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
   "aud": "https://erp.example.com",
-  "exp": 1797840300,
+  "exp": 1793606705,
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -3183,16 +3192,17 @@ projection omits them.
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "proposal_hash":
-      "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
     "state": "active"
   }
 }
 ~~~
 
-The following is an example of the response for the same token after
-the Mission is revoked ({{composite-active}}):
+The following is an example of the response, after the Mission is
+revoked, for an unexpired token the AS issued on refresh before the
+revocation ({{composite-active}}):
 
 ~~~ json
 {
@@ -3201,11 +3211,11 @@ the Mission is revoked ({{composite-active}}):
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
-      "terminated_at": "2026-11-02T08:30:00Z"
+      "terminated_at": "2026-11-02T08:53:20Z"
     }
   }
 }
@@ -3526,8 +3536,8 @@ access token:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "tool-runner-7",
-  "iat": 1797840600,
-  "exp": 1797840900,
+  "iat": 1793607005,
+  "exp": 1793607305,
   "jti": "at_3qX5bN7sR1tY8mZ9Kp2v",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -3977,12 +3987,21 @@ surface that references a Mission from outside carries it as
 The following is an example of a Mission Record:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
   "state": "active",
-  "intent": { "goal": "Reconcile Q3 invoices ...",
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 500 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z" },
   "proposed_authority": [
     { "type": "mission_resource_access",
@@ -4023,11 +4042,11 @@ The following is an example of a Mission Record:
       } }
   ],
   "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
   "intent_hash":
-    "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
   "proposal_hash":
-    "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+    "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approval_basis": {
@@ -4039,13 +4058,13 @@ The following is an example of a Mission Record:
       "sub": "user_3p2q8mN1a0kV7tR" },
     "adjudication": { "kind": "human" },
     "root_commitment":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "authority_source": { "type": "user_delegated" },
   "client_id": "s6BhdRkqt3",
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-  "created_at": "2026-10-15T14:32:11Z",
+  "created_at": "2026-11-02T08:00:00Z",
   "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
@@ -4075,11 +4094,11 @@ is the workload principal, `client_id` is the agent, and
 }
 ~~~
 
-The hash values above are illustrative: the test vectors
-({{test-vectors}}) compute anchors over a reduced Mission Intent and
-Authority Set, not over these objects. A companion that extends this
-example either reproduces the recorded objects byte-exactly or states
-that its example diverges and its anchors differ.
+The first example's anchors are computed over its displayed `intent`,
+`proposed_authority` and `authority_set` ({{integrity-anchors}}); the
+excerpt's `root_commitment` is illustrative. A companion that extends
+this example either reproduces the recorded objects byte-exactly or
+states that its example diverges and its anchors differ.
 
 # Integrity and Commitments {#integrity-and-commitments}
 
@@ -5480,8 +5499,9 @@ This appendix follows one Mission in a single trust domain through
 Mission creation, token issuance, and resource server enforcement.
 It is illustrative and adds no requirements. The OAuth steps follow
 this document; the identity setup follows
-{{I-D.draft-ietf-wimse-aims}}. Identifiers and hash values are
-illustrative, not computed from the displayed JSON.
+{{I-D.draft-ietf-wimse-aims}}. Identifiers are illustrative; the hash
+values are computed over the displayed objects
+({{integrity-anchors}}).
 
 The example uses the baseline issuance path: stateless enforcement
 bounded only by token lifetime. Stage 3 notes where the optional
@@ -5509,13 +5529,16 @@ through PAR ({{submission-via-par}}), carrying the Mission Intent and
 no evidence:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
     "task_bounds": [
       "Read only invoices issued in 2026-Q3.",
-      "Post journal entries under $500."
+      "Post journal entries of at most USD 500 each."
     ],
     "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
@@ -5577,11 +5600,11 @@ The AS (`as.example.com`) validates both, derives this Authority Set
 After approval, the AS records Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
 `authority_hash`
-`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ`,
+`sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM`,
 `intent_hash`
-`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`, and
+`sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0`, and
 `proposal_hash`
-`sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo`.
+`sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo`.
 
 ## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 
@@ -5631,8 +5654,8 @@ The following is an example of the decoded access token payload:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606405,
+  "exp": 1793606705,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -6505,6 +6528,11 @@ Cross-Domain:
   which now describes each basis type, and the worked example says
   why its resource server is a Mission-aware Resource Server. No
   requirement changes.
+
+- Editorial (#1176): the examples of the canonical Mission follow one
+  dated history, with the Intent in full and anchors computed over the
+  displayed objects; an example line too long for the page is folded
+  per RFC 8792. No requirement changes.
 
 - Editorial (#910): the approval rules for another principal and for
   an external Subject sit in a Subject Establishment subsection that

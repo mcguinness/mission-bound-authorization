@@ -71,6 +71,11 @@ interface GrantOverrides {
   exp?: number; // absolute epoch seconds
   /** The delegated set the grant carries; defaults to one covered entry. */
   authorizationDetails?: unknown;
+  /**
+   * The grant's client_id: the client's registration at this RAS (ID-JAG -04
+   * Section 3.1). Defaults to REGISTERED_CLIENT_ID; null omits the claim.
+   */
+  clientId?: string | null;
 }
 
 async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
@@ -86,7 +91,7 @@ async function mintGrant(overrides: GrantOverrides = {}): Promise<string> {
     authorization_details: overrides.authorizationDetails ?? [DEFAULT_CEILING[0]],
     cnf: { jkt: clientJkt },
     ...(overrides.sub !== null ? { sub: overrides.sub ?? GRANT_SUB } : {}),
-    client_id: "ap-agent",
+    ...(overrides.clientId !== null ? { client_id: overrides.clientId ?? REGISTERED_CLIENT_ID } : {}),
     ...(overrides.identityContinuationHandle !== undefined
       ? { identity_continuation_handle: overrides.identityContinuationHandle }
       : {}),
@@ -125,6 +130,40 @@ async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizati
     ...config,
   });
 }
+
+describe("RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1)", () => {
+  const clientIdOf = (token: string) =>
+    JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString()).client_id as string;
+
+  it("a mismatched redemption is invalid_grant and does not consume the grant; the same grant redeems once the registration it names is the authenticated client", async () => {
+    const server = await ras();
+    const grant = await mintGrant({ clientId: "ap-agent" });
+    await expect(server.redeem(grant, clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+    // Equal-string registration: the destination registers the client under the
+    // same identifier its home AS uses, which is not a conflict.
+    server.registerClient(clientJkt, "ap-agent");
+    const result = await server.redeem(grant, clientJkt);
+    expect(clientIdOf(result.access_token)).toBe("ap-agent");
+  });
+
+  it("a grant with no client_id is invalid_grant", async () => {
+    const server = await ras();
+    await expect(server.redeem(await mintGrant({ clientId: null }), clientJkt)).rejects.toMatchObject({ code: "invalid_grant" });
+  });
+
+  it("a distinct destination ID redeems: the grant names the registration here, and the local token carries it", async () => {
+    const server = await ras();
+    const result = await server.redeem(await mintGrant({ clientId: REGISTERED_CLIENT_ID }), clientJkt);
+    expect(clientIdOf(result.access_token)).toBe(REGISTERED_CLIENT_ID);
+    expect(REGISTERED_CLIENT_ID).not.toBe("ap-agent");
+  });
+
+  it("an equal-string registration redeems: the same identifier names the client in both domains", async () => {
+    const server = await ras({ registeredClients: { [clientJkt]: "ap-agent" } });
+    const result = await server.redeem(await mintGrant({ clientId: "ap-agent" }), clientJkt);
+    expect(clientIdOf(result.access_token)).toBe("ap-agent");
+  });
+});
 
 describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)", () => {
   const delegated: AuthorityEntry = {

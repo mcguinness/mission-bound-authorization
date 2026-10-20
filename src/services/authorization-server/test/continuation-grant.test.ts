@@ -54,6 +54,14 @@ const ISSUER = `http://localhost:${PORT}`;
 const CAI = "https://cai.example"; // the injected Continuation Assertion Issuer
 const CAI_OTHER = "https://cai-other.example"; // trusted only for OTHER_RAS's hops
 const OTHER_RAS = "https://ras.other.test";
+/**
+ * @spec cross-domain#pre-established-trust (#1166, D510); ICA -02 5.5.5 - the
+ * destination-scoped mapping the main AS resolves each onward grant's client_id
+ * from: the deployment's ap-agent registration at RAS_AUD (a distinct ID), and
+ * equal-string registrations for every other client and target here. Mutable
+ * so the (f6) case can remove or duplicate an entry and restore it.
+ */
+const CROSS_DOMAIN_CLIENTS: Array<{ targetAs: string; clientId: string; destinationClientId: string }> = [];
 const RESOURCE = CANONICAL_RESOURCE; // in DERIVATION_POLICY's ceiling
 const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audience)
 const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves, never approved
@@ -369,6 +377,14 @@ beforeAll(async () => {
     jwks: { keys: [{ ...(await exportJWK(keys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
   });
 
+  CROSS_DOMAIN_CLIENTS.push(
+    ...TOPOLOGY.crossDomainClients,
+    { targetAs: OTHER_RAS, clientId: "ap-agent", destinationClientId: "ap-agent" },
+    ...["svc-b", "svc-x", "svc-c"].flatMap((c) => [
+      { targetAs: RAS_AUD, clientId: c, destinationClientId: c },
+      { targetAs: OTHER_RAS, clientId: c, destinationClientId: c },
+    ]),
+  );
   as = await buildAuthorizationServer({
     // @spec #1173 (D375): switchable to full for the cache-bound cases.
     dpopProofReplay: replay,
@@ -393,6 +409,7 @@ beforeAll(async () => {
       { iss: RAS_AUD, jwks: { keys: [rasCaiPub] }, attestsFor: [] },
     ],
     resourceToAs: RESOURCE_TO_AS,
+    crossDomainClients: CROSS_DOMAIN_CLIENTS,
     // Deterministic subjectResolver is the default (a stable digest over ISSUER).
   });
   asServer = as.provider.listen(PORT);
@@ -957,6 +974,40 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     }
     expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  it("(f6) the onward grant names the client's registration at the target RAS; a missing or ambiguous mapping is invalid_target, with no hop and no derivation (#1166, D510; ICA -02 5.5.5)", async () => {
+    // Distinct ID: ap-agent's registration at RAS_AUD is the deployment's RAS client.
+    const ok = newLineage("apev-f6-ok");
+    const res = await tokenExchange({ subjectToken: await mintICA(ok.handle) });
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(decodeJwt(body.access_token as string).client_id).toBe(TOPOLOGY.rasLocalClientId);
+
+    const entry = CROSS_DOMAIN_CLIENTS.findIndex((e) => e.targetAs === RAS_AUD && e.clientId === "ap-agent");
+    expect(entry).toBeGreaterThanOrEqual(0);
+    const saved = CROSS_DOMAIN_CLIENTS[entry]!;
+    const refusedWithNoEffect = async (label: string): Promise<void> => {
+      const { missionId, handle } = newLineage(`apev-f6-${label}`);
+      const hops = as.continuationStore.handlesForMission(missionId).length;
+      const r = await tokenExchange({ subjectToken: await mintICA(handle) });
+      const b = (await r.json()) as { error?: string };
+      expect(r.status, `${label}: ${JSON.stringify(b)}`).toBe(400);
+      expect(b.error, label).toBe("invalid_target");
+      expect(as.continuationStore.handlesForMission(missionId), label).toHaveLength(hops);
+      expect(as.kernel.get(missionId)?.derivation_count, label).toBe(0);
+    };
+    try {
+      // Missing: no registration for ap-agent at RAS_AUD, and no fallback to "ap-agent".
+      CROSS_DOMAIN_CLIENTS.splice(entry, 1);
+      await refusedWithNoEffect("missing");
+      // Ambiguous: two distinct registrations for ap-agent at RAS_AUD.
+      CROSS_DOMAIN_CLIENTS.push(saved, { ...saved, destinationClientId: "another-registration" });
+      await refusedWithNoEffect("ambiguous");
+    } finally {
+      const kept = CROSS_DOMAIN_CLIENTS.filter((e) => e.destinationClientId !== "another-registration" && e !== saved);
+      CROSS_DOMAIN_CLIENTS.splice(0, CROSS_DOMAIN_CLIENTS.length, ...kept, saved);
+    }
   });
 
   it("(f3) one resource the audience does not serve -> invalid_target, in either order (an order-independent set)", async () => {

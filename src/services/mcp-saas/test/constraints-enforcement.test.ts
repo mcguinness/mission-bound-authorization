@@ -21,6 +21,7 @@ import {
   type AuthorityEntry,
   issueCrossDomainGrant,
   MissionKernel,
+  resolveDestinationClientId,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { ResourceAuthorizationServer } from "@mission/ras";
@@ -32,6 +33,8 @@ const RAS_ISS = "https://ras.ledgercloud.test";
 const READ = "ledger:vendor.read";
 const WRITE = "ledger:journal.write";
 const RESOURCE_TO_AS = (r: string) => (r === SAAS_RESOURCE ? RAS_ISS : AS_ISS);
+// @spec cross-domain#pre-established-trust (#1166, D510): the agent's registration at the RAS.
+const CROSS_DOMAIN_CLIENTS = [{ targetAs: RAS_ISS, clientId: "ap-agent", destinationClientId: "ledgercloud-ras-redeemer" }];
 const POLICY = {
   policy_version: "saas-constraints-policy-1",
   ceiling: [{ type: "mission_resource_access", resource: SAAS_RESOURCE, actions: [READ, WRITE] }],
@@ -111,7 +114,7 @@ async function pipelineToken(authority: AuthorityEntry[]): Promise<string> {
   const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
     missionId: mission.id,
     targetAs: RAS_ISS,
-    clientId: "ap-agent",
+    clientId: resolveDestinationClientId(CROSS_DOMAIN_CLIENTS, "ap-agent", RAS_ISS),
     cnfJkt: agentJkt,
     resourceToAs: RESOURCE_TO_AS,
   });
