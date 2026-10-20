@@ -11,20 +11,20 @@
     "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
-    "content_sha256": "33e8ae6138b82668731a7d5e6cb125e183c49750144caa3438903e5c719c8cbc"
+    "revision": "dade6c569d18a1e587f68885903447e8f9af5bb3",
+    "content_sha256": "1fbb3409c45047fe17f65b591912c05c3ce6199f59db8160f87e5720381380ac"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "6667b68f9afece5e490ea65022196e6c4991dd1b",
     "content_sha256": "8cd8d68437668e5a6268b3ffa5e158017d5d71ef4129d4250ef70da2f3beb317"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "1df0e37958729923a4ea977df0da22b45c5bae4d",
-    "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
+    "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
+    "content_sha256": "065c797c3074eb766497180cf700fc267ecd227b45a399c1ad47330a226a7fa5"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "f69e5dc0d0047b55578dbc7ac3f9c2bc1b1935df",
-    "content_sha256": "ac8bdce5360f73f3671d169a8b6fa7d7ac088b5c7c67cafb39a96570e5d0611d"
+    "revision": "67ec44100970a77f99311908804150d00b5affac",
+    "content_sha256": "00e698892a75e62714efab0c6b7d73c5b4417c59f8046a53975acb6ff25b53a9"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -67,16 +67,16 @@
     "content_sha256": "944c69c3032fb77891a69e6dc1b92aaa59dbc3f40cf738bbd5ec48165ded7c65"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "7687968173b35c13756a3aa2ec3741380803f387",
-    "content_sha256": "748baa5b01e2e8052eba9d7ba14358140eb6790f2f78990a4b466fcd75d8f5f9"
+    "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
+    "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b3bb3ee8d83454cad7a59349de9e9cc0f134cd1c",
-    "content_sha256": "b5b0f2e926915a920b0def153fdaf8e6f104d5aa5f3f90ee3a9184ad7145415e"
+    "revision": "2fb012f255c63c3cb3e9403e39b003551389ea4e",
+    "content_sha256": "0e8be927b29036a2d4b257e67900e71da9ec3511a6964027bd1ac263a2d6dc9e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
-    "content_sha256": "27edd07822a1d48d0d33f71a8708fc36836218a466d924f07d04eefdb85dcc1c"
+    "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
+    "content_sha256": "7b767e1bb56356fbbafd8237ba563fe816093fa499e8d3617ee2fd600ad8c0ca"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -87,8 +87,8 @@
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "9d61842777ef55834a198434289e0eed4d88fb16",
-    "content_sha256": "91355a5e310223dda4d4d9513b2a98923dc568f716a8ab6e72a7d597a4088b6f"
+    "revision": "0f8529ed4c7d73ec386bfc4ce930db363ae56757",
+    "content_sha256": "bf8e39b9b15b7359c300421c85970c18f4c07596f5f39d9d699f470eca279c7e"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -99,20 +99,20 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "228b8f3a7696d06e1d52f149140f487d3bf2837d",
-    "content_sha256": "dde493a296da308b2dce3d58678771929a4649af3f46598a5435e5b9c57c41b1"
+    "revision": "9086861763e145f126c249098e2037dbf2cdd9e8",
+    "content_sha256": "38c57c936e0184e9c3299c6ab27f27b9e47bf6b39fd4cc3517230cb49c625654"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
-    "content_sha256": "a2906080c314e315896fa5211c425a8a0861be4cc819a3466188fb3d873ad65c"
+    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
+    "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
-    "content_sha256": "bb2e4b03cd8650b40d0c8404657f1bd9616b6632d63a5a03f2b19a44dc8d7f19"
+    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
+    "content_sha256": "03313926575c29814dc3d56328f76dc778a00ba9697df39c1a377588bd08e934"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -143,8 +143,8 @@
     "content_sha256": "d05b02b6664c2acfdd532b8bcbebf19af04ccbb55d5146149226bb8932b0be18"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "30e534a2aacf4d45a584a272184882834f9f3004",
-    "content_sha256": "479c860ed0ba047bf6dc585382ab316fbf3b5cebcf4a2a2d7845211743669978"
+    "revision": "9086861763e145f126c249098e2037dbf2cdd9e8",
+    "content_sha256": "8ac6904ac2b8f0cab7e3b516c938a2459a64a1bde36c57dc075d63e4e8e1308d"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
@@ -236,6 +236,8 @@
    "runtime.history-input",
    "runtime.evaluation-context-binding",
    "runtime.discovered-catalog",
+   "runtime.resource-contract",
+   "resource-access.resource-contract",
    "runtime.materialized-policy-view",
    "containment.narrowing",
    "cross-domain.origin-principal",
@@ -3731,7 +3733,7 @@
    "id": "core.approval-basis.adjudication-governance-record-override",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "issuance-relationship",
-   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
+   "text": "where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `adjudication.kind`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3764,10 +3766,32 @@
    "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it."
   },
   {
-   "id": "approval-governance.assertion.direct-accountable-human",
+   "id": "approval-governance.triggers.required-under-adopting-profile",
    "spec": "draft-mcguinness-mission-approval-governance.md",
-   "anchor": "assertion-requirements",
-   "text": "For `direct`, it MUST be the `human` assertion of `consent_principal`",
+   "anchor": "triggers",
+   "text": "Under a profile that adopts these recording triggers, the record is REQUIRED for an approval event when any of the following holds",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "mas.enterprise"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "under a profile that adopts the recording triggers, an approval event for which any trigger holds commits an Approval Governance Record with the Mission; without such a profile a trigger alone creates no recording obligation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 ruling 1 (D568). The family's adopting profile is the Enterprise Mission Authority Profile, which records under these triggers. The reference implementation decides no recording trigger (it commits records only under governed_policy), so no surface can witness this row yet; it stays todo."
+  },
+  {
+   "id": "approval-governance.triggers.voluntary-record-conforms",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "triggers",
+   "text": "Every Approval Governance Record a deployment records, whether required or not, MUST satisfy the requirements of this document",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3778,12 +3802,48 @@
    "surface": "governance-record",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approval Governance Record for a direct approval whose accountable assertion is a policy or service assertion does not commit and no Mission is created active; contributing policy and service assertions alongside the human accountable assertion are accepted"
+    "normative": "a record kept although no profile or basis requires it meets every requirement on the record (authenticated, event-bound, policy-authorized assertions; the accountable-approver rule for its basis; atomic commitment; the envelope); one that does not, does not commit"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention)."
+   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet."
+  },
+  {
+   "id": "approval-governance.assertion.direct-accountable-human",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "accountable-assertion",
+   "text": "For `direct`, the record MUST carry exactly one `human` assertion whose `principal` is `consent_principal` and whose `decision` is `approve`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an Approval Governance Record for a direct approval satisfies the accountable-approver rule only with exactly one human approve assertion of consent_principal; a record whose consent_principal approves only through a policy or service assertion, approves twice, or does not approve fails the rule and does not commit; contributing policy and service assertions beside the human accountable assertion are accepted",
+    "local": "Witnessed at the reference validator (assertAccountableApprover). The reference commits no Approval Governance Record for a direct approval, so the does-not-commit clause has no commit-path witness."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: accepts exactly one human approve assertion of consent_principal beside contributing policy and service assertions",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion)."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -5112,7 +5172,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -5135,7 +5195,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -5158,7 +5218,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
   },
   {
    "id": "derivation-limits.effective.standing-consent-ceiling",
@@ -5179,9 +5239,52 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > an instance with no requested limit records the committed maximum; a larger request is capped at it and a smaller one stands, each instance counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > a deployment ceiling raised above the maximum after consent does not lift an instance above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a deployment ceiling above the figure does not lift a child above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > carries the derivation count forward under a limit a larger request cannot raise, and refuses at exhaustion creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > a stricter request narrows the inherited limit without resetting the count; one that leaves no derivation refuses",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "derivation limits through the drawdown (@spec progressive#in-ceiling-expansion, derivation-limits#effective-limit) > an exact retry returns the recorded token without counting; once that token has expired, the fresh delivery token is gated by the successor's limit",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1119 (D327). Partial: the cap against the committed maximum is witnessed for the Template (Dispatch Policy) and Child Delegation (child_creation_policy) bases, never above it, never absent where finite, stricter values kept, a raised or removed deployment ceiling not lifting it, each Mission's own count, and for the Progressive ceiling consent by the existing limit-never-raised witnesses. Not witnessed: the precondition that the maximum is rendered at the standing consent (the reference has no standing-consent rendering surface; see the rendering rows), and the clause that only a fresh human approval of the standing consent lifts the maximum. The reference also implements the governed_policy standing-consent basis, which the local text above does not name; it states no maximum, so nothing caps those Missions beyond the deployment ceiling."
   },
   {
    "id": "core.lifecycle.mission-error-diagnostic",
@@ -15531,6 +15634,49 @@
    ]
   },
   {
+   "id": "txn-authorization.challenge.contract-reference-names-version",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "resource-challenge",
+   "text": "where the entry carries a `resource_contract` reference, that reference names the version, and the runtime profile's resolution of it decides admission and completion",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a challenge whose entry references a contract that does not resolve is refused at admission, and a workflow whose reference stops resolving is refused at completion; a resolving reference selects that version's Operation Profile"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "txn-authorization.challenge.version-recorded-at-admission",
+   "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
+   "anchor": "resource-challenge",
+   "text": "otherwise the version is the resource's current one at admission, which the workflow records",
+   "role": "TAS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "transaction-authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an entry without a resource_contract reference, the workflow records the Operation Profile version current at admission and completes under it; the version is not read from the entry's fixed type"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. The reference TAS keys its Operation Profile registry on the entry type (kernel/operation-profile.ts), which this clause replaces."
+  },
+  {
    "id": "txn-authorization.redemption.subject-token-audience-pop",
    "spec": "draft-mcguinness-oauth-mission-transaction-authorization.md",
    "anchor": "challenge-redemption",
@@ -18196,7 +18342,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v11, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), declares each operation's execution capabilities (#817), and matches `prefix` entries with the Resource Access matcher (#1276); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -19551,6 +19697,270 @@
    "notes": "Recorded capability comparison is wired end to end. The runtime.discovered-catalog claim also brings the three runtime.classification.* rows into scope; those remain todo."
   },
   {
+   "id": "runtime.resource-contract.bytes-immutable",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "Published contract bytes MUST remain immutable for a reference.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the contract document a resource publishes for an (id, version) has one digest for as long as the version is declared"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.new-version-on-change",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A resource that changes any contract material MUST publish it as a new version with its own digest",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a change to any listed contract material (operation contract, Operation Profile binding items, constraint extraction, class or phase, capability digest, evaluation-context descriptor reference) yields a new version with a different digest"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.declared-states",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A resource that adopts resource contracts declares, in its Resource Server runtime profile ({{rs-runtime-profile}}), each contract version it serves, the operations each covers, the operations that require a reference, and each version's state",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Resource Server runtime profile lists every served contract version with its covered operations, the operations requiring a reference, and its state (current, superseded with a declared retention, or retired)"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.pdp-refuses-unresolved",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "The PDP MUST refuse the action unless the entry carries a reference that resolves.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action under an entry whose reference is unknown, unavailable, has a changed digest, names a retired version, or names a superseded version outside its retention is denied resource_contract_drift, with identical parameters; a v1 reference at a resource serving only v2 is denied"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.missing-reference-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A missing reference refuses: it is never replaced by the current contract, and an approval that committed no reference gains one only through a new approval.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the resource requires a reference for the operation, an action under an entry without one is denied, and no evaluated or recorded authority acquires the current contract's reference"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.superseded-within-retention",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "resolves only for an entry that already references it, and only within the retention the profile declares for that version",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action under an entry referencing a superseded version is decided normally within the declared retention (and permits where every other input permits), and is refused outside it"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.retained-relaxes-nothing",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A resolved contract, current or superseded, MUST NOT relax any other decision input.",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under a retained superseded contract, an inactive Mission, narrowed or revoked authority, a lapsed entitlement, or a Resource-policy denial still refuses the action"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.pep-normalizes-under-resolved",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "The PEP MUST normalize the operation's parameters, and perform the operation, under the resolved contract, never under another version the resource serves.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an entry referencing a retained version, the decision request's normalized parameters and parameter_digest, and the performed operation, follow that version's Operation Profile, not the current one"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.approval-bound-to-reference",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "An approval given under one reference MUST NOT satisfy the approval requirement for an action under another",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an action-bound approval recorded under one contract reference, presented for an action whose applicable entry references another, does not satisfy the approval gate even when both references resolve; under the AuthZEN profile the re-evaluation is denied out_of_scope"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.approval-time-pin-insufficient",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "a reference that no longer resolves when the decision is made refuses the action even though the approval and the parameters are unchanged",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a contract definition change after the action-bound approval and before the decision, with identical parameters, refuses the action with no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.executing-pep-reresolves",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "the executing PEP MUST resolve the permit's reference against the resource's current declarations, and MUST refuse before any effect unless it resolves to the contract the permit was decided under",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a contract definition change after the decision and before dispatch, with identical parameters, suppresses the effect: no effect is released and Execution Evidence records resource_contract_unresolvable"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "runtime.resource-contract.stage-carriers",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "resource-contract",
+   "text": "A failure at use under an obtained permit suppresses the effect and is recorded as Execution Evidence, not as a PDP denial",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a pre-decision contract failure yields a Refusal Record, a PDP failure a denial, and a failure at use Execution Evidence with outcome suppressed, each chosen by call site"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "runtime.decision-inputs.resource-policy-fail-closed",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "input-resource-policy",
@@ -20438,6 +20848,28 @@
     }
    ],
    "notes": "Tested for the authorizing entry (entry_digest) only; the Mission reference, issuer, audience, sub, client_id, actor context, confirmation key, action, resource, policy-view version, and lifetime control bindings are not independently asserted by a test. #1276: the resource item includes the operation target an authority-entry match uses; no test establishes that a permit binds the target. #853: the list binds the boundary identifier in place of \"the credential audience or protected resource\"."
+  },
+  {
+   "id": "runtime.permit-binding.resource-contract",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "permit-binding",
+   "text": "the resource contract reference, where a resource contract applies to the action",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for an action under a resource contract binds its reference, so a permit decided under one reference is not usable for an operation under another"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -21469,6 +21901,232 @@
     }
    ],
    "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
+  },
+  {
+   "id": "runtime.execution-capabilities.declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Where the transaction-assurance tier covers an operation's class ({{runtime-conformance}}), its Operation Profile MUST declare these **execution capabilities**, each stated even where the answer is no:",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for every operation in a class the transaction-assurance tier covers, the published Operation Profile states durable idempotency (its holder, key, scope and retention, and what distinguishes a deliberately new operation with identical parameters from a retransmission), conditional-effect support, authoritative outcome lookup, the commit point, cancellation semantics, compensation authority, and the recovery from an unknown outcome, each even where the answer is no",
+    "local": "the reference publishes them per operation and phase as the Enforcement Scope Statement's extensions.execution_capabilities in its Protected Resource Metadata; a PDP-claim or PEP-reservation holder names its key, scope and retention through the class's transaction_assurance declaration or the operation's reversible_write_idempotency key control, and loadRuntimePosture refuses an unstated item or a holder the statement does not resolve"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > publishes the execution capabilities of every effectful operation the PEP serves, each under its own class and phase",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > the shipped statement declares every execution capability of each effectful payments operation and asserts no transaction claim",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a declaration that leaves an execution capability unstated, naming the entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a durable-idempotency holder the statement does not resolve",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. The payments statement declares all five effectful operations, the two high-consequence ones the tier covers and the three reversible writes it does not. Each test was proved by disabling the check it covers (the commit_point item, the PDP-claim and PEP-reservation holder checks, the shipped wire declaration)."
+  },
+  {
+   "id": "runtime.execution-capabilities.enforced-context-needs-conditional-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim the enforced property of Evaluation-Context Binding ({{evaluation-context-binding}}) for an operation whose Operation Profile declares no conditional-effect support.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims the enforced Evaluation-Context Binding property for an operation whose Operation Profile declares no conditional-effect support; a reread at the PEP alone reaches only the verified property",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting evaluation_context_enforced with conditional_effect none, and admits it with a declared precondition"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an enforced Evaluation-Context Binding claim with no declared conditional-effect support, and admits it with a declared precondition",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "Partial: the refusal is witnessed on the reference statement's per-operation assertion (proved by disabling the evaluation_context_enforced check). The Evaluation-Context Binding declaration that publishes the verified or enforced property per operation is #773's and does not exist in the reference, so no test reads the property from it."
+  },
+  {
+   "id": "runtime.execution-capabilities.exactly-once-needs-resource-idempotency",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim exactly-once execution for an operation whose Operation Profile declares no durable idempotency held by the resource.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims exactly-once execution for an operation unless its Operation Profile declares durable idempotency held by the resource; the PDP's idempotency claim or the PEP's reservation does not back the claim",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting exactly_once unless durable_idempotency.held_by is resource with a key, scope and retention, and the PDP module refuses to boot on such a configuration; the shipped statement asserts it nowhere"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an exactly-once claim with no durable idempotency held by the resource, and admits it once the resource holds a key, scope and retention",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > a configuration claiming exactly-once execution on the PDP's claim alone refuses the boot",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. Proved by disabling the exactly_once check (the unit test) and the loader's call to executionCapabilityFindings (the boot test)."
+  },
+  {
+   "id": "runtime.execution-capabilities.recovery-rests-on-declared-capability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the published statement declares a recovery from an unknown outcome only on a declared capability: re-presenting the effect only where the resource holds durable idempotency, resolving it by lookup only where an outcome lookup is declared, and otherwise holding it",
+    "local": "the reference loader refuses at load a resource_retransmission recovery without durable idempotency held by the resource, and an outcome_lookup recovery without a declared lookup; the shipped statement declares outcome_lookup or hold"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an unknown-outcome recovery that rests on no declared outcome lookup or resource idempotency",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The declaration facet of the clause; runtime.execution-capabilities.no-recovery-by-re-execution is the execution facet. Proved by disabling each of the two recovery checks in turn."
+  },
+  {
+   "id": "runtime.execution-capabilities.no-recovery-by-re-execution",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an executing deployment never recovers an unknown high-consequence outcome by executing the effect again, except as a retransmission that a resource with declared durable idempotency deduplicates",
+    "local": "witnessed where no lookup reaches the effect: after a restart the in-memory connectors cannot answer for the prior process's wire, the claim closes indeterminate, and a retry under the same key is refused duplicate_suppressed with no ledger entry"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+  },
+  {
+   "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Without one, the outcome stays undetermined, and its idempotency claim and any consumption reservation stay held until evidence resolves it",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for a high-consequence operation whose outcome no declared lookup establishes, the outcome stays undetermined and its idempotency claim and any consumption reservation stay held until evidence resolves it, never released by time",
+    "local": "the PDP's claim closes indeterminate at the reconciliation window's end and keeps refusing the key"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial: the idempotency-claim half is witnessed; consumption reservations are the metering companion's, which the reference does not implement. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again."
+  },
+  {
+   "id": "runtime.execution-capabilities.compensation-declaration-grants-no-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "the declaration names the action and grants no authority",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a declared compensating action is authorized only by its own Decision under current authority; the Operation Profile's compensation declaration never serves as authority for it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No payments operation declares a compensating action (compensation none throughout), so nothing exercises the rule. The compound-actions rows carry the compensate-phase Decision and compensates_evaluation_id."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
@@ -23107,6 +23765,94 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). No contract, an unsupported contract form or ambiguous declarations refuse target_unresolvable before any decision request, at the payments and SaaS resources. Mutations M11, M12 and M16 fail T2, T3 and S2. #1296 review: \"one absolute URI\" is checked as RFC 3986 absolute-URI syntax (Section 4.3; every % begins a pct-encoded triplet, Section 2.1) by an ABNF transcription in isOperationTarget, plus RFC 9110's non-empty http(s) host, never by new URL(), which accepts %zz, a trailing % and %4. A contract naming such a target establishes none: the payments resource refuses target_unresolvable before any decision request in both modes, and the SaaS resource refuses with no journal entry, though the entries name the identical string. The same mutations fail both witnesses. #1276 argument-derived contracts: the payments PEP also supports {template}, an RFC 6570 Level 1 template whose one path variable the PEP fills from the intake-validated argument it names (PAYMENTS_INVOICE_CONTRACT, <canonical resource URI>/invoices/{invoice_id}). No shipped tool declares it, so the shipped profile and its decision bytes stay service-level; the witnesses select it through the live Operation Profile seam (PepDeps.operationProfile) in both decision-channel modes, the remote PDP registered for the contracts (AuthorizedPep.operationContracts). A missing, empty, list-valued or dot-segment argument and declarations deriving different targets refuse target_unresolvable before any decision request. Mutations: a service-identifier fallback on a missing argument, a list's first value and a dropped dot-segment check each fail that witness."
   },
   {
+   "id": "authzen.context-resource-contract.request-member",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "REQUIRED when a resource contract applies to the action",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a decision request for an action under a resource contract carries resource.properties.resource_contract with the id, version and digest of the contract the PEP will perform under"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.pep-trusted-derivation",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The PEP establishes the reference from the applicable entry's reference, resolved against its own trusted contract declarations, and never from a value the caller asserts.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller-asserted contract reference never reaches the decision request; the presented reference is the applicable entry's, resolved against the PEP's own declarations"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.pdp-denies-unequal",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The PDP MUST deny the action with `resource_contract_drift` unless the reference resolves under the PDP's own trusted declarations and equals, member for member, the reference of an applicable entry that authorizes the action.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a presented reference that is absent where a contract applies, does not resolve, or differs from every authorizing entry's reference is denied resource_contract_drift with no permit"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-resource-contract.binding-and-cache-key",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-resource-contract",
+   "text": "The reference is part of the authorization binding and the cache key ({{projections}}), so a permit is never reused under another contract.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "two requests that differ only in resource.properties.resource_contract have different cache keys, and a permit cached under one is not reused for the other"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "pdp-request",
@@ -24664,6 +25410,50 @@
    ]
   },
   {
+   "id": "authzen.context-approval.contract-reference-bound",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "The Mission checks then also establish that the approved Resource's `properties.resource_contract` equals the request's, member for member.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval whose approved Resource carries a resource_contract reference other than the re-evaluated request's does not satisfy approval_required"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.context-approval.contract-mismatch-out-of-scope",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-approval",
+   "text": "An approval given under one reference does not cover an action under another, even when both references resolve: the PDP MUST deny that re-evaluation with ARAP's `out_of_scope`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval given for an action under v1 (superseded, within retention) presented for the same action under v2 (current), with identical parameters, is denied out_of_scope with no permit and no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.context-history.no-caller-asserted-outcome",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "context-history",
@@ -24846,6 +25636,28 @@
    "tests": []
   },
   {
+   "id": "authzen.runtime-denial-classification.resource-contract-drift",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "runtime-denial-classification",
+   "text": "`resource_contract_drift`: a resource contract applies to the action and the applicable entry's reference is missing or does not resolve under the resource's declared contract states",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP denial for a missing required or unresolvable contract reference, or for a request reference absent or unequal to the entry's, carries resource_contract_drift, not out_of_authority, capability_drift or parameter_violation"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "authzen.requestable-denials.auto-approval-bounded",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "requestable-denials",
@@ -24959,6 +25771,72 @@
     }
    ],
    "notes": "evaluate.test.ts proves the PDP echoes the request's parameter_digest into conditions.parameter_digest unchanged (equality, not a recomputation). The PEP's enforcement of the exact binding is proven by the reverification tests: server.ts's callReadTool/callWriteTool/callTransactionTool all read the digest from decision.context.conditions.parameter_digest and recompute-and-compare against authoritative state immediately before execution, refusing parameter_mismatch on any divergence (proven for both the write path, pre-existing, and the list-read path, #612 finding 1). Known limitation, unrelated to this row's PEP-enforcement text: the request-side carriage this profile's current examples show (action.properties.parameter_digest) differs from this deployment's context.parameter_digest placement; that request-shape divergence is pre-existing and out of this finding's scope (response-context only), flagged here rather than silently carried."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-equals-request",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "REQUIRED on a permit for an action to which a resource contract applies, and equal to the validated request's `resource.properties.resource_contract`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit for an action under a resource contract carries conditions.resource_contract equal to the validated request's reference"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-pep-compares",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "At every use, the executing PEP MUST resolve this reference against its own current contract declarations and MUST NOT release an effect unless it resolves and equals the reference of the contract the PEP is about to perform the operation under.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a contract definition change after the decision and before dispatch, with identical parameters, and a permit whose condition names a contract other than the one the PEP would perform under, both release no effect"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.response-context.conditions-resource-contract-carrier",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "response-context",
+   "text": "A missing condition where a contract applies, an unresolvable reference, or an unequal one is Execution Evidence `suppressed` / `resource_contract_unresolvable`, not a PDP denial.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each use-time contract failure is recorded as Execution Evidence with outcome suppressed and error resource_contract_unresolvable, never as a PDP denial"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "authzen.response-context.valid-until-required-and-bounded",
@@ -25434,6 +26312,50 @@
     }
    ],
    "notes": "Classified by call site, never by the reason string the two carriers share."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.resource-contract-two-carriers",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "`resource_contract_unresolvable` likewise appears on two carriers, the carrier recording whether the PEP found the contract unresolvable before the decision request or at use",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a contract the PEP cannot resolve before the decision request is a Refusal Record and one that stops resolving at use is Execution Evidence, both carrying resource_contract_unresolvable"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "authzen.failure-condition-coverage.resource-contract-not-parameter-or-target",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "A contract failure is never reported as a parameter deviation or as `target_drift`, even when the parameters and the target are unchanged.",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a contract failure with unchanged parameters and target is never recorded as parameter_violation, parameter_mismatch or target_drift"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "authzen.failure-condition-coverage.target-drift-versus-parameter-mismatch",
@@ -28860,7 +29782,7 @@
    "id": "evidence.refusal.denial-reason-enum-and-boundary",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "pre-decision-refusal",
-   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve, or the PEP cannot establish one unambiguous operation target for the request), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
+   "text": "For a PEP refusal, one of `token_invalid`, `mission_claim_missing`, `mission_reference_conflict` (reference sources naming different Missions, or an unusable propagated reference where governance requires one, the Mission Reference Propagation channel's conflict rule, {{I-D.draft-mcguinness-mission-authority-server}}), `credential_authority_insufficient` (the presented credential's own authority does not cover the request, as the PEP establishes it before any decision request, including a delegation instance whose authority has been withdrawn, which is distinct from a credential that failed validation), `request_unsupported` (the enforcement surface implements no such action), `request_invalid` (the PEP established the action, and the supplied arguments fail its required input schema, including an unknown or authoritative member, a missing required member, a wrong type, or a pattern failure), `target_unresolvable` (the request names a target object the enforcement surface cannot resolve, or the PEP cannot establish one unambiguous operation target for the request), `capability_source_unresolvable` (the capability definition the PEP must present could not be resolved), `resource_contract_unresolvable` (the resource contract the operation requires could not be resolved, {{I-D.draft-mcguinness-mission-runtime}}), `decision_evidence_unverifiable` (the Decision Evidence for a permit was absent or did not verify, so no decision the PEP can rely on was obtained), `channel_failure`, `pdp_unreachable`, or `state_unavailable`",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -28872,7 +29794,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
+    "normative": "denial_reason names a pre-evaluation condition from the enumerated set (PEP-side: token_invalid, mission_claim_missing, mission_reference_conflict, credential_authority_insufficient, request_unsupported, request_invalid, target_unresolvable, capability_source_unresolvable, resource_contract_unresolvable, decision_evidence_unverifiable, channel_failure, pdp_unreachable, state_unavailable; PDP-side: mission_context_missing, operation_target_invalid), disjoint from the runtime profile's evaluated-decision denial reasons; a record able to populate the PDP-derived members of an evaluated decision is a Decision Evidence Object instead, never a Refusal Record"
    },
    "level": "unit",
    "coverage": "partial",
@@ -28999,6 +29921,28 @@
     }
    ],
    "notes": "Covers pdp_unreachable and channel_failure on the remote path, state_unavailable (the deployment's unknown_mission diagnostic maps to it; #1329, D496: a Mission-bound schedule_payment whose Mission the loader does not hold is refused at the HTTP endpoint with DPoP with one verifiable signed Refusal Record carrying that value, no decision request, no Resource-policy query and no business effect, while the same write under the held Mission schedules; treating the unknown Mission as an empty active view lets the request reach the PDP, and a different refusal reason, each fails the witness), capability_source_unresolvable pre-decision, decision_evidence_unverifiable, and credential_authority_insufficient: on one broad Mission under an allowing policy, the PEP refuses an invoice-only credential's vendor lookup before any decision request with one Refusal Record naming that value and the store-resolved vendor, while a broad credential is permitted, over HTTP, the mediated channel and the remote and co-resident decision channels (#825 acceptance item 2). Over the MCP channel, one test signs three of these values side by side, each with no PDP call and no effect: request_invalid (the invalid_request diagnostic, arguments that fail an established action's served input schema, D334), request_unsupported (unknown_tool) and capability_source_unresolvable (a schema intake cannot read). target_unresolvable (the unknown_vendor diagnostic, #1251, D484): a lookup_vendor naming a vendor the store does not hold is refused with one verifiable signed Refusal Record carrying that value, no decision request and no Resource-policy query, under an unconstrained credential and under one that names the vendor, at the PEP over both decision channels and over the HTTP endpoint with DPoP; with D324's server fallback restored, the unconstrained lookup reaches the PDP and the named one signs credential_authority_insufficient, and each assertion fails. #786 enumerated the eight reasons this deployment previously emitted outside the set, so every emitted reason now maps to an enumerated value; #1148 (D379) makes the set a boundary the PEP cannot cross: its mapping is exhaustive over the Refusal Record path's diagnostics, an unmapped diagnostic rejects enforcement before anything is signed, and the evidence store refuses a value outside the emitting role's set. token_invalid, mission_claim_missing and mission_reference_conflict still have no assertion on a value the PEP signs, and remain #594 wave 4. This is not full Refusal Record conformance. #1276 widens target_unresolvable to a PEP that cannot establish one unambiguous operation target, and adds the PDP-side operation_target_invalid; neither #1276 clause has a witness, and the reference's PDP closed set does not include operation_target_invalid yet."
+  },
+  {
+   "id": "evidence.refusal.resource-contract-unresolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "`resource_contract_unresolvable` (the resource contract the operation requires could not be resolved",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP that cannot resolve the resource contract the operation requires before the decision request signs a Refusal Record with denial_reason resource_contract_unresolvable, with no decision request and no effect"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -30003,6 +30947,28 @@
     }
    ],
    "notes": "The capability snapshot is excluded from parameter_digest, so parameter_mismatch would assert a comparison that never failed."
+  },
+  {
+   "id": "evidence.execution.error-resource-contract-unresolvable",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "`resource_contract_unresolvable` (the resource contract the permit was decided under did not resolve at execution, or differs from the contract the operation would be performed under)",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.resource-contract"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a permit whose contract no longer resolves at use, or differs from the contract the PEP is about to perform under, is suppressed with error resource_contract_unresolvable, never a parameter comparison"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "evidence.execution.duplicate-identifiers-are-distinct",
@@ -33354,12 +34320,31 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where Mission Derivation Limits is adopted, each dispatched instance's derivation_limit is established at its own Dispatch with its own count, at or below the maximum the committed Dispatch Policy states; a later raise or removal of the deployment's general policy ceiling does not lift a dispatched instance above that maximum",
-    "local": "requires the deployment to also adopt Mission Derivation Limits"
+    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads the maximum from the verified Dispatch Policy snapshot's derivation_limit_ceiling (an integer of at least 1, or null or absent for no finite maximum), clamps each instance's resolved limit to it and never leaves the limit absent where it is finite; template consent refuses a malformed statement"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > an instance with no requested limit records the committed maximum; a larger request is capped at it and a smaller one stands, each instance counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119) > a deployment ceiling raised above the maximum after consent does not lift an instance above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1119 (D327). Every clause witnessed: each instance's own limit and count at its Dispatch (no request records the maximum, a larger request is capped, a smaller one stands, derivation_count 0), and a deployment ceiling raised above the maximum (a kernel at 100), removed (the suite's null ceiling) or stricter (2) never lifts an instance above it. Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the endpoint witness and the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "template.grant-type.agent-separate-from-presenter",
@@ -33479,7 +34464,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -34562,7 +35547,7 @@
    "id": "progressive.in-ceiling.contained-overlap-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority capability under a containment restriction of its expansion chain",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority capability under a containment restriction of its expansion chain",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -34586,7 +35571,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -34658,7 +35643,7 @@
    "id": "progressive.in-ceiling.discharged-overlap-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The drawdown policy MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority the authority a discharge restriction of its expansion chain covers",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate a successor whose complete Authority Set, including authority carried forward from its predecessor, overlaps in authority the authority a discharge restriction of its expansion chain covers",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -34682,7 +35667,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
   },
   {
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
@@ -35128,7 +36113,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
   },
   {
    "id": "progressive.in-ceiling.successor-subject-source",
@@ -35269,7 +36254,7 @@
    "id": "progressive.ceiling.consent-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "progressive-authorization",
-   "text": "The consent disclosure MUST render the ceiling and the fact that in-ceiling expansion is policy-adjudicated",
+   "text": "At the initial approval, the consent disclosure MUST render the ceiling to the Approver, together with the fact that in-ceiling expansion is policy-adjudicated",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35285,7 +36270,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017)."
+   "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
   },
   {
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
@@ -35351,6 +36336,29 @@
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-test.declaration-evaluated",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "the adjudication MUST evaluate the declaration against the ceiling",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown triggered by a resource not named at approval whose content-addressed self-declaration is available is adjudicated against that declaration and the ceiling",
+    "local": "The reference AS has no resource self-declaration intake (AAuth Rich Resource Requests, the discovery companion)."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row."
   },
   {
    "id": "progressive.ceiling-test.beyond-ceiling-not-policy",
@@ -36239,6 +37247,29 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
+   "id": "progressive.limits.pair-with-short-lifetimes",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-limits",
+   "text": "A deployment SHOULD pair it with short successor lifetimes, constraint-bounded ceilings, and runtime enforcement",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment of progressive authorization bounds successor lifetimes, constrains its ceilings, and runs runtime enforcement",
+    "local": "Deployment guidance; the reference deployment declares no successor lifetime bound of its own."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row."
+  },
+  {
    "id": "progressive.audit.cumulative-drawdown-count",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
@@ -36314,7 +37345,7 @@
    "id": "progressive.audit.resource-declaration-digest",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record of such a drawdown MUST carry the declaration's digest as `resource_declaration_digest`",
+   "text": "The record of a drawdown whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36330,7 +37361,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017)."
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated)."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
@@ -40116,6 +41147,28 @@
    ]
   },
   {
+   "id": "resource-access.scope-projection.contract-preserved",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "For an entry carrying `resource_contract`, the mapping states that the target performs every operation the mapped `scope` value permits under exactly the referenced contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carrying resource_contract, or one without it for a target that requires a reference, is projected to scope only where the mapping states the target performs the scope's operations under exactly that contract; otherwise no scope is emitted for it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "transformation-capabilities",
@@ -41092,6 +42145,184 @@
     }
    ],
    "notes": "#1258 item 8, #1277 review finding 2 (D454); #1275 (D457). Derivation keeps a candidate list as a restriction and records the entry's origin (policy where the reference entry has no list); narrowMatchers and matchersSubset stay structural, and a Child Mission keeps every origin of the parent entries it falls within. Eligibility is decided at each delegated issuance against the approved entry, its retained origin, every list and the current policy. Endpoint witnesses: the ICA continuation exchange (a proposal-added list, a Child Mission's list) and designation. A list requested at a later ICA exchange is no longer issued: the grant's conveyed copy of a policy-origin entry omits `delegation` (#1374), so that request is refused and witnesses nothing here. Proven by disabling the code it covers: recording every origin as list, dropping the policy check, dropping the proposal's list, or ignoring the parent's origin each fails its witness. Cases dg-inherit-01 and 04 run through the reader (kernel level)."
+  },
+  {
+   "id": "resource-access.subset.contract-preserved-exactly",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "subset",
+   "text": "A carries `resource_contract` exactly when B does, and then with `id`, `version`, and `digest` each equal to B's",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a derived, refreshed, exchanged or delegated entry that removes, replaces or adds a resource_contract reference relative to its Mission entry is not a subset and is refused; one that carries it unchanged passes this step"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. Prove through every enabled transformation: derivation, refresh narrowing, Token Exchange delegation, async delegation and dispatch handoff."
+  },
+  {
+   "id": "resource-access.resource-contract.unconfigured-reference-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "MUST refuse, with the `invalid_authorization_details` error code, a proposed entry whose `resource_contract` does not equal, member for member, the reference of a contract its configuration names as current for the entry's `resource` and that defines every action and action family the entry lists",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, or a contract not defining an action the entry lists) is refused invalid_authorization_details and no Mission is created"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.assembled-from-configuration",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "MUST, where its configuration requires a reference for the entry's `resource` and the proposal carries none, record the current contract's reference in the entry, so that the Approver approves the entry with it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a resource whose configuration requires a reference, the approved Authority Set entry carries the configured current contract's id, version and digest even when the proposal carried none"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.authority-hash-commits",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "The reference is part of the entry, so `authority_hash` commits it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "two Authority Sets that differ only in an entry's resource_contract member have different authority_hash values"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "An authorization server that does not implement this section refuses a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and never drops the member.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization server without resource contract support refuses an entry carrying resource_contract with invalid_authorization_details and never issues the entry with the member removed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. The reference AS refuses every member outside its supported set (#1399, PR #1421), which covers this member until the implementation admits it; a witness must name resource_contract."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-performs-only-referenced",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "A resource server MUST NOT treat an entry carrying `resource_contract` as authorizing an operation unless it performs that operation under exactly the referenced contract",
+   "role": "RS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an operation the resource would perform under a contract other than the entry's referenced one (another version, or the same version with a different digest) is refused with no effect, including a v1-referencing entry at a resource that serves only v2"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-missing-required-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "Where the resource server's operation contract requires a reference for an operation, an applicable entry without one provides no authority for it.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at a resource that requires a reference for the operation, an applicable entry without resource_contract authorizes nothing, and the request is refused unless another fully enforceable entry covers it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
+   "id": "resource-access.resource-contract.rs-follows-runtime-version-states",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "text": "Which versions a resource still performs, and for which entries, follows the version states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that does not resolve there authorizes nothing.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server performs an entry's operation under a superseded version only within its declared retention and never under a retired one; outside those states the entry authorizes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -42596,6 +43827,28 @@
    "notes": "#1376 states the rule; #1373 (#1386, #1398) enforces it. Every clause is witnessed: neither member and another member are refused at PAR (entry-validation.test.ts) and by the intake validator and direct derivation (delegate-matcher-members.test.ts, which asserts invalid_authorization_details for both shapes in a proposal and a ceiling entry); no derived entry keeps the org reproduction's narrowed matcher; and the deferral, handoff and async-delegation exchanges refuse a requested entry carrying another member. The PAR witness here was proved by mutation, each alone: admitting an unknown member (expected 201 to be 400 for the org matcher) and admitting a matcher with neither member (expected 201 to be 400 for {}); the #1386 and #1398 witnesses were proved in those PRs. Not cited, since their error or surface differs from this row: the config loaders (a native configuration error naming the entry) and the template admin plane (invalid_request), and the allowed_child_actors cases, which are Child Delegation's list. No vector case: the reader's delegate-matcher and entry-validation executors run none for this rule yet."
   },
   {
+   "id": "resource-access.entry-validation.resource-contract-shape",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource_contract` is not an object with exactly the members `id`, `version`, and `digest`, or one of them does not have the form {{resource-access-type}} gives it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_contract is not an object with exactly id (an absolute URI), version (a non-empty string) and digest (the sha-256: integrity-anchor encoded form) is refused invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+  },
+  {
    "id": "resource-access.entry-validation.time-window-ordering",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
@@ -43985,7 +45238,7 @@
    "id": "approval-governance.assertion.accountable-kind-human-or-policy",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-requirements",
-   "text": "The matching assertion's `kind` MUST be `human` or `policy`",
+   "text": "The accountable assertion's `kind` MUST be `human` or `policy`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -43997,7 +45250,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an evaluation whose assertion matching the accountable approver is kind service does not satisfy the accountable-approver rule: no record commits and the Mission is not created active, whether or not the service assertion was produced by a model",
-    "local": "Witnessed for governed_policy: a record whose accountable assertion is kind service (or human) does not commit. No direct Approval Governance Record is implemented."
+    "local": "Witnessed at commit for governed_policy (a record whose accountable assertion is kind service or human does not commit) and at the reference validator for direct, where no record is committed."
    },
    "level": "unit",
    "coverage": "partial",
@@ -44007,15 +45260,86 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion is not the consent principal's policy assertion naming the deciding policy and approved_at",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable approver."
+   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable assertion. #1436 ruling 2 (D568): requoted; the governed witness gives the human and service variants an authority valid for their kind that also carries the deciding policy's members, so only the kind check refuses them (mutation: matching without kind)."
+  },
+  {
+   "id": "approval-governance.assertion.governed-accountable-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "accountable-assertion",
+   "text": "For `governed_policy`, the record MUST carry exactly one `policy` assertion whose `principal` is `consent_principal`, whose `decision` is `approve`, and whose `authority` names the deciding policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a governed_policy record satisfies the accountable-approver rule only with exactly one policy approve assertion of consent_principal naming the deciding policy; the same human's policy assertion under another policy contributes without matching; two assertions naming the deciding policy, or a human or service assertion in its place, fail the rule and the record does not commit"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > governed_policy: counts only the consent principal's policy assertion that names the deciding policy",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion is not the consent principal's policy assertion naming the deciding policy and approved_at",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 2 (D568). assertGovernedPolicyRecord, which the activation commit runs before signing, delegates to assertAccountableApprover; mutation: matching without the deciding policy lets a second policy assertion of the same human trip the exactly-one rule."
+  },
+  {
+   "id": "approval-governance.assertion.standing-consent-basis-stands-in",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "accountable-assertion",
+   "text": "the Mission satisfies the rule through its authenticated `approval_basis` record, not through an assertion",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record for a Mission under any named standing-consent basis other than governed_policy satisfies the accountable-approver rule with no matching assertion, its approval_basis standing in; contributing policy and service assertions are accepted and none is required",
+    "local": "Witnessed at the reference validator (assertAccountableApprover) for template, policy_drawdown and ceiling_drawdown. The reference commits no Approval Governance Record under these bases."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > other standing-consent bases: the approval_basis stands in, so no assertion is required or matched",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",
    "spec": "draft-mcguinness-mission-approval-governance.md",
-   "anchor": "record",
-   "text": "For a `service` assertion, the identifier and version of the logic that produced the decision",
+   "anchor": "assertion-authority",
+   "text": "A `service` assertion's `authority` identifies the logic that produced the decision, and the model where a model produced it",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -44026,8 +45350,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a service assertion's authority names the identifier and version of the logic that produced its decision, and the model's identifier and version where a model produced it",
-    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness."
+    "normative": "a service assertion's authority carries logic_id and logic_version, and model_id with model_version where a model produced the decision; a record whose service assertion lacks the logic pair, or carries one of the model pair without the other, does not commit",
+    "local": "Produced on the governed-policy kernel path (activateGovernedPolicy), the one path that commits a service assertion in the reference AS; the reference's model advisor is the whole logic, so its logic pair names the model. Refusal witnessed at the validator; no endpoint witness."
    },
    "level": "unit",
    "coverage": "tested",
@@ -44037,9 +45361,181 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > lets a recorded model output refuse or narrow an activation, never widen it, and records it as a service assertion",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version."
+   "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version. #1436 ruling 3 (D568): typed members logic_id, logic_version, model_id, model_version; requoted; mutations: dropping the producer's logic pair, the logic check, or the model pairing."
+  },
+  {
+   "id": "approval-governance.assertion.policy-principal-approver",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-members",
+   "text": "For a `policy` assertion, the human who approved the exact policy version its `authority` names",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names (where a consented root commits a separate evaluator that decides, the human who approved that root), never an identity for the policy itself",
+    "local": "Witnessed only for the governed_policy accountable assertion, the one policy assertion the reference produces: its principal is the consent principal who approved the root. The reference never produces a contributing policy assertion, the case this rule settles (#1436 item 5)."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness."
+  },
+  {
+   "id": "approval-governance.authority.human-members",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "A `human` assertion's `authority` records the authentication the issuer verified for the decision",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a human assertion's authority carries auth_time (RFC 3339) and, where the issuer possesses them, acr (a string) and amr (an array of strings), taken from the authentication the issuer verified; a record carrying another shape does not commit",
+    "local": "Witnessed at the reference validator (assertAssertionAuthority), which the governed commit gate runs over every assertion. The reference commits no human assertion, so no record carrying one is committed."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > accepts the typed members of each kind: human authentication, policy version and approval, service logic and model",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568). auth_time is REQUIRED (the issuer that verified the authentication knows when it happened); acr and amr follow Consent Evidence's authentication_context, recording each value the issuer possesses. Mutations: auth_time or amr unchecked."
+  },
+  {
+   "id": "approval-governance.authority.policy-members",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "A `policy` assertion's `authority` names the deciding policy version and its human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion's authority carries policy_id and version (strings) and approved_at (RFC 3339); a record whose policy assertion lacks one or carries a mistyped one does not commit"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > is enforced at the governed_policy commit gate, before the record is signed",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568): the existing names policy_id, version and approved_at, now typed. Mutations: approved_at or version unchecked; the commit gate skipping the check."
+  },
+  {
+   "id": "approval-governance.authority.approved-by-equals-principal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "When present, it MUST equal `principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion whose approved_by differs from its principal, or is not an iss and sub object, is refused and the record does not commit",
+    "local": "The reference never emits approved_by; the refusal is witnessed at the validator and at the governed_policy commit gate on an injected record."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses an approved_by that differs from the policy assertion's principal",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > is enforced at the governed_policy commit gate, before the record is signed",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568); mutation: accepting any approved_by."
+  },
+  {
+   "id": "approval-governance.authority.approved-by-corroborated",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "It takes `approved_by` from the same state and MUST NOT accept it from the asserting party",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "approved_by is corroborated provenance from retained, authenticated governance state, never the asserting party's own statement",
+    "local": "No witness: no test distinguishes an approved_by taken from retained governance state from one the asserting party supplied (accepting both values from the asserting party would pass every current test), and the reference never emits approved_by. The equality with principal is witnessed on approval-governance.authority.approved-by-equals-principal."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1436 ruling 3 (D568): any approved_by is corroborated provenance, never self-authenticating evidence. todo on owner review of #1442 at e7a3a2bd: the equality test it once cited compares approved_by only with the supplied principal and consults no governance state."
   },
   {
    "id": "approval-governance.envelope.verifier-steps",
@@ -44092,7 +45588,7 @@
    "id": "approval-governance.envelope.typ-cty",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
-   "text": "a verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
+   "text": "MUST reject a JWS whose protected header lacks `typ` or `cty`, or whose `typ` or `cty` does not match this pair",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -44103,7 +45599,7 @@
    "surface": "governance-record",
    "assertion": "refusal",
    "observation": {
-    "normative": "a record whose JWS protected typ or cty is not application/mission-approval-governance+jws and application/mission-approval-governance+json is rejected even when its signature verifies"
+    "normative": "a record whose JWS protected header lacks typ or cty, or whose typ or cty is not mission-approval-governance+jws and mission-approval-governance+json under the media-type comparison of Sections 4.1.9 and 4.1.10 of RFC 7515 (application/ prefix optional, case-insensitive, no parameters), is rejected even when its signature verifies"
    },
    "level": "unit",
    "coverage": "tested",
@@ -44115,7 +45611,94 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation: verifyApprovalGovernanceRecord, exercised on a record committed under governed_policy."
+   "notes": "#1185 implementation: verifyApprovalGovernanceRecord, exercised on a record committed under governed_policy. #1436 ruling 4 (D568): either form of each value matches, so the clause is requoted; the witness adds a missing cty, an empty typ, a parameter-carrying cty, a +jwt subtype, another top-level type and a swapped pair (mutations: cty unchecked, parameters ignored)."
+  },
+  {
+   "id": "approval-governance.envelope.short-form-emitted",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "envelope",
+   "text": "a `typ` of `mission-approval-governance+jws`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer's JWS protected header carries typ mission-approval-governance+jws and cty mission-approval-governance+json, the registered media types with application/ omitted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "Approval Governance Record envelope (@spec approval-governance#envelope) > emits the typ and cty the registered media types abbreviate, with application/ omitted",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 4 (D568); mutation: emitting the application/ form."
+  },
+  {
+   "id": "approval-governance.envelope.either-form-accepted",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "envelope",
+   "text": "A verifier MUST accept either form of each value",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record whose typ or cty carries the application/ prefix, or differs only in the case of the type or subtype name, verifies like one carrying the emitted short forms"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "Approval Governance Record envelope (@spec approval-governance#envelope) > accepts the application/ forms and case variants of typ and cty, leaving the signed record and its digest as retained",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 4 (D568); mutations: exact-string comparison with the short form, case-sensitive comparison."
+  },
+  {
+   "id": "approval-governance.envelope.no-rewrite-on-normalization",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "envelope",
+   "text": "a verifier MUST NOT rewrite the signed header, the payload, or the retained record",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "verifying a record whose typ or cty is in the application/ form or another case leaves the record, its envelope value and its record digest byte-identical"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "Approval Governance Record envelope (@spec approval-governance#envelope) > accepts the application/ forms and case variants of typ and cty, leaving the signed record and its digest as retained",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 4 (D568); mutation: the verifier rewriting the signed header to the normalized form."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",
@@ -46464,12 +48047,37 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy_drawdown child's derivation_limit is at most the per-child derivation limit the Parent Mission's approval rendered, read from the entry's child_creation_policy snapshot or the policy the Parent Mission's policy_version identifies, with the child's own count; after the deployment raises or removes its per-child policy ceiling, a newly policy-created child under the same entry is still at or below the rendered figure; a stricter policy narrows it",
-    "local": "requires the deployment to also adopt Mission Derivation Limits"
+    "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a deployment ceiling above the figure does not lift a child above it, and a stricter one narrows it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > the strictest committed figure binds a child drawing on several entries",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > an entry with no snapshot under a parent approved under another policy version is refused policy_denied, since its rendered figure cannot be read",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1119 (D327). Partial: every clause is witnessed at the kernel (unit) level, and no endpoint witness exists, since no endpoint suite builds an AS whose policy commits a child_creation_policy. At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
@@ -50523,7 +52131,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50545,7 +52153,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50633,7 +52241,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, and, where the token-exchange response completes it, invalid_request for a predecessor no longer `active` and invalid_grant for check 3",
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion",
     "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
    },
    "level": "endpoint",
@@ -51417,11 +53025,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response"
+    "normative": "an expansion whose intent.expires_at passes while it is pending creates no successor, and its completion answers access_denied on a deferred poll, invalid_grant on a code redemption, and invalid_request in the token-exchange response",
+    "local": "the deferred-poll arm is witnessed: an approval whose effective expiry has already passed at the creation commit (the reference's stand-in for an intent.expires_at that passed while pending) creates no successor, leaves the predecessor active, and the poll answers access_denied; the code-redemption arm has no interactive path in the reference, and the token-exchange-response arm (a progressive drawdown) has no witness"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > @spec mission#approval-event: a ceiling that passes while the approval pends creates NO Mission (access_denied)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Mutation-proved 2026-10-20: making the creation refusal in the expansion deferral's redeem answer invalid_grant fails the cited assertion (expected 'invalid_grant' to be 'access_denied'); restored, it passes."
   },
   {
    "id": "expansion.submission.child-actor-refused",
@@ -51553,6 +53170,138 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "expansion.request.client-possession-proof",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "expansion-request",
+   "text": "To expand a predecessor Mission, the requester MUST prove possession of the predecessor Mission's authority through a sender-constrained proof, and a reusable bearer refresh credential MUST NOT be the carrier of that proof.",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client requesting expansion presents a sender-constrained Mission-bound access token with proof of its confirmation key, never a refresh token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.submission.client-proof-back-channel-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "submission",
+   "text": "The possession proof of {{request-binding}} is presented only on the token endpoint's authenticated back channel and MUST NOT appear on any front channel.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "authorization-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the subject_token and its possession proof are sent only to the token endpoint, never in an authorization request, redirect or other front-channel message"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.conformance.client-required-parameters",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "conformance",
+   "text": "send the REQUIRED parameters of {{submission}}, including `creation_request_id`",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every expansion token exchange a client sends carries grant_type, requested_token_type, subject_token, subject_token_type, mission_intent and creation_request_id, and actor_token_type with any actor_token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.reconciliation.client-no-retry-after-state-change",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "The client MUST NOT retry the same expansion against this predecessor.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a refusal carrying predecessor_state_changed, the client sends no further expansion of that predecessor for the same operation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.reconciliation.client-discover-successor",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "The client SHOULD discover the existing successor and re-evaluate whether a further expansion is still required",
+   "role": "client",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after superseded_by_concurrent_expansion, the client looks up the successor (for example through the predecessor's termination.successor) and expands the successor only if it still needs the authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.creation-retention.client-retry-horizon",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-retention",
+   "text": "A client MUST NOT retry a creation past the published horizon",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a client does not repeat a creation_request_id once the deployment's published retry horizon has passed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
