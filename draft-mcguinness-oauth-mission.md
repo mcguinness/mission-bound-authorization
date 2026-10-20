@@ -6715,8 +6715,7 @@ Evidence takes the verification framework, while the `evidence` member
 stays. Approved-Set Verification takes complete-set verification, and
 Derivation Limits the derivation limit and `derivations_remaining`.
 Metering registers its Intent members, and Approval Governance holds
-the governance record's assertion rules. The OAuth Binding Mapping
-Assessment moved here from the substrate (#708).
+the governance record's assertion rules.
 
 **Security and privacy.** Delegation hardening, including
 `allowed_delegates` narrowing issuer policy (#1258); Approver
@@ -6732,8 +6731,9 @@ trimmed toward the Mission Security Model (#877).
 **Editorial and structure.** The reading-path reorder (#910) and the
 Sections 1-2 reading path (#1379), with an Implementation Map and new
 appendices; the OAuth RFC conventions review; the density and
-readability passes, with lowercase role nouns (#876); and examples
-aligned to the canonical Mission (#1176).
+readability passes, with lowercase role nouns (#876); examples
+aligned to the canonical Mission (#1176); and the OAuth Binding
+Mapping Assessment, moved here from the substrate (#708).
 
 **References.** draft-klrc-aiagent-auth is replaced by
 {{I-D.draft-ietf-wimse-aims}}, draft-zehavi-oauth-rar-metadata by
