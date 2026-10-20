@@ -8112,9 +8112,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry whose actions carry a non-string or empty element beside the requested action, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298) and an unrecognized `resource_match` (#1276) each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, and ignoring `resource_match` each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298), an unrecognized `resource_match` (#1276) and `actions` carrying an element that is not a non-empty string each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, ignoring `resource_match`, and dropping the `actions` element check (or only its non-empty test) each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
   },
   {
    "id": "core.rs-enforcement.whole-request-single-entry",

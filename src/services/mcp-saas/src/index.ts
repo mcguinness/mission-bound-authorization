@@ -80,7 +80,8 @@ interface SaasEntry {
 /**
  * @spec resource-access#rs-enforcement, mission#rs-enforcement: whether one
  * entry, on its own, covers the request. An entry of a type this resource
- * does not implement, one carrying a member with no role here, one carrying a
+ * does not implement, one carrying a member with no role here, one whose
+ * `actions` carry an element that is not a non-empty string, one carrying a
  * `constraints` key this resource does not enforce, or one with a malformed
  * `constraints` member provides no authority: nothing is ever set aside as
  * advisory.
@@ -93,6 +94,9 @@ function entryCovers(entry: SaasEntry, target: string, action: string, args: Rec
   if (!entryMatchesTarget(entry, target) || !Array.isArray(entry.actions) || !entry.actions.includes(action)) {
     return false;
   }
+  // A malformed `actions` member is not enforceable either: any element that
+  // is not a non-empty string makes the entry provide no authority.
+  if (!entry.actions.every((a: unknown) => typeof a === "string" && a.length > 0)) return false;
   if (entry.constraints === undefined) return true;
   const c = entry.constraints;
   if (!c || typeof c !== "object" || Array.isArray(c)) return false;
