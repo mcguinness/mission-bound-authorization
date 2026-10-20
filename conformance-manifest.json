@@ -79,8 +79,8 @@
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "dc3d3cc0fe3be85cb458b78962a28349c0a3dab3",
-    "content_sha256": "fde328e1de5cc5d286402164d12f799916c15b7b804348484ca941d943208740"
+    "revision": "04a2c0f01078c59fabc6a768055a1de99cfecaf4",
+    "content_sha256": "f200829411b753abb3555d38757e25f1948498e5b62e4d9624b8d76645d5d144"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -107,8 +107,8 @@
     "content_sha256": "d3b998ee50ff458b459b91a8eded3595cb20733d13db19803bf658b92b1f4dee"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "d08dd0e9e7d01bce036532b3ab014370e080b7b3",
-    "content_sha256": "094e45bbec1efc393bc66dcbd8b1753f05d7d33ca234d1d23403c17ea9d42186"
+    "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
+    "content_sha256": "6d527751c054d27fca3be46fb394a02b1cce4939fa2b1869221f3856ac4cf97a"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -34478,7 +34478,7 @@
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of this section",
+   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of {{in-ceiling-expansion}}",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -34664,7 +34664,7 @@
    "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Its record's `approval_event_id` identifies this drawdown, never the ceiling consent",
+   "text": "The successor record's `approval_event_id` identifies this drawdown, never the ceiling consent",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -34890,7 +34890,7 @@
    "id": "progressive.drawdown-derivation.exhaustion-refuses",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits' Enforcement at Issuance section refuses a derivation (`invalid_grant`, with its `mission_error` diagnostic), creating no successor, superseding no predecessor, and counting nothing",
+   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits refuses a derivation ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\"), with `invalid_grant` and its `mission_error` diagnostic, creating no successor, superseding no predecessor, and counting nothing",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -34962,7 +34962,7 @@
    "id": "progressive.drawdown-derivation.recovery-token-gated",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A fresh delivery token minted on recovery is ordinary issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section \"Recovery is delivery\"), counted against and gated by the successor's `derivation_limit`",
+   "text": "A fresh delivery token minted on recovery is ordinary issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section \"Recovery Is Delivery\"), counted against and gated by the successor's `derivation_limit`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -34998,7 +34998,7 @@
    "id": "progressive.drawdown-derivation.ceiling-consent-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "MUST state this inheritance, as Mission Derivation Limits' Approval Rendering section requires of a standing consent: policy-adjudicated successors carry forward the Mission's derivation count and never exceed its rendered `derivation_limit`, or, where the Mission has none, no finite limit is guaranteed for them",
+   "text": "MUST state this inheritance, as Mission Derivation Limits requires of a standing consent ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Approval Rendering\"): policy-adjudicated successors carry forward the Mission's derivation count and never exceed its rendered `derivation_limit`, or, where the Mission has none, no finite limit is guaranteed for them",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -35171,7 +35171,7 @@
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "its `activation` is an object with exactly two members, `policy_id` (the Mission's `drawdown_policy.id`) and `policy_version`",
+   "text": "`activation`: an object with exactly two members, `policy_id` (the Mission's `drawdown_policy.id`) and `policy_version`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
