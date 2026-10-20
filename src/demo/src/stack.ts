@@ -27,21 +27,25 @@ import {
   OperationProfileRegistry,
   type ProviderCapability,
   type SigningKeySource,
+  startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
+  type BoundaryEvidenceKey,
+  buildBoundaryEvidenceKeyResolver,
   createDecisionPoint,
   createDecisionChannel,
   createPdpRefusalRecorder,
+  evidenceKeyConsumer,
   type IdempotencyClaimDomain,
   loadRuntimePosture,
   openIdempotencyClaimDomain,
   RUNTIME_POSTURE,
+  type RuntimePosture,
   stalenessBound,
   stateSourcePlacement,
-  deriveJoinDelegation,
   type Fga,
   fgaResourcePolicy,
   issuerLocalClients,
@@ -51,6 +55,7 @@ import {
 } from "@mission/pdp";
 import {
   ActorRecords,
+  boundaryEvidenceAuthorization,
   buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
@@ -61,6 +66,7 @@ import {
   deploymentRetentionWindowSeconds,
   type DpopKeys,
   EVIDENCE_KEY_SET_LOCATION,
+  evidenceKeySetLocation,
   EvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
@@ -72,6 +78,7 @@ import {
   type MissionReference,
   OutcomeReconciler,
   PaymentsStore,
+  paymentsBoundaryContext,
   Pep,
   type PepDeps,
   type ReceiptIssuerScope,
@@ -93,6 +100,7 @@ import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResou
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
 import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
+import { kernelMissionView } from "./kernel-mission-view.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -360,6 +368,16 @@ export async function composeStack(opts: {
    */
   kernelStore?: { file: string };
   /**
+   * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
+   * Scope Statement this stack runs under, validated by `loadRuntimePosture`.
+   * Absent: the published one (`config/enforcement-scope.json`). One value
+   * feeds the boundary context, the PDP's claim domain, the reconciler and
+   * the statement the resource publishes, so a declared change reaches every
+   * consumer together. A test supplies a statement that declares a change of
+   * boundary identifier.
+   */
+  statement?: RuntimePosture;
+  /**
    * TEST FIXTURE ONLY (D332); `pnpm as-native` never sets it. Under the
    * `as-native` target, also enable `dev-token` and dev ordinary issuance, so
    * a negative test can mint the ordinary credential a baseline Join would
@@ -618,6 +636,10 @@ export async function composeStack(opts: {
         },
       },
     }));
+    // #1326, #1349: what this boot revoked from a kernel written before #1340.
+    for (const n of startupRemediationNotices(as.startupRemediation)) {
+      (n.level === "warn" ? console.warn : console.log)(`${n.message}: ${JSON.stringify(n.detail)}`);
+    }
     const asServer = as.provider.listen(asPort);
     // A port already in use refuses startup here, releasing what construction
     // opened, rather than surfacing as an unhandled error event. @spec #250:
@@ -836,6 +858,17 @@ export async function composeStack(opts: {
   // `decide`. This wiring, and the PEP it wires, hold the decision function
   // and the published verification material, and nothing that can emit.
   const evidenceKeys = createEphemeralEvidenceKeys();
+  // @spec runtime#runtime-conformance (#853, D487): the one declared boundary
+  // context every producer here reads: the PEP establishes its boundary from
+  // it, and the PDP's Decision Evidence and Refusal Records and the PEP's own
+  // records sign only for a boundary it authorizes their emitter for, so all
+  // of them switch together at a declared cutover.
+  const statement = opts.statement ?? RUNTIME_POSTURE;
+  const boundary = paymentsBoundaryContext(statement);
+  const pdpBoundary = (): string | undefined => {
+    const established = boundary.establish();
+    return established.ok ? established.boundary : undefined;
+  };
   // @spec runtime#idempotency (#917, D223): the PDP's Exact claim domain, a
   // durable single-writer SQLite file named in configuration and owned by the
   // statement's one PDP. It verifies settlement against exactly the
@@ -848,13 +881,33 @@ export async function composeStack(opts: {
   // closes indeterminate alerts where the claim domain moves it, after the
   // move commits, so a prior process's claim alerts too.
   const operatorAlerts = stderrAlertSink();
+  // @spec runtime#boundary-identifier-change (#853 review): settlement
+  // verifies Execution Evidence under the declared versions, by the record's
+  // (audience, kid) pair, so a record produced under an earlier version still
+  // settles after a change and one under the new version settles once its
+  // key is held. Its readiness for each version is bound below.
+  const settlementKeys: BoundaryEvidenceKey[] = evidenceKeys.verification.flatMap((k) =>
+    k.role === "pep" || k.role === "executor"
+      ? [{ kid: k.kid, publicKey: k.publicKey, emitterId: k.emitterId, role: k.role }]
+      : [],
+  );
   const pdpClaims = openIdempotencyClaimDomain({
     file: claimsFile,
-    owner: RUNTIME_POSTURE.pdps[0] as string,
-    statement: RUNTIME_POSTURE,
-    settlementKeys: buildEvidenceKeyResolver(evidenceKeys.verification.filter((k) => k.role !== "pdp")),
+    owner: statement.pdps[0] as string,
+    statement,
+    settlementKeys: buildBoundaryEvidenceKeyResolver(boundary.declaration, settlementKeys),
     onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
   });
+  // @spec runtime#boundary-identifier-change step 1 (#853 review): the
+  // consumers whose bindings are provisioned outside the statement. Until
+  // each is provisioned for the version in force, the boundary is not
+  // established and every request refuses (`boundary_unprovisioned`): the
+  // settlement verifier holds a key for every enforcement key the version
+  // authorizes, and the claim domain's own statement declares the version.
+  boundary.bindConsumer(
+    evidenceKeyConsumer({ name: "pdp-settlement-keys", roles: ["pep", "executor"], audienceBound: false, keys: () => settlementKeys }),
+  );
+  boundary.bindConsumer(pdpClaims.boundaryConsumer());
   // @spec runtime#input-resource-policy (#828): the independently
   // administered Resource policy, stored OpenFGA entitlements read with no
   // Mission input, for principals authenticated under this stack's issuer.
@@ -870,6 +923,8 @@ export async function composeStack(opts: {
       verificationKey: decisionEvidenceKeys.publicKey,
       emitterId: CANONICAL_RESOURCE,
       audience: CANONICAL_RESOURCE,
+      authorizesAudience: (audience) =>
+        boundary.authorizesEvidence({ audience, kid: decisionEvidenceKey.kid, emitter: CANONICAL_RESOURCE, role: "pdp" }, "current"),
     },
     claims: pdpClaims,
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
@@ -881,7 +936,7 @@ export async function composeStack(opts: {
     refusals: createPdpRefusalRecorder({
       signer: { kid: decisionEvidenceKey.kid, key: decisionEvidenceKeys.privateKey },
       emitterId: CANONICAL_RESOURCE,
-      scope: CANONICAL_RESOURCE,
+      scope: (requested) => (requested !== undefined && requested === pdpBoundary() ? requested : undefined),
       retain: (record) => {
         const missionId = "unknown";
         evidenceRetention.retain({
@@ -906,7 +961,7 @@ export async function composeStack(opts: {
   mkdirSync(dirname(writeReservationsFile), { recursive: true });
   const writeReservations = openWriteReservationStore({
     file: writeReservationsFile,
-    owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string,
+    owner: statement.mediated_scope.pep_locations[0] as string,
   });
   // @spec runtime-evidence#execution-evidence-object (Retention),
   // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
@@ -918,10 +973,11 @@ export async function composeStack(opts: {
   const evidenceRetention = new EvidenceRetentionStore({
     retentionWindowSeconds: deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS),
   });
-  for (const key of [
+  const heldKeys = [
     ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
     { ...decisionPoint.evidenceVerification, role: "pdp" as const },
-  ]) {
+  ];
+  for (const key of heldKeys) {
     evidenceRetention.publishKey({
       location: EVIDENCE_KEY_SET_LOCATION,
       kid: key.kid,
@@ -933,14 +989,53 @@ export async function composeStack(opts: {
       publicKey: await exportJWK(key.publicKey as Parameters<typeof exportJWK>[0]),
     });
   }
+  // @spec runtime#boundary-identifier-change (#853 review): every key this
+  // deployment holds is also published, at each declared boundary's own
+  // key-set location, bound to that boundary, for every version that
+  // authorizes it, so the key set is provisioned for a declared change
+  // before its cutover and keeps the earlier boundary's set. A version that
+  // authorizes a key this deployment does not hold leaves that boundary's
+  // set unprovisioned, and the consumer bound below holds the cutover.
+  for (const version of boundary.declaration.versions) {
+    for (const declared of version.boundaries) {
+      for (const authorized of declared.evidence_keys) {
+        const key = heldKeys.find((k) => k.kid === authorized.kid && k.emitterId === authorized.emitter && k.role === authorized.role);
+        if (!key) continue;
+        evidenceRetention.publishKey({
+          location: evidenceKeySetLocation(declared.boundary),
+          kid: key.kid,
+          emitterId: key.emitterId,
+          role: key.role,
+          audience: declared.boundary,
+          publicKey: await exportJWK(key.publicKey as Parameters<typeof exportJWK>[0]),
+        });
+      }
+    }
+  }
+  boundary.bindConsumer(
+    evidenceKeyConsumer({
+      name: "published-evidence-keys",
+      roles: ["pdp", "pep", "executor"],
+      audienceBound: true,
+      keys: (declared) => evidenceRetention.publishedVerificationKeys(evidenceKeySetLocation(declared)),
+    }),
+  );
+  // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
+  // PEP verifies the PDP's Decision Evidence under the declared statement
+  // versions, by the record's (audience, kid) pair, against exactly what the
+  // decision point publishes for the records it emits.
   const evidence = new EvidenceStore(
     evidenceKeys.signing,
-    buildEvidenceKeyResolver([
-      ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
-      // Exactly what the decision point publishes for the records it emits.
-      { ...decisionPoint.evidenceVerification, role: "pdp" },
+    buildBoundaryEvidenceKeyResolver(boundary.declaration, [
+      {
+        kid: decisionPoint.evidenceVerification.kid,
+        publicKey: decisionPoint.evidenceVerification.publicKey,
+        emitterId: decisionPoint.evidenceVerification.emitterId,
+        role: "pdp",
+      },
     ]),
     evidenceRetention,
+    boundaryEvidenceAuthorization(boundary),
   );
   // @spec runtime#runtime-conformance — the deployment's own receipt-issuer
   // designation, over the key sets above and the locations its own statement
@@ -965,47 +1060,9 @@ export async function composeStack(opts: {
   // Exposed on ComposedStack for inspection (agent-run.ts's kill-switch poll);
   // callers that need a PDP decision use `loadView` below instead, which pairs
   // this with the freshness of the read.
-  const viewFor = (missionId: string): MissionView | undefined => {
-    const r = kernel.get(missionId);
-    if (!r) return undefined;
-    const fresh = kernel.applyExpiry(r);
-    // @spec discharge#runtime, discharge#visibility (#1144, D335): the committed
-    // discharge DELTA beside the committed set, so the PDP refuses a discharged
-    // entry at the point of use (`authority_discharged`, step 5b) and reads a
-    // credential's discharge condition through its source entries (step 5c).
-    // The PDP cannot detect a missing delta, so this loader supplies it.
-    const dischargedDigests = kernel.dischargedEntryDigests(fresh);
-    return {
-      id: fresh.id,
-      issuer: fresh.issuer,
-      state: fresh.state,
-      version: fresh.version,
-      authority_hash: fresh.authority_hash,
-      // @spec authority-server#mission-join rule 5 (#557 review point 2):
-      // this is the canonical Mission loader, so it is where a kernel
-      // AuthorityEntry's own `delegation` policy gets mapped to the PDP's
-      // `join_delegation` member via the shared deterministic adapter,
-      // rather than that member existing only in hand-built test fixtures.
-      authority_set: fresh.authority_set.map((e) => ({
-        ...e,
-        ...(e.delegation !== undefined ? { join_delegation: deriveJoinDelegation(e.delegation) } : {}),
-      })),
-      subject: fresh.subject,
-      client_id: fresh.client_id,
-      // The containment DELTA (not a filtered set), so the PDP distinguishes
-      // never-approved (out_of_authority) from approved-then-contained
-      // (authority_contained).
-      ...(fresh.containment
-        ? {
-            containment: {
-              version: fresh.containment.containment_version,
-              contained: fresh.containment.contained,
-            },
-          }
-        : {}),
-      ...(dischargedDigests.length > 0 ? { discharged: { entry_digests: dischargedDigests } } : {}),
-    };
-  };
+  // The committed record's projection, containment and discharge deltas
+  // included, shared with the MAS pilot (`kernel-mission-view.ts`).
+  const viewFor = (missionId: string): MissionView | undefined => kernelMissionView(kernel, missionId);
 
   // @spec runtime#state-freshness, authzen#context-audience-freshness: this
   // deployment's trusted state source is the one config/enforcement-scope.json
@@ -1053,7 +1110,7 @@ export async function composeStack(opts: {
   const runtimeDecisionPolicy = {
     requiresActionApproval: (action: string) => action === "payments:remittance.send",
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
-    stateSourcePlacement: stateSourcePlacement(RUNTIME_POSTURE),
+    stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {
       delegates: Object.fromEntries(Object.entries(MAS_JOIN.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
     },
@@ -1065,6 +1122,23 @@ export async function composeStack(opts: {
   const pepId = "mcp-payments-pep";
   const decisionChannel = await createDecisionChannel(decisionPoint, {
     mode, pepId, audience: CANONICAL_RESOURCE,
+    // @spec runtime#boundary-identifier (#853, D487): the PDP accepts a
+    // boundary identifier only from a PEP authorized for it, read from the
+    // version in force on every request.
+    scopes: () => {
+      const established = pdpBoundary();
+      return established !== undefined ? [established] : [];
+    },
+    // @spec runtime#boundary-identifier-change (#853 review): settlement and
+    // reconciliation are scoped to the boundary in force too, never to a
+    // configured audience a cutover would leave behind.
+    claimAudience: pdpBoundary,
+    // @spec resource-access#resource-matching (#1276, D457), runtime#boundary-
+    // identifier-change (#853 review): the one target the payments operation
+    // contracts establish, the service CANONICAL_RESOURCE names, registered
+    // apart from the boundary: a change of boundary identifier does not move
+    // the operation target, so it stays in scope across the cutover.
+    operationTargets: [CANONICAL_RESOURCE],
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
@@ -1087,11 +1161,12 @@ export async function composeStack(opts: {
       };
     },
   });
-  const enforcementScopeStatement = loadRuntimePosture({ ...RUNTIME_POSTURE, remote_decision_channels: decisionChannel.remoteDecisionChannels });
+  const enforcementScopeStatement = loadRuntimePosture({ ...statement, remote_decision_channels: decisionChannel.remoteDecisionChannels });
   let observer: PepDeps["observe"];
   const pep = new Pep({
     payments,
     evidence,
+    boundary,
     decide: decisionChannel.decide,
     claims: decisionChannel.claims,
     fga,
@@ -1149,7 +1224,7 @@ export async function composeStack(opts: {
   // own claim channel, redemption store, connectors, evidence and
   // reservations. Constructed here and not started: see `DemoStack.reconciler`.
   const reconciler = new OutcomeReconciler({
-    statement: RUNTIME_POSTURE,
+    statement,
     component: pepId,
     claims: decisionChannel.claims,
     evidence,

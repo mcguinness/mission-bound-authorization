@@ -31,7 +31,10 @@ import {
 } from "@mission/core";
 import { getTracer } from "@mission/telemetry";
 import {
+  type AudienceContext,
+  type AudienceValidation,
   type AuthorityEntry,
+  type BoundaryEstablishment,
   type ClaimChannel,
   committedEntry,
   type DecisionEvidenceObject,
@@ -39,7 +42,10 @@ import {
   type DecisionOptions,
   type DelegatePolicy,
   type Decision,
+  EnforcementBoundaryContext,
+  lineageScopeDigests,
   type EntitlementResolver,
+  type JoinMappingContract,
   evaluate,
   type EvaluateOptions,
   isDecisionChannelRefusal,
@@ -80,6 +86,49 @@ import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } 
 import { admitArguments } from "./intake.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
+
+/**
+ * @spec runtime#runtime-conformance (#853, D487): this PEP's location in the
+ * Enforcement Scope Statement, the key it establishes its enforcement
+ * boundary under.
+ */
+export const PAYMENTS_PEP_LOCATION = "mcp-payments-pep";
+
+/**
+ * @spec runtime#runtime-conformance, runtime-oauth#token-validation (#853,
+ * D487): the payments PEP's boundary context over the published statement.
+ * The shipped statement declares the boundary `CANONICAL_RESOURCE`, the
+ * protected resource's RFC 9728 `resource` string, and no audience alias.
+ */
+export function paymentsBoundaryContext(statement: unknown = RUNTIME_POSTURE): EnforcementBoundaryContext {
+  return new EnforcementBoundaryContext(statement, PAYMENTS_PEP_LOCATION);
+}
+
+/**
+ * @spec runtime#runtime-conformance (#853, D487): the caller-visible refusal
+ * when this PEP cannot establish its enforcement boundary. It has no Refusal
+ * Record: the record REQUIRES an `audience`, and none is invented.
+ */
+export const BOUNDARY_UNRESOLVABLE = "boundary_unresolvable";
+
+/**
+ * @spec runtime#boundary-identifier-change step 1 (#853 review): the
+ * caller-visible refusal while the version in force declares this PEP's
+ * boundary but a bound consumer (a published key set, a settlement verifier,
+ * the PDP's claim domain) is not yet provisioned for it. No producer uses the
+ * new identifier until every consumer accepts it, so, as for
+ * {@link BOUNDARY_UNRESOLVABLE}, no record is made.
+ */
+export const BOUNDARY_UNPROVISIONED = "boundary_unprovisioned";
+
+/**
+ * @spec runtime-evidence#execution-evidence-object `error` (#853, D487): the
+ * disposition of a permit whose enforcement boundary is no longer the one
+ * this PEP establishes, after a declared cutover invalidated the permits
+ * decided under the previous boundary. The cutover is an operator control,
+ * and the closed set names that `kill_switch`.
+ */
+export const BOUNDARY_CUTOVER_ERROR = "kill_switch";
 /** The tool-id base for this server's capabilities (@spec runtime-evidence#evidence-extensions `capability_source.tool_id`). */
 export const TOOL_BASE = "mcp://payments.demo/tools";
 
@@ -140,6 +189,23 @@ export interface CommonTokenFacts {
    * Absent for every ordinary Mission-bound credential.
    */
   txn?: TxnCredential;
+  /**
+   * @spec runtime-oauth#token-validation, runtime#boundary-identifier-change
+   * (#853, D487): the enforcement boundary, and the statement version that
+   * declared it, this credential's `aud` was validated against. Every server
+   * validator sets it ({@link ValidatedBoundary}). The PEP refuses the request
+   * when the boundary or version it establishes for the decision is not this
+   * one, so a cutover between validation and decision never moves a
+   * credential into a boundary that did not accept it. Absent only on facts a
+   * caller assembled without a server validator.
+   */
+  validatedBoundary?: ValidatedBoundary;
+}
+
+/** The boundary and statement version a credential's audience was validated against. */
+export interface ValidatedBoundary {
+  boundary: string;
+  version: string;
 }
 
 /** A credential carrying the `mission` claim: the ordinary, pre-#557 shape. */
@@ -482,11 +548,28 @@ interface PermitUseCheck {
   name: string;
   failure: (
     attempt: ExecutionAttempt,
-    ctx: { now: Date; profile: ActionMapping | undefined },
+    ctx: { now: Date; profile: ActionMapping | undefined; boundary: BoundaryEstablishment },
   ) => string | undefined;
 }
 
 const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
+  {
+    // @spec runtime#runtime-conformance, runtime#permit-binding (#853, D487):
+    // a permit binds the enforcement boundary it was decided at. The boundary
+    // is re-established from the declaration at every use, so a permit
+    // decided before a declared cutover, a cacheable read's or one phase of a
+    // multi-phase operation included, is unusable after it: the in-flight
+    // operation is refused and restarts under the new boundary, never carried
+    // across. The disposition keeps the permit's original `audience`. The
+    // statement version is compared too: the permit's credential was
+    // validated under that version's audience rule, which a later version can
+    // narrow while keeping the identifier.
+    name: "enforcement_boundary",
+    failure: (attempt, { boundary }) =>
+      boundary.ok && boundary.boundary === attempt.audience && boundary.version === attempt.boundaryVersion
+        ? undefined
+        : BOUNDARY_CUTOVER_ERROR,
+  },
   {
     // @spec runtime#compound-actions — "The executing PEP MUST compare the
     // permit's bound phase with the phase of the crossing before releasing an
@@ -640,6 +723,14 @@ export interface PepDeps {
    * permit carrying the condition as invalid rather than executing it.
    */
   recognizedConditions?: ReadonlySet<string>;
+  /**
+   * @spec runtime#runtime-conformance, runtime-oauth#token-validation (#853,
+   * D487): the declared boundary context this PEP establishes its enforcement
+   * boundary from, independently of any credential's `aud` and any Authority
+   * Set entry. Defaults to {@link paymentsBoundaryContext} over the published
+   * statement. The server validates `aud` against the same context.
+   */
+  boundary?: EnforcementBoundaryContext;
   /** Deployment policy: which actions require an action-bound approval (M6). */
   requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
   maxApprovalAgeSeconds?: number;
@@ -730,6 +821,26 @@ export interface PepDeps {
       clientId: string,
       missionClientId: string,
     ) => number | undefined;
+    /**
+     * @spec authority-server#mapping-contract (#818): the deployment's
+     * versioned mapping contract, for a route whose credentials come from an
+     * issuer outside the Mission's subject and client namespace. Called ONCE
+     * per joined request; that one snapshot supplies the credential bound
+     * (its scope mapping, in place of `resolveOrdinaryAuthority`), the client
+     * the actor-record lookup is keyed on, and the PDP's subject and client
+     * join (forwarded as `joinMapping`), so one request applies one contract
+     * version throughout. A source with no usable snapshot returns
+     * `UNRESOLVED_JOIN_MAPPING`, which resolves nothing. Absent: the
+     * shared-namespace hooks above, unchanged.
+     */
+    mappingContract?: () => JoinMappingContract;
+    /**
+     * @spec authority-server#high-consequence-binding (#818): forwarded to
+     * the PDP as `missionBoundOnlyClasses`: the action classes this route
+     * admits only under a Mission-bound credential, so a joined request in one
+     * is denied rather than evaluated under the join.
+     */
+    missionBoundOnlyClasses?: ReadonlySet<string>;
   };
   /** PDP signer + ARS endpoint for requestable denials (M6). */
   requestable?: { sign: import("jose").CryptoKey; kid: string; endpoint: string };
@@ -911,6 +1022,14 @@ export interface EnforceResult {
 export interface WriteReservationScope {
   scope: IdempotencyScope;
   scopeDigest: string;
+  /**
+   * @spec runtime#idempotency, runtime#boundary-identifier-change (#853
+   * review): the digests of the same scope under each identifier the
+   * request's boundary replaces (`lineageScopeDigests`). Retrieval and the
+   * reservation's own transaction read a key held under any of them as held,
+   * so a declared change never makes a reserved or completed key fresh.
+   */
+  lineageScopeDigests: readonly string[];
   operationIdentity: string;
   idempotencyKey?: string;
 }
@@ -934,7 +1053,29 @@ export interface ExecutionAttempt {
   evaluationId: string;
   /** The governing Mission, from `resolvedMission`, never `token.mission`. */
   mission: { id: string; issuer: string; authority_hash?: string };
+  /**
+   * @spec runtime#permit-binding (#853, D487): the enforcement boundary the
+   * permit was decided at, exactly as this PEP sent it in
+   * `resource.properties.audience`. Every disposition record of this permit
+   * carries it, and the `enforcement_boundary` use check compares the
+   * boundary this PEP establishes now against it before every release.
+   */
   audience: string;
+  /**
+   * @spec runtime#boundary-identifier-change (#853, D487): the statement
+   * version that declared {@link audience} when the permit was decided, and
+   * against which the request's credential was validated. The
+   * `enforcement_boundary` use check refuses the permit once another version
+   * is in force.
+   *
+   * #1327 re-review: read from the permit's retained Decision Evidence row
+   * (its `boundary_version`, `evidence.ts`), which records it when the
+   * permit is first retained, never from the request that happens to
+   * receive the permit: a PDP retransmission re-presents an earlier permit,
+   * which keeps its own version. Absent where that row records none, which
+   * no version in force matches.
+   */
+  boundaryVersion?: string;
   /**
    * @spec resource-access#resource-matching (#1276, D457): the operation
    * target the permit was decided on, exactly as this PEP sent it in
@@ -1030,7 +1171,8 @@ export type PepRefusalDiagnostic =
   | "decision_evidence_unverifiable"
   | "channel_failure"
   | "pdp_unreachable"
-  | "unresolvable_recipients";
+  | "unresolvable_recipients"
+  | "credential_boundary_changed";
 
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
@@ -1086,6 +1228,12 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   // The recipients the operation addresses cannot be resolved from the
   // resource's own routing records (#1266): its target does not resolve.
   unresolvable_recipients: "target_unresolvable",
+  // @spec runtime-oauth#token-validation, runtime#boundary-identifier-change
+  // (#853, D487): the credential's `aud` was validated against a boundary or
+  // statement version other than the one this request is decided at (a
+  // cutover fell between validation and decision). It is not validated for
+  // the established boundary: a token-validation failure there.
+  credential_boundary_changed: "token_invalid",
 });
 
 /** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
@@ -1203,10 +1351,61 @@ export class Pep {
   private readonly now: () => Date;
   /** @spec authzen#context-audience-freshness: who supplies Mission state for this enforcement scope. */
   private readonly placement: StateSourcePlacement;
+  /** @spec runtime#runtime-conformance (#853, D487): where this PEP's boundary is declared. */
+  readonly boundaryContext: EnforcementBoundaryContext;
   constructor(private readonly deps: PepDeps) {
     this.capabilityCatalog = deps.capabilityCatalog ?? new PaymentsToolCatalog();
     this.now = deps.now ?? (() => new Date());
     this.placement = deps.stateSourcePlacement ?? stateSourcePlacement(RUNTIME_POSTURE);
+    this.boundaryContext = deps.boundary ?? paymentsBoundaryContext();
+  }
+
+  /**
+   * @spec runtime#runtime-conformance (#853, D487): the enforcement boundary
+   * this PEP establishes now, from its declared location and the active
+   * version alone.
+   */
+  boundary(): BoundaryEstablishment {
+    return this.boundaryContext.establish(this.now());
+  }
+
+  /**
+   * @spec runtime-oauth#token-validation (#853, D487): whether a verified
+   * credential's `aud` names the boundary this PEP establishes now, directly
+   * or through an alias declared for `context`'s issuer and token profile.
+   */
+  validateAudience(aud: unknown, context: AudienceContext): AudienceValidation {
+    return this.boundaryContext.validateAudience(aud, context, this.now());
+  }
+
+  /**
+   * @spec runtime#runtime-conformance, runtime-oauth#token-validation,
+   * runtime#boundary-identifier-change (#853, D487): the boundary this
+   * request is decided at, established now, and held to the boundary the
+   * credential was validated against. A boundary that cannot be established
+   * refuses with no record. A credential validated against another boundary
+   * or statement version (a cutover fell between validation and this point)
+   * is refused `credential_boundary_changed`, recorded at the boundary
+   * established now: it is never relabeled into a boundary that did not
+   * accept it. The caller retries, and its credential is validated afresh.
+   */
+  private async requestBoundary(
+    token: TokenFacts,
+    action: string,
+  ): Promise<{ ok: true; boundary: string; version: string } | { ok: false; refusal_reason: string }> {
+    const established = this.boundary();
+    if (!established.ok) {
+      return {
+        ok: false,
+        refusal_reason: established.reason === "consumer_unprovisioned" ? BOUNDARY_UNPROVISIONED : BOUNDARY_UNRESOLVABLE,
+      };
+    }
+    const validated = token.validatedBoundary;
+    if (validated !== undefined && (validated.boundary !== established.boundary || validated.version !== established.version)) {
+      await this.recordRefusal(established.boundary, token, "credential_boundary_changed", action);
+      return { ok: false, refusal_reason: "credential_boundary_changed" };
+    }
+    return established;
   }
 
   /**
@@ -1262,16 +1461,21 @@ export class Pep {
   ): Promise<{ ok: true; args: Record<string, unknown> } | { ok: false; refusal_reason: string }> {
     const mapping = this.toolAction(tool);
     if (!mapping) return { ok: true, args };
+    // @spec runtime#runtime-conformance (#853, D487): no boundary, no record:
+    // a Refusal Record REQUIRES an `audience`, and none is invented.
+    const established = await this.requestBoundary(token, mapping.action);
+    if (!established.ok) return { ok: false, refusal_reason: established.refusal_reason };
+    const boundary = established.boundary;
     let inputSchema: unknown;
     try {
       inputSchema = (this.capabilityCatalog.toolDefinitions([tool])[0] as { inputSchema?: unknown } | undefined)?.inputSchema;
     } catch {
-      await this.recordRefusal(token, "capability_source_unresolvable", mapping.action);
+      await this.recordRefusal(boundary, token, "capability_source_unresolvable", mapping.action);
       return { ok: false, refusal_reason: "capability_source_unresolvable" };
     }
     const admitted = admitArguments(inputSchema, args);
     if (admitted.ok) return admitted;
-    await this.recordRefusal(token, "invalid_request", mapping.action);
+    await this.recordRefusal(boundary, token, "invalid_request", mapping.action);
     return { ok: false, refusal_reason: "invalid_request" };
   }
 
@@ -1311,8 +1515,16 @@ export class Pep {
     actionApproval?: ActionApprovalInput,
     signals?: RequestSignals,
   ): Promise<EnforceResult> {
+    // @spec runtime#runtime-conformance (#853, D487): the boundary is
+    // established first, from the declaration alone, and every decision
+    // input, binding and record of this request uses this one value. A
+    // boundary that cannot be established refuses with no Refusal Record:
+    // the record REQUIRES an `audience`, and none is invented.
     const mapping = this.toolAction(tool);
-    if (!mapping) return await this.refuse(token, "unknown_tool", tool);
+    const establishedBoundary = await this.requestBoundary(token, mapping?.action ?? tool);
+    if (!establishedBoundary.ok) return { permitted: false, refusal_reason: establishedBoundary.refusal_reason };
+    const { boundary, version: boundaryVersion } = establishedBoundary;
+    if (!mapping) return await this.refuse(boundary, token, "unknown_tool", tool);
 
     let view: MissionView;
     let observation: MissionStateObservation;
@@ -1330,6 +1542,14 @@ export class Pep {
     // case, where no delegate policy is consulted at all).
     let isBaselineJoin = false;
     let delegateDepth: number | undefined;
+    // @spec authority-server#mapping-contract (#818): the one contract
+    // snapshot this joined request applies, forwarded to the PDP below.
+    let joinMapping: JoinMappingContract | undefined;
+    // @spec authority-server#mapping-contract (#818 review P2): set when that
+    // snapshot cannot resolve anything (absent, invalidated or stale). The
+    // mapping is unresolved, so the join fails `mission_binding_failed` at the
+    // PDP; this PEP never reports it as a credential with no authority.
+    let joinMappingUnavailable = false;
     // @spec authzen#context-credential (#825, D312) — the credential's own
     // authority as the PDP receives it: the Mission-bound credential's
     // verified entries, or, on the baseline-Join path, the entries the
@@ -1350,11 +1570,11 @@ export class Pep {
           !("malformed" in propagated) &&
           propagated.id === token.mission.id &&
           propagated.issuer === token.mission.issuer;
-        if (!matches) return await this.refuse(token, "mission_reference_conflict", mapping.action);
+        if (!matches) return await this.refuse(boundary, token, "mission_reference_conflict", mapping.action);
       }
 
       const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-      if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action);
+      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action);
 
       // @spec authority-server#reference-verification — the locally loaded
       // Mission view is the PEP's own binding source; a credential whose
@@ -1362,7 +1582,7 @@ export class Pep {
       // reference sources disagreeing on the canonical (issuer, id) pair,
       // refused as mission_reference_conflict, never resolved by picking one.
       if (loaded.view.issuer !== token.mission.issuer) {
-        return await this.refuse(token, "mission_reference_conflict", mapping.action, loaded.view);
+        return await this.refuse(boundary, token, "mission_reference_conflict", mapping.action, loaded.view);
       }
       view = loaded.view;
       observation = loaded.observation;
@@ -1373,7 +1593,7 @@ export class Pep {
       // Mission reference (rule 1). ABSENT masJoin config: this deployment
       // claims no MAS-governed route, so refuse exactly as the prior
       // behavior would have (an unrecognized/no-claim credential).
-      if (!this.deps.masJoin) return await this.refuse(token, "unknown_mission", mapping.action);
+      if (!this.deps.masJoin) return await this.refuse(boundary, token, "unknown_mission", mapping.action);
 
       // @spec authority-server#reference-verification (#557, #972 item 13,
       // D289) — this route is MAS-governed, so governance requires a
@@ -1383,13 +1603,13 @@ export class Pep {
       // `unknown_mission` stays for a supplied, well-formed reference that
       // does not resolve (below): a Mission named but not found.
       const propagated = signals?.missionReference;
-      if (!propagated) return await this.refuse(token, "mission_reference_conflict", mapping.action);
+      if (!propagated) return await this.refuse(boundary, token, "mission_reference_conflict", mapping.action);
       if ("malformed" in propagated) {
-        return await this.refuse(token, "mission_reference_conflict", mapping.action);
+        return await this.refuse(boundary, token, "mission_reference_conflict", mapping.action);
       }
 
       const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
-      if (!loaded) return await this.refuse(token, "unknown_mission", mapping.action, undefined, propagated.id);
+      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action, undefined, propagated.id);
 
       // Rule 8, bound 1: the acting credential's OWN authority, resolved by a
       // PEP-side deployment hook over TokenFacts (@spec
@@ -1399,15 +1619,36 @@ export class Pep {
       // which enforces it as its own bound (D312, D340). No evaluator
       // configured -> fail closed (see PepDeps.masJoin doc): a working Join
       // with no usable permit, never a silently unbounded one.
-      const ordinaryAuthority = this.deps.masJoin.resolveOrdinaryAuthority?.(token);
-      if (!ordinaryAuthority) return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+      // @spec authority-server#mapping-contract (#818): under a mapping
+      // contract the credential bound is the contract's scope mapping, read
+      // from the same snapshot the PDP's join applies, for the credential's
+      // own verified issuer and `scope`.
+      joinMapping = this.deps.masJoin.mappingContract?.();
+      // @spec authority-server#mapping-contract (#818 review P2): a contract
+      // with no usable snapshot is an unresolved mapping, not a credential
+      // without authority. The request carries an empty credential authority
+      // (nothing is mapped) to the PDP, whose join denies it
+      // `mission_binding_failed`; a usable contract whose scope mapping
+      // grants nothing for this action stays `out_of_authority` below.
+      joinMappingUnavailable = joinMapping !== undefined && !joinMapping.usable(this.now());
+      const ordinaryAuthority = joinMappingUnavailable
+        ? []
+        : joinMapping
+          ? joinMapping.credentialAuthority({
+              issuer: token.credential?.issuer ?? "",
+              scope: token.mission ? undefined : token.scope,
+              resource: CANONICAL_RESOURCE,
+              now: this.now(),
+            })
+          : this.deps.masJoin.resolveOrdinaryAuthority?.(token);
+      if (!ordinaryAuthority) return await this.refuse(boundary, token, "out_of_authority", mapping.action, loaded.view);
       // The same entries reach the PDP as the credential bound, so a remote
       // PDP enforces them too rather than only this non-empty gate. Entries
       // the bound cannot read in full refuse here, never reach it narrowed.
       try {
         carriedAuthority = credentialEntriesFromAuthority(ordinaryAuthority);
       } catch {
-        return await this.refuse(token, "out_of_authority", mapping.action, loaded.view);
+        return await this.refuse(boundary, token, "out_of_authority", mapping.action, loaded.view);
       }
 
       // Rules 3, 4, 5, 6 (subject/client join, delegate narrowing, uniform
@@ -1424,11 +1665,22 @@ export class Pep {
       observation = loaded.observation;
       missionAnchor = { id: propagated.id, issuer: propagated.issuer };
       isBaselineJoin = true;
-      delegateDepth = this.deps.masJoin.resolveDelegateDepth?.(
-        { id: propagated.id, issuer: propagated.issuer },
-        token.clientId,
-        loaded.view.client_id,
-      );
+      // Rule 5's actor records name clients in the Mission's namespace, so
+      // under a mapping contract the lookup is keyed on the client the
+      // contract maps this credential's client to. No mapped client, no
+      // record: an absent depth, which the PDP denies on the delegate
+      // disposition.
+      const depthClientId = joinMapping
+        ? joinMapping.clientFor({ iss: token.credential?.issuer ?? "", clientId: token.clientId }, this.now())
+        : token.clientId;
+      delegateDepth =
+        depthClientId === undefined
+          ? undefined
+          : this.deps.masJoin.resolveDelegateDepth?.(
+              { id: propagated.id, issuer: propagated.issuer },
+              depthClientId,
+              loaded.view.client_id,
+            );
     }
 
     // @spec authzen#context-audience-freshness: where the declared placement
@@ -1438,7 +1690,7 @@ export class Pep {
     // runtime-evidence#pre-decision-refusal `state_unavailable`, never a
     // decision request carrying a malformed observation.
     if (this.placement === "pep" && parseStateObservation(observation) === undefined) {
-      return await this.refuse(token, "state_unavailable", mapping.action, view);
+      return await this.refuse(boundary, token, "state_unavailable", mapping.action, view);
     }
 
     // Per-instance revocation (M12): refuse if any actor in the chain is
@@ -1446,7 +1698,7 @@ export class Pep {
     if (this.deps.revokedInstances?.size) {
       for (const hop of flattenActChain(token.act)) {
         if (this.deps.revokedInstances.has(`${hop.iss} ${hop.sub}`)) {
-          return await this.refuse(token, "instance_revoked", mapping.action, view);
+          return await this.refuse(boundary, token, "instance_revoked", mapping.action, view);
         }
       }
     }
@@ -1459,7 +1711,7 @@ export class Pep {
     // refused before any decision request, with no fallback to this
     // resource's metadata identifier.
     const established = this.operationTargetFor(tool);
-    if (!established.ok) return await this.refuse(token, "operation_target_unresolvable", mapping.action, view);
+    if (!established.ok) return await this.refuse(boundary, token, "operation_target_unresolvable", mapping.action, view);
     const operationTarget = established.target;
 
     // Effective parameters from authoritative store state (D34).
@@ -1485,7 +1737,7 @@ export class Pep {
       // refuses an unknown invoice; a credential naming that vendor never
       // reaches a decision. No server-resource fallback remains.
       const targetVendor = this.deps.payments.getVendor(String(args.vendor_id ?? ""));
-      if (targetVendor === undefined) return await this.refuse(token, "unknown_vendor", mapping.action, view);
+      if (targetVendor === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       targetVendorId = targetVendor.id;
       // @spec resource-access#initial-common-constraints (#1266): the
       // vendor record's own tenant, the ownership fact a `tenant` bound reads.
@@ -1501,10 +1753,10 @@ export class Pep {
     if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
-      if (!invoice) return await this.refuse(token, "unknown_invoice", mapping.action, view);
+      if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
       const vendor = this.deps.payments.getVendor(invoice.vendor_id);
       if (!vendor) {
-        return await this.refuse(token, "unknown_vendor", mapping.action, view, undefined, {
+        return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view, undefined, {
           resource: { type: "invoice", id: invoice.id },
         });
       }
@@ -1513,7 +1765,7 @@ export class Pep {
       if (mapping.reachesRecipients) {
         const resolved = this.deps.payments.remittanceRecipients(vendor.id);
         if (!resolved) {
-          return await this.refuse(token, "unresolvable_recipients", mapping.action, view, undefined, {
+          return await this.refuse(boundary, token, "unresolvable_recipients", mapping.action, view, undefined, {
             resource: { type: "invoice", id: invoice.id },
           });
         }
@@ -1567,7 +1819,7 @@ export class Pep {
       let requestedVendorId: string | undefined;
       if (args.vendor_id !== undefined) {
         requestedVendorId = this.deps.payments.getVendor(String(args.vendor_id))?.id;
-        if (requestedVendorId === undefined) return await this.refuse(token, "unknown_vendor", mapping.action, view);
+        if (requestedVendorId === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       }
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
       listEffective = buildListEffectiveParams({ action: mapping.action, resource: operationTarget, ...scope });
@@ -1666,12 +1918,19 @@ export class Pep {
         coveringCredentialEntries(token.credentialAuthority, establishedFacts).length > 0;
       carriedAuthority = token.credentialAuthority;
       if (!covered) {
-        await this.recordRefusal(token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
+        await this.recordRefusal(boundary, token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
         return { permitted: false, denial_reason: "out_of_authority" };
       }
-    } else if (carriedAuthority !== undefined && coveringCredentialEntries(carriedAuthority, establishedFacts).length === 0) {
+    } else if (
+      !joinMappingUnavailable &&
+      carriedAuthority !== undefined &&
+      coveringCredentialEntries(carriedAuthority, establishedFacts).length === 0
+    ) {
       // The Mission's view itself is never filtered by the credential (D340).
-      return await this.refuse(token, "out_of_authority", mapping.action, view);
+      // An unavailable mapping contract skips this gate only so the PDP's join
+      // reports it (`mission_binding_failed`); its empty credential authority
+      // still permits nothing there (#818 review P2).
+      return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
     }
 
     // Actor facts and capability presentation originate at the enforcement surface.
@@ -1684,7 +1943,7 @@ export class Pep {
     let capability: ReturnType<CapabilityCatalog["resolve"]>;
     try { capability = this.capabilityCatalog.resolve(tool); }
     catch {
-      return this.refuse(token, "capability_source_unresolvable", mapping.action, view, undefined, { resource: resourceObj });
+      return this.refuse(boundary, token, "capability_source_unresolvable", mapping.action, view, undefined, { resource: resourceObj });
     }
     const capabilitySnapshot = capability.catalog_sourced ? capability.snapshot : undefined;
     if (effective && capabilitySnapshot) effective.capability_snapshot = capabilitySnapshot;
@@ -1705,7 +1964,7 @@ export class Pep {
       // target, never against the audience or `type`/`id`.
       resource: {
         ...resourceObj,
-        properties: { ...resourceObj.properties, audience: CANONICAL_RESOURCE, operation_target: operationTarget },
+        properties: { ...resourceObj.properties, audience: boundary, operation_target: operationTarget },
       },
       // @spec authzen#parameter-digest `idempotency_key` (#917): forwarded
       // exactly as the caller supplied it, distinct from `parameter_digest`.
@@ -1829,7 +2088,20 @@ export class Pep {
       // @spec authority-server#mission-join rule 4 (#557 review point 1) —
       // forwarded to the PDP unchanged; consulted only when this request
       // carries `context.mission_join` above.
-      ...(this.deps.masJoin?.delegatePolicy !== undefined ? { delegatePolicy: this.deps.masJoin.delegatePolicy } : {}),
+      // @spec authority-server#mapping-contract (#818): under a mapping
+      // contract, the delegate policy is the one that contract version states.
+      ...(joinMapping?.delegatePolicy !== undefined
+        ? { delegatePolicy: joinMapping.delegatePolicy }
+        : this.deps.masJoin?.delegatePolicy !== undefined
+          ? { delegatePolicy: this.deps.masJoin.delegatePolicy }
+          : {}),
+      // @spec authority-server#mapping-contract, #high-consequence-binding
+      // (#818): the snapshot this request already applied, and the classes
+      // this route reserves for Mission-bound credentials.
+      ...(joinMapping ? { joinMapping } : {}),
+      ...(this.deps.masJoin?.missionBoundOnlyClasses !== undefined
+        ? { missionBoundOnlyClasses: this.deps.masJoin.missionBoundOnlyClasses }
+        : {}),
     };
     // @spec authzen#failure-condition-coverage, runtime#outage-radius — the
     // decision call is guarded. A call that threw obtained no decision, and
@@ -1847,7 +2119,7 @@ export class Pep {
       // (this PEP holds none, #828), so it refuses to decide: `pdp_unreachable`.
       decision = await (this.deps.decide ?? ((r: EvaluationRequest, o: DecisionOptions) => evaluate(r, o as EvaluateOptions)))(req, decisionOptions);
     } catch {
-      return this.refuse(token, "pdp_unreachable", mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
+      return this.refuse(boundary, token, "pdp_unreachable", mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
     }
     // @spec authzen#failure-condition-coverage — a local channel failure is
     // not a PDP decision. It has no PDP evidence/evaluation identifier, and
@@ -1867,7 +2139,7 @@ export class Pep {
         "decision_channel_response_too_large",
       ]);
       const reason = integrityFailures.has(cause) ? "channel_failure" : "pdp_unreachable";
-      return this.refuse(token, reason, mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
+      return this.refuse(boundary, token, reason, mapping.action, view, undefined, { evaluationRequest: req, resource: req.resource });
     }
 
     this.deps.observe?.({ tool, args, token, envelope: req, decision, ...(effective ? { effective } : {}) });
@@ -1887,14 +2159,17 @@ export class Pep {
     // this PEP acts on is `decision` itself, and the retention below changes
     // nothing about that.
     const emitted = decision.context.decision_evidence as DecisionEvidenceObject | undefined;
+    // #1327 re-review: a newly retained record binds the version this request
+    // was established at; a re-presented one keeps the version it was first
+    // retained under.
     const retention = emitted
-      ? await this.deps.evidence.retainDecision(emitted)
+      ? await this.deps.evidence.retainDecision(emitted, { boundaryVersion })
       : ({ retained: false, reason: "absent" } as const);
     if (!retention.retained && decision.decision) {
       // Fail closed on a permit: an action whose decision left no verifiable
       // Decision Evidence is refused rather than executed. A denial keeps its
       // own denial reason, which is the more useful one, and denies either way.
-      return this.refuse(token, "decision_evidence_unverifiable", mapping.action, view, undefined, {
+      return this.refuse(boundary, token, "decision_evidence_unverifiable", mapping.action, view, undefined, {
         evaluationRequest: req,
         resource: req.resource,
       });
@@ -2010,6 +2285,12 @@ export class Pep {
     // carries authorization facts from the RETAINED record (the authorized
     // digest included) rather than from the response context or the request.
     const retained = retention.retained ? retention.record.content : undefined;
+    // @spec runtime#boundary-identifier-change (#1327 re-review): the version
+    // the permit was decided under, from its retained row, never the one
+    // established for this request. A PDP retransmission re-presents an
+    // earlier permit; given the version now in force it would pass the
+    // `enforcement_boundary` use check after a cutover.
+    const permitVersion = retention.retained ? retention.record.boundary_version : undefined;
     const attempt: ExecutionAttempt = {
       evaluationId: decision.context.decision_id as string,
       mission: {
@@ -2017,7 +2298,8 @@ export class Pep {
         issuer: missionAnchor.issuer,
         ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
       },
-      audience: CANONICAL_RESOURCE,
+      audience: boundary,
+      ...(permitVersion !== undefined ? { boundaryVersion: permitVersion } : {}),
       operationTarget,
       action: mapping.action,
       tool,
@@ -2155,6 +2437,7 @@ export class Pep {
       writeReservation = {
         scope,
         scopeDigest: idempotencyScopeDigest(scope),
+        lineageScopeDigests: lineageScopeDigests(this.boundaryContext.declaration, scope),
         operationIdentity: operationIdentity(req),
         ...(typeof key === "string" ? { idempotencyKey: key } : {}),
       };
@@ -2324,7 +2607,12 @@ export class Pep {
    */
   permitUseFailure(attempt: ExecutionAttempt): string | undefined {
     for (const check of PERMIT_USE_CHECKS) {
-      const error = check.failure(attempt, { now: this.now(), profile: this.toolAction(attempt.tool) });
+      const now = this.now();
+      const error = check.failure(attempt, {
+        now,
+        profile: this.toolAction(attempt.tool),
+        boundary: this.boundaryContext.establish(now),
+      });
       if (error !== undefined) return error;
     }
     return undefined;
@@ -2450,6 +2738,7 @@ export class Pep {
   }
 
   private async refuse(
+    boundary: string,
     token: TokenFacts,
     reason: PepRefusalDiagnostic,
     action: string,
@@ -2457,7 +2746,7 @@ export class Pep {
     missionIdOverride?: string,
     established?: RefusalEstablished,
   ): Promise<EnforceResult> {
-    await this.recordRefusal(token, reason, action, view, missionIdOverride, established);
+    await this.recordRefusal(boundary, token, reason, action, view, missionIdOverride, established);
     return { permitted: false, refusal_reason: reason };
   }
 
@@ -2482,8 +2771,13 @@ export class Pep {
    * enumerated value, never a deployment's own diagnostic string"). The two
    * surfaces are deliberately separate, and only the signed one is
    * interoperable.
+   *
+   * `boundary` is the enforcement boundary this request established
+   * (@spec runtime#runtime-conformance, #853, D487): the record's `audience`,
+   * whatever `aud` the credential carried. A denial needs no permit for it.
    */
   private async recordRefusal(
+    boundary: string,
     token: TokenFacts,
     reason: PepRefusalDiagnostic,
     action: string,
@@ -2494,7 +2788,7 @@ export class Pep {
     const missionId = view?.id ?? token.mission?.id ?? missionIdOverride ?? "unknown";
     await this.deps.evidence.recordRefusal(CANONICAL_RESOURCE, "pep", {
       missionId,
-      audience: CANONICAL_RESOURCE,
+      audience: boundary,
       action: { name: action },
       denial_reason: signedDenialReason(reason),
       subject: { id: token.sub, ...(token.iss !== undefined ? { properties: { iss: token.iss } } : {}) },

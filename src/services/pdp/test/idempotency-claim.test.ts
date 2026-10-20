@@ -21,6 +21,7 @@ import { join } from "node:path";
 import { openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "../src/decision-evidence.js";
+import type { BoundaryStatementVersion, EnforcementBoundaries } from "../src/enforcement-boundary.js";
 import type { EnforcementScopeStatement } from "../src/enforcement-scope.js";
 import { type Decision, evaluate as evaluateRequest, type EvaluateOptions, type EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
@@ -196,6 +197,23 @@ function options(claims: IdempotencyClaimDomain, c: Clock, over: Partial<Evaluat
   };
 }
 
+/**
+ * The fixture statement with a second boundary version taking effect at
+ * `cutoverMs` (#1327 re-review): the same boundary, PEP location and keys,
+ * so only the statement generation changes.
+ */
+function statementWithVersionAt(cutoverMs: number): EnforcementScopeStatement {
+  const statement = statementWithPrivilegedAdministration();
+  const [shipped] = (statement.enforcement_boundaries as EnforcementBoundaries).versions;
+  statement.enforcement_boundaries = {
+    versions: [
+      shipped as BoundaryStatementVersion,
+      { ...(shipped as BoundaryStatementVersion), version: "payments-boundary-v1-rekeyed", effective_at: new Date(cutoverMs).toISOString() },
+    ],
+  };
+  return statement;
+}
+
 /** A claim domain on its own file; `reopen` is a PDP restart against the same file. */
 function domainOnFile(c: Clock, statement: EnforcementScopeStatement = statementWithPrivilegedAdministration()) {
   const file = join(mkdtempSync(join(tmpdir(), "claim-917-")), "claims.sqlite");
@@ -208,7 +226,7 @@ function domainOnFile(c: Clock, statement: EnforcementScopeStatement = statement
  * through the same single-writer opener at the domain's schema version.
  */
 function rowsOf(file: string): Array<{ evaluation_id: string; state: string; decision_json: string | null }> {
-  const db = openDurableStore({ file, migrations: ["-- claims schema v1"], owner: CLAIM_OWNER });
+  const db = openDurableStore({ file, migrations: ["-- claims schema v1", "-- claims schema v2"], owner: CLAIM_OWNER });
   try {
     return db.prepare("SELECT evaluation_id, state, decision_json FROM claims ORDER BY claimed_at_ms").all() as Array<{
       evaluation_id: string;
@@ -537,6 +555,42 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       claims.close();
     });
 
+    // #1327 re-review: the reference invalidates every permit at a new
+    // statement version. The boundary identifier and so the cache key are
+    // unchanged here; only the generation the claim was made under differs.
+    it("does not return it once a later statement version is in force, the boundary and cache key unchanged (@spec runtime#boundary-identifier-change)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c, statementWithVersionAt(T0 + 5_000));
+      const claims = open();
+      const key = freshKey();
+      const first = await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }));
+      expect(first.decision).toBe(true);
+      // Control: in the generation the claim was made under, the retry is the retransmission.
+      c.set(T0 + 1_000);
+      const again = await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }));
+      expect(again.context.evaluation_id).toBe(first.context.evaluation_id);
+      // After the cutover, still inside the permit's validity: suppressed under the original claim, never claimed afresh.
+      c.set(T0 + 6_000);
+      const after = await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }));
+      expectDenied(after, "duplicate_suppressed", { next_action: "retry", retry_after: 1 });
+      claims.close();
+    });
+
+    it("does not return it when the cutover falls while the PEP is answering (@spec runtime#boundary-identifier-change)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c, statementWithVersionAt(T0 + 5_000));
+      const claims = open();
+      const key = freshKey();
+      expect((await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: unconsumed }))).decision).toBe(true);
+      const answerAcrossCutover: ConsumptionStatusFn = () => {
+        c.set(T0 + 6_000);
+        return "unconsumed";
+      };
+      const late = await evaluate(request(c, { key }), options(claims, c, { consumptionStatus: answerAcrossCutover }));
+      expectDenied(late, "duplicate_suppressed", { next_action: "retry", retry_after: 1 });
+      claims.close();
+    });
+
     it("does not return it when the PEP answers consumed or unknown, fails, or does not answer in time", async () => {
       const c = clock();
       const file = join(mkdtempSync(join(tmpdir(), "claim-917-")), "claims.sqlite");
@@ -707,7 +761,11 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       const file = join(mkdtempSync(join(tmpdir(), "claim-917-")), "claims.sqlite");
       openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: statementWithPrivilegedAdministration() }).close();
       // A later build migrated the file one version further.
-      openDurableStore({ file, migrations: ["-- claims schema v1", "CREATE TABLE claims_v2 (x INTEGER) STRICT"], owner: CLAIM_OWNER }).close();
+      openDurableStore({
+        file,
+        migrations: ["-- claims schema v1", "-- claims schema v2", "CREATE TABLE claims_v3 (x INTEGER) STRICT"],
+        owner: CLAIM_OWNER,
+      }).close();
       expect(() => openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: statementWithPrivilegedAdministration() })).toThrow(/newer than this build/);
     });
   });

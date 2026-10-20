@@ -406,8 +406,88 @@ function loadTopology(): Topology {
 /** The validated deployment topology; consumers inject these values (no cycles). */
 export const TOPOLOGY: Topology = loadTopology();
 
-/** Deployment-owned ESS bytes; the PDP validates the complete statement at boot. */
-export const RUNTIME_SCOPE_CONFIG: unknown = readJson("enforcement-scope.json");
+/** The default (pre-env-override) payments resource, from topology.json. */
+const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
+
+export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? DEFAULT_PAYMENTS_RESOURCE;
+
+/**
+ * Deployment-owned ESS bytes; the PDP validates the complete statement at
+ * boot. @spec runtime#runtime-conformance (#853, D487): under
+ * MCP_PAYMENTS_RESOURCE the statement tracks CANONICAL_RESOURCE as
+ * {@link templatePaymentsResource} allows, so the statement, Protected
+ * Resource Metadata and every consumer read one value. Unset, the bytes are
+ * the file's.
+ */
+export const RUNTIME_SCOPE_CONFIG: unknown = templatePaymentsResource(
+  readJson("enforcement-scope.json"),
+  DEFAULT_PAYMENTS_RESOURCE,
+  CANONICAL_RESOURCE,
+);
+
+/**
+ * @spec runtime#boundary-identifier-change (#853 review): the statement with
+ * the payments resource `from` (the file's value) replaced by `to` (the
+ * MCP_PAYMENTS_RESOURCE override), only where that is configuration rather
+ * than history.
+ *
+ * - `mediated_scope.resources` is the statement's current configuration and
+ *   is templated.
+ * - An `enforcement_boundaries` declaration of one version with no
+ *   `replaces` record is initial configuration, and is templated whole: its
+ *   boundary, aliases and emitter identities follow `to`.
+ * - A declaration with retained history (more than one version, or a
+ *   `replaces` record) is authorization history that evidence produced
+ *   under it is verified against. It is kept byte for byte, never templated,
+ *   and an override is accepted only when the last version already declares
+ *   `to` as a boundary; any other override is refused, since following it
+ *   would mean rewriting a retained version. A change of identifier is
+ *   declared as a new version instead.
+ */
+export function templatePaymentsResource(statement: unknown, from: string, to: string): unknown {
+  if (from === to) return statement;
+  const remap = (value: unknown): unknown =>
+    value === from
+      ? to
+      : Array.isArray(value)
+        ? value.map(remap)
+        : value !== null && typeof value === "object"
+          ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, remap(v)]))
+          : value;
+  const file = "enforcement-scope.json";
+  const stmt = asObject(file, statement, "statement");
+  const scope = asObject(file, stmt.mediated_scope, "mediated_scope");
+  const declared = stmt.enforcement_boundaries;
+  let boundaries = declared;
+  if (declared !== undefined) {
+    const versions = asObject(file, declared, "enforcement_boundaries").versions;
+    const list = Array.isArray(versions) ? versions : [];
+    const history =
+      list.length !== 1 || list.some((v) => v !== null && typeof v === "object" && "replaces" in v);
+    if (!history) {
+      boundaries = remap(declared);
+    } else {
+      const last = list[list.length - 1] as { boundaries?: unknown } | undefined;
+      const current = Array.isArray(last?.boundaries) ? last.boundaries : [];
+      if (
+        !current.some(
+          (b) =>
+            b !== null && typeof b === "object" && (b as { boundary?: unknown }).boundary === to,
+        )
+      ) {
+        throw new ConfigError(
+          file,
+          `MCP_PAYMENTS_RESOURCE ${to} is not a boundary of the last enforcement_boundaries version; retained versions are never rewritten, so declare the change as a new version`,
+        );
+      }
+    }
+  }
+  return {
+    ...stmt,
+    mediated_scope: { ...scope, resources: remap(scope.resources) },
+    ...(boundaries !== undefined ? { enforcement_boundaries: boundaries } : {}),
+  };
+}
 const runtimeStateSource = asObject(
   "enforcement-scope.json",
   asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,
@@ -425,11 +505,6 @@ if (
     "mission_max_stale_seconds must be a positive integer",
   );
 }
-
-/** The default (pre-env-override) payments resource, from topology.json. */
-const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
-
-export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? DEFAULT_PAYMENTS_RESOURCE;
 
 export interface SeededUser {
   sub: string;

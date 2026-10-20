@@ -1,0 +1,109 @@
+{
+  "pilot": "mas-pilot-1",
+  "mission_issuer": "https://mas.pilot.invalid",
+  "mas_delegates": ["subagent-invoice-extractor"],
+  "estate": {
+    "issuer": "http://127.0.0.1:14818",
+    "host": "127.0.0.1",
+    "port": 14818,
+    "accounts": ["u-1001", "u-1002", "u-1003", "u-1004", "alice"],
+    "clients": [
+      {
+        "client_id": "estate-ap-bot-7f3",
+        "redirect_uri": "https://ap-bot.estate.invalid/cb",
+        "scope": "invoices.read vendors.read remit.send",
+        "resources": ["http://localhost:4403/mcp"]
+      },
+      {
+        "client_id": "estate-extractor-2c1",
+        "redirect_uri": "https://extractor.estate.invalid/cb",
+        "scope": "invoices.read",
+        "resources": ["http://localhost:4403/mcp"]
+      },
+      {
+        "client_id": "ap-agent",
+        "redirect_uri": "https://ap-agent.estate.invalid/cb",
+        "scope": "invoices.read vendors.read",
+        "resources": ["http://localhost:4403/mcp"]
+      }
+    ],
+    "resource_servers": {
+      "http://localhost:4403/mcp": { "scope": "invoices.read vendors.read remit.send" }
+    }
+  },
+  "mapping_cache": { "max_stale_seconds": 300 },
+  "mission_bound_only_classes": ["irreversible_action", "external_commitment", "privileged_administration"],
+  "mapping_contract": {
+    "contract_id": "mas-pilot-identity",
+    "version": 1,
+    "issued_at": "2026-10-19T00:00:00Z",
+    "provenance": {
+      "source": "estate-directory-export",
+      "export_id": "estate-dir-2026-10-19-001",
+      "exported_at": "2026-10-19T00:00:00Z"
+    },
+    "mission_issuer": "https://mas.pilot.invalid",
+    "subjects": [
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "sub": "u-1001" },
+        "to": { "iss": "https://mas.pilot.invalid", "sub": "alice" },
+        "status": "active"
+      },
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "sub": "u-1002" },
+        "to": { "iss": "https://mas.pilot.invalid", "sub": "alice" },
+        "status": "active"
+      },
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "sub": "u-1003" },
+        "to": { "iss": "https://mas.pilot.invalid", "sub": "alice" },
+        "status": "disabled"
+      },
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "sub": "alice" },
+        "to": { "iss": "https://mas.pilot.invalid", "sub": "dana" },
+        "status": "active"
+      }
+    ],
+    "clients": [
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "client_id": "estate-ap-bot-7f3" },
+        "to": "ap-agent",
+        "status": "active"
+      },
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "client_id": "estate-extractor-2c1" },
+        "to": "subagent-invoice-extractor",
+        "status": "active"
+      }
+    ],
+    "scopes": {
+      "resource": "http://localhost:4403/mcp",
+      "issuers": {
+        "http://127.0.0.1:14818": {
+          "invoices.read": ["payments:invoice.read", "payments:invoice.list"],
+          "vendors.read": ["payments:vendor.read"],
+          "remit.send": ["payments:remittance.send"]
+        }
+      }
+    },
+    "delegates": { "subagent-invoice-extractor": { "max_depth": 1 } },
+    "instance": { "supported": false, "required": false },
+    "failure": "mission_binding_failed"
+  },
+  "routes": [
+    { "route": "gateway", "admits": "estate-ordinary", "issuer": "http://127.0.0.1:14818" },
+    { "route": "resource", "admits": "mission-bound", "issuer": "https://mas.pilot.invalid" }
+  ],
+  "inventory": [
+    { "tool": "list_invoices", "class": "consequential_read", "gateway": "joined" },
+    { "tool": "get_invoice", "class": "consequential_read", "gateway": "joined" },
+    { "tool": "lookup_vendor", "class": "consequential_read", "gateway": "joined" },
+    { "tool": "schedule_payment", "class": "consequential_write", "gateway": "joined" },
+    { "tool": "cancel_scheduled_payment", "class": "consequential_write", "gateway": "joined" },
+    { "tool": "check_transfer", "class": "consequential_read", "gateway": "joined" },
+    { "tool": "hold_transfer", "class": "consequential_write", "gateway": "joined" },
+    { "tool": "execute_wire_transfer", "class": "irreversible_action", "gateway": "mission_bound_only" },
+    { "tool": "send_remittance_email", "class": "external_commitment", "gateway": "mission_bound_only" }
+  ]
+}
