@@ -349,6 +349,75 @@ export function revokeSuccessorsExpandedByAnotherClient(
   return { revoked, unresolved };
 }
 
+/** A ceiling-drawdown successor from another client whose provenance the remediation could not confirm. */
+export interface UnresolvedDrawdownProvenance {
+  successorId: string;
+  /** The client the successor's `activation_actor` names, if any. */
+  clientId: string | undefined;
+  reason: string;
+}
+
+/** What {@link revokeDrawdownSuccessorsRequestedByAnotherClient} did. */
+export interface DrawdownRemediation {
+  /** The drawdown successors it revoked. */
+  revoked: string[];
+  /** Drawdown successors whose provenance disagrees, which it did not act on. */
+  unresolved: UnresolvedDrawdownProvenance[];
+}
+
+/**
+ * @spec expansion#verification-order step 4 (#1372, D528): revoke every
+ * non-terminal ceiling-drawdown successor that a client other than its
+ * predecessor's own requested before the step-4 check existed (#1326). A
+ * drawdown opens no deferral, but its basis records the requesting client as
+ * `activation_actor`, while `client_id` is copied from the predecessor, so
+ * the successor's own record is the link. A successor is a target only when
+ * its provenance agrees: the activation actor is this issuer's and names
+ * another client, the successor carries its predecessor's client, and the
+ * predecessor's supersession names it. Anything else is reported, never
+ * resolved by guessing.
+ *
+ * As {@link revokeSuccessorsExpandedByAnotherClient}: the ordinary lifecycle
+ * transition after the expiry clock, the predecessor stays superseded, a
+ * terminal successor keeps its termination, the cascade reaches its children,
+ * a later successor its own client requested is not a target, a later run
+ * commits nothing, and a failed transition throws.
+ */
+export function revokeDrawdownSuccessorsRequestedByAnotherClient(kernel: MissionKernel): DrawdownRemediation {
+  const revoked: string[] = [];
+  const unresolved: UnresolvedDrawdownProvenance[] = [];
+  for (const successor of kernel.missionsByApprovalBasis("ceiling_drawdown")) {
+    if (successor.approval_basis.type !== "ceiling_drawdown") continue;
+    const actor = successor.approval_basis.activation_actor;
+    const report = (reason: string): void => {
+      unresolved.push({ successorId: successor.id, clientId: actor?.sub, reason });
+    };
+    if (!actor || actor.iss !== successor.issuer) {
+      report("the activation actor is not this issuer's");
+      continue;
+    }
+    if (actor.sub === successor.client_id) continue;
+    const predecessor = successor.predecessor ? kernel.get(successor.predecessor) : undefined;
+    if (!predecessor) {
+      report("the predecessor record is missing");
+      continue;
+    }
+    if (successor.client_id !== predecessor.client_id) {
+      report("the successor does not carry the predecessor's client");
+      continue;
+    }
+    const termination = predecessor.termination;
+    if (predecessor.state !== "terminated" || termination?.reason !== "superseded" || termination.successor !== successor.id) {
+      report("the predecessor's supersession does not name the successor");
+      continue;
+    }
+    if (TERMINAL_STATES.has(kernel.applyExpiry(successor).state)) continue;
+    kernel.transition(successor.id, "revoke");
+    revoked.push(successor.id);
+  }
+  return { revoked, unresolved };
+}
+
 /**
  * The successor's `mission` claim, adding the `predecessor` lineage member.
  */
