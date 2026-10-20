@@ -41,8 +41,12 @@ const FORMAT = "mission-resource-access-cases/1";
  * operation contract and refuse a missing, unsupported or ambiguous one; the PDP, the
  * payments PEP and the SaaS resource match entries against that target with the one
  * Resource Access matcher in `@mission/core`. The executors below run that same matcher
- * and contract evaluation (helper level). `resource-match.prefix` stays unimplemented: a
- * prefix entry provides no authority.
+ * and contract evaluation (helper level).
+ *
+ * `resource-match.prefix` (#1276): that matcher also enforces `prefix` entries, and the
+ * authorization server's subset test (`isSubsetEntry`), PAR intake and derivation compare
+ * them with the same prefix comparison, so the unsupported-prefix refusals (der-03, der-04)
+ * no longer apply.
  */
 const IMPLEMENTED = new Set([
   "subset.exact-resource",
@@ -60,6 +64,7 @@ const IMPLEMENTED = new Set([
   "delegate-matcher",
   "operation-target",
   "resource-match.exact",
+  "resource-match.prefix",
   // #1275 (D457): retained eligibility provenance and the delegation-authorization policy hook.
   "delegation.policy",
   "delegation.inherited-eligibility",
@@ -185,6 +190,17 @@ function run(c: Case): void {
       // Establishment from the operation contract (#1276): each refusal must be
       // the one the case describes, never another path's refusal.
       const contract = input.contract as { candidates?: unknown[] } | null;
+      if (c.expected.outcome === "no-match") {
+        // A query that selects another resource is resolved first (#1276): the
+        // case names the resolved target, and the entry is matched against it,
+        // never against the request URI that merely shares the entry's path.
+        const entry = input.entry as { resource: string; resource_match?: string };
+        const resolved = input.resolved_target;
+        if (typeof resolved !== "string") throw new Error(`${c.id}: no resolved_target`);
+        expect(matchResource(entry, input.request as string), `${c.id}: the unresolved request`).toBe("match");
+        expect(matchResource(entry, resolved), c.expected.reason).toBe("no-match");
+        return;
+      }
       if (c.expected.outcome !== "refuse-resolution") throw new Error(`${c.id}: no executor for ${c.expected.outcome}`);
       if (contract === null) {
         expect(establishOperationTarget(undefined), c.expected.reason).toEqual({ ok: false, reason: "no_contract" });
@@ -346,6 +362,12 @@ const CITED = new Set([
   "sub-res-01",
   "sub-res-02",
   "sub-res-03",
+  "sub-res-04",
+  "sub-res-05",
+  "sub-res-06",
+  "sub-res-07",
+  "sub-res-08",
+  "rm-resolve-04",
   "sub-ra-01",
   "sub-ra-02",
   "dg-inherit-01",
@@ -405,6 +427,19 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     }
   });
 
+  it("the subset test draws the resource servers' boundary: an exact candidate naming each resource-matching case's target is within the case's entry exactly when the matcher admits the target (@spec resource-access#subset, #1276)", () => {
+    const matching = [...byId.values()].filter((c) => c.check === "resource-match");
+    expect(matching.filter((c) => c.requires.includes("resource-match.prefix")).length).toBeGreaterThan(10);
+    for (const c of matching) {
+      const entry = c.input.entry as { resource: string; resource_match?: "exact" | "prefix" };
+      const text = c.input.entry_resource_json_text;
+      const resource = typeof text === "string" ? (JSON.parse(text) as string) : entry.resource;
+      const reference = { type: "mission_resource_access", resource, actions: ["a.read"], ...(entry.resource_match ? { resource_match: entry.resource_match } : {}) } as AuthorityEntry;
+      const candidate = { type: "mission_resource_access", resource: c.input.target as string, actions: ["a.read"] } as AuthorityEntry;
+      expect(isSubsetEntry(candidate, reference), c.id).toBe(matchResource(reference, c.input.target as string) === "match");
+    }
+  });
+
   describe("witnesses the conformance ledger cites", () => {
     it("sub-res-01: an exact candidate is within an exact reference with the identical resource", () => {
       runCited("sub-res-01");
@@ -414,6 +449,24 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     });
     it("sub-res-03: an exact candidate carrying a query its exact reference lacks is not within it", () => {
       runCited("sub-res-03");
+    });
+    it("sub-res-04: an exact candidate the prefix reference's matcher admits is within it", () => {
+      runCited("sub-res-04");
+    });
+    it("sub-res-05: an exact candidate extending the prefix reference within a segment is not within it", () => {
+      runCited("sub-res-05");
+    });
+    it("sub-res-06: a prefix candidate whose normalized base the prefix reference admits is within it", () => {
+      runCited("sub-res-06");
+    });
+    it("sub-res-07: a prefix candidate /orders is not within a prefix reference /orders/", () => {
+      runCited("sub-res-07");
+    });
+    it("sub-res-08: a prefix candidate is never within an exact reference, even naming the same resource", () => {
+      runCited("sub-res-08");
+    });
+    it("rm-resolve-04: a query that selects another resource is resolved first, and the resolved target falls outside the prefix", () => {
+      runCited("rm-resolve-04");
     });
     it("sub-ra-01: a candidate omitting requires_action_approval is within a reference carrying false", () => {
       runCited("sub-ra-01");
