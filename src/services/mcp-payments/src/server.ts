@@ -68,7 +68,7 @@ import {
   type WriteReservationScope,
 } from "./pep.js";
 import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
-import { type IntrospectionSettings, TokenIntrospector } from "./introspection.js";
+import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
 import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
 import {
@@ -895,6 +895,12 @@ export class McpPaymentsServer {
     };
     const validated = this.requireAudience(payload, INTROSPECTED_TOKEN_PROFILE, this.deps.issuer);
     await this.verifyPresentation(accessToken, introspected.cnfJkt, pop);
+    // Admission re-reads the clock after its awaits: a token that expired
+    // while it was being introspected or its proof checked is refused here,
+    // not only at the PDP's own credential-expiry check (#1400 review).
+    if (introspected.exp * 1000 <= introspector.clock().getTime()) {
+      throw new TokenInactiveError("expired while being admitted");
+    }
     return this.ordinaryFactsFrom(payload, introspected.cnfJkt, validated);
   }
 

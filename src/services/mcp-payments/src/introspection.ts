@@ -86,6 +86,11 @@ export class TokenIntrospector {
     this.now = settings.now ?? (() => new Date());
   }
 
+  /** This adapter's clock, for a caller that re-checks `exp` after its own awaits. */
+  clock(): Date {
+    return this.now();
+  }
+
   async introspect(accessToken: string): Promise<IntrospectedToken> {
     const key = createHash("sha256").update(accessToken).digest("base64url");
     const nowMs = this.now().getTime();
@@ -93,9 +98,14 @@ export class TokenIntrospector {
     if (cached && nowMs < cached.untilMs) return cached.token;
     this.cache.delete(key);
 
-    const token = this.read(await this.call(accessToken), nowMs);
-    const untilMs = Math.min(nowMs + this.settings.cacheMaxSeconds * 1000, token.exp * 1000);
-    if (untilMs > nowMs) {
+    const answer = await this.call(accessToken);
+    // The clock is read again once the answer is in: a token that expired
+    // while the call was in flight is refused, and the cache entry's life
+    // starts from this reading (#1400 review).
+    const answeredMs = this.now().getTime();
+    const token = this.read(answer, answeredMs);
+    const untilMs = Math.min(answeredMs + this.settings.cacheMaxSeconds * 1000, token.exp * 1000);
+    if (untilMs > answeredMs) {
       if (this.cache.size >= (this.settings.cacheMaxEntries ?? 1000)) {
         const oldest = this.cache.keys().next().value;
         if (oldest !== undefined) this.cache.delete(oldest);
