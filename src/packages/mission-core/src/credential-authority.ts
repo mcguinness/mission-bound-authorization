@@ -19,7 +19,7 @@ import { conditionCanonicalBytes } from "./authority-subset.js";
 import {
   type CommonConstraintKey,
   type ConstraintFacts,
-  commonConstraintGates,
+  commonConstraintGatesOverMembers,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   isImplementedCommonConstraint,
   validCommonConstraint,
@@ -315,6 +315,13 @@ export interface CredentialTarget {
    */
   constraintFacts?: ConstraintFacts;
   /**
+   * @spec resource-access#initial-common-constraints (#1266): for an action
+   * over a collection, each member's own facts, established by the
+   * enforcement point from its own records. Present, every member is
+   * evaluated and one that fails or lacks a fact denies the whole action.
+   */
+  constraintMembers?: readonly ConstraintFacts[];
+  /**
    * Whether this enforcement path independently requires an action-bound
    * approval for the action, so an entry demanding one is honored.
    */
@@ -352,7 +359,7 @@ export interface CredentialConstraintTrace {
  */
 export function credentialConstraintGates(
   entry: CredentialAuthorityEntry,
-  facts: Pick<CredentialFacts, "vendorIds" | "amount" | "constraintFacts">,
+  facts: Pick<CredentialFacts, "vendorIds" | "amount" | "constraintFacts" | "constraintMembers">,
 ): CredentialConstraintTrace {
   const c = entry.constraints;
   const evaluated: CredentialConstraintTrace["evaluated"] = [];
@@ -375,7 +382,7 @@ export function credentialConstraintGates(
       return { satisfied: false, evaluated };
     }
   }
-  const common = commonConstraintGates(c, facts.constraintFacts ?? {});
+  const common = commonConstraintGatesOverMembers(c, facts.constraintFacts ?? {}, facts.constraintMembers);
   evaluated.push(...common.evaluated);
   if (!common.satisfied) return { satisfied: false, evaluated };
   return { satisfied: true, evaluated };

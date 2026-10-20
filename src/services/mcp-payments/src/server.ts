@@ -1321,7 +1321,10 @@ export class McpPaymentsServer {
     // the admission call above is not the last word on either.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
-    return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
+    return {
+      ok: true,
+      result: this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id)),
+    };
   }
 
   /** @spec runtime#idempotency (#918): the Operation Profile keys this tool as a reversible write. */
@@ -2146,13 +2149,23 @@ export class McpPaymentsServer {
    * decision. The store filter on `args.vendor_id` stays as a first pass;
    * this filter is the actual binding enforcement, applied regardless of
    * what the caller asked for, and an absent scope returns nothing.
+   * `listMemberIds` (@spec resource-access#initial-common-constraints, #1266)
+   * are the invoices whose own facts the decision evaluated, when it bound
+   * them; no other invoice is returned.
    */
-  private execute(tool: string, args: Record<string, unknown>, listVendorScope?: string[]): unknown {
+  private execute(
+    tool: string,
+    args: Record<string, unknown>,
+    listVendorScope?: string[],
+    listMemberIds?: string[],
+  ): unknown {
     switch (tool) {
       case "list_invoices": {
         const invoices = this.deps.payments.listInvoices(args.vendor_id ? String(args.vendor_id) : undefined);
         const scope = listVendorScope ?? [];
-        return invoices.filter((inv) => scope.includes(inv.vendor_id));
+        return invoices.filter(
+          (inv) => scope.includes(inv.vendor_id) && (listMemberIds === undefined || listMemberIds.includes(inv.id)),
+        );
       }
       case "get_invoice":
         return this.deps.payments.getInvoice(String(args.invoice_id));

@@ -19,7 +19,9 @@ import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
   type AuthorityEntry as CoreAuthorityEntry,
-  commonConstraintGates,
+  type CollectionMemberFacts,
+  collectionMemberConstraintFacts,
+  commonConstraintGatesOverMembers,
   compareAmounts,
   computeAnchor,
   type ConstraintFacts,
@@ -206,6 +208,16 @@ export interface EvaluationRequest {
        * `data_classification` bound reads it; an absent label satisfies none.
        */
       data_classification?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): for an
+       * action over a collection, every member the action reads, each with
+       * the facts the PEP read from that member's own record. Present, the
+       * issuance, tenant and classification bounds read each member's facts
+       * instead of the single-object members above, and one member that
+       * fails or lacks a fact denies the whole action. A list that cannot be
+       * read establishes no member fact.
+       */
+      members?: CollectionMemberFacts[];
     };
   };
   action: {
@@ -1576,6 +1588,23 @@ async function evaluateInner(
         }
       : {}),
   };
+  // @spec resource-access#initial-common-constraints (#1266): a collection
+  // read's members, each with its own facts. A list with any member that
+  // cannot be read is unreadable as a whole: it is carried as empty, which
+  // establishes no member fact, rather than filtered to the members that read.
+  const rawMembers = req.resource.properties?.members as unknown;
+  const memberFacts =
+    rawMembers === undefined
+      ? undefined
+      : Array.isArray(rawMembers)
+        ? rawMembers.map(collectionMemberConstraintFacts)
+        : [undefined];
+  const constraintMembers: ConstraintFacts[] | undefined =
+    memberFacts === undefined
+      ? undefined
+      : memberFacts.every((m): m is ConstraintFacts => m !== undefined)
+        ? memberFacts
+        : [];
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
     c: CredentialAuthorityEntry,
@@ -1616,6 +1645,7 @@ async function evaluateInner(
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
     constraintFacts,
+    ...(constraintMembers !== undefined ? { constraintMembers } : {}),
   };
   const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
   if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
@@ -1828,7 +1858,8 @@ async function evaluateInner(
   // evaluated against the facts the PEP established, through the same shared
   // gate the credential bound uses. Keyed on the constraint's own presence; an
   // absent fact or a malformed value refuses, never permits open.
-  const commonGates = commonConstraintGates(entry.constraints, constraintFacts);
+  // A collection read's members are each evaluated with their own facts.
+  const commonGates = commonConstraintGatesOverMembers(entry.constraints, constraintFacts, constraintMembers);
   for (const key of commonGates.evaluated) contributions.add(key);
   if (!commonGates.satisfied) return deny("parameter_violation", "mission");
 

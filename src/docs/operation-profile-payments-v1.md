@@ -1,12 +1,24 @@
-# payments-runtime-profile-v9
+# payments-runtime-profile-v10
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v9`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v10`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v10** (#1266): a `list_invoices` read evaluates each invoice it
+  returns against the issuance, tenant and classification bounds, with
+  that invoice's own facts, instead of refusing for want of a single
+  object. When an entry the read could rely on carries one of those
+  bounds, the decision request gains `resource.properties.members` and
+  the list form gains `members`, so `parameter_digest` binds each member's
+  facts. One member outside a bound, or without the fact, refuses the
+  whole read. `mission_constraints_supported` also names
+  `requires_action_approval` and `terminal_when`, which the resource
+  enforces through its PDP. Every other read's decision bytes are
+  unchanged from v9.
 
 - **v9** (#853, D487): the canonical resource URI is the enforcement
   boundary identifier the Enforcement Scope Statement declares for
@@ -169,7 +181,8 @@ merely because the mapped action's own schema declares one.
 
 The resource enforces these Mission Resource Access Common Constraints
 (#1266), and `mission_constraints_supported` names exactly them beside
-`max_amount` and `vendors`. Each is evaluated through the shared
+`max_amount`, `vendors`, `requires_action_approval` and `terminal_when`.
+Each is evaluated through the shared
 semantics in `packages/mission-core/src/common-constraints.ts`, on the
 matched Mission entry (the PDP) and on the credential's own entries (the
 PEP before any decision, and the PDP), against facts the PEP reads from
@@ -181,11 +194,11 @@ and the PDP refuses a matched entry that carries one.
 
 | Key | Authoritative fact | Decision request member | Targets without the fact |
 |---|---|---|---|
-| `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
-| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
+| `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive; for `list_invoices`, each invoice returned | `resource.properties.issued_at`; for `list_invoices`, each member's `issued_at` in `resource.properties.members` | `lookup_vendor` (a vendor record has no issuance instant), an invoice with no `issued_at`, and a `list_invoices` read with such a member or with no member: refused |
+| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string; for `list_invoices`, each invoice returned | `resource.properties.tenant`; for `list_invoices`, each member's `tenant` in `resource.properties.members` | a vendor record naming no tenant, and a `list_invoices` read with a member whose vendor names none or with no member: refused |
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
 | `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
-| `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named | `resource.properties.data_classification` | `list_invoices` and `lookup_vendor` (no single labeled record), and an invoice with no label: refused |
+| `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named; for `list_invoices`, each invoice returned | `resource.properties.data_classification`; for `list_invoices`, each member's `data_classification` in `resource.properties.members` | `lookup_vendor` (a vendor record has no label), an invoice with no label, and a `list_invoices` read with such a member or with no member: refused |
 | `allowed_tools` | the tool this PEP dispatched the operation to, from its Operation Profile (`TOOL_ACTIONS`), compared as an exact string; the phases of `payments:payment.execute` are distinct tools | `action.properties.tool` (on every decision request) | none: every operation has a dispatched tool |
 
 `time_window` is also enforced after the decision: the PDP caps the
@@ -312,9 +325,21 @@ digested as above.
 - A bulk form with an empty `vendor_scope` names a placeholder vendor
   object instead. An entry's empty allowlist refuses it, and no stored
   entitlement names it, so the deployment's Resource policy refuses it.
+- When a Mission or credential entry naming the target and the action
+  carries `resource_issued_after`, `resource_issued_before`, `tenant` or
+  `data_classification`, the list form gains `members`: every invoice the
+  read returns, sorted by `id`, each with its record's `issued_at` and
+  `classification` (as `data_classification`) and its vendor's `tenant`,
+  where the records hold them. The decision request carries the same list
+  as `resource.properties.members`, and the PEP's credential bound and the
+  PDP evaluate those bounds for each member with its own facts. A member
+  outside a bound or without the fact refuses the whole read with
+  `parameter_violation`, as an empty `members` does under such a bound; no
+  response carries the members that pass.
 - Before release the PEP recomputes the list form from the current Mission
   and store; a difference is `parameter_mismatch`. Execution returns only
-  invoices whose vendor is in `vendor_scope`.
+  invoices whose vendor is in `vendor_scope` and, when the form carries
+  `members`, only those invoices.
 
 ## Resource policy
 
