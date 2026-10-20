@@ -313,6 +313,44 @@ This type does not use the {{RFC9396}} common `locations` field:
 refuses an entry carrying `locations` with the
 `invalid_authorization_details` error code.
 
+The authorization server also refuses an entry with the
+`invalid_authorization_details` error code when:
+
+- its `resource` is not an `absolute-URI` ({{Section 4.3 of RFC3986}}),
+  so no entry's `resource` carries a fragment component;
+- its `resource` is an `http` or `https` URI without the `//` authority
+  form naming a non-empty host;
+- its `actions` array is empty, or one of its values is neither an
+  action identifier nor an action family ({{resource-access-type}});
+- its `delegation.max_depth` is not a non-negative integer, so a
+  negative or fractional value is refused;
+- an `allowed_delegates` matcher carries neither `sub` nor
+  `sub_profile`, or carries any other member
+  ({{matching-allowed-delegates}});
+- its `time_window` Common Constraint has a `not_before` later than its
+  `not_after`, a window that admits no instant; or
+- its `recipient_domain` Common Constraint is not a DNS name in ASCII
+  form, with each internationalized label in its A-label form, or ends
+  in a dot.
+
+Letter case does not make a `recipient_domain` invalid; values compare
+case-insensitively ({{value-space-comparison}}).
+
+The following values are valid and carry a defined meaning:
+
+- A `max_depth` of 0 admits the entry into no delegated token, since a
+  delegated token's delegation depth is 1 or more
+  ({{delegate-eligibility}}): the entry supplies no in-Mission delegated
+  authority. Any other `delegation` member stays intact; a member a
+  companion profile defines there, such as a child-creation grant, keeps
+  the bound that profile gives it.
+- An empty `allowed_delegates` array permits no delegate. It differs
+  from an absent member, which defers eligibility to the authorization
+  server's delegation-authorization policy ({{delegate-eligibility}}).
+- An action value that a consumer does not recognize for the entry's
+  `resource` grants nothing. It does not make the entry unenforceable:
+  the entry's other actions remain enforceable ({{rs-enforcement}}).
+
 ### Decimal Values {#decimal-values}
 
 A decimal-string value in a Common Constraint (`max_amount`'s `amount`
