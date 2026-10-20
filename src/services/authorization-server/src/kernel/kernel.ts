@@ -458,6 +458,14 @@ export interface StatusObservationOptions {
    * surface. Absent, `sub` is the Mission's client, as before.
    */
   actingParty?: string;
+  /**
+   * @spec authority-server#join-disclosure (#818): the authenticated caller
+   * is a PDP enrolled for the requested audience, so the `mission` object
+   * also discloses the Mission's `subject` (`iss`, `sub`) and `client_id`.
+   * The provider decides it from the deployment's enrollment configuration;
+   * absent, neither member is included and the response is unchanged.
+   */
+  joinDisclosure?: boolean;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -4130,6 +4138,13 @@ export class MissionKernel {
       sub: opts.actingParty ?? record.client_id,
       mission: {
         ...this.missionClaim(record),
+        // @spec authority-server#join-disclosure (#818): the Mission's
+        // Subject and client, for an enrolled joining PDP only. Entries keep
+        // their recorded `delegation` member on every audience-scoped
+        // response, so nothing else changes for the enrolled caller.
+        ...(opts.joinDisclosure
+          ? { subject: { iss: record.subject.iss, sub: record.subject.sub }, client_id: record.client_id }
+          : {}),
         // @spec mission-status#mission-status-response (#702) — OPTIONAL,
         // disclosed at the AS's discretion (issuance profile's introspection
         // disclosure footing); this reference AS discloses it on every
