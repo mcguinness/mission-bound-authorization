@@ -1128,29 +1128,39 @@ Mission by adding a Progressive ceiling and carrying no
 is derived first, per the Progressive profile's own construction
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}): `typ`
 `mission-authority-ceiling`, `value` a two-member object of
-`authority_ceiling` and `drawdown_policy`.
+`authority_ceiling` and `drawdown_policy`. The ceiling covers the
+Authority Set, and `drawdown_policy` is an activation policy
+reference whose `digest` stands for a policy snapshot this example
+does not display.
 
 ~~~ json
 {
   "authority_ceiling": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "invoices.write"] }
+      "actions": ["invoices.read", "invoices.write",
+        "journal-entries.write"] }
   ],
-  "drawdown_policy": "https://as.example.com/policies/erp-drawdown-v1"
+  "drawdown_policy": {
+    "id": "erp-drawdown",
+    "version": "1",
+    "digest":
+      "sha-256:_hLEAl_ir1vxnex2tgbS6eRR99lyL1r6yyeB4RrC184"
+  }
 }
 ~~~
 
 ~~~ text
 {"iss":"https://as.example.com","typ":"mission-authority-ceiling","v
 alue":{"authority_ceiling":[{"actions":["invoices.read","invoices.wr
-ite"],"resource":"https://erp.example.com","type":"mission_resource_
-access"}],"drawdown_policy":"https://as.example.com/policies/erp-dra
-wdown-v1"}}
+ite","journal-entries.write"],"resource":"https://erp.example.com","
+type":"mission_resource_access"}],"drawdown_policy":{"digest":"sha-2
+56:_hLEAl_ir1vxnex2tgbS6eRR99lyL1r6yyeB4RrC184","id":"erp-drawdown",
+"version":"1"}}}
 ~~~
 
 ~~~ text
-ceiling_hash = sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q
+ceiling_hash = sha-256:JaGArrkON1yHM16a_QRe5QqlIbhaxhXLUV7wtReyvD0
 ~~~
 
 The manifest is the always-present members above plus this
@@ -1167,7 +1177,7 @@ I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
 rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
 3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
 NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
-eiling_hash":"sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q","
+eiling_hash":"sha-256:JaGArrkON1yHM16a_QRe5QqlIbhaxhXLUV7wtReyvD0","
 client_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires
 _at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc
 9-","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4
@@ -1177,8 +1187,8 @@ N1a0kV7tR"}}}
 ~~~
 
 ~~~ text
-approval_context_commitment = sha-256:JJtL7r3tCIBNt8YwLyFU4_qa4eHAhY
-qsIdFz_87yXlk
+approval_context_commitment = sha-256:PG7CiXyNLp3QXptmC3cBQolXHDmmeW
+f_0j17gwY-U5g
 ~~~
 
 **Vector 4: conditional `submission_evidence_commitment`.** Diverges
