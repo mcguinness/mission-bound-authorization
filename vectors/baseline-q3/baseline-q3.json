@@ -338,6 +338,18 @@
       ]
     },
     {
+      "name": "governed-policy-activation",
+      "label": "baseline-q3/variant/governed-policy-activation",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT"
+      },
+      "differs_by": "Activated under `governed_policy`: Alice approved the policy `q3-close-agent` version 3 at 2026-10-30T16:00:00Z, and the policy activates the client's proposal of the baseline task at 08:00:00 with no fresh human decision.",
+      "drafts": [
+        "approval-governance"
+      ]
+    },
+    {
       "name": "metered-consumption",
       "label": "baseline-q3/variant/metered-consumption",
       "mission": {

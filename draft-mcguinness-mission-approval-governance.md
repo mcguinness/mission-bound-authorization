@@ -968,6 +968,114 @@ Withdrawing the standing consent stops every later activation under
 it (step 1). A Mission already activated keeps its ordinary
 lifecycle: withdrawal does not revoke it.
 
+## Example {#governed-policy-example}
+
+The following example shows an excerpt, other members omitted, of the
+Mission Record of `msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT`, activated
+under `governed_policy`. Alice approved the policy `q3-close-agent`
+version 3 at 2026-10-30T16:00:00Z. The client `s6BhdRkqt3` later
+proposed the issuance profile's Worked Example task, and the policy
+activated it at 2026-11-02T08:00:00Z with no fresh human decision. The
+Mission shares the Worked Example Mission's Intent and Authority Set,
+and so its anchors. The policy digest stands for a policy snapshot this
+example does not display.
+
+~~~ json
+{
+  "id": "msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT",
+  "issuer": "https://as.example.com",
+  "subject": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_basis": {
+    "type": "governed_policy",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "approved_at": "2026-10-30T16:00:00Z",
+    "root_commitment":
+      "sha-256:nw0FRGuMWUqNMS9BwKpEpqcvZwwO9DGrrujtlMNTAJU",
+    "activation": {
+      "approval_event_id": "ape_7d2sUfnZmgimG0bc67hu",
+      "policy": { "id": "q3-close-agent", "version": "3",
+        "digest":
+          "sha-256:nw0FRGuMWUqNMS9BwKpEpqcvZwwO9DGrrujtlMNTAJU" } },
+    "activation_actor": { "iss": "https://as.example.com",
+      "sub": "s6BhdRkqt3" },
+    "adjudication": { "kind": "policy",
+      "policy": { "id": "q3-close-agent", "version": "3" },
+      "governance_record": true }
+  },
+  "authority_source": { "type": "user_delegated" },
+  "client_id": "s6BhdRkqt3",
+  "approval_event_id": "ape_7d2sUfnZmgimG0bc67hu",
+  "created_at": "2026-11-02T08:00:00Z"
+}
+~~~
+
+The following is an example of the Approval Governance Record committed
+with that Mission:
+
+~~~ json
+{
+  "approval_event_id": "ape_7d2sUfnZmgimG0bc67hu",
+  "mission": {
+    "issuer": "https://as.example.com",
+    "intent_hash":
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
+    "authority_hash":
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+  },
+  "approval_policy": {
+    "id": "q3-close-agent",
+    "version": "3",
+    "digest":
+      "sha-256:nw0FRGuMWUqNMS9BwKpEpqcvZwwO9DGrrujtlMNTAJU"
+  },
+  "assertions": [
+    { "assertion_id": "ast_1",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR" },
+      "kind": "policy", "decision": "approve",
+      "decided_at": "2026-11-02T08:00:00Z",
+      "authority": { "policy_id": "q3-close-agent", "version": "3",
+        "approved_at": "2026-10-30T16:00:00Z" } }
+  ],
+  "evaluation": {
+    "decision": "approved",
+    "evaluated_at": "2026-11-02T08:00:00Z",
+    "contributing": ["ast_1"]
+  },
+  "envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0y..."
+  }
+}
+~~~
+
+In this example:
+
+- The root decides activations itself, with no separate evaluator, so
+  `root_commitment`, `activation.policy.digest`, and
+  `approval_policy.digest` carry one value ({{governed-policy-record}}).
+- The client `s6BhdRkqt3` requested the activation. It is the
+  `activation_actor`, distinct from the `consent_principal`, Alice.
+- `ast_1` is the accountable assertion: a `policy` assertion whose
+  `principal` is Alice and whose `approved_at` equals
+  `approval_basis.approved_at` ({{governed-policy-record}}). Because a
+  non-human assertion contributes, the third recording trigger also
+  holds ({{triggers}}).
+- The root declares a 30-day recency ceiling for every consequence
+  class, a 60-second clock-skew allowance, and an exception that admits
+  a `policy` accountable assertion for irreversible actions, with a
+  maximum age of 7 days ({{recency-declarations}}). The issuer
+  classifies `journal-entries.write` as an irreversible action, so the
+  exception applies and the strictest applicable maximum is 7 days
+  ({{recency-evaluation}}).
+- At `evaluated_at`, `ast_1` is 2 days and 16 hours old, and
+  `approved_at` <= `decided_at` <= `evaluated_at` holds, so the issuer
+  counts it. Without the exception, the accountable assertion would have
+  to be `kind: human`, and the policy could not activate this Mission
+  ({{recency-high-risk}}).
+
 # Consent Evidence Relationship {#consent-evidence-relationship}
 
 Where both are recorded, the AGR is authoritative for

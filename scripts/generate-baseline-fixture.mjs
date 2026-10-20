@@ -186,6 +186,7 @@ const VARIANTS = [
   { name: "mas-issued", issuer: "https://mas.example.com", id: MISSION_ID, differs_by: "The baseline task and Authority Set issued by a Mission Authority Server under its own issuer, with no proposal; its anchors use `iss` `https://mas.example.com`.", drafts: ["authority-server", "issuance-grant"] },
   { name: "cap-expansion", issuer: "https://mas.example.com", differs_by: "A Mission Authority Server Mission whose 1,200 USD adjustment leads to an approved expansion to a 2,000 USD cap.", drafts: ["authority-server"] },
   { name: "agr-backed-direct", differs_by: "Alice's approval is recorded through an Approval Governance Record.", drafts: ["approval-governance"] },
+  { name: "governed-policy-activation", differs_by: "Activated under `governed_policy`: Alice approved the policy `q3-close-agent` version 3 at 2026-10-30T16:00:00Z, and the policy activates the client's proposal of the baseline task at 08:00:00 with no fresh human decision.", drafts: ["approval-governance"] },
   { name: "metered-consumption", differs_by: "The Intent adds consumption bounds and the Authority Set adds a `reconciliation.run` entry.", drafts: ["metering"] },
   { name: "children-enabled", differs_by: "The invoice-read entry's `delegation` adds `children`.", drafts: ["child-delegation"] },
   { name: "write-delegable", differs_by: "The journal-write entry carries a `delegation` member.", drafts: ["attenuation"] },
