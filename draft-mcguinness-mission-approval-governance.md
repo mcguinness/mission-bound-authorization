@@ -1580,7 +1580,12 @@ decision times are personal data about reviewers. The record is
 control-plane state retained by the issuer, never disclosed on wire
 surfaces, and access to a retained record follows the issuer's audit-log
 discipline for approval-event records
-({{I-D.draft-mcguinness-oauth-mission}}).
+({{I-D.draft-mcguinness-oauth-mission}}). The
+`approval_context_commitment` value is the same in every artifact that
+discloses it, so it correlates those artifacts
+({{approval-context-carriage}}). A `service` assertion's `authority`
+discloses the identifiers and versions of the logic and model that took
+part in a decision ({{assertion-authority}}).
 
 # IANA Considerations {#iana}
 
