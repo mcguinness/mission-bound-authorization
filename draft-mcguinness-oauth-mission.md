@@ -408,7 +408,10 @@ A Mission is created and used in a single chain:
 4. **Bind the grant.** The AS binds the OAuth grant the approval
    produces to that Mission, server-side: every later derivation from
    that grant lineage resolves to exactly this Mission, and the client
-   never selects or reassigns it ({{grant-binding}}).
+   never selects or reassigns it ({{grant-binding}}). Under a profile,
+   the AS can bind a further lineage to the same Mission, such as a
+   refresh-token family a continuation transport establishes; each
+   lineage resolves to exactly one Mission.
 5. **Issue and enforce.** Every access token the agent obtains under
    the Mission carries the derived authorization details and a
    **`mission` claim** identifying that Mission (`id`, `issuer`). A
