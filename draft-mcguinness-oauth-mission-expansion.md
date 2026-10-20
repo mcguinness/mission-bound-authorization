@@ -999,8 +999,9 @@ redemption at or after it with `invalid_grant`, and nothing activates.
 ({{deferred-window}}).
 
 After activation the Mission Issuer MUST refuse a further pushed
-request for the continuation and MUST refuse redemption of any other
-code issued for the operation with `invalid_grant`. A lost redemption
+request for the continuation with `invalid_request`, and MUST refuse
+redemption of any other code issued for the operation with
+`invalid_grant`. A lost redemption
 response is recovered by repeating the token exchange with the same
 `creation_request_id` ({{creation-recovery}}); an operation whose
 continuation expired before activation answers that retry with

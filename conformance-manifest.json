@@ -49644,7 +49644,7 @@
    "id": "expansion.interactive.no-second-code-after-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "interactive-handoff",
-   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
+   "text": "After activation the Mission Issuer MUST refuse a further pushed request for the continuation with `invalid_request`, and MUST refuse redemption of any other code issued for the operation with `invalid_grant`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
