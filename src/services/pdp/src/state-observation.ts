@@ -7,7 +7,7 @@
  * member.
  */
 
-import { type JWTVerifyGetKey, jwtVerify } from "jose";
+import { type JWTPayload, type JWTVerifyGetKey, jwtVerify } from "jose";
 
 /**
  * The observation's members. Typed `string` where the profile names a closed
@@ -94,6 +94,59 @@ export function parseStateObservation(value: unknown): ParsedStateObservation | 
 /** @spec status#mission-status-response: the signed Status envelope's `typ`. */
 const MISSION_STATUS_RESPONSE_TYP = "mission-status-response+jwt";
 
+/** A Mission Status Response that verified: its claims, its `mission` object, and the signed `mission.fresh_until`. */
+export interface VerifiedMissionStatus {
+  payload: JWTPayload;
+  mission: Record<string, unknown>;
+  /** The signed `mission.fresh_until`, epoch milliseconds. */
+  freshUntilMs: number;
+}
+
+/**
+ * @spec status#mission-status-response (consumer checks 1, 3, 4, 5, 8 and the
+ * `exp` half of 9): the ONE verifier of a signed Mission Status Response,
+ * shared by the PEP-carried `assertion` ({@link verifyStateAssertion}) and the
+ * PDP's own read of the declared state source (`mission-status-resolver.ts`),
+ * so the two never disagree about what verifies.
+ *
+ * Verified means: a JWS of the Status media type, signed by one of `keys`,
+ * issued by `expected.issuer`, audienced to `expected.audience` (the
+ * enforcement scope), not expired, its `mission` object naming
+ * `expected.missionId` under that same issuer, and carrying a signed
+ * `mission.fresh_until`. `keys` are the declared state source's published
+ * status-response keys; absent, nothing can be verified. Each caller adds the
+ * checks its own input needs; this function adds none of theirs.
+ */
+export async function verifyMissionStatusResponse(
+  jws: string,
+  expected: { missionId: string; issuer: string; audience: string },
+  keys: JWTVerifyGetKey | undefined,
+  now: Date,
+  clockToleranceSeconds: number,
+): Promise<VerifiedMissionStatus | undefined> {
+  if (keys === undefined) return undefined;
+  try {
+    const { payload } = await jwtVerify(jws, keys, {
+      typ: MISSION_STATUS_RESPONSE_TYP,
+      issuer: expected.issuer,
+      audience: expected.audience,
+      currentDate: now,
+      clockTolerance: clockToleranceSeconds,
+    });
+    const mission = payload.mission;
+    if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return undefined;
+    const m = mission as Record<string, unknown>;
+    if (m.id !== expected.missionId || m.issuer !== expected.issuer) return undefined;
+    // The signed state ceiling. A status response with none bounds nothing
+    // the PDP could rely on, so it does not verify.
+    const freshUntilMs = rfc3339Ms(m.fresh_until);
+    if (freshUntilMs === undefined) return undefined;
+    return { payload, mission: m, freshUntilMs };
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * @spec authzen#context-audience-freshness `assertion`: verify the signed
  * Mission Status Response "the PEP obtained `state` and `version` from", so
@@ -101,10 +154,8 @@ const MISSION_STATUS_RESPONSE_TYP = "mission-status-response+jwt";
  * `keys` are the declared state source's published status-response keys;
  * absent, nothing can be verified and the assertion is refused.
  *
- * Verified means: a JWS of the Status media type, signed by one of `keys`,
- * issued by the Mission's issuer, audienced to this enforcement scope, not
- * expired, naming this Mission, carrying a signed `mission.fresh_until`, and
- * agreeing with the observation it rides in: the same `state`, the same
+ * Verified means: the response verifies ({@link verifyMissionStatusResponse})
+ * and agrees with the observation it rides in: the same `state`, the same
  * `version` where the observation names one, an `iat` equal to
  * `mission_status_issued_at`, and a `fresh_until` no earlier than
  * `mission_status_expires_at` ("its `mission.fresh_until`, never its `exp`,
@@ -123,35 +174,19 @@ export async function verifyStateAssertion(
   now: Date,
   clockToleranceSeconds: number,
 ): Promise<number | undefined> {
-  if (keys === undefined) return undefined;
-  try {
-    const { payload } = await jwtVerify(observation.assertion, keys, {
-      typ: MISSION_STATUS_RESPONSE_TYP,
-      issuer: expected.issuer,
-      audience: expected.audience,
-      currentDate: now,
-      clockTolerance: clockToleranceSeconds,
-    });
-    const mission = payload.mission;
-    if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return undefined;
-    const m = mission as Record<string, unknown>;
-    if (m.id !== expected.missionId || m.issuer !== expected.issuer || m.state !== observation.state) return undefined;
-    if (observation.version !== undefined && m.version !== observation.version) return undefined;
-    if (
-      observation.issuedAtMs !== undefined &&
-      (typeof payload.iat !== "number" || payload.iat * 1000 !== observation.issuedAtMs)
-    ) {
-      return undefined;
-    }
-    // The signed state ceiling. A status response with none bounds nothing
-    // the PDP could rely on, so it does not verify.
-    const freshUntilMs = rfc3339Ms(m.fresh_until);
-    if (freshUntilMs === undefined) return undefined;
-    // A repeated expiry later than the signed one is a mismatch, as for state
-    // and version; an earlier one is a deployment-policy end and stands.
-    if (observation.expiresAtMs !== undefined && observation.expiresAtMs > freshUntilMs) return undefined;
-    return freshUntilMs;
-  } catch {
+  const verified = await verifyMissionStatusResponse(observation.assertion, expected, keys, now, clockToleranceSeconds);
+  if (verified === undefined) return undefined;
+  const { payload, mission: m, freshUntilMs } = verified;
+  if (m.state !== observation.state) return undefined;
+  if (observation.version !== undefined && m.version !== observation.version) return undefined;
+  if (
+    observation.issuedAtMs !== undefined &&
+    (typeof payload.iat !== "number" || payload.iat * 1000 !== observation.issuedAtMs)
+  ) {
     return undefined;
   }
+  // A repeated expiry later than the signed one is a mismatch, as for state
+  // and version; an earlier one is a deployment-policy end and stands.
+  if (observation.expiresAtMs !== undefined && observation.expiresAtMs > freshUntilMs) return undefined;
+  return freshUntilMs;
 }
