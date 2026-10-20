@@ -187,10 +187,70 @@ export type ReversibleWriteControlDeclaration =
 /** The one reversible-write class that may elect the idempotency-key control. */
 export const REVERSIBLE_WRITE_CLASS = "consequential_write";
 
+/**
+ * @spec runtime#execution-capabilities (#817): the durable record that
+ * deduplicates a retransmission of an operation. `pdp_claim` is the PDP's
+ * idempotency claim, whose key, scope and horizon the class's
+ * `transaction_assurance` declaration names; `pep_reservation` is the PEP's
+ * reservation, which the operation's `reversible_write_idempotency` key
+ * control names; `resource` is the resource's own record, so this
+ * declaration names its key, scope and retention itself.
+ */
+export const DURABLE_IDEMPOTENCY_HOLDERS = ["resource", "pdp_claim", "pep_reservation"] as const;
+
+/**
+ * @spec runtime#execution-capabilities (#817): how an operation recovers from
+ * an unknown outcome. `hold`: it stays undetermined and its claim stays held
+ * until evidence resolves it. `outcome_lookup`: the declared outcome lookup
+ * resolves it from evidence. `resource_retransmission`: the effect is
+ * re-presented under the same key to a resource whose declared durable
+ * idempotency deduplicates it. Nothing else re-executes an effect.
+ */
+export const UNKNOWN_OUTCOME_RECOVERIES = ["hold", "outcome_lookup", "resource_retransmission"] as const;
+
+/**
+ * @spec runtime#execution-capabilities (#817): the per-operation transaction
+ * claims the admission rules gate. `exactly_once` rests on durable
+ * idempotency held by the resource; `evaluation_context_enforced`, the
+ * enforced property of Evaluation-Context Binding, rests on declared
+ * conditional-effect support.
+ */
+export const EXECUTION_ASSERTIONS = ["exactly_once", "evaluation_context_enforced"] as const;
+
+/** The compound-action phases an operation declaration may name (runtime#compound-actions). */
+const COMPOUND_PHASES = ["preflight", "prepare", "commit", "compensate"] as const;
+
+export type DurableIdempotencyDeclaration =
+  | { held_by: "pdp_claim" | "pep_reservation"; new_operation: string }
+  | { held_by: "resource"; key: string; scope: readonly string[]; retention: string; new_operation: string };
+
+/**
+ * @spec runtime#execution-capabilities (#817): one operation's execution
+ * capabilities, each stated even where the answer is `none`, and the
+ * transaction claims it asserts. `action_class` is carried because the
+ * statement has no operation table to map an action identifier to its class.
+ * A reference-statement representation of the Operation Profile items, not a
+ * Runtime wire member.
+ */
+export interface ExecutionCapabilityDeclaration {
+  operation: string;
+  phase?: (typeof COMPOUND_PHASES)[number];
+  action_class: string;
+  durable_idempotency: "none" | DurableIdempotencyDeclaration;
+  conditional_effect: "none" | { precondition: string };
+  outcome_lookup: "none" | { identifier: string; method: string };
+  commit_point: string;
+  cancellation: string;
+  compensation: "none" | { action: string };
+  unknown_outcome_recovery: (typeof UNKNOWN_OUTCOME_RECOVERIES)[number];
+  asserted: ReadonlyArray<(typeof EXECUTION_ASSERTIONS)[number]>;
+}
+
 export interface EnforcementExtensionDeclarations {
   custody?: ReadonlyArray<{ mediated_class: string; custody_mode: string }>;
   transaction_assurance?: ReadonlyArray<TransactionAssuranceDeclaration>;
   reversible_write_idempotency?: ReadonlyArray<ReversibleWriteControlDeclaration>;
+  execution_capabilities?: ReadonlyArray<ExecutionCapabilityDeclaration>;
   evidence?: {
     mechanism: string;
     retention_window: string;
@@ -521,6 +581,160 @@ export function validateEnforcementScopeStatement(
 
   findings.push(...reversibleWriteFindings(stmt, scopeOk && object(scope) ? scope : undefined));
 
+  return findings;
+}
+
+/**
+ * @spec runtime#execution-capabilities (#817): the `execution_capabilities`
+ * declarations, checked wherever they appear, claimed or not. Like
+ * {@link evidenceDeclarationFindings}, this runs after the structural pass
+ * ({@link validateEnforcementScopeStatement}) at load, so a defect in another
+ * declaration is reported once, by its own check, and never again here as an
+ * unresolvable holder.
+ *
+ * Each entry names one operation (and phase) of a declared mediated class
+ * once, and states every capability, `none` included, so a capability is
+ * never left implicit. A durable-idempotency holder must resolve inside this
+ * statement: the PDP's claim through the class's `transaction_assurance`
+ * scope and horizon, the PEP's reservation through the operation's
+ * `reversible_write_idempotency` key control, and the resource's own record
+ * through the key, scope and retention it names.
+ *
+ * The admission rules refuse a claim no declared capability supports:
+ * `exactly_once` without durable idempotency held by the resource, and
+ * `evaluation_context_enforced` without conditional-effect support; and a
+ * recovery from an unknown outcome that rests on no declared outcome lookup
+ * or resource idempotency. A refusal here is a configuration error at load.
+ */
+export function executionCapabilityFindings(input: unknown): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const scope = object(stmt.mediated_scope) ? stmt.mediated_scope : undefined;
+  const findings: EnforcementScopeFinding[] = [];
+  const extensions = object(stmt.extensions) ? stmt.extensions : {};
+  const declared = extensions.execution_capabilities;
+  if (declared === undefined) return findings;
+  const push = (member: string, problem: string): void => {
+    findings.push({ member, problem });
+  };
+  if (!Array.isArray(declared)) {
+    push("extensions.execution_capabilities", "must be an array of per-operation declarations");
+    return findings;
+  }
+  const classes = scope && isNonEmptyStringArray(scope.action_classes) ? scope.action_classes : [];
+  const transaction = Array.isArray(extensions.transaction_assurance) ? extensions.transaction_assurance : [];
+  const writes = Array.isArray(extensions.reversible_write_idempotency) ? extensions.reversible_write_idempotency : [];
+  const isActionId = (v: unknown): v is string => isNonEmptyString(v) && v.includes(":");
+  const seen = new Set<string>();
+  declared.forEach((raw, i) => {
+    const member = `extensions.execution_capabilities[${i}]`;
+    const decl = object(raw) ? raw : undefined;
+    if (!decl) {
+      push(member, "entry must be an object");
+      return;
+    }
+    const operation = decl.operation;
+    const actionClass = decl.action_class;
+    if (!isActionId(operation)) push(member, "operation must be an action identifier");
+    if (decl.phase !== undefined && !(COMPOUND_PHASES as readonly unknown[]).includes(decl.phase)) {
+      push(member, `phase must be one of ${COMPOUND_PHASES.join(", ")}`);
+    }
+    if (!isNonEmptyString(actionClass)) {
+      push(member, "missing the action class of the operation");
+    } else if (!classes.includes(actionClass)) {
+      push(member, `action_class "${actionClass}" is outside mediated_scope.action_classes`);
+    }
+    const identity = `${String(operation)}#${String(decl.phase ?? "")}`;
+    if (seen.has(identity)) push(member, `operation "${String(operation)}" is declared twice`);
+    seen.add(identity);
+
+    // Durable idempotency: `none`, or a holder this statement resolves.
+    const idem = decl.durable_idempotency;
+    let heldBy: unknown;
+    if (idem !== "none") {
+      if (!object(idem)) {
+        push(member, "durable_idempotency must be none or a declaration naming its holder");
+      } else {
+        heldBy = idem.held_by;
+        if (!(DURABLE_IDEMPOTENCY_HOLDERS as readonly unknown[]).includes(heldBy)) {
+          push(member, `durable_idempotency.held_by must be one of ${DURABLE_IDEMPOTENCY_HOLDERS.join(", ")}`);
+        }
+        if (!isNonEmptyString(idem.new_operation)) {
+          push(member, "durable_idempotency names nothing that distinguishes a new operation from a retransmission");
+        }
+        if (heldBy === "pdp_claim") {
+          const claim = transaction.find((d) => object(d) && d.mediated_class_or_scope === actionClass);
+          const named =
+            object(claim) &&
+            isNonEmptyStringArray(claim.idempotency_scope) &&
+            typeof claim.idempotency_horizon_seconds === "number" &&
+            claim.idempotency_horizon_seconds > 0;
+          if (!named) {
+            push(member, "durable idempotency held by the PDP claim, but no transaction_assurance declaration for its class names the scope and horizon");
+          }
+        } else if (heldBy === "pep_reservation") {
+          const control =
+            writes.find((d) => object(d) && d.mediated_class_or_scope === operation) ??
+            writes.find((d) => object(d) && d.mediated_class_or_scope === actionClass);
+          if (!object(control) || control.permit_lifetime_control !== "validity_window_plus_idempotency_key") {
+            push(member, "durable idempotency held by the PEP reservation, but no reversible_write_idempotency key control covers the operation");
+          }
+        } else if (heldBy === "resource") {
+          const dims = idem.scope;
+          if (
+            !isNonEmptyString(idem.key) ||
+            !isNonEmptyStringArray(dims) ||
+            new Set(dims).size !== dims.length ||
+            retentionWindowSeconds(idem.retention) === undefined
+          ) {
+            push(member, "durable idempotency held by the resource names no key, scope of distinct members, or retention of days or below");
+          }
+        }
+      }
+    }
+
+    const conditional = decl.conditional_effect;
+    if (conditional !== "none" && !(object(conditional) && isNonEmptyString(conditional.precondition))) {
+      push(member, "conditional_effect must be none or name the precondition carried to the resource");
+    }
+    const lookup = decl.outcome_lookup;
+    if (lookup !== "none" && !(object(lookup) && isNonEmptyString(lookup.identifier) && isNonEmptyString(lookup.method))) {
+      push(member, "outcome_lookup must be none or name the recorded identifier and how it is queried");
+    }
+    if (!isNonEmptyString(decl.commit_point)) push(member, "missing the commit point");
+    if (!isNonEmptyString(decl.cancellation)) push(member, "missing the cancellation semantics");
+    const compensation = decl.compensation;
+    if (compensation !== "none" && !(object(compensation) && isActionId(compensation.action))) {
+      push(member, "compensation must be none or name the compensating action identifier");
+    }
+
+    // Admission: a recovery from an unknown outcome rests on a declared
+    // capability, never on executing the effect again.
+    const recovery = decl.unknown_outcome_recovery;
+    if (!(UNKNOWN_OUTCOME_RECOVERIES as readonly unknown[]).includes(recovery)) {
+      push(member, `unknown_outcome_recovery must be one of ${UNKNOWN_OUTCOME_RECOVERIES.join(", ")}`);
+    } else if (recovery === "outcome_lookup" && !object(lookup)) {
+      push(member, "an outcome_lookup recovery rests on no declared outcome lookup");
+    } else if (recovery === "resource_retransmission" && heldBy !== "resource") {
+      push(member, "a resource_retransmission recovery rests on no durable idempotency held by the resource");
+    }
+
+    // Admission: each transaction claim rests on its declared capability.
+    const asserted = decl.asserted;
+    if (
+      !Array.isArray(asserted) ||
+      new Set(asserted).size !== asserted.length ||
+      !asserted.every((a) => (EXECUTION_ASSERTIONS as readonly unknown[]).includes(a))
+    ) {
+      push(member, `asserted must list distinct values of ${EXECUTION_ASSERTIONS.join(", ")}, or none`);
+      return;
+    }
+    if (asserted.includes("exactly_once") && heldBy !== "resource") {
+      push(member, "claims exactly-once execution with no durable idempotency held by the resource");
+    }
+    if (asserted.includes("evaluation_context_enforced") && !object(conditional)) {
+      push(member, "claims the enforced Evaluation-Context Binding property with no declared conditional-effect support");
+    }
+  });
   return findings;
 }
 

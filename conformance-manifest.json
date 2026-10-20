@@ -23,8 +23,8 @@
     "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "f69e5dc0d0047b55578dbc7ac3f9c2bc1b1935df",
-    "content_sha256": "ac8bdce5360f73f3671d169a8b6fa7d7ac088b5c7c67cafb39a96570e5d0611d"
+    "revision": "10e05d79c000dd30182270bc9f3765ccdfaffbb8",
+    "content_sha256": "58a1455a07f9e93758ddc802e98a41ca3b3b7affc4887847f13829741721241b"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -18460,7 +18460,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v10, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), and declares each operation's execution capabilities (#817); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -21727,6 +21727,232 @@
     }
    ],
    "notes": "Before #610's fix, list_invoices without vendor_id was never actually classified as materially unaffecting the resource set in the sense of successfully returning everything: a vendor-constrained entry always denied (out_of_authority then; parameter_violation now, #801) since the unbound call's implicit vendorId of \"\" never matched a real vendors constraint and an unconstrained entry threw an FGA validation error (the default resourceObj named an FGA object type/id the domain model does not accept). Neither path reached a permit, so the pre-fix behavior was closer to broken-and-fail-closed-by-accident than to the issue's literal \"returns every invoice\" description; the LATENT misclassification was in server.ts's execute(), which would have trusted args.vendor_id blindly and returned the unfiltered store had a permit ever been reached. The fix repairs the underlying FGA object typing (so the call reaches a real decision at all) and binds the result: a vendor-constrained entry narrows the bulk result to its own multi-vendor scope, never the whole store (proven for two vendors, with a third excluded, not just a singleton); an unconstrained entry legitimately keeps returning every vendor, which is the entry's true scope, not a misclassification. Verified this fix is reached from every entry point: McpPaymentsServer.callReadTool directly, and both mcp-transport.ts's and mcp-http-transport.ts's route() functions fall through to callReadTool for list_invoices (no separate switch bypasses it). This row's role is AS for the same reason noted on the paired must-require-binding-for-material-reads row; see that row's notes for the representative-vendor FGA-check limitation, which applies equally here. #612 finding 1 hardening: the bulk read's normalized parameters (vendor_scope/vendor_scope_source) now actually enter parameter_digest and are reverified immediately before execution (Pep.reverifyList), so a Mission-authority change landing between the permit and execution is caught as a digest mismatch rather than executed on a stale scope (proven with a live-OpenFGA TOCTOU test that narrows the entry's vendors constraint via the same beforeReverify test-hook idiom callWriteTool already uses for writes). #612 finding 3: the decision request names the FULL collection (resource.properties.vendor_ids), and evaluateInner's step 6a checks every named member against the Mission's own contextual relation, denying the WHOLE read the moment any one member is refused (out_of_authority with authority_bound mission, D404; parameter_violation for a member the entry's own vendors constraint excludes, #801); the response contract has no lane for a partially narrowed permit. The \"finding 3\" tests prove that Mission-check mechanism with a stub Fga. Independent Resource policy is a separate bound: since #1135 (#828, D418) the PDP asks a stored-entitlement policy, with nothing Mission-derived, about every target at step 6b and denies resource_policy; the resource-policy-pep.test.ts witnesses (a fixture over both channels, and live OpenFGA in CI) show a policy refusing one member refusing the whole read with no result. entry_digest anchors only the Mission ceiling, never Resource policy's independent say. #828 step 5: the unconstrained bulk form is bound to the vendors the store holds invoices for, named as targets and digested, not to a placeholder."
+  },
+  {
+   "id": "runtime.execution-capabilities.declared",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Where the transaction-assurance tier covers an operation's class ({{runtime-conformance}}), its Operation Profile MUST declare these **execution capabilities**, each stated even where the answer is no:",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for every operation in a class the transaction-assurance tier covers, the published Operation Profile states durable idempotency (its holder, key, scope and retention, and what distinguishes a deliberately new operation with identical parameters from a retransmission), conditional-effect support, authoritative outcome lookup, the commit point, cancellation semantics, compensation authority, and the recovery from an unknown outcome, each even where the answer is no",
+    "local": "the reference publishes them per operation and phase as the Enforcement Scope Statement's extensions.execution_capabilities in its Protected Resource Metadata; a PDP-claim or PEP-reservation holder names its key, scope and retention through the class's transaction_assurance declaration or the operation's reversible_write_idempotency key control, and loadRuntimePosture refuses an unstated item or a holder the statement does not resolve"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > publishes the execution capabilities of every effectful operation the PEP serves, each under its own class and phase",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > the shipped statement declares every execution capability of each effectful payments operation and asserts no transaction claim",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a declaration that leaves an execution capability unstated, naming the entry",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load a durable-idempotency holder the statement does not resolve",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. The payments statement declares all five effectful operations, the two high-consequence ones the tier covers and the three reversible writes it does not. Each test was proved by disabling the check it covers (the commit_point item, the PDP-claim and PEP-reservation holder checks, the shipped wire declaration)."
+  },
+  {
+   "id": "runtime.execution-capabilities.enforced-context-needs-conditional-effect",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim the enforced property of Evaluation-Context Binding ({{evaluation-context-binding}}) for an operation whose Operation Profile declares no conditional-effect support.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.evaluation-context-binding"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims the enforced Evaluation-Context Binding property for an operation whose Operation Profile declares no conditional-effect support; a reread at the PEP alone reaches only the verified property",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting evaluation_context_enforced with conditional_effect none, and admits it with a declared precondition"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an enforced Evaluation-Context Binding claim with no declared conditional-effect support, and admits it with a declared precondition",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "Partial: the refusal is witnessed on the reference statement's per-operation assertion (proved by disabling the evaluation_context_enforced check). The Evaluation-Context Binding declaration that publishes the verified or enforced property per operation is #773's and does not exist in the reference, so no test reads the property from it."
+  },
+  {
+   "id": "runtime.execution-capabilities.exactly-once-needs-resource-idempotency",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "A deployment MUST NOT claim exactly-once execution for an operation whose Operation Profile declares no durable idempotency held by the resource.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no published statement claims exactly-once execution for an operation unless its Operation Profile declares durable idempotency held by the resource; the PDP's idempotency claim or the PEP's reservation does not back the claim",
+    "local": "the reference loader refuses at load an execution_capabilities entry asserting exactly_once unless durable_idempotency.held_by is resource with a key, scope and retention, and the PDP module refuses to boot on such a configuration; the shipped statement asserts it nowhere"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an exactly-once claim with no durable idempotency held by the resource, and admits it once the resource holds a key, scope and retention",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/execution-capabilities.test.ts",
+     "name": "execution capabilities on the resource metadata surface (@spec runtime#execution-capabilities, #817) > a configuration claiming exactly-once execution on the PDP's claim alone refuses the boot",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#817 steps 1 to 3. Proved by disabling the exactly_once check (the unit test) and the loader's call to executionCapabilityFindings (the boot test)."
+  },
+  {
+   "id": "runtime.execution-capabilities.recovery-rests-on-declared-capability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the published statement declares a recovery from an unknown outcome only on a declared capability: re-presenting the effect only where the resource holds durable idempotency, resolving it by lookup only where an outcome lookup is declared, and otherwise holding it",
+    "local": "the reference loader refuses at load a resource_retransmission recovery without durable idempotency held by the resource, and an outcome_lookup recovery without a declared lookup; the shipped statement declares outcome_lookup or hold"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/execution-capabilities.test.ts",
+     "name": "execution capabilities in the Enforcement Scope Statement (@spec runtime#execution-capabilities, #817) > refuses at load an unknown-outcome recovery that rests on no declared outcome lookup or resource idempotency",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The declaration facet of the clause; runtime.execution-capabilities.no-recovery-by-re-execution is the execution facet. Proved by disabling each of the two recovery checks in turn."
+  },
+  {
+   "id": "runtime.execution-capabilities.no-recovery-by-re-execution",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "For an operation in the high-consequence classes, the deployment MUST NOT recover an unknown outcome by executing the effect again, except by re-presenting it under the same key to a resource whose declared durable idempotency deduplicates it.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "an executing deployment never recovers an unknown high-consequence outcome by executing the effect again, except as a retransmission that a resource with declared durable idempotency deduplicates",
+    "local": "witnessed where no lookup reaches the effect: after a restart the in-memory connectors cannot answer for the prior process's wire, the claim closes indeterminate, and a retry under the same key is refused duplicate_suppressed with no ledger entry"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
+     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+  },
+  {
+   "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "Without one, the outcome stays undetermined, and its idempotency claim and any consumption reservation stay held until evidence resolves it",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "for a high-consequence operation whose outcome no declared lookup establishes, the outcome stays undetermined and its idempotency claim and any consumption reservation stay held until evidence resolves it, never released by time",
+    "local": "the PDP's claim closes indeterminate at the reconciliation window's end and keeps refusing the key"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "Partial: the idempotency-claim half is witnessed; consumption reservations are the metering companion's, which the reference does not implement. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again."
+  },
+  {
+   "id": "runtime.execution-capabilities.compensation-declaration-grants-no-authority",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "execution-capabilities",
+   "text": "the declaration names the action and grants no authority",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a declared compensating action is authorized only by its own Decision under current authority; the Operation Profile's compensation declaration never serves as authority for it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No payments operation declares a compensating action (compensation none throughout), so nothing exercises the rule. The compound-actions rows carry the compensate-phase Decision and compensates_evaluation_id."
   },
   {
    "id": "runtime.metering.unmetered-bound-refusal",
