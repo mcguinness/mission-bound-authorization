@@ -211,8 +211,11 @@ export {
 export {
   resolveBaselineJoin,
   deriveJoinDelegation,
+  UNRESOLVED_JOIN_MAPPING,
   type BaselineJoinInput,
   type BaselineJoinResult,
   type DelegatePolicy,
+  type JoinIdentityResolution,
+  type JoinMappingContract,
   type KernelDelegationPolicy,
 } from "./mas-join.js";
