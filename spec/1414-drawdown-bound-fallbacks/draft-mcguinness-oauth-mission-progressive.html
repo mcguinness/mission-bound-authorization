@@ -1822,14 +1822,14 @@ a pre-consented ceiling cannot become a standing grant that a
 compromised agent reaches through unattended drawdowns.<a href="#section-3.1.4-1" class="pilcrow">¶</a></p>
 <p id="section-3.1.4-2">A single policy-adjudicated in-ceiling drawdown <span class="bcp14">MUST NOT</span> activate the
 entire remaining ceiling. A drawdown activates the entire remaining
-ceiling when its successor's Authority Set holds all the authority the
-ceiling grants: every <code>authority_ceiling</code> entry, taken one action at a
-time, is a subset of some entry of the successor's Authority Set under
-the issuance profile's subset rule, constraints and resource narrowing
-included (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A comparison the
-subset rule cannot decide counts as activating it. Policy adjudication
-therefore never reaches the entire ceiling: the final increment always
-takes a fresh human approval.<a href="#section-3.1.4-2" class="pilcrow">¶</a></p>
+ceiling unless the Mission Issuer can show a request the ceiling
+admits that no entry of the successor's Authority Set authorizes: one
+of an <code>authority_ceiling</code> entry's actions, with resource and
+constraint values that entry admits (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Subset Rule"). The successor's entries are judged together,
+so ceiling authority it splits across several entries counts as held.
+Policy adjudication therefore never reaches the entire ceiling: the
+final increment always takes a fresh human approval.<a href="#section-3.1.4-2" class="pilcrow">¶</a></p>
 <p id="section-3.1.4-3">The drawdown policy <span class="bcp14">MUST</span> bound each drawdown incrementally, by one or
 both of:<a href="#section-3.1.4-3" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2685,9 +2685,11 @@ consented authority ceiling.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a><
 <li class="normal" id="appendix-A-3.1">
           <p id="appendix-A-3.1.1">Drawdown Bounds: a drawdown that would activate the entire remaining
 ceiling, or that exceeds the per-drawdown bound or the chain rate
-bound, falls back to a fresh human approval. The entire remaining
-ceiling is defined by the subset rule, one action at a time, so the
-final increment always takes a fresh human approval (#1414, D555).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+bound, falls back to a fresh human approval. A drawdown activates the
+entire remaining ceiling unless the Mission Issuer can show ceiling
+authority that the successor's entries, judged together, do not
+authorize, so the final increment always takes a fresh human approval
+(#1414, D555).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.2">
           <p id="appendix-A-3.2.1">Editorial: In-Ceiling Expansion in subsections, Relationship and
