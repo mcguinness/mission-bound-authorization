@@ -10,8 +10,9 @@
  *   configured issuer with its own keys, accounts and client registrations.
  * - The MAS: the reference Mission kernel under its own issuer, which issues
  *   no tokens in this mode. The PEP reads its committed records in process,
- *   as the AS-native target does (D293); Mission Status over HTTP is not part
- *   of this slice.
+ *   as the AS-native target does (D293). The separated configuration
+ *   (`separated.ts`) instead reads them through the MAS's signed Mission
+ *   Status over HTTP, and holds no kernel.
  * - The gateway: a MAS-governed HTTP MCP route whose resource server trusts
  *   ONLY the estate issuer: RFC 9068 JWTs under the keys the estate publishes,
  *   and opaque tokens through RFC 7662 introspection at the estate as the
@@ -36,7 +37,7 @@
 
 import { exportJWK, generateKeyPair } from "jose";
 import { MissionKernel } from "@mission/authorization-server";
-import { AUTHORITY_SOURCES, CONTAINMENT_POLICY, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { CONTAINMENT_POLICY, TOPOLOGY } from "@mission/demo-data";
 import {
   ActorRecords,
   Connectors,
@@ -47,9 +48,11 @@ import {
   type LoadedView,
   McpPaymentsServer,
   type MissionReference,
+  type MissionViewSource,
   openEphemeralWriteReservationStore,
   PaymentsStore,
   Pep,
+  type PepDeps,
   TransactionEngine,
   type WriteReservationStore,
 } from "@mission/mcp-payments";
@@ -60,6 +63,7 @@ import {
   issuerLocalClients,
   issuerLocalPrincipals,
   RUNTIME_POSTURE,
+  type StateSourcePlacement,
 } from "@mission/pdp";
 import { kernelMissionView } from "../kernel-mission-view.js";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "../resource-policy-store.js";
@@ -70,6 +74,7 @@ import {
   startEstateAuthorizationServer,
 } from "./estate-as.js";
 import { MappingContractCache } from "./mapping-contract.js";
+import { pilotMissionPolicy } from "./mas-policy.js";
 
 export interface MasPilotOptions {
   /** The OpenFGA the Resource policy and the Mission-authority check read. */
@@ -100,12 +105,12 @@ export interface MasPilotOptions {
   introspectionNow?: () => Date;
 }
 
-export interface MasPilot {
+/** Everything the pilot assembles around its Mission state source, kernel or not. */
+export interface MasPilotParts {
   config: MasPilotConfig;
   estate: EstateAuthorizationServer;
   /** The estate's client registrations, with the secrets generated at this boot. */
   estateClients: ReadonlyMap<string, EstateClientRegistration>;
-  kernel: MissionKernel;
   missionIssuer: string;
   mapping: MappingContractCache;
   actorRecords: ActorRecords;
@@ -122,6 +127,28 @@ export interface MasPilot {
   /** The resource's own Mission-bound route. */
   resourceRoute: HttpMcpChannel;
   close: () => Promise<void>;
+}
+
+export interface MasPilot extends MasPilotParts {
+  kernel: MissionKernel;
+}
+
+/** The decision point's entry the PEP calls. */
+export type PdpDecide = NonNullable<PepDeps["decide"]>;
+
+/**
+ * How the assembled pilot reads Mission state, and nothing else about it:
+ * the core below never holds a Mission store. `loadView` is the PEP's
+ * synchronous read; `viewSource` the remote read it awaits first, where
+ * there is one; `decide` wraps the decision point (the separated PDP's own
+ * read); `stateSourcePlacement` the declared placement.
+ */
+export interface MissionStateWiring {
+  missionIssuer: string;
+  loadView: (ref: MissionReference) => LoadedView | undefined;
+  viewSource?: MissionViewSource;
+  stateSourcePlacement?: StateSourcePlacement;
+  decide?: (inner: PdpDecide) => PdpDecide;
 }
 
 /**
@@ -144,6 +171,44 @@ function missionLoader(kernel: MissionKernel): (ref: MissionReference) => Loaded
 export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> {
   const config = opts.config ?? loadMasPilotConfig();
   const missionIssuer = config.mission_issuer;
+  const statusKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
+  const { policy, authoritySources } = pilotMissionPolicy(config);
+  const kernel = new MissionKernel({
+    issuer: missionIssuer,
+    policy: policy as never,
+    containmentPolicy: CONTAINMENT_POLICY as never,
+    authoritySourceCatalog: authoritySources as never,
+    statusKey: statusKeys.privateKey,
+    statusKid: TOPOLOGY.keys.asStatus.kid,
+  });
+  try {
+    const parts = await assembleMasPilot(opts, config, { missionIssuer, loadView: missionLoader(kernel) });
+    return {
+      ...parts,
+      kernel,
+      close: async () => {
+        await parts.close();
+        kernel.close();
+      },
+    };
+  } catch (e) {
+    kernel.close();
+    throw e;
+  }
+}
+
+/**
+ * Everything but the Mission state source: the estate, the mapping contract,
+ * the payments store, the Resource policy, the PEP and decision point, and
+ * both routes. Starts each listener and returns `close()`, which releases
+ * them; a failure part way releases what it opened.
+ */
+export async function assembleMasPilot(
+  opts: MasPilotOptions,
+  config: MasPilotConfig,
+  wiring: MissionStateWiring,
+): Promise<MasPilotParts> {
+  const missionIssuer = wiring.missionIssuer;
   const estateClients = new Map<string, EstateClientRegistration>(
     config.estate.clients.map((c) => [c.client_id, { ...c, client_secret: crypto.randomUUID() }]),
   );
@@ -170,38 +235,6 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
     const published = (await (await fetch(estate.jwksUri)).json()) as { keys: Record<string, unknown>[] };
     const estateKids = published.keys.map((k) => k.kid).filter((kid): kid is string => typeof kid === "string");
 
-    const statusKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
-    // The pilot MAS's derivation ceiling: the shipped one, with each delegable
-    // entry's delegates named by client identifier. The join compares a bare
-    // client identifier (rule 4), so a profile matcher such as the shipped
-    // `{sub_profile: "ai_agent"}` admits no joined delegate at all.
-    const policy = {
-      ...DERIVATION_POLICY,
-      policy_version: `${DERIVATION_POLICY.policy_version}+${config.pilot}`,
-      ceiling: DERIVATION_POLICY.ceiling.map((entry) =>
-        entry.delegation
-          ? { ...entry, delegation: { ...entry.delegation, allowed_delegates: config.mas_delegates.map((sub) => ({ sub })) } }
-          : entry,
-      ),
-    };
-    // An authority source whose ceiling is the deployment's derivation ceiling
-    // ("deployment" in config/authority-sources.json) follows the pilot's.
-    const shippedCeiling = JSON.stringify(DERIVATION_POLICY.ceiling);
-    const authoritySources = {
-      ...AUTHORITY_SOURCES,
-      entries: AUTHORITY_SOURCES.entries.map((source) =>
-        JSON.stringify(source.ceiling) === shippedCeiling ? { ...source, ceiling: policy.ceiling } : source,
-      ),
-    };
-    const kernel = new MissionKernel({
-      issuer: missionIssuer,
-      policy: policy as never,
-      containmentPolicy: CONTAINMENT_POLICY as never,
-      authoritySourceCatalog: authoritySources as never,
-      statusKey: statusKeys.privateKey,
-      statusKid: TOPOLOGY.keys.asStatus.kid,
-    });
-    opened.push(() => kernel.close());
     // The Mission Issuer's own token-verification key: in MAS mode it signs
     // no access token, so the resource route verifies against a key nothing
     // ever signs with.
@@ -250,20 +283,23 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
     const evidence = new EvidenceStore(keys.signing, keys.resolver);
     const observe = opts.observeDecisionRequest;
 
-    const loadView = missionLoader(kernel);
+    const loadView = wiring.loadView;
+    const decidePdp = wiring.decide ? wiring.decide(keys.decide) : keys.decide;
     const actorRecords = new ActorRecords();
     const pep = new Pep({
       decide: observe
         ? async (request, decisionOptions) => {
             observe(request);
-            return keys.decide(request, decisionOptions);
+            return decidePdp(request, decisionOptions);
           }
-        : keys.decide,
+        : decidePdp,
       payments,
       evidence,
       fga: store.fga,
       modelId: store.modelId,
       loadView,
+      ...(wiring.viewSource ? { viewSource: wiring.viewSource } : {}),
+      ...(wiring.stateSourcePlacement ? { stateSourcePlacement: wiring.stateSourcePlacement } : {}),
       instanceEpoch: "mas-pilot-epoch",
       ...(opts.now ? { now: opts.now } : {}),
       masJoin: {
@@ -323,7 +359,6 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
       config,
       estate,
       estateClients,
-      kernel,
       missionIssuer,
       mapping,
       actorRecords,

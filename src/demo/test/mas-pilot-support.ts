@@ -13,7 +13,7 @@ import { validateMissionIntent } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, canonicalHtu, createHttpMediatedClient, type DpopKeys, dpopProofFor } from "@mission/mcp-payments";
 import type { EvaluationRequest } from "@mission/pdp";
-import { composeMasPilot, type MasPilot } from "../src/mas-pilot/compose.js";
+import { composeMasPilot, type MasPilot, type MasPilotParts } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
 import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
@@ -115,7 +115,7 @@ export function approve(
 }
 
 /** An ordinary access token from the estate AS, for one of its registered clients and directory accounts. */
-export async function estateToken(pilot: MasPilot, clientId: string, account: string, scope: string): Promise<Credential> {
+export async function estateToken(pilot: MasPilotParts, clientId: string, account: string, scope: string): Promise<Credential> {
   const registration = pilot.estateClients.get(clientId);
   if (!registration) throw new Error(`no estate client ${clientId}`);
   const dpopKeys = await generateKeyPair("ES256", { extractable: true });
@@ -133,11 +133,11 @@ export async function estateToken(pilot: MasPilot, clientId: string, account: st
   return { token: result.accessToken, dpopKeys };
 }
 
-export const reference = (pilot: MasPilot, missionId: string) => `id="${missionId}", issuer="${pilot.missionIssuer}"`;
+export const reference = (pilot: MasPilotParts, missionId: string) => `id="${missionId}", issuer="${pilot.missionIssuer}"`;
 
 /** One tool call over the gateway (or another route) with the propagated reference. */
 export async function call(
-  pilot: MasPilot,
+  pilot: MasPilotParts,
   credential: Credential,
   missionId: string,
   tool: string,
@@ -155,7 +155,7 @@ export async function call(
 }
 
 /** `pnpm resource-policy` (its own code path), attached to this pilot's store and model. */
-export function admin(pilot: MasPilot, ...argv: string[]): Promise<string> {
+export function admin(pilot: MasPilotParts, ...argv: string[]): Promise<string> {
   return resourcePolicyAdmin(
     argv,
     {
@@ -174,7 +174,7 @@ export function admin(pilot: MasPilot, ...argv: string[]): Promise<string> {
  * DPoP proof at `url`: 401 or 503 when the route refuses the credential before
  * any session (and so before any PEP decision), 200 when it admits it.
  */
-export async function handshakeStatus(pilot: MasPilot, credential: Credential, missionId: string, url = pilot.gateway.url): Promise<number> {
+export async function handshakeStatus(pilot: MasPilotParts, credential: Credential, missionId: string, url = pilot.gateway.url): Promise<number> {
   const res = await fetch(url, {
     method: "POST",
     headers: {

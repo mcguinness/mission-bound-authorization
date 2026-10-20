@@ -43,6 +43,13 @@
     }
   },
   "introspection": { "client_id": "mas-gateway-introspector", "timeout_ms": 2000, "cache_max_seconds": 60 },
+  "separated_mas": {
+    "host": "127.0.0.1",
+    "port": 14834,
+    "pdp_principal_id": "svc:mas-pilot-pdp",
+    "enrolled_pdps": [{ "principal_id": "svc:mas-pilot-pdp", "enforcement_scopes": ["http://localhost:4403/mcp"] }],
+    "state_source": { "placement": "pdp", "timeout_ms": 2000, "max_response_bytes": 65536 }
+  },
   "mapping_cache": { "max_stale_seconds": 300 },
   "mission_bound_only_classes": ["irreversible_action", "external_commitment", "privileged_administration"],
   "resource_policy": {
