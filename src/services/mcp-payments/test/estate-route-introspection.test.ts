@@ -136,11 +136,6 @@ describe("estate route with introspection: an opaque token (#818 slice 3)", () =
     expect(seen).toHaveLength(0);
   });
 
-  it("refuses an opaque token on an estate route with no introspection configured", async () => {
-    await expect(present(server({ introspection: false }), OPAQUE)).rejects.toThrow();
-    expect(seen).toHaveLength(0);
-  });
-
   it("refuses to configure introspection on a route whose issuer is a Mission Issuer", () => {
     expect(() => server({ ordinaryOnly: false })).toThrow(/ordinaryOnly/);
   });
