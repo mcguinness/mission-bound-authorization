@@ -1476,6 +1476,8 @@ export interface MasJoinPolicy {
  *   PDP's signed Decision Evidence (the acting subject and client, the
  *   joined-view commitment `join_view_id`, or the `mission_binding_failed`
  *   denial); the identity mapping resolves nothing beyond that comparison.
+ *   A join request refused before any decision is recorded in the PEP's
+ *   signed Refusal Record instead.
  * - `failure: "mission_binding_failed"`.
  */
 export interface MasJoinMappingContract {

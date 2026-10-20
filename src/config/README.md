@@ -81,7 +81,9 @@ against the deployment's actor records); client-instance identity (neither
 supported nor required); the version identifier (`contract_id`, `version`);
 the audit record (`decision_evidence`: the PDP's signed Decision Evidence of
 each join decision, with the acting subject and client and either the
-`join_view_id` commitment or the `mission_binding_failed` denial); and the
+`join_view_id` commitment or the `mission_binding_failed` denial; a join
+request refused before any decision is recorded in the PEP's signed Refusal
+Record instead); and the
 failure semantics (`mission_binding_failed`). Read by `@mission/demo-data`
 (`parseMasJoinPolicy`).
 
