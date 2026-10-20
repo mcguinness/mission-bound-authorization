@@ -91,8 +91,8 @@
     "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "228b8f3a7696d06e1d52f149140f487d3bf2837d",
-    "content_sha256": "dde493a296da308b2dce3d58678771929a4649af3f46598a5435e5b9c57c41b1"
+    "revision": "102070fe47f006ba57d9d3c9a99f921c1acc1982",
+    "content_sha256": "0a58266776c374a93c2296abe6df9424f2cab91af9ea2e296fdd7b351c8c9e62"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -3723,7 +3723,7 @@
    "id": "core.approval-basis.adjudication-governance-record-override",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "issuance-relationship",
-   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
+   "text": "where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `adjudication.kind`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -43633,7 +43633,7 @@
    "id": "approval-governance.envelope.typ-cty",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
-   "text": "a verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
+   "text": "A verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
