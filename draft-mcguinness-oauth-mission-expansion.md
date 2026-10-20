@@ -2232,18 +2232,19 @@ treatment of consent disclosure.
 The `predecessor` member of the `mission` claim ({{predecessor-member}})
 is not registered in a dedicated registry: it is carried inside the
 already-registered `mission` claim, an open object for which the
-issuance profile establishes no member registry. No new claim,
-parameter, or token-introspection registration is required for the
-lineage link.
+issuance profile establishes no member registry. No new claim or
+token-introspection registration is required for the lineage link;
+the `predecessor` request parameter is registered in
+{{iana-parameters}}.
 
 This document defines two sets of symbolic codes: the expansion
 reconciliation status codes ({{reconciliation}}), a closed set conveyed
 in `mission_expansion_status`, and the expansion denial reasons
 ({{denial-reasons}}), conveyed in the shared `mission_denial_reason`
-member. As members of the OAuth error response JSON body at the token
-endpoint, both are namespaced to their error responses and require no
-registration; their authorization error response parameter forms, used
-on the interactive path, are registered in {{iana-parameters}}.
+member. Both members are registered in the OAuth Parameters registry
+({{iana-parameters}}) for the token response, where they are members
+of the JSON error response body, and for the authorization response,
+where the interactive path carries them as error response parameters.
 
 The reconciliation status codes remain specification-defined: the
 closed set is small and fully specified in {{reconciliation}}. A future
