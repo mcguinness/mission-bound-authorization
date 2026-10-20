@@ -34806,7 +34806,7 @@
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of {{in-ceiling-expansion}}",
+   "text": "A drawdown request whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of {{in-ceiling-expansion}}",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -34842,7 +34842,7 @@
    "id": "progressive.in-ceiling.restriction-survives-intervening-successor",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the containment, not only to one from the Mission that holds the overlay",
+   "text": "The Mission Issuer MUST apply this test to every drawdown request in the chain after the containment, not only to one from the Mission that holds the overlay",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -34902,7 +34902,7 @@
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the discharge, not only to one from the Mission that holds the discharged entry",
+   "text": "The Mission Issuer MUST apply this test to every drawdown request in the chain after the discharge, not only to one from the Mission that holds the discharged entry",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -34992,7 +34992,7 @@
    "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The successor record's `approval_event_id` identifies this drawdown, never the ceiling consent",
+   "text": "The successor record's `approval_event_id` identifies this policy-adjudicated drawdown, never the ceiling consent",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -35502,6 +35502,29 @@
    "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
   },
   {
+   "id": "progressive.ceiling.client-input-not-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-authorization",
+   "text": "client input alone never establishes the consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a ceiling or drawdown policy that only a client supplied, without the Approver's consent on the approval surface, is never recorded as consented",
+    "local": "The reference reads the ceiling only from the approval surface's decision body (ceilingConsentOf); no test yet shows a client-supplied ceiling ignored."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572."
+  },
+  {
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
@@ -35624,6 +35647,42 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row."
+  },
+  {
+   "id": "progressive.ceiling-test.retained-outside-authority-needs-human",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "a successor that retains authority outside the ceiling requires a fresh human approval unless an explicit re-consent has brought that authority within the ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a requested successor that keeps authority outside the ceiling falls back to a fresh human approval; after a re-consent that brings it within the ceiling, the same authority is drawn by policy",
+    "local": "The ceiling test runs over the complete requested successor Authority Set."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
    "id": "progressive.ceiling-test.beyond-ceiling-not-policy",
@@ -36138,7 +36197,7 @@
    "id": "progressive.in-ceiling.per-drawdown-bound",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The drawdown policy MUST bound each drawdown incrementally",
+   "text": "The drawdown policy MUST bound each policy-adjudicated drawdown incrementally",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36204,7 +36263,7 @@
    "id": "progressive.drawdown-bounds.entire-ceiling-defined",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
+   "text": "A drawdown request activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the requested successor Authority Set authorizes",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36282,7 +36341,7 @@
    "id": "progressive.drawdown-bounds.entire-ceiling-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "text": "A drawdown request that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36312,7 +36371,7 @@
    "id": "progressive.drawdown-bounds.per-drawdown-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "text": "A drawdown request that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36342,7 +36401,7 @@
    "id": "progressive.drawdown-bounds.rate-bound-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "text": "A drawdown request that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36372,7 +36431,7 @@
    "id": "progressive.in-ceiling.fresh-approval-classes",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A drawdown MUST be adjudicated by a fresh human approval when it",
+   "text": "A drawdown request MUST be adjudicated by a fresh human approval when it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36426,7 +36485,7 @@
    "id": "progressive.in-ceiling.live-children-fall-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer therefore MUST NOT policy-adjudicate an in-ceiling drawdown while the predecessor has non-terminal Child Missions",
+   "text": "The Mission Issuer therefore MUST NOT policy-adjudicate an in-ceiling drawdown request while the predecessor has non-terminal Child Missions",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -36687,7 +36746,7 @@
    "id": "progressive.audit.resource-declaration-digest",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record of a drawdown whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
+   "text": "The record of a drawdown request whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36775,7 +36834,7 @@
    "id": "progressive.ceiling-review.no-adjudication-past-cadence",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "The Mission Issuer MUST NOT policy-adjudicate an in-ceiling drawdown for a chain whose most recent human approval of the ceiling is older than that cadence",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate an in-ceiling drawdown request for a chain whose most recent human approval of the ceiling is older than that cadence",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
