@@ -1233,29 +1233,50 @@ The AS processes a submission in this order:
    ({{submission-via-par}}).
 2. Validate the `intent` object against the Mission Intent member
    definitions ({{mission-intent}}).
-3. Compute the provisional `intent_hash` over the `intent` object
+3. Validate any authority proposal: refuse an entry of a type the AS
+   does not support, or one that fails its type's definition or a
+   schema advertised for it or established out of band, with
+   `invalid_authorization_details`, and a proposed entry that carries a
+   `resource` member whose value is not among the Intent's
+   `target_resources`, with `invalid_request` ({{authority-proposal}}).
+4. Compute the provisional `intent_hash` over the `intent` object
    ({{integrity-anchors}}).
-4. Apply any submission checks that configured admission policy or
+5. Apply any submission checks that configured admission policy or
    adopted profiles require before evidence verification, including
    when no `evidence` member is present. For example, the Submission
    Evidence companion resolves required evidence here and refuses a
    missing required type
    ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, Section
    "Required Evidence Is Resolved Before Derivation").
-5. Apply the evidence dispatch and refusal rules, verifying every
+6. Apply the evidence dispatch and refusal rules, verifying every
    presented entry under its type's rules
    ({{intent-submission-evidence}}).
-6. Apply admission policy and derive the Authority Set independently
-   ({{authorization-derivation}}).
-7. Render the Intent, the Authority Set, and the material verified
+7. Apply admission policy and derive the Authority Set independently
+   ({{authorization-derivation}}), including the `target_resources`
+   membership of each entry that carries a `resource` member
+   ({{derivation-modes}}) and, where a proposal was submitted, that
+   each derived entry is a same-type subset of a proposed entry
+   ({{authority-proposal}}).
+8. Render the Intent, the Authority Set, and the material verified
    provenance for approval; a change to any of them before the
    decision is re-rendered and approved over the changed context
    ({{approval-event}}).
-8. At activation, record the approved `intent`, `intent_hash`, the
+9. At activation, record the approved `intent`, `intent_hash`, the
    Authority Set, and the verified evidence facts as
    `submission_evidence` ({{mission-record}}).
 
-The material verified provenance of step 7 is part of the approval
+The AS MUST refuse a submission that fails more than one check with
+the error of the earliest failing step in this order. For example:
+
+- a malformed proposal together with a missing required evidence
+  type is refused at step 3, with `invalid_authorization_details`;
+- a proposed entry outside `target_resources` together with a
+  presented evidence entry that fails verification is refused at
+  step 3, with `invalid_request`; and
+- an `intent` object that fails validation together with a malformed
+  proposal is refused at step 2, with `invalid_request`.
+
+The material verified provenance of step 8 is part of the approval
 surface. Where a deployment commits the rendered approval surface,
 that commitment MUST cover the normalized provenance facts, at least
 as a digest of their canonical `submission_evidence` representation
@@ -1272,9 +1293,8 @@ entries of an AS-supported type ({{other-types}}).
 
 ## Derivation Modes {#derivation-modes}
 
-Derivation is mechanical. It happens once, at the approval event, under
-the derivation policy then in force, as one procedure whose candidate
-entries depend on whether an authority proposal was submitted:
+Derivation is mechanical: one procedure whose candidate entries depend
+on whether an authority proposal was submitted:
 
 - **Narrowing mode** (preferred where the client can author
   `authorization_details`): the client submitted an authority
@@ -1304,6 +1324,16 @@ entries depend on whether an authority proposal was submitted:
   consent to a pre-approved ceiling is the separate, experimental
   Mission Template profile
   ({{I-D.draft-mcguinness-oauth-mission-template}}), not this mode.
+
+Derivation can run provisionally during submission processing, where
+the inputs it needs are available ({{submission-processing}}). The
+candidate Authority Set is complete before the approval rendering
+({{direct-approval-steps}}), and a change that
+{{approval-context-changes}} covers is recomputed and approved over the
+changed context. The approved Authority Set is fixed when the Mission
+Record is created, atomically with the approval decision
+({{direct-approval-steps}}), under the derivation policy in force at
+the approval event.
 
 In both modes the AS bounds every Authority Set entry by the Mission
 Intent: each entry that carries a `resource` member MUST have it among
@@ -2967,28 +2997,54 @@ from the same proposal unremediated.
 # Error and Challenge Mapping {#error-mapping}
 
 This document reuses standard OAuth errors and challenges, selected
-by parameter ownership and processing stage. The following table is
-the normative statement of the base OAuth error for each failure it
-lists. A rule elsewhere in this document that names one of these
-codes ({{submission-via-par}}, {{authority-proposal}},
-{{intent-submission-evidence}}, {{authorization-derivation}},
-{{approval-authentication}}, {{issuance-gating}}, {{rs-enforcement}},
-{{self-exchange}}, {{delegation-constraints}}) applies this mapping.
+by parameter ownership and processing stage. The following tables are
+the normative statement of the base OAuth error for each failure they
+list. A rule elsewhere in this document that names one of these
+codes ({{intent-members}}, {{submission-via-par}},
+{{authority-proposal}}, {{intent-submission-evidence}},
+{{authorization-derivation}}, {{approval-authentication}},
+{{grant-binding-resolution}}, {{issuance-gating}},
+{{scope-projection}}, {{rs-enforcement}}, {{delegation}},
+{{designation}}, {{self-exchange}}, {{delegation-constraints}})
+applies this mapping.
+
+An AS that performs an applicable check early, at PAR, responds with
+the same error class the check would yield at the authorization or
+token endpoint. {{Section 2.3 of RFC9126}} permits an
+authorization-request error at PAR, and returning it there does not
+change which row applies.
+
+The tables are grouped by surface. The first table holds each
+failure whose rule is not confined to the surface of one of the other
+three tables (PAR and the authorization endpoint, Token Exchange, or a
+protected resource); each failure appears once. Token Exchange is a
+token-endpoint operation: a row of the first table that names the
+token endpoint or a token request covers an exchange, alongside the
+exchange rows of the third table.
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
-| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
-| PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
-| PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{direct-approval-steps}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
-| Authorization decision: the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: none unless a defined extension applies |
+| Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
-| Token endpoint: the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe detail |
+| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe detail |
+{: title="Failures not confined to one surface"}
+
+| Surface / failing input | Base OAuth error and optional detail |
+|---|---|
+| PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) ({{submission-via-par}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) ({{authority-proposal}}) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
+| PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
+| Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: none unless a defined extension applies |
+{: title="PAR and authorization endpoint failures"}
+
+| Surface / failing input | Base OAuth error and optional detail |
+|---|---|
 | Token exchange: a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange | `invalid_request` ({{Section 2.2.2 of RFC8693}}), unless a Token Exchange profile assigns the failure its own code; a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint; an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`. Detail: safe `error_description` |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Delegated token exchange ({{delegation}}): the `subject_token` is not a designation this AS issued naming the requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
@@ -2996,25 +3052,23 @@ codes ({{submission-via-par}}, {{authority-proposal}},
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Token exchange using {{delegated-instance-context}}: required Client Attestation fails validation | `invalid_client_attestation`. Detail: no instance-identity disclosure |
 | Token exchange using {{delegated-instance-context}}: required instance-to-delegate or output-key association cannot be established | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: no instance-identity disclosure |
+{: title="Token Exchange failures"}
+
+| Surface / failing input | Base OAuth error and optional detail |
+|---|---|
 | Protected resource: a token lacking the `mission` claim, where the resource requires it ({{rs-enforcement}}) | `invalid_token` ({{Section 3.1 of RFC6750}}). Detail: none |
 | Protected resource: weak or stale authentication of the token's Subject, where the deployment conveys it ({{rs-enforcement}}) | `insufficient_user_authentication` ({{Section 3 of RFC9470}}). Detail: `acr_values` or `max_age` |
-| Protected resource: DPoP proof missing, invalid, or mismatched | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}). Detail: none |
-| Protected resource: DPoP nonce required, missing, or stale | `DPoP` `use_dpop_nonce` challenge ({{Section 9 of RFC9449}}). Detail: fresh nonce |
-| Protected resource: certificate-bound token's presented certificate mismatch | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}). Detail: none |
-| Protected resource: insufficient carried authority, or an unenforceable constraint | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
-{: title="Endpoint x parameter x failure-stage error mapping"}
+| Protected resource: DPoP proof missing, invalid, or mismatched ({{rs-enforcement}}) | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}). Detail: none |
+| Protected resource: DPoP nonce required, missing, or stale ({{rs-denials}}) | `DPoP` `use_dpop_nonce` challenge ({{Section 9 of RFC9449}}). Detail: fresh nonce |
+| Protected resource: certificate-bound token's presented certificate mismatch ({{rs-enforcement}}) | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}). Detail: none |
+| Protected resource: insufficient carried authority, or an unenforceable constraint ({{rs-denials}}) | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
+{: title="Protected resource challenges"}
 
-In the table, which evidence types are required follows
+In these tables, which evidence types are required follows
 {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, and
 `invalid_client_attestation` is the error code that
 {{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}
 specifies.
-
-An AS that performs an applicable check early, at PAR, responds with
-the same error class the check would yield at the authorization or
-token endpoint. {{Section 2.3 of RFC9126}} permits an
-authorization-request error at PAR, and returning it there does not
-change which row of the table above applies.
 
 # Mission State via Token Introspection {#introspection}
 
@@ -6863,6 +6917,25 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Submission processing (#1411, D559): Submission Processing Order
+  validates an authority proposal's type, schema, and
+  `target_resources` membership after the Intent and before evidence,
+  and refuses a submission that fails several checks with the error of
+  the earliest failing step. Derivation Modes states when Authority
+  Set derivation runs: provisionally during submission where its
+  inputs allow, complete before the approval rendering, recomputed on
+  a change before the decision, and fixed when the Mission Record is
+  created.
+
+- Editorial (#1410): Error and Challenge Mapping is four tables by
+  surface: failures not confined to one surface first, then PAR and the
+  authorization endpoint, Token Exchange, and protected-resource
+  challenges. The early-PAR rule sits above the tables. Rows that
+  lacked a defining section cite it, the Mission Identifier mismatch
+  refusal of Establishing and Resolving a Binding has a row, and the
+  list of rules that name these codes gains five sections. No
+  requirement changes.
 
 - Editorial (#1409): Terminology defines Authority Set derivation and
   derivation (one issuance operation). The Implementation Map lists

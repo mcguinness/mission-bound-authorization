@@ -223,7 +223,7 @@ binding's Submission via PAR rules for the envelope's structure,
 closed top levels, and size bounds, and its Authority Proposal rules,
 reading "the same pushed request" as this request.
 
-The AS MUST complete steps 1 to 5 of the OAuth binding's Submission
+The AS MUST complete steps 1 to 6 of the OAuth binding's Submission
 Processing Order, and validate every proposed entry, before it issues
 a `device_code`, refusing a failure with the error code the OAuth
 binding's error mapping assigns to it at PAR, in an error response as
@@ -231,7 +231,7 @@ binding's error mapping assigns to it at PAR, in an error response as
 response, the client learns only the session outcomes of
 {{outcomes}}; the device grant has no front-channel step at which a
 later refusal could reach it with its code. Derivation and rendering
-(steps 6 and 7) run at the approval event ({{approval}}), where the
+(steps 7 and 8) run at the approval event ({{approval}}), where the
 Subject and authority source are established.
 
 # Session Binding {#session-binding}
