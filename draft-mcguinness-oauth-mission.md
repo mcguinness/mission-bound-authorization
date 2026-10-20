@@ -5492,8 +5492,9 @@ member's registration in its own IANA considerations.
 # End-to-End Example {#e2e-example}
 
 This appendix follows one Mission in a single trust domain through
-Mission creation, token issuance, and resource server enforcement.
-It is illustrative and adds no requirements. The OAuth steps follow
+Mission creation, token issuance, resource server enforcement, a
+refusal, and revocation. It is illustrative and adds no requirements.
+The OAuth steps follow
 this document; the identity setup follows
 {{I-D.draft-ietf-wimse-aims}}. Identifiers are illustrative; the hash
 values are computed over the displayed objects
@@ -5567,6 +5568,46 @@ In the same push, the agent proposes concrete authority on the
 ]
 ~~~
 
+Both are parameters of one pushed authorization request
+({{RFC9126}}), with PKCE ({{RFC7636}}); client authentication is
+omitted, and extra line breaks are for display purposes only:
+
+~~~
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+response_type=code
+&client_id=s6BhdRkqt3
+&redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+&code_challenge_method=S256
+&mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Reconcile...
+&authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+~~~
+
+The AS returns a `request_uri`:
+
+~~~
+HTTP/1.1 201 Created
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "request_uri": "urn:ietf:params:oauth:request_uri:6esc_11ACC5bwc",
+  "expires_in": 60
+}
+~~~
+
+and the agent sends `alice`'s user agent to the authorization
+endpoint with it:
+
+~~~
+GET /authorize?client_id=s6BhdRkqt3&request_uri=urn%3Aietf%3Aparams
+  %3Aoauth%3Arequest_uri%3A6esc_11ACC5bwc HTTP/1.1
+Host: as.example.com
+~~~
+
 The AS (`as.example.com`) validates both, derives this Authority Set
 (each entry a same-type subset of a proposed entry,
 {{authority-proposal}}), and renders it for `alice`'s consent:
@@ -5593,8 +5634,9 @@ The AS (`as.example.com`) validates both, derives this Authority Set
 ]
 ~~~
 
-After approval, the AS records Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
+`alice` approves at 08:00:00 UTC on 2026-11-02, and the AS records
+Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state
+(state version 1) with
 `authority_hash`
 `sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM`,
 `intent_hash`
@@ -5604,13 +5646,27 @@ After approval, the AS records Mission
 
 ## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 
-When the agent redeems the authorization code at the token endpoint,
-the AS resolves the Mission from the grant
+At 08:00:05 the agent redeems the authorization code with its PKCE
+verifier and a DPoP proof ({{RFC9449}}):
+
+~~~
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=authorization_code
+&code=SplxlOBeZQQYbYS6WxSbIA
+&redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+~~~
+
+The AS resolves the Mission from the grant
 ({{grant-binding-resolution}}), checks that it is `active`
-({{lifecycle}}), and issues a Mission-bound access token for the ERP.
-The token response carries the granted `authorization_details` echo
-({{mission-bound-tokens}}) and the `mission_id` and
-`mission_expires_at` response parameters
+({{lifecycle}}), and issues a Mission-bound access token for the ERP
+and a refresh token. The token response carries the granted
+`authorization_details` echo ({{mission-bound-tokens}}) and the
+`mission_id` and `mission_expires_at` response parameters
 ({{mission-response-parameters}}):
 
 ~~~ json
@@ -5618,6 +5674,7 @@ The token response carries the granted `authorization_details` echo
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
   "expires_in": 300,
+  "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "mission_expires_at": "2026-12-31T23:59:59Z",
   "authorization_details": [
@@ -5708,11 +5765,79 @@ With enforcement from the token alone, the consequential
 carried constraints. Where the deployment runs the runtime profile
 ({{I-D.draft-mcguinness-mission-runtime}}), the resource server also
 obtains a point-of-use permit against current Mission state from a
-policy decision point before executing the write.
+policy decision point before executing the write. The AuthZEN
+profile's worked request ({{I-D.draft-mcguinness-mission-authzen}})
+is that check for a 423.50 USD posting at 08:14:03, made with a
+write-only token the agent obtained by refresh at 08:14:00.
 
 The end-to-end example of the Mission Cross-Domain Projection profile
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) continues this
-Mission to a partner ERP in another trust domain.
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) follows a
+Mission like this one whose authority also covers a partner ERP in
+another trust domain.
+
+## Stage 4: The Resource Server Refuses {#stage-4-the-resource-server-refuses}
+
+The agent then asks the ERP to post a 780.00 USD adjustment with the
+same write-only token. The amount exceeds the entry's `max_amount` of
+500.00 USD, so the ERP refuses it from the token alone as outside the
+carried authority ({{rs-enforcement}}). This deployment accepts the
+agent learning that more authority needs a new approval or an
+expansion ({{denial-disclosure}}), so the challenge carries
+`mission_denial`:
+
+~~~
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: DPoP error="insufficient_scope",
+  mission_denial="insufficient_authority"
+~~~
+
+A fresh token from the same Mission does not help: every token it
+derives is a subset of the same Authority Set ({{subset}}).
+
+## Stage 5: Suspension, Resumption, and Revocation {#stage-5-suspension-resumption-and-revocation}
+
+The Mission is suspended at 08:20:00 and resumed at 08:30:00 (state
+versions 2 and 3) through the lifecycle operations of the Mission
+Status profile ({{I-D.draft-mcguinness-oauth-mission-status}}); the
+AS derives nothing in between ({{lifecycle}}). At 08:50:00 the agent
+refreshes for the read-only token of the refresh example in
+{{mission-bound-tokens}}, which expires at 08:55:00.
+
+At 08:53:20 the agent revokes the Mission with the reason "Quarterly
+reconcile completed early", under an explicit lifecycle authorization
+the deployment grants it for this Mission
+({{I-D.draft-mcguinness-oauth-mission-status}}); its resource tokens
+and refresh token confer no such authority. The AS commits
+`terminated` with reason
+`revoked` as state version 4, and a receiver of the Mission Signals
+profile learns of it from a Security Event Token
+({{I-D.draft-mcguinness-oauth-mission-signals}}). Revocation stops the
+Mission at the issuer ({{revocation}}). A later refresh is refused
+with the `mission_error` diagnostic ({{issuance-gating}}):
+
+~~~
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_grant",
+  "mission_error": "revoked"
+}
+~~~
+
+Introspection reports the 08:50:00 token inactive with the Mission's
+termination, although the token has not expired ({{examples}},
+{{composite-active}}).
+
+Revocation does not recall the token already issued. The ERP,
+enforcing from the token alone, can honor the read-only token until
+its `exp` at 08:55:00. A resource server that introspects at the
+issuer on every request stops honoring it on its next request. One
+that obtains a point-of-use permit under the runtime profile
+({{I-D.draft-mcguinness-mission-runtime}}) stops within that
+deployment's declared freshness and permit bounds, since a permit can
+rest on a state observation taken before the revocation.
 
 # Design Context and Boundaries {#design-context}
 
@@ -6513,7 +6638,9 @@ Cross-Domain:
 - Editorial (#1176): the examples of the canonical Mission follow one
   dated history, with the Intent in full and anchors computed over the
   displayed objects; an example line too long for the page is folded
-  per RFC 8792. No requirement changes.
+  per RFC 8792. The end-to-end example continues through the pushed
+  request, code redemption with a refresh token, a resource server
+  refusal, and revocation. No requirement changes.
 
 - Editorial (#910): the approval rules for another principal and for
   an external Subject sit in a Subject Establishment subsection that
