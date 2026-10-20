@@ -260,73 +260,38 @@ Relying Auditor:
 
 The Mission Record carries exactly one accountable principal,
 `approval_basis.consent_principal`, and this document does not change
-that: the accountable Approver remains the only principal any
-downstream projection, token, or enforcement point consumes. The
-record captures the standing behind that
-approval, never a second authorization surface visible outside the
-issuer.
+that. The accountable Approver remains the only principal that any
+downstream projection, token, or enforcement point consumes. The record
+captures the standing behind that approval, never a second authorization
+surface visible outside the issuer.
 
-`approval_event_id` joins the record to the approval event and to
-the Mission Record it governs
-({{I-D.draft-mcguinness-oauth-mission}}). The record never appears on
-tokens or in any protocol message; it is issuer-retained
-control-plane state. Where the governed Mission populates
-`approval_basis.adjudication`
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping") and
-this record exists, `adjudication.governance_record` is `true` and
-`kind` names the mechanism the approval basis fixes: `human` for
-`direct`, and `policy` for a standing-consent basis, including
-`governed_policy` ({{governed-policy}}). It is never a value that
-names this record itself, and never a flattening of its assertion set
-into a single principal. Where the record carries an accountable
-assertion ({{assertion-requirements}}), that assertion's own `kind`
-MUST equal `kind`.
+`approval_event_id` joins the record to the approval event and to the
+Mission Record it governs ({{I-D.draft-mcguinness-oauth-mission}}). The
+record never appears on tokens or in any protocol message; it is
+issuer-retained control-plane state. OAuth standardizes the
+authorization data that a client requests and is granted ({{RFC9396}}
+for rich authorization requests), not an organization's internal
+approval provenance, so the record also stays out of enforcement
+projections, matching the issuance profile's control-plane discipline.
 
-# Boundaries {#boundaries}
-
-The record governs the Mission approval event; an action-time
-approval under the runtime profile's re-evaluation surfaces
+The record governs the Mission approval event. An action-time approval
+under the runtime profile's re-evaluation surfaces
 ({{I-D.draft-mcguinness-mission-runtime}}) is a different layer and
 never joins this record.
 
-OAuth standardizes the requested and granted authorization data, not
-an organization's internal approval provenance ({{RFC9396}} takes the
-same boundary for rich authorization requests); this record therefore
-stays off protocol messages and out of enforcement projections,
-matching the issuance profile's control-plane discipline.
+Where the governed Mission populates `approval_basis.adjudication`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping") and
+this record exists:
 
-{{policy-approval-recency}} bounds the AGR `policy` assertion path
-and, by extension, a standing-consent Mission whose `approval_basis`
-record stands in for that assertion ({{assertion-requirements}}). The
-issuance profile's standing-consent authority bases carry their own
-human-approval instant, in `approval_basis.approved_at`, traced
-through `consent_principal` and a commitment
-({{I-D.draft-mcguinness-oauth-mission}}); the template profile's
-`template` basis and the progressive profile's `ceiling_drawdown`
-basis both populate it, and each profile declares its own maximum age
-against it: `review_cadence` for template, the ceiling review cadence
-for progressive
-({{I-D.draft-mcguinness-oauth-mission-template}},
-{{I-D.draft-mcguinness-oauth-mission-progressive}}). Under
-`governed_policy` the two instants coincide:
-`approval_basis.approved_at` equals the accountable `policy`
-assertion's `authority.approved_at` ({{governed-policy-record}}), so
-this document's ceiling bounds that basis, alongside any
-standing-consent recency ceiling the deployment declares.
-
-The two recency paths are therefore analogous, each bounding staleness
-against a retained human-approval instant, but distinct in what they
-gate: this section's ceiling governs whether the issuer may count a
-`policy` assertion, or activate a Mission whose `approval_basis`
-stands in for one, at evaluation; a profile's own maximum age governs
-whether the dispatch or drawdown may happen at all, independent of
-whether an AGR is ever recorded.
-
-Outside `governed_policy`, a standing-consent Mission's
-accountable-approver rule is satisfied by `approval_basis` itself
-({{assertion-requirements}}), never by fabricating a `policy`
-assertion in its place; the high-risk-class default of this section
-still binds that record directly.
+- `adjudication.governance_record` is `true`;
+- `adjudication.kind` names the mechanism the approval basis fixes:
+  `human` for `direct`, and `policy` for a standing-consent basis,
+  including `governed_policy` ({{governed-policy}}). It is never a value
+  that names this record itself, and never a flattening of its assertion
+  set into a single principal; and
+- where the record carries an accountable assertion
+  ({{assertion-requirements}}), that assertion's own `kind` MUST equal
+  `adjudication.kind`.
 
 # Recording Triggers {#triggers}
 
@@ -713,6 +678,39 @@ authentication-strength, rendering, and accountable-principal
 requirements the issuance profile and {{assertion-requirements}}
 otherwise impose still carry that property; this section only
 decides which assertion kind MUST be present.
+
+## Relationship to Standing-Consent Recency {#recency-standing-consent}
+
+{{policy-approval-recency}} bounds the AGR `policy` assertion path and,
+by extension, a standing-consent Mission whose `approval_basis` record
+stands in for that assertion ({{assertion-requirements}}).
+
+The issuance profile's standing-consent bases carry their own
+human-approval instant in `approval_basis.approved_at`, traced through
+`consent_principal` and a commitment
+({{I-D.draft-mcguinness-oauth-mission}}). The template profile's
+`template` basis and the progressive profile's `ceiling_drawdown` basis
+both populate it, and each profile declares its own maximum age against
+it: `review_cadence` for template, and the ceiling review cadence for
+progressive ({{I-D.draft-mcguinness-oauth-mission-template}},
+{{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+Under `governed_policy` the two instants coincide:
+`approval_basis.approved_at` equals the accountable `policy` assertion's
+`authority.approved_at` ({{governed-policy-record}}). This document's
+ceiling therefore bounds that basis, alongside any standing-consent
+recency ceiling the deployment declares
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Recency").
+
+The two recency paths are analogous, each bounding staleness against a
+retained human-approval instant, but they gate different things:
+
+- this document's ceiling governs whether the issuer may count a
+  `policy` assertion, or activate a Mission whose `approval_basis`
+  stands in for one, at evaluation; and
+- a profile's own maximum age governs whether the dispatch or drawdown
+  may happen at all, independent of whether an AGR is ever recorded.
 
 # Envelope and Verification {#envelope}
 

@@ -3722,7 +3722,7 @@
    "id": "core.approval-basis.adjudication-governance-record-override",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "issuance-relationship",
-   "text": "Where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `kind`.",
+   "text": "where the record carries an accountable assertion ({{assertion-requirements}}), that assertion's own `kind` MUST equal `adjudication.kind`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
