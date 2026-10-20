@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-20T05:56:20Z
-Source repository commit: b1ccb4900de02af2d27d4ec3c5ee6d3b17ff343b
+Generated: 2026-10-20T06:15:20Z
+Source repository commit: 0e14f144e994ebbf2d78586b6c47cc731b1a8556
 Member count: 9
 
 Reading order:
@@ -6926,14 +6926,14 @@ Table of Contents
    9.  governance-record event coverage, ordering, integrity, access,
        and retention.
 
-   The Statement MUST then include a capability table with one row for
-   each capability in Section 5.  Each row MUST say supplied or not
-   supplied: a capability is supplied in a named scope when the row's
+   The Statement MUST then include a capability list with one entry for
+   each capability in Section 5.  Each entry MUST say supplied or not
+   supplied: a capability is supplied in a named scope when the entry's
    stated activation conditions hold, or it is not supplied.  There is
    no third state.  An activation condition states separately what a
    specification defines, what an implementation supports, what a
    deployment enables, and where the resulting property applies.  A
-   supplied row MUST:
+   supplied entry MUST:
 
    *  cite the binding sections that satisfy the capability;
 
@@ -6959,58 +6959,81 @@ Table of Contents
 
    The following is a non-normative skeleton:
 
-   +=============+========+==========+===============+=================+
-   |Capability   |Claim   |Activation| Scope and     | Limitations     |
-   |             |        |          | defining      |                 |
-   |             |        |          | sections      |                 |
-   +=============+========+==========+===============+=================+
-   |Lifecycle-   |supplied|always    | Controller    | Previously      |
-   |Gated        |        |          | permission    | issued          |
-   |Authorization|        |          | decisions     | resource        |
-   |             |        |          |               | credentials     |
-   |             |        |          |               | expire          |
-   |             |        |          |               | independently   |
-   +-------------+--------+----------+---------------+-----------------+
-   |State-       |supplied|Status    | Status        | Maximum         |
-   |Observable   |        |extension | responses     | staleness is    |
-   |             |        |active    |               | deployment-     |
-   |             |        |          |               | configured      |
-   +-------------+--------+----------+---------------+-----------------+
-   |Structured   |not     |--        | --            | Approved        |
-   |Authority    |supplied|          |               | Context is      |
-   |             |        |          |               | descriptive     |
-   +-------------+--------+----------+---------------+-----------------+
-   |Monotonic    |not     |--        | --            | No authority    |
-   |Derivation   |supplied|          |               | comparison      |
-   |             |        |          |               | relation is     |
-   |             |        |          |               | defined         |
-   +-------------+--------+----------+---------------+-----------------+
-   |Credential-  |supplied|always    | Native        | Covers          |
-   |Bound        |        |          | authorization | correlation,    |
-   |             |        |          | artifact      | not context     |
-   |             |        |          |               | disclosure      |
-   +-------------+--------+----------+---------------+-----------------+
-   |Authorized   |supplied|Verified  | Join          | Joining         |
-   |Context      |        |join      | assertions    | authority is    |
-   |Correlation  |        |active    |               | the             |
-   |             |        |          |               | Controller      |
-   +-------------+--------+----------+---------------+-----------------+
-   |Independently|supplied|Signed    | Signed        | Proves          |
-   |Verifiable   |        |receipt   | receipts      | approval as     |
-   |             |        |profile   |               | of issuance,    |
-   |             |        |active    |               | not current     |
-   |             |        |          |               | state           |
-   +-------------+--------+----------+---------------+-----------------+
-   |Portable     |not     |--        | --            | Governance      |
-   |Evidence     |supplied|          |               | record is       |
-   |             |        |          |               | Controller-     |
-   |             |        |          |               | local           |
-   +-------------+--------+----------+---------------+-----------------+
+   Lifecycle-Gated Authorization:
+      Claim: supplied
 
-     Table 3: Illustrative Mission Substrate Statement capability table
+      Activation: always
 
-   A real Statement also carries each supplied row's temporal elements
-   and failure behavior; the skeleton omits those columns for width.
+      Scope and defining sections: Controller permission decisions
+
+      Limitations: Previously issued resource credentials expire
+      independently
+
+   State-Observable:
+      Claim: supplied
+
+      Activation: Status extension active
+
+      Scope and defining sections: Status responses
+
+      Limitations: Maximum staleness is deployment-configured
+
+   Structured Authority:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: Approved Context is descriptive
+
+   Monotonic Derivation:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: No authority comparison relation is defined
+
+   Credential-Bound:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: Native authorization artifact
+
+      Limitations: Covers correlation, not context disclosure
+
+   Authorized Context Correlation:
+      Claim: supplied
+
+      Activation: Verified join active
+
+      Scope and defining sections: Join assertions
+
+      Limitations: Joining authority is the Controller
+
+   Independently Verifiable:
+      Claim: supplied
+
+      Activation: Signed receipt profile active
+
+      Scope and defining sections: Signed receipts
+
+      Limitations: Proves approval as of issuance, not current state
+
+   Portable Evidence:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: Governance record is Controller-local
+
+   A real Statement also carries each supplied entry's temporal elements
+   and failure behavior; the skeleton omits them for brevity.
 
    Text outside the Statement cannot silently broaden a capability
    claim.  If another specification adds a capability, that
@@ -7345,7 +7368,7 @@ Appendix B.  Mission-Bound Authorization Family Use
         | record     |                                            |
         +------------+--------------------------------------------+
 
-                     Table 4: Family vocabulary mapping
+                     Table 3: Family vocabulary mapping
 
    A family document that maps its own vocabulary to the kernel's uses
    these correspondences.
@@ -7394,6 +7417,11 @@ Appendix B.  Mission-Bound Authorization Family Use
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Mission Substrate Statement's capability table is a capability
+      list with one entry per capability, which fits the text rendering.
+      Each entry states what a row stated, with the same obligations
+      (#1382).
 
    *  Family Use names the accountable human by the OAuth binding's
       record member approval_basis.consent_principal, following that
@@ -11029,7 +11057,8 @@ Table of Contents
 
    Because the policy lives in the entry, authority_hash commits it with
    the rest of the Authority Set, and it is carried with the entries
-   wherever they go, including across a cross-domain projection
+   wherever they go, including across a cross-domain projection where
+   that profile's provenance rule keeps it
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
    *Delegation depth.* The delegation depth of a token is the number of
@@ -14711,92 +14740,99 @@ Appendix F.  OAuth Binding Mapping Assessment
        evidence and lifecycle history, retained for the audit horizon,
        with integrity resting on record custody and the typed anchors.
 
-   The capability table:
+   The capability list:
 
-   +=============+========+==============+=====================================================+============+
-   |Capability   |Claim   |Activation    |Scope and defining sections                          |Limitations |
-   +=============+========+==============+=====================================================+============+
-   |Lifecycle-   |supplied|always        |State-gated issuance and every derivation gate       |Outstanding |
-   |Gated        |        |              |                                                     |credentials |
-   |Authorization|        |              |                                                     |run to their|
-   |             |        |              |                                                     |own exp; the|
-   |             |        |              |                                                     |residual is |
-   |             |        |              |                                                     |bounded, not|
-   |             |        |              |                                                     |zero        |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |State-       |supplied|Status,       |Those surfaces                                       |Staleness   |
-   |Observable   |        |introspection,|                                                     |bounded by  |
-   |             |        |or Signals    |                                                     |each        |
-   |             |        |companion     |                                                     |surface's   |
-   |             |        |active        |                                                     |declared    |
-   |             |        |              |                                                     |freshness   |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |Structured   |supplied|always        |authorization_details of AS-supported types          |Semantics   |
-   |Authority    |        |              |(Section 5.2), each type's own specification defining|exist per   |
-   |             |        |              |semantics (for mission_resource_access, the Mission  |supported   |
-   |             |        |              |Resource Access Profile's Common Constraints,        |type, not   |
-   |             |        |              |[I-D.draft-mcguinness-oauth-mission-resource-access])|universally |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |Monotonic    |supplied|always        |The subset rule over covered types at every          |Covered     |
-   |Derivation   |        |              |derivation, delegation, and attenuation point        |transitions |
-   |             |        |              |                                                     |are         |
-   |             |        |              |                                                     |attenuate; a|
-   |             |        |              |                                                     |cross-      |
-   |             |        |              |                                                     |vocabulary  |
-   |             |        |              |                                                     |transition  |
-   |             |        |              |                                                     |is          |
-   |             |        |              |                                                     |decide_anew,|
-   |             |        |              |                                                     |never silent|
-   |             |        |              |                                                     |attenuation |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |Credential-  |supplied|always        |The mission claim on issued tokens                   |Fact        |
-   |Bound        |        |              |                                                     |semantics:  |
-   |             |        |              |                                                     |issuance    |
-   |             |        |              |                                                     |under the   |
-   |             |        |              |                                                     |Mission,    |
-   |             |        |              |                                                     |authority   |
-   |             |        |              |                                                     |derivation, |
-   |             |        |              |                                                     |lifecycle-  |
-   |             |        |              |                                                     |gated       |
-   |             |        |              |                                                     |issuance;   |
-   |             |        |              |                                                     |state-as-of |
-   |             |        |              |                                                     |only via the|
-   |             |        |              |                                                     |State-      |
-   |             |        |              |                                                     |Observable  |
-   |             |        |              |                                                     |surfaces    |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |Authorized   |supplied|the Delegation|The Token Exchange join at delegated issuance: the   |The base    |
-   |Context      |        |capability    |AS, as joining authority, joins the Mission and      |grant       |
-   |Correlation  |        |active        |Subject carried by the Mission-bound subject_token   |binding at  |
-   |             |        |(Section 12)  |with the delegate identity independently established |issuance co-|
-   |             |        |              |by the actor_token or the delegate's own client      |establishes |
-   |             |        |              |authentication, binding both to the newly issued     |its facts   |
-   |             |        |              |credential                                           |and is not a|
-   |             |        |              |                                                     |join; cross-|
-   |             |        |              |                                                     |authority   |
-   |             |        |              |                                                     |joins are   |
-   |             |        |              |                                                     |the Mission |
-   |             |        |              |                                                     |Authority   |
-   |             |        |              |                                                     |Server's    |
-   |             |        |              |                                                     |machinery,  |
-   |             |        |              |                                                     |not this    |
-   |             |        |              |                                                     |binding's   |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |Independently|supplied|Mandate,      |Anchor recomputation and signed artifacts per those  |Signature   |
-   |Verifiable   |        |signed Status,|profiles                                             |verification|
-   |             |        |or audit      |                                                     |never       |
-   |             |        |companion     |                                                     |establishes |
-   |             |        |active        |                                                     |current     |
-   |             |        |              |                                                     |state       |
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
-   |Portable     |supplied|Evidence,     |Per those profiles                                   |The         |
-   |Evidence     |        |Mandate, or   |                                                     |governance  |
-   |             |        |audit         |                                                     |record is   |
-   |             |        |companion     |                                                     |otherwise   |
-   |             |        |active        |                                                     |issuer-local|
-   +-------------+--------+--------------+-----------------------------------------------------+------------+
+   Lifecycle-Gated Authorization:
+      Claim: supplied
 
-              Table 10: OAuth Mission binding capability table
+      Activation: always
+
+      Scope and defining sections: State-gated issuance and every
+      derivation gate
+
+      Limitations: Outstanding credentials run to their own exp; the
+      residual is bounded, not zero
+
+   State-Observable:
+      Claim: supplied
+
+      Activation: Status, introspection, or Signals companion active
+
+      Scope and defining sections: Those surfaces
+
+      Limitations: Staleness bounded by each surface's declared
+      freshness
+
+   Structured Authority:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: authorization_details of AS-supported
+      types (Section 5.2), each type's own specification defining
+      semantics (for mission_resource_access, the Mission Resource
+      Access Profile's Common Constraints,
+      [I-D.draft-mcguinness-oauth-mission-resource-access])
+
+      Limitations: Semantics exist per supported type, not universally
+
+   Monotonic Derivation:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: The subset rule over covered types at
+      every derivation, delegation, and attenuation point
+
+      Limitations: Covered transitions are attenuate; a cross-vocabulary
+      transition is decide_anew, never silent attenuation
+
+   Credential-Bound:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: The mission claim on issued tokens
+
+      Limitations: Fact semantics: issuance under the Mission, authority
+      derivation, lifecycle-gated issuance; state-as-of only via the
+      State-Observable surfaces
+
+   Authorized Context Correlation:
+      Claim: supplied
+
+      Activation: the Delegation capability active (Section 12)
+
+      Scope and defining sections: The Token Exchange join at delegated
+      issuance: the AS, as joining authority, joins the Mission and
+      Subject carried by the Mission-bound subject_token with the
+      delegate identity independently established by the actor_token or
+      the delegate's own client authentication, binding both to the
+      newly issued credential
+
+      Limitations: The base grant binding at issuance co-establishes its
+      facts and is not a join; cross-authority joins are the Mission
+      Authority Server's machinery, not this binding's
+
+   Independently Verifiable:
+      Claim: supplied
+
+      Activation: Mandate, signed Status, or audit companion active
+
+      Scope and defining sections: Anchor recomputation and signed
+      artifacts per those profiles
+
+      Limitations: Signature verification never establishes current
+      state
+
+   Portable Evidence:
+      Claim: supplied
+
+      Activation: Evidence, Mandate, or audit companion active
+
+      Scope and defining sections: Per those profiles
+
+      Limitations: The governance record is otherwise issuer-local
 
    Temporal elements: every issued credential's exp is capped by the
    record's effective expires_at; state observations carry their
@@ -14804,12 +14840,12 @@ Appendix F.  OAuth Binding Mapping Assessment
    outstanding credential lifetime.  Failure behavior: an unknown
    lifecycle state is non-active; an unresolvable reference, a failed
    anchor verification, and an unknown authorization_details type fail
-   closed; where a row's activation condition does not hold, the
+   closed; where an entry's activation condition does not hold, the
    property is not supplied, and a consumer cannot rely on it.
 
    This document's three optional capabilities (Section 18) are surfaces
    an implementation may or may not offer, each independent of the
-   others.  The capability table above states scoped guarantee claims:
+   others.  The capability list above states scoped guarantee claims:
    properties this document supplies and the conditions under which each
    is supplied.  The entries below relate each optional capability to
    those claims.  Declaring an optional capability never creates a claim
@@ -14846,6 +14882,10 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Editorial (#1382): the OAuth Binding Mapping Assessment's
+      capability table is a capability list, one entry per capability,
+      which fits the text rendering.  No requirement changes.
 
    *  Editorial (#1380): four tables fit the 69-column text rendering.
       The resource server enforcement table and the error mapping cite
@@ -16201,13 +16241,13 @@ Table of Contents
    Cache-Control: no-store
    Pragma: no-cache
 
-   eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+   eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 
    Decoded JWS header:
 
    {
      "alg": "ES256",
-     "kid": "sa-key-2026-q3",
+     "kid": "as-key-2026-q3",
      "typ": "mission-status-response+jwt"
    }
 
@@ -16538,7 +16578,7 @@ Table of Contents
      "error": "not_found",
      "error_description":
        "Mission reference is not found or not visible.",
-     "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+     "nonce": "nonce_zsPy4APqVNO96xAT"
    }
 
    The body MUST contain error and error_description, and MUST
@@ -17070,7 +17110,7 @@ Table of Contents
    Content-Type: application/mission-status-response+jwt
    Cache-Control: no-store
 
-   eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+   eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 
    Decoded JWS payload:
 
@@ -18472,11 +18512,12 @@ Table of Contents
    trust rules, from which the PDP establishes the Mission's lifecycle
    state and the freshness of that observation.  Examples include a
    query to the Mission issuer, a local Mission database, an
-   authenticated status or event feed, or a short-lived derived
-   credential whose lifetime is the deployment's accepted state lease.
-   A materialized policy view (Section 7.1) is not a state source: it
-   commits the compiled authority, never the mutable lifecycle state a
-   decision consults.
+   authenticated status or event feed (such as the lifecycle events of
+   [I-D.draft-mcguinness-oauth-mission-signals]), or a short-lived
+   derived credential whose lifetime is the deployment's accepted state
+   lease.  A materialized policy view (Section 7.1) is not a state
+   source: it commits the compiled authority, never the mutable
+   lifecycle state a decision consults.
 
    The substrate this profile enforces against provides at least a
    lifecycle-gated capability (Mission state at the issuer, with
@@ -20662,10 +20703,10 @@ Table of Contents
 
    *  for each Common Constraint or other registered constraint the
       operation's authority entries can carry
-      ([I-D.draft-mcguinness-oauth-mission]): the authoritative
-      operation input or derived attribute that satisfies it, and the
-      extraction and normalization rule mapping that input into the
-      constraint's own value domain.  The constraint's defining
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]): the
+      authoritative operation input or derived attribute that satisfies
+      it, and the extraction and normalization rule mapping that input
+      into the constraint's own value domain.  The constraint's defining
       specification owns its syntax, subset, intersection, comparison,
       and point-of-use satisfaction semantics; an Operation Profile MUST
       NOT override them, and unit or currency conversion is never part
@@ -22455,6 +22496,12 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-
               discharge.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
 
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
@@ -32179,7 +32226,9 @@ Table of Contents
       evidence_envelope removed.  The protected-header requirements and
       the verification path are defined in Section 7.1.
 
-   Example, over the worked disclosure of Appendix B:
+   Example, over the worked disclosure of Appendix B.  The Mission's
+   record carries the same consent_rendering_hash, which this profile
+   adds to the record the issuance profile's Worked Example shows:
 
    {
      "evidence_id": "cns_7rP2kL9mQ4",
@@ -32193,7 +32242,7 @@ Table of Contents
        "proposal_hash":
          "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
        "consent_rendering_hash":
-         "sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g"
+         "sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24"
      },
      "approver": {
        "iss": "https://idp.example.com",
@@ -32220,7 +32269,7 @@ Table of Contents
      "disclosure": {
        "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
        "consent_rendering_hash":
-         "sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g"
+         "sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24"
      },
      "evidence_envelope": {
        "format": "jws-compact",
@@ -32971,12 +33020,15 @@ Appendix B.  Worked Disclosure and Test Vector
          USD 500 per journal entry.",
        "expires_at": "2026-12-31T23:59:59Z",
        "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
-       "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
+       "approver_display": "alice (user_3p2q8mN1a0kV7tR)",
+       "authority_source_display":
+         "Delegated by alice from her own authority."
      },
      "authority_summary": [
        {
          "resource": "https://erp.example.com",
          "actions": ["invoices.read"],
+         "rendered": "The agent can read invoices in the ERP.",
          "constraints": [
            {
              "constraint": "resource_issued_after",
@@ -33006,6 +33058,7 @@ Appendix B.  Worked Disclosure and Test Vector
        {
          "resource": "https://erp.example.com",
          "actions": ["journal-entries.write"],
+         "rendered": "The agent can post journal entries in the ERP.",
          "constraints": [
            {
              "constraint": "max_amount",
@@ -33109,17 +33162,21 @@ Appendix B.  Worked Disclosure and Test Vector
    proposed invoices.*, which the authorization server narrowed to
    invoices.read, so the read element's narrowed_from renders that
    narrowing; the write entry is derived as proposed and carries none.
-   This example chooses the narrowed_from member to show the proposed-
-   versus-granted distinction inside the committed disclosure; this
-   document defines no interoperable member by that name.  The write
-   entry warrants a material notice and an irreversibility risk
-   dimension because posted journal entries are not automatically
-   reversible; constraint_provenance attributes the max_amount bound to
-   the Subject, who stated it in the task request.  The notice is of a
-   high-risk class, so approver_actions carries its per-notice
-   acknowledgment (Section 4.2).  The requesting_client names the agent
-   that will wield the granted authority.  The Approver is the Subject,
-   so the top-level subject member is absent.
+   Each element states its action in rendered, and mission_summary
+   identifies the user-delegated authority source in
+   authority_source_display, as the issuance profile's rendering
+   requires ([I-D.draft-mcguinness-oauth-mission]).  This example
+   chooses the narrowed_from, element-level rendered, and
+   authority_source_display members to show those facts inside the
+   committed disclosure; this document defines no interoperable members
+   by those names.  The write entry warrants a material notice and an
+   irreversibility risk dimension because posted journal entries are not
+   automatically reversible; constraint_provenance attributes the
+   max_amount bound to the Subject, who stated it in the task request.
+   The notice is of a high-risk class, so approver_actions carries its
+   per-notice acknowledgment (Section 4.2).  The requesting_client names
+   the agent that will wield the granted authority.  The Approver is the
+   Subject, so the top-level subject member is absent.
 
    consent_rendering_hash is the prefixed SHA-256 over the JCS [RFC8785]
    canonical bytes of the integrity-anchor envelope with typ mission-
@@ -33145,43 +33202,46 @@ Appendix B.  Worked Disclosure and Test Vector
    Z"}],"delegation":{"allowed_delegates":[{"sub_profile":"ai_agent"}],
    "max_depth":2,"rendered":"AI agents can receive it, at most two dele
    gations deep."},"narrowed_from":{"actions":["invoices.*"],"rendered"
-   :"Asked for all invoice actions; only reading is granted."},"resourc
-   e":"https://erp.example.com"},{"actions":["journal-entries.write"],"
-   constraints":[{"constraint":"max_amount","rendered":"Each journal en
-   try is capped at 500.00 US dollars (USD).","value":{"amount":"500.00
-   ","currency":"USD"}}],"resource":"https://erp.example.com"}],"constr
-   aint_provenance":[{"applies_to":{"constraint":"max_amount","resource
-   ":"https://erp.example.com"},"source":"subject"}],"delegation_summar
-   y":{"applies_to":{"action":"invoices.read","resource":"https://erp.e
-   xample.com"},"child_missions":false,"delegates":"AI agents","further
-   _delegation":true,"max_depth":2},"disclosure_id":"disc_4pQ9z","displ
-   ay_context":{"channel":"web","rendered_at":"2026-11-02T07:59:30Z"},"
-   locale":"en-US","material_notices":[{"applies_to":{"action":"journal
-   -entries.write","resource":"https://erp.example.com"},"condition":"i
-   rreversible_action","statement":"Posted journal entries are not auto
-   matically reversible."},{"applies_to":{"action":"invoices.read","res
-   ource":"https://erp.example.com"},"condition":"delegation","statemen
-   t":"The agent can pass its invoice read access to AI agents."}],"mis
-   sion_summary":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)","ex
-   pires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices and p
-   ost adjustments of at most USD 500 per journal entry.","subject_disp
-   lay":"alice (user_3p2q8mN1a0kV7tR)"},"rendering_template_digest":"sh
-   a-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","requesting_clien
-   t":{"client_id":"s6BhdRkqt3","display":"Invoice Reconciler Agent"},"
-   risk_summary":[{"dimension":"data_access","statement":"The agent can
-    read invoices held in the ERP system."},{"dimension":"spend","state
-   ment":"The agent can post journal entries of up to 500 US dollars."}
-   ,{"dimension":"irreversibility","statement":"Posted journal entries
-    alter the ledger of record."},{"dimension":"delegation","statement"
-   :"AI agents acting for the agent can read the same invoices."}],"sou
-   rce_hashes":{"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI
-   5c9jiyMbE4KvFM","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4M
-   y_EsNAf1C1U4r0","proposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8
-   yL1PxryNyMwroKGo"},"template_id":"mission-consent-standard","templat
-   e_version":"2026-06"}}
+   :"Asked for all invoice actions; only reading is granted."},"rendere
+   d":"The agent can read invoices in the ERP.","resource":"https://erp
+   .example.com"},{"actions":["journal-entries.write"],"constraints":[{
+   "constraint":"max_amount","rendered":"Each journal entry is capped a
+   t 500.00 US dollars (USD).","value":{"amount":"500.00","currency":"U
+   SD"}}],"rendered":"The agent can post journal entries in the ERP.","
+   resource":"https://erp.example.com"}],"constraint_provenance":[{"app
+   lies_to":{"constraint":"max_amount","resource":"https://erp.example.
+   com"},"source":"subject"}],"delegation_summary":{"applies_to":{"acti
+   on":"invoices.read","resource":"https://erp.example.com"},"child_mis
+   sions":false,"delegates":"AI agents","further_delegation":true,"max_
+   depth":2},"disclosure_id":"disc_4pQ9z","display_context":{"channel":
+   "web","rendered_at":"2026-11-02T07:59:30Z"},"locale":"en-US","materi
+   al_notices":[{"applies_to":{"action":"journal-entries.write","resour
+   ce":"https://erp.example.com"},"condition":"irreversible_action","st
+   atement":"Posted journal entries are not automatically reversible."}
+   ,{"applies_to":{"action":"invoices.read","resource":"https://erp.exa
+   mple.com"},"condition":"delegation","statement":"The agent can pass
+    its invoice read access to AI agents."}],"mission_summary":{"approv
+   er_display":"alice (user_3p2q8mN1a0kV7tR)","authority_source_display
+   ":"Delegated by alice from her own authority.","expires_at":"2026-12
+   -31T23:59:59Z","goal":"Reconcile Q3 invoices and post adjustments of
+    at most USD 500 per journal entry.","subject_display":"alice (user_
+   3p2q8mN1a0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNG
+   lzi_vzZJNJbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s
+   6BhdRkqt3","display":"Invoice Reconciler Agent"},"risk_summary":[{"d
+   imension":"data_access","statement":"The agent can read invoices hel
+   d in the ERP system."},{"dimension":"spend","statement":"The agent c
+   an post journal entries of up to 500 US dollars."},{"dimension":"irr
+   eversibility","statement":"Posted journal entries alter the ledger o
+   f record."},{"dimension":"delegation","statement":"AI agents acting
+    for the agent can read the same invoices."}],"source_hashes":{"auth
+   ority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","i
+   ntent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0","p
+   roposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"}
+   ,"template_id":"mission-consent-standard","template_version":"2026-0
+   6"}}
 
    consent_rendering_hash =
-     sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g
+     sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24
 
    An implementation that canonicalizes the same envelope, computes SHA-
    256, and encodes as sha-256: followed by base64url with no padding

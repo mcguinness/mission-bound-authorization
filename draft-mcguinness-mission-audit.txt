@@ -1362,7 +1362,7 @@ Table of Contents
    The payload is the SHA-256 digest of the JCS canonical bytes of the
    retained Consent Evidence object, evidence_envelope included
    (Section 5.3), carried inline as the raw digest whose base64url form
-   is ABgvgPAXUukhkxer0K6MzkH6XEL8VBc2WRwjXvt5Wa4, not that display
+   is TSzomEHSsEM5B7TDB-3Kl-v2it40P3Wyb7xJiE45iRU, not that display
    string.  The Transparency Service appends the statement and returns a
    Receipt, a COSE_Sign1 with an inclusion proof in its unprotected
    header, which the Mission Issuer keeps with the evidence as a
