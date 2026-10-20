@@ -14,6 +14,10 @@
  * The Mission entry here carries no constraint, so only the credential's can
  * fail.
  *
+ * `requires_action_approval` (@spec resource-access#initial-common-constraints):
+ * `false` needs no approval input; `true` is satisfied only by an approval
+ * fresh within the maximum age and bound to the request's parameter digest.
+ *
  * Unit level: a stub `Fga` satisfies the one method evaluate() calls.
  */
 
@@ -34,18 +38,24 @@ const OTHER_ACTION = "payments:vendor.read";
 const NOW = new Date("2026-10-18T12:00:00Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 
-const view: MissionView = {
+const missionView = (constraints?: Record<string, unknown>): MissionView => ({
   id: "msn_1375",
   issuer: "https://as.test",
   state: "active",
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [
-    { type: "mission_resource_access", resource: RESOURCE, actions: [ACTION] } as MissionView["authority_set"][number],
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: [ACTION],
+      ...(constraints ? { constraints } : {}),
+    } as MissionView["authority_set"][number],
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
-};
+});
+const view = missionView();
 
 const credentialEntry = (constraints?: Record<string, unknown>, actions: string[] = [ACTION]) => ({
   type: "mission_resource_access",
@@ -59,6 +69,8 @@ async function decide(
   credential: unknown[],
   properties: Record<string, unknown> = {},
   amount?: { amount: string; currency: string },
+  v: MissionView = view,
+  context: Partial<EvaluationRequest["context"]> = {},
 ) {
   const req: EvaluationRequest = {
     subject: { id: "alice" },
@@ -72,16 +84,18 @@ async function decide(
       mission: { id: "msn_1375", issuer: "https://as.test", authority_hash: "sha-256:testhash" },
       credential: { authority: credential as never },
       ...(amount ? { amount } : {}),
+      ...context,
     },
   };
   const d = await evaluate(req, {
-    view,
+    view: v,
     fga: alwaysAllowFga,
     modelId: "model-1",
     now: () => NOW,
     stalenessBound,
     relationForAction,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+    maxApprovalAgeSeconds: 300,
   });
   return { permit: d.decision, reason: d.context.denial_reason };
 }
@@ -131,5 +145,35 @@ describe("PDP: another credential entry permits only on its own (@spec resource-
     expect(
       (await decide([...halves, whole], { tenant: "payments-demo" }, { amount: "700.00", currency: "USD" })).permit,
     ).toBe(true);
+  });
+});
+
+describe("PDP: requires_action_approval's input and predicate (@spec resource-access#initial-common-constraints)", () => {
+  const DIGEST = "sha-256:op-1375";
+  const approval = (over: Record<string, unknown> = {}) => ({
+    parameter_digest: DIGEST,
+    action_approval: { id: "apr_1375", approved_at: NOW.toISOString(), parameter_digest: DIGEST, ...over },
+  });
+  const required = { permit: false, reason: "action_approval_required" };
+
+  it("false needs no approval input: an entry carrying false permits with no approval, as one omitting the member does", async () => {
+    const off = { requires_action_approval: false };
+    expect((await decide([credentialEntry()], {}, undefined, missionView(off))).permit).toBe(true);
+    expect((await decide([credentialEntry(off)])).permit).toBe(true);
+    // Control: true with no approval refuses.
+    const gated = missionView({ requires_action_approval: true });
+    expect(await decide([credentialEntry()], {}, undefined, gated)).toMatchObject(required);
+  });
+
+  it("true is satisfied only by an approval fresh within the maximum age and bound to the request's parameter digest", async () => {
+    const gated = missionView({ requires_action_approval: true });
+    const ask = (context: Partial<EvaluationRequest["context"]>) =>
+      decide([credentialEntry()], {}, undefined, gated, context);
+    expect((await ask(approval())).permit).toBe(true);
+    // Older than the deployment's 300-second maximum age.
+    const stale = new Date(NOW.getTime() - 301_000).toISOString();
+    expect(await ask(approval({ approved_at: stale }))).toMatchObject(required);
+    // Bound to other parameters than the request's.
+    expect(await ask(approval({ parameter_digest: "sha-256:other-op" }))).toMatchObject(required);
   });
 });
