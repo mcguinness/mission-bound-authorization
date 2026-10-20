@@ -8113,9 +8113,15 @@
      "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry whose actions carry a non-string or empty element beside the requested action, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298) and an unrecognized `resource_match` (#1276) each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, and ignoring `resource_match` each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298), an unrecognized `resource_match` (#1276) and `actions` carrying an element that is not a non-empty string each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, ignoring `resource_match`, and dropping the `actions` element check (or only its non-empty test) each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
   },
   {
    "id": "core.rs-enforcement.whole-request-single-entry",
@@ -35294,7 +35300,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission whose Approver consented a ceiling records authority_ceiling and drawdown_policy, and its ceiling_hash is the integrity anchor with typ mission-authority-ceiling over an object of exactly those two members",
-    "local": "The Approver's decision on the approval surface carries authority_ceiling and drawdown_policy {id, version}; the issuer mints the policy digest from the snapshot it holds and refuses one it does not hold. Read only where the deployment configures the progressive option."
+    "local": "The Approver's decision on the approval surface carries authority_ceiling and drawdown_policy {id, version}; the issuer mints the policy digest from the snapshot it holds and refuses one it does not hold, at an unknown id or another version, invalid_request before any write (no provider grant, Mission or code). Read only where the deployment configures the progressive option."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -35309,6 +35315,12 @@
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "ceiling consent (@spec progressive#progressive-authorization) > refuses a consented drawdown_policy the issuer does not hold, or one that is not an object, as invalid_request",
      "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a consented drawdown_policy the issuer does not hold, at an unknown id or another version, invalid_request before any write: no grant, Mission or code",
+     "level": "endpoint",
      "surface": "commitment"
     }
    ],
@@ -40708,7 +40720,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives",
-    "local": "#1373: the reference AS refuses a matcher, in allowed_delegates or allowed_child_actors, that carries a member other than sub and sub_profile, carries neither, or carries an empty or non-string value, at proposal intake, configuration load, template consent and derivation, and in the requested authority of the deferred grant, the dispatch handoff and the async-delegation exchange, rather than deriving or issuing it without the member; Resource Access Entry Validation states the rule (resource-access.entry-validation.matcher-members)"
+    "local": "#1373: the reference AS refuses a matcher, in allowed_delegates or allowed_child_actors, that carries a member other than sub and sub_profile, carries neither, or carries an empty or non-string value, at proposal intake, configuration load, template consent and derivation, and in the requested authority of the deferred grant, the dispatch handoff and the async-delegation exchange, rather than deriving or issuing it without the member; Resource Access Entry Validation states the rule (resource-access.entry-validation.matcher-members). At runtime, delegatePermitted applies the same rule, so a malformed matcher that a record committed before these refusals still holds permits nothing, and the list's other matchers still decide"
    },
    "level": "unit",
    "coverage": "partial",
@@ -41473,12 +41485,20 @@
    "surface": "resource-operation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an entry carrying a member another specification defines for this type is enforced, not refused, when that specification's enforcement obligations are fulfilled"
+    "normative": "an entry carrying a member another specification defines for this type is enforced, not refused, when that specification's enforcement obligations are fulfilled",
+    "local": "The payments resource implements one member another specification defines for this type: Capability Binding's capability_sources. Its PEP presents the current per-tool binding, and its policy decision point, acting for it, compares that binding with the one the entry records: it permits when they agree and denies capability_drift when the served definition changed. The credential bound sets the member aside for that Mission-bound check. SaaS implements no extension member and refuses such an entry (resource-access.rs-enforcement.unknown-member-unenforceable)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members). #1362: SaaS implements no extension member, so it refuses an entry carrying `capability_sources` (witnessed under resource-access.rs-enforcement.unknown-member-unenforceable); that converse case is not a witness for this row."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/capability-binding.test.ts",
+     "name": "one catalog snapshot from discovery to invocation > a served definition edited after real approval denies capability_drift and retains the compared evidence",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1277 review finding 1 (D454). Witnessed at the payments resource: an approved Mission entry carrying the capability_sources binding the AS recorded permits the invoice read through McpPaymentsServer, the retained decision evidence carries the compared binding, and once the served definition is edited the same entry denies capability_drift, so the member is enforced, not set aside. The entry is the Mission's approved entry, which the policy decision point evaluates for the resource under the runtime-enforced profile; the presented credential in this test carries no binding, and the credential bound's set-aside of one is witnessed only at unit level (parseCredentialAuthority). Proved by mutation in the policy decision point, each alone: denying every entry that records a binding for the action fails the permit (expected false to be true), and skipping the comparison fails the drift denial. Common Constraints are constraints keys, enforced under the constraints member rather than extension members, so their tests are not witnesses here. Case fc-09 stays skipped: the reader claims no rs.extension-members capability. #1362: SaaS refusing capability_sources is the converse case (resource-access.rs-enforcement.unknown-member-unenforceable). Partial: the runtime-enforced arm is witnessed at the endpoint, but the issuance arm, a presented credential carrying capability_sources at the resource server and set aside by the credential bound, has only the unit-level witness, so the local observation's set-aside clause has no endpoint assertion."
   },
   {
    "id": "resource-access.rs-enforcement.locations-unenforceable",
