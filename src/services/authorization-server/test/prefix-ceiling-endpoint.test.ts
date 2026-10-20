@@ -29,7 +29,7 @@ const hoisted = await vi.hoisted(async () => {
 
 import { rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
@@ -238,6 +238,46 @@ describe("a configured prefix ceiling derives through the authorization server (
     const redirect = await approve([read(SIBLING)], [RESOURCE, SIBLING]);
     expect(redirect.searchParams.get("error")).toBe("invalid_authorization_details");
     expect(as.kernel.allMissions().length).toBe(before);
+  });
+});
+
+describe("a finer entry pairs with the resource that serves it through the shared matcher (@spec mission#introspection, status#mission-status-response, capability-binding#capability-source-binding, #1440)", () => {
+  let issued: { at: string; rt: string; keys: Keys; missionId: string };
+  beforeAll(async () => {
+    issued = await issue([read(INV1)], [RESOURCE, INV1]);
+  });
+
+  it("introspection by the payments resource server discloses the finer entry its resource serves", async () => {
+    const res = await fetch(`${ISSUER}/introspect`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${Buffer.from("rs-payments:dev-introspection-rs-payments").toString("base64")}`,
+      },
+      body: new URLSearchParams({ token: issued.at }).toString(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Json;
+    expect(body.active).toBe(true);
+    expect(resourcesOf(body.authorization_details as AuthorityEntry[])).toEqual([{ resource: INV1 }]);
+  });
+
+  it("the audience-scoped Mission Status response lists the finer entry for the payments audience and nothing for another audience", async () => {
+    const scoped = async (audience: string) => {
+      const res = await fetch(`${ISSUER}/missions/${issued.missionId}/status?audience=${encodeURIComponent(audience)}`, {
+        headers: { "x-service-token": DEV_SERVICE_TOKEN },
+      });
+      expect(res.status).toBe(200);
+      return claims(await res.text()).authorization_details as AuthorityEntry[];
+    };
+    expect(resourcesOf(await scoped(RESOURCE))).toEqual([{ resource: INV1 }]);
+    expect(await scoped(DERIVATION_POLICY.ceiling[2]?.resource as string)).toEqual([]);
+  });
+
+  it("the trusted catalog resolves the finer entry's catalog-sourced action, as for the payments service's own entry", () => {
+    const sources = as.kernel.get(issued.missionId)?.authority_set[0]?.capability_sources ?? [];
+    expect(sources.map((b) => b.action)).toEqual(["payments:invoice.read"]);
+    expect(sources[0]?.tool_id).toMatch(/^mcp:\/\/payments\.demo\/tools\//);
   });
 });
 
