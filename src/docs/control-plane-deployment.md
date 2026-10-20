@@ -307,12 +307,21 @@ before it serves a request:
   `expansion_deferrals` row records the client that opened it and the
   approval event it completed under, and its `redeemed = 1` marker is set in
   the transaction that created the successor. A later `deny` rewrites the
-  row's `state` but not the marker, and deferral rows are never deleted. The successor carries the predecessor's
-  client, so its own record cannot show the defect. The AS acts only when
-  exactly one Mission carries the deferral's predecessor and approval event,
-  the predecessor's `superseded` termination names it, it carries the
-  predecessor's client, and no deferral the predecessor's own client opened
-  claims the same approval event.
+  row's `state` but not the marker, and deferral rows are never deleted. The
+  successor carries the predecessor's client, so its own record cannot show
+  the defect. The AS acts only when exactly one Mission carries the deferral's
+  predecessor and approval event, the predecessor's `superseded` termination
+  names it, it carries the predecessor's client, and no deferral the
+  predecessor's own client opened claims the same approval event.
+- A Progressive ceiling-drawdown successor another client requested. With
+  Progressive drawdown on (`progressive`, off in every shipped launcher), the
+  in-ceiling path creates a successor without a deferral. Its
+  `approval_basis.activation_actor` records the requesting client, while its
+  `client_id` is copied from the predecessor, so the successor's own record is
+  the link and is never purged. The AS acts only when the activation actor is
+  this issuer's and names a client other than the successor's, the successor
+  carries the predecessor's client, and the predecessor's `superseded`
+  termination names it.
 
 Revocation runs after the expiry clock, so an expired Mission records
 `expired`, and a terminal one keeps its recorded termination. The predecessor
@@ -324,10 +333,11 @@ drain. A successor that its own client later approved from a
 revoked one is not a target, since the defect belongs to one creation
 operation. A later boot finds nothing left to revoke and commits nothing. A
 revocation that fails stops the build, so the AS never serves with an
-identified live Mission. `BuiltAs.startupRemediation` lists what was revoked
-and each committed deferral from another client whose successor could not be
-identified, and each shipped launcher (`server.ts`, `pnpm as-native` and
-`pnpm issuance-only`) logs both. A reported deferral is left alone.
+identified live Mission. `BuiltAs.startupRemediation` lists what was revoked,
+each committed deferral from another client whose successor could not be
+identified, and each drawdown successor whose provenance disagrees, and each
+shipped launcher (`server.ts`, `pnpm as-native` and `pnpm issuance-only`) logs
+them. A reported deferral or successor is left alone.
 
 Residuals:
 
@@ -339,12 +349,6 @@ Residuals:
   replacement creation to succeed. A child whose row was gone before the first
   boot of a build with #1340 cannot be identified, and the AS revokes no child
   whose provenance is missing.
-- **Policy-adjudicated drawdown successors.** With Progressive drawdown on
-  (`progressive`, off in every shipped launcher), another client could also
-  complete an in-ceiling drawdown, which creates a successor without a
-  deferral. Its `approval_basis.activation_actor` and its `creation_idempotency`
-  row (`op = 'expansion'`) name the requesting client. This remediation does
-  not act on it.
 - **Credentials already issued.** Revocation is enforced wherever the AS or a
   resource consults the Mission's state: issuance gating, refresh, Token
   Exchange, introspection and Mission Status. A self-contained access token
