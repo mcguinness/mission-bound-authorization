@@ -60,6 +60,7 @@ import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
 import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
+import { revokeSuccessorsExpandedByAnotherClient, type SuccessorRemediation } from "./kernel/expansion.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
@@ -403,12 +404,15 @@ export {
 } from "./kernel/delegation.js";
 export {
   createExpansion,
+  revokeSuccessorsExpandedByAnotherClient,
   successorMissionClaim,
   successorWidensOnly,
   type ContainmentHistoryEntry,
   type ExpansionEvidence,
   type ExpansionInput,
   type ExpansionResult,
+  type SuccessorRemediation,
+  type UnresolvedSuccessorProvenance,
 } from "./kernel/expansion.js";
 export {
   createChildMission,
@@ -819,6 +823,13 @@ export interface BuiltAs {
    * (`suspensionSchedules`) and serves `suspend`.
    */
   suspensionScheduler?: SuspensionScheduler;
+  /**
+   * @spec child-delegation#request-processing step 4, expansion#verification-order
+   * step 4 (#1326, #1349): what building this assembly revoked from before
+   * the acting-client checks existed, and the committed expansions from
+   * another client whose successor it could not identify, for the operator.
+   */
+  startupRemediation: { revokedChildren: string[]; successors: SuccessorRemediation };
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -1633,9 +1644,15 @@ export async function buildAuthorizationServer(opts: {
   await kernel.recoverAtBoot();
   // @spec child-delegation#request-processing step 4 (#1326): revoke any child
   // that a client other than its parent's own created before the step-4 check
-  // existed, while its creation operation is retained, then deliver the
-  // revocations' durable effects (family grants) before serving a request.
-  if (revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency).length > 0) {
+  // existed, while its creation operation is retained.
+  // @spec expansion#verification-order step 4 (#1349, D516): revoke any
+  // successor created through another client's committed deferral, as its
+  // retained deferral identifies it. Then deliver the revocations' durable
+  // effects (family grants) before serving a request. A failed revocation
+  // throws, so the assembly is not served.
+  const revokedChildren = revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency);
+  const successorRemediation = revokeSuccessorsExpandedByAnotherClient(kernel, expansionDeferrals);
+  if (revokedChildren.length + successorRemediation.revoked.length > 0) {
     await kernel.drainLifecycleOutbox();
   }
   // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
@@ -1666,5 +1683,6 @@ export async function buildAuthorizationServer(opts: {
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
+    startupRemediation: { revokedChildren, successors: successorRemediation },
   };
 }

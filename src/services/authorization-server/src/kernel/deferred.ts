@@ -676,6 +676,32 @@ export class ExpansionDeferralStore {
   }
 
   /**
+   * @spec expansion#verification-order step 4 (#1349): every retained deferral
+   * whose completion committed (`redeemed`, set in the activation
+   * transaction), with the client that opened it and the approval event it
+   * completed under. Deferral rows are never deleted, so this is the durable
+   * link from a successor to the client whose request created it.
+   */
+  retainedCommittedExpansions(): Array<{
+    deferralCode: string;
+    predecessorId: string;
+    clientId: string;
+    approvalEventId: string | undefined;
+  }> {
+    const rows = this.db
+      .prepare(
+        "SELECT deferral_code, predecessor_id, client_id, approval_event_id FROM expansion_deferrals WHERE state = 'approved' AND redeemed = 1 ORDER BY created_at, deferral_code",
+      )
+      .all() as Array<{ deferral_code: string; predecessor_id: string; client_id: string; approval_event_id: string | null }>;
+    return rows.map((r) => ({
+      deferralCode: r.deferral_code,
+      predecessorId: r.predecessor_id,
+      clientId: r.client_id,
+      approvalEventId: r.approval_event_id ?? undefined,
+    }));
+  }
+
+  /**
    * Poll/redeem a deferred expansion. Mirrors {@link DeferralStore.redeem}'s
    * poll/interval/expiry states. On approval it runs the deferred-window check (a)
    * against Mission STATE (never the expired subject_token, check (b)) and then
