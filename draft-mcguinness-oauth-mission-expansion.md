@@ -499,12 +499,13 @@ endpoint with the following parameters:
   exchange missing it with `invalid_request`.
 
 A `mission_intent` on a token exchange marks it as a Mission-creation
-exchange. A Mission-creation exchange whose `subject_token` resolves
-to a Mission and that carries no `child_actor` is an expansion. A token exchange
-carrying both a `predecessor` cross-check and the child-delegation
-profile's `child_actor`
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) MUST be
-refused with `invalid_request`: the operations do not combine.
+exchange, and its `requested_token_type` selects the operation: the
+access-token type selects expansion, and the JWT type selects child
+creation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
+The Mission Issuer MUST refuse with `invalid_request` a token exchange
+that carries both a `predecessor` cross-check and the child-delegation
+profile's `child_actor`, and an expansion exchange that carries
+`child_actor`: the operations do not combine.
 
 The possession proof of {{request-binding}} is presented only on the
 token endpoint's authenticated back channel and MUST NOT appear on any

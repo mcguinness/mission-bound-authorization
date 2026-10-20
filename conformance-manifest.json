@@ -50269,6 +50269,28 @@
    "tests": []
   },
   {
+   "id": "expansion.submission.child-actor-refused",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "submission",
+   "text": "The Mission Issuer MUST refuse with `invalid_request` a token exchange that carries both a `predecessor` cross-check and the child-delegation profile's `child_actor`, and an expansion exchange that carries `child_actor`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expansion exchange (requested_token_type access token) that carries child_actor, or any token exchange carrying both predecessor and child_actor, is refused invalid_request and creates nothing",
+    "local": "the reference AS selects by requested_token_type and ignores child_actor on an access-token exchange"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",
