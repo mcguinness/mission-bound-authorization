@@ -2002,6 +2002,18 @@ same rule as vector 5.
 
 \[\[ To be removed from the final specification ]]
 
+- Resolutions of the remaining #1436 questions. An assertion binds to
+  the approval event's `intent_hash` as well. Policy-authorization says
+  what it checks for a `policy` assertion. `contributing` lists what the
+  satisfied rule counted, so a `deny` assertion never appears in it. An
+  exception never lengthens its class's recency ceiling. The members of
+  `evaluation` are marked as required. Evaluating Recency points at the
+  one `approved_at` verification rule. Conventions names both digest
+  sources. Re-checking an Evaluation defines the Relying Auditor's
+  re-check. Privacy Considerations name two correlators. A policy
+  version that several humans approved names its one accountable human
+  as the principal.
+
 - Four rulings on the #1436 questions (D568), each a change in
   requirements. The recording triggers bind only under a profile that
   adopts them, and a record kept voluntarily meets every requirement on
