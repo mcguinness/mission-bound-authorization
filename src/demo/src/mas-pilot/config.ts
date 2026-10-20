@@ -21,6 +21,17 @@ export interface MasPilotClientConfig {
   redirect_uri: string;
   scope: string;
   resources: string[];
+  /** The access token format the estate issues this client (#818 slice 3). */
+  token_format: "jwt" | "opaque";
+}
+
+/** The gateway's RFC 7662 introspection of the estate's opaque tokens (#818 slice 3). */
+export interface MasPilotIntrospectionConfig {
+  /** The introspection client the estate registers for the gateway; its secret is generated at each boot. */
+  client_id: string;
+  timeout_ms: number;
+  /** A positive result is cached at most this long, and never past the token's `exp`; a negative one never. */
+  cache_max_seconds: number;
 }
 
 export interface MasPilotInventoryEntry {
@@ -50,6 +61,7 @@ export interface MasPilotConfig {
     resource_servers: Record<string, { scope: string }>;
   };
   mapping_cache: { max_stale_seconds: number };
+  introspection: MasPilotIntrospectionConfig;
   mission_bound_only_classes: string[];
   /**
    * @spec runtime#input-resource-policy (#828, #818): the grants a development
@@ -147,6 +159,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     "mas_delegates",
     "estate",
     "mapping_cache",
+    "introspection",
     "mission_bound_only_classes",
     "resource_policy",
     "mapping_contract",
@@ -167,11 +180,20 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
   const seen = new Set<string>();
   const clients = estate.clients.map((c, i): MasPilotClientConfig => {
     const ctx = `estate.clients[${i}]`;
-    const o = obj(c, ctx, ["client_id", "redirect_uri", "scope", "resources"]);
+    const o = obj(c, ctx, ["client_id", "redirect_uri", "scope", "resources", "token_format"]);
+    if (o.token_format !== "jwt" && o.token_format !== "opaque") {
+      throw new MasPilotConfigError(`${ctx}.token_format must be "jwt" or "opaque"`);
+    }
     const id = str(o.client_id, `${ctx}.client_id`);
     if (seen.has(id)) throw new MasPilotConfigError(`${ctx}.client_id ${id} is registered twice`);
     seen.add(id);
-    return { client_id: id, redirect_uri: str(o.redirect_uri, `${ctx}.redirect_uri`), scope: str(o.scope, `${ctx}.scope`), resources: strs(o.resources, `${ctx}.resources`) };
+    return {
+      client_id: id,
+      redirect_uri: str(o.redirect_uri, `${ctx}.redirect_uri`),
+      scope: str(o.scope, `${ctx}.scope`),
+      resources: strs(o.resources, `${ctx}.resources`),
+      token_format: o.token_format,
+    };
   });
   const rsRaw = estate.resource_servers;
   if (rsRaw === null || typeof rsRaw !== "object" || Array.isArray(rsRaw)) {
@@ -179,11 +201,25 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
   }
   const resource_servers: Record<string, { scope: string }> = {};
   for (const [resource, v] of Object.entries(rsRaw as Record<string, unknown>)) {
-    // The gateway verifies `aud` against the payments resource identifier.
-    if (resource !== CANONICAL_RESOURCE) {
-      throw new MasPilotConfigError(`estate.resource_servers names ${resource}, but the gateway's resource is ${CANONICAL_RESOURCE}`);
-    }
     resource_servers[resource] = { scope: str(obj(v, `estate.resource_servers.${resource}`, ["scope"]).scope, `${resource}.scope`) };
+  }
+  // The gateway verifies `aud` against the payments resource identifier, so
+  // the estate must serve it; its other resources are the estate's own.
+  if (!Object.hasOwn(resource_servers, CANONICAL_RESOURCE)) {
+    throw new MasPilotConfigError(`estate.resource_servers must name the gateway's resource ${CANONICAL_RESOURCE}`);
+  }
+  const intro = obj(root.introspection, "introspection", ["client_id", "timeout_ms", "cache_max_seconds"]);
+  const timeoutMs = intro.timeout_ms;
+  const cacheMax = intro.cache_max_seconds;
+  if (typeof timeoutMs !== "number" || !Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new MasPilotConfigError("introspection.timeout_ms must be a positive integer");
+  }
+  if (typeof cacheMax !== "number" || !Number.isInteger(cacheMax) || cacheMax < 0) {
+    throw new MasPilotConfigError("introspection.cache_max_seconds must be a non-negative integer");
+  }
+  const introspectionClient = str(intro.client_id, "introspection.client_id");
+  if (seen.has(introspectionClient)) {
+    throw new MasPilotConfigError("introspection.client_id must not be one of the estate's own clients");
   }
   const cache = obj(root.mapping_cache, "mapping_cache", ["max_stale_seconds"]);
   const maxStale = cache.max_stale_seconds;
@@ -211,6 +247,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     mas_delegates: strs(root.mas_delegates, "mas_delegates"),
     estate: { issuer, host: str(estate.host, "estate.host"), port, accounts: strs(estate.accounts, "estate.accounts"), clients, resource_servers },
     mapping_cache: { max_stale_seconds: maxStale },
+    introspection: { client_id: introspectionClient, timeout_ms: timeoutMs, cache_max_seconds: cacheMax },
     mission_bound_only_classes: strs(root.mission_bound_only_classes, "mission_bound_only_classes"),
     resource_policy: resourcePolicySeed(root.resource_policy),
     mapping_contract: root.mapping_contract,
