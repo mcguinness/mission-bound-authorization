@@ -217,7 +217,19 @@ expands; a `predecessor` lineage member on the resulting Mission; and
 the `superseded` termination reason for the predecessor, with the
 reconciliation rules that keep concurrent expansions consistent.
 
-## Status: an optional extension {#optional-status}
+## Relationship to the Issuance Profile {#relationship}
+
+This document depends normatively on the issuance profile and is not
+implementable alone. It reuses, without restating, that profile's
+Mission Intent, submission via PAR, authority
+derivation, approval event with its integrity anchors, Mission record,
+the `mission` claim, the subset rule, and the lifecycle and issuance
+gating. It uses the terms Agent (Client), Subject, Approver, Mission
+Issuer, Mission Intent, Authority Set, Mission, and derived token as
+defined there.
+
+Where this document refers to "the issuance profile" without a section,
+it means {{I-D.draft-mcguinness-oauth-mission}} as a whole.
 
 This document is optional. It is a layered extension to the issuance
 profile, not a change to it. A deployment that implements
@@ -235,21 +247,7 @@ adjudicates expansion; otherwise it remains a plain issuance-profile
 Mission Issuer. Nothing here places a new requirement back on the
 issuance profile.
 
-## Relationship to the issuance profile {#relationship}
-
-This document depends normatively on the issuance profile and is not
-implementable alone. It reuses, without restating, that profile's
-Mission Intent, submission via PAR, authority
-derivation, approval event with its integrity anchors, Mission record,
-the `mission` claim, the subset rule, and the lifecycle and issuance
-gating. It uses the terms Agent (Client), Subject, Approver, Mission
-Issuer, Mission Intent, Authority Set, Mission, and derived token as
-defined there.
-
-Where this document refers to "the issuance profile" without a section,
-it means {{I-D.draft-mcguinness-oauth-mission}} as a whole.
-
-## Scope
+## Scope {#scope}
 
 This document defines:
 
@@ -311,9 +309,7 @@ Expansion request:
   `subject_token`, asking the Mission Issuer to adjudicate a successor
   ({{expansion-request}}).
 
-# Expansion Overview
-
-## Protocol flow
+# Protocol Overview {#overview}
 
 ~~~
  Agent (client)               Mission Issuer (AS)
@@ -383,7 +379,7 @@ Whether the Mission Issuer adjudicates a successor remains its decision
 ({{adjudication}}); an eligible denial is not an authorization in favor
 of expansion.
 
-## Expansion is not step-up {#not-step-up}
+## Expansion Is Not Step-Up {#not-step-up}
 
 Expansion is a governance operation. It is distinct from
 authentication step-up {{RFC9470}}. A request denied because an `acr`
@@ -412,7 +408,7 @@ profile ({{I-D.draft-mcguinness-mission-authority-server}}) binds the
 same abstract requirement to an authenticated-client submission on its
 token-less surface; the two are peer bindings of one requirement.
 
-## The token exchange request {#submission}
+## Token Exchange Request {#submission}
 
 A client initiates an expansion as an {{RFC8693}} token exchange at the
 token endpoint. The request carries:
@@ -513,7 +509,7 @@ approval ceremony carries only the consent decision; the predecessor
 binding and possession proof are established by the token exchange in
 every completion mode.
 
-## Proving possession of the predecessor {#request-binding}
+## Proving Possession of the Predecessor {#request-binding}
 
 The issuance profile resolves a Mission from the credential the client
 presents, never from a client-supplied `mission_id`
@@ -577,7 +573,7 @@ is identified and authorized by a credential the client already holds
 and can prove possession of, and a client cannot name an arbitrary
 predecessor.
 
-## Predecessor must be active {#predecessor-active}
+## Predecessor Must Be Active {#predecessor-active}
 
 The Mission Issuer MUST resolve the predecessor from `subject_token`
 and verify it is in the `active` state before adjudicating, and MUST
@@ -615,7 +611,7 @@ The Mission Issuer processes an expansion token exchange in the
 verification order of {{verification-order}} and completes it in one of
 the modes of {{completion-modes}}.
 
-## Mission Issuer verification order {#verification-order}
+## Verification Order {#verification-order}
 
 The Mission Issuer MUST evaluate an expansion token exchange in this
 order, refusing on the first failure:
@@ -684,7 +680,7 @@ authorize that authority explicitly, and its consent disclosure MUST
 name the discharged entry and the condition that discharged it
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
 
-## Completion modes {#completion-modes}
+## Completion Modes {#completion-modes}
 
 An expansion completes in one of two modes, each obtaining the fresh
 approval the successor's authority requires. The deferred token
@@ -761,7 +757,7 @@ reservation ({{creation-idempotency}}) makes completion recoverable:
 a client that loses the response recovers the one committed
 operation, never a second creation.
 
-## Interactive handoff {#interactive-handoff}
+## Interactive Handoff {#interactive-handoff}
 
 An {{RFC8693}} success carries an issued token
 ({{Section 2.2.1 of RFC8693}}), so interactive completion cannot use
@@ -843,7 +839,7 @@ the token exchange with the same `creation_request_id`
 ({{creation-recovery}}); an operation whose continuation expired
 before activation answers that retry with `expired_token`.
 
-## The deferred window {#deferred-window}
+## The Deferred Window {#deferred-window}
 
 A completion may occur later than the request, across a deferred or
 interactive approval window. Two rules govern that window:
@@ -901,7 +897,7 @@ and recheck that snapshot at completion under the child profile's Carryover
 rules ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise
 the ordinary cascade notice and per-child re-creation above remain the floor.
 
-## Successor expiry {#successor-expiry}
+## Successor Expiry {#successor-expiry}
 
 The successor's effective `expires_at` follows the issuance profile's
 requested-versus-effective rule
@@ -939,7 +935,7 @@ An approved successor extension MUST NOT extend a carried child's expiry:
 carryover remains bounded by the old child and its new parent's effective
 expiry ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
-## Successor Subject and authority source {#successor-source}
+## Successor Subject and Authority Source {#successor-source}
 
 A successor's `subject` and `authority_source` MUST equal the
 predecessor's, whichever completion mode or approval basis creates it;
@@ -955,7 +951,7 @@ at that commit. On failure it creates no successor and leaves the
 predecessor `active`. The same commit rechecks the effective expiry
 ({{successor-expiry}}).
 
-# The Predecessor Mission Reference {#predecessor-member}
+# Lineage Members {#predecessor-member}
 
 The successor records a lineage link to the predecessor as a
 `predecessor` member, both on the successor's `mission` claim and on
@@ -1133,7 +1129,7 @@ The transition has these requirements:
   Consumers rely on the issuance profile's forward-compatibility rule:
   a `terminated` Mission, whatever its reason, is non-deriving.
 
-## No implicit rollback {#no-rollback}
+## No Implicit Rollback {#no-rollback}
 
 The Mission Issuer MUST NOT implicitly resurrect a superseded
 predecessor when its successor is later revoked, expired, or itself
@@ -1369,7 +1365,7 @@ family, which is not a Mission
 template profile's Dispatch does so for a dispatched Mission
 ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
-## The operation fingerprint {#creation-fingerprint}
+## The Operation Fingerprint {#creation-fingerprint}
 
 The operation fingerprint commits what the operation is, so a
 repeated identifier is distinguishable from a reused one. It is
@@ -1464,7 +1460,7 @@ material is excluded: the DPoP proof serialization and its `jti`, the
 client-authentication assertion serialization, the raw
 `subject_token` serialization, and `creation_request_id` itself.
 
-## The durable reservation {#creation-reservation}
+## The Durable Reservation {#creation-reservation}
 
 A reservation is the durable record binding the authenticated client,
 the `creation_request_id`, and the fingerprint. It is created in a
@@ -1490,7 +1486,7 @@ resolves by fingerprint:
 - different fingerprint: refuse with `invalid_request`. The
   identifier was reused for a different operation.
 
-## Recovery is delivery {#creation-recovery}
+## Recovery Is Delivery {#creation-recovery}
 
 The Mission Issuer stores the operation's stable outcome, never its
 serialized response: the completion mode with its continuation
@@ -1522,7 +1518,7 @@ Recovery never re-creates. Whatever the outcome tier, a recovered
 operation yields the Mission the operation already created, or the
 continuation it already opened, and nothing else.
 
-## Revalidation and lookup order {#creation-revalidation}
+## Revalidation and Lookup Order {#creation-revalidation}
 
 A matching `creation_request_id` never bypasses authentication or
 possession. Before recovering anything, the Mission Issuer MUST
@@ -1547,7 +1543,7 @@ reason `superseded` when the first attempt succeeded
 ({{superseded-state}}), so re-running the predecessor-active gate
 first would refuse the very recovery this mechanism exists to serve.
 
-## Tombstone retention {#creation-retention}
+## Tombstone Retention {#creation-retention}
 
 Retention has two tiers. The full delivery-artifact record MAY be
 retained briefly. The idempotency tombstone, the
@@ -1644,76 +1640,6 @@ it can parse but cannot derive a valid Authority Set from fails with
 a proposal alongside it, or `access_denied` where it did not, exactly
 as for any Mission creation.
 
-# Worked Example {#example}
-
-A Q3 reconciliation Mission `msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS`,
-not the single-domain walkthrough's, authorizes reading invoices and
-posting journal entries of at most USD 500. Mid-task the agent finds an
-adjustment of $1,200, outside the active Mission's authority. It cannot
-widen in place; it requests an expansion as a token exchange presenting
-the predecessor's Mission-bound access token as the `subject_token`,
-proving possession with a DPoP proof over the token's confirmation key:
-
-~~~ http
-POST /token HTTP/1.1
-Host: as.example.com
-Content-Type: application/x-www-form-urlencoded
-DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
-
-grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
-requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
-subject_token=<predecessor%20Mission-bound%20access%20token>&
-subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
-mission_intent=%7B%22intent%22%3A
-  %7B...journal-entries%20cap%20%242000...%7D%7D&
-predecessor=msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS&
-creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
-client_id=s6BhdRkqt3
-~~~
-
-The Mission Issuer resolves the predecessor from `subject_token`,
-verifies the presenter controls the token's confirmation key, confirms
-the `predecessor` cross-check names that Mission and that it is
-`active`, and derives the successor's Authority Set. The widening
-requires fresh consent and the deployment approves asynchronously, so
-the Mission Issuer returns a deferred token response;
-`alice` approves the widened cap on the review surface, and the client's
-next poll delivers the successor's access token. At that issuance the
-Mission Issuer activates the successor and supersedes the predecessor
-atomically; until then the predecessor stays `active`. The successor's
-token carries a `predecessor` member:
-
-~~~ json
-{
-  "mission": {
-    "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
-    "issuer": "https://as.example.com",
-    "predecessor": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
-  }
-}
-~~~
-
-The predecessor is now `terminated` with reason `superseded`: it
-derives no new tokens, its already-issued tokens run out their short
-lifetimes, and the task continues under the successor. Its record
-carries (other members omitted):
-
-~~~ json
-{
-  "state": "terminated",
-  "termination": {
-    "reason": "superseded",
-    "terminated_at": "2026-11-02T09:40:00Z",
-    "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
-  }
-}
-~~~
-
-The widening came only from `alice`'s
-fresh consent; the successor's `authority_hash` commits the widened
-Authority Set it was actually approved for, not the predecessor's plus a
-delta.
-
 # Conformance {#conformance}
 
 An implementation claims conformance to this document only in the
@@ -1784,7 +1710,7 @@ authorization companion defines a further OPTIONAL capability,
 **Expansion with Progressive Authorization**, with its own conformance
 requirements ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
 
-# Security Considerations
+# Security Considerations {#security-considerations}
 
 Expansion's central guarantee is the issuance profile's, applied to
 the successor: a user's fresh approval bounds every token derived for
@@ -1792,7 +1718,7 @@ the broadened task. The risks specific to expansion are in the
 predecessor binding, the predecessor-to-successor handoff, and the
 lineage link.
 
-## Predecessor confusion {#predecessor-confusion}
+## Predecessor Confusion {#predecessor-confusion}
 
 A client could attempt to expand a Mission it does not control, for
 example by naming another tenant's or subject's `mission_id` in the
@@ -1812,7 +1738,7 @@ Mitigations:
   Issuers; an expansion is adjudicated only at the predecessor's own
   `issuer`.
 
-## Possession proof {#possession-proof}
+## Possession Proof {#possession-proof}
 
 A stolen or exfiltrated predecessor credential could be replayed to
 request an expansion.
@@ -1832,7 +1758,7 @@ Mitigations:
   recorded at request time so a legitimate deferred completion is not
   gated on that lifetime ({{deferred-window}}).
 
-## Authority comes only from new consent {#new-consent}
+## Authority Comes Only from New Consent {#new-consent}
 
 An expansion could be misused to widen authority without the Approver
 re-consenting, if a successor were allowed to inherit or extend
@@ -1850,7 +1776,7 @@ Mitigations:
   so expansion cannot launder a longer lifetime past the originally
   approved horizon.
 
-## Race against predecessor lifecycle {#lifecycle-race}
+## Race against the Predecessor Lifecycle {#lifecycle-race}
 
 Between the moment a client decides to expand and the moment the
 successor activates, the predecessor may be revoked, expire, or be
@@ -1871,7 +1797,7 @@ Mitigations:
   successor or stop, without leaking the predecessor's new internal
   state beyond that ({{reconciliation}}).
 
-## Duplicate creation {#duplicate-creation}
+## Duplicate Creation {#duplicate-creation}
 
 To a client, a lost response is indistinguishable from a failed
 creation. Without idempotency the natural retry after a network
@@ -1899,7 +1825,7 @@ Mitigations:
   published ({{creation-retention}}), and a Mission Issuer MAY cap
   outstanding reservations per client.
 
-## Expansion versus step-up {#step-up-distinction}
+## Expansion versus Step-Up {#step-up-distinction}
 
 Conflating expansion with authentication step-up {{RFC9470}} would
 route an authentication shortfall through an approval event the
@@ -1914,7 +1840,7 @@ denial that is an authority shortfall is the one expansion addresses
 ({{not-step-up}}). The component that classifies the denial
 ({{eligibility}}) makes this distinction.
 
-## Policy probing {#policy-probing}
+## Policy Probing {#policy-probing}
 
 A client could submit many expansion requests for the same predecessor
 to map the Mission Issuer's policy boundary from the denial reasons.
@@ -1931,7 +1857,7 @@ Mitigations:
   the requested authority was approved, not the full surface of what
   would have been.
 
-## Audit linkage {#audit-linkage}
+## Audit Linkage {#audit-linkage}
 
 The `predecessor` member makes the expansion chain observable: an
 authorized auditor can trace a successor back through its predecessors
@@ -1943,13 +1869,13 @@ and defeats it; the member is therefore mandatory on a successor
 General OAuth security guidance applies to the underlying credentials
 through the issuance profile.
 
-# Privacy Considerations
+# Privacy Considerations {#privacy-considerations}
 
 The privacy surface expansion adds over the issuance profile is the
 lineage link and the authority detail disclosed when a task is
 broadened.
 
-## Predecessor-chain correlation {#chain-correlation}
+## Predecessor-Chain Correlation {#chain-correlation}
 
 The `predecessor` member that gives audit linkage ({{audit-linkage}})
 is also a correlation surface: it links a successor to its predecessor
@@ -1962,7 +1888,7 @@ with a governance need, rather than exposing the chain to every
 credential audience. The issuance profile's Mission Identifier
 correlation considerations apply to each Mission in the chain.
 
-## Related-work correlation {#related-to-correlation}
+## Related-Work Correlation {#related-to-correlation}
 
 `related_to` correlates independently approved tasks the way the
 `predecessor` chain correlates a succession, without the authority
@@ -1971,7 +1897,7 @@ member only to audiences that require the governance relationship,
 and the issuance profile's Mission Identifier correlation
 considerations apply to both Missions it names.
 
-## Disclosure of the broadened task {#broadened-task}
+## Disclosure of the Broadened Task {#broadened-task}
 
 The expansion Mission Intent and the consent disclosure rendered at the
 expansion approval event reveal how the approved task is evolving. The
@@ -1979,7 +1905,7 @@ Mission Issuer SHOULD render that disclosure only to the Approver and
 authorized governance consumers, consistent with the issuance profile's
 treatment of consent disclosure.
 
-# IANA Considerations
+# IANA Considerations {#iana}
 
 The `predecessor` member of the `mission` claim
 ({{predecessor-member}}) is not registered in a dedicated registry: it
@@ -2076,6 +2002,8 @@ Internet-Draft reference as a publication dependency under this
 registry's policy until it is published; Specification Required does
 not require Standards Track maturity of the registrant.
 
+## OAuth Parameters Registration {#iana-parameters}
+
 The expansion request is an {{RFC8693}} token exchange carrying the
 already-registered `mission_intent` request parameter and the
 already-registered token-exchange parameters `subject_token`,
@@ -2140,14 +2068,77 @@ Error Registry" ({{Section 11.4 of RFC6749}}):
 - Change controller: IETF
 - Specification document(s): this document, {{interactive-handoff}}
 
-# Acknowledgments
-{:numbered="false"}
-
-The author thanks the reviewers of the Mission-Bound Authorization for
-OAuth 2.0 profile for feedback on the expansion model and its
-composition with the issuance flow.
-
 --- back
+
+# Worked Example {#example}
+
+A Q3 reconciliation Mission `msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS`,
+not the single-domain walkthrough's, authorizes reading invoices and
+posting journal entries of at most USD 500. Mid-task the agent finds an
+adjustment of $1,200, outside the active Mission's authority. It cannot
+widen in place; it requests an expansion as a token exchange presenting
+the predecessor's Mission-bound access token as the `subject_token`,
+proving possession with a DPoP proof over the token's confirmation key:
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
+requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
+subject_token=<predecessor%20Mission-bound%20access%20token>&
+subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
+mission_intent=%7B%22intent%22%3A
+  %7B...journal-entries%20cap%20%242000...%7D%7D&
+predecessor=msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS&
+creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
+client_id=s6BhdRkqt3
+~~~
+
+The Mission Issuer resolves the predecessor from `subject_token`,
+verifies the presenter controls the token's confirmation key, confirms
+the `predecessor` cross-check names that Mission and that it is
+`active`, and derives the successor's Authority Set. The widening
+requires fresh consent and the deployment approves asynchronously, so
+the Mission Issuer returns a deferred token response;
+`alice` approves the widened cap on the review surface, and the client's
+next poll delivers the successor's access token. At that issuance the
+Mission Issuer activates the successor and supersedes the predecessor
+atomically; until then the predecessor stays `active`. The successor's
+token carries a `predecessor` member:
+
+~~~ json
+{
+  "mission": {
+    "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
+    "issuer": "https://as.example.com",
+    "predecessor": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
+  }
+}
+~~~
+
+The predecessor is now `terminated` with reason `superseded`: it
+derives no new tokens, its already-issued tokens run out their short
+lifetimes, and the task continues under the successor. Its record
+carries (other members omitted):
+
+~~~ json
+{
+  "state": "terminated",
+  "termination": {
+    "reason": "superseded",
+    "terminated_at": "2026-11-02T09:40:00Z",
+    "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
+  }
+}
+~~~
+
+The widening came only from `alice`'s
+fresh consent; the successor's `authority_hash` commits the widened
+Authority Set it was actually approved for, not the predecessor's plus a
+delta.
 
 # Document History {#document-history}
 
@@ -2195,3 +2186,10 @@ composition with the issuance flow.
   chain's outstanding containment restrictions.
 - Added explicitly approved carryover hooks for disclosure, atomic completion,
   and the carried child's unchanged expiry ceiling (#576).
+
+# Acknowledgments {#acknowledgments}
+{:numbered="false"}
+
+The author thanks the reviewers of the Mission-Bound Authorization for
+OAuth 2.0 profile for feedback on the expansion model and its
+composition with the issuance flow.
