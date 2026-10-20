@@ -1820,6 +1820,7 @@
    "adoption_alias": "mission-continuation",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion"
    ],
    "adoption_requires": [
@@ -2206,7 +2207,8 @@
    "summary": "Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration.",
    "pull_when": "The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"

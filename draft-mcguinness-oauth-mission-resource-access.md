@@ -51,6 +51,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -64,14 +72,6 @@ informative:
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-cross-domain:
-    title: "Mission Cross-Domain Projection for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
     author:
       -
         ins: K. McGuinness
@@ -872,7 +872,9 @@ Record. The copy the grant conveys keeps `delegation` only as
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}} allows, and an
 omitted member ends onward delegation from that copy. Neither stage
 lets an entry without `delegation` in the Mission Record appear in a
-delegated token.
+delegated token. The dependency on that profile, here and in the
+absent-member exception of {{resource-access-type}}, binds only an
+authorization server that issues cross-domain grants.
 
 **Inherited eligibility.** A derived entry's `allowed_delegates`
 restricts eligibility; it never replaces an obligation the derivation

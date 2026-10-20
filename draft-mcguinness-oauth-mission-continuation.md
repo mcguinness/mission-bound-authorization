@@ -41,11 +41,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC9700:
-  I-D.draft-zhu-oauth-async-delegation:
-  I-D.draft-mcguinness-oauth-id-continuation-assertion:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -54,6 +49,11 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
+  RFC9700:
+  I-D.draft-zhu-oauth-async-delegation:
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
   I-D.draft-mcguinness-oauth-mission-template:
     title: "Mission Template for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
@@ -413,7 +413,8 @@ that keeps an omitted `delegation` exceeds the grant's authority and
 is refused. The rule changes only the conveyed copy: the delegation
 constraints at this exchange apply at the depth counted above, `act`
 attributes the same actors, and that profile's depth reset does not
-apply.
+apply. The dependency on that profile binds only a deployment that
+adopts this transport.
 
 ## Async Delegation Transport {#transport-async}
 
