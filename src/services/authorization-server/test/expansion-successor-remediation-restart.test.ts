@@ -265,4 +265,91 @@ describe("successor remediation at build (@spec expansion#verification-order ste
       second.kernel.close();
     }
   });
+
+  it("reports, and neither revokes nor expires, a committed deferral whose predecessor or successor is another issuer's, or whose predecessor, approval event, supersession or client disagrees (#1392)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "successor-remediation-provenance-"));
+    dirs.push(dir);
+    const file = join(dir, "kernel.db");
+    const startedAt = Date.now();
+    const first = await build(file);
+    const seed = seeding(first);
+    const FOREIGN = "https://foreign.example";
+    // Inconsistent storage, not what the exchange writes: each successor is
+    // created as a pre-#1340 poll created it, then one provenance field is altered.
+    const sql = (statement: string, ...values: unknown[]) => first.kernel.db.prepare(statement).run(...values);
+    const setIssuer = (id: string) => sql("UPDATE missions SET issuer = ? WHERE id = ?", FOREIGN, id);
+
+    // The predecessor is another issuer's.
+    const pForeign = seed.predecessor();
+    const foreignPredecessor = seed.expand(pForeign.id, OTHER);
+    setIssuer(pForeign.id);
+    // The successor is another issuer's. Its own expiry has passed by the
+    // next boot, and the sweep does not apply it.
+    const pForeignSuccessor = seed.predecessor();
+    const foreignSuccessor = seed.expand(pForeignSuccessor.id, OTHER, new Date(startedAt + 10 * 60_000).toISOString());
+    setIssuer(foreignSuccessor.successor);
+    // Both are another issuer's, agreeing with each other.
+    const pForeignPair = seed.predecessor();
+    const foreignPair = seed.expand(pForeignPair.id, OTHER);
+    setIssuer(pForeignPair.id);
+    setIssuer(foreignPair.successor);
+    // The deferral's predecessor names no record.
+    const pUnlinked = seed.predecessor();
+    const unlinked = seed.expand(pUnlinked.id, OTHER);
+    sql("UPDATE expansion_deferrals SET predecessor_id = ? WHERE deferral_code = ?", "msn_missing", unlinked.code);
+    // The deferral records no approval event.
+    const pNoEvent = seed.predecessor();
+    const noEvent = seed.expand(pNoEvent.id, OTHER);
+    sql("UPDATE expansion_deferrals SET approval_event_id = NULL WHERE deferral_code = ?", noEvent.code);
+    // (Two Missions under one approval event cannot be stored:
+    // `missions.approval_event_id` is UNIQUE.)
+    // The predecessor's supersession names another Mission.
+    const pMisnamed = seed.predecessor();
+    const misnamed = seed.expand(pMisnamed.id, OTHER);
+    sql(
+      "UPDATE missions SET termination_json = ? WHERE id = ?",
+      JSON.stringify({ ...(first.kernel.get(pMisnamed.id) as MissionRecord).termination, successor: "msn_other" }),
+      pMisnamed.id,
+    );
+    // The successor does not carry its predecessor's client.
+    const pReassigned = seed.predecessor();
+    const reassigned = seed.expand(pReassigned.id, OTHER);
+    sql("UPDATE missions SET client_id = ? WHERE id = ?", "another-client", reassigned.successor);
+    // A consistent target beside them, so the sweep demonstrably ran.
+    const pTarget = seed.predecessor();
+    const target = seed.expand(pTarget.id, OTHER);
+
+    const before = new Map(first.kernel.allMissions().map((m) => [m.id, m]));
+    first.kernel.close();
+
+    const second = await build(file, () => new Date(startedAt + 60 * 60_000));
+    try {
+      const report = second.startupRemediation.successors;
+      expect(report.revoked).toEqual([target.successor]);
+      const untouched = [foreignPredecessor, foreignSuccessor, foreignPair, unlinked, noEvent, misnamed, reassigned];
+      for (const { successor } of untouched) {
+        expect(second.kernel.get(successor), successor).toEqual(before.get(successor));
+      }
+      const entry = (op: { code: string }, predecessorId: string, reason: string) => ({
+        deferralCode: op.code,
+        predecessorId,
+        clientId: OTHER,
+        reason,
+      });
+      expect(report.unresolved).toEqual(
+        expect.arrayContaining([
+          entry(foreignPredecessor, pForeign.id, "the predecessor is not this issuer's"),
+          entry(foreignSuccessor, pForeignSuccessor.id, "the successor is not this issuer's"),
+          entry(foreignPair, pForeignPair.id, "the predecessor is not this issuer's"),
+          entry(unlinked, "msn_missing", "the predecessor record is missing"),
+          entry(noEvent, pNoEvent.id, "the deferral records no approval event"),
+          entry(misnamed, pMisnamed.id, "the predecessor's supersession does not name the successor"),
+          entry(reassigned, pReassigned.id, "the successor does not carry the predecessor's client"),
+        ]),
+      );
+      expect(report.unresolved).toHaveLength(7);
+    } finally {
+      second.kernel.close();
+    }
+  });
 });
