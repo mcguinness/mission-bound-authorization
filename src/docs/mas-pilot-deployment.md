@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `8a8b68de`
+Every statement here is true of the reference implementation at `e6a7d172`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -546,9 +546,12 @@ Gaps:
    `mapping_version` claim: #1454 (§8 lists what they need). The
    introspection adapter here is what a MAS would use to inspect the estate
    token.
-2. A launcher and an operator walkthrough for either topology, attaching to
-   an administered Resource-policy store: #818's slice 5B. The separated MAS
-   has a process entry (`mas-serve.ts`) but no operator command.
+2. Done in slice 5B: operator launchers for both topologies
+   (`pnpm mas-pilot`, `pnpm mas-pilot:separated`), attaching to an
+   administered Resource-policy store, and the walkthrough
+   (`docs/mas-pilot-walkthrough.md`; §13). MAS key rotation stays
+   unsupported: the resolver reads the MAS's keys once, and restarting the
+   pilot is the remedy.
 3. Ledger: `mas.mapping-contract.floor-documented` is `tested` on
    `demo/test/mas-join-contract.test.ts`: every shipped deployment that
    mounts a join route declares its mapping contract (this pilot's in §2;
