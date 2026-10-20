@@ -40,9 +40,11 @@ describe("the approval disclosure for each per-child figure source (@spec child-
     );
   });
 
-  it("a committed policy this issuer does not hold renders that no figure can be shown and no child can be created", () => {
+  it("a committed policy this issuer does not hold renders that no figure can be shown and the approval is refused", () => {
     const lines = render({ child_creation_policy: REF }, () => undefined).children[0]?.lines ?? [];
-    expect(lines.some((l) => l.startsWith("The per-child derivation limit cannot be shown: child creation policy urn:policy:child version 1 is not one this issuer holds"))).toBe(true);
+    expect(lines).toContain(
+      "The per-child derivation limit cannot be shown: child creation policy urn:policy:child version 1 is not one this issuer holds at its committed digest. This approval is refused until it can be shown.",
+    );
     expect(lines.some((l) => l.includes("never above"))).toBe(false);
   });
 
@@ -50,7 +52,7 @@ describe("the approval disclosure for each per-child figure source (@spec child-
     const malformed = { version: "1", content_type: "application/json", content: JSON.stringify({ derivation_limit_ceiling: 0 }) };
     const lines = render({ child_creation_policy: REF }, () => malformed).children[0]?.lines ?? [];
     expect(lines).toContain(
-      "The per-child derivation limit cannot be shown: child creation policy urn:policy:child states a malformed derivation_limit_ceiling, so no child can be created under this entry.",
+      "The per-child derivation limit cannot be shown: child creation policy urn:policy:child states a malformed derivation_limit_ceiling. This approval is refused until it states a usable one.",
     );
   });
 

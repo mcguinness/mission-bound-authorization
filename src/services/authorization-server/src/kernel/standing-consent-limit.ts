@@ -67,10 +67,13 @@ export function withinStandingConsentMaximum(
 /**
  * @spec child-delegation#derivation-budget (#1119, D327) — the per-child
  * maximum a delegable entry's `children` grant commits, read the same way at
- * the Parent Mission's approval rendering and at each child's creation, so the
- * figure shown and the figure enforced cannot differ. `held` resolves a
- * `child_creation_policy` reference to the snapshot this issuer verifies
- * against its committed digest, or undefined.
+ * the Parent Mission's approval rendering, at its approval decision, and at
+ * each child's creation. One reader means the three compute the figure the
+ * same way from the same committed state; it does not bind a rendering to the
+ * later decision, which re-reads (a figure that cannot be disclosed refuses
+ * the approval there). `held` resolves a `child_creation_policy` reference to
+ * the snapshot this issuer verifies against its committed digest, or
+ * undefined.
  * - `policy`: the entry commits a policy whose snapshot states the maximum;
  * - `deployment`: the entry commits no policy, so the deployment's policy
  *   ceiling for a child's `derivation_limit` is the figure;

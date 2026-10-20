@@ -3318,10 +3318,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
       // progressive#derivation-limits (#1119, D327): the established limit,
       // and for each entry whose policy-created children this approval
-      // consents to, the subtree figures and the per-child rule, read by the
-      // same reader child creation enforces (committedPerChildMaximum). The
-      // figures are a view: the decision re-derives, and child creation
-      // re-verifies the committed policy.
+      // consents to, the subtree figures and the per-child rule, computed by
+      // the same reader the decision and child creation use
+      // (committedPerChildMaximum). The figures are a view, not bound to the
+      // decision: the decision re-derives and refuses an approval whose
+      // per-child figure cannot be disclosed, and child creation re-verifies
+      // the committed policy.
       const derivation = approvalDerivationRendering({
         limit: kernel.resolveDerivationLimit(intent.requested_derivation_limit),
         deploymentCeiling: kernel.resolveDerivationLimit(undefined),
@@ -5335,6 +5337,24 @@ async function decide(
     return;
   }
 
+  // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+  // (#1119): an approval consents to each delegable entry's policy-created
+  // children only with that entry's per-child rule and maximum disclosed. While
+  // one cannot be disclosed (its committed policy is not held at its digest, or
+  // states a malformed maximum), the approval is refused, before anything is
+  // written, so restoring the policy later enables no child grant the Approver
+  // never saw; a fresh approval discloses it. A retry of a committed decision
+  // recovers it instead.
+  if (!opts.kernel.findByApprovalEvent(`apev_${details.uid}`)) {
+    const undisclosed = undisclosedChildGrant(authority, (ref) =>
+      verifiedActivationPolicy(opts.issuer, opts.kernel.activationPolicies(), ref),
+    );
+    if (undisclosed) {
+      await finish({ error: "access_denied", error_description: undisclosed });
+      return;
+    }
+  }
+
   // @spec mission#scope-projection, mission#error-mapping — the requested
   // `scope` check at the authorization decision, before any Mission exists:
   // under a trusted mapping, a requested resource value the derived authority
@@ -5662,9 +5682,7 @@ export function approvalDerivationRendering(input: {
               { asyncDelegation: input.asyncDelegation },
             )
           : [
-              committed.source === "unheld"
-                ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} version ${committed.policy.version} is not one this issuer holds at its committed digest, so no child can be created under this entry until it is.`
-                : `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}, so no child can be created under this entry.`,
+              undisclosableReason(committed),
             ];
     children.push({
       label: `${entry.resource}: ${entry.actions.join(", ")}`,
@@ -5683,6 +5701,37 @@ export function approvalDerivationRendering(input: {
     children,
     ...(input.progressive ? { progressive: progressiveInheritanceLine(input.limit) } : {}),
   };
+}
+
+/**
+ * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+ * (#1119): why a delegable entry's per-child figure cannot be disclosed, or
+ * undefined when it can. An approval cannot consent to a child grant whose
+ * rule and maximum it could not show, so the decision refuses while any is
+ * undisclosable; once the policy is held again, a fresh approval discloses it.
+ */
+function undisclosableReason(committed: ReturnType<typeof committedPerChildMaximum>): string {
+  return committed.source === "unheld"
+    ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} version ${committed.policy.version} is not one this issuer holds at its committed digest. This approval is refused until it can be shown.`
+    : committed.source === "unusable"
+      ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}. This approval is refused until it states a usable one.`
+      : "";
+}
+
+/** The first delegable entry whose per-child figure cannot be disclosed, with the reason, or undefined. */
+function undisclosedChildGrant(
+  authority: readonly AuthorityEntry[],
+  held: Parameters<typeof committedPerChildMaximum>[1],
+): string | undefined {
+  for (const entry of authority) {
+    const grant = entry.delegation?.children as { child_creation_policy?: ActivationPolicyRef } | undefined;
+    if (!grant) continue;
+    const committed = committedPerChildMaximum(grant, held);
+    if (committed.source === "unheld" || committed.source === "unusable") {
+      return `${entry.resource}: ${undisclosableReason(committed)}`;
+    }
+  }
+  return undefined;
 }
 
 function renderLines(lines: readonly string[], cls: string): string {

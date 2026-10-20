@@ -611,8 +611,9 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // ceiling, which may since have been raised or removed.
   const perChildMaxima: StandingConsentMaximum[] = [];
   for (const pi of drawnOn) {
-    // The same reader the Parent Mission's approval rendering uses, so the
-    // figure enforced here is the figure the parent's approval showed.
+    // The same reader the Parent Mission's approval rendering and decision
+    // use: the figure is computed the same way from the committed policy, and
+    // the decision refused an approval whose figure could not be disclosed.
     const committed = committedPerChildMaximum(
       childrenOf(parentEntry(pi)),
       (ref) =>
