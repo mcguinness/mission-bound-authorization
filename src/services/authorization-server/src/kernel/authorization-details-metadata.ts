@@ -27,6 +27,15 @@ import {
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
 
 /**
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1376): one `actions` value, matched as a whole: an action identifier
+ * (`[A-Za-z0-9_.:-]+`), or an action family, an identifier followed by `.*`.
+ * Anchored and without the `m` flag, so a character outside the grammar
+ * anywhere in the value, a trailing newline included, fails it.
+ */
+export const ACTION_VALUE = /^[A-Za-z0-9_.:-]+(?:\.\*)?$/;
+
+/**
  * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
  * (#1373): one delegate matcher, the item of both `allowed_delegates` and
  * `allowed_child_actors`. Closed to `sub` and `sub_profile`, at least one
@@ -87,7 +96,9 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
     // the RFC 9396 common `locations` field; its presence, whatever its value,
     // fails the schema.
     locations: false,
-    actions: { type: "array", items: { type: "string" }, minItems: 1 },
+    // @spec resource-access#entry-validation (#1376): non-empty, each value an
+    // action identifier or an action family ({@link ACTION_VALUE}).
+    actions: { type: "array", items: { type: "string", pattern: ACTION_VALUE.source }, minItems: 1 },
     constraints: {
       type: "object",
       description: "Common Constraints (@spec mission#common-constraints)",
@@ -257,6 +268,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   }
   if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
     return "actions must be a non-empty array of strings";
+  }
+  // @spec resource-access#entry-validation (#1376): each value matches the
+  // action grammar as a whole, so an identifier the namespace cannot carry
+  // is refused at intake rather than admitted and never matched.
+  const malformedAction = e.actions.find((a) => !ACTION_VALUE.test(a));
+  if (malformedAction !== undefined) {
+    return `actions value ${JSON.stringify(malformedAction)} is neither an action identifier nor an action family`;
   }
   if (e.constraints !== undefined) {
     if (e.constraints === null || typeof e.constraints !== "object" || Array.isArray(e.constraints)) {
