@@ -70,6 +70,13 @@ const READ_C = { type: "mission_resource_access", resource: RESOURCE_C, actions:
 const MISSION_EXP = "2027-01-01T00:00:00Z";
 const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_B || r === RESOURCE_C ? RAS_AUD : ISSUER);
+/**
+ * @spec resource-access#resource-access-type (#1266): the redeeming RAS's
+ * deployment policy, the keys the resource it serves enforces. The base
+ * entry carries `max_amount` and `vendors`; without this knowledge the RAS
+ * would drop it whole.
+ */
+const RAS_CONSTRAINTS_SUPPORTED = { [RESOURCE]: ["max_amount", "vendors"] };
 
 // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): every RAS
 // redemption in this file is a CONTINUATION ID-JAG (identity_continuation_handle
@@ -598,6 +605,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
+      resourceConstraintsSupported: RAS_CONSTRAINTS_SUPPORTED,
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
@@ -1697,6 +1705,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
+      resourceConstraintsSupported: RAS_CONSTRAINTS_SUPPORTED,
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },

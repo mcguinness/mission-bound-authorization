@@ -89,10 +89,12 @@ export interface RasConfig {
    * @spec resource-access#resource-access-type, #protected-resource-metadata
    * (#1266): per destination resource, the `constraints` keys its resource
    * server is known to enforce, for example from that resource's
-   * `mission_constraints_supported` metadata. A minted entry for a listed
-   * resource carrying any other key is dropped whole, never stripped of the
-   * key, which would widen it. A resource not listed here is minted as
-   * narrowed; its resource server fails closed on a key it cannot enforce.
+   * `mission_constraints_supported` metadata. This is the RAS's only
+   * enforcement knowledge: a resource not listed here, or every resource
+   * when the member is absent, is known to enforce no key. A minted entry
+   * carrying a key its resource is not known to enforce is dropped whole,
+   * never stripped of the key, which would widen it. An entry with no
+   * `constraints` key needs no such knowledge.
    */
   resourceConstraintsSupported?: Readonly<Record<string, readonly string[]>>;
   now?: () => Date;
@@ -406,14 +408,16 @@ export class ResourceAuthorizationServer {
 
   /**
    * Whether every `constraints` key of `entry` is one its resource is known to
-   * enforce; true for a resource {@link RasConfig.resourceConstraintsSupported}
-   * does not list.
+   * enforce. A resource {@link RasConfig.resourceConstraintsSupported} does
+   * not list is known to enforce none, so only an entry with no key passes
+   * for it: the RAS never assumes support it was not given.
    */
   private constraintsEnforcedFor(entry: AuthorityEntry): boolean {
+    const keys = Object.keys(entry.constraints ?? {});
+    if (keys.length === 0) return true;
     const supported = this.cfg.resourceConstraintsSupported;
-    if (!supported || !Object.hasOwn(supported, entry.resource)) return true;
-    const keys = supported[entry.resource] ?? [];
-    return Object.keys(entry.constraints ?? {}).every((key) => keys.includes(key));
+    const enforced = supported && Object.hasOwn(supported, entry.resource) ? (supported[entry.resource] ?? []) : [];
+    return keys.every((key) => enforced.includes(key));
   }
 
   /** @spec MCP EMA: the RAS declares enterprise-managed auth in its metadata. */

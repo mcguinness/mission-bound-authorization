@@ -113,9 +113,24 @@ beforeAll(async () => {
   clientJkt = await calculateJwkThumbprint(await exportJWK(clientKeys.publicKey));
 });
 
+/**
+ * @spec resource-access#resource-access-type (#1266): this harness's
+ * deployment policy, the keys its destination resource enforces. The RAS
+ * drops whole a constrained entry for a resource it has no such knowledge
+ * of, so a harness whose grants carry `max_amount` declares it here.
+ */
+const HARNESS_CONSTRAINTS_SUPPORTED: Readonly<Record<string, readonly string[]>> = {
+  [AUDIENCE]: ["max_amount", "vendors"],
+};
+
 async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizationServer> {
+  return new ResourceAuthorizationServer(await rasConfig(config));
+}
+
+/** The harness configuration, with `config` applied over it. */
+async function rasConfig(config: Partial<RasConfig> = {}): Promise<RasConfig> {
   const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
-  return new ResourceAuthorizationServer({
+  return {
     localCeiling: DEFAULT_CEILING,
     localPolicyVersion: "test-local-policy-1",
     issuer: RAS_ISS,
@@ -127,8 +142,9 @@ async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizati
     mapping: basePolicy(),
     entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
     entitlementStalenessBoundSeconds: 300,
+    resourceConstraintsSupported: HARNESS_CONSTRAINTS_SUPPORTED,
     ...config,
-  });
+  };
 }
 
 describe("RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1)", () => {
@@ -698,10 +714,36 @@ describe("RAS emits only the constraints keys the destination resource enforces 
     constraints: { max_amount: { amount: "10.00", currency: "USD" } },
   };
 
-  it("drops whole an entry carrying a key the resource does not list, keeps listed keys intact, and leaves an unlisted resource as narrowed", async () => {
+  const otherOpen: AuthorityEntry = {
+    type: "mission_resource_access", resource: "https://other.example.test/mcp", actions: ["reports.read"],
+  };
+
+  it("drops whole an entry carrying a key the resource does not list, and keeps listed keys intact", async () => {
     const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: ["vendors"] } });
-    const result = await server.redeem(await mintGrant({ authorizationDetails: [windowed, vendorBound, otherCapped] }), clientJkt);
-    expect(details(result.access_token)).toEqual([vendorBound, otherCapped]);
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [windowed, vendorBound] }), clientJkt);
+    expect(details(result.access_token)).toEqual([vendorBound]);
+  });
+
+  it("drops whole a constrained entry for a resource it has no enforcement knowledge of, and keeps an unconstrained one", async () => {
+    const grantDetails = [vendorBound, otherCapped, otherOpen];
+    // Knowledge for another resource only: that resource's listed key survives.
+    const listedElsewhere = await ras({ resourceConstraintsSupported: { [AUDIENCE]: ["vendors", "max_amount"] } });
+    const listed = await listedElsewhere.redeem(await mintGrant({ authorizationDetails: grantDetails }), clientJkt);
+    expect(details(listed.access_token)).toEqual([vendorBound, otherOpen]);
+    // No knowledge configured at all: no key survives, the unconstrained entry does.
+    const { resourceConstraintsSupported: _declared, ...withoutKnowledge } = await rasConfig();
+    const none = new ResourceAuthorizationServer(withoutKnowledge);
+    const unlisted = await none.redeem(await mintGrant({ authorizationDetails: grantDetails }), clientJkt);
+    expect(details(unlisted.access_token)).toEqual([otherOpen]);
+  });
+
+  it("an empty key list admits only a resource's unconstrained entries (boundary)", async () => {
+    const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: [], "https://other.example.test/mcp": [] } });
+    const result = await server.redeem(
+      await mintGrant({ authorizationDetails: [vendorBound, otherCapped, otherOpen, DEFAULT_CEILING[0]] }),
+      clientJkt,
+    );
+    expect(details(result.access_token)).toEqual([otherOpen, DEFAULT_CEILING[0]]);
   });
 
   it("refuses when no entry survives, without consuming the grant", async () => {
