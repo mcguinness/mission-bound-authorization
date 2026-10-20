@@ -3009,9 +3009,34 @@
     "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the intent object and before any evidence check"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D559 (#1411): ruled qualified A + C."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification."
   },
   {
    "id": "core.submission.earliest-step-precedence",
@@ -3032,9 +3057,40 @@
     "normative": "a submission failing two checks is refused with the error of the earlier step of Submission Processing Order"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D559 (#1411): ruled qualified A + C."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed Submission envelope together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls."
   },
   {
    "id": "core.submission.precedence-proposal-over-missing-evidence",
@@ -3055,8 +3111,15 @@
     "normative": "a submission with a malformed proposal and a missing required evidence type fails invalid_authorization_details, not invalid_mission_intent_evidence"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
    "notes": "D559 (#1411): ruled qualified A + C."
   },
   {
@@ -3078,8 +3141,15 @@
     "normative": "a submission with a proposed entry outside target_resources and an evidence entry failing verification fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
    "notes": "D559 (#1411): ruled qualified A + C."
   },
   {
@@ -3101,8 +3171,15 @@
     "normative": "a submission whose intent fails validation and whose proposal is malformed fails invalid_request, not invalid_authorization_details"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
    "notes": "D559 (#1411): ruled qualified A + C."
   },
   {
@@ -3123,10 +3200,17 @@
    "observation": {
     "normative": "the Authority Set rendered for approval is the complete candidate set, not a partial one"
    },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D559 (#1411): ruled qualified A + C."
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. The test renders a two-entry derivation and compares the rendered set with the full derivation of the same Intent and proposal."
   },
   {
    "id": "core.derivation.fixed-at-creation",
@@ -3146,10 +3230,29 @@
    "observation": {
     "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
    },
-   "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "D559 (#1411): ruled qualified A + C."
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > keeps the approved Authority Set fixed after creation: a later derivation-policy change does not recompute it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > concurrent duplicate decisions on one interaction commit one Mission, one grant identity and one binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members."
   },
   {
    "id": "core.submission.size-bounds-evidence",
