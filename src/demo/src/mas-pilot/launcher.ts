@@ -270,6 +270,12 @@ export async function launchMasPilot(options: MasPilotLaunchOptions): Promise<Ma
     }
     opened.push(pilotConsole.close);
     const consoles = { ...(masConsole ? { mas: masConsole } : {}), pilot: pilotConsole.url, token };
+    const keyEnv = options.masKeyEnv ?? {};
+    const masKeys = options.mas
+      ? "the running MAS's own"
+      : `${keyEnv.MISSION_KEY_RING ? `key ring ${keyEnv.MISSION_KEY_RING}` : "ephemeral, generated at this boot"}; kernel ${
+          keyEnv.MISSION_KERNEL_STORE ? `store ${keyEnv.MISSION_KERNEL_STORE}` : "in memory, lost at shutdown"
+        }`;
     let closing: Promise<void> | undefined;
     return {
       pilot,
@@ -278,6 +284,7 @@ export async function launchMasPilot(options: MasPilotLaunchOptions): Promise<Ma
       summary: [
         `MAS pilot, ${options.topology === "in-process" ? "in process" : "separated"} (#818)`,
         `  MAS                ${config.mission_issuer}  (${options.topology === "in-process" ? "this process" : masProcess ? `process ${masProcess.pid}, no IPC channel` : "running elsewhere"})`,
+        `  MAS keys           ${masKeys}`,
         `  estate AS          ${pilot.estate.issuer}`,
         `  gateway            ${pilot.gateway.url}  (estate credentials, joined under the mapping contract)`,
         `  resource route     ${pilot.resourceRoute.url}  (Mission-bound credentials only)`,

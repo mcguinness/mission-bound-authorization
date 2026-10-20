@@ -152,6 +152,7 @@ d("the MAS pilot launcher, in process (#818 slice 5B)", () => {
     const launch = await launchFor("in-process", 14859, 14858);
     try {
       expect(launch.masProcess).toBeUndefined();
+      expect(launch.summary).toContain("  MAS keys           ephemeral, generated at this boot; kernel in memory, lost at shutdown");
       await walk(launch, launch.consoles.pilot, "authority_contained");
     } finally {
       await launch.close();
