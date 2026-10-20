@@ -64,6 +64,8 @@ export type {
 export {
   conditionCanonicalBytes,
   conditionsNoBroader,
+  DELEGATE_MATCHER_MEMBERS,
+  delegateMatcherListViolation,
   entryWithinCeiling,
   isAuthorityEntry,
   isSubsetEntry,
