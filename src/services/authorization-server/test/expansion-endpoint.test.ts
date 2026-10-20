@@ -67,6 +67,7 @@ import {
   buildAuthorizationServer,
   type BuiltAs,
   createChildMission,
+  DEFERRED_GRANT_TYPE,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
   validateMissionIntent,
@@ -285,22 +286,19 @@ async function expandViaExchange(
     authorization_details: JSON.stringify(authority(actions)),
     // @spec expansion#creation-request-id — REQUIRED on every initiation.
     creation_request_id: creationRequestId ?? crypto.randomUUID(),
+    completion_mode: "deferred",
   });
 }
 
-/** Poll a deferred expansion: deferral_code + DPoP only, NO subject_token (check (b)). */
+/**
+ * Poll a deferred expansion on the deferred token response's deferred grant:
+ * deferral_code + DPoP only, NO subject_token (check (b)).
+ */
 async function pollExpansion(
   deferralCode: string,
   makeProof?: (extra: Record<string, unknown>) => Promise<string>,
 ): Promise<Response> {
-  return tokenRequest(
-    {
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
-      deferral_code: deferralCode,
-    },
-    makeProof,
-  );
+  return tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode }, makeProof);
 }
 
 function approveDeferral(deferralCode: string): void {
@@ -343,7 +341,7 @@ beforeAll(async () => {
       {
         client_id: CARRY_ACTOR,
         client_name: "Carryover replacement child actor (token-exchange capable)",
-        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE, DEFERRED_GRANT_TYPE],
         response_types: [],
         redirect_uris: [],
         token_endpoint_auth_method: "private_key_jwt",
@@ -453,6 +451,7 @@ describe("expansion wire: a predecessor that is not active (@spec expansion#pred
         mission_intent: intentJson("Widen to add remittance", actions),
         authorization_details: JSON.stringify(authority(actions)),
         creation_request_id: crypto.randomUUID(),
+        completion_mode: "deferred",
       });
       const wrongBody = (await wrongKey.json()) as { error?: string; error_description?: string; mission_error?: string };
       expect(wrongKey.status, JSON.stringify(wrongBody)).toBe(400);
@@ -516,6 +515,7 @@ describe("expansion wire: Submission envelope (@spec mission#submission-via-par,
       mission_intent: JSON.stringify({ goal: "Widen", target_resources: [RESOURCE], expires_at: FAR_EXP }),
       authorization_details: JSON.stringify(authority(["payments:invoice.read", "payments:remittance.send"])),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const body = (await res.json()) as { error?: string; error_description?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
@@ -558,6 +558,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
         authority(["payments:invoice.read", "payments:remittance.send"]),
       ),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     expect(opened.status, JSON.stringify(ob)).toBe(400);
@@ -605,6 +606,7 @@ describe("expansion: verified facts persist across the deferred window (@spec mi
         authority(["payments:invoice.read", "payments:remittance.send"]),
       ),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     failVerification = false;
     const body = (await res.json()) as { error?: string; error_description?: string };
@@ -1171,6 +1173,7 @@ describe("expansion wire: possession (@spec expansion, #448)", () => {
       requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       // Otherwise valid (step 1's creation_request_id), so possession is what fails.
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
       login_hint: "alice",
       mission_intent: intentJson("Read invoices only", ["payments:invoice.read"]),
       authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
@@ -1238,6 +1241,7 @@ describe("expansion acting-agent authorization (@spec expansion#verification-ord
     mission_intent: intentJson(goal, widen),
     authorization_details: JSON.stringify(authority(widen)),
     creation_request_id: creationRequestId,
+    completion_mode: "deferred",
   });
   type Refusal = { error?: string; error_description?: string; deferral_code?: string; mission_error?: string; access_token?: string };
 
@@ -1282,8 +1286,7 @@ describe("expansion acting-agent authorization (@spec expansion#verification-ord
     approveDeferral(seeded.deferral_code);
     const missionsBefore = as.kernel.allMissions().length;
     const poll = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: seeded.deferral_code,
     });
     const body = (await poll.json()) as Refusal;
@@ -1558,6 +1561,7 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
       mission_intent: intentJson(goal, actions),
       authorization_details: JSON.stringify(authority(actions)),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     type Refusal = { error?: string; error_description?: string; mission_error?: string; access_token?: string };
 
@@ -1639,6 +1643,7 @@ describe("subject-token possession at the expansion exchange (@spec expansion#re
     mission_intent: intentJson("Widen to add remittance", WIDE),
     authorization_details: JSON.stringify(authority(WIDE)),
     creation_request_id: crypto.randomUUID(),
+    completion_mode: "deferred",
     ...extra,
   });
   const send = async (params: Record<string, string>, proof: string | null): Promise<Response> =>
@@ -1747,6 +1752,7 @@ describe("the creation fingerprint's actor member (@spec expansion#creation-fing
       mission_intent: intentJson("Widen to add remittance", WIDE),
       authorization_details: JSON.stringify(authority(WIDE)),
       creation_request_id: creationRequestId,
+      completion_mode: "deferred",
       ...(withActorToken ? { actor_token: await actorToken(), actor_token_type: JWT_TOKEN_TYPE } : {}),
     });
     return { status: res.status, ...((await res.json()) as { error?: string; error_description?: string; deferral_code?: string }) };
@@ -1802,6 +1808,7 @@ describe("invalid or unacceptable subject and actor tokens at the expansion exch
         mission_intent: intentJson("Widen to add remittance", WIDE),
         authorization_details: JSON.stringify(authority(WIDE)),
         creation_request_id: creationRequestId,
+        completion_mode: "deferred",
         ...extra,
       },
       await clientAssertion(),
@@ -1911,5 +1918,220 @@ describe("an expansion approval meets the approval-authentication floor (@spec m
     const pb = (await poll.json()) as { error?: string };
     expect(poll.status, JSON.stringify(pb)).toBe(200);
     expect(successorsOf(predecessorId)).toHaveLength(1);
+  });
+});
+
+describe("the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177)", () => {
+  const WIDE = ["payments:invoice.read", "payments:remittance.send"];
+  const DEFERRAL_CODE_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:deferral-code";
+  type Body = {
+    error?: string;
+    error_description?: string;
+    deferral_code?: string;
+    access_token?: string;
+    mission_id?: string;
+  };
+  const read = async (res: Response) => ({ status: res.status, ...((await res.json()) as Body) });
+
+  /** A widening expansion exchange as ap-agent, with or without the opt-in, or with another completion_mode. */
+  const initiate = async (subjectToken: string, creationRequestId: string, completionMode?: string) =>
+    read(
+      await tokenRequest({
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        subject_token: subjectToken,
+        subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        login_hint: "alice",
+        mission_intent: intentJson("Widen to add remittance", WIDE),
+        authorization_details: JSON.stringify(authority(WIDE)),
+        creation_request_id: creationRequestId,
+        ...(completionMode !== undefined ? { completion_mode: completionMode } : {}),
+      }),
+    );
+
+  /** DTR -00 Section 7: cancel a deferral at the RFC 7009 revocation endpoint, as ap-agent unless another assertion is given. */
+  const revokeDeferral = async (code: string, assertion?: string): Promise<Response> =>
+    fetch(`${ISSUER}/token/revocation`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        token: code,
+        token_type_hint: DEFERRAL_CODE_TOKEN_TYPE,
+        client_assertion: assertion ?? (await clientAssertion()),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+
+  /** A pending deferral opened with the opt-in. */
+  const openDeferral = async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    const creationRequestId = crypto.randomUUID();
+    const opened = await initiate(pred.accessToken, creationRequestId, "deferred");
+    expect(opened.error, JSON.stringify(opened)).toBe("authorization_pending");
+    return { pred, creationRequestId, code: opened.deferral_code as string };
+  };
+
+  for (const completionMode of [undefined, "push"]) {
+    it(`refuses a widening exchange ${completionMode === undefined ? "without completion_mode" : "whose completion_mode does not include deferred"} with invalid_request, opening no deferral and recording no operation`, async () => {
+      const pred = await issuePredecessor(["payments:invoice.read"]);
+      const missionCountBefore = as.kernel.allMissions().length;
+      const derivationCountBefore = as.kernel.get(pred.missionId)?.derivation_count;
+      const creationRequestId = crypto.randomUUID();
+      const res = await initiate(pred.accessToken, creationRequestId, completionMode);
+      expect(res.status, JSON.stringify(res)).toBe(400);
+      expect(res.error).toBe("invalid_request");
+      expect(res.error_description).toContain("completion_mode");
+      expect(res.deferral_code).toBeUndefined();
+      expect(as.creationIdempotency.find("ap-agent", creationRequestId)).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(missionCountBefore);
+      expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+      expect(as.kernel.get(pred.missionId)?.derivation_count).toBe(derivationCountBefore);
+    });
+  }
+
+  it("refuses a retry of a pending deferred operation without the opt-in with invalid_request and no deferral; a retry that opts in returns the same deferral", async () => {
+    const { pred, creationRequestId, code } = await openDeferral();
+    const bare = await initiate(pred.accessToken, creationRequestId);
+    expect(bare.status, JSON.stringify(bare)).toBe(400);
+    expect(bare.error).toBe("invalid_request");
+    expect(bare.error_description).toContain("completion_mode");
+    expect(bare.deferral_code).toBeUndefined();
+    const optedIn = await initiate(pred.accessToken, creationRequestId, "deferred");
+    expect(optedIn.error, JSON.stringify(optedIn)).toBe("authorization_pending");
+    expect(optedIn.deferral_code).toBe(code);
+  });
+
+  it("refuses a retry of a completed deferred operation without the opt-in with invalid_request; a retry that opts in recovers the delivered token", async () => {
+    const { pred, creationRequestId, code } = await openDeferral();
+    approveDeferral(code);
+    const completed = await read(await pollExpansion(code));
+    expect(completed.status, JSON.stringify(completed)).toBe(200);
+    const bare = await initiate(pred.accessToken, creationRequestId);
+    expect(bare.status, JSON.stringify(bare)).toBe(400);
+    expect(bare.error).toBe("invalid_request");
+    expect(bare.access_token).toBeUndefined();
+    const optedIn = await initiate(pred.accessToken, creationRequestId, "deferred");
+    expect(optedIn.status, JSON.stringify(optedIn)).toBe(200);
+    expect(optedIn.access_token).toBe(completed.access_token);
+  });
+
+  it("refuses a token exchange carrying a deferral_code with invalid_request naming the deferred grant, and completes the deferral on the deferred grant", async () => {
+    const { pred, code } = await openDeferral();
+    approveDeferral(code);
+    const viaExchange = await read(
+      await tokenRequest({
+        grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+        requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+        deferral_code: code,
+      }),
+    );
+    expect(viaExchange.status, JSON.stringify(viaExchange)).toBe(400);
+    expect(viaExchange.error).toBe("invalid_request");
+    expect(viaExchange.error_description).toContain(DEFERRED_GRANT_TYPE);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    const polled = await read(await pollExpansion(code));
+    expect(polled.status, JSON.stringify(polled)).toBe(200);
+    expect(as.kernel.get(pred.missionId)?.termination?.successor).toBe(polled.mission_id);
+  });
+
+  it("answers a poll under another key with invalid_dpop_proof and a poll by another client as an unknown code, leaving the deferral redeemable", async () => {
+    const { pred, code } = await openDeferral();
+    approveDeferral(code);
+    const otherKey = await read(await tokenRequestWithDpop(carryDpop, { grant_type: DEFERRED_GRANT_TYPE, deferral_code: code }));
+    expect(otherKey.status, JSON.stringify(otherKey)).toBe(400);
+    expect(otherKey.error).toBe("invalid_dpop_proof");
+    const otherClient = await read(
+      await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, dpopKeys, { grant_type: DEFERRED_GRANT_TYPE, deferral_code: code }),
+    );
+    expect(otherClient.status, JSON.stringify(otherClient)).toBe(400);
+    expect(otherClient.error).toBe("invalid_grant");
+    // Answered exactly as an unknown code is, so the refusal discloses nothing.
+    const unknown = await read(
+      await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, dpopKeys, {
+        grant_type: DEFERRED_GRANT_TYPE,
+        deferral_code: `xdfr_${"A".repeat(24)}`,
+      }),
+    );
+    expect(otherClient).toEqual(unknown);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    const polled = await read(await pollExpansion(code));
+    expect(polled.status, JSON.stringify(polled)).toBe(200);
+  });
+
+  it("advertises the deferred token response and the deferral-code revocation token type", async () => {
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+    expect(meta.deferred_token_response_supported).toBe(true);
+    expect(meta.grant_types_supported).toContain(DEFERRED_GRANT_TYPE);
+    expect(meta.revocation_endpoint_token_type_values_supported).toContain(DEFERRAL_CODE_TOKEN_TYPE);
+  });
+
+  for (const approved of [false, true]) {
+    it(`cancels a ${approved ? "approved" : "pending"} deferral at the revocation endpoint: its next poll answers access_denied and no successor exists`, async () => {
+      const { pred, code } = await openDeferral();
+      if (approved) approveDeferral(code);
+      const missionCountBefore = as.kernel.allMissions().length;
+      const revoked = await revokeDeferral(code);
+      expect(revoked.status).toBe(200);
+      const polled = await read(await pollExpansion(code));
+      expect(polled.status, JSON.stringify(polled)).toBe(400);
+      expect(polled.error).toBe("access_denied");
+      expect(polled.access_token).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(missionCountBefore);
+      expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    });
+  }
+
+  it("leaves a deferral unchanged when another client revokes its code, and answers 200", async () => {
+    const { code } = await openDeferral();
+    const revoked = await revokeDeferral(code, await assertionFor(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey));
+    expect(revoked.status).toBe(200);
+    const polled = await read(await pollExpansion(code));
+    expect(polled.status, JSON.stringify(polled)).toBe(400);
+    expect(polled.error).toBe("authorization_pending");
+  });
+
+  it("leaves a completed deferral and its successor unchanged when the code is revoked after delivery", async () => {
+    const { code } = await openDeferral();
+    approveDeferral(code);
+    const completed = await read(await pollExpansion(code));
+    expect(completed.status, JSON.stringify(completed)).toBe(200);
+    const revoked = await revokeDeferral(code);
+    expect(revoked.status).toBe(200);
+    expect(as.kernel.get(completed.mission_id as string)?.state).toBe("active");
+    const again = await read(await pollExpansion(code));
+    expect(again.status, JSON.stringify(again)).toBe(400);
+    expect(again.error).toBe("invalid_grant");
+  });
+
+  it("treats a completion committed but never delivered as redeemed and then cancelled: the poll after the revocation answers access_denied, not the token", async () => {
+    const { pred, code } = await openDeferral();
+    approveDeferral(code);
+    // FAILPOINT, as in round 5: publication throws right after the activation
+    // transaction commits, before the completion is released.
+    const kernelAny = as.kernel as unknown as {
+      opts: { onLifecycleCommit?: (c: { id: string; event_id?: string; committed_at: string }) => void };
+    };
+    const realHook = kernelAny.opts.onLifecycleCommit;
+    kernelAny.opts.onLifecycleCommit = () => {
+      throw new Error("failpoint: crash before publication");
+    };
+    try {
+      const first = await pollExpansion(code);
+      expect(first.status).not.toBe(200);
+    } finally {
+      kernelAny.opts.onLifecycleCommit = realHook;
+    }
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
+    try {
+      const revoked = await revokeDeferral(code);
+      expect(revoked.status).toBe(200);
+      const polled = await read(await pollExpansion(code));
+      expect(polled.status, JSON.stringify(polled)).toBe(400);
+      expect(polled.error).toBe("access_denied");
+      expect(polled.access_token).toBeUndefined();
+    } finally {
+      // Drain the crash window's pending events so later tests start clean.
+      as.kernel.publishPendingCommits();
+    }
   });
 });

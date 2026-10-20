@@ -37,6 +37,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
@@ -725,6 +726,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
             mission_intent: submission("Publish and retire the quarterly reports"),
             authorization_details: JSON.stringify([entry([READ, WRITE, DELETE])]),
             creation_request_id: crypto.randomUUID(),
+            completion_mode: "deferred",
           },
           keys,
         );
@@ -737,8 +739,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
         });
         const polled = await token(
           {
-            grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-            requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+            grant_type: DEFERRED_GRANT_TYPE,
             deferral_code: opened.body.deferral_code as string,
           },
           keys,

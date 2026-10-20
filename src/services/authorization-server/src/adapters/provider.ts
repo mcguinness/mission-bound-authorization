@@ -301,6 +301,7 @@ import {
   DeferralError,
   type DeferralStore,
   type DeferredToken,
+  EXPANSION_DEFERRAL_PREFIX,
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
 import {
@@ -392,8 +393,10 @@ import {
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
+  cancelExpansionDeferralOnRevocation,
   type ContinuationReplay,
   handleTokenExchangeGrant,
+  pollDeferredExpansion,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
   verifyTokenEndpointDpop,
@@ -932,9 +935,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (missionApproval && !enabled("token-revocation")) {
     throw new Error("the deferred-approval capability needs token-revocation (the deferred substrate's cancellation)");
   }
+  // @spec expansion#completion-modes (#1177): a deferred expansion is polled
+  // on the deferred grant and cancelled at the revocation endpoint.
+  const expansionDeferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
   const grantEnabled = new Map<string, boolean>([
-    // The deferred grant polls an AROP deferral and a Mission approval deferral.
-    [DEFERRED_GRANT_TYPE, enabled("deferred") || missionApproval !== undefined],
+    // The deferred grant polls an AROP deferral, a Mission approval deferral
+    // and an expansion deferral.
+    [DEFERRED_GRANT_TYPE, enabled("deferred") || missionApproval !== undefined || expansionDeferrals !== undefined],
     // The RFC 7523 grant redeems a child grant and a Dispatch Handoff grant.
     [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation") || enabled("templates")],
     [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
@@ -2175,10 +2182,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // `deferred_authorization` (AROP initiation) are declared so the token
   // endpoint does not strip them from ctx.oidc.params.
   const arop = opts.deferrals && enabled("deferred") ? opts.deferrals : undefined;
-  if (grantEnabled.get(DEFERRED_GRANT_TYPE) && (arop || missionApproval)) {
+  if (grantEnabled.get(DEFERRED_GRANT_TYPE) && (arop || missionApproval || expansionDeferrals)) {
     provider.registerGrantType(
       DEFERRED_GRANT_TYPE,
-      (ctx) => handleDeferredGrant(opts, arop, missionApproval, provider, ctx),
+      (ctx) => handleDeferredGrant(opts, arop, missionApproval, expansionDeferrals, provider, ctx),
       // `scope` (@spec mission#scope-projection) is read on the redeeming request.
       new Set(["deferral_code", "deferred_authorization", "scope"]),
     );
@@ -2190,6 +2197,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (missionApproval) {
     registerDeferredAuthorizationCodeGrant(provider, opts, missionApproval, new DeferredAuthorizationCodes(missionApproval));
     provider.use(cancelOnRevocation(missionApproval));
+  }
+  if (expansionDeferrals && enabled("token-revocation")) {
+    provider.use(cancelExpansionDeferralOnRevocation(expansionDeferrals));
   }
 
   // @spec child-delegation#child-client-identity — the RFC 7523 JWT-bearer
@@ -2280,7 +2290,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // stripGrantIrrelevantParams removes it.
         "predecessor",
         "creation_request_id",
+        // Refused on the exchange: a deferred expansion is polled on the
+        // deferred grant (#1177).
         "deferral_code",
+        // @spec expansion#completion-modes (#1177): the deferred token
+        // response's opt-in.
+        "completion_mode",
         // @spec child-delegation#carryover-commit — the carryover result
         // retrieval mode of the child-creation completion surface (no new
         // endpoint and no new metadata member).
@@ -2541,10 +2556,18 @@ async function handleDeferredGrant(
   opts: AdapterOptions,
   deferrals: DeferralStore | undefined,
   missionApproval: MissionApprovalDeferralStore | undefined,
+  expansionDeferrals: ExpansionDeferralStore | undefined,
   provider: Provider,
   ctx: KoaContextWithOIDC,
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
+
+  // @spec expansion#completion-modes (#1177): a deferred expansion's poll.
+  if (typeof params.deferral_code === "string" && params.deferral_code.startsWith(EXPANSION_DEFERRAL_PREFIX)) {
+    if (!expansionDeferrals) throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+    await pollDeferredExpansion(opts, provider, ctx, params.deferral_code);
+    return;
+  }
 
   if (typeof params.deferral_code === "string" && params.deferral_code.startsWith(MISSION_APPROVAL_DEFERRAL_PREFIX)) {
     if (!missionApproval) throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
@@ -4559,14 +4582,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (enabled("device-authorization")) meta.mission_device_authorization_supported = true;
       // DTR -00 (Client Opt-In Signaling): an AS that publishes metadata and
       // supports deferred token responses says so. Advertised where Deferred
-      // Mission Approval is served; the AROP deferral is initiated by its own
-      // grant request and never opted into with `completion_mode`.
-      if (deferredCodes) {
-        meta.deferred_token_response_supported = true;
-        // DTR -00 Section 7.4 (Discovery): an AS that supports deferral
-        // lists the deferral-code token type its revocation endpoint accepts
-        // (the cancellation), so a client can rely on it. The revocation
-        // endpoint is served wherever Deferred Mission Approval is.
+      // Mission Approval or a deferred expansion (#1177) is served; the AROP
+      // deferral is initiated by its own grant request and never opted into
+      // with `completion_mode`.
+      const expansionDeferred = enabled("expansion") && opts.expansionDeferrals !== undefined;
+      if (deferredCodes || expansionDeferred) meta.deferred_token_response_supported = true;
+      // DTR -00 Section 7.4 (Discovery): an AS that supports deferral lists
+      // the deferral-code token type its revocation endpoint accepts (the
+      // cancellation), so a client can rely on it. The revocation endpoint is
+      // served wherever Deferred Mission Approval is; an expansion deferral is
+      // cancellable wherever the revocation endpoint is.
+      if (deferredCodes || (expansionDeferred && enabled("token-revocation"))) {
         const listed = Array.isArray(meta.revocation_endpoint_token_type_values_supported)
           ? (meta.revocation_endpoint_token_type_values_supported as unknown[])
           : [];

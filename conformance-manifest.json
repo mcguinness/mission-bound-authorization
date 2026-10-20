@@ -53233,11 +53233,36 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an expansion exchange, or a retry of a deferred one, whose completion_mode does not include deferred never receives the deferred response: a new exchange receives the interactive handoff or, where the Mission Issuer offers no interactive completion, invalid_request with no operation recorded, and a retry of a deferred operation receives invalid_request",
-    "local": "the reference AS defers every widening expansion exchange and never reads completion_mode"
+    "local": "the reference AS offers no interactive completion, so a new exchange without the opt-in is refused invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177) > refuses a widening exchange without completion_mode with invalid_request, opening no deferral and recording no operation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177) > refuses a widening exchange whose completion_mode does not include deferred with invalid_request, opening no deferral and recording no operation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177) > refuses a retry of a pending deferred operation without the opt-in with invalid_request and no deferral; a retry that opts in returns the same deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177) > refuses a retry of a completed deferred operation without the opt-in with invalid_request; a retry that opts in recovers the delivered token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
    "notes": "#1177."
   },
   {
@@ -53256,7 +53281,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a client polls a deferred expansion with the deferred token response's deferred grant type and its deferral_code",
-    "local": "the reference AS serves, and its clients use, the token-exchange grant with deferral_code for the expansion poll (#1177)"
+    "local": "the reference AS serves the poll on the deferred grant and refuses a token exchange carrying a deferral_code; no reference client implements expansion"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -53415,11 +53440,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a same-creation_request_id retry of an operation opened in the deferred mode whose completion_mode does not include deferred is refused invalid_request and receives no deferral",
-    "local": "the reference AS never reads completion_mode, so it returns the same deferral (#1177)"
+    "local": "the check applies to an operation recorded in the deferred mode, pending or completed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177) > refuses a retry of a pending deferred operation without the opt-in with invalid_request and no deferral; a retry that opts in returns the same deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "the deferred token response substrate for expansion (@spec expansion#completion-modes, #creation-revalidation, DTR -00, #1177) > refuses a retry of a completed deferred operation without the opt-in with invalid_request; a retry that opts in recovers the delivered token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1177."
   },
   {
    "id": "expansion.creation.failed-retry-deferred",

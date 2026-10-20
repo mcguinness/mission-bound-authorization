@@ -43,6 +43,7 @@ import {
   type DischargeAuthorityPolicy,
   entryDigest,
 } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14839;
@@ -308,6 +309,7 @@ function expansionParams(
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     creation_request_id: creationRequestId,
+    completion_mode: "deferred",
     mission_intent: intentJson(goal, intentExtra),
     authorization_details: JSON.stringify(authority(actions)),
   };
@@ -721,8 +723,7 @@ async function approveAndPoll(
     ...(ceiling ? { ceiling } : {}),
   });
   const res = await tokenRequest({
-    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    grant_type: DEFERRED_GRANT_TYPE,
     deferral_code: deferralCode,
   });
   const body = (await res.json()) as { access_token: string; mission_id: string };

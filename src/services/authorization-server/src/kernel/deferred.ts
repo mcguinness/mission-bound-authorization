@@ -50,6 +50,9 @@ import type {
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
 
+/** The prefix of an expansion deferral code; the deferred grant routes on it. */
+export const EXPANSION_DEFERRAL_PREFIX = "xdfr_";
+
 const SCHEMA = `
 CREATE TABLE deferrals (
   deferral_code TEXT PRIMARY KEY,
@@ -561,7 +564,7 @@ export class ExpansionDeferralStore {
         "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ? AND client_id = ?",
       )
       .get(key, input.clientId) as { deferral_code: string } | undefined;
-    const code = existing?.deferral_code ?? `xdfr_${randomBytes(18).toString("base64url")}`;
+    const code = existing?.deferral_code ?? `${EXPANSION_DEFERRAL_PREFIX}${randomBytes(18).toString("base64url")}`;
     if (!existing) {
       // @spec child-delegation#carryover-manifest — PREPARATION: render the
       // plan read-only and RESERVE the proposed successor and replacement
@@ -698,6 +701,42 @@ export class ExpansionDeferralStore {
     // identifiers stay HELD: never handed to another plan, never re-drawn as a
     // fresh identifier, and the cancelled plan can never complete.
     this.cancelCarryoverPlan(deferralCode);
+  }
+
+  /**
+   * DTR -00 Section 7.2 (#1177): cancel a deferral at the revocation endpoint.
+   * Only the client the deferral was issued to cancels it, and only within its
+   * `expires_in`. A pending or approved deferral that has not completed is
+   * refused, so its next poll answers `access_denied`. A completion that
+   * committed but was never released to the token adapter is treated as
+   * redeemed and then cancelled: no later poll delivers its token. Anything
+   * else is left unchanged. Returns whether the deferral was cancelled.
+   */
+  cancel(deferralCode: string, clientId: string): boolean {
+    const row = this.db
+      .prepare("SELECT client_id, state, redeemed, completion_released, created_at FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as
+      | { client_id: string; state: string; redeemed: number; completion_released: number | null; created_at: number }
+      | undefined;
+    if (!row || row.client_id !== clientId) return false;
+    if (this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return false;
+    if (row.redeemed === 0) {
+      const cancelled =
+        this.db
+          .prepare(
+            "UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ? AND redeemed = 0 AND state IN ('authorization_pending', 'approved')",
+          )
+          .run(deferralCode).changes === 1;
+      if (cancelled) this.cancelCarryoverPlan(deferralCode);
+      return cancelled;
+    }
+    return (
+      this.db
+        .prepare(
+          "UPDATE expansion_deferrals SET state = 'access_denied', completion_released = 1 WHERE deferral_code = ? AND redeemed = 1 AND completion_released IS NOT 1",
+        )
+        .run(deferralCode).changes === 1
+    );
   }
 
   /** Mark a denied or abandoned deferral's carryover reservations cancelled. */

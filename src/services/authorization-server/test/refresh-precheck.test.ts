@@ -28,6 +28,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { gateErrorToMissionError } from "../src/adapters/provider.js";
 import { buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14783;
@@ -422,6 +423,7 @@ async function expand(m: { accessToken: string; keys: Keys }): Promise<string> {
       }),
       authorization_details: JSON.stringify(widened),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     },
     m.keys,
   );
@@ -435,7 +437,7 @@ async function expand(m: { accessToken: string; keys: Keys }): Promise<string> {
     approvedUntil: FAR_EXP,
   });
   const poll = await token(
-    { grant_type: TOKEN_EXCHANGE_GRANT_TYPE, requested_token_type: ACCESS_TOKEN_TOKEN_TYPE, deferral_code: deferralCode },
+    { grant_type: DEFERRED_GRANT_TYPE, deferral_code: deferralCode },
     m.keys,
   );
   expect(poll.status, JSON.stringify(poll.body)).toBe(200);
