@@ -3491,13 +3491,32 @@ resolves by fingerprint:<a href="#section-11.2-3" class="pilcrow">¶</a></p>
 or deferral, or a retryable in-progress result;<a href="#section-11.2-4.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-4.3">
-            <p id="section-11.2-4.3.1">same fingerprint, operation failed: return the recorded failure,
-the error its completing step answered, directly or through the same
-deferral's next poll; and<a href="#section-11.2-4.3.1" class="pilcrow">¶</a></p>
+            <p id="section-11.2-4.3.1">same fingerprint, operation failed: answer with the recorded
+failure, as below; and<a href="#section-11.2-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-4.4">
             <p id="section-11.2-4.4.1">different fingerprint: refuse with <code>invalid_request</code>, since the
 identifier was reused for a different operation.<a href="#section-11.2-4.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-11.2-5">A retry of a failed operation is answered by the failure and by the
+surface the retry reaches:<a href="#section-11.2-5" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-11.2-6.1">
+            <p id="section-11.2-6.1.1">An operation in the deferred mode returns its deferral, whose next
+poll answers as the deferred token response defines: <code>access_denied</code>
+after a denial or a refused activation, with any reconciliation
+status, and <code>expired_token</code> once the deferral has expired.<a href="#section-11.2-6.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-11.2-6.2">
+            <p id="section-11.2-6.2.1">Any other operation answers the repeated token exchange directly:
+<code>access_denied</code> after the Approver's denial and <code>expired_token</code> after
+its continuation expired before activation (<a href="#interactive-handoff" class="auto internal xref">Section 5.3</a>).
+After a refused activation it answers the error a completion in the
+token-exchange response answers for the same failure
+(<a href="#reconciliation" class="auto internal xref">Section 10</a>, <a href="#successor-expiry" class="auto internal xref">Section 5.6</a>), with any reconciliation
+status, and a refusal the token exchange response itself carried is
+repeated.<a href="#section-11.2-6.2.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -3629,8 +3648,9 @@ untouched. The denial surfaces according to the completion mode
 (<a href="#completion-modes" class="auto internal xref">Section 5.2</a>):<a href="#section-12-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-12-2.1">
-          <p id="section-12-2.1.1">on the token exchange response, as <code>invalid_request</code>
-(<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>);<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-12-2.1.1">on the token exchange response that adjudicates it, as
+<code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); a retry of the
+operation is answered as <a href="#creation-reservation" class="auto internal xref">Section 11.2</a> states;<a href="#section-12-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-12-2.2">
           <p id="section-12-2.2.1">on a deferred poll, as the deferred substrate's <code>access_denied</code>
