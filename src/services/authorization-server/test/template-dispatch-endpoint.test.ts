@@ -195,7 +195,7 @@ async function dispatch(params: {
 }
 
 /** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec mission#standing-consent-bases). */
-const heldPolicy = (id: string, rule: { select_agent?: string } = {}) => ({
+const heldPolicy = (id: string, rule: { select_agent?: string; derivation_limit_ceiling?: number | null } = {}) => ({
   version: "1",
   content_type: "application/json",
   content: JSON.stringify({ id, ...rule }),
@@ -241,6 +241,9 @@ beforeAll(async () => {
       "test-route-unlisted": heldPolicy("test-route-unlisted", { select_agent: "governed-agent" }),
       "test-no-rule": heldPolicy("test-no-rule"),
       "wide-reconciliation": heldPolicy("wide-reconciliation"),
+      // @spec mission-template#dispatch, derivation-limits#effective-limit
+      // (#1119): a Dispatch Policy stating the per-instance maximum.
+      "test-limit-3": heldPolicy("test-limit-3", { derivation_limit_ceiling: 3 }),
     },
   });
   asServer = as.provider.listen(PORT);
@@ -344,6 +347,33 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
 });
 
 describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", () => {
+  // @spec mission-template#dispatch, derivation-limits#effective-limit
+  // (#1119, D327): each dispatched instance's derivation_limit is established
+  // at its own Dispatch, never above the maximum the committed Dispatch Policy
+  // states, whatever it requests; the deployment imposes no ceiling here.
+  it("a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own", async () => {
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), dispatch_policy: { id: "test-limit-3", version: "1" } });
+    const { template_id } = (await created.json()) as { template_id: string };
+    expect(created.status).toBe(201);
+    const intentRequesting = (limit?: number) =>
+      JSON.stringify({
+        intent: {
+          goal: "reconcile Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: FAR_FUTURE,
+          ...(limit === undefined ? {} : { requested_derivation_limit: limit }),
+        },
+      });
+    for (const [limit, recorded] of [[undefined, 3], [10, 3], [2, 2]] as const) {
+      const res = await dispatch({ templateId: template_id, intent: intentRequesting(limit), dispatchEventId: `evt-limit-${seq++}` });
+      const body = (await res.json()) as { mission_id?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      const instance = as.kernel.get(body.mission_id as string);
+      expect(instance?.derivation_limit, String(limit)).toBe(recorded);
+      expect(instance?.derivation_count, String(limit)).toBe(1);
+    }
+  });
+
   it("happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent", async () => {
     const created = await createTemplateAdmin(readOnlyTemplateBody());
     const { template_id } = (await created.json()) as { template_id: string };

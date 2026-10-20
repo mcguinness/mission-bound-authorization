@@ -41,6 +41,13 @@ import type { CreationIdempotencyStore } from "./creation-idempotency.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
+  STANDING_CONSENT_LIMIT_MEMBER,
+  type StandingConsentMaximum,
+  standingConsentMaximumOf,
+  strictestMaximum,
+  withinStandingConsentMaximum,
+} from "./standing-consent-limit.js";
+import {
   type ApprovalBasis,
   type AuthorityEntry,
   type CascadeMode,
@@ -593,6 +600,42 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     if (!seen) evaluatedPolicies.push({ ref: policyRef, snapshot });
   }
 
+  // @spec child-delegation#derivation-budget, derivation-limits#effective-limit
+  // (#1119, D327): the per-child derivation limit the Parent Mission's approval
+  // rendered for each justifying entry is taken from the policy state that
+  // approval committed: the entry's `child_creation_policy` snapshot where it
+  // carries one, otherwise the policy the parent's `policy_version` identifies.
+  // This issuer holds only its current policy, so an entry without a snapshot
+  // under a parent approved under another policy version cannot have its
+  // figure read, and creation is refused rather than taking the current
+  // ceiling, which may since have been raised or removed.
+  const perChildMaxima: StandingConsentMaximum[] = [];
+  for (const pi of drawnOn) {
+    const policyRef = childrenOf(parentEntry(pi))?.child_creation_policy;
+    if (!policyRef) {
+      if (parent.policy_version !== kernel.policyVersion()) {
+        throw new ChildDelegationError(
+          "policy_denied",
+          `the per-child derivation limit the parent's approval rendered cannot be read: policy_version ${parent.policy_version} is not the policy this issuer holds, and the entry carries no child_creation_policy`,
+          makeEvidence("denied", "strict_subset", "policy_denied"),
+        );
+      }
+      continue; // the current policy's ceiling applies through resolveDerivationLimit
+    }
+    const evaluated = evaluatedPolicies.find(
+      ({ ref }) => ref.id === policyRef.id && ref.version === policyRef.version && ref.digest === policyRef.digest,
+    );
+    const maximum = evaluated ? standingConsentMaximumOf(evaluated.snapshot) : undefined;
+    if (!maximum) {
+      throw new ChildDelegationError(
+        "policy_denied",
+        `child creation policy ${policyRef.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}`,
+        makeEvidence("denied", "strict_subset", "policy_denied"),
+      );
+    }
+    perChildMaxima.push(maximum);
+  }
+
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
   // permitted by every justifying entry, under the SAME shared matcher as the
   // core's allowed_delegates. The child actor's
@@ -787,7 +830,14 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
     // ceiling exactly like an ordinary Mission approval; it is NOT inherited
     // from the parent, and an omitted request is not "unbounded" but simply
     // no client-requested narrowing of the deployment's own ceiling.
-    derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+    //
+    // @spec child-delegation#derivation-budget (#1119, D327): never above the
+    // strictest finite per-child figure the justifying entries' committed
+    // policies state, and never absent where one is finite.
+    derivation_limit: withinStandingConsentMaximum(
+      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+      strictestMaximum(perChildMaxima),
+    ),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,
