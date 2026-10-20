@@ -6500,7 +6500,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: 8c925f899cc8ee9d -->
+<!-- assessed-substrate-digest: d4a3ab8ae8fc65b9 -->
 
 This appendix is informative. It is this document's Mapping
 Assessment of itself against the kernel and capabilities of the
