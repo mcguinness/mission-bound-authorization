@@ -41,9 +41,9 @@ import type { CreationIdempotencyStore } from "./creation-idempotency.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
+  committedPerChildMaximum,
   STANDING_CONSENT_LIMIT_MEMBER,
   type StandingConsentMaximum,
-  standingConsentMaximumOf,
   strictestMaximum,
   withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
@@ -611,8 +611,16 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // ceiling, which may since have been raised or removed.
   const perChildMaxima: StandingConsentMaximum[] = [];
   for (const pi of drawnOn) {
-    const policyRef = childrenOf(parentEntry(pi))?.child_creation_policy;
-    if (!policyRef) {
+    // The same reader the Parent Mission's approval rendering uses, so the
+    // figure enforced here is the figure the parent's approval showed.
+    const committed = committedPerChildMaximum(
+      childrenOf(parentEntry(pi)),
+      (ref) =>
+        evaluatedPolicies.find(
+          ({ ref: r }) => r.id === ref.id && r.version === ref.version && r.digest === ref.digest,
+        )?.snapshot,
+    );
+    if (committed.source === "deployment") {
       if (parent.policy_version !== kernel.policyVersion()) {
         throw new ChildDelegationError(
           "policy_denied",
@@ -622,18 +630,16 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
       }
       continue; // the current policy's ceiling applies through resolveDerivationLimit
     }
-    const evaluated = evaluatedPolicies.find(
-      ({ ref }) => ref.id === policyRef.id && ref.version === policyRef.version && ref.digest === policyRef.digest,
-    );
-    const maximum = evaluated ? standingConsentMaximumOf(evaluated.snapshot) : undefined;
-    if (!maximum) {
+    if (committed.source !== "policy") {
       throw new ChildDelegationError(
         "policy_denied",
-        `child creation policy ${policyRef.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}`,
+        committed.source === "unusable"
+          ? `child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}`
+          : `child creation policy ${committed.policy.id} does not match its committed digest`,
         makeEvidence("denied", "strict_subset", "policy_denied"),
       );
     }
-    perChildMaxima.push(maximum);
+    perChildMaxima.push(committed.maximum);
   }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be
