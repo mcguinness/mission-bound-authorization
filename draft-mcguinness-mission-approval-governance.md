@@ -331,6 +331,20 @@ approval surface itself. Where an agent resolves it on its own behalf,
 there is no human decision for this list to be degenerate about
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
+The following table gives an example approval for each trigger, and for
+the degenerate case. Each row names one trigger that holds; others can
+hold too.
+
+| Approval | Trigger that holds |
+|---|---|
+| A manager approves a Mission whose Subject is Alice | The Approver differs from the Subject |
+| Alice and a finance co-approver both approve | More than one principal contributes |
+| A delegation-of-authority policy asserts alongside Alice ({{record-example}}) | A non-human assertion contributes |
+| A two-of-three finance rule decides the approval | A threshold rule is evaluated |
+| An approver's authority comes from a delegation matrix held outside the Mission Record | Validating an assertion requires outside standing |
+| Alice alone approves her own Mission on the approval surface | None; no record is required |
+{: title="Recording trigger examples"}
+
 # The Approval Governance Record {#record}
 
 An Approval Governance Record is a JSON object. {{record-members}} and
