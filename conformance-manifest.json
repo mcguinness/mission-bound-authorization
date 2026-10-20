@@ -51349,6 +51349,138 @@
    "tests": []
   },
   {
+   "id": "expansion.request.client-possession-proof",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "expansion-request",
+   "text": "To expand a predecessor Mission, the requester MUST prove possession of the predecessor Mission's authority through a sender-constrained proof, and a reusable bearer refresh credential MUST NOT be the carrier of that proof.",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client requesting expansion presents a sender-constrained Mission-bound access token with proof of its confirmation key, never a refresh token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.submission.client-proof-back-channel-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "submission",
+   "text": "The possession proof of {{request-binding}} is presented only on the token endpoint's authenticated back channel and MUST NOT appear on any front channel.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "authorization-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the subject_token and its possession proof are sent only to the token endpoint, never in an authorization request, redirect or other front-channel message"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.conformance.client-required-parameters",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "conformance",
+   "text": "send the REQUIRED parameters of {{submission}}, including `creation_request_id`",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every expansion token exchange a client sends carries grant_type, requested_token_type, subject_token, subject_token_type, mission_intent and creation_request_id, and actor_token_type with any actor_token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.reconciliation.client-no-retry-after-state-change",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "The client MUST NOT retry the same expansion against this predecessor.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a refusal carrying predecessor_state_changed, the client sends no further expansion of that predecessor for the same operation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.reconciliation.client-discover-successor",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "reconciliation",
+   "text": "The client SHOULD discover the existing successor and re-evaluate whether a further expansion is still required",
+   "role": "client",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after superseded_by_concurrent_expansion, the client looks up the successor (for example through the predecessor's termination.successor) and expands the successor only if it still needs the authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.creation-retention.client-retry-horizon",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "creation-retention",
+   "text": "A client MUST NOT retry a creation past the published horizon",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a client does not repeat a creation_request_id once the deployment's published retry horizon has passed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",
