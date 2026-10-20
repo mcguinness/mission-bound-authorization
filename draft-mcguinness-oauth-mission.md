@@ -212,6 +212,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -1715,6 +1723,10 @@ At a direct approval event the AS MUST, in order:
      ({{authority-proposal}}), the rendering MUST distinguish the
      entries the client proposed from any narrowing or restructuring
      the AS applied.
+   - Mission Capability Binding
+     ({{I-D.draft-mcguinness-mission-capability-binding}}) states
+     what the rendering presents for the source binding of a
+     catalog-sourced action.
 6. **Compute the integrity anchors** ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
