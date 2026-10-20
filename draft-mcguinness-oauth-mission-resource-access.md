@@ -647,15 +647,15 @@ not require a derivation to run a particular intersection algorithm, and
 a ceiling whose specification defines a refusal rule is enforced by that
 rule, not silently intersected.
 
-At the point of use, the resource server applies the predicate of each
-Common Constraint an applicable entry carries to that constraint's
-input. Any fact a predicate needs that is missing or malformed makes the
-entry provide no authority. An operation contract may leave a constraint
-unsupported for that operation. The resource server MUST treat an
-applicable entry whose constraint it cannot evaluate or satisfy as
-providing no authority. It MUST refuse the request unless another
-applicable entry independently authorizes the whole request with every
-constraint satisfied ({{rs-enforcement}}).
+At the point of use ({{rs-enforcement}}), the resource server applies
+the predicate of each Common Constraint an applicable entry carries to
+that constraint's input. Any fact a predicate needs that is missing or
+malformed makes the entry provide no authority. An operation contract
+may leave a constraint unsupported for that operation. The resource
+server MUST treat an applicable entry whose constraint it cannot
+evaluate or satisfy as providing no authority. It MUST refuse the
+request unless another applicable entry independently authorizes the
+whole request with every constraint satisfied.
 
 A `constraints` member whose name is a specification-defined Common
 Constraint is interpreted per its definition. Any other member name
