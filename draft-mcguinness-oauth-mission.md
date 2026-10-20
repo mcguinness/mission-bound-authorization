@@ -4888,7 +4888,8 @@ downgrade:
 
 - **Issuance.** The rules of {{authority-proposal}} keep such a
   resource's tokens inside a Mission and refuse such a client's
-  `authorization_details` request that omits the Intent.
+  authorization request that carries `authorization_details` but
+  omits the Intent.
 - **Client.** A client holding a Mission Intent does not fall back to an
   ordinary request where Mission support is not established, and a
   client performing a Mission's task does not present an ordinary
