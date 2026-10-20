@@ -1863,7 +1863,8 @@
    "summary": "Lets a single Mission be honored by Authorization Servers in other trust domains: the originating issuer projects audience-scoped authority through a short-lived, sender-constrained cross-domain grant, and the Resource AS mints its own local Mission-bound tokens preserving the `mission` claim.",
    "pull_when": "A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
