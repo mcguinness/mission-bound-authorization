@@ -1,12 +1,15 @@
 /**
- * @spec authority-server#lifecycle-and-state, authority-server#join-disclosure (#818 slice 4b)
+ * @spec authority-server#lifecycle-and-state, authority-server#join-disclosure (#818 slices 4b, 5B)
  *
  * The separated MAS, as its own process: the reference authorization server
- * under the issuer `http://{separated_mas.host}:{separated_mas.port}`, with
- * the pilot's derivation ceiling (`mas-policy.ts`). It serves Mission Status
- * (signed responses, Join Disclosure to the PDPs `separated_mas.enrolled_pdps`
- * enrolls) and the Mission Lifecycle surface, and is the only holder of the
- * Mission records; the pilot's PEP and PDP reach it over HTTP alone.
+ * under the issuer `http://{separated_mas.host}:{separated_mas.port}`
+ * (`mas-as.ts`), with the pilot's derivation ceiling. It serves Mission
+ * Status (signed responses, Join Disclosure to the PDPs
+ * `separated_mas.enrolled_pdps` enrolls), the Mission Lifecycle surface and
+ * the approval surface, and is the only holder of the Mission records; the
+ * pilot's PEP and PDP reach it over HTTP alone. Its URL is the Mission
+ * issuer: the configuration's `mission_issuer` is moved to it
+ * (`relocateMissionIssuer`).
  *
  * Environment:
  * - `MAS_PILOT_CONFIG`: the pilot configuration file (default: the shipped one).
@@ -17,61 +20,72 @@
  *   `MISSION_KERNEL_STORE`, as for the standalone authorization server
  *   (`signingKeysFromEnv`, `kernelStoreFromEnv`): a key ring and a kernel
  *   store keep the keys and the Missions across a restart.
+ * - `MAS_PILOT_OPERATOR_TOKEN` and `MAS_PILOT_OPERATOR_CONSOLE_PORT` (#818
+ *   slice 5B): serve the operator console's MAS half (`operator-console.ts`)
+ *   on that loopback port (0: ephemeral) behind that bearer, and print its
+ *   address. Both or neither.
  *
- * Started with an IPC channel, it also takes two operator messages that are
- * test harness, not a protocol surface: `approve` (a Mission approved through
- * the kernel, as the in-process pilot's operator does) and `clock` (an offset
- * on the kernel clock, so a test moves the MAS's time with its own).
- * Revocation and containment go through the HTTP Lifecycle surface.
+ * Started with an IPC channel (the tests' `mas-process.ts`), it also takes two
+ * operator messages that are test harness, not a protocol surface: `approve`
+ * (a Mission approved through the kernel) and `clock` (an offset on the kernel
+ * clock). The operator launcher (`launcher.ts`) starts it with no IPC channel,
+ * so neither handler is registered there: it approves through the approval
+ * surface and changes state through the Lifecycle endpoint.
  */
 
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import {
-  buildAuthorizationServer,
-  kernelStoreFromEnv,
-  MISSION_STATUS_SCOPE,
-  signingKeysFromEnv,
-  validateMissionIntent,
-} from "@mission/authorization-server";
-import { loadMasPilotConfig } from "./config.js";
-import { pilotMissionPolicy } from "./mas-policy.js";
+import { kernelStoreFromEnv, signingKeysFromEnv, validateMissionIntent } from "@mission/authorization-server";
+import { loadMasPilotConfig, relocateMissionIssuer } from "./config.js";
+import { buildPilotMas, masIssuer, type PilotMas } from "./mas-as.js";
+import { masConsoleRoutes, type OperatorConsole, startOperatorConsole } from "./operator-console.js";
 
 function fail(message: string): never {
   console.error(`mas-pilot: startup failed: ${message}`);
   process.exit(1);
 }
 
-const config = process.env.MAS_PILOT_CONFIG ? loadMasPilotConfig(process.env.MAS_PILOT_CONFIG) : loadMasPilotConfig();
+const loaded = process.env.MAS_PILOT_CONFIG ? loadMasPilotConfig(process.env.MAS_PILOT_CONFIG) : loadMasPilotConfig();
+const config = relocateMissionIssuer(loaded, masIssuer(loaded));
 const separated = config.separated_mas;
-const issuer = `http://${separated.host}:${separated.port}`;
-if (config.mission_issuer !== issuer) fail(`mission_issuer must be the separated MAS's own URL ${issuer}, not ${config.mission_issuer}`);
 const pdpToken = process.env.MAS_PILOT_PDP_TOKEN;
 if (!pdpToken) fail("MAS_PILOT_PDP_TOKEN names no PDP credential");
+const consoleToken = process.env.MAS_PILOT_OPERATOR_TOKEN;
+const consolePort = process.env.MAS_PILOT_OPERATOR_CONSOLE_PORT;
+if ((consoleToken === undefined) !== (consolePort === undefined)) {
+  fail("set both MAS_PILOT_OPERATOR_TOKEN and MAS_PILOT_OPERATOR_CONSOLE_PORT, or neither");
+}
 
 let offsetMs = 0;
 const now = () => new Date(Date.now() + offsetMs);
-const { policy, authoritySources } = pilotMissionPolicy(config);
-let built: Awaited<ReturnType<typeof buildAuthorizationServer>>;
+let mas: PilotMas;
 try {
   const kernelStore = kernelStoreFromEnv(process.env);
   if (kernelStore) mkdirSync(dirname(kernelStore.file), { recursive: true });
-  built = await buildAuthorizationServer({
-    issuer,
+  mas = await buildPilotMas(config, {
+    pdpToken,
     signingKeys: signingKeysFromEnv(process.env),
     ...(kernelStore ? { kernelStore } : {}),
-    derivationPolicy: policy as never,
-    authoritySources: authoritySources as never,
-    serviceTokenPrincipals: { [pdpToken]: { principal_id: separated.pdp_principal_id, scopes: [MISSION_STATUS_SCOPE] } },
-    enrolledJoinPdps: Object.fromEntries(separated.enrolled_pdps.map((e) => [e.principal_id, e.enforcement_scopes])),
     now,
   });
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));
 }
-const server = built.provider.listen(separated.port, separated.host, () => {
-  console.log(`mas-pilot: ready ${issuer}`);
+const server = mas.built.provider.listen(separated.port, separated.host);
+await new Promise<void>((resolve) => {
+  server.once("listening", () => resolve());
+  server.once("error", (e) => fail(`${mas.issuer} cannot listen: ${e.message}`));
 });
+let operatorConsole: OperatorConsole | undefined;
+if (consoleToken !== undefined && consolePort !== undefined) {
+  try {
+    operatorConsole = await startOperatorConsole([masConsoleRoutes(mas)], { port: Number(consolePort), token: consoleToken });
+  } catch (e) {
+    fail(`the operator console cannot listen: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  console.log(`mas-pilot: operator console ${operatorConsole.url}`);
+}
+console.log(`mas-pilot: ready ${mas.issuer}`);
 
 interface OperatorMessage {
   id: number;
@@ -80,29 +94,40 @@ interface OperatorMessage {
   offsetMs?: number;
 }
 
-process.on("message", (raw: unknown) => {
-  const msg = raw as OperatorMessage;
-  try {
-    if (msg.op === "clock") {
-      offsetMs = Number(msg.offsetMs ?? 0);
-      process.send?.({ id: msg.id, ok: true });
-      return;
+// Test harness only: registered where this process has an IPC channel.
+if (process.send) {
+  process.on("message", (raw: unknown) => {
+    const msg = raw as OperatorMessage;
+    try {
+      if (msg.op === "clock") {
+        offsetMs = Number(msg.offsetMs ?? 0);
+        process.send?.({ id: msg.id, ok: true });
+        return;
+      }
+      const input = msg.input as NonNullable<OperatorMessage["input"]>;
+      const { intent, ...rest } = input;
+      const record = mas.built.kernel.approve({ ...rest, intent: validateMissionIntent(intent) } as Parameters<
+        typeof mas.built.kernel.approve
+      >[0]);
+      process.send?.({ id: msg.id, ok: true, missionId: record.id });
+    } catch (e) {
+      process.send?.({ id: msg.id, ok: false, error: e instanceof Error ? e.message : String(e) });
     }
-    const input = msg.input as NonNullable<OperatorMessage["input"]>;
-    const { intent, ...rest } = input;
-    const record = built.kernel.approve({ ...rest, intent: validateMissionIntent(intent) } as Parameters<typeof built.kernel.approve>[0]);
-    process.send?.({ id: msg.id, ok: true, missionId: record.id });
-  } catch (e) {
-    process.send?.({ id: msg.id, ok: false, error: e instanceof Error ? e.message : String(e) });
-  }
-});
+  });
+}
 
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
+let closing = false;
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
   process.on(signal, () => {
-    server.closeAllConnections();
-    server.close(() => {
-      built.kernel.close();
-      process.exit(0);
-    });
+    if (closing) return;
+    closing = true;
+    void (async () => {
+      await operatorConsole?.close();
+      server.closeAllConnections();
+      server.close(() => {
+        mas.built.kernel.close();
+        process.exit(0);
+      });
+    })();
   });
 }

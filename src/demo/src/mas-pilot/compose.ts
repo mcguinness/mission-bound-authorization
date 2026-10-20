@@ -103,6 +103,12 @@ export interface MasPilotOptions {
   introspectionEndpoint?: string;
   /** The introspection cache's clock. Defaults to `now`. */
   introspectionNow?: () => Date;
+  /**
+   * The in-process MAS's kernel, owned by its caller (a launcher's reference
+   * authorization server). Absent, the pilot builds a bare kernel and closes
+   * it with itself. Read by `composeMasPilot` only.
+   */
+  kernel?: MissionKernel;
 }
 
 /** Everything the pilot assembles around its Mission state source, kernel or not. */
@@ -171,16 +177,13 @@ function missionLoader(kernel: MissionKernel): (ref: MissionReference) => Loaded
 export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> {
   const config = opts.config ?? loadMasPilotConfig();
   const missionIssuer = config.mission_issuer;
-  const statusKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
-  const { policy, authoritySources } = pilotMissionPolicy(config);
-  const kernel = new MissionKernel({
-    issuer: missionIssuer,
-    policy: policy as never,
-    containmentPolicy: CONTAINMENT_POLICY as never,
-    authoritySourceCatalog: authoritySources as never,
-    statusKey: statusKeys.privateKey,
-    statusKid: TOPOLOGY.keys.asStatus.kid,
-  });
+  // #818 slice 5B: a launcher's MAS is the reference authorization server in
+  // this process, and the pilot reads that server's kernel; the server owns it.
+  const owned = opts.kernel === undefined;
+  const kernel = opts.kernel ?? (await pilotKernel(config));
+  const release = () => {
+    if (owned) kernel.close();
+  };
   try {
     const parts = await assembleMasPilot(opts, config, { missionIssuer, loadView: missionLoader(kernel) });
     return {
@@ -188,13 +191,27 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
       kernel,
       close: async () => {
         await parts.close();
-        kernel.close();
+        release();
       },
     };
   } catch (e) {
-    kernel.close();
+    release();
     throw e;
   }
+}
+
+/** A bare kernel under the pilot's policy, the in-process MAS when no server is given. */
+async function pilotKernel(config: MasPilotConfig): Promise<MissionKernel> {
+  const statusKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
+  const { policy, authoritySources } = pilotMissionPolicy(config);
+  return new MissionKernel({
+    issuer: config.mission_issuer,
+    policy: policy as never,
+    containmentPolicy: CONTAINMENT_POLICY as never,
+    authoritySourceCatalog: authoritySources as never,
+    statusKey: statusKeys.privateKey,
+    statusKid: TOPOLOGY.keys.asStatus.kid,
+  });
 }
 
 /**

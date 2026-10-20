@@ -311,3 +311,15 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
 export function loadMasPilotConfig(path: URL | string = new URL("../../../config/mas-pilot.json", import.meta.url)): MasPilotConfig {
   return parseMasPilotConfig(JSON.parse(readFileSync(path, "utf8")));
 }
+
+/**
+ * The configuration with its Mission issuer moved to `url`, everywhere the
+ * configuration names it (the mapping contract's `mission_issuer` and Mission
+ * subjects, the route table). When the MAS is the reference authorization
+ * server, its own URL is the Mission issuer (#818 slice 5B), in either
+ * topology. Unchanged when it already names `url`.
+ */
+export function relocateMissionIssuer(config: MasPilotConfig, url: string): MasPilotConfig {
+  if (config.mission_issuer === url) return config;
+  return JSON.parse(JSON.stringify(config).split(JSON.stringify(config.mission_issuer).slice(1, -1)).join(url)) as MasPilotConfig;
+}
