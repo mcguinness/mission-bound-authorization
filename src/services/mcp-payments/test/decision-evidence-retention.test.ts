@@ -690,6 +690,30 @@ describe("retention honors the declared audit window (@spec runtime-evidence#rec
     reopened.close();
   });
 
+  // @spec runtime#boundary-identifier-change (#1327 re-review): the version a
+  // permit was decided under is bound when its record is first retained. A
+  // re-presentation (a PDP retransmission) never moves it to the version a
+  // later request names, before or after a restart.
+  it("keeps the boundary version a decision was first retained under, for a re-presented record and after a restart", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "evidence-retention-"));
+    dirs.push(dir);
+    const file = join(dir, "evidence.db");
+    const first = retainingDeployment({ file });
+    const decision = await first.pdp.emitter.emit(decisionInput("dec_versioned"));
+    const retained = await first.evidence.retainDecision(decision, { boundaryVersion: "payments-boundary-v1" });
+    expect(retained).toMatchObject({ retained: true, record: { boundary_version: "payments-boundary-v1" } });
+    const represented = await first.evidence.retainDecision(JSON.parse(JSON.stringify(decision)), { boundaryVersion: "payments-boundary-v2" });
+    expect(represented).toMatchObject({ retained: true, record: { boundary_version: "payments-boundary-v1" } });
+    expect(first.evidence.all().filter((e) => e.kind === "decision")).toHaveLength(1);
+    first.retention.close();
+
+    const reopened = new EvidenceRetentionStore({ retentionWindowSeconds: WINDOW_SECONDS, store: { file }, now: () => NOW });
+    const recovered = new EvidenceStore(first.keys.signing, reopened.resolver({ locations: [EVIDENCE_KEY_SET_LOCATION] }), reopened);
+    const again = await recovered.retainDecision(JSON.parse(JSON.stringify(decision)), { boundaryVersion: "payments-boundary-v2" });
+    expect(again).toMatchObject({ retained: true, record: { boundary_version: "payments-boundary-v1" } });
+    reopened.close();
+  });
+
   it("releases a record only once the window has passed, and fails closed at capacity rather than evicting one still inside it", async () => {
     let clock = NOW.getTime();
     const { evidence, retention } = retainingDeployment({ clock: () => clock, capacity: 1 });

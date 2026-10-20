@@ -1181,7 +1181,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   reaches the policy: `lookup_vendor` naming a vendor the store does not
   hold is refused `unknown_vendor` before any decision (D484), as
   `get_invoice` and a named-vendor `list_invoices` are. The payments
-  Operation Profile (`payments-runtime-profile-v8`) declares the policy's
+  Operation Profile (`payments-runtime-profile-v9`) declares the policy's
   owner, principals (subject and client), relations, tenant, freshness and
   failure behavior.
 

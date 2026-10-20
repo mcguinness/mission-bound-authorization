@@ -98,11 +98,11 @@ const viewFor = (missionId: string): MissionView => ({
 class HeldEvidenceStore extends EvidenceStore {
   holdDecision?: () => Promise<void>;
   holdExecution?: (input: ExecutionEvidenceInput) => Promise<void>;
-  override async retainDecision(record: DecisionEvidenceObject) {
+  override async retainDecision(record: DecisionEvidenceObject, binding?: { boundaryVersion?: string }) {
     const hold = this.holdDecision;
     this.holdDecision = undefined;
     await hold?.();
-    return super.retainDecision(record);
+    return super.retainDecision(record, binding);
   }
   override async recordExecution(emitterId: string, role: "pep" | "executor", input: ExecutionEvidenceInput) {
     await this.holdExecution?.(input);
