@@ -238,7 +238,10 @@ implementable alone. It reuses, without restating:
 - the issuance profile's approval event, integrity-anchor envelope,
   and subset rule.
 
-Other companions interact with a drawdown as follows:
+The following table summarizes how other companions interact with a
+drawdown. The cited sections control each requirement and when it
+applies; adopting this document does not require adopting any listed
+companion.
 
 | Companion | Effect on a drawdown | Section |
 |---|---|---|
@@ -249,7 +252,7 @@ Other companions interact with a drawdown as follows:
 | Mission Consumption Metering | Grants no new capacity | {{ceiling-drawdown-basis}} |
 | Mission Approval Governance | The basis meets the accountable-approver rule; a consumption-bound drawdown needs a class-named exception | {{ceiling-drawdown-basis}} |
 | Mission Consent Evidence | Commits the ceiling and review disclosures | {{progressive-authorization}}, {{ceiling-review}} |
-| Mission Open-World Discovery | Defines the encounter adjudication contract for a self-declared resource | {{audit-linkage}} |
+| Mission Open-World Discovery | Defines the encounter adjudication contract for a self-declared resource | {{ceiling-test}} |
 {: title="Companion Interactions"}
 
 ## Conventions and Terminology {#conventions-and-terminology}
@@ -397,8 +400,9 @@ commits only the consented Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}), and the ceiling is a bound
 on future expansions, not present authority.
 
-The consent disclosure MUST render the ceiling and the fact that
-in-ceiling expansion is policy-adjudicated
+At the initial approval, the consent disclosure MUST render the
+ceiling to the Approver, together with the fact that in-ceiling
+expansion is policy-adjudicated
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 A Mission that carries no `authority_ceiling` has no progressive
@@ -475,6 +479,17 @@ A ceiling entry MAY name a resource family rather than a single
 resource, under the same resource-narrowing semantics the subset rule
 fixes: a successor entry's `resource` is in-ceiling when it narrows
 the ceiling entry's.
+
+Where a drawdown is triggered by the agent encountering a resource
+not named at approval, and the resource self-declares its operations
+and consequences in a content-addressed form, the adjudication MUST
+evaluate the declaration against the ceiling, and the drawdown's
+record carries the declaration's digest ({{audit-linkage}}). An AAuth
+deployment adopting Rich Resource Requests composes one such
+self-declaring substrate ({{I-D.draft-mcguinness-mission-aauth}}). The
+discovery companion ({{I-D.draft-mcguinness-mission-discovery}})
+defines the encounter adjudication contract, the identity pinning,
+and the floors this drawdown path carries.
 
 The Mission Issuer MUST NOT policy-adjudicate a requested authority
 that is not within the consented `authority_ceiling`. Such a request
@@ -567,11 +582,12 @@ drawdown while the predecessor has non-terminal Child Missions: such
 a request falls back to a fresh human approval, at which that notice
 can be rendered.
 
-**Discharged authority.** The drawdown policy MUST NOT
+**Discharged authority.** The Mission Issuer MUST NOT
 policy-adjudicate a successor whose complete Authority Set, including
 authority carried forward from its predecessor, overlaps in authority
 the authority a discharge restriction of its expansion chain covers
-({{I-D.draft-mcguinness-oauth-mission-discharge}}). The test is overlap
+({{I-D.draft-mcguinness-oauth-mission-discharge}}), whatever its
+drawdown policy permits. The test is overlap
 in authority, not structural equality or entry identity. Such a
 request falls back to a fresh human approval whose consent disclosure
 names the discharged entry and the condition that discharged it.
@@ -579,15 +595,15 @@ names the discharged entry and the condition that discharged it.
 The Mission Issuer MUST apply this test to every drawdown in the chain
 after the discharge, not only to one from the Mission that holds the
 discharged entry, and neither an approval of unrelated authority nor a
-ceiling review clears the restriction ({{ceiling-review}}).
-Completion-discharged authority therefore cannot be resurrected by
-policy.
+ceiling review clears the restriction ({{ceiling-review}}). Policy
+adjudication cannot restore discharged authority.
 
-**Contained authority.** The drawdown policy MUST NOT
+**Contained authority.** The Mission Issuer MUST NOT
 policy-adjudicate a successor whose complete Authority Set, including
 authority carried forward from its predecessor, overlaps in authority
 capability under a containment restriction of its expansion chain
-({{I-D.draft-mcguinness-oauth-mission-containment}}). Such a request
+({{I-D.draft-mcguinness-oauth-mission-containment}}), whatever its
+drawdown policy permits. Such a request
 falls back to a fresh human approval whose consent disclosure names
 the contained capability and the event class that caused its
 containment.
@@ -930,32 +946,11 @@ afresh, as Mission Derivation Limits states. This bounds counted
 derivations through the drawdown succession only, not a Mission's
 descendants, other tokens, or resource effects.
 
-## What It Bounds, and What It Does Not {#progressive-limits}
-
-The ceiling is broad by construction, since it must cover the
-open-ended task. What stays narrow is the active authority any single
-Mission in the chain yields: each in-ceiling successor is derived for
-the authority actually needed at that step and is independently gated
-and revocable.
-
-A compromised agent cannot instantly wield the ceiling. It can
-exercise only the current active authority and request in-ceiling
-drawdown, which is policy-gated, bounded per drawdown and rate-limited
-per chain ({{drawdown-bounds}}), recorded for audit
-({{audit-linkage}}), and enforced per action by the runtime layer
-({{I-D.draft-mcguinness-mission-runtime}}).
-
-Progressive authorization bounds, and does not eliminate,
-standing-authority exposure. A deployment SHOULD pair it with short
-successor lifetimes, constraint-bounded ceilings, and runtime
-enforcement.
-
 ## The Ceiling Review {#ceiling-review}
 
-A pre-consented ceiling is standing consent, and standing consent
-decays: a chain renewed indefinitely on policy alone is a standing
-grant. This profile therefore bounds the chain in time, not only per
-drawdown and per unit time ({{drawdown-bounds}}).
+A pre-consented ceiling is standing consent. Standing consent requires
+periodic human review, so this profile bounds the chain in time, not
+only per drawdown and per unit time ({{drawdown-bounds}}).
 
 A deployment MUST publish a **ceiling review cadence** in its
 Mission Deployment Profile. The Mission Issuer MUST NOT
@@ -1008,9 +1003,9 @@ review:
 
 Where consent evidence is claimed, that disclosure is committed like
 any other ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}),
-so the record shows the reviewer saw the cycle they renewed. The
-review is where decay is caught; {{sec-consent-decay}} names the tells
-a reviewer checks the records for.
+so the record shows the reviewer saw the cycle they renewed.
+{{sec-consent-decay}} lists the signs in the chain's records that a
+reviewer checks.
 
 ## Realizing an Approved Access Request {#arap-feedback}
 
@@ -1105,19 +1100,11 @@ drawdown's `ceiling_drawdown` approval basis already records, that it
 was adjudicated within the cadence that applied at the time
 ({{ceiling-review}}).
 
-Where a drawdown is triggered by the agent encountering a resource
-not named at approval, and the resource self-declares its operations
-and consequences in a content-addressed form, the adjudication MUST
-evaluate the declaration against the ceiling. The record of such a
-drawdown MUST carry the declaration's digest as
-`resource_declaration_digest`, so the encounter is reproducible in
-audit: what the resource claimed to be when authority bound to it. An
-AAuth deployment adopting Rich Resource Requests composes one such
-self-declaring substrate ({{I-D.draft-mcguinness-mission-aauth}}).
-
-The discovery companion ({{I-D.draft-mcguinness-mission-discovery}})
-defines the encounter adjudication contract, the identity pinning,
-and the floors this drawdown path carries.
+The record of a drawdown whose adjudication evaluated a resource's
+self-declaration ({{ceiling-test}}) MUST carry the declaration's
+digest as `resource_declaration_digest`, so the encounter is
+reproducible in audit: what the resource claimed to be when authority
+bound to it.
 
 # Conformance {#conformance}
 
@@ -1179,14 +1166,29 @@ The expansion profile's security considerations apply in full
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}). This document adds
 the drawdown surface.
 
-## Unattended Drawdown {#sec-unattended-drawdown}
+## What Progressive Authorization Bounds {#progressive-limits}
 
-The ceiling is consented once and drawn on many times. A compromised
-agent can request in-ceiling drawdown unattended. The mitigations are
-the rate bound ({{drawdown-bounds}}), the prohibited-class rule
-({{fresh-approval}}), the fall-back to human approval for unauthorized
-drawdowns ({{policy-adjudication}}), and per-action runtime
-enforcement ({{I-D.draft-mcguinness-mission-runtime}}).
+The ceiling is broad by construction, since it must cover the
+open-ended task. What stays narrow is the active authority any single
+Mission in the chain yields: each in-ceiling successor is derived for
+the authority actually needed at that step and is independently gated
+and revocable.
+
+The ceiling is consented once and drawn on many times, so a
+compromised agent can request in-ceiling drawdown unattended. It
+cannot instantly wield the ceiling: it can exercise only the current
+active authority, and each drawdown it requests is bounded per
+drawdown and rate-limited per chain ({{drawdown-bounds}}), held to the
+prohibited-class rule ({{fresh-approval}}), taken to a fresh human
+approval when the drawdown policy does not authorize it
+({{policy-adjudication}}), recorded for audit ({{audit-linkage}}), and
+enforced per action by the runtime layer
+({{I-D.draft-mcguinness-mission-runtime}}).
+
+Progressive authorization bounds, and does not eliminate,
+standing-authority exposure. A deployment SHOULD pair it with short
+successor lifetimes, constraint-bounded ceilings, and runtime
+enforcement.
 
 ## The Drawdown Policy as Governance {#sec-drawdown-policy}
 
@@ -1197,11 +1199,12 @@ recorded as the decision mechanism ({{audit-linkage}}).
 
 ## The Ceiling as a Consent Artifact {#sec-ceiling-consent}
 
-The ceiling is a consent artifact. It MUST be rendered to the
-Approver at the initial approval with the fact that in-ceiling
-expansion is policy-adjudicated ({{progressive-authorization}}); a
-ceiling the Approver did not knowingly consent to is standing
-authority obtained by omission.
+The ceiling is a consent artifact: every drawdown it later admits acts
+on a consent the Approver gave once, at the initial approval.
+{{progressive-authorization}} requires that approval's disclosure to
+render the ceiling and the fact that in-ceiling expansion is
+policy-adjudicated. Without this disclosure, the Approver has not
+knowingly consented to the ceiling.
 
 ## Probing the Ceiling {#sec-ceiling-probing}
 
@@ -1213,22 +1216,22 @@ bounds such probing either way
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Policy
 Probing").
 
-## Consent Decay {#sec-consent-decay}
+## Periodic Review {#sec-consent-decay}
 
-Consent decays even when nothing is misconfigured: the drawdown and
-rate bounds cap rate, not duration, and the ceiling review
-({{ceiling-review}}) is the temporal bound. The tells of decay are
-checkable from the chain's own records:
+Standing consent requires periodic human review even when nothing is
+misconfigured: the drawdown and rate bounds cap rate, not duration,
+and the ceiling review ({{ceiling-review}}) is the temporal bound. The
+chain's own records show when the consent no longer matches the work:
 
 - reviews that never narrow the ceiling;
 - ceilings that only grow;
 - guard exceptions trending toward zero because the policy was
-  quietly widened; and
+  widened; and
 - discharge that never fires because no unit of work is scoped
   tightly enough to complete.
 
-A review that cannot cite the evidence of the cycle it renews has not
-reviewed it.
+The review uses the chain evidence listed in Ceiling Review
+({{ceiling-review}}).
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -1272,6 +1275,15 @@ Denial Reasons Registry"):
 
 -01
 
+- Rulings on the editorial restructure's author's calls (D569): the
+  discharge and containment prohibitions bind the Mission Issuer,
+  whatever its drawdown policy permits; one ceiling-disclosure
+  requirement remains, in Progressive Authorization, with Security
+  cross-referencing it; What It Bounds moves into Security, merged
+  with Unattended Drawdown; declaration evaluation moves into Ceiling
+  Test, with the `resource_declaration_digest` record in Audit
+  Linkage; plain statements replace persuasive phrases; the companion
+  table is labelled a summary.
 - Ceiling Test and new Ceiling Re-Consent: a request outside the
   ceiling is never policy-adjudicated and falls back to an ordinary,
   freshly approved expansion, subject to the Mission Issuer's policy; a
