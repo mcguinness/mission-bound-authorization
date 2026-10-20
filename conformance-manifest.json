@@ -44852,7 +44852,7 @@
   {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
-   "anchor": "deferred-window",
+   "anchor": "predecessor-children",
    "text": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules",
    "role": "AS",
    "strength": "MUST",

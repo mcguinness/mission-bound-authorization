@@ -862,7 +862,7 @@ predecessor's transition to `terminated` with reason `superseded`
 - the Subject and authority-source checks of {{successor-source}};
 - the effective-expiry check of {{successor-expiry}}; and
 - where Child Mission Carryover is approved, the carryover rules of
-  {{superseded-state}}.
+  {{predecessor-children}}.
 
 Until the successor activates, the predecessor remains `active`. An
 expansion that never completes, whose deferred approval lapses, or
@@ -873,61 +873,21 @@ Child Missions.
 
 ## The Deferred Window {#deferred-window}
 
-A completion may occur later than the request, across a deferred or
+A completion can occur later than the request, across a deferred or
 interactive approval window. Two rules govern that window:
 
 - The predecessor's Mission state MUST be re-verified at issuance
   (completion), not only at request time. A predecessor that was
   terminated or contained during the window MUST fail completion, per
   the compare-and-set of {{reconciliation}}. This preserves the
-  new-derivation kill a terminal predecessor state effects: a deferred
-  approval MUST NOT become a bypass of it.
+  halt on new derivation that a terminal predecessor state effects: a
+  deferred approval MUST NOT become a bypass of it.
 - Expiry of the `subject_token` during the window MUST NOT gate
   completion. The predecessor binding and the possession proof are
   evaluated and recorded at request time ({{request-binding}}); the
   short-lived `subject_token` expiring while approval is pending does
   not invalidate the pending exchange. The re-verification above is of
   the predecessor's Mission state, not of the expired token.
-
-Supersession is a terminal exit from `active`, so it is a terminal
-cascade trigger for the predecessor's entire delegation tree under the
-child-delegation profile
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). When the
-predecessor has non-terminal Child Missions, the expansion consent
-disclosure SHOULD surface that fact as a material notice: at minimum
-the count of live Child Missions and that supersession terminates
-them. A child still needed after the expansion is re-created under the
-successor through ordinary child creation, in generation order. A
-deployment MAY additionally support an expansion-request parameter by
-which the client asks the Mission Issuer to refuse the expansion while
-live Child Missions exist.
-
-This is the priced limitation of the current design. Cascade applies
-to every non-terminal Child Mission regardless of whether that
-child's own Authority Set would still satisfy strict-subset validation
-against the successor: the successor's Authority Set is freshly
-derived, not inherited by reference, so a child's creation-time subset
-check does not carry forward
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-"Cascade Revocation").
-
-The re-creation above is paid for per child: a fresh assertion
-conveyed to the child actor that held the terminated child, and an
-interval in which that child actor's outstanding tokens under the
-terminated child run to the earlier of their own `exp` and the runtime
-staleness bound, where the runtime enforcement layer is deployed,
-while the replacement is delivered
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
-"Cascade Failure"). Where a deployment provides the notice recommended
-above, the expansion consent event is where this price is rendered;
-that consent event is the only point in this profile at which a human
-can witness the cascade before it happens.
-
-Where explicitly approved Child Mission Carryover is selected, the Mission
-Issuer MUST render and commit its complete manifest and exclusion policy,
-and recheck that snapshot at completion under the child profile's Carryover
-rules ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise
-the ordinary cascade notice and per-child re-creation above remain the floor.
 
 ## Successor Expiry {#successor-expiry}
 
@@ -992,76 +952,62 @@ predecessor `active`. The same commit rechecks the effective expiry
 
 # Lineage Members {#predecessor-member}
 
-The successor records a lineage link to the predecessor as a
-`predecessor` member, both on the successor's `mission` claim and on
-the successor's Mission record.
-
-The issuance profile's `mission` claim is an open object: additional
-members MAY appear alongside `id` and `issuer`, each
-defined by the profile that introduces it, and a consumer MUST ignore
-members it does not understand and MUST NOT use any additional member
-to grant or widen authority ({{I-D.draft-mcguinness-oauth-mission}}).
-This document introduces one such member:
+This document defines three lineage members. The issuance profile's
+`mission` claim is an open object whose additional members are each
+defined by the profile that introduces them
+({{I-D.draft-mcguinness-oauth-mission}}); `predecessor` is one such
+member.
 
 `predecessor`:
-: REQUIRED on a successor Mission; absent otherwise. A string. The
-  `mission_id` of the Mission this Mission succeeded by expansion.
-  Present on every Mission created by expansion and absent on a Mission
-  that was not created by expansion. It links the successor to the
-  Mission it replaced so that the expansion chain is observable in
-  audit.
-
-The same `predecessor` value is recorded on the successor's immutable
-Mission record so that the lineage is durable independently of any
-derived token.
-
-This document defines a further lineage member, `related_to`, and the
-`successor` member of a `superseded` termination:
+: REQUIRED on a successor Mission; absent otherwise. A string: the
+  `mission_id` of the Mission this Mission succeeded by expansion. It
+  is carried on the successor's `mission` claim and recorded on the
+  successor's immutable Mission record, so the lineage is durable
+  independently of any derived token and the expansion chain is
+  observable in audit.
 
 `related_to`:
-: OPTIONAL. A string. The `mission_id` of a Mission this Mission is
-  related to by lineage without superseding it, used for a non-superseding
-  link such as a branch ({{replacement}}). Unlike `predecessor`, its
-  presence does not imply that the referenced Mission was superseded and
-  it carries no lifecycle consequence.
+: OPTIONAL. A string: the `mission_id` of a Mission this Mission is
+  related to by lineage without superseding it, used for a
+  non-superseding link such as a branch ({{replacement}}) or an
+  independent continuation ({{independent-continuation}}). Unlike
+  `predecessor`, its presence does not imply that the referenced
+  Mission was superseded, and it carries no lifecycle consequence.
 
 `successor`:
 : REQUIRED in the `termination` of a Mission terminated with reason
-  `superseded` ({{superseded-state}}); absent otherwise. A string. The
+  `superseded` ({{superseded-state}}); absent otherwise. A string: the
   `mission_id` of the successor that superseded this Mission by
-  expansion, issued by the same Mission Issuer, written into the
+  expansion, issued by the same Mission Issuer and written into the
   predecessor's `termination` at supersession. It appears only inside
-  `termination`. It is the
-  reverse of the successor's `predecessor` link, letting a consumer that
-  holds a superseded predecessor discover its successor directly.
-  The Status profile surfaces it in the status response
-  ({{I-D.draft-mcguinness-oauth-mission-status}}) and the Signals profile
-  in the supersession's lifecycle event
+  `termination`. It is the reverse of the successor's `predecessor`
+  link, so a consumer that holds a superseded predecessor discovers its
+  successor directly. The Status profile surfaces it in the status
+  response ({{I-D.draft-mcguinness-oauth-mission-status}}) and the
+  Signals profile in the supersession's lifecycle event
   ({{I-D.draft-mcguinness-oauth-mission-signals}}), each inside
   `termination`.
 
-`predecessor`, `related_to`, and `successor` are lineage and audit
-context only. Consistent with the issuance profile's
+All three members are lineage and audit context only. Consistent with the issuance profile's
 open-`mission`-claim rule, each of them MUST NOT grant or widen
 authority, and a consumer that does not understand one MUST ignore it.
 The successor's authority comes only from its own `authority_hash`,
 never from its predecessor.
 
-`predecessor`, `related_to`, and `successor` are each a bare Mission
-Identifier string, not an object like the `parent` member of a Child
-Mission
+Each is a bare Mission Identifier string, not an object like the
+`parent` member of a Child Mission
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): same-issuer
-succession needs only the identifier to resolve the linked Mission at the
-shared `issuer`, whereas parentage carries cascade semantics and
+succession needs only the identifier to resolve the linked Mission at
+the shared `issuer`, whereas parentage carries cascade semantics and
 cross-object integrity that require a structured member.
 
-Properties:
+The lineage members have these properties:
 
 - **Cardinality.** A successor has at most one `predecessor`. An
   expansion chain is expressed by walking `predecessor` links from a
   successor back toward the original Mission.
-- **Immutability.** `predecessor` is set at the successor's approval
-  event and MUST NOT change thereafter. The Mission record is immutable
+- **Immutability.** The `predecessor` member is set at the
+  successor's approval event and MUST NOT change thereafter. The Mission record is immutable
   except for its `state` and its `termination`, which a supersession
   writes once on the predecessor with the `successor` link
   ({{superseded-state}}).
@@ -1069,8 +1015,8 @@ Properties:
   expansion is adjudicated by the predecessor's Mission Issuer. A
   consumer correlating a chain resolves each link at that issuer.
 
-Example successor `mission` claim on a derived token (non-normative;
-other token claims omitted):
+The following is an example of a successor's `mission` claim (other
+token claims omitted):
 
 ~~~ json
 {
@@ -1104,35 +1050,21 @@ is:
 | From | Event | To | Reason |
 |---|---|---|---|
 | `active` | successor activates when its authority is issued | `terminated` | `superseded` |
+{: title="The supersession transition"}
 
-The transition has these requirements:
+The transition has these properties:
 
-- **Atomic with successor activation.** The successor activates, and the
-  predecessor becomes `terminated` with reason `superseded`, in one
-  atomic operation at the point
-  the successor's authority is issued ({{completion-modes}}: the
-  resolving deferred poll or the interactive code redemption), not at
-  the approval decision that precedes it. In that same operation the
-  Mission Issuer writes the predecessor's `termination`, once, with
-  `successor` set to the successor's `mission_id`
-  ({{predecessor-member}}). Until the successor activates the
-  predecessor remains `active`.
-  - An expansion that never completes, whose deferred approval lapses,
-    or whose authorization code is never redeemed or expires, activates
-    no successor and leaves the predecessor `active`, so it never
-    strands the task's authority nor cascade-terminates the
-    predecessor's Child Missions.
-  - If the atomic operation fails, the predecessor remains `active`
-    and no successor record exists. The Mission Issuer MUST NOT
-    produce a partial successor or a predecessor left in an
-    indeterminate state.
-- **Explicit carryover.** When the approved operation includes Child Mission
-  Carryover, the Mission Issuer MUST include replacement records, required
-  old-child cascades, the committed outcome map, and durable recovery work
-  in the same atomic operation. Publication follows commit and is repairable;
-  constructing replacements first does not guarantee external event order
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
-- **Non-active: no further derivation.** A superseded Mission is not
+- **Atomic with successor activation.** The predecessor becomes
+  `terminated` with reason `superseded` only in the successor's
+  activation step ({{successor-activation}}), at the point the
+  successor's authority is issued, not at the approval decision that
+  precedes it. In that step the Mission Issuer writes the predecessor's
+  `termination`, once, with `successor` set to the successor's
+  `mission_id` ({{predecessor-member}}). If the atomic operation fails,
+  the predecessor remains `active` and no successor record exists. The
+  Mission Issuer MUST NOT produce a partial successor or a predecessor
+  left in an indeterminate state.
+- **No further derivation.** A superseded Mission is not
   `active`, so the issuance profile's issuance gating refuses to derive
   any new token, refresh, token exchange, or cross-domain grant under
   it: derivation proceeds only from an `active` Mission
@@ -1155,60 +1087,114 @@ The transition has these requirements:
     the issuance profile's optional revocation composition is in use.
 - **Reported as non-active.** A superseded predecessor is reported
   through the same mechanisms that report a revoked or expired
-  Mission. Where the issuance profile's optional token introspection is
-  offered, the composite `active` is `false` and, from the issuer, the
-  `mission.state` member gives `terminated` and
-  `mission.termination.reason` gives `superseded`. Where the Mission
-  Status profile {{I-D.draft-mcguinness-oauth-mission-status}} is
-  deployed, the Status Response `mission.state` gives `terminated` and
-  its `mission.termination` carries reason `superseded` and the
-  `successor`. A
-  deployment that offers either surface and this document MUST include
-  `superseded` among the termination reasons its issuer may report.
-  Consumers rely on the issuance profile's forward-compatibility rule:
-  a `terminated` Mission, whatever its reason, is non-deriving.
+  Mission:
+
+  - where the issuance profile's optional token introspection is
+    offered, the composite `active` is `false` and, from the issuer,
+    `mission.state` is `terminated` and `mission.termination.reason`
+    is `superseded`; and
+  - where the Mission Status profile
+    ({{I-D.draft-mcguinness-oauth-mission-status}}) is deployed, the
+    Status Response `mission.state` is `terminated` and its
+    `mission.termination` carries reason `superseded` and the
+    `successor`.
+
+  A deployment that offers either surface and this document MUST
+  include `superseded` among the termination reasons its issuer may
+  report. Consumers rely on the issuance profile's forward-compatibility
+  rule: a `terminated` Mission, whatever its reason, is non-deriving.
+
+## Child Missions of the Predecessor {#predecessor-children}
+
+Supersession is a terminal exit from `active`, so it is a terminal
+cascade trigger for the predecessor's entire delegation tree under the
+child delegation profile
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Cascade
+applies to every non-terminal Child Mission, regardless of whether that
+child's own Authority Set would still satisfy strict-subset validation
+against the successor: the successor's Authority Set is freshly
+derived, not inherited by reference, so a child's creation-time subset
+check does not carry forward
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Cascade Revocation").
+
+A child still needed after the expansion is re-created under the
+successor through ordinary child creation, in generation order. Each
+re-creation costs
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}, Section
+"Cascade Failure"):
+
+- a fresh assertion conveyed to the child actor that held the
+  terminated child; and
+- an interval, while the replacement is delivered, in which that child
+  actor's outstanding tokens under the terminated child run to the
+  earlier of their own `exp` and, where the runtime enforcement layer
+  is deployed, the runtime staleness bound.
+
+When the predecessor has non-terminal Child Missions, the expansion
+consent disclosure SHOULD surface that fact as a material notice: at
+minimum the count of live Child Missions and that supersession
+terminates them. Where a deployment provides this notice, the
+expansion consent event renders the cost above; that consent event is
+the only point in this profile at which a human can witness the
+cascade before it happens. A deployment MAY additionally support an
+expansion-request parameter by which the client asks the Mission
+Issuer to refuse the expansion while live Child Missions exist.
+
+Where explicitly approved Child Mission Carryover is selected, the Mission
+Issuer MUST render and commit its complete manifest and exclusion policy,
+and recheck that snapshot at completion under the child profile's Carryover
+rules ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise
+the ordinary cascade notice and per-child re-creation above remain the floor.
+
+When the approved operation includes Child Mission Carryover, the
+Mission Issuer MUST include replacement records, required old-child
+cascades, the committed outcome map, and durable recovery work in the
+same atomic operation. Publication follows commit and is repairable;
+constructing replacements first does not guarantee external event order
+({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
 
 ## No Implicit Rollback {#no-rollback}
 
 The Mission Issuer MUST NOT implicitly resurrect a superseded
 predecessor when its successor is later revoked, expired, or itself
 superseded; `terminated` is terminal, whatever its reason. A
-deployment that needs
-"revert to the predecessor's authority" semantics expresses that as a
-new approval event creating a new Mission that carries the relevant
-authority, with its own `predecessor` link preserving the lineage. A
-rollback is therefore a new governed Mission, not a state reversal.
+deployment that needs to revert to the predecessor's authority
+expresses that as a new approval event creating a new Mission that
+carries the relevant authority, with its own `predecessor` link
+preserving the lineage. A rollback is a new governed Mission, not a
+state reversal.
 
 # Replacement Expansion {#replacement}
 
-A successful expansion is a **replacement**: the successor replaces the
-predecessor, and the predecessor becomes `terminated` with reason
-`superseded` ({{superseded-state}}). Replacement is the only mode this
-document
-defines.
+A successful expansion is a replacement: the successor replaces the
+predecessor, which becomes `terminated` with reason `superseded`
+({{superseded-state}}). Replacement is the only mode this document
+defines. Under replacement:
 
-Under replacement, exactly one successor is created per predecessor,
-and the predecessor is no longer active once the successor activates.
-The successor carries its own complete Authority Set as derived and
-consented at the expansion approval event; it does not inherit the
-predecessor's authority by reference. A deployment that wants the
-successor to retain the predecessor's authority alongside the new
-authority expresses the combined authority in the expansion Mission
-Intent, so the successor's `authority_hash` commits exactly the
-authority the Approver saw and approved ({{adjudication}}).
+- exactly one successor is created per predecessor, and the
+  predecessor is no longer `active` once the successor activates; and
+- the successor carries its own complete Authority Set as derived and
+  consented at the expansion approval event; it does not inherit the
+  predecessor's authority by reference.
 
-A **branch** mode, in which the predecessor and the successor both
-remain `active` after expansion (for example, a separately scoped child
-task running alongside the original), is OPTIONAL and is not defined
-here. A deployment that needs a separately scoped task alongside a
-still-active Mission creates an ordinary new Mission under the issuance
-profile and MAY set that Mission's `related_to` member
+A deployment that wants the successor to retain the predecessor's
+authority alongside the new authority expresses the combined authority
+in the expansion Mission Intent, so the successor's `authority_hash`
+commits exactly the authority the Approver saw and approved
+({{adjudication}}).
+
+A branch mode, in which the predecessor and the successor both remain
+`active` after expansion (for example, a separately scoped child task
+running alongside the original), is OPTIONAL and is not defined here.
+A deployment that needs a separately scoped task alongside a
+still-active Mission creates an ordinary new Mission under the
+issuance profile and MAY set that Mission's `related_to` member
 ({{predecessor-member}}) to the original Mission's `mission_id` to
-preserve lineage; it does not set `predecessor`, which would imply a
+preserve lineage. It does not set `predecessor`, which would imply a
 supersession, so the original remains `active`. An atomic, grant-bound
-branch
-expansion that creates such a child within a single expansion approval
-event is deferred to a future revision of this document.
+branch expansion that creates such a child within a single expansion
+approval event is deferred to a future revision of this document.
 
 # Continuing Under an Independently Approved Mission {#independent-continuation}
 
@@ -1216,12 +1202,11 @@ A deployment can end one Mission and continue the work under another
 without this document's expansion protocol: it approves an ordinary
 new Mission under the issuance profile and explicitly revokes the
 prior Mission. This is independent continuation, an operational
-pattern; it is not expansion, succession, or replacement in the
+pattern. It is not expansion, succession, or replacement in the
 protocol sense, and none of this document's `predecessor`,
 `successor`, or `superseded` semantics apply.
 
-The two commits are independent, and the pattern's properties follow
-from that:
+The two commits are independent, with these consequences:
 
 - both Missions are normally `active` for an interval; revoking first
   instead opens an availability gap if the new approval fails;
@@ -1242,22 +1227,29 @@ from that:
   prior Mission.
 
 A deployment MAY record the relationship as `related_to` on the new
-Mission ({{predecessor-member}}). `related_to` is issuer-recorded
-correlation metadata, not client-asserted authority: this document
-defines no client request parameter for it, and `mission_intent`
-carries the task and its submission evidence, never a relationship
-member; the input that causes it to be recorded is authenticated
-and authorized under the Mission Issuer's management or local policy.
-The Mission Issuer MUST authorize and resolve the reference, in its
-own namespace, before the new Mission's approval completes (a
-cross-issuer relationship requires a structured extension); MUST set
-`related_to` atomically when the Mission record is created; and MUST
-NOT add or change it afterward. An unresolved or unauthorized
-reference is never recorded: deployment policy either rejects the
-creation uniformly or proceeds without the relationship, applied
-consistently across requests, and neither behavior discloses whether
-the referenced Mission exists. The member asserts related work only,
-neither mutual recognition nor replacement.
+Mission ({{predecessor-member}}). The `related_to` member is
+issuer-recorded correlation metadata, not client-asserted authority:
+
+- this document defines no client request parameter for it, and
+  `mission_intent` carries the task and its submission evidence, never
+  a relationship member; and
+- the input that causes it to be recorded is authenticated and
+  authorized under the Mission Issuer's management or local policy.
+
+The Mission Issuer:
+
+- MUST authorize and resolve the reference, in its own namespace,
+  before the new Mission's approval completes (a cross-issuer
+  relationship requires a structured extension);
+- MUST set `related_to` atomically when the Mission record is created;
+  and
+- MUST NOT add or change it afterward.
+
+An unresolved or unauthorized reference is never recorded: deployment
+policy either rejects the creation uniformly or proceeds without the
+relationship, applied consistently across requests, and neither
+behavior discloses whether the referenced Mission exists. The member
+asserts related work only, neither mutual recognition nor replacement.
 
 A Mission created this way MUST NOT carry the `predecessor` member,
 which asserts the supersession semantics only replacement expansion
@@ -1272,12 +1264,12 @@ More than one expansion request MAY be in flight against the same
 predecessor at once, and more than one MAY be adjudicated and awaiting
 its completion. Because replacement produces exactly one successor per
 predecessor ({{replacement}}) and supersession is deferred to
-activation ({{superseded-state}}), the Mission Issuer MUST serialize the
-completions that would activate a successor of the same predecessor, so
-that concurrent expansions cannot each activate one.
+activation ({{successor-activation}}), the Mission Issuer MUST
+serialize the completions that would activate a successor of the same
+predecessor, so that concurrent expansions cannot each activate one.
 
 The Mission Issuer MUST apply compare-and-set semantics at successor
-activation ({{completion-modes}}). This is the completion-side
+activation ({{successor-activation}}). This is the completion-side
 re-verification of the deferred window ({{deferred-window}}). In the
 same atomic step that would activate the successor and supersede the
 predecessor, the Mission Issuer MUST verify:
@@ -1299,12 +1291,14 @@ with `invalid_grant` and the applicable reconciliation status from the
 closed set below; where the token-exchange response completes the
 expansion, a failed first or second check, a predecessor no longer
 `active`, is refused with `invalid_request` instead
-({{predecessor-active}}). The losing or otherwise stale expansion is rejected
-at completion; it activates no successor. The third check catches
-narrowing that lands between adjudication and activation: authority
-contained or discharged after the approval returns only through a new
-expansion, adjudicated against the current restrictions, which require
-fresh human approval with the restriction disclosed.
+({{predecessor-active}}). The losing or otherwise stale expansion is
+rejected at completion; it activates no successor.
+
+The third check catches narrowing that lands between adjudication and
+activation: authority contained or discharged after the approval
+returns only through a new expansion, adjudicated against the current
+restrictions, which require fresh human approval with the restriction
+disclosed.
 
 The reconciliation status codes are:
 
@@ -1321,7 +1315,7 @@ The reconciliation status codes are:
   with reason `revoked`, `expired`, `superseded`, or another) before
   this expansion could complete,
   whether caught at request binding ({{predecessor-active}}) or at the
-  compare-and-set on successor activation ({{reconciliation}}). The
+  compare-and-set on successor activation. The
   client MUST NOT retry the same expansion against this predecessor.
 
 `predecessor_not_active`:
@@ -1338,30 +1332,28 @@ The reconciliation status codes are:
   submit a new expansion, which is adjudicated against the current
   restrictions.
 
-The two terminal-exit codes overlap in the `superseded` case by design:
+The two terminal-exit codes overlap in the `superseded` case:
 `superseded_by_concurrent_expansion` is the specific reconciliation
 outcome when the cause is a concurrent expansion that has already won,
 and `predecessor_state_changed` is the general outcome for any other
-terminal exit from `active`. A Mission Issuer SHOULD return the specific
-code when it can attribute the change to a concurrent expansion.
-`predecessor_not_active` is distinct from both: it reports a reversible,
+terminal exit from `active`. A Mission Issuer SHOULD return the
+specific code when it can attribute the change to a concurrent
+expansion. The `predecessor_not_active` code reports a reversible,
 non-terminal state, so it invites the retry the terminal codes forbid.
 
-The Mission Issuer conveys the reconciliation status in a
-`mission_expansion_status` member of the OAuth error response body,
-alongside the OAuth error:
+The Mission Issuer conveys the reconciliation status in an OAuth error
+response member:
 
 `mission_expansion_status`:
-: A string carrying one reconciliation status from this document's
-  closed set ({{reconciliation}}). It is returned by the step that
-  failed. At the token endpoint, on the token exchange response and on
-  a deferred token response poll ({{completion-modes}}), it is a member
-  of the JSON error response body, alongside the OAuth `error` member.
-  On the retained interactive path's front-channel authorization error
-  response, which carries error parameters rather than a JSON body, it
-  is carried as an error response parameter of the same name.
-  Adjudication denial reasons ride the separate `mission_denial_reason`
-  member ({{denial-reasons}}).
+: A string carrying one reconciliation status from the closed set
+  above, returned by the step that failed. At the token endpoint (the
+  token exchange response and a deferred token response poll,
+  {{completion-modes}}), it is a member of the JSON error response
+  body, alongside the OAuth `error` member. On the interactive path's
+  front-channel authorization error response, which carries error
+  parameters rather than a JSON body, it is an error response
+  parameter of the same name. Adjudication denial reasons use the
+  separate `mission_denial_reason` member ({{denial-reasons}}).
 
 # Creation Idempotency {#creation-idempotency}
 
@@ -1374,54 +1366,55 @@ of the exchange recovers that operation ({{creation-recovery}}); it
 MUST NOT repeat Mission creation or any creation-side effect:
 creation accounting, creation lifecycle events, evidence emission.
 
-The identifier is REQUIRED in every completion mode because the
-client cannot know in advance which mode the Mission Issuer will
-select, and because the existing single-use artifacts do not close
-the retry fault. DPoP proof `jti` single-use ({{request-binding}})
-prevents replay of one captured proof; a client that loses the
-response retries with a fresh, valid proof, and without the
-identifier that retry is a second creation. The interactive path's
-single-use artifacts prevent only duplicate redemption within one
-ceremony; the reservation made at initiation, and the single recorded
-approval outcome of {{interactive-handoff}}, prevent a retry or a
-repeated pushed request from starting a second ceremony
-({{creation-recovery}}).
+The identifier is REQUIRED in every completion mode for two reasons:
 
-The child delegation profile
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) carries the
-same parameter with the same semantics on its child-creation
-exchange, as `mission_denial_reason` is shared across the profiles
-that mint a Mission related to an existing one ({{denial-reasons}}).
-More generally, a creation exchange explicitly profiled by an
-adopter, not only one that mints a Mission, adopts the same
-definitions by reference, each under its own domain-separating `op`
-value and its own binding of the fingerprint's `source` and other
-members to what that exchange actually creates
-({{creation-fingerprint}}): the continuation profile's
-async-delegation exchange does so for a delegated refresh-token
-family, which is not a Mission
-({{I-D.draft-mcguinness-oauth-mission-continuation}}), and the
-template profile's Dispatch does so for a dispatched Mission
-({{I-D.draft-mcguinness-oauth-mission-template}}).
+- the client cannot know in advance which mode the Mission Issuer will
+  select; and
+- the existing single-use artifacts do not stop a retry from creating
+  twice. DPoP proof `jti` single-use ({{request-binding}}) prevents
+  replay of one captured proof, but a client that loses the response
+  retries with a fresh, valid proof. The interactive path's single-use
+  artifacts prevent only duplicate redemption within one ceremony.
+
+The reservation made at initiation, and the single recorded approval
+outcome of {{interactive-handoff}}, prevent a retry or a repeated
+pushed request from starting a second ceremony ({{creation-recovery}}).
+
+A creation exchange that its adopter explicitly profiles, whether or
+not it mints a Mission, adopts these definitions by reference, under
+its own domain-separating `op` value and its own binding of the
+fingerprint's `source` and other members to what that exchange
+actually creates ({{creation-fingerprint}}):
+
+- the child delegation profile's child-creation exchange carries the
+  same parameter with the same semantics
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}});
+- the continuation profile's async-delegation exchange adopts it for a
+  delegated refresh-token family, which is not a Mission
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}); and
+- the template profile's Dispatch adopts it for a dispatched Mission
+  ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 ## The Operation Fingerprint {#creation-fingerprint}
 
-The operation fingerprint commits what the operation is, so a
-repeated identifier is distinguishable from a reused one. It is
-computed as an issuance-profile integrity anchor
-({{I-D.draft-mcguinness-oauth-mission}}) whose `typ` is
-`mission-creation-fingerprint`, under that profile's
-collision-resistant `typ` convention, and whose committed value is
-the object below: the anchor envelope is canonicalized with JCS
-{{RFC8785}}, hashed with SHA-256, and encoded as `sha-256:` followed
-by the base64url, no-padding, encoding of the digest, exactly as for
-the profile's other anchors. It is an envelope anchor under the
-issuance profile's commitment mechanisms, which this document
-imports normatively. As a JCS commitment-envelope `typ`,
-`mission-creation-fingerprint` names a hash domain, not a
-representation crossing a protocol boundary, and is deliberately not a
-media type ({{I-D.draft-mcguinness-oauth-mission}}, Section "Namespace
-Taxonomy").
+The operation fingerprint commits what the operation is, so the
+Mission Issuer can tell a repeated identifier from a reused one. It is
+an issuance-profile integrity anchor
+({{I-D.draft-mcguinness-oauth-mission}}) with:
+
+- `typ` `mission-creation-fingerprint`, under that profile's
+  collision-resistant `typ` convention; and
+- the fingerprint object below as its committed value.
+
+The anchor envelope is canonicalized with JCS {{RFC8785}}, hashed with
+SHA-256, and encoded as `sha-256:` followed by the base64url,
+no-padding, encoding of the digest, exactly as for the profile's other
+anchors. It is an envelope anchor under the issuance profile's
+commitment mechanisms, which this document imports normatively. As a
+JCS commitment-envelope `typ`, `mission-creation-fingerprint` names a
+hash domain, not a representation crossing a protocol boundary, and is
+not a media type ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Namespace Taxonomy").
 
 The fingerprint object carries exactly these members:
 
@@ -1430,7 +1423,7 @@ The fingerprint object carries exactly these members:
   child delegation profile's; `dispatch` for the template profile's
   Dispatch ({{I-D.draft-mcguinness-oauth-mission-template}}). This
   member domain-separates the operations that share a creation
-  exchange. An adopting profile under the clause above declares its
+  exchange. An adopting profile ({{creation-idempotency}}) declares its
   own value the same way, as the continuation profile's
   async-delegation exchange declares `async-delegation`
   ({{I-D.draft-mcguinness-oauth-mission-continuation}}).
@@ -1510,8 +1503,8 @@ without one does not withstand concurrent retries.
 
 The reservation and the created Mission's identifier MUST be
 committed atomically with Mission creation; credential generation MAY
-follow the commit. This closes the crash window: when the Mission
-commits and the Mission Issuer fails before responding, the retry
+follow the commit. When the Mission commits and the Mission Issuer fails before
+responding, the retry
 finds the committed operation and resumes delivery
 ({{creation-recovery}}), never creating again.
 
@@ -1521,8 +1514,8 @@ resolves by fingerprint:
 - same fingerprint, operation completed: recover it
   ({{creation-recovery}});
 - same fingerprint, operation reserved or pending: return the same
-  continuation, or a retryable in-progress result;
-- different fingerprint: refuse with `invalid_request`. The
+  continuation, or a retryable in-progress result; and
+- different fingerprint: refuse with `invalid_request`, since the
   identifier was reused for a different operation.
 
 ## Recovery Is Delivery {#creation-recovery}
@@ -1576,7 +1569,7 @@ operation.
 
 The idempotency lookup occurs after client authentication and
 possession verification and before the predecessor lifecycle gate
-({{verification-order}}). The order is load-bearing: the retry worth
+({{verification-order}}). The order matters: the retry worth
 recovering is exactly the one whose predecessor was terminated with
 reason `superseded` when the first attempt succeeded
 ({{superseded-state}}), so re-running the predecessor-active gate
@@ -1584,31 +1577,39 @@ first would refuse the very recovery this mechanism exists to serve.
 
 ## Tombstone Retention {#creation-retention}
 
-Retention has two tiers. The full delivery-artifact record MAY be
-retained briefly. The idempotency tombstone, the
-`(client, creation_request_id)` binding with its fingerprint and its
-Mission or continuation reference, MUST survive at least the
-deployment's published retry horizon, and retention to the source or
-created Mission's lifetime, or to the deployment's audit horizon, is
-RECOMMENDED. The retry horizon is a published deployment bound, like
-the deployment's other operational bounds. A client MUST NOT retry a
-creation past the published horizon: reuse of an identifier after
-its tombstone expires is outside the contract and is processed as a
-new operation.
+Retention has two tiers:
+
+- The full delivery-artifact record MAY be retained briefly.
+- The idempotency tombstone, the `(client, creation_request_id)`
+  binding with its fingerprint and its Mission or continuation
+  reference, MUST survive at least the deployment's published retry
+  horizon, and retention to the source or created Mission's lifetime,
+  or to the deployment's audit horizon, is RECOMMENDED.
+
+The retry horizon is a published deployment bound, like the
+deployment's other operational bounds. A client MUST NOT retry a
+creation past the published horizon: reuse of an identifier after its
+tombstone expires is outside the contract and is processed as a new
+operation.
 
 # Expansion Denial Reasons {#denial-reasons}
 
-An adjudication that completes with the Approver declining, or with the
-Mission Issuer refusing on policy grounds, denies the expansion: no
-successor is created and the predecessor remains `active` and
-untouched. Such a denial surfaces per the completion mode
-({{completion-modes}}): as an OAuth error on the token exchange response
-(typically `invalid_request` for a request the Mission Issuer will not
-derive a valid Authority Set from), as the deferred substrate's
-`access_denied` resolution on a deferred poll, or through the
-interactive approval's own decline path. It MAY additionally carry one
-machine-readable reason code from the Mission Denial Reasons registry
-({{iana-denial-reasons}}); this document defines four:
+An adjudication that completes with the Approver declining, or with
+the Mission Issuer refusing on policy grounds, denies the expansion:
+no successor is created, and the predecessor remains `active` and
+untouched. The denial surfaces according to the completion mode
+({{completion-modes}}):
+
+- on the token exchange response, as an OAuth error (typically
+  `invalid_request` for a request the Mission Issuer will not derive a
+  valid Authority Set from);
+- on a deferred poll, as the deferred substrate's `access_denied`
+  resolution; or
+- on the interactive path, through the approval's own decline path.
+
+A denial MAY additionally carry one machine-readable reason code from
+the Mission Denial Reasons registry ({{iana-denial-reasons}}). This
+document defines four:
 
 `out_of_policy`:
 : The Mission Issuer's governance policy refuses the requested
@@ -1632,33 +1633,37 @@ machine-readable reason code from the Mission Denial Reasons registry
   predecessor, so an expansion response is never ambiguously a
   non-successor.
 
-A companion profile registers an extension to this set in the Mission
-Denial Reasons registry ({{iana-denial-reasons}}) rather than defining
-it here (for example, the experimental progressive authorization
-companion registers `out_of_ceiling`,
-{{I-D.draft-mcguinness-oauth-mission-progressive}}, and the
+Companion profiles register further values in the Mission Denial
+Reasons registry ({{iana-denial-reasons}}). For example, the experimental progressive authorization companion
+registers `out_of_ceiling`
+({{I-D.draft-mcguinness-oauth-mission-progressive}}), and the
 experimental template dispatch companion registers
-`out_of_template_ceiling` and `dispatch_prohibited_class`,
-{{I-D.draft-mcguinness-oauth-mission-template}}); a consumer MUST
+`out_of_template_ceiling` and `dispatch_prohibited_class`
+({{I-D.draft-mcguinness-oauth-mission-template}}). A consumer MUST
 treat an unrecognized reason code as a denial with no further
 semantics.
 
 A Mission Issuer MUST NOT use a reason code to disclose policy
-boundaries beyond the adjudicated request ({{policy-probing}});
-omitting the reason code is always permitted, with one exception:
-`nothing_to_expand` MUST be carried on its refusal. It reveals only
-that the requester already holds the requested authority, which the
-requester can observe from its own token, so the policy-probing
-rationale for omission does not apply ({{policy-probing}}); carrying
-it keeps a non-widening refusal distinguishable from a policy denial.
-When present, a reason code is carried in a
-`mission_denial_reason` member: at the token endpoint, on
-the token exchange response and on a deferred token response poll, a
-member of the JSON error response body alongside the OAuth `error`
-member; on the retained interactive path's front-channel authorization
-error response, an error response parameter of the same name.
+boundaries beyond the adjudicated request ({{policy-probing}}).
+Omitting the reason code is always permitted, except on a
+`nothing_to_expand` refusal, which always carries it (see its
+definition above). That code reveals only that the requester already
+holds the requested authority, which the requester can observe from
+its own token, so the policy-probing rationale for omission does not
+apply; carrying it keeps a non-widening refusal distinguishable from a
+policy denial.
 
-`mission_denial_reason` is the shared carrier for adjudication denial
+When present, a reason code is carried in a `mission_denial_reason`
+member:
+
+- at the token endpoint (the token exchange response and a deferred
+  token response poll), as a member of the JSON error response body
+  alongside the OAuth `error` member; and
+- on the interactive path's front-channel authorization error
+  response, as an error response parameter of the same name.
+
+The `mission_denial_reason` member is the shared carrier for
+adjudication denial
 reasons across the profiles that mint a Mission related to an existing
 one: the child delegation profile
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) carries its
@@ -1668,16 +1673,18 @@ specification; the unrecognized-code rule above applies to the member
 wherever it appears.
 
 Two failure classes are not denial reasons and use the issuance
-profile's error vocabulary directly: an expansion request whose
-`predecessor` cross-check does not match the `subject_token`-resolved
-Mission fails with `invalid_grant` ({{request-binding}}), or with
-`invalid_request` where its predecessor is not `active`
-({{predecessor-active}}); an expansion Mission
-Intent the Mission Issuer cannot parse fails with `invalid_request`; one
-it can parse but cannot derive a valid Authority Set from fails with
-`invalid_authorization_details` ({{RFC9396}}) where the client submitted
-a proposal alongside it, or `access_denied` where it did not, exactly
-as for any Mission creation.
+profile's error vocabulary directly:
+
+- a `predecessor` cross-check that does not match the
+  `subject_token`-resolved Mission fails with `invalid_grant`
+  ({{request-binding}}), or with `invalid_request` where the
+  predecessor is not `active` ({{predecessor-active}}); and
+- an expansion Mission Intent the Mission Issuer cannot parse fails
+  with `invalid_request`, and one it can parse but cannot derive a
+  valid Authority Set from fails with `invalid_authorization_details`
+  ({{RFC9396}}) where the client submitted a proposal alongside it, or
+  `access_denied` where it did not, exactly as for any Mission
+  creation.
 
 # Conformance {#conformance}
 
@@ -1704,8 +1711,8 @@ A conforming **expansion-capable Mission Issuer** MUST:
   against the token's own confirmation key, refuse a `predecessor`
   cross-check that does not match the resolved Mission with
   `invalid_grant` and a predecessor that is not `active` with
-  `invalid_request`, and evaluate the request in
-  the verification order of {{verification-order}}
+  `invalid_request`, and evaluate the request in the verification
+  order of {{verification-order}}
   ({{request-binding}}, {{predecessor-active}});
 - require a `creation_request_id` on every expansion exchange,
   refusing a missing one with `invalid_request`, and recover a
@@ -1718,8 +1725,8 @@ A conforming **expansion-capable Mission Issuer** MUST:
 - complete the expansion in one of the modes of {{completion-modes}},
   obtaining new consent for the successor's authority through the
   deferred token response or the interactive handoff
-  ({{adjudication}}, {{interactive-handoff}}) and enforcing the successor-expiry rule
-  ({{successor-expiry}});
+    ({{adjudication}}, {{interactive-handoff}}) and enforcing the
+  successor-expiry rule ({{successor-expiry}});
 - keep the predecessor's `subject` and `authority_source` on the
   successor and verify that source in the activating commit
   ({{successor-source}});
@@ -1727,9 +1734,9 @@ A conforming **expansion-capable Mission Issuer** MUST:
   and Mission record ({{predecessor-member}});
 - activate the successor and transition the predecessor to
   `terminated` with reason `superseded`, its `termination` carrying
-  `successor`, atomically when the successor's authority is issued,
-  leaving the
-  predecessor `active` until then, re-verifying predecessor state at
+    `successor`, atomically when the successor's authority is issued
+  ({{successor-activation}}), leaving the predecessor `active` until
+  then, re-verifying predecessor state at
   completion ({{deferred-window}}), and refuse further derivation under
   a superseded Mission ({{superseded-state}}); and
 - serialize concurrent expansions against the same predecessor with the
