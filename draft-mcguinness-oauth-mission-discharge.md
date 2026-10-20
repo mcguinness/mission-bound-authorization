@@ -594,7 +594,7 @@ selector for the write entry of the worked example ({{example}}):
 {
   "active": true,
   "client_id": "s6BhdRkqt3",
-  "exp": 1790000000,
+  "exp": 1793607540,
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -607,7 +607,7 @@ selector for the write entry of the worked example ({{example}}):
         ] } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_ONfClQ7GEkjX8YRu8n_N3js79ifrskm9",
     "issuer": "https://as.example.com",
     "state": "active",
     "discharge_selectors": [
@@ -1041,15 +1041,22 @@ In the ERP examples in this document, the operation contract identifies
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
 constraints determine the permitted operations within that service.
 
-A Mission for `alice` reconciles Q3 payables. Its Authority Set has two
-entries: a read over the ledger, and a write to post journal entries,
-bounded to under 500 USD and discharged when the Q3 close is finalized:
+A Mission for `alice` reconciles Q3 invoices. Its Authority Set has two
+entries: a read over Q3 invoices, and a write to post journal entries,
+bounded to at most 500 USD and discharged when the Q3 close is
+finalized:
 
 ~~~ json
 [
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
-    "actions": ["invoices.read"] },
+    "actions": ["invoices.read"],
+    "constraints": {
+      "resource_issued_after": "2026-07-01T00:00:00Z",
+      "resource_issued_before": "2026-09-30T23:59:59Z" },
+    "delegation": {
+      "max_depth": 2,
+      "allowed_delegates": [{ "sub_profile": "ai_agent" }] } },
   { "type": "mission_resource_access",
     "resource": "https://erp.example.com",
     "actions": ["journal-entries.write"],
@@ -1083,7 +1090,7 @@ the same target by the condition selector it reads from introspection
 From then on the
 authorization server refuses to derive the write entry: a refresh
 returns a token carrying only the read entry. The Mission stays
-`active`, so the agent can still read the ledger to finish its
+`active`, so the agent can still read the invoices to finish its
 reconciliation report, but it can no longer post journal entries. No
 revoke and no clock was needed; the write authority retired itself
 when the task it was granted for completed.
