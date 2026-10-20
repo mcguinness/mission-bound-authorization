@@ -48006,9 +48006,16 @@
     "normative": "a Mission Status response to an enrolled joining PDP carries mission.subject, mission.client_id, and each disclosed entry with its delegation member"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No standalone MAS service exists in the reference composition; the reference PEP loads the same facts through its MissionView loader. Todo until a MAS Mission Status surface exists (#972)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > discloses subject, client_id and each entry's recorded delegation to a PDP enrolled for the requested enforcement scope",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a service principal its enrolledJoinPdps configuration enrolls for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id."
   },
   {
    "id": "mas.join-disclosure.not-to-others",
@@ -48028,9 +48035,22 @@
     "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "No standalone MAS service exists in the reference composition; the reference PEP loads the same facts through its MissionView loader. Todo until a MAS Mission Status surface exists (#972)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > includes neither member for any other caller: a principal enrolled for nothing, the enrolled PDP for another scope or for no scope, an inherited-name principal",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the response the kernel's default observation signs, byte for byte",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the kernel's default observation. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. Partial: the reference response's envelope sub names the Mission's client_id for every caller, so a caller not enrolled still learns the client the mission object withholds, contrary to Join Disclosure's 'sub still identifies the requesting caller' and Status consumer check 6. Tested once the envelope sub names the requesting caller (#1407)."
   },
   {
    "id": "mas.join-inputs.pep-carries-member",
