@@ -3046,7 +3046,7 @@
    "id": "core.authority-proposal.governed-client-token-request-not-reached",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange for a designation ({{designation}}), needs no `mission_intent` under the second rule",
+   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange for a delegation designation ({{designation}}), needs no `mission_intent` under the second rule",
    "role": "AS",
    "strength": "stated",
    "applicability": {

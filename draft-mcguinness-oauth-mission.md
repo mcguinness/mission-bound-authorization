@@ -1163,11 +1163,12 @@ request ({{discovery}} states the client-side rules and
 
 A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
-for a designation ({{designation}}), needs no `mission_intent` under
-the second rule. It creates no Mission submission, and every other
-check still applies to it: Issuance Gating ({{issuance-gating}}), the
-subset rule ({{subset}}), the first rule above, and the grant's
-binding to its Mission, client and sender.
+for a delegation designation ({{designation}}), needs no
+`mission_intent` under the second rule. This exception opens no
+Mission submission carriage, and every other check still applies to
+the request: Issuance Gating ({{issuance-gating}}), the subset rule
+({{subset}}), the first rule above, and the grant's binding to its
+Mission, client and sender.
 
 The following is an example of an authority proposal submitted alongside
 the example Intent of {{mission-intent}}. Derivation narrows
