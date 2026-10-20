@@ -232,8 +232,8 @@ const isText = (v: unknown): v is string => typeof v === "string" && v.length > 
  * `policy_id`, `version` and `approved_at` (RFC 3339), and an `approved_by`
  * that, where present, equals the assertion's `principal` (corroborated
  * provenance, never the asserting party's word). service: `logic_id` and
- * `logic_version`, with `model_id` and `model_version` together where a model
- * produced the decision. A record carrying any other shape does not commit.
+ * `logic_version`, with `model_version` wherever `model_id` (a model produced
+ * the decision). A record carrying any other shape does not commit.
  */
 export function assertAssertionAuthority(a: AgrAssertion): void {
   const fail = (why: string): never => {
@@ -259,9 +259,10 @@ export function assertAssertionAuthority(a: AgrAssertion): void {
     }
     case "service":
       if (!isText(m.logic_id) || !isText(m.logic_version)) fail("logic_id and logic_version are required strings");
-      if ((m.model_id !== undefined || m.model_version !== undefined) && !(isText(m.model_id) && isText(m.model_version))) {
+      if (m.model_id !== undefined && !(isText(m.model_id) && isText(m.model_version))) {
         fail("model_id and model_version are required together");
       }
+      if (m.model_version !== undefined && !isText(m.model_version)) fail("model_version is not a string");
       break;
     default:
       fail(`kind ${String((a as { kind: unknown }).kind)} is not human, policy or service`);

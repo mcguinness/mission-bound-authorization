@@ -160,11 +160,13 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
       /signature does not verify/,
     );
     const { cty: _c, ...noCty } = header;
+    const { typ: _t, ...noTyp } = header;
     for (const wrong of [
       { ...header, typ: "JWT" },
       { ...header, cty: "application/json" },
       { alg: "ES256", kid: "as-status" },
       noCty,
+      noTyp,
       { ...header, typ: "" },
       { ...header, cty: "mission-approval-governance+json; charset=utf-8" },
       { ...header, typ: "application/mission-approval-governance+jwt" },

@@ -427,9 +427,10 @@ Each element of `assertions` is an object with these members:
 
   - For a `human` assertion, the authenticated human who decided.
   - For a `policy` assertion, the human who approved the exact policy
-    version its `authority` names, as the issuer's retained,
-    authenticated governance state records. The policy is the decision
-    mechanism, never the principal.
+    version its `authority` names (where a consented root commits a
+    separate evaluator that decides, the human who approved that root),
+    as the issuer's retained, authenticated governance state records.
+    The policy is the decision mechanism, never the principal.
   - For a `service` assertion, the service that produced the decision.
 
 `kind`:
@@ -614,6 +615,9 @@ In this example:
   alongside the accountable assertion rather than in place of it.
   Because a second principal and a non-human assertion contribute, the
   second and third recording triggers hold ({{triggers}}).
+- The `envelope` member's `value` is the JWS whose payload is the JCS
+  canonical bytes of this object with `envelope` itself removed
+  ({{envelope}}).
 
 # Assertion Requirements {#assertion-requirements}
 
@@ -905,7 +909,7 @@ value in {{record-example}}:
 {
   "alg": "ES256",
   "kid": "as-key-2",
-    "typ": "mission-approval-governance+jws",
+  "typ": "mission-approval-governance+jws",
   "cty": "mission-approval-governance+json"
 }
 ~~~
@@ -1433,9 +1437,9 @@ A Recording Issuer MUST:
   assertion ({{assertion-validation}});
 - record denials ({{assertion-validation}});
 - satisfy the accountable-approver rule for the Mission's approval
-  basis: one matching `human` assertion under `direct`, one matching
-  `policy` assertion under `governed_policy`, and the authenticated
-  `approval_basis` under any other standing-consent basis
+  basis: exactly one matching `human` assertion under `direct`, exactly
+  one matching `policy` assertion under `governed_policy`, and the
+  authenticated `approval_basis` under any other standing-consent basis
   ({{accountable-assertion}});
 - evaluate under the retained policy version ({{atomic-commitment}});
 - enforce the strictest applicable policy-approval maximum age across
@@ -1916,7 +1920,10 @@ same rule as vector 5.
   a record. The accountable-approver rule is stated per approval basis:
   one `human` approval under `direct`, one `policy` approval naming the
   deciding policy under `governed_policy`, and the authenticated
-  `approval_basis` under any other standing-consent basis. Assertion
+  `approval_basis` under any other standing-consent basis. Only
+  assertions of the basis's kind (under `governed_policy`, only those
+  naming the deciding policy) count toward "exactly one"; other
+  assertions in the consent principal's name contribute. Assertion
   Authority types `authority` for each assertion kind, and a `policy`
   assertion's principal is the human who approved the policy version.
   The JWS `typ` and `cty` are emitted with `application/` omitted and
