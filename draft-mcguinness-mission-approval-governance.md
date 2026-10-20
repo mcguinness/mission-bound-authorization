@@ -188,8 +188,8 @@ The record has two phases:
 This document is optional. A deployment that records nothing beyond the
 Mission Record's accountable `approval_basis.consent_principal` is fully
 conformant to its Mission binding and unaffected by this document. A
-profile can require the record under the Recording Triggers
-({{triggers}}).
+profile can require the record; {{triggers}} defines the conditions
+under which one does.
 
 The record is independent of the approval ceremony. It applies alike to
 synchronous approval, to deferred approval
@@ -256,11 +256,11 @@ Recording trigger:
 
 Recording Issuer:
 : A Mission Issuer that records Approval Governance Records
-  ({{conformance}}). This document also calls it "the issuer".
+  ({{conformance}}).
 
 Relying Auditor:
-: A party that verifies a retained record and re-checks its evaluation
-  ({{conformance}}).
+: A party that verifies a retained record and can re-check its
+  evaluation ({{conformance}}).
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
@@ -544,8 +544,8 @@ In this example:
 
 # Assertion Requirements {#assertion-requirements}
 
-These rules apply before commitment, while the record is part of the
-approval decision ({{atomic-commitment}}).
+These rules govern the assertions the issuer evaluates
+({{atomic-commitment}}).
 
 ## Assertion Validation {#assertion-validation}
 
@@ -608,14 +608,14 @@ Where a deployment records the Approval Governance Record for an
 approval, the record and the Mission are one commit. Within that commit,
 the issuer:
 
-1. validates the assertions ({{assertion-requirements}});
-2. evaluates them under the referenced policy version;
-3. where the record carries `approval_context_commitment`
-   ({{record-members}}), computes it from the Mission Record being
-   created;
-4. signs the evaluated record ({{envelope}}); and
-5. persists the signed record in the same commit as the Mission's
-   creation.
+- validates the assertions ({{assertion-requirements}});
+- evaluates them under the referenced policy version;
+- where the record carries `approval_context_commitment`
+  ({{record-members}}), computes it from the Mission Record being
+  created;
+- signs the evaluated record ({{envelope}}); and
+- persists the signed record in the same commit as the Mission's
+  creation.
 
 Signing follows evaluation and precedes persistence, never the reverse,
 and `approval_context_commitment` is computed before signing. A value of
@@ -1091,9 +1091,9 @@ In this example:
   class, a 60-second clock-skew allowance, and an exception that admits
   a `policy` accountable assertion for irreversible actions, with a
   maximum age of 7 days ({{recency-declarations}}). The issuer
-  classifies `journal-entries.write` as an irreversible action, so the
-  exception applies and the strictest applicable maximum is 7 days
-  ({{recency-evaluation}}).
+  classifies `journal-entries.write` as an irreversible action and finds
+  no other high-risk class, so the exception applies and the strictest
+  applicable maximum is 7 days ({{recency-evaluation}}).
 - At `evaluated_at`, `ast_1` is 2 days and 16 hours old, and
   `approved_at` <= `decided_at` <= `evaluated_at` holds, so the issuer
   counts it. Without the exception, the accountable assertion would have
@@ -1156,8 +1156,8 @@ Where a deferred approval revises under Mission Approval Revision
 deployment records consent evidence, each `revision_required` outcome
 produces a `narrowed` consent-evidence decision with no corresponding
 record: no Mission yet exists for the atomic commitment rule
-({{atomic-commitment}}) to attach to. The two artifacts hold different
-facts, so they do not conflict:
+({{atomic-commitment}}) to attach to. This is a deliberate artifact
+separation, not an authority conflict:
 
 - where consent evidence is recorded, it owns the narrowing history,
   through its `narrowed` entries and `predecessor_intent_hashes`; and
@@ -1334,14 +1334,14 @@ and evidence metadata, never authority.
 
 # Conformance {#conformance}
 
-This document has two conformance targets. A Recording Issuer MUST:
+A Recording Issuer MUST:
 
 - authenticate, event-bind, and policy-authorize every contributing
   assertion ({{assertion-validation}});
 - record denials ({{assertion-validation}});
 - include the accountable-approver assertion
   ({{accountable-assertion}});
-- evaluate under the retained policy version ({{approval-policy}});
+- evaluate under the retained policy version ({{atomic-commitment}});
 - enforce the strictest applicable policy-approval maximum age across
   the consequence classes the committed Mission's derived Authority
   Set and Mission Intent carry, from a committed ceiling
@@ -1375,7 +1375,7 @@ considerations are specific to the Approval Governance Record.
 
 A forged or padded assertion is an authorization attack before
 commitment, not an audit defect: the assertion requirements of
-{{assertion-validation}} are the control, and a deployment that
+{{assertion-requirements}} are the control, and a deployment that
 records assertions without authenticating them has built an approval
 bypass rather than an evidence trail.
 
@@ -1816,11 +1816,12 @@ same rule as vector 5.
   Policy-Approval Recency are split into subsections; Boundaries is
   folded into the sections it qualified; Conformance precedes Security
   Considerations; and the Approval Context Commitment test vectors are
-  an appendix. Conventions defines the accountable assertion, the record
-  digest, the Recording Issuer and the Relying Auditor. New examples
-  show one approval per recording trigger, the decoded JWS protected
-  header, a `governed_policy` activation with its recency computation,
-  and the matching Consent Evidence members.
+  an appendix. Security and Privacy Considerations open with a pointer
+  to the issuance profile's. Conventions defines the accountable
+  assertion, the record digest, the Recording Issuer and the Relying
+  Auditor. New examples show one approval per recording trigger, the
+  decoded JWS protected header, a `governed_policy` activation with its
+  recency computation, and the matching Consent Evidence members.
 
 - Recording Triggers states that a Mission whose Approver differs
   from its Subject holds the first trigger, so the Enterprise Mission
