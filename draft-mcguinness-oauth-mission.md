@@ -2970,12 +2970,13 @@ This document reuses standard OAuth errors and challenges, selected
 by parameter ownership and processing stage. The following tables are
 the normative statement of the base OAuth error for each failure they
 list. A rule elsewhere in this document that names one of these
-codes ({{intent-members}}, {{submission-via-par}}, {{authority-proposal}},
-{{intent-submission-evidence}}, {{authorization-derivation}},
-{{approval-authentication}}, {{grant-binding-resolution}},
-{{issuance-gating}}, {{scope-projection}}, {{rs-enforcement}},
-{{delegation}}, {{designation}}, {{self-exchange}},
-{{delegation-constraints}}) applies this mapping.
+codes ({{intent-members}}, {{submission-via-par}},
+{{authority-proposal}}, {{intent-submission-evidence}},
+{{authorization-derivation}}, {{approval-authentication}},
+{{grant-binding-resolution}}, {{issuance-gating}},
+{{scope-projection}}, {{rs-enforcement}}, {{delegation}},
+{{designation}}, {{self-exchange}}, {{delegation-constraints}})
+applies this mapping.
 
 An AS that performs an applicable check early, at PAR, responds with
 the same error class the check would yield at the authorization or
@@ -2986,10 +2987,10 @@ change which row applies.
 The tables are grouped by surface. The first table holds each
 failure that is not confined to the surface of one of the other three
 tables (PAR and the authorization endpoint, Token Exchange, or a
-protected resource); each failure appears once. Token Exchange is a token-endpoint
-operation: a row of the first table that names the token endpoint or
-a token request covers an exchange, alongside the exchange rows of the
-third table.
+protected resource); each failure appears once. Token Exchange is a
+token-endpoint operation: a row of the first table that names the
+token endpoint or a token request covers an exchange, alongside the
+exchange rows of the third table.
 
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
