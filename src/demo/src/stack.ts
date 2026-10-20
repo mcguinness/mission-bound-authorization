@@ -20,6 +20,7 @@ import {
   type DeferralStore,
   type DischargeAuthorityPolicy,
   issueCrossDomainGrant,
+  resolveDestinationClientId,
   type IssuerEvidenceStore,
   MissionKernel,
   missionResourceAccessProfile,
@@ -774,11 +775,18 @@ export async function composeStack(opts: {
       rasIssuer: RAS_ISS,
       saasResource,
       protectedEventSources: as.protectedEventSources,
+      // @spec cross-domain#cross-domain-grant (#1166, D510): the grant names
+      // the requesting client's registration at the target Resource AS,
+      // resolved from the destination-scoped mapping (config/topology.json
+      // crossDomainClients); a missing or ambiguous mapping throws
+      // DestinationClientUnresolvedError (invalid_target) and never falls back
+      // to the agent's client_id here. The reference has no HTTP surface for
+      // this base exchange; the demo calls it directly.
       issueCrossDomainGrant: (missionId, cnfJkt) =>
         issueCrossDomainGrant(kernel, xdKeys.privateKey, crossDomainKey.kid, {
           missionId,
           targetAs: RAS_ISS,
-          clientId: "ap-agent",
+          clientId: resolveDestinationClientId(TOPOLOGY.crossDomainClients, "ap-agent", RAS_ISS),
           cnfJkt,
           resourceToAs,
         }),

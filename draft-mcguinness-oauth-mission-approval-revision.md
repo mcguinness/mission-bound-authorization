@@ -545,8 +545,12 @@ Where the deployment records Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), this
 revision-required outcome is recorded with `decision` `narrowed`,
 carrying the reviewed disclosure's `consent_rendering_hash` and the
-refused dimensions; the anchor values are those of that profile's
-worked disclosure and test vector:
+refused dimensions. The reviewed disclosure is that profile's worked
+disclosure and test vector with its own `disclosure_id` (`disc_7nR3w`)
+and `rendered_at` (`2026-06-30T18:01:30Z`) and, because this request
+pushed no proposal, without `source_hashes.proposal_hash` or the read
+element's `narrowed_from`; its `consent_rendering_hash` is computed
+over that object as that profile computes it:
 
 ~~~ json
 {
@@ -554,13 +558,16 @@ worked disclosure and test vector:
   "mission": {
     "issuer": "https://as.example.com",
     "intent_hash":
-      "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "authority_hash":
-      "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "approver": {
     "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR"
+  },
+  "client": {
+    "client_id": "s6BhdRkqt3"
   },
   "narrowed_at": "2026-06-30T18:02:00Z",
   "decision": "narrowed",
@@ -574,9 +581,9 @@ worked disclosure and test vector:
   "approval_policy_version": "approval-policy:v12",
   "sequence": 91427,
   "disclosure": {
-    "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
+    "uri": "https://as.example.com/consent-evidence/disc_7nR3w",
     "consent_rendering_hash":
-      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
+      "sha-256:zfzbAIawIpHyTut1FbyCQLqR0s_jbr-l7rbAUIje5L8"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -623,8 +630,15 @@ Cache-Control: no-store
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
-      "constraints": { "period": "2026-Q3" } } ],
-  "mission_id": "msn_5Jt9wX4kP7rN2vQ8yL3sD6zB0mF1hG-",
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } } ],
+  "mission_id": "msn_BZ0X6ddT5JmWo5krirQjkgYXUq_T4loG",
   "mission_expires_at": "2026-12-31T23:59:59Z" }
 ~~~
 

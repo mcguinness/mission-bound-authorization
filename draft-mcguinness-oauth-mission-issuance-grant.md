@@ -386,15 +386,19 @@ Claims:
   key has the `jkt` thumbprint, or a client certificate on the TLS
   connection whose SHA-256 thumbprint matches the `x5t#S256` value.
 
-In the examples in this document, the invoice API's operation contract
-identifies the collection `https://api.example.com/invoices` as the
-operation target for invoice reads
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The entries
+In the examples in this document, the ERP's operation contract
+identifies the service's own identifier, `https://erp.example.com`,
+as the operation target
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}); actions and
+constraints determine the permitted operations within it. The entries
 carry no `resource_match`, so they are `exact` and cover only
-operations whose target is that collection.
+operations whose target is that identifier.
 
-The following is an example of a decoded grant payload; the
-`authority_hash` value is illustrative:
+The following is an example of a decoded grant payload for the
+Mission of the Mission Authority Server's examples
+({{I-D.draft-mcguinness-mission-authority-server}}), whose
+`authority_hash` it carries; its entry is a subset of that
+Mission's invoice-read entry:
 
 ~~~ json
 {
@@ -409,16 +413,17 @@ The following is an example of a decoded grant payload; the
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:R6tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQo",
+      "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs",
     "expires_at": "2026-12-31T23:59:59Z"
   },
   "authorization_details": [
     {
       "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"],
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
       "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
   ]
@@ -490,10 +495,11 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
   "authorization_details": [
     {
       "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"],
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
       "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
   ]
@@ -731,10 +737,11 @@ Cache-Control: no-store
   "authorization_details": [
     {
       "type": "mission_resource_access",
-      "resource": "https://api.example.com/invoices",
-      "actions": ["read"],
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
       "constraints": {
-        "resource_issued_after": "2026-07-01T00:00:00Z"
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
       }
     }
   ],

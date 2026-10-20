@@ -155,6 +155,19 @@
       "note": "draft-mcguinness-mission-authority-server cites MCP-META (Model Context Protocol: Base Protocol) as a normative reference for the MCP Carriage section's `_meta` namespacing rule; this entry refreshes the family's pin from the retired 2025-11-25 legacy-handshake track (issue #533, split from #290) to the 2026-07-28 release, the same tag and commit as the MCP entry above (5f5440bb26a62e2cf3440b92da5a667efa03b267), a different file within it. Located at docs/specification/2026-07-28/basic/index.mdx (confirmed via the repository contents API: blob sha dfe11ecc1443b7dec051b1b1b9a93982b735c647, size 25134 bytes, matching the fetched raw file this sha256 is computed over). The citing draft's own front-matter target and date were bumped from 2025-11-25 to 2026-07-28 in the same change that established this entry. Adoption review disclosure: the section's load-bearing claim is that `com.karlmcguinness.mission/reference` is a reverse-DNS-prefixed key outside MCP's own reserved `_meta` namespace. The 2026-07-28 revision states this rule more precisely than before (a prefix is MCP-reserved only when its second label is `modelcontextprotocol` or `mcp`), and the family's key's second label (`karlmcguinness`) is not reserved under that rule, so the claim holds, now on more explicit textual footing. The statelessness delta (SEP-2575) adds required per-request `_meta` fields but does not touch the reserved-prefix rule this section relies on, and it reinforces the section's own per-request, never-session-state, carriage rule. The section separately reads 'absent negotiated or configured propagation support the call MUST be refused': the removed initialize/notifications/initialized handshake was one way capability negotiation used to happen, but the sentence never named that mechanism, and per-request `io.modelcontextprotocol/clientCapabilities`, the `extensions` field, and `server/discover` are all still 'negotiated ... support' under the ordinary meaning of the word; this was a deliberate read, not an oversight, and the sentence is left as written. No prose changed beyond the pin refresh.",
       "reference_keys": ["MCP-META"],
       "pin_id": "MCP-META@ce6b16e0b225"
+    },
+    {
+      "id": "ID-JAG",
+      "kind": "datatracker",
+      "doc": "draft-ietf-oauth-identity-assertion-authz-grant",
+      "rev": "04",
+      "url": "https://www.ietf.org/archive/id/draft-ietf-oauth-identity-assertion-authz-grant-04.txt",
+      "sha256": "a59c1dffc0b5e59d1bd541276c6948eb9191f3b83685be5810a32e63effb4653",
+      "ref": "IETF Internet-Draft, rev 04 (2026-05-21)",
+      "status": "established",
+      "note": "Pinned for #1166 (D510): Cross-Domain's grant client_id follows Sections 3.1 (client_id is the client at the Resource Authorization Server), 4.4.1 (the Resource AS checks it against the authenticated client, invalid_grant on mismatch) and 5 (the issuer maintains the client-to-Resource-AS mapping). Digest is of the published .txt.",
+      "reference_keys": ["I-D.draft-ietf-oauth-identity-assertion-authz-grant"],
+      "pin_id": "ID-JAG@a59c1dffc0b5"
     }
   ],
   "archive": [

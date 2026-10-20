@@ -67,6 +67,7 @@ informative:
   RFC9493:
   RFC9635:
   RFC8628:
+  RFC8792:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -382,6 +383,16 @@ OAuth does not define a task record that links approval of a task to
 every grant obtained for it. Without that linkage, withdrawing task
 approval need not stop issuance under those grants.
 
+No existing OAuth object fills that role ({{why-a-new-object}}); an
+`authorization_details` entry ({{RFC9396}}), for example, expresses
+authority but not the task it serves or a lifecycle of its own. A
+Mission, held by the AS beside the grant, does. It commits the
+disclosed task with its approved authority and has an identifier and
+a lifecycle independent of any grant. It can be revoked by that
+identifier through an authenticated means, independent of possession
+of any token ({{revocation}}), and a token derived from it by Token
+Exchange identifies the same Mission ({{grant-binding}}).
+
 A Mission is created and used in a single chain:
 
 1. **Submit.** The client submits a structured **Mission Intent**
@@ -391,38 +402,56 @@ A Mission is created and used in a single chain:
 2. **Derive authority.** The AS derives **authorization details**
    ({{RFC9396}}), the **Authority Set**: the concrete authority the
    task needs.
-3. **Approve.** At an **approval event**, the Approver consents to
-   that authority. The AS commits the task as **`intent_hash`** and
-   the authority as **`authority_hash`**, and records a durable
-   **Mission**.
+3. **Approve.** At an **approval event**, the approval rendering
+   shows the Intent's task, and the Approver consents to the derived
+   Authority Set itself, not to the task description alone
+   ({{approval-event}}). The AS commits the Mission Intent as
+   **`intent_hash`** and the approved Authority Set as
+   **`authority_hash`** ({{integrity-anchors}}). It records a durable
+   **Mission** whose record associates the disclosed task, the
+   approved authority, and the approval basis ({{mission-record}}).
 4. **Bind the grant.** The AS binds the OAuth grant the approval
-   produces to that Mission, server-side: every later derivation from
-   that grant lineage resolves to exactly this Mission, and the client
-   never selects or reassigns it ({{grant-binding}}).
-5. **Issue and enforce.** Every access token the agent obtains under
-   the Mission carries the derived authorization details and a
-   **`mission` claim** identifying that Mission (`id`, `issuer`). A
-   resource server enforces statelessly from the token.
+   produces to that Mission, server-side ({{grant-binding}}). Each
+   later issuance operation from that grant lineage, such as a
+   refresh, is a derivation ({{issuance-gating}}) and resolves to
+   exactly this Mission; the client never selects or reassigns it.
+   Under a profile, the AS can bind a further lineage to the same
+   Mission, such as a refresh-token family a continuation transport
+   establishes; each lineage resolves to exactly one Mission.
+5. **Issue and enforce.** Every derived authority is no broader than
+   the approved Authority Set ({{subset}}). Every access token the
+   agent obtains under the Mission carries the derived authorization
+   details and a **`mission` claim** identifying that Mission (`id`,
+   `issuer`). A resource server enforces statelessly from the token.
 6. **Stop issuance.** Token issuance and refresh are **gated on
-   Mission state**, so revoking or expiring the Mission stops the
-   agent from obtaining further authority.
+   Mission state**: a Mission that is not `active` yields no further
+   derivation ({{issuance-gating}}), including from any grant lineage
+   bound to it ({{grant-binding-state}}). Revoking or expiring the
+   Mission therefore stops the agent from obtaining further
+   authority.
 
-A user thus approves a task once, and that approval, not a
-per-request scope grant, bounds and outlives every token the agent
-derives. The Mission Record commits the consented authority once,
-as `authority_hash`, and a party holding the full Authority Set can
-verify it independently ({{consent-binding}}).
-Mission Approved-Set Verification
+Steps 3 to 6 state the properties this document provides;
+{{conformance}} states the requirements that realize them.
+
+A user thus approves the authority for a task once, and that
+approval, not a per-request scope grant, bounds and outlives every
+token the agent derives. The Mission Record commits the consented
+authority once, as `authority_hash`; a party holding the complete
+Authority Set can recompute the commitment and compare the result
+with `authority_hash` ({{consent-binding}}). Mission Approved-Set
+Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
-defines that check for a token that carries only a narrowed subset.
+defines how a token that carries only a narrowed subset is checked
+against the complete set.
 
 This chain is the first of two enforcement layers, and a deployment
 can run it alone: a resource server need not be Mission-aware unless
-it receives delegated tokens ({{rs-enforcement}}). The chain provides
-task-bound issuance, auditability, and a revocation gate over future
-derivation. Every token carries a subset of the approved Authority
-Set ({{subset}}) that no resource server over-grants on
-({{scope-projection}}).
+it receives delegated tokens ({{rs-enforcement}}). A Mission-unaware
+resource server that authorizes only from `scope` operates within the
+Mission only where the AS establishes that its scope projection and
+the resource's independent controls cannot over-grant
+({{scope-projection}}). The chain provides task-bound issuance,
+auditability, and a revocation gate over future derivation.
 
 The chain does not evaluate individual actions, so token lifetime
 and narrow authority bound the exposure between issuance and use.
@@ -431,26 +460,6 @@ The second layer, a separately specified runtime layer
 classes whose consequence needs one.
 
 ## Implementation Map {#implementation-map}
-
-This document establishes six properties; {{conformance}} states the
-requirements that realize them:
-
-1. The task is disclosed: the approval rendering shows the Intent's
-   task, and the AS commits the Intent as `intent_hash`
-   ({{approval-event}}, {{integrity-anchors}}).
-2. The authority is explicitly approved: the Approver consents to the
-   derived Authority Set itself, not to the task description alone
-   ({{approval-event}}).
-3. The Mission Record durably associates the disclosed task, the
-   approved authority, and the approval basis; separate commitments
-   protect the recorded Intent and Authority Set ({{mission-record}},
-   {{integrity-anchors}}).
-4. The OAuth grant lineage is bound to exactly one Mission,
-   server-side ({{grant-binding}}).
-5. Every derived authority is no broader than the approved Authority
-   Set ({{subset}}).
-6. A Mission that is not `active` yields no further derivation
-   ({{issuance-gating}}).
 
 The starting path is one client, one authorization server, direct
 approval, and a single resource audience, with no runtime profile,
@@ -462,13 +471,9 @@ times. The following table lists where each implementer reads next.
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
 | Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
-
-On this starting path, a scope-only resource is eligible only when the
-AS establishes that its scope projection and the resource's
-independent controls cannot over-grant ({{scope-projection}}).
 
 Some duties apply only when their condition holds:
 
@@ -519,21 +524,11 @@ is a task whose purpose, authority, and bounds the Approver can
 evaluate together ({{approval-comprehension}}).
 
 Optional companions can reduce repeated approvals through standing
-consent ({{standing-consent-bases}}), for example:
-
-- Mission Template ({{I-D.draft-mcguinness-oauth-mission-template}})
-  creates bounded instances of recurring tasks.
-- Progressive Authorization
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}) permits
-  successor Missions within a previously approved authority ceiling
-  as a task evolves.
-- Mission Approval Governance
-  ({{I-D.draft-mcguinness-mission-approval-governance}}) lets a
-  policy version a human approved decide an agent's own proposals.
-
-The template, ceiling, or policy still needs a meaningful human
-approval, and no such mechanism removes its profile's human-approval
-requirement for high-consequence authority.
+consent ({{standing-consent-bases}}): for example, a template, an
+authority ceiling, or a policy that a human approved once governs
+later Missions. The template, ceiling, or policy still needs a
+meaningful human approval, and no such mechanism removes its
+profile's human-approval requirement for high-consequence authority.
 
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
@@ -628,8 +623,11 @@ All times are UTC on the same day.
    ({{mission-response-parameters}}). The access token's five-minute
    lifetime is distinct from the Mission's one-hour lifetime
    ({{mission-bound-tokens}}).
-4. **Use.** The ERP, a Mission-aware Resource Server, validates the
-   token and proof of possession and permits the authorized read; the
+4. **Use.** The ERP is a Mission-aware Resource Server: it enforces
+   the `mission_resource_access` entry itself, work a plain
+   {{RFC9068}} resource server does not do ({{conformance}}). It
+   validates the token and proof of possession and permits the
+   authorized read; the
    token grants no write authority. The resource request involves no
    Mission-state lookup or complete-set retrieval ({{rs-enforcement}}).
 5. **Stop further issuance.** At 12:02 an authorized revocation makes
@@ -648,7 +646,9 @@ token on its next request after revocation, through the composite
 {::boilerplate bcp14-tagged}
 
 All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 Agent (Client):
 : The OAuth client acting for the Mission's Subject, identified by
@@ -934,12 +934,15 @@ those a companion profile the AS implements defines
 The following is an example of a Mission Intent:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "goal": "Reconcile Q3 invoices and post adjustments of at most \
+    USD 500 per journal entry.",
   "target_resources": ["https://erp.example.com"],
   "task_bounds": [
     "Read only invoices issued in 2026-Q3.",
-    "Post journal entries under $500."
+    "Post journal entries of at most USD 500 each."
   ],
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z"
@@ -1052,9 +1055,12 @@ compact Intent and one evidence entry of an illustrative,
 deployment-defined type:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
@@ -2645,8 +2651,8 @@ The following is an example of a decoded Mission-bound token payload:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606405,
+  "exp": 1793606705,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -3162,7 +3168,7 @@ projection omits them.
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
   "aud": "https://erp.example.com",
-  "exp": 1797840300,
+  "exp": 1793606705,
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -3186,16 +3192,17 @@ projection omits them.
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "proposal_hash":
-      "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
     "state": "active"
   }
 }
 ~~~
 
-The following is an example of the response for the same token after
-the Mission is revoked ({{composite-active}}):
+The following is an example of the response, after the Mission is
+revoked, for an unexpired token the AS issued on refresh before the
+revocation ({{composite-active}}):
 
 ~~~ json
 {
@@ -3204,11 +3211,11 @@ the Mission is revoked ({{composite-active}}):
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
-      "terminated_at": "2026-11-02T08:30:00Z"
+      "terminated_at": "2026-11-02T08:53:20Z"
     }
   }
 }
@@ -3529,8 +3536,8 @@ access token:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "tool-runner-7",
-  "iat": 1797840600,
-  "exp": 1797840900,
+  "iat": 1793607005,
+  "exp": 1793607305,
   "jti": "at_3qX5bN7sR1tY8mZ9Kp2v",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -3862,13 +3869,20 @@ with no fresh human approval per instance; each instance is still
 created at its own approval event ({{approval-event}}). The following
 `type` values are such bases:
 
-- `template` ({{I-D.draft-mcguinness-oauth-mission-template}})
+- `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
+  bounded instances of a recurring task;
 - `policy_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): Child
+  Missions that a parent agent requests and a policy adjudicates with
+  no human interaction, rooted in the Parent Mission's accountable
+  human;
 - `ceiling_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}})
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}): successor
+  Missions within a previously approved authority ceiling as a task
+  evolves; and
 - `governed_policy`
-  ({{I-D.draft-mcguinness-mission-approval-governance}})
+  ({{I-D.draft-mcguinness-mission-approval-governance}}): an agent's
+  own proposals, decided by a policy version that a human approved.
 
 For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
@@ -3973,12 +3987,21 @@ surface that references a Mission from outside carries it as
 The following is an example of a Mission Record:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "issuer": "https://as.example.com",
   "state": "active",
-  "intent": { "goal": "Reconcile Q3 invoices ...",
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 500 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z" },
   "proposed_authority": [
     { "type": "mission_resource_access",
@@ -4019,11 +4042,11 @@ The following is an example of a Mission Record:
       } }
   ],
   "authority_hash":
-    "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+    "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
   "intent_hash":
-    "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+    "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
   "proposal_hash":
-    "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+    "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
   "subject": { "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR" },
   "approval_basis": {
@@ -4035,13 +4058,13 @@ The following is an example of a Mission Record:
       "sub": "user_3p2q8mN1a0kV7tR" },
     "adjudication": { "kind": "human" },
     "root_commitment":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
   },
   "authority_source": { "type": "user_delegated" },
   "client_id": "s6BhdRkqt3",
   "policy_version": "deploy-policy:v17",
   "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
-  "created_at": "2026-10-15T14:32:11Z",
+  "created_at": "2026-11-02T08:00:00Z",
   "expires_at": "2026-12-31T23:59:59Z"
 }
 ~~~
@@ -4071,11 +4094,11 @@ is the workload principal, `client_id` is the agent, and
 }
 ~~~
 
-The hash values above are illustrative: the test vectors
-({{test-vectors}}) compute anchors over a reduced Mission Intent and
-Authority Set, not over these objects. A companion that extends this
-example either reproduces the recorded objects byte-exactly or states
-that its example diverges and its anchors differ.
+The first example's anchors are computed over its displayed `intent`,
+`proposed_authority` and `authority_set` ({{integrity-anchors}}); the
+excerpt's `root_commitment` is illustrative. A companion that extends
+this example either reproduces the recorded objects byte-exactly or
+states that its example diverges and its anchors differ.
 
 # Integrity and Commitments {#integrity-and-commitments}
 
@@ -5473,11 +5496,13 @@ member's registration in its own IANA considerations.
 # End-to-End Example {#e2e-example}
 
 This appendix follows one Mission in a single trust domain through
-Mission creation, token issuance, and resource server enforcement.
-It is illustrative and adds no requirements. The OAuth steps follow
+Mission creation, token issuance, resource server enforcement, a
+refusal, and revocation. It is illustrative and adds no requirements.
+The OAuth steps follow
 this document; the identity setup follows
-{{I-D.draft-ietf-wimse-aims}}. Identifiers and hash values are
-illustrative, not computed from the displayed JSON.
+{{I-D.draft-ietf-wimse-aims}}. Identifiers are illustrative; the hash
+values are computed over the displayed objects
+({{integrity-anchors}}).
 
 The example uses the baseline issuance path: stateless enforcement
 bounded only by token lifetime. Stage 3 notes where the optional
@@ -5505,13 +5530,16 @@ through PAR ({{submission-via-par}}), carrying the Mission Intent and
 no evidence:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
     "task_bounds": [
       "Read only invoices issued in 2026-Q3.",
-      "Post journal entries under $500."
+      "Post journal entries of at most USD 500 each."
     ],
     "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
@@ -5544,6 +5572,46 @@ In the same push, the agent proposes concrete authority on the
 ]
 ~~~
 
+Both are parameters of one pushed authorization request
+({{RFC9126}}), with PKCE ({{RFC7636}}); client authentication is
+omitted, and extra line breaks are for display purposes only:
+
+~~~
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+response_type=code
+&client_id=s6BhdRkqt3
+&redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+&code_challenge_method=S256
+&mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Reconcile...
+&authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
+~~~
+
+The AS returns a `request_uri`:
+
+~~~
+HTTP/1.1 201 Created
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "request_uri": "urn:ietf:params:oauth:request_uri:6esc_11ACC5bwc",
+  "expires_in": 60
+}
+~~~
+
+and the agent sends `alice`'s user agent to the authorization
+endpoint with it:
+
+~~~
+GET /authorize?client_id=s6BhdRkqt3&request_uri=urn%3Aietf%3Aparams
+  %3Aoauth%3Arequest_uri%3A6esc_11ACC5bwc HTTP/1.1
+Host: as.example.com
+~~~
+
 The AS (`as.example.com`) validates both, derives this Authority Set
 (each entry a same-type subset of a proposed entry,
 {{authority-proposal}}), and renders it for `alice`'s consent:
@@ -5570,24 +5638,39 @@ The AS (`as.example.com`) validates both, derives this Authority Set
 ]
 ~~~
 
-After approval, the AS records Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
+`alice` approves at 08:00:00 UTC on 2026-11-02, and the AS records
+Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state
+(state version 1) with
 `authority_hash`
-`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ`,
+`sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM`,
 `intent_hash`
-`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`, and
+`sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0`, and
 `proposal_hash`
-`sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo`.
+`sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo`.
 
 ## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 
-When the agent redeems the authorization code at the token endpoint,
-the AS resolves the Mission from the grant
+At 08:00:05 the agent redeems the authorization code with its PKCE
+verifier and a DPoP proof ({{RFC9449}}):
+
+~~~
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=authorization_code
+&code=SplxlOBeZQQYbYS6WxSbIA
+&redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+~~~
+
+The AS resolves the Mission from the grant
 ({{grant-binding-resolution}}), checks that it is `active`
-({{lifecycle}}), and issues a Mission-bound access token for the ERP.
-The token response carries the granted `authorization_details` echo
-({{mission-bound-tokens}}) and the `mission_id` and
-`mission_expires_at` response parameters
+({{lifecycle}}), and issues a Mission-bound access token for the ERP
+and a refresh token. The token response carries the granted
+`authorization_details` echo ({{mission-bound-tokens}}) and the
+`mission_id` and `mission_expires_at` response parameters
 ({{mission-response-parameters}}):
 
 ~~~ json
@@ -5595,6 +5678,7 @@ The token response carries the granted `authorization_details` echo
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
   "token_type": "DPoP",
   "expires_in": 300,
+  "refresh_token": "rt_4mN8qV2xP7sL1tY9zB3k",
   "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   "mission_expires_at": "2026-12-31T23:59:59Z",
   "authorization_details": [
@@ -5627,8 +5711,8 @@ The following is an example of the decoded access token payload:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606405,
+  "exp": 1793606705,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -5685,11 +5769,79 @@ With enforcement from the token alone, the consequential
 carried constraints. Where the deployment runs the runtime profile
 ({{I-D.draft-mcguinness-mission-runtime}}), the resource server also
 obtains a point-of-use permit against current Mission state from a
-policy decision point before executing the write.
+policy decision point before executing the write. The AuthZEN
+profile's worked request ({{I-D.draft-mcguinness-mission-authzen}})
+is that check for a 423.50 USD posting at 08:14:03, made with a
+write-only token the agent obtained by refresh at 08:14:00.
 
 The end-to-end example of the Mission Cross-Domain Projection profile
-({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) continues this
-Mission to a partner ERP in another trust domain.
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) follows a
+Mission like this one whose authority also covers a partner ERP in
+another trust domain.
+
+## Stage 4: The Resource Server Refuses {#stage-4-the-resource-server-refuses}
+
+The agent then asks the ERP to post a 780.00 USD adjustment with the
+same write-only token. The amount exceeds the entry's `max_amount` of
+500.00 USD, so the ERP refuses it from the token alone as outside the
+carried authority ({{rs-enforcement}}). This deployment accepts the
+agent learning that more authority needs a new approval or an
+expansion ({{denial-disclosure}}), so the challenge carries
+`mission_denial`:
+
+~~~
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: DPoP error="insufficient_scope",
+  mission_denial="insufficient_authority"
+~~~
+
+A fresh token from the same Mission does not help: every token it
+derives is a subset of the same Authority Set ({{subset}}).
+
+## Stage 5: Suspension, Resumption, and Revocation {#stage-5-suspension-resumption-and-revocation}
+
+The Mission is suspended at 08:20:00 and resumed at 08:30:00 (state
+versions 2 and 3) through the lifecycle operations of the Mission
+Status profile ({{I-D.draft-mcguinness-oauth-mission-status}}); the
+AS derives nothing in between ({{lifecycle}}). At 08:50:00 the agent
+refreshes for the read-only token of the refresh example in
+{{mission-bound-tokens}}, which expires at 08:55:00.
+
+At 08:53:20 the agent revokes the Mission with the reason "Quarterly
+reconcile completed early", under an explicit lifecycle authorization
+the deployment grants it for this Mission
+({{I-D.draft-mcguinness-oauth-mission-status}}); its resource tokens
+and refresh token confer no such authority. The AS commits
+`terminated` with reason
+`revoked` as state version 4, and a receiver of the Mission Signals
+profile learns of it from a Security Event Token
+({{I-D.draft-mcguinness-oauth-mission-signals}}). Revocation stops the
+Mission at the issuer ({{revocation}}). A later refresh is refused
+with the `mission_error` diagnostic ({{issuance-gating}}):
+
+~~~
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_grant",
+  "mission_error": "revoked"
+}
+~~~
+
+Introspection reports the 08:50:00 token inactive with the Mission's
+termination, although the token has not expired ({{examples}},
+{{composite-active}}).
+
+Revocation does not recall the token already issued. The ERP,
+enforcing from the token alone, can honor the read-only token until
+its `exp` at 08:55:00. A resource server that introspects at the
+issuer on every request stops honoring it on its next request. One
+that obtains a point-of-use permit under the runtime profile
+({{I-D.draft-mcguinness-mission-runtime}}) stops within that
+deployment's declared freshness and permit bounds, since a permit can
+rest on a state observation taken before the revocation.
 
 # Design Context and Boundaries {#design-context}
 
@@ -6486,6 +6638,28 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1379): the Introduction says what a Mission is beside
+  an OAuth grant, drawn from Design Context, and that under a profile
+  the AS can bind a further grant lineage to the same Mission. The
+  creation chain states the properties the document establishes,
+  replacing the Implementation Map's separate list, and glosses
+  "derivation" as an issuance operation. The layering paragraph
+  states the scope-projection condition for a resource server that
+  authorizes only from `scope`, replacing the Implementation Map's
+  copy, and the Implementation Map names the issuance checks. A
+  holder of the complete Authority Set is described as recomputing
+  `authority_hash`. Applicability points to Standing-Consent Bases,
+  which now describes each basis type, and the worked example says
+  why its resource server is a Mission-aware Resource Server. No
+  requirement changes.
+
+- Editorial (#1176): the examples of the canonical Mission follow one
+  dated history, with the Intent in full and anchors computed over the
+  displayed objects; an example line too long for the page is folded
+  per RFC 8792. The end-to-end example continues through the pushed
+  request, code redemption with a refresh token, a resource server
+  refusal, and revocation. No requirement changes.
 
 - Editorial (#910): the approval rules for another principal and for
   an external Subject sit in a Subject Establishment subsection that

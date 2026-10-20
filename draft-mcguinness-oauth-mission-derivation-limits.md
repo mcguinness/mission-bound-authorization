@@ -49,6 +49,7 @@ normative:
 
 informative:
   RFC8785:
+  RFC8792:
   I-D.draft-mcguinness-oauth-mission-issuance-grant:
     title: "Mission Issuance Grant for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-issuance-grant.html
@@ -187,6 +188,9 @@ Mission Issuer (the "issuer AS" or the "AS"), Resource AS, Approver,
 approval event, Authority Set, Mission-bound token, and derivation
 from {{I-D.draft-mcguinness-oauth-mission}}.
 
+An example line too long for the page is folded with the single
+backslash strategy of {{RFC8792}}.
+
 Derivation limit:
 : The AS-established effective ceiling on the number of derivations
   under one Mission, recorded as the Mission Record's
@@ -227,9 +231,17 @@ The following is an example of a Mission Intent carrying a requested
 derivation limit:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "goal": "Reconcile Q3 invoices and post adjustments of at most \
+    USD 500 per journal entry.",
   "target_resources": ["https://erp.example.com"],
+  "task_bounds": [
+    "Read only invoices issued in 2026-Q3.",
+    "Post journal entries of at most USD 500 each."
+  ],
+  "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z",
   "requested_derivation_limit": 200
 }
@@ -473,9 +485,9 @@ granted the `derivations_remaining` disclosure privilege:
 {
   "active": true,
   "client_id": "s6BhdRkqt3",
-  "exp": 1790000000,
+  "exp": 1793607600,
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_yus7U3N_e3iDkgiz5tLJseuV5ytwgt-i",
     "issuer": "https://as.example.com",
     "state": "active",
     "derivations_remaining": 187
@@ -713,6 +725,10 @@ intent_hash = sha-256:r--mF07yZfWRGV6N28A2u_8rUzIG-bNhpvFSS5FhoBk
 \[\[ To be removed from the final specification ]]
 
 -00
+
+- Editorial (#1176): examples of the canonical Mission follow one
+  dated history; an example line too long for the page is folded per
+  RFC 8792. No requirement changes.
 
 - The derivation-limit refusal states its code directly,
   `invalid_grant` on every derivation path, since the OAuth binding's
