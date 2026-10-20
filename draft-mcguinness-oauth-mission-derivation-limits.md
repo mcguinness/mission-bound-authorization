@@ -282,7 +282,7 @@ Mission, so that neither can replenish a derivation budget:
   policy or requested ceiling narrows it further, and a predecessor
   with no `derivation_limit` passes on no finite limit
   ({{I-D.draft-mcguinness-oauth-mission-progressive}}, Section
-  "In-ceiling expansion").
+  "In-Ceiling Expansion").
 
 Otherwise each Mission Record's ceiling comes only from its own
 Intent's `requested_derivation_limit`, clamped by the deployment's
