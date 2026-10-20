@@ -409,6 +409,22 @@ describe("the floor over a consented authority ceiling (@spec mission#approval-a
     expect(created?.drawdown_policy?.id).toBe("drawdown-std");
     expect(typeof created?.ceiling_hash).toBe("string");
   });
+
+  it("refuses a consented drawdown_policy the issuer does not hold, at an unknown id or another version, invalid_request before any write: no grant, Mission or code", async () => {
+    for (const drawdownPolicy of [{ id: "drawdown-unknown", version: "1" }, { id: "drawdown-std", version: "2" }]) {
+      const r = await authorize(progressive, {
+        authority: READ,
+        ceiling: { ...CEILING_CONSENT, drawdown_policy: drawdownPolicy },
+        approval: { browser: { sub: "bob", acr: "mfa", auth_time: now() - 1, subject: "alice" } },
+      });
+      const label = JSON.stringify(drawdownPolicy);
+      expect(r.error, label).toBe("invalid_request");
+      expect(r.description, label).toBe("drawdown_policy names no policy this issuer holds at that version");
+      expect(r.code, label).toBeUndefined();
+      expect(r.missions, label).toBe(0);
+      expect(r.grants, label).toBe(0);
+    }
+  });
 });
 
 describe("the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425)", () => {
