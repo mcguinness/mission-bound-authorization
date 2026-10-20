@@ -151,7 +151,11 @@ async function build(
   mode: (typeof MODES)[number],
   view: MissionView,
   contracts: ResourceContractDeclarations,
-  opts: { pdpContracts?: ResourceContractDeclarations; now?: () => Date } = {},
+  opts: {
+    pdpContracts?: ResourceContractDeclarations;
+    now?: () => Date;
+    requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
+  } = {},
 ): Promise<Built> {
   const now = opts.now ?? NOW;
   const point = createEphemeralDecisionPoint({
@@ -184,7 +188,16 @@ async function build(
     pepId: "mcp-payments-pep",
     audience: CANONICAL_RESOURCE,
     operationContracts: [{ service: CANONICAL_RESOURCE }, PAYMENTS_INVOICE_CONTRACT],
-    getOptions: () => ({ view, fga, modelId: "test", now, stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }),
+    getOptions: () => ({
+      view,
+      fga,
+      modelId: "test",
+      now,
+      stalenessBound,
+      relationForAction,
+      stateSourcePlacement: "pep" as const,
+      ...(opts.requiresActionApproval ? { requiresActionApproval: opts.requiresActionApproval } : {}),
+    }),
   });
   const decided: EvaluationRequest[] = [];
   let pepContracts = contracts;
@@ -198,6 +211,7 @@ async function build(
     now,
     resourceContracts: () => pepContracts,
     retainedOperationProfiles: () => ({ [RETAINED_PROFILE]: RETAINED_TABLE }),
+    ...(opts.requiresActionApproval ? { requiresActionApproval: opts.requiresActionApproval } : {}),
     decide: (req, o) => {
       decided.push(req);
       return channel.decide(req, o);
@@ -374,6 +388,231 @@ describe("each stage records a contract failure on its own carrier (@spec runtim
       } finally {
         await x.close();
       }
+    }
+  });
+});
+
+describe("the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249)", () => {
+  const v1View = viewOf([entry(V1, `${CANONICAL_RESOURCE}/invoices`, { resource_match: "prefix" })]);
+
+  it("a reference the PEP resolves and the PDP's declarations no longer do is denied resource_contract_drift, parameters identical: a v1 entry at a PDP serving only v2", async () => {
+    const view = viewOf([entry(V1_LIVE)]);
+    for (const mode of MODES) {
+      const control = await build(mode, view, V1_CURRENT);
+      const x = await build(mode, view, V1_CURRENT, { pdpContracts: V2_ONLY });
+      try {
+        const ok = await control.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+        const res = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+        expect(ok.permitted, mode).toBe(true);
+        expect(res, mode).toMatchObject({ permitted: false, denial_reason: "resource_contract_drift" });
+        expect(x.decided[0]?.context.parameter_digest, mode).toBe(control.decided[0]?.context.parameter_digest);
+      } finally {
+        await control.close();
+        await x.close();
+      }
+    }
+  });
+
+  it("where the PDP's declarations require a reference, an unpinned entry is denied resource_contract_drift and gains none", async () => {
+    const unpinned = viewOf([entry(undefined)]);
+    for (const mode of MODES) {
+      const x = await build(mode, unpinned, V1_CURRENT, { pdpContracts: declarations([declared("v1", "current")], ACTIONS) });
+      try {
+        const res = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(unpinned));
+        expect(res, mode).toMatchObject({ permitted: false, denial_reason: "resource_contract_drift" });
+        expect(x.decided[0]?.resource.properties, mode).not.toHaveProperty("resource_contract");
+        expect(unpinned.authority_set[0], mode).not.toHaveProperty("resource_contract");
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  it("a superseded version permits within the retention the PDP declares and is denied past it", async () => {
+    const lapsed = declarations([
+      declared("v1", "superseded", RETAINED_PROFILE, { retained_until: "2026-10-01T00:00:00Z" }),
+      declared("v2", "current"),
+    ]);
+    for (const mode of MODES) {
+      const within = await build(mode, v1View, RETAINED);
+      const past = await build(mode, v1View, RETAINED, { pdpContracts: lapsed });
+      try {
+        expect((await within.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v1View))).permitted, mode).toBe(true);
+        expect(await past.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v1View)), mode).toMatchObject({
+          permitted: false,
+          denial_reason: "resource_contract_drift",
+        });
+      } finally {
+        await within.close();
+        await past.close();
+      }
+    }
+  });
+
+  it("under a retained v1, an inactive Mission and contained authority still refuse", async () => {
+    for (const mode of MODES) {
+      for (const [label, view, expected] of [
+        ["inactive", { ...v1View, state: "suspended" }, "mission_inactive"],
+        ["contained", { ...v1View, containment: { version: 1, contained: [{ resource: `${CANONICAL_RESOURCE}/invoices`, actions: ACTIONS }] } }, "authority_contained"],
+      ] as const) {
+        const x = await build(mode, view as MissionView, RETAINED);
+        try {
+          const res = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view as MissionView));
+          expect(res, `${mode} ${label}`).toMatchObject({ permitted: false, denial_reason: expected });
+        } finally {
+          await x.close();
+        }
+      }
+    }
+  });
+
+  it("an approval bound to v1 does not cover the same action under v2, both resolving and the parameters identical: out_of_scope; one bound to v2 permits", async () => {
+    const v2View = viewOf([entry(V2)]);
+    for (const mode of MODES) {
+      const x = await build(mode, v2View, RETAINED, { requiresActionApproval: () => true });
+      try {
+        const gated = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View));
+        expect(gated, mode).toMatchObject({ permitted: false, denial_reason: "action_approval_required" });
+        const digest = x.decided[0]?.context.parameter_digest as string;
+        const approval = (r: ResourceContractRef) => ({
+          id: "apr_249",
+          approved_at: NOW().toISOString(),
+          parameter_digest: digest,
+          resource: { properties: { resource_contract: r } },
+        });
+        expect(await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View), approval(V1)), mode).toMatchObject({
+          permitted: false,
+          denial_reason: "out_of_scope",
+        });
+        expect((await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(v2View), approval(V2))).permitted, mode).toBe(true);
+        expect(new Set(x.decided.map((r) => r.context.parameter_digest)).size, mode).toBe(1);
+      } finally {
+        await x.close();
+      }
+    }
+  });
+
+  it("an approval bound to v1, parameters unchanged, is refused once the PDP's v1 definition changed after the approval and before the decision", async () => {
+    const view = viewOf([entry(V1_LIVE)]);
+    const changed = declarations([{ ...declared("v1", "current", "payments-runtime-profile-changed"), version: "v1" }]);
+    for (const mode of MODES) {
+      const before = await build(mode, view, V1_CURRENT, { requiresActionApproval: () => true });
+      const after = await build(mode, view, V1_CURRENT, { pdpContracts: changed, requiresActionApproval: () => true });
+      try {
+        await before.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+        const approval = {
+          id: "apr_249_pin",
+          approved_at: NOW().toISOString(),
+          parameter_digest: before.decided[0]?.context.parameter_digest as string,
+          resource: { properties: { resource_contract: V1_LIVE } },
+        };
+        expect((await before.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view), approval)).permitted, mode).toBe(true);
+        expect(await after.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view), approval), mode).toMatchObject({
+          permitted: false,
+          denial_reason: "resource_contract_drift",
+        });
+      } finally {
+        await before.close();
+        await after.close();
+      }
+    }
+  });
+
+  it("a presented reference that resolves but differs from the Mission entry's is denied resource_contract_drift", async () => {
+    // The credential names v2; the Mission's entry was approved under v1.
+    const view = viewOf([entry(V1)]);
+    for (const mode of MODES) {
+      const x = await build(mode, view, RETAINED);
+      try {
+        const res = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view, [entry(V2)]));
+        expect(x.decided[0]?.resource.properties.resource_contract, mode).toEqual(V2);
+        expect(res, mode).toMatchObject({ permitted: false, denial_reason: "resource_contract_drift" });
+      } finally {
+        await x.close();
+      }
+    }
+  });
+});
+
+describe("the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249)", () => {
+  const view = viewOf([entry(V1_LIVE)]);
+  const lonePep = (contracts: () => ResourceContractDeclarations) => {
+    const keys = createEphemeralEvidenceKeys();
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved" }],
+      [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    let asked = 0;
+    const pep = new Pep({
+      payments,
+      evidence,
+      fga: { checkWithContext: async () => true } as unknown as Fga,
+      modelId: "test",
+      loadView: () => ({ view, observation: { state: "active", version: 1, mode: "fresh", freshness_at: NOW().toISOString() } }),
+      instanceEpoch: "epoch-249-unit",
+      now: NOW,
+      resourceContracts: contracts,
+      decide: async () => {
+        asked++;
+        throw new Error("no PDP is reachable from this test");
+      },
+    });
+    return { pep, evidence, asked: () => asked };
+  };
+
+  it("a reference that does not resolve signs a Refusal Record resource_contract_unresolvable, asks no PDP and has no effect", async () => {
+    const { pep, evidence, asked } = lonePep(() => V2_ONLY);
+    const res = await pep.enforce("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+    expect(res).toMatchObject({ permitted: false, refusal_reason: "resource_contract_unresolvable" });
+    expect(asked()).toBe(0);
+    const records = evidence.forMission(view.id);
+    expect(records.map((e) => [e.kind, (e.content as { denial_reason?: string }).denial_reason])).toEqual([
+      ["refusal", "resource_contract_unresolvable"],
+    ]);
+  });
+
+  it("at use, a permit whose contract no longer resolves, or whose condition is missing or names another contract, is suppressed with Execution Evidence resource_contract_unresolvable, never a parameter or target error", async () => {
+    let contracts = V1_CURRENT;
+    const { pep, evidence } = lonePep(() => contracts);
+    const established = pep.boundary();
+    if (!established.ok) throw new Error("boundary");
+    const attempt = (over: Record<string, unknown> = {}) => ({
+      evaluationId: `dec_${crypto.randomUUID()}`,
+      mission: { id: view.id, issuer: view.issuer },
+      audience: established.boundary,
+      boundaryVersion: established.version,
+      operationTarget: CANONICAL_RESOURCE,
+      operationArguments: { invoice_id: "inv-1" },
+      performedContract: V1_LIVE,
+      permitResourceContract: V1_LIVE as unknown,
+      action: "payments:invoice.read",
+      tool: "get_invoice",
+      permitValidUntil: new Date(NOW().getTime() + 60_000).toISOString(),
+      executionId: `exe_${crypto.randomUUID()}`,
+      permitId: "permit-249",
+      joinKey: "op:msn_249_pep:payments:invoice.read",
+      observeEffectiveDigest: () => undefined,
+      ...over,
+    });
+    expect(pep.permitUseFailure(attempt() as never)).toBeUndefined();
+    const outcomes: string[] = [];
+    for (const [a, swap] of [
+      [attempt({ permitResourceContract: undefined }), V1_CURRENT],
+      [attempt({ permitResourceContract: V2 }), V1_CURRENT],
+      [attempt(), declarations([{ version: "v1", state: "retired", digest: V1_LIVE.digest }, declared("v2", "current")])],
+    ] as const) {
+      contracts = swap;
+      const out = await pep.verifyPermitAtUse(a as never);
+      outcomes.push(out.ok ? "ok" : out.error);
+    }
+    expect(outcomes).toEqual(["resource_contract_unresolvable", "resource_contract_unresolvable", "resource_contract_unresolvable"]);
+    const executions = evidence.forMission(view.id).filter((e) => e.kind === "execution").map((e) => e.content as { outcome: string; error: string });
+    expect(executions).toHaveLength(3);
+    for (const e of executions) {
+      expect(e).toMatchObject({ outcome: "suppressed", error: "resource_contract_unresolvable" });
+      expect(["parameter_mismatch", "target_drift", "phase_mismatch"]).not.toContain(e.error);
     }
   });
 });
