@@ -2436,6 +2436,52 @@ approved, not the predecessor's authority plus a delta.
 
 \[\[ To be removed from the final specification ]]
 
+- The deferred mode applies only to an exchange whose
+  `completion_mode` includes `deferred`; any other exchange gets the
+  interactive handoff or `invalid_request`, and the client polls with
+  the deferred token response's deferred grant type.
+
+- A completion refused on a deferred poll answers `access_denied` with
+  the reconciliation status, as the deferred token response requires;
+  a code redemption keeps `invalid_grant`, and
+  `mission_expansion_status` is also carried on code redemption. When
+  `intent.expires_at` passes while an expansion is pending, a poll
+  answers `access_denied`, a code redemption `invalid_grant`, and a
+  token-exchange-response completion `invalid_request`.
+
+- A pushed request after activation is refused with `invalid_request`;
+  the pushed request may carry `predecessor` as a cross-check.
+
+- `requested_token_type` selects the operation, and an expansion
+  exchange that carries `child_actor` is refused with
+  `invalid_request`.
+
+- The fingerprint's `cnf` is a confirmation object and its `actor` an
+  object with the `actor_token`'s `iss` and `sub`; `completion_mode` is
+  outside the fingerprint.
+
+- `related_to` is a Mission Record member, not a `mission` claim
+  member, and a rollback Mission links to the superseded predecessor
+  with `related_to`, not `predecessor`.
+
+- The deferred window fails completion on a containment or discharge
+  restriction that overlaps the successor's authority, as check 3
+  states, and the request-time status follows reconciliation's
+  attribution rule.
+
+- A reservation becomes `failed` on a denial, a passed deadline or a
+  refused activation, and a retry receives the recorded failure.
+
+- A client conformance target; a client does not initiate expansion for
+  an authentication shortfall.
+
+- `creation_request_id` randomness is at least 122 bits, which a
+  version 4 UUID provides.
+
+- Removed: the undefined parameter for refusing an expansion while live
+  Child Missions exist, and `invalid_token` from the token-endpoint
+  refusals.
+
 - Editorial restructure, with no change to any requirement: sections
   reordered and titled in Title Case; Successor Activation and Child
   Missions of the Predecessor collect the activation and child-cascade
