@@ -20081,7 +20081,7 @@
    "id": "runtime.parameter-binding.constraint-input-binding",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "parameter-binding",
-   "text": "for each Common Constraint or other registered constraint the operation's authority entries can carry ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative operation input or derived attribute that satisfies it, and the extraction and normalization rule mapping that input into the constraint's own value domain",
+   "text": "for each Common Constraint or other registered constraint the operation's authority entries can carry ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the authoritative operation input or derived attribute that satisfies it, and the extraction and normalization rule mapping that input into the constraint's own value domain",
    "role": "RS",
    "strength": "MUST",
    "applicability": {

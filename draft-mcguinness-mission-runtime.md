@@ -201,6 +201,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -2446,7 +2454,7 @@ implementers of the same operation bind the same bytes:
   ({{evaluation-context-binding}});
 - for each Common Constraint or other registered constraint the
   operation's authority entries can carry
-  ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the authoritative
   operation input or derived attribute that satisfies it, and the
   extraction and normalization rule mapping that input into the
   constraint's own value domain.  The constraint's defining
