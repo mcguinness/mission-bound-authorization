@@ -44,7 +44,7 @@ const read = (req: IncomingMessage): Promise<string> =>
     req.on("end", () => resolve(s));
   });
 
-function server(over: { ordinaryOnly?: boolean; introspection?: boolean } = {}): McpPaymentsServer {
+function server(over: { ordinaryOnly?: boolean; introspection?: boolean; now?: () => Date } = {}): McpPaymentsServer {
   return new McpPaymentsServer({
     writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
     pep: undefined as never, // token validation alone never reaches the PEP
@@ -55,7 +55,16 @@ function server(over: { ordinaryOnly?: boolean; introspection?: boolean } = {}):
     issuer: ESTATE,
     ordinaryOnly: over.ordinaryOnly ?? true,
     ...((over.introspection ?? true)
-      ? { introspection: { endpoint, clientId: "gw", clientSecret: "s", timeoutMs: 500, cacheMaxSeconds: 0 } }
+      ? {
+          introspection: {
+            endpoint,
+            clientId: "gw",
+            clientSecret: "s",
+            timeoutMs: 500,
+            cacheMaxSeconds: 0,
+            ...(over.now ? { now: over.now } : {}),
+          },
+        }
       : {}),
   });
 }
@@ -138,5 +147,20 @@ describe("estate route with introspection: an opaque token (#818 slice 3)", () =
 
   it("refuses to configure introspection on a route whose issuer is a Mission Issuer", () => {
     expect(() => server({ ordinaryOnly: false })).toThrow(/ordinaryOnly/);
+  });
+});
+
+describe("estate route with introspection: expiry is re-checked at admission (#1400 review)", () => {
+  it("refuses a token whose exp passes after the adapter accepted it, before admission completes", async () => {
+    // Time passes across the awaits: this clock moves one second forward at
+    // each reading. The adapter reads it twice (the cache lookup, then once
+    // the answer is in) and accepts a token whose exp is two seconds after the
+    // first reading; admission's own re-check is the third reading, at exp.
+    const startMs = Math.floor(Date.now() / 1000) * 1000;
+    let readings = 0;
+    const stepping = () => new Date(startMs + 1000 * readings++);
+    answer = { ...answer, exp: startMs / 1000 + 2 };
+    await expect(present(server({ now: stepping }), OPAQUE)).rejects.toThrow(/expired while being admitted/);
+    expect(readings).toBe(3);
   });
 });

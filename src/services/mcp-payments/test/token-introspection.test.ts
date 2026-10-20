@@ -18,6 +18,8 @@ const AUD = "http://localhost:4403/mcp";
 
 /** What the endpoint answers next, and what it saw. */
 let answer: { status: number; body: string; delayMs?: number };
+/** Runs while a call is in flight, before the endpoint answers. */
+let onRequest: (() => void) | undefined;
 const seen: { authorization?: string; body: string }[] = [];
 let server: Server;
 let endpoint: string;
@@ -71,6 +73,7 @@ beforeAll(async () => {
   server = createServer(async (req, res) => {
     const body = await read(req);
     seen.push({ ...(req.headers.authorization ? { authorization: req.headers.authorization } : {}), body });
+    onRequest?.();
     const { status, body: out, delayMs } = answer;
     if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
     res.writeHead(status, { "content-type": "application/json" });
@@ -85,6 +88,7 @@ afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 beforeEach(() => {
+  onRequest = undefined;
   seen.length = 0;
   answer = { status: 200, body: active() };
 });
@@ -163,6 +167,19 @@ describe("token introspection: the cache bounds (RFC 7662, #818 slice 3)", () =>
     c.advance(6);
     answer = { status: 200, body: JSON.stringify({ active: false }) };
     await expect(i.introspect("short-lived")).rejects.toBeInstanceOf(TokenInactiveError);
+    expect(seen).toHaveLength(2);
+  });
+});
+
+describe("token introspection: expiry is checked after the answer arrives (#1400 review)", () => {
+  it("refuses a token that expires while its introspection is in flight, and keeps no cache entry for it", async () => {
+    const c = clock();
+    answer = { status: 200, body: active({ exp: nowS() + 5 }) };
+    onRequest = () => c.advance(10);
+    const i = introspector({ cacheMaxSeconds: 60, now: c.now });
+    await expect(i.introspect("expiring-in-flight")).rejects.toThrow(/expired/);
+    onRequest = undefined;
+    await expect(i.introspect("expiring-in-flight")).rejects.toThrow(/expired/);
     expect(seen).toHaveLength(2);
   });
 });
