@@ -290,9 +290,11 @@ async function renderParentApproval(limit?: number): Promise<string> {
 describe("the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119)", () => {
   it("renders the established derivation limit, not only the requested one, with the async delegation family statement", async () => {
     const html = await renderParentApproval(150);
-    expect(html).toContain("Derivation limit (established): at most 100 token derivations from this Mission.");
+    // The Mission's own section, not the child block, which carries the statement too.
+    const established = html.match(/<ul class="derivation-limit">(.*?)<\/ul>/s)?.[1] ?? "";
+    expect(established).toContain("Derivation limit (established): at most 100 token derivations from this Mission.");
     expect(html).not.toContain("at most 150 token derivations");
-    expect(html).toContain("The refreshes of an async delegation family are not counted against this limit.");
+    expect(established).toContain("The refreshes of an async delegation family are not counted against this limit.");
   });
 
   it("renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement", async () => {
