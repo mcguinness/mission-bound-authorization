@@ -84,7 +84,7 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
-import { type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
+import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 
@@ -2278,9 +2278,13 @@ export class Pep {
       // that is the family's monotonic trust ratchet (@spec containment);
       // handing back "here's how to ask again" for a deliberately narrowed
       // capability would contradict restore-only-via-Expansion.
+      // #818 slice 4b review: and only where absence from this view means
+      // never granted (view-source.ts); an effective projection that cannot
+      // prove the committed set gets the refusal with no hint.
       if (
         decision.context.denial_reason === "out_of_authority" &&
-        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action))
+        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action)) &&
+        absenceMeansNeverGranted(this.deps.viewSource, view)
       ) {
         result.insufficient_authorization = buildInsufficientAuthorization([
           { type: "mission_resource_access", resource: operationTarget, actions: [mapping.action] },

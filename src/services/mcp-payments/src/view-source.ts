@@ -14,6 +14,7 @@
  */
 
 import type { PropagatedMissionReference } from "@mission/core";
+import { type MissionView, viewHoldsCommittedSet } from "@mission/pdp";
 
 /**
  * Why the read established no view, in the PEP's refusal diagnostics.
@@ -49,6 +50,22 @@ export async function prepareRequestView(
   const ref = credentialMission ?? (propagated !== undefined && !("malformed" in propagated) ? propagated : undefined);
   if (ref === undefined) return undefined;
   return source.prepare({ id: ref.id, issuer: ref.issuer });
+}
+
+/**
+ * Whether an action's absence from `view.authority_set` means it was never
+ * granted, so that a hint to request it is honest (#818 slice 4b review).
+ * An in-process loader supplies the committed set, with containment and
+ * discharge carried as deltas, so absence is never-granted there. A remote
+ * source's view is the effective projection (a Mission Status response
+ * omits a contained or discharged entry, and another audience's entries):
+ * absence there may be a deliberate narrowing, which is restored only through
+ * Expansion. Such a view counts only where it proves it holds the full
+ * committed set (`viewHoldsCommittedSet`, D335), the proof the PDP applies
+ * to the credential bound.
+ */
+export function absenceMeansNeverGranted(source: MissionViewSource | undefined, view: MissionView): boolean {
+  return source === undefined || viewHoldsCommittedSet(view);
 }
 
 /** The refusal for a view miss: the remote read's reason where it failed, else the in-process `unknown_mission`. */

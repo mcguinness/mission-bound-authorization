@@ -199,12 +199,29 @@ d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Miss
     // The PDP decides it: the Status view no longer carries the action, so it
     // is outside the Authority Set (rule 7), not a contained entry.
     expect(after).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+    // A contained action is restored only through Expansion: no hint to ask for it again.
+    expect(after.insufficient_authorization, JSON.stringify(after)).toBeUndefined();
     expect(decisions(pilot, missionId).at(-1)?.content).toMatchObject({ decision: "deny", denial_reason: "out_of_authority" });
     expect(pilot.resolver.peek({ id: missionId, issuer: MAS_URL })?.view.authority_set.flatMap((e) => e.actions)).not.toContain(
       "payments:invoice.read",
     );
     const vendor = await call(pilot, credential, missionId, "lookup_vendor", { vendor_id: "acme" });
     expect(vendor.ok, JSON.stringify(vendor)).toBe(true);
+  });
+
+  it("proposes a never-granted action back on a Status view that proves it holds the committed set", async () => {
+    // One audience, nothing contained or discharged: the Status view's
+    // effective set is the committed set, and its authority_hash proves it.
+    const missionId = await approveAtMas("alice", "never-granted", ["payments:invoice.read"]);
+    const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read vendors.read");
+    const res = await call(pilot, credential, missionId, "lookup_vendor", { vendor_id: "acme" });
+    expect(res).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+    const remediation = (res.insufficient_authorization as { authorization_remediation: string } | undefined)?.authorization_remediation;
+    expect(remediation, JSON.stringify(res)).toBeDefined();
+    expect(JSON.parse(Buffer.from(remediation as string, "base64url").toString("utf8"))).toEqual({
+      authorization_details: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] }],
+    });
+    expect(decisions(pilot, missionId).at(-1)?.content).toMatchObject({ decision: "deny", denial_reason: "out_of_authority" });
   });
 
   it("observes a revocation at the MAS within the signed bound: relied on until its fresh_until, then mission_inactive", async () => {

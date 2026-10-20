@@ -10,8 +10,9 @@
  * skips.
  */
 
+import { authorityHash } from "@mission/core";
 import { describe, expect, it } from "vitest";
-import type { Fga, MissionView } from "@mission/pdp";
+import { committedEntry, type Fga, type MissionView, viewHoldsCommittedSet } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import {
   CANONICAL_RESOURCE,
@@ -44,7 +45,8 @@ const VIEW: MissionView = {
   client_id: "ap-agent",
 };
 
-function harness(opts: { source?: (ref: { id: string; issuer: string }) => ViewPreparation }) {
+function harness(opts: { source?: (ref: { id: string; issuer: string }) => ViewPreparation; view?: MissionView; credentialActions?: string[] }) {
+  const view = opts.view ?? VIEW;
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
@@ -53,7 +55,7 @@ function harness(opts: { source?: (ref: { id: string; issuer: string }) => ViewP
   const state = { available: true, decisions: 0, prepared: [] as Array<{ id: string; issuer: string }> };
   const loadView = (ref: { id: string; issuer: string }) =>
     state.available && ref.id === MISSION && ref.issuer === ISSUER
-      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const viewSource: MissionViewSource | undefined = opts.source
     ? {
@@ -89,9 +91,9 @@ function harness(opts: { source?: (ref: { id: string; issuer: string }) => ViewP
   const token: TokenFacts = {
     sub: "alice",
     clientId: "ap-agent",
-    mission: { id: MISSION, issuer: ISSUER, authority_hash: VIEW.authority_hash },
+    mission: { id: MISSION, issuer: ISSUER, authority_hash: view.authority_hash },
     cnfJkt: "jkt-view-source",
-    credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: READS }]),
+    credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: opts.credentialActions ?? READS }]),
   };
   return { server, evidence, state, token };
 }
@@ -115,6 +117,30 @@ describe("a remote Mission view source at the PEP (#818, D560)", () => {
       ok: false,
       refusal_reason: "unknown_mission",
     });
+  });
+
+  it("proposes a never-granted action back only where the view proves it holds the committed set (#818 slice 4b review)", async () => {
+    const entries = VIEW.authority_set;
+    // The committed set itself: authority_hash recomputes over the view's entries.
+    const complete: MissionView = { ...VIEW, authority_hash: authorityHash(ISSUER, entries.map(committedEntry) as never) };
+    // An effective projection: the issuer committed one more action than the view carries.
+    const projected: MissionView = {
+      ...VIEW,
+      authority_hash: authorityHash(ISSUER, [{ ...committedEntry(entries[0] as never), actions: [...READS, "payments:vendor.read"] }] as never),
+    };
+    expect(viewHoldsCommittedSet(complete)).toBe(true);
+    expect(viewHoldsCommittedSet(projected)).toBe(false);
+    const remediationFor = async (view: MissionView, source: boolean) => {
+      // The credential carries the action; the Mission does not.
+      const h = harness({ view, credentialActions: [...READS, "payments:vendor.read"], ...(source ? { source: () => ({ ok: true }) } : {}) });
+      const res = await h.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, h.token);
+      expect(res, JSON.stringify(res)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+      return res.insufficient_authorization;
+    };
+    expect(await remediationFor(complete, true)).toBeDefined();
+    expect(await remediationFor(projected, true)).toBeUndefined();
+    // An in-process loader's view is read as the committed set, as before.
+    expect(await remediationFor(projected, false)).toBeDefined();
   });
 
   it("a list read whose view lapses between the decision and its re-verification is suppressed target_drift, recording no observation it did not make", async () => {
