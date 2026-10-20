@@ -1416,9 +1416,10 @@ async function evaluateInner(
   // 5. Authority entry match: the approved entry's resource is matched
   //    against the PEP-established operation target with the Resource Access
   //    matcher (@spec resource-access#resource-matching, #1276, D457):
-  //    literal `exact`, and an entry under `prefix` or an unrecognized
-  //    `resource_match` provides no authority. Never the audience, never the
-  //    AuthZEN resource object's type/id. On the baseline-Join path (4b
+  //    literal `exact`, or `prefix` at a path-segment boundary after the one
+  //    URI normalization; an unrecognized `resource_match`, or a `prefix`
+  //    base the matcher cannot enforce, provides no authority. Never the
+  //    audience, never the AuthZEN resource object's type/id. On the baseline-Join path (4b
   //    above), matched against the JOINED authority set, never the Mission's
   //    raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
@@ -1584,21 +1585,27 @@ async function evaluateInner(
     if (!conditions?.length) return { state: "live" };
     viewHoldsFullSet ??= viewHoldsCommittedSet(view);
     if (!viewHoldsFullSet) return { state: "unestablished" };
+    // @spec resource-access#subset step 1 (#1276): each side keeps its
+    // `resource_match`, so a credential entry is sourced only from a Mission
+    // entry whose resource set contains its own.
     const asEntry: CoreAuthorityEntry = {
       type: c.type,
       resource: c.resource,
+      ...(c.resource_match !== undefined ? { resource_match: c.resource_match } : {}),
       actions: c.actions,
       ...(c.constraints ? { constraints: c.constraints } : {}),
     };
     let sources = 0;
     for (const m of view.authority_set) {
       if (m.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
-      const source: CoreAuthorityEntry = {
+      const match = (m as { resource_match?: unknown }).resource_match;
+      const source = {
         type: m.type,
         resource: m.resource,
+        ...(match !== undefined ? { resource_match: match } : {}),
         actions: m.actions,
         ...(m.constraints ? { constraints: m.constraints } : {}),
-      };
+      } as CoreAuthorityEntry;
       if (!isSubsetEntry(asEntry, source)) continue;
       if (!conditionsNoBroader(m.constraints?.terminal_when, conditions)) continue;
       sources++;
