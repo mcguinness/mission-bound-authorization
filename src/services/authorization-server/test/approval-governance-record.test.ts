@@ -7,14 +7,17 @@ import {
   activateGovernedPolicy,
   AGR_JWS_CTY,
   AGR_JWS_TYP,
+  type AgrAssertion,
   type ApprovalGovernanceRecord,
   ApprovalGovernanceError,
   approvalGovernanceRecordDigest,
+  assertAccountableApprover,
   type AuthorityEntry,
   MissionKernel,
   type MissionRecord,
   recordGovernedPolicyConsent,
   signApprovalGovernanceRecord,
+  type UnsignedApprovalGovernanceRecord,
   validateMissionIntent,
   verifyApprovalGovernanceRecord,
 } from "../src/index.js";
@@ -192,5 +195,96 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
     expect(resigned.envelope.value).not.toBe(record.envelope.value);
     expect(() => verifyAgainst(resigned)).not.toThrow();
     expect(approvalGovernanceRecordDigest(resigned)).not.toBe(expected);
+  });
+});
+
+/** Fixtures for the per-basis and per-kind rules, on typed `authority` objects. */
+const ALICE = { iss: "https://idp.test", sub: "alice" };
+const CFO = { iss: "https://idp.test", sub: "cfo" };
+const humanBy = (assertion_id: string, principal = ALICE, decision: "approve" | "deny" = "approve"): AgrAssertion => ({
+  assertion_id,
+  principal,
+  kind: "human",
+  decision,
+  decided_at: "2026-07-01T00:00:00.000Z",
+  authority: { auth_time: "2026-06-30T23:59:00.000Z", acr: "urn:example:acr:phr", amr: ["hwk"] },
+});
+const policyBy = (assertion_id: string, principal = CFO, policy_id = "urn:policy:dlg"): AgrAssertion => ({
+  assertion_id,
+  principal,
+  kind: "policy",
+  decision: "approve",
+  decided_at: "2026-07-01T00:00:00.000Z",
+  authority: { policy_id, version: "7", approved_at: "2026-06-01T00:00:00.000Z" },
+});
+const serviceBy = (assertion_id: string, principal = { iss: ISS, sub: "model:judge" }): AgrAssertion => ({
+  assertion_id,
+  principal,
+  kind: "service",
+  decision: "approve",
+  decided_at: "2026-07-01T00:00:00.000Z",
+  authority: { logic_id: "judge", logic_version: "3", model_id: "judge", model_version: "3" },
+});
+const recordWith = (assertions: AgrAssertion[]): UnsignedApprovalGovernanceRecord => {
+  const { envelope: _e, ...unsigned } = record;
+  return {
+    ...unsigned,
+    assertions,
+    evaluation: { ...unsigned.evaluation, contributing: assertions.map((a) => a.assertion_id) },
+  };
+};
+const directBasis = {
+  type: "direct" as const,
+  consent_principal: ALICE,
+  activation: { approval_event_id: "ape-direct" },
+  activation_actor: ALICE,
+  root_commitment: "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+};
+
+describe("accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion)", () => {
+  it("direct: accepts exactly one human approve assertion of consent_principal beside contributing policy and service assertions", () => {
+    const alice = humanBy("ast_alice");
+    expect(assertAccountableApprover(recordWith([alice, policyBy("ast_dlg"), serviceBy("ast_judge")]), directBasis)).toEqual(alice);
+  });
+
+  it("direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all", () => {
+    for (const assertions of [
+      [policyBy("ast_p", ALICE)],
+      [serviceBy("ast_s", ALICE)],
+      [humanBy("ast_1"), humanBy("ast_2")],
+      [humanBy("ast_1", ALICE, "deny")],
+      [humanBy("ast_1", CFO)],
+    ]) {
+      expect(() => assertAccountableApprover(recordWith(assertions), directBasis)).toThrow(
+        /direct record: exactly one approve assertion of kind human/,
+      );
+    }
+  });
+
+  it("governed_policy: counts only the consent principal's policy assertion that names the deciding policy", () => {
+    if (mission.approval_basis.type !== "governed_policy") throw new Error("basis");
+    const basis = mission.approval_basis;
+    const accountable = record.assertions.find((a) => a.kind === "policy") as AgrAssertion;
+    // The same human's policy assertion under another policy contributes without matching.
+    const other = { ...accountable, assertion_id: "ast_other", authority: { ...accountable.authority, policy_id: "urn:policy:other" } };
+    expect(assertAccountableApprover(recordWith([accountable, other]), basis)).toEqual(accountable);
+    // Two assertions naming the deciding policy, or a human approval in its place, are refused.
+    for (const assertions of [
+      [accountable, { ...accountable, assertion_id: "ast_twice" }],
+      [{ ...accountable, kind: "human" as const }],
+      [{ ...accountable, kind: "service" as const }],
+    ]) {
+      expect(() => assertAccountableApprover(recordWith(assertions), basis)).toThrow(
+        /governed_policy record: exactly one approve assertion of kind policy/,
+      );
+    }
+  });
+
+  it("other standing-consent bases: the approval_basis stands in, so no assertion is required or matched", () => {
+    for (const type of ["template", "policy_drawdown", "ceiling_drawdown"] as const) {
+      const basis = { ...directBasis, type, approved_at: "2026-06-01T00:00:00.000Z" } as never;
+      expect(assertAccountableApprover(recordWith([serviceBy("ast_judge")]), basis)).toBeUndefined();
+      expect(assertAccountableApprover(recordWith([policyBy("ast_dlg", ALICE), humanBy("ast_alice")]), basis)).toBeUndefined();
+    }
   });
 });

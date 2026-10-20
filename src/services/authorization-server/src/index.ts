@@ -540,6 +540,7 @@ export {
   ApprovalGovernanceError,
   ApprovalGovernanceRecordStore,
   approvalGovernanceRecordDigest,
+  assertAccountableApprover,
   assertGovernedPolicyRecord,
   assertMissionBinding,
   signApprovalGovernanceRecord,

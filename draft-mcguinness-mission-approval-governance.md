@@ -577,32 +577,36 @@ counted toward any policy rule.
 
 ## Accountable Assertion {#accountable-assertion}
 
-Exactly one assertion MUST match the Mission Record's accountable
-`approval_basis.consent_principal` and carry an `approve` decision; the
-record supports the approval it claims to govern or it does not commit.
-This is the accountable-approver rule. The matching assertion's `kind`
-MUST be `human` or `policy`: a `service` assertion, including one a
-model produced, is a contributing governance input, never the
-accountable assertion.
+The accountable-approver rule ties a record to the Mission's one
+accountable principal, the Mission Record's
+`approval_basis.consent_principal`. The Mission's `approval_basis.type`
+fixes how a record satisfies it:
 
-The Mission's `approval_basis.type` fixes the accountable assertion:
-
-- For `direct`, it MUST be the `human` assertion of `consent_principal`,
-  the human decision a `direct` approval event carries
-  ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and `service`
-  assertions can contribute without replacing it.
-- For `governed_policy`, it is a `policy` assertion carrying the
-  deciding policy's provenance chain ({{governed-policy-record}}): the
-  policy is the decision mechanism and the matched principal stays the
-  human who approved it, subject to the high-risk-class restriction of
-  {{recency-high-risk}}.
+- For `direct`, the record MUST carry exactly one `human` assertion
+  whose `principal` is `consent_principal` and whose `decision` is
+  `approve`: the human decision a `direct` approval event carries
+  ({{I-D.draft-mcguinness-oauth-mission}}). Contributing `policy` and
+  `service` assertions do not replace it.
+- For `governed_policy`, the record MUST carry exactly one `policy`
+  assertion whose `principal` is `consent_principal`, whose `decision`
+  is `approve`, and whose `authority` names the deciding policy
+  ({{governed-policy-record}}). The policy is the decision mechanism,
+  and the principal stays the human who approved it.
 - For any other named standing-consent `approval_basis`
-  ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies this
-  rule through that record instead of a matching assertion:
-  `consent_principal`, `root_commitment`, and `approved_at`, already
-  fixed at the approval event and immutable, stand in place of it,
-  subject to the same high-risk-class restriction. The record can still
-  carry contributing `policy` and `service` assertions.
+  ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies the
+  rule through its authenticated `approval_basis` record, not through an
+  assertion: `consent_principal`, `root_commitment`, and `approved_at`,
+  fixed at the approval event and immutable, stand in for an accountable
+  assertion. The record can still carry contributing `policy` and
+  `service` assertions.
+
+A record that does not satisfy the rule for its basis does not commit
+({{atomic-commitment}}). The assertion that satisfies it under `direct`
+or `governed_policy` is the accountable assertion; no other basis has
+one. The accountable assertion's `kind` MUST be `human` or `policy`: a
+`service` assertion, including one a model produced, is a contributing
+governance input, never the accountable assertion. Under every basis,
+the high-risk-class restrictions of {{recency-high-risk}} apply.
 
 No assertion is fabricated in the name of the activating policy or the
 requesting actor to stand in for a fresh human decision that did not
@@ -1347,17 +1351,21 @@ A Recording Issuer MUST:
 - authenticate, event-bind, and policy-authorize every contributing
   assertion ({{assertion-validation}});
 - record denials ({{assertion-validation}});
-- include the accountable assertion
+- satisfy the accountable-approver rule for the Mission's approval
+  basis: one matching `human` assertion under `direct`, one matching
+  `policy` assertion under `governed_policy`, and the authenticated
+  `approval_basis` under any other standing-consent basis
   ({{accountable-assertion}});
 - evaluate under the retained policy version ({{atomic-commitment}});
 - enforce the strictest applicable policy-approval maximum age across
   the consequence classes the committed Mission's derived Authority
   Set and Mission Intent carry, from a committed ceiling
   and any committed exception ({{policy-approval-recency}});
-- require `kind: human` for the accountable assertion where
-  the committed Mission's derived Authority Set or Mission Intent
-  carries a high-risk class, unless a committed
-  class-named exception applies ({{policy-approval-recency}});
+- where the committed Mission's derived Authority Set or Mission Intent
+  carries a high-risk class, require a `human` accountable assertion
+  unless a committed class-named exception applies, and require such an
+  exception for a basis without an accountable assertion
+  ({{recency-high-risk}});
 - under `governed_policy`, record the members of
   {{governed-policy-record}} and complete the activation checks of
   {{governed-policy-activation}};

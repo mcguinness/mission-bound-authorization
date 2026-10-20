@@ -3803,7 +3803,7 @@
    "id": "approval-governance.assertion.direct-accountable-human",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-requirements",
-   "text": "For `direct`, it MUST be the `human` assertion of `consent_principal`",
+   "text": "For `direct`, the record MUST carry exactly one `human` assertion whose `principal` is `consent_principal` and whose `decision` is `approve`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -3814,12 +3814,26 @@
    "surface": "governance-record",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approval Governance Record for a direct approval whose accountable assertion is a policy or service assertion does not commit and no Mission is created active; contributing policy and service assertions alongside the human accountable assertion are accepted"
+    "normative": "an Approval Governance Record for a direct approval satisfies the accountable-approver rule only with exactly one human approve assertion of consent_principal; a record whose consent_principal approves only through a policy or service assertion, approves twice, or does not approve fails the rule and does not commit; contributing policy and service assertions beside the human accountable assertion are accepted",
+    "local": "Witnessed at the reference validator (assertAccountableApprover). The reference commits no Approval Governance Record for a direct approval, so the does-not-commit clause has no commit-path witness."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1185 specification PR (D387, D390, D413); no implementation witness yet, the reference implementation PR follows. Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: accepts exactly one human approve assertion of consent_principal beside contributing policy and service assertions",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion)."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -43570,7 +43584,7 @@
    "id": "approval-governance.assertion.accountable-kind-human-or-policy",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "assertion-requirements",
-   "text": "The matching assertion's `kind` MUST be `human` or `policy`",
+   "text": "The accountable assertion's `kind` MUST be `human` or `policy`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -43582,7 +43596,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an evaluation whose assertion matching the accountable approver is kind service does not satisfy the accountable-approver rule: no record commits and the Mission is not created active, whether or not the service assertion was produced by a model",
-    "local": "Witnessed for governed_policy: a record whose accountable assertion is kind service (or human) does not commit. No direct Approval Governance Record is implemented."
+    "local": "Witnessed at commit for governed_policy (a record whose accountable assertion is kind service or human does not commit) and at the reference validator for direct, where no record is committed."
    },
    "level": "unit",
    "coverage": "partial",
@@ -43592,9 +43606,80 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion is not the consent principal's policy assertion naming the deciding policy and approved_at",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
    "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable approver."
+  },
+  {
+   "id": "approval-governance.assertion.governed-accountable-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "accountable-assertion",
+   "text": "For `governed_policy`, the record MUST carry exactly one `policy` assertion whose `principal` is `consent_principal`, whose `decision` is `approve`, and whose `authority` names the deciding policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a governed_policy record satisfies the accountable-approver rule only with exactly one policy approve assertion of consent_principal naming the deciding policy; the same human's policy assertion under another policy contributes without matching; two assertions naming the deciding policy, or a human or service assertion in its place, fail the rule and the record does not commit"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > governed_policy: counts only the consent principal's policy assertion that names the deciding policy",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion is not the consent principal's policy assertion naming the deciding policy and approved_at",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 2 (D568). assertGovernedPolicyRecord, which the activation commit runs before signing, delegates to assertAccountableApprover; mutation: matching without the deciding policy lets a second policy assertion of the same human trip the exactly-one rule."
+  },
+  {
+   "id": "approval-governance.assertion.standing-consent-basis-stands-in",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "accountable-assertion",
+   "text": "the Mission satisfies the rule through its authenticated `approval_basis` record, not through an assertion",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record for a Mission under any named standing-consent basis other than governed_policy satisfies the accountable-approver rule with no matching assertion, its approval_basis standing in; contributing policy, service and human assertions are accepted and none is required",
+    "local": "Witnessed at the reference validator (assertAccountableApprover) for template, policy_drawdown and ceiling_drawdown. The reference commits no Approval Governance Record under these bases."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > other standing-consent bases: the approval_basis stands in, so no assertion is required or matched",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",

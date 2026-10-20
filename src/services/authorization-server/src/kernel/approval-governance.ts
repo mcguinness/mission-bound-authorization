@@ -21,7 +21,7 @@ import { createHash, type KeyObject, verify } from "node:crypto";
 import type { ActivationPolicyRef } from "@mission/core";
 import { canonicalize, type JsonValue } from "@mission/core";
 import type { Database } from "@mission/store";
-import type { ApprovalBasisGovernedPolicy, MissionRecord } from "./types.js";
+import type { ApprovalBasis, ApprovalBasisGovernedPolicy, MissionRecord } from "./types.js";
 
 /** @spec approval-governance#envelope: the JWS protected `typ`. */
 export const AGR_JWS_TYP = "application/mission-approval-governance+jws";
@@ -165,12 +165,55 @@ export function assertMissionBinding(record: UnsignedApprovalGovernanceRecord, m
 const samePrincipal = (a: AgrPrincipal, b: AgrPrincipal): boolean => a.iss === b.iss && a.sub === b.sub;
 
 /**
+ * @spec approval-governance#accountable-assertion: the accountable-approver
+ * rule for the Mission's approval basis. Under `direct`, EXACTLY ONE `human`
+ * assertion of `consent_principal` approves; under `governed_policy`, EXACTLY
+ * ONE `policy` assertion of `consent_principal` that names the deciding policy
+ * approves; any other named standing-consent basis satisfies the rule through
+ * its authenticated `approval_basis`, so no assertion is required (and none is
+ * fabricated). A `service` assertion never satisfies the rule. Returns the
+ * accountable assertion, or undefined where the basis has none; a record that
+ * fails the rule does not commit.
+ */
+export function assertAccountableApprover(
+  record: UnsignedApprovalGovernanceRecord,
+  basis: ApprovalBasis,
+): AgrAssertion | undefined {
+  const approvesAs = (a: AgrAssertion, kind: "human" | "policy"): boolean =>
+    a.kind === kind && a.decision === "approve" && samePrincipal(a.principal, basis.consent_principal);
+  let kind: "human" | "policy";
+  let matching: AgrAssertion[];
+  switch (basis.type) {
+    case "direct":
+      kind = "human";
+      matching = record.assertions.filter((a) => approvesAs(a, kind));
+      break;
+    case "governed_policy": {
+      kind = "policy";
+      const deciding = basis.activation.policy;
+      matching = record.assertions.filter(
+        (a) => approvesAs(a, kind) && a.authority.policy_id === deciding.id && a.authority.version === deciding.version,
+      );
+      break;
+    }
+    default:
+      return undefined;
+  }
+  if (matching.length !== 1) {
+    throw new ApprovalGovernanceError(
+      `${basis.type} record: exactly one approve assertion of kind ${kind} must match consent_principal`,
+    );
+  }
+  return matching[0];
+}
+
+/**
  * @spec approval-governance#assertion-requirements,
- * approval-governance#governed-policy-record: the accountable-approver rule
- * under `governed_policy`: EXACTLY ONE assertion matches
- * `approval_basis.consent_principal` with an `approve` decision, and it is a
- * `policy` assertion whose `authority` names the deciding policy's `id` and
- * `version` with `approved_at` equal to `approval_basis.approved_at`. The
+ * approval-governance#governed-policy-record: the record under
+ * `governed_policy`. Its accountable assertion
+ * ({@link assertAccountableApprover}) is the one `policy` assertion of
+ * `approval_basis.consent_principal` that names the deciding policy's `id` and
+ * `version`, with `approved_at` equal to `approval_basis.approved_at`. The
  * record's `approval_policy` is the consented root, the evaluation approved,
  * and it relies on the accountable assertion. A record failing any of these
  * does not commit.
@@ -191,18 +234,8 @@ export function assertGovernedPolicyRecord(
   if (!record.evaluation.contributing.every((id) => ids.includes(id))) {
     fail("evaluation relies on an assertion the record does not carry");
   }
-  const accountable = record.assertions.filter(
-    (a) => samePrincipal(a.principal, basis.consent_principal) && a.decision === "approve",
-  );
-  if (accountable.length !== 1) fail("exactly one approve assertion must match consent_principal");
-  const [a] = accountable as [AgrAssertion];
-  if (a.kind !== "policy") fail("the accountable assertion is not a policy assertion");
-  if (
-    a.authority.policy_id !== basis.adjudication.policy.id ||
-    a.authority.version !== basis.adjudication.policy.version ||
-    a.authority.policy_id !== basis.activation.policy.id ||
-    a.authority.version !== basis.activation.policy.version
-  ) {
+  const a = assertAccountableApprover(record, basis) as AgrAssertion;
+  if (a.authority.policy_id !== basis.adjudication.policy.id || a.authority.version !== basis.adjudication.policy.version) {
     fail("the accountable assertion does not name the deciding policy");
   }
   if (a.authority.approved_at !== basis.approved_at) {
