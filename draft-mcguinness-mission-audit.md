@@ -803,7 +803,7 @@ delegation, so `actor` is absent. The record:
   "aud": "https://erp.example.com",
   "entries_digest":
     "sha-256:Hilv4npLEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o",
-  "issued_at": "2026-10-15T14:32:12Z"
+  "issued_at": "2026-11-02T08:14:00Z"
 }
 ~~~
 
@@ -811,14 +811,14 @@ Its JCS canonical bytes (one line; breaks are for display only):
 
 ~~~ text
 {"aud":"https://erp.example.com","entries_digest":"sha-256:Hilv4np
-LEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-10-15T14:3
-2:12Z","issuer":"https://as.example.com","mission_id":"msn_8RfX2Lq
+LEWlcp2y5z7xcACgXxRhx-LO6dqs5AX0xL8o","issued_at":"2026-11-02T08:1
+4:00Z","issuer":"https://as.example.com","mission_id":"msn_8RfX2Lq
 v9TqMv4z7sA2bN1k0YpEdHc9-","token_digest":"sha-256:V1Wbh4Z3wK39B_Y
 mzHlvkGr7hEA1rUoJMuj00y0q-eE","token_digest_kind":"jti"}
 ~~~
 
 The committed digest is the SHA-256 of those bytes; its base64url
-form is `ilGnfpu7hz4kMZeqXWuxwNi0i_fO2vzjWGOY_i9yt4s`. The Signed
+form is `qSXEIPaVGlUC9JOE7XMZM7TzP-ljyAcPA7ui-zubEvA`. The Signed
 Statement carries the digest bytes inline as its payload, with
 `payload-preimage-content-type` `application/mission-derivation-record+json`
 and the same `iss` and `sub` as {{transition-vector}}.
