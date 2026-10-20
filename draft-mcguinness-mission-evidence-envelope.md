@@ -671,7 +671,7 @@ this type as follows, rejecting the submission with
    legitimate retry; a committed reservation is permanent for the
    window this AS retains submission records.
 8. Verify `intent_hash` equals the provisional `intent_hash` computed
-   at submission-processing step 3
+   at submission-processing step 4
    ({{I-D.draft-mcguinness-oauth-mission}}).
 9. Verify `presenter.client_id`, and `cnf` where present, equal the
    presenter the containing exchange established; the assertion is
