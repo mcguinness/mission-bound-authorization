@@ -12,6 +12,8 @@ import {
   ApprovalGovernanceError,
   approvalGovernanceRecordDigest,
   assertAccountableApprover,
+  assertAssertionAuthority,
+  assertGovernedPolicyRecord,
   type AuthorityEntry,
   MissionKernel,
   type MissionRecord,
@@ -286,5 +288,70 @@ describe("accountable-approver rule by approval basis (@spec approval-governance
       expect(assertAccountableApprover(recordWith([serviceBy("ast_judge")]), basis)).toBeUndefined();
       expect(assertAccountableApprover(recordWith([policyBy("ast_dlg", ALICE), humanBy("ast_alice")]), basis)).toBeUndefined();
     }
+  });
+});
+
+describe("assertion authority by kind (@spec approval-governance#assertion-authority)", () => {
+  const withAuthority = (a: AgrAssertion, authority: Record<string, unknown>): AgrAssertion =>
+    ({ ...a, authority }) as AgrAssertion;
+
+  it("accepts the typed members of each kind: human authentication, policy version and approval, service logic and model", () => {
+    for (const a of [
+      humanBy("ast_h"),
+      withAuthority(humanBy("ast_h_min"), { auth_time: "2026-06-30T23:59:00Z" }),
+      policyBy("ast_p"),
+      withAuthority(policyBy("ast_p_by"), { ...policyBy("x").authority, approved_by: CFO }),
+      serviceBy("ast_s"),
+      withAuthority(serviceBy("ast_s_rules"), { logic_id: "dlg-rules", logic_version: "12" }),
+    ]) {
+      expect(() => assertAssertionAuthority(a)).not.toThrow();
+    }
+  });
+
+  it("refuses a missing or mistyped member of each kind", () => {
+    const { auth_time: _t, ...noAuthTime } = humanBy("x").authority;
+    const { policy_id: _i, ...noPolicyId } = policyBy("x").authority;
+    const { version: _v, ...noVersion } = policyBy("x").authority;
+    const { approved_at: _a, ...noApprovedAt } = policyBy("x").authority;
+    const { logic_id: _l, ...noLogicId } = serviceBy("x").authority;
+    const { logic_version: _lv, ...noLogicVersion } = serviceBy("x").authority;
+    for (const [a, why] of [
+      [withAuthority(humanBy("h1"), noAuthTime), /auth_time/],
+      [withAuthority(humanBy("h2"), { auth_time: "yesterday" }), /auth_time/],
+      [withAuthority(humanBy("h3"), { auth_time: "2026-06-30T23:59:00Z", acr: 5 }), /acr/],
+      [withAuthority(humanBy("h4"), { auth_time: "2026-06-30T23:59:00Z", amr: "hwk" }), /amr/],
+      [withAuthority(policyBy("p1"), noPolicyId), /policy_id and version/],
+      [withAuthority(policyBy("p2"), noVersion), /policy_id and version/],
+      [withAuthority(policyBy("p3"), noApprovedAt), /approved_at/],
+      [withAuthority(policyBy("p4"), { ...policyBy("x").authority, approved_at: "2026-06-01" }), /approved_at/],
+      [withAuthority(serviceBy("s1"), noLogicId), /logic_id and logic_version/],
+      [withAuthority(serviceBy("s2"), noLogicVersion), /logic_id and logic_version/],
+      [withAuthority(serviceBy("s3"), { logic_id: "judge", logic_version: "3", model_id: "judge" }), /model_id and model_version/],
+      [{ ...humanBy("n1"), authority: null } as unknown as AgrAssertion, /not an object/],
+    ] as const) {
+      expect(() => assertAssertionAuthority(a)).toThrow(why);
+    }
+  });
+
+  it("refuses an approved_by that differs from the policy assertion's principal", () => {
+    const by = (approved_by: unknown) => withAuthority(policyBy("ast_p"), { ...policyBy("x").authority, approved_by });
+    expect(() => assertAssertionAuthority(by(CFO))).not.toThrow();
+    for (const other of [ALICE, { iss: "https://login.test", sub: "cfo" }, null, "cfo"]) {
+      expect(() => assertAssertionAuthority(by(other))).toThrow(/approved_by is not the assertion's principal/);
+    }
+  });
+
+  it("is enforced at the governed_policy commit gate, before the record is signed", () => {
+    if (mission.approval_basis.type !== "governed_policy") throw new Error("basis");
+    const { envelope: _e, ...unsigned } = record;
+    const accountable = unsigned.assertions[0] as AgrAssertion;
+    const withBy = (approved_by: unknown): UnsignedApprovalGovernanceRecord => ({
+      ...unsigned,
+      assertions: [withAuthority(accountable, { ...accountable.authority, approved_by })],
+    });
+    expect(() => assertGovernedPolicyRecord(withBy(accountable.principal), mission.approval_basis as never)).not.toThrow();
+    expect(() => assertGovernedPolicyRecord(withBy({ iss: ISS, sub: "mallory" }), mission.approval_basis as never)).toThrow(
+      /governed_policy record: assertion ast_policy authority: approved_by/,
+    );
   });
 });

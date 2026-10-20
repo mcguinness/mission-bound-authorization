@@ -43,9 +43,42 @@ export interface AgrAssertion {
   kind: "human" | "service" | "policy";
   decision: "approve" | "deny";
   decided_at: string;
-  /** The provenance under which this principal was authorized to decide. */
+  /**
+   * The provenance under which this principal was authorized to decide: a
+   * {@link HumanAuthority}, {@link PolicyAuthority} or {@link ServiceAuthority}
+   * by `kind` ({@link assertAssertionAuthority}).
+   */
   authority: Record<string, JsonValue>;
   reason?: string;
+}
+
+/** @spec approval-governance#assertion-authority: a `human` assertion's `authority`. */
+export interface HumanAuthority {
+  /** RFC 3339: when the principal authenticated for this decision. */
+  auth_time: string;
+  /** REQUIRED when the issuer possesses it at the approval event. */
+  acr?: string;
+  /** REQUIRED when the issuer possesses them at the approval event. */
+  amr?: string[];
+}
+
+/** @spec approval-governance#assertion-authority: a `policy` assertion's `authority`. */
+export interface PolicyAuthority {
+  policy_id: string;
+  version: string;
+  /** RFC 3339: the human approval of this exact version, from retained, authenticated governance state. */
+  approved_at: string;
+  /** Corroborated from the same state, never the asserting party's word; equals the assertion's `principal`. */
+  approved_by?: AgrPrincipal;
+}
+
+/** @spec approval-governance#assertion-authority: a `service` assertion's `authority`. */
+export interface ServiceAuthority {
+  logic_id: string;
+  logic_version: string;
+  /** REQUIRED where a model produced the decision, with `model_version`. */
+  model_id?: string;
+  model_version?: string;
 }
 
 /** @spec approval-governance#record: every member except the integrity `envelope`. */
@@ -164,6 +197,55 @@ export function assertMissionBinding(record: UnsignedApprovalGovernanceRecord, m
 
 const samePrincipal = (a: AgrPrincipal, b: AgrPrincipal): boolean => a.iss === b.iss && a.sub === b.sub;
 
+/** Strict RFC 3339 date-time shape, checked before `Date.parse` (the lifecycle endpoint's rule). */
+const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
+const isInstant = (v: unknown): boolean =>
+  typeof v === "string" && RFC3339_DATE_TIME.test(v) && !Number.isNaN(Date.parse(v));
+const isText = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+/**
+ * @spec approval-governance#assertion-authority: an assertion's `authority` is
+ * the typed object its `kind` fixes. human: `auth_time` (RFC 3339), with `acr`
+ * (a string) and `amr` (an array of strings) where present. policy:
+ * `policy_id`, `version` and `approved_at` (RFC 3339), and an `approved_by`
+ * that, where present, equals the assertion's `principal` (corroborated
+ * provenance, never the asserting party's word). service: `logic_id` and
+ * `logic_version`, with `model_id` and `model_version` together where a model
+ * produced the decision. A record carrying any other shape does not commit.
+ */
+export function assertAssertionAuthority(a: AgrAssertion): void {
+  const fail = (why: string): never => {
+    throw new ApprovalGovernanceError(`assertion ${a.assertion_id} authority: ${why}`);
+  };
+  const au = a.authority as Record<string, unknown> | null;
+  if (au === null || typeof au !== "object" || Array.isArray(au)) fail("is not an object");
+  const m = au as Record<string, unknown>;
+  switch (a.kind) {
+    case "human":
+      if (!isInstant(m.auth_time)) fail("auth_time is not an RFC 3339 timestamp");
+      if (m.acr !== undefined && !isText(m.acr)) fail("acr is not a string");
+      if (m.amr !== undefined && !(Array.isArray(m.amr) && m.amr.every(isText))) fail("amr is not an array of strings");
+      break;
+    case "policy": {
+      if (!isText(m.policy_id) || !isText(m.version)) fail("policy_id and version are required strings");
+      if (!isInstant(m.approved_at)) fail("approved_at is not an RFC 3339 timestamp");
+      const by = m.approved_by as AgrPrincipal | undefined;
+      if (by !== undefined && !(by !== null && typeof by === "object" && samePrincipal(by, a.principal))) {
+        fail("approved_by is not the assertion's principal");
+      }
+      break;
+    }
+    case "service":
+      if (!isText(m.logic_id) || !isText(m.logic_version)) fail("logic_id and logic_version are required strings");
+      if ((m.model_id !== undefined || m.model_version !== undefined) && !(isText(m.model_id) && isText(m.model_version))) {
+        fail("model_id and model_version are required together");
+      }
+      break;
+    default:
+      fail(`kind ${String((a as { kind: unknown }).kind)} is not human, policy or service`);
+  }
+}
+
 /**
  * @spec approval-governance#accountable-assertion: the accountable-approver
  * rule for the Mission's approval basis. Under `direct`, EXACTLY ONE `human`
@@ -227,6 +309,13 @@ export function assertGovernedPolicyRecord(
   };
   const ids = record.assertions.map((a) => a.assertion_id);
   if (new Set(ids).size !== ids.length) fail("assertion_id values are not unique");
+  for (const x of record.assertions) {
+    try {
+      assertAssertionAuthority(x);
+    } catch (e) {
+      fail((e as Error).message);
+    }
+  }
   if (record.approval_policy.digest !== basis.root_commitment) {
     fail("approval_policy.digest is not the consented root's commitment");
   }

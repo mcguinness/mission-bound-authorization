@@ -354,10 +354,11 @@ hold too.
 
 # The Approval Governance Record {#record}
 
-An Approval Governance Record is a JSON object. {{record-members}} and
-{{assertion-members}} define its members. {{assertion-requirements}} and
-{{atomic-commitment}} define how the issuer builds and commits it, and
-{{envelope}} defines its integrity protection.
+An Approval Governance Record is a JSON object. {{record-members}},
+{{assertion-members}} and {{assertion-authority}} define its members.
+{{assertion-requirements}} and {{atomic-commitment}} define how the
+issuer builds and commits it, and {{envelope}} defines its integrity
+protection.
 
 ## Record Members {#record-members}
 
@@ -421,7 +422,15 @@ Each element of `assertions` is an object with these members:
 : REQUIRED. A string, unique within the record.
 
 `principal`:
-: REQUIRED. An object with `iss` and `sub`.
+: REQUIRED. An object with `iss` and `sub`: the principal in whose name
+  the assertion is made.
+
+  - For a `human` assertion, the authenticated human who decided.
+  - For a `policy` assertion, the human who approved the exact policy
+    version its `authority` names, as the issuer's retained,
+    authenticated governance state records. The policy is the decision
+    mechanism, never the principal.
+  - For a `service` assertion, the service that produced the decision.
 
 `kind`:
 : REQUIRED. A string, one of `human`, `service`, or `policy`.
@@ -433,30 +442,92 @@ Each element of `assertions` is an object with these members:
 : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
 
 `authority`:
-: REQUIRED. A reference to the provenance under which this principal was
-  authorized to decide:
-
-  - For a `human` assertion, the authentication context of the
-    assertion.
-  - For a `policy` assertion, the deciding policy's identifier and
-    version, and `approved_at`: the family's provenance chain for
-    non-human adjudication, in which the policy decides the instance
-    because a human approved the policy.
-  - For a `service` assertion, the identifier and version of the logic
-    that produced the decision, including the model's identifier and
-    version where a model produced it.
+: REQUIRED. An object recording the provenance under which the principal
+  was authorized to decide. Its members depend on `kind`
+  ({{assertion-authority}}).
 
 `reason`:
 : OPTIONAL. A string.
 
-A `policy` assertion's `approved_at` is an RFC 3339 timestamp: the human
-approval instant of that exact policy version, not the assertion
-instant. The `decided_at` member records when the policy asserted, and
-`approved_at` records when a human approved the version it asserts
-under. The issuer MUST verify `approved_at` from retained, authenticated
-governance state for the named `policy_id` and `version`; it MUST NOT
-accept `approved_at` as the assertion's own uncorroborated clock value
-({{policy-approval-recency}}).
+## Assertion Authority {#assertion-authority}
+
+An assertion's `authority` is an object whose members depend on the
+assertion's `kind`. Each member below states its type, its presence, and
+the source the issuer takes it from. A member this section does not
+define for the assertion's `kind` carries no semantics under this
+document.
+
+A `human` assertion's `authority` records the authentication the issuer
+verified for the decision ({{assertion-validation}}):
+
+`auth_time`:
+: REQUIRED. An RFC 3339 timestamp: when the principal authenticated for
+  this decision.
+
+`acr`:
+: A string: the authentication context class reference of that
+  authentication. REQUIRED when the issuer possesses it at the approval
+  event.
+
+`amr`:
+: An array of strings: the authentication methods references of that
+  authentication. REQUIRED when the issuer possesses them at the
+  approval event.
+
+The issuer takes these members from the authentication it verified,
+never from the requesting client or agent.
+
+A `policy` assertion's `authority` names the deciding policy version and
+its human approval:
+
+`policy_id`:
+: REQUIRED. A string: the identifier of the policy that decided.
+
+`version`:
+: REQUIRED. A string: the exact version of that policy.
+
+`approved_at`:
+: REQUIRED. An RFC 3339 timestamp: the human approval instant of that
+  exact policy version, not the assertion instant. The `decided_at`
+  member records when the policy asserted, and `approved_at` records
+  when a human approved the version it asserts under.
+
+`approved_by`:
+: OPTIONAL. An object with `iss` and `sub`: the human who approved that
+  version. When present, it MUST equal `principal`.
+
+The issuer takes `policy_id` and `version` from the policy it evaluated,
+or from the authenticated decision it verified. The `approved_at` and
+`approved_by` members are corroborated provenance, never
+self-authenticating evidence: the issuer MUST verify `approved_at` from
+retained, authenticated governance state for the named `policy_id` and
+`version`, and it MUST NOT accept `approved_at` as the assertion's own
+uncorroborated clock value ({{policy-approval-recency}}). It takes
+`approved_by` from the same state and MUST NOT accept it from the
+asserting party.
+
+A `service` assertion's `authority` identifies the logic that produced
+the decision, and the model where a model produced it:
+
+`logic_id`:
+: REQUIRED. A string: the identifier of the logic (for example, a
+  workflow, a rule engine, or a model) that produced the decision.
+
+`logic_version`:
+: REQUIRED. A string: the version of that logic.
+
+`model_id`:
+: A string: the identifier of the model that produced the decision.
+  REQUIRED where a model produced it.
+
+`model_version`:
+: A string: the version of that model. REQUIRED where `model_id` is
+  present.
+
+Where the logic is itself a model, `logic_id` and `logic_version` carry
+the model's identifier and version, as `model_id` and `model_version`
+do. The issuer takes these members from the integrity-protected channel
+or signature it verified for the assertion ({{assertion-validation}}).
 
 ## Approval Policy Reference {#approval-policy}
 
@@ -513,13 +584,11 @@ and Authority Set, and so its anchors.
         "amr": ["pwd", "hwk"],
         "auth_time": "2026-11-02T07:59:00Z" } },
     { "assertion_id": "ast_2",
-      "principal": { "iss": "https://as.example.com",
-        "sub": "policy:finance-charter" },
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_dC9yqLHPbadQRVw" },
       "kind": "policy", "decision": "approve",
       "decided_at": "2026-11-02T08:00:00Z",
       "authority": { "policy_id": "dlg-matrix", "version": "v7",
-        "approved_by": { "iss": "https://login.example.com",
-          "sub": "cfo@example.com" },
         "approved_at": "2026-09-15T09:00:00Z" } }
   ],
   "evaluation": {
@@ -540,13 +609,11 @@ In this example:
   Alice (`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`). `ast_1`
   is her own `approve` assertion, which satisfies the
   accountable-approver rule of {{accountable-assertion}} directly.
-- `ast_2` is a `policy` assertion carrying its own provenance chain,
-  recorded alongside the accountable assertion rather than in place of
-  it. Because a non-human assertion contributes, the record is required
-  under the third recording trigger ({{triggers}}).
-- The `envelope` member's `value` is the JWS whose payload is the JCS
-  canonical bytes of this object with `envelope` itself removed
-  ({{envelope}}).
+- `ast_2` is a `policy` assertion in the name of the human who approved
+  `dlg-matrix` version `v7` (`user_dC9yqLHPbadQRVw`). It is recorded
+  alongside the accountable assertion rather than in place of it.
+  Because a second principal and a non-human assertion contribute, the
+  second and third recording triggers hold ({{triggers}}).
 
 # Assertion Requirements {#assertion-requirements}
 

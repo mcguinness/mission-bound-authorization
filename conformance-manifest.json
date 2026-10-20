@@ -43685,7 +43685,7 @@
    "id": "approval-governance.record.service-authority-logic-version",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "record",
-   "text": "For a `service` assertion, the identifier and version of the logic that produced the decision",
+   "text": "A `service` assertion's `authority` identifies the logic that produced the decision, and the model where a model produced it",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -43696,8 +43696,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a service assertion's authority names the identifier and version of the logic that produced its decision, and the model's identifier and version where a model produced it",
-    "local": "Limited to the governed-policy kernel path (activateGovernedPolicy), the one path that reaches this case in the reference AS; no endpoint witness."
+    "normative": "a service assertion's authority carries logic_id and logic_version, and model_id with model_version where a model produced the decision; a record whose service assertion lacks the logic pair, or carries one of the model pair without the other, does not commit",
+    "local": "Produced on the governed-policy kernel path (activateGovernedPolicy), the one path that commits a service assertion in the reference AS; the reference's model advisor is the whole logic, so its logic pair names the model. Refusal witnessed at the validator; no endpoint witness."
    },
    "level": "unit",
    "coverage": "tested",
@@ -43707,9 +43707,187 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > lets a recorded model output refuse or narrow an activation, never widen it, and records it as a service assertion",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version."
+   "notes": "Defines authority for the service kind, previously defined only for human and policy assertions. #1185 implementation: a model's recorded output is a service assertion whose authority names the model's identifier and version. #1436 ruling 3 (D568): typed members logic_id, logic_version, model_id, model_version; requoted; mutations: dropping the producer's logic pair, the logic check, or the model pairing."
+  },
+  {
+   "id": "approval-governance.assertion.policy-principal-approver",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-members",
+   "text": "For a `policy` assertion, the human who approved the exact policy version its `authority` names",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy assertion's principal is the human who approved the exact policy version its authority names, never an identity for the policy itself",
+    "local": "The reference produces policy assertions only under governed_policy, where that human is the consent principal."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness."
+  },
+  {
+   "id": "approval-governance.authority.human-members",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "A `human` assertion's `authority` records the authentication the issuer verified for the decision",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a human assertion's authority carries auth_time (RFC 3339) and, where the issuer possesses them, acr (a string) and amr (an array of strings), taken from the authentication the issuer verified; a record carrying another shape does not commit",
+    "local": "Witnessed at the reference validator (assertAssertionAuthority), which the governed commit gate runs over every assertion. The reference commits no human assertion, so no record carrying one is committed."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > accepts the typed members of each kind: human authentication, policy version and approval, service logic and model",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568); presence follows Consent Evidence's authentication_context (record each value possessed). Mutations: auth_time or amr unchecked."
+  },
+  {
+   "id": "approval-governance.authority.policy-members",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "A `policy` assertion's `authority` names the deciding policy version and its human approval",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion's authority carries policy_id and version (strings) and approved_at (RFC 3339); a record whose policy assertion lacks one or carries a mistyped one does not commit"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > is enforced at the governed_policy commit gate, before the record is signed",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > activates a bounded Mission and commits a signed Approval Governance Record with it",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568): the existing names policy_id, version and approved_at, now typed. Mutations: approved_at or version unchecked; the commit gate skipping the check."
+  },
+  {
+   "id": "approval-governance.authority.approved-by-equals-principal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "When present, it MUST equal `principal`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a policy assertion whose approved_by differs from its principal, or is not an iss and sub object, is refused and the record does not commit"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses an approved_by that differs from the policy assertion's principal",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > is enforced at the governed_policy commit gate, before the record is signed",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568); mutation: accepting any approved_by."
+  },
+  {
+   "id": "approval-governance.authority.approved-by-corroborated",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-authority",
+   "text": "It takes `approved_by` from the same state and MUST NOT accept it from the asserting party",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "approved_by is corroborated provenance from retained, authenticated governance state, never the asserting party's own statement",
+    "local": "Only its observable consequence is witnessed: an approved_by that differs from the principal the governance state names is refused. The reference never emits approved_by, so the source it is taken from has no witness."
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses an approved_by that differs from the policy assertion's principal",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 3 (D568): any approved_by is corroborated provenance, never self-authenticating evidence."
   },
   {
    "id": "approval-governance.envelope.verifier-steps",

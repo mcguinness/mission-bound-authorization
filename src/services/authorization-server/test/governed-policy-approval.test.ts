@@ -774,7 +774,7 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
       kind: "service",
       decision: "approve",
       decided_at: mission.created_at,
-      authority: { model_id: "risk-model", model_version: "3" },
+      authority: { logic_id: "risk-model", logic_version: "3", model_id: "risk-model", model_version: "3" },
       reason: "narrowed",
     });
     expect(record.evaluation.contributing).toEqual(["ast_policy", "ast_model_1"]);
