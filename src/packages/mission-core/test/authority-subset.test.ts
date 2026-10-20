@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
+  delegateMatcherListViolation,
   entryWithinCeiling,
   isAuthorityEntry,
   isSubsetSet,
@@ -89,6 +90,44 @@ describe("shared authority ceiling (#762)", () => {
       expect(narrowToCeiling([candidate as AuthorityEntry], [entry])).toEqual([]);
       expect(narrowToCeiling([entry], [candidate as AuthorityEntry])).toEqual([]);
     }
+  });
+});
+
+describe("the shared delegate-matcher rule (@spec resource-access#matching-allowed-delegates, #1373)", () => {
+  const MALFORMED: ReadonlyArray<readonly [unknown, string]> = [
+    [{ sub_profile: "ai_agent", org: "A" }, "m entries carry no member 'org'"],
+    [{}, "m entries must carry sub or sub_profile"],
+    [{ sub: "" }, "m.sub must not be empty"],
+    [{ sub_profile: "" }, "m.sub_profile must not be empty"],
+    [{ sub: 7 }, "m.sub must be a string"],
+    [{ sub: "actor", sub_profile: ["ai_agent"] }, "m.sub_profile must be a string"],
+    [null, "m entries must be objects"],
+  ];
+  const VALID = [
+    { sub: "actor" },
+    { sub_profile: "ai_agent" },
+    { sub: "actor", sub_profile: "ai_agent" },
+    { sub_profile: "ai_agent client_instance" },
+  ];
+  const lists = (matchers: unknown[]) => [
+    { ...entry, delegation: { max_depth: 1, allowed_delegates: matchers } },
+    { ...entry, delegation: { max_depth: 1, children: { allowed_child_actors: matchers } } },
+  ];
+
+  it("names each malformed matcher, and isAuthorityEntry refuses it in either list", () => {
+    for (const [matcher, violation] of MALFORMED) {
+      expect(delegateMatcherListViolation([{ sub: "actor" }, matcher], "m")).toBe(violation);
+      for (const candidate of lists([matcher])) {
+        expect(isAuthorityEntry(candidate), violation).toBe(false);
+      }
+    }
+    expect(delegateMatcherListViolation({ sub: "actor" }, "m")).toBe("m must be an array");
+  });
+
+  it("admits sub, sub_profile, both, and a multi-value sub_profile in either list", () => {
+    expect(delegateMatcherListViolation(VALID, "m")).toBeUndefined();
+    expect(delegateMatcherListViolation([], "m")).toBeUndefined();
+    for (const candidate of lists(VALID)) expect(isAuthorityEntry(candidate)).toBe(true);
   });
 });
 

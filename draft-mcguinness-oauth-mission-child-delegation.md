@@ -2091,7 +2091,7 @@ Example:
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g"
+      "sha-256:5TEV3V5Ej6aOjuCIytX7jc1YWyWEF-nN_6ILcAbW3-M"
   },
   "child_actor": {
     "sub": "subagent-invoice-extractor",
@@ -2101,7 +2101,7 @@ Example:
     "result": "strict_subset"
   },
   "fanout": {
-    "active_children": 2,
+    "active_children": 1,
     "max_children": 5
   },
   "cascade_mode": "immediate",

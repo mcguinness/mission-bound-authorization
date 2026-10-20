@@ -288,6 +288,34 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     }
   });
 
+  // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+  // (#1373): a template ceiling entry whose delegate matcher carries a member
+  // other than `sub` and `sub_profile`, or neither, is refused at consent,
+  // naming the entry, rather than stored and refused only at dispatch.
+  it("refuses a template whose ceiling entry carries a malformed delegate matcher, naming the entry, and creates no template", async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [
+        { max_depth: 1, allowed_delegates: [{ sub_profile: "ai_agent", org: "A" }] },
+        "ceiling[0] delegation.allowed_delegates entries carry no member 'org'",
+      ],
+      [
+        { max_depth: 1, children: { allowed_child_actors: [{}] } },
+        "ceiling[0] delegation.children.allowed_child_actors entries must carry sub or sub_profile",
+      ],
+    ];
+    for (const [delegation, description] of cases) {
+      const body = readOnlyTemplateBody();
+      const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) => (i === 0 ? { ...e, delegation } : e));
+      const res = await createTemplateAdmin({ ...body, ceiling });
+      const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+      expect(res.status, JSON.stringify(out)).toBe(400);
+      expect(out.error).toBe("invalid_request");
+      expect(out.error_description).toBe(description);
+      expect(out.template_id).toBeUndefined();
+      expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+    }
+  });
+
   it("rejects an absent or wrong x-service-token with 401", async () => {
     const absent = await createTemplateAdmin(readOnlyTemplateBody(), null);
     expect(absent.status).toBe(401);

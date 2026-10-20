@@ -12,6 +12,8 @@
  */
 
 import {
+  delegateMatcherListViolation,
+  entryDelegateMatcherViolation,
   isAbsoluteUri,
   isActivationPolicyRef,
   isImplementedCommonConstraint,
@@ -23,6 +25,30 @@ import {
 
 /** @spec mission#authorization-derivation — the sole type this AS derives. */
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
+
+/**
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1376): one `actions` value, matched as a whole: an action identifier
+ * (`[A-Za-z0-9_.:-]+`), or an action family, an identifier followed by `.*`.
+ * Anchored and without the `m` flag, so a character outside the grammar
+ * anywhere in the value, a trailing newline included, fails it.
+ */
+export const ACTION_VALUE = /^[A-Za-z0-9_.:-]+(?:\.\*)?$/;
+
+/**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): one delegate matcher, the item of both `allowed_delegates` and
+ * `allowed_child_actors`. Closed to `sub` and `sub_profile`, at least one
+ * present, each a non-empty string: the published form of the shared rule
+ * {@link validateMissionResourceAccessSchema} applies
+ * (`delegateMatcherListViolation`).
+ */
+const DELEGATE_MATCHER_SCHEMA: Record<string, JsonValue> = {
+  type: "object",
+  properties: { sub: { type: "string", minLength: 1 }, sub_profile: { type: "string", minLength: 1 } },
+  minProperties: 1,
+  additionalProperties: false,
+};
 
 /** draft-zehavi-oauth-rar-metadata §5 — one type's published metadata entry. */
 export interface AuthorizationDetailsTypeMetadata {
@@ -70,7 +96,9 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
     // the RFC 9396 common `locations` field; its presence, whatever its value,
     // fails the schema.
     locations: false,
-    actions: { type: "array", items: { type: "string" }, minItems: 1 },
+    // @spec resource-access#entry-validation (#1376): non-empty, each value an
+    // action identifier or an action family ({@link ACTION_VALUE}).
+    actions: { type: "array", items: { type: "string", pattern: ACTION_VALUE.source }, minItems: 1 },
     constraints: {
       type: "object",
       description: "Common Constraints (@spec mission#common-constraints)",
@@ -132,14 +160,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       description: "@spec attenuation#delegation, child-delegation#fanout",
       properties: {
         max_depth: { type: "integer", minimum: 0 },
-        allowed_delegates: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: { sub: { type: "string" }, sub_profile: { type: "string" } },
-            additionalProperties: true,
-          },
-        },
+        allowed_delegates: { type: "array", items: DELEGATE_MATCHER_SCHEMA },
         // @spec child-delegation#fanout — the per-entry child-creation controls.
         // `allowed_child_actors` is the same matcher shape as `allowed_delegates`
         // (shared vocabulary); both are now schema-covered so neither rides on
@@ -150,14 +171,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           properties: {
             max_children: { type: "integer", minimum: 0 },
             max_child_depth: { type: "integer", minimum: 1 },
-            allowed_child_actors: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: { sub: { type: "string" }, sub_profile: { type: "string" } },
-                additionalProperties: true,
-              },
-            },
+            allowed_child_actors: { type: "array", items: DELEGATE_MATCHER_SCHEMA },
             child_creation_policy: {
               type: "object",
               properties: {
@@ -255,6 +269,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
     return "actions must be a non-empty array of strings";
   }
+  // @spec resource-access#entry-validation (#1376): each value matches the
+  // action grammar as a whole, so an identifier the namespace cannot carry
+  // is refused at intake rather than admitted and never matched.
+  const malformedAction = e.actions.find((a) => !ACTION_VALUE.test(a));
+  if (malformedAction !== undefined) {
+    return `actions value ${JSON.stringify(malformedAction)} is neither an action identifier nor an action family`;
+  }
   if (e.constraints !== undefined) {
     if (e.constraints === null || typeof e.constraints !== "object" || Array.isArray(e.constraints)) {
       return "constraints must be an object";
@@ -335,8 +356,11 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
     if (typeof d.max_depth !== "number" || !Number.isInteger(d.max_depth) || d.max_depth < 0) {
       return "delegation.max_depth must be a non-negative integer";
     }
+    // @spec resource-access#matching-allowed-delegates (#1373): the shared
+    // matcher rule, applied before derivation can rebuild a matcher without a
+    // member it does not recognize.
     if (d.allowed_delegates !== undefined) {
-      const err = validateMatcherList(d.allowed_delegates, "delegation.allowed_delegates");
+      const err = delegateMatcherListViolation(d.allowed_delegates, "delegation.allowed_delegates");
       if (err) return err;
     }
     // @spec child-delegation#fanout — the per-entry `children` controls, including
@@ -364,7 +388,10 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         return "delegation.children.child_creation_policy must be an activation policy reference (id, version, digest)";
       }
       if (ch.allowed_child_actors !== undefined) {
-        const err = validateMatcherList(ch.allowed_child_actors, "delegation.children.allowed_child_actors");
+        const err = delegateMatcherListViolation(
+          ch.allowed_child_actors,
+          "delegation.children.allowed_child_actors",
+        );
         if (err) return err;
       }
     }
@@ -403,22 +430,22 @@ export function refusedMemberInRequest(entries: readonly unknown[]): string | un
 }
 
 /**
- * Shared structural check for a delegate-matcher list (`allowed_delegates` /
- * `allowed_child_actors`): an array of objects each with optional string `sub` /
- * `sub_profile`. Returns a violation description or undefined. Mirrors the
- * runtime matcher's shape ({@link DelegateMatcher}).
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): the shared delegate-matcher rule over a requested
+ * `authorization_details` array, for the same intakes as
+ * {@link refusedMemberInRequest}: the first `mission_resource_access` entry
+ * whose `allowed_delegates` or `allowed_child_actors` carries a malformed
+ * matcher yields the violation (`entryDelegateMatcherViolation`, which applies
+ * `delegateMatcherListViolation`). Each intake's subset check reads a matcher's
+ * `sub` and `sub_profile` only, so a matcher carrying another member would be
+ * admitted, then issued either rebuilt without the member (a projection) or
+ * carrying a member no enforcement point reads (the deferred grant).
  */
-function validateMatcherList(value: unknown, path: string): string | undefined {
-  if (!Array.isArray(value)) return `${path} must be an array`;
-  for (const m of value) {
-    if (m === null || typeof m !== "object" || Array.isArray(m)) {
-      return `${path} entries must be objects`;
-    }
-    const mm = m as Record<string, unknown>;
-    if (mm.sub !== undefined && typeof mm.sub !== "string") return `${path}.sub must be a string`;
-    if (mm.sub_profile !== undefined && typeof mm.sub_profile !== "string") {
-      return `${path}.sub_profile must be a string`;
-    }
+export function malformedMatcherInRequest(entries: readonly unknown[]): string | undefined {
+  for (const entry of entries) {
+    if ((entry as { type?: unknown } | null)?.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
+    const violation = entryDelegateMatcherViolation(entry);
+    if (violation) return violation;
   }
   return undefined;
 }

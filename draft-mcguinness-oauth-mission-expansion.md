@@ -1649,10 +1649,11 @@ as for any Mission creation.
 A Q3 reconciliation Mission `msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS`,
 not the single-domain walkthrough's, authorizes reading invoices and
 posting journal entries of at most USD 500. Mid-task the agent finds an
-adjustment of $1,200, outside the active Mission's authority. It cannot
-widen in place; it requests an expansion as a token exchange presenting
-the predecessor's Mission-bound access token as the `subject_token`,
-proving possession with a DPoP proof over the token's confirmation key:
+adjustment of USD 1,200, outside the active Mission's authority. It
+cannot widen in place; it requests an expansion as a token exchange
+presenting the predecessor's Mission-bound access token as the
+`subject_token`, proving possession with a DPoP proof over the token's
+confirmation key:
 
 ~~~ http
 POST /token HTTP/1.1
@@ -1665,7 +1666,7 @@ requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 subject_token=<predecessor%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 mission_intent=%7B%22intent%22%3A
-  %7B...journal-entries%20cap%20%242000...%7D%7D&
+  %7B...journal-entries%20cap%20USD%202000...%7D%7D&
 predecessor=msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS&
 creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
 client_id=s6BhdRkqt3

@@ -1191,7 +1191,7 @@ This section is this binding's Mission Substrate Statement and
 declares conformance to {{I-D.draft-mcguinness-mission-substrate}}.
 It applies to this revision of the binding in every resource access
 mode of {{access-modes}}; mode-specific limits appear in the
-capability table.
+capability list.
 
 The contextual-governance kernel maps as follows:
 
@@ -1261,24 +1261,121 @@ The contextual-governance kernel maps as follows:
    coverage, ordering, integrity, access, and retention requirements
    of {{mission-log}}.
 
-The Statement's capability table follows, one row per capability;
-every supplied row states its activation conditions, and its temporal
-and failure elements in its cells or by express inheritance of the
-Bounded Reliance floor ({{I-D.draft-mcguinness-mission-substrate}}):
+The Statement's capability list follows, one entry per capability;
+every supplied entry states its activation conditions, and its
+temporal and failure elements in the entry or by express inheritance
+of the Bounded Reliance floor
+({{I-D.draft-mcguinness-mission-substrate}}):
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued `mission_s256` claim; decisions fail closed when current state cannot be established ({{lifecycle}}, {{access-modes}}, {{mission-log}}) | Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless ({{ref-propagation}}); the post-transition residual is bounded by person-token and auth-token lifetime and `expires_at` |
-| State-Observable | supplied | the AAuth Mission Management status operation active ({{I-D.draft-mcguinness-mission-aauth-management}}) | Authenticated per-role callers, the `active` and `terminated` vocabulary, responses stamped `observed_at` with a declared `fresh_until` reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable | The base binding exposes no consumer-facing state source; token acceptance is not observation |
-| Structured Authority | not supplied | -- | -- | The mission description is private prose and `approved_tools` is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary |
-| Monotonic Derivation | not supplied | -- | -- | No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary; an accepted update can broaden the work under the same reference with the Supervisor's acceptance ({{lifecycle}}), so the binding offers no containment guarantee |
-| Credential-Bound | supplied | PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed `mission_s256` claim ({{access-modes}}, {{ref-propagation}}) | PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission | Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim ({{ref-propagation}}) |
-| Authorized Context Correlation | not supplied | -- | -- | The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined |
-| Independently Verifiable | not supplied | -- | -- | `s256` proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties |
-| Portable Evidence | not supplied | -- | -- | The mission log is PS-local; signed receipts or checkpoints would be an extension |
-{: title="AAuth Mission substrate capabilities"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
 
-Each supplied row's temporal elements inherit the binding's own
+  Activation: always
+
+  Scope and defining sections: Mission approval and other positive
+  governance decisions at the mission endpoint, permission decisions,
+  person-token issuance under a named or upstream-inherited mission, and
+  auth-token issuance the PS performs or brokers for requests carrying
+  the person-token-issued `mission_s256` claim; decisions fail closed
+  when current state cannot be established ({{lifecycle}},
+  {{access-modes}}, {{mission-log}})
+
+  Limitations: Independently issued resource credentials and
+  intentionally missionless requests, admitted by policy with no
+  required or inherited association, are outside the claim; a failed
+  required association is rejected, never treated as missionless
+  ({{ref-propagation}}); the post-transition residual is bounded by
+  person-token and auth-token lifetime and `expires_at`
+
+State-Observable:
+: Claim: supplied
+
+  Activation: the AAuth Mission Management status operation active
+  ({{I-D.draft-mcguinness-mission-aauth-management}})
+
+  Scope and defining sections: Authenticated per-role callers, the
+  `active` and `terminated` vocabulary, responses stamped `observed_at`
+  with a declared `fresh_until` reliance bound, failing closed on
+  failed, unrecognized, or stale responses, absent and unauthorized
+  references indistinguishable
+
+  Limitations: The base binding exposes no consumer-facing state source;
+  token acceptance is not observation
+
+Structured Authority:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: The mission description is private prose and
+  `approved_tools` is PS-governance input; scopes or a resource-owned
+  policy language can supply structure inside its own boundary
+
+Monotonic Derivation:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: No cross-boundary subset relation is defined; a resource
+  policy language can define monotonicity within its own vocabulary; an
+  accepted update can broaden the work under the same reference with the
+  Supervisor's acceptance ({{lifecycle}}), so the binding offers no
+  containment guarantee
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: PS authorization or federated authorization access mode,
+  for requests whose resource token carries and validates the signed
+  `mission_s256` claim ({{access-modes}}, {{ref-propagation}})
+
+  Scope and defining sections: PS-issued or PS-brokered artifacts carry
+  the claim, a binding established at issuance rather than by an
+  external join; fact semantics: PS issuance or brokering under the
+  mission
+
+  Limitations: Agent identity and resource-managed modes convey no
+  mission binding; federated authorization artifacts are AS-issued under
+  the PS's brokering, and the PS's delivery check rejects one that omits
+  or alters the claim ({{ref-propagation}})
+
+Authorized Context Correlation:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: The PS co-establishes the mission, person, agent, and
+  token where it is on the path; no authoritative join of independently
+  established facts is defined
+
+Independently Verifiable:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: `s256` proves byte identity to parties holding the blob;
+  it does not prove record properties or current state to third parties
+
+Portable Evidence:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: The mission log is PS-local; signed receipts or
+  checkpoints would be an extension
+{: #aauth-mission-substrate-capabilities newline="true"}
+
+Each supplied entry's temporal elements inherit the binding's own
 bounds unless stated: decisions establish current state at the PS at
 decision time, artifact lifetime is the auth-token lifetime capped by
 `expires_at`, and the residual after the mission becomes non-active
@@ -1313,6 +1410,10 @@ incremental deployment remain distinct concerns.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial (#1382): the Mission Substrate Statement's capability
+  table is a capability list, one entry per capability, which fits
+  the text rendering. No requirement changes.
 
 - Native Reference defines how a consumer that keys Missions by
   `issuer` and `id`, such as the Runtime and the AuthZEN profile,
