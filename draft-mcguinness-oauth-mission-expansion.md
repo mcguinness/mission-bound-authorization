@@ -195,13 +195,12 @@ An agent's task does not always stay within the authority approved
 for it. The agent can meet an action that the approved Authority Set
 does not cover but that the deployment's governance policy would
 permit under a fresh consent. Expansion is the governed path from that
-shortfall to a new approval. It never patches or widens the existing
-Mission. It creates a new Mission through the issuance profile's own
+shortfall to a new approval. It does not modify or widen the existing Mission. It creates a new Mission through the issuance profile's own
 approval event, with its own integrity anchors and Mission record,
 linked to the Mission it replaces. The successor's authority comes
 only from that approval.
 
-This document adds three things to the issuance profile:
+The mechanism rests on three additions to the issuance profile:
 
 - an expansion request, an {{RFC8693}} token exchange bound to the
   predecessor by possession of the predecessor's Mission-bound access
@@ -237,7 +236,7 @@ request, records no `predecessor` member, and never terminates a
 Mission with reason `superseded`. The issuance profile's lifecycle
 (`active`, and `terminated` with reason `revoked` or `expired`) is
 complete without expansion. A Mission Issuer claims conformance to
-this document only when it adjudicates expansion ({{conformance}}).
+this document only under one of the targets of {{conformance}}.
 
 ## Scope {#scope}
 
@@ -324,9 +323,9 @@ Successor activation:
      |                            |
      |                            | 2. complete, one of:
      |                            |
-     |    <-- authz_pending ----- | (a) deferred: fresh async
-     |    ---- poll ------------> |     approval via DTR;
-     |    <-- access token ------ |     token on approval
+     |    <-- deferral ---------- | (a) deferred: fresh async
+     |    ---- poll ------------> |     approval; token on
+     |    <-- access token ------ |     approval
      |                            |
      |    <-- interaction req. -- | (b) interactive: the
      |    ---- PAR + handle ----> |     client pushes the
@@ -378,10 +377,9 @@ Denials come from different sources:
   insufficient-authority error ({{I-D.draft-mcguinness-oauth-mission}}).
 - Under the runtime enforcement profile
   ({{I-D.draft-mcguinness-mission-runtime}}), a deny is terminal for
-  the attempted action, and that profile names the
-  authority-expandable-denial escalation, which turns such a deny into
-  an expansion, as out of its scope. This document defines that
-  expansion.
+  the attempted action, and a request that would broaden the Mission's
+  authority is refused, with expansion out of that profile's scope.
+  This document defines that expansion.
 
 This document does not require any particular denial source: a client
 that knows, by any means, that an action needs authority the active
@@ -501,8 +499,8 @@ endpoint with the following parameters:
   exchange missing it with `invalid_request`.
 
 A `mission_intent` on a token exchange marks it as a Mission-creation
-exchange. An exchange whose `subject_token` resolves to a Mission and
-that carries no `child_actor` is an expansion. A token exchange
+exchange. A Mission-creation exchange whose `subject_token` resolves
+to a Mission and that carries no `child_actor` is an expansion. A token exchange
 carrying both a `predecessor` cross-check and the child-delegation
 profile's `child_actor`
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) MUST be
@@ -541,8 +539,9 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
 ~~~
 {: #fig-request title="Expansion Request"}
 
-The `mission_intent` value, decoded, raises the journal-entry cap from
-USD 500 to USD 2,000 and keeps the rest of the predecessor's task:
+The following is an example of the decoded `mission_intent` value. It
+raises the journal-entry cap from USD 500 to USD 2,000 and keeps the
+rest of the predecessor's task:
 
 ~~~ json
 =============== NOTE: '\' line wrapping per RFC 8792 ===============
@@ -744,8 +743,8 @@ Deferred:
   deferred token response
   ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
-  `authorization_pending` with a `deferral_code` and a polling
-  `interval`. The Approver acts on the deployment's asynchronous review
+  `authorization_pending` with a `deferral_code`, its `expires_in`, and
+  a polling `interval`. The Approver acts on the deployment's asynchronous review
   surface, and the client polls. The poll resolves to the successor's
   access token on approval, or to `access_denied` or `expired_token`.
   This document references that substrate and does not redefine it.
@@ -792,8 +791,8 @@ In either mode, the exchange's `creation_request_id` reservation
 loses the response recovers the one committed operation, never a
 second creation.
 
-The following example shows a deferred completion of the request in
-{{fig-request}}. The Mission Issuer defers it:
+The following is an example of a deferred response to the request in
+{{fig-request}}:
 
 ~~~ http
 HTTP/1.1 400 Bad Request
@@ -809,9 +808,10 @@ Cache-Control: no-store
 ~~~
 {: #fig-deferred title="Deferred Response"}
 
-The client polls with the deferred grant type
-({{Section 5.5 of I-D.draft-gerber-oauth-deferred-token-response}}) and
-a DPoP proof (line breaks for display purposes only):
+The following is an example of the client's poll with the deferred
+grant type ({{Section 5.5 of I-D.draft-gerber-oauth-deferred-token-response}})
+and a DPoP proof, with client authentication omitted (line breaks for
+display purposes only):
 
 ~~~ http
 POST /token HTTP/1.1
@@ -825,12 +825,13 @@ grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
 ~~~
 {: #fig-poll title="Deferred Poll"}
 
-After the Approver approves, the next poll activates the successor
-({{successor-activation}}) and returns its access token. The response
-carries the token exchange's `issued_token_type`
-({{Section 2.2.1 of RFC8693}}), the successor's `mission_id`, the
-effective expiry in `mission_expires_at` ({{successor-expiry}}), and
-the successor's complete Authority Set:
+The following is an example of the response to the first poll after
+the Approver approves, which activates the successor
+({{successor-activation}}). In this example, the response carries the
+token exchange's `issued_token_type` ({{Section 2.2.1 of RFC8693}}),
+the successor's `mission_id`, the effective expiry in
+`mission_expires_at` ({{successor-expiry}}), and the granted
+`authorization_details`:
 
 ~~~ http
 HTTP/1.1 200 OK
@@ -851,11 +852,7 @@ Cache-Control: no-store
       "actions": ["invoices.read"],
       "constraints": {
         "resource_issued_after": "2026-07-01T00:00:00Z",
-        "resource_issued_before": "2026-09-30T23:59:59Z"
-      },
-      "delegation": {
-        "max_depth": 2,
-        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+                "resource_issued_before": "2026-09-30T23:59:59Z"
       } },
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -916,7 +913,8 @@ The client then sends a pushed authorization request
 - `response_type=code`, its `redirect_uri`, and `state`; and
 - the PKCE `S256` challenge or DPoP binding the issuance profile
   requires for an authorization code
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval").
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization Code
+  Protection").
 
 It carries no `mission_intent` and no `authorization_details`: the
 token exchange is this operation's carriage ({{submission}}). Client authentication at the pushed authorization request endpoint
@@ -1026,8 +1024,7 @@ predecessor's transition to `terminated` with reason `superseded`
 Until the successor activates, the predecessor remains `active`. An
 expansion that never completes, whose deferred approval lapses, or
 whose authorization code is never redeemed or expires, creates no
-successor and leaves the predecessor `active`. It therefore never
-strands the task's authority or cascade-terminates the predecessor's
+successor and leaves the predecessor `active`. It therefore never leaves the task without authority or cascade-terminates the predecessor's
 Child Missions.
 
 ## The Deferred Window {#deferred-window}
@@ -1073,7 +1070,7 @@ redemption, MUST carry the effective value in the issuance profile's
 issuance profile's atomic creation-time check: where the
 submission's `intent.expires_at` passes while the expansion is
 pending, completion creates no successor Mission and the exchange
-fails with this profile's denial semantics ({{denial-reasons}}).
+fails with this document's denial semantics ({{denial-reasons}}).
 
 An auditor verifies the successor record by inequalities, never by
 matching a recomputed minimum:
@@ -1113,7 +1110,8 @@ predecessor `active`. The same commit rechecks the effective expiry
 
 This document defines three lineage members. The issuance profile's
 `mission` claim is an open object whose additional members are each
-defined by the profile that introduces them
+defined by the profile that introduces them, are ignored by a consumer
+that does not understand them, and never grant or widen authority
 ({{I-D.draft-mcguinness-oauth-mission}}); `predecessor` is one such
 member.
 
@@ -1264,7 +1262,7 @@ The transition has these properties:
   report. Consumers rely on the issuance profile's forward-compatibility
   rule: a `terminated` Mission, whatever its reason, is non-deriving.
 
-The following example shows the predecessor's `state` and
+The following is an example of the predecessor's `state` and
 `termination` after supersession (other Mission record members
 omitted):
 
@@ -1280,8 +1278,8 @@ omitted):
 ~~~
 {: #fig-termination title="Superseded Predecessor"}
 
-A later refresh under the predecessor is refused with the issuance
-profile's `mission_error` diagnostic:
+The following is an example of a later refresh under the predecessor,
+refused with the issuance profile's `mission_error` diagnostic:
 
 ~~~ http
 HTTP/1.1 400 Bad Request
@@ -1326,8 +1324,7 @@ When the predecessor has non-terminal Child Missions, the expansion
 consent disclosure SHOULD surface that fact as a material notice: at
 minimum the count of live Child Missions and that supersession
 terminates them. Where a deployment provides this notice, the
-expansion consent event renders the cost above; that consent event is
-the only point in this profile at which a human can witness the
+expansion consent event renders the cost above; that consent event is the only point in this document at which a human can witness the
 cascade before it happens. A deployment MAY additionally support an
 expansion-request parameter by which the client asks the Mission
 Issuer to refuse the expansion while live Child Missions exist.
@@ -1336,10 +1333,11 @@ Where explicitly approved Child Mission Carryover is selected, the Mission
 Issuer MUST render and commit its complete manifest and exclusion policy,
 and recheck that snapshot at completion under the child profile's Carryover
 rules ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Otherwise
-the ordinary cascade notice and per-child re-creation above remain the floor.
+the ordinary cascade notice and per-child re-creation above remain the minimum.
 
-When the approved operation includes Child Mission Carryover, the
-Mission Issuer MUST include replacement records, required old-child
+Carryover completes in the successor's activation step
+({{successor-activation}}). When the approved operation includes Child
+Mission Carryover, the Mission Issuer MUST include replacement records, required old-child
 cascades, the committed outcome map, and durable recovery work in the
 same atomic operation. Publication follows commit and is repairable;
 constructing replacements first does not guarantee external event order
@@ -1469,9 +1467,8 @@ predecessor, the Mission Issuer MUST verify:
 2. no other replacement expansion has already activated a successor for
    this predecessor (equivalently, the predecessor has not already
    been terminated with reason `superseded`); and
-3. the successor's complete Authority Set, including authority carried
-   forward from the predecessor, overlaps in authority no authority
-   under a current containment or discharge restriction of the chain
+3. the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a
+   current containment or discharge restriction of the chain
    ({{I-D.draft-mcguinness-oauth-mission-containment}},
    {{I-D.draft-mcguinness-oauth-mission-discharge}}) that the
    successor's approval did not explicitly restore with that
@@ -1485,7 +1482,7 @@ expansion, a failed first or second check, a predecessor no longer
 ({{predecessor-active}}). The losing or otherwise stale expansion is
 rejected at completion; it activates no successor.
 
-The third check catches narrowing that lands between adjudication and
+The third check catches narrowing that occurs between adjudication and
 activation: authority contained or discharged after the approval
 returns only through a new expansion, adjudicated against the current
 restrictions, which require fresh human approval with the restriction
@@ -1525,7 +1522,8 @@ The reconciliation status codes are:
 
 The two terminal-exit codes overlap in the `superseded` case:
 `superseded_by_concurrent_expansion` is the specific reconciliation
-outcome when the cause is a concurrent expansion that has already won,
+outcome when the cause is a concurrent expansion that has already
+activated a successor,
 and `predecessor_state_changed` is the general outcome for any other
 terminal exit from `active`. A Mission Issuer SHOULD return the
 specific code when it can attribute the change to a concurrent
@@ -1843,7 +1841,7 @@ Companion profiles register further values in the Mission Denial
 Reasons registry ({{iana-denial-reasons}}). For example, the experimental progressive authorization companion
 registers `out_of_ceiling`
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), and the
-experimental template dispatch companion registers
+experimental template profile registers
 `out_of_template_ceiling` and `dispatch_prohibited_class`
 ({{I-D.draft-mcguinness-oauth-mission-template}}). A consumer MUST
 treat an unrecognized reason code as a denial with no further
@@ -1946,7 +1944,7 @@ A conforming **expansion-capable Mission Issuer** MUST:
 - complete the expansion in one of the modes of {{completion-modes}},
   obtaining new consent for the successor's authority through the
   deferred token response or the interactive handoff
-    ({{adjudication}}, {{interactive-handoff}}) and enforcing the
+    ({{completion-modes}}, {{interactive-handoff}}) and enforcing the
   successor-expiry rule ({{successor-expiry}});
 - keep the predecessor's `subject` and `authority_source` on the
   successor and verify that source in the activating commit
@@ -2378,9 +2376,10 @@ approved, not the predecessor's authority plus a delta.
   reordered and titled in Title Case; Successor Activation and Child
   Missions of the Predecessor collect the activation and child-cascade
   rules previously spread across several sections; dense paragraphs
-  become lists; restatements of rules defined elsewhere point to their
-  home instead of repeating the keyword; every message has an example,
-  and Appendix A walks one expansion end to end; the OAuth Parameters
+  become lists; restatements in the Lineage, Security and IANA text
+  point to the rule's home instead of repeating the keyword; the main
+  messages have examples, and Appendix A walks one expansion end to
+  end; the OAuth Parameters
   registrations use the RFC 6749 template.
 
 - No `predecessor_token` parameter is registered: the predecessor is

@@ -46997,7 +46997,7 @@
    "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a current containment or discharge restriction of the chain",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -47019,7 +47019,7 @@
    "id": "expansion.reconciliation.containment-between-adjudication-and-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a current containment or discharge restriction of the chain",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
