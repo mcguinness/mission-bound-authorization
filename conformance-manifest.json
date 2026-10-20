@@ -15184,7 +15184,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered: a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string, and the issuance path in services/authorization-server carries no Enterprise-tier classification or key-binding requirement. The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.claim-isolation",
@@ -15228,7 +15228,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered: a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string, and the issuance path in services/authorization-server carries no Enterprise-tier classification or key-binding requirement. The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.runtime-freshness-not-replaced",
@@ -15250,7 +15250,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and no service or package carries a tier classification or an Enterprise-profile path (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.credential-mission-equality",
@@ -51863,7 +51863,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.one-thumbprint",
@@ -51885,7 +51885,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-checks-reported-binding",
@@ -51907,7 +51907,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.join-claim",
@@ -51929,7 +51929,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-uses-join-claim",
@@ -51951,7 +51951,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.depth-disagreement-denies",
@@ -51973,7 +51973,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
@@ -51995,7 +51995,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.failed-validation-denies",
@@ -52017,7 +52017,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.metadata.max-stale-required",
@@ -52060,7 +52060,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.malformed-request",
@@ -52082,7 +52082,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.join-failed-outcomes",
@@ -52104,7 +52104,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.submission.interval-in-force",
@@ -52189,7 +52189,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
@@ -52211,7 +52211,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.mapping-contract.floor-documented",
@@ -52230,9 +52230,22 @@
     "normative": "every deployment that joins documents its subject, client, delegate and instance mappings"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-join-contract.test.ts",
+     "name": "every join-enabling deployment declares the mapping contract its joins apply (@spec authority-server#mapping-contract, #818) > the shipped deployments each load a declared contract: the shared stack's join, and the MAS pilot in process and separated",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/mas-join-contract.test.ts",
+     "name": "every join-enabling deployment declares the mapping contract its joins apply (@spec authority-server#mapping-contract, #818) > refuses to start a composition that would mount a join route with no declared contract, before it connects to anything",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#818 slice 5A: every shipped deployment that mounts a join route declares the contract in configuration under a strict loader: the shared demo stack's join in config/mas-join.json mapping_contract (identity subject and client mappings, the delegate entry rule, no client instance, a version, Decision Evidence as the audit record, mission_binding_failed), beside its scope_actions and delegates; the MAS pilot, in process and separated, in config/mas-pilot.json mapping_contract. The tests assert each deployment's subject, client, delegate and instance mappings and that composeStack, composeMasPilot and composeSeparatedMasPilot refuse to start a join route without a contract, before connecting to anything; each refusal and the shared contract's presence are proved by a defect that makes its assertion fail. The deployment documentation is config/README.md (mas-join.json) and src/docs/mas-pilot-deployment.md section 2."
   },
   {
    "id": "mas.mapping-contract.enterprise-publishes",
@@ -52254,7 +52267,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Deployment documentation; no runtime surface to test. The reference claims no Enterprise tier, so no MAS here is an enterprise MAS that must publish its contract."
   },
   {
    "id": "mas.hc.mission-bound-instance-check",
@@ -52276,7 +52289,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "No Enterprise high-consequence path with Instance Context in the reference composition (#972 item 8)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). No Enterprise high-consequence path with Instance Context in the reference composition."
   },
   {
    "id": "mas.join-assertion.audience-enrolled",
@@ -52298,7 +52311,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -52320,7 +52333,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-checks-aud",
@@ -52342,7 +52355,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.cache-key",
@@ -52364,7 +52377,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.cache-rechecks",
@@ -52386,7 +52399,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.submission.unsupported-media-type",

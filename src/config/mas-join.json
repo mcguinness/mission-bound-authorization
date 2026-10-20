@@ -5,5 +5,15 @@
   },
   "scope_actions": {
     "payments.read": ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"]
+  },
+  "mapping_contract": {
+    "contract_id": "shared-demo-join",
+    "version": 1,
+    "subject_mapping": "identity",
+    "client_mapping": "identity",
+    "delegate_entry_rule": "client_id_matchers",
+    "instance": { "supported": false, "required": false },
+    "audit": "decision_evidence",
+    "failure": "mission_binding_failed"
   }
 }
