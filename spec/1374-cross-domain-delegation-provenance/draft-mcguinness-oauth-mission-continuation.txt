@@ -356,7 +356,9 @@ Table of Contents
    an omitted delegation exceeds the grant's authority and is refused.
    The rule changes only the conveyed copy: the delegation constraints
    at this exchange apply at the depth counted above, act attributes the
-   same actors, and that profile's depth reset does not apply.
+   same actors, and that profile's depth reset does not apply.  The
+   dependency on that profile binds only a deployment that adopts this
+   transport.
 
 6.2.  Async Delegation Transport
 
@@ -577,6 +579,12 @@ Table of Contents
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-cross-domain]
+              McGuinness, K., "Mission Cross-Domain Projection for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-cross-
+              domain.html>.
+
    [I-D.draft-mcguinness-oauth-mission-expansion]
               McGuinness, K., "Mission Expansion for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -653,12 +661,6 @@ Table of Contents
               2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-child-
               delegation.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-cross-domain]
-              McGuinness, K., "Mission Cross-Domain Projection for OAuth
-              2.0", 2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-cross-
-              domain.html>.
 
    [I-D.draft-mcguinness-oauth-mission-derivation-limits]
               McGuinness, K., "Mission Derivation Limits for OAuth 2.0",
