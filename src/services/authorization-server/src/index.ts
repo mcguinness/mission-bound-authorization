@@ -544,6 +544,7 @@ export {
   assertAssertionAuthority,
   assertGovernedPolicyRecord,
   type HumanAuthority,
+  jwsMediaTypeMatches,
   type PolicyAuthority,
   type ServiceAuthority,
   assertMissionBinding,

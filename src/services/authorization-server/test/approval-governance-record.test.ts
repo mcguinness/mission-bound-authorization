@@ -159,10 +159,17 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
     expect(() => verifyAgainst({ ...record, envelope: { format: "jws-compact", value: envelopeWith(header, other) } })).toThrow(
       /signature does not verify/,
     );
+    const { cty: _c, ...noCty } = header;
     for (const wrong of [
       { ...header, typ: "JWT" },
       { ...header, cty: "application/json" },
       { alg: "ES256", kid: "as-status" },
+      noCty,
+      { ...header, typ: "" },
+      { ...header, cty: "mission-approval-governance+json; charset=utf-8" },
+      { ...header, typ: "application/mission-approval-governance+jwt" },
+      { ...header, typ: "text/mission-approval-governance+jws" },
+      { ...header, typ: AGR_JWS_CTY, cty: AGR_JWS_TYP },
     ]) {
       expect(() => verifyAgainst({ ...record, envelope: { format: "jws-compact", value: envelopeWith(wrong) } })).toThrow(
         /typ and cty/,
@@ -170,6 +177,33 @@ describe("Approval Governance Record envelope (@spec approval-governance#envelop
     }
     // A correctly formed envelope over the same record verifies.
     expect(() => verifyAgainst({ ...record, envelope: { format: "jws-compact", value: envelopeWith(header) } })).not.toThrow();
+  });
+
+  it("emits the typ and cty the registered media types abbreviate, with application/ omitted", () => {
+    const [h] = record.envelope.value.split(".") as [string];
+    const header = JSON.parse(Buffer.from(h, "base64url").toString("utf8")) as Record<string, unknown>;
+    expect(header.typ).toBe("mission-approval-governance+jws");
+    expect(header.cty).toBe("mission-approval-governance+json");
+  });
+
+  it("accepts the application/ forms and case variants of typ and cty, leaving the signed record and its digest as retained", () => {
+    for (const [typ, cty] of [
+      ["application/mission-approval-governance+jws", "application/mission-approval-governance+json"],
+      ["application/mission-approval-governance+jws", "mission-approval-governance+json"],
+      ["Mission-Approval-Governance+JWS", "APPLICATION/Mission-Approval-Governance+JSON"],
+    ]) {
+      const signed: ApprovalGovernanceRecord = {
+        ...record,
+        envelope: { format: "jws-compact", value: envelopeWith({ alg: "ES256", kid: "as-status", typ, cty }) },
+      };
+      const before = JSON.stringify(signed);
+      const digest = approvalGovernanceRecordDigest(signed);
+      expect(verifyAgainst(signed)).toBe(signed);
+      expect(JSON.stringify(signed)).toBe(before);
+      expect(approvalGovernanceRecordDigest(signed)).toBe(digest);
+      const [h] = signed.envelope.value.split(".") as [string];
+      expect(JSON.parse(Buffer.from(h, "base64url").toString("utf8"))).toMatchObject({ typ, cty });
+    }
   });
 
   it("rejects an unsupported envelope format rather than accepting it unverified", () => {

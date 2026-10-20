@@ -878,11 +878,25 @@ accepting it unverified.
 The JWS protected header MUST carry:
 
 - a `kid` resolvable in the Mission Issuer's published key material;
-- a `typ` of `application/mission-approval-governance+jws`; and
-- a `cty` of `application/mission-approval-governance+json` ({{iana}}).
+- a `typ` of `mission-approval-governance+jws`; and
+- a `cty` of `mission-approval-governance+json`.
 
-A verifier MUST reject a JWS whose protected `typ` and `cty` are not
-exactly this pair (Sections 4.1.9 and 4.1.10 of {{RFC7515}}).
+These values are the registered media types
+`application/mission-approval-governance+jws` and
+`application/mission-approval-governance+json` ({{iana}}) with the
+`application/` prefix omitted, as Sections 4.1.9 and 4.1.10 of
+{{RFC7515}} recommend.
+
+A verifier compares each value as a media type under those sections: it
+treats a value that contains no `/` as if `application/` were prepended,
+and it compares type and subtype names case-insensitively. Neither media
+type defines a parameter, so a value that carries one matches neither. A
+verifier MUST accept either form of each value, and MUST reject a JWS
+whose protected header lacks `typ` or `cty`, or whose `typ` or `cty`
+does not match this pair. Normalization applies only to the comparison:
+a verifier MUST NOT rewrite the signed header, the payload, or the
+retained record, so the record digest below covers the record exactly as
+signed and retained.
 
 The following is the decoded JWS protected header of the `envelope`
 value in {{record-example}}:
@@ -891,8 +905,8 @@ value in {{record-example}}:
 {
   "alg": "ES256",
   "kid": "as-key-2",
-  "typ": "application/mission-approval-governance+jws",
-  "cty": "application/mission-approval-governance+json"
+    "typ": "mission-approval-governance+jws",
+  "cty": "mission-approval-governance+json"
 }
 ~~~
 

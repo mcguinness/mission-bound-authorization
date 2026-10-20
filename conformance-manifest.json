@@ -43940,7 +43940,7 @@
    "id": "approval-governance.envelope.typ-cty",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
-   "text": "A verifier MUST reject a JWS whose protected `typ` and `cty` are not exactly this pair",
+   "text": "MUST reject a JWS whose protected header lacks `typ` or `cty`, or whose `typ` or `cty` does not match this pair",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -43951,7 +43951,7 @@
    "surface": "governance-record",
    "assertion": "refusal",
    "observation": {
-    "normative": "a record whose JWS protected typ or cty is not application/mission-approval-governance+jws and application/mission-approval-governance+json is rejected even when its signature verifies"
+    "normative": "a record whose JWS protected header lacks typ or cty, or whose typ or cty is not mission-approval-governance+jws and mission-approval-governance+json under the media-type comparison of Sections 4.1.9 and 4.1.10 of RFC 7515 (application/ prefix optional, case-insensitive, no parameters), is rejected even when its signature verifies"
    },
    "level": "unit",
    "coverage": "tested",
@@ -43963,7 +43963,94 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 implementation: verifyApprovalGovernanceRecord, exercised on a record committed under governed_policy."
+   "notes": "#1185 implementation: verifyApprovalGovernanceRecord, exercised on a record committed under governed_policy. #1436 ruling 4 (D568): either form of each value matches, so the clause is requoted; the witness adds a missing cty, an empty typ, a parameter-carrying cty, a +jwt subtype, another top-level type and a swapped pair (mutations: cty unchecked, parameters ignored)."
+  },
+  {
+   "id": "approval-governance.envelope.short-form-emitted",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "envelope",
+   "text": "a `typ` of `mission-approval-governance+jws`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer's JWS protected header carries typ mission-approval-governance+jws and cty mission-approval-governance+json, the registered media types with application/ omitted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "Approval Governance Record envelope (@spec approval-governance#envelope) > emits the typ and cty the registered media types abbreviate, with application/ omitted",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 4 (D568); mutation: emitting the application/ form."
+  },
+  {
+   "id": "approval-governance.envelope.either-form-accepted",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "envelope",
+   "text": "A verifier MUST accept either form of each value",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a record whose typ or cty carries the application/ prefix, or differs only in the case of the type or subtype name, verifies like one carrying the emitted short forms"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "Approval Governance Record envelope (@spec approval-governance#envelope) > accepts the application/ forms and case variants of typ and cty, leaving the signed record and its digest as retained",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 4 (D568); mutations: exact-string comparison with the short form, case-sensitive comparison."
+  },
+  {
+   "id": "approval-governance.envelope.no-rewrite-on-normalization",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "envelope",
+   "text": "a verifier MUST NOT rewrite the signed header, the payload, or the retained record",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "verifying a record whose typ or cty is in the application/ form or another case leaves the record, its envelope value and its record digest byte-identical"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
+     "name": "Approval Governance Record envelope (@spec approval-governance#envelope) > accepts the application/ forms and case variants of typ and cty, leaving the signed record and its digest as retained",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 4 (D568); mutation: the verifier rewriting the signed header to the normalized form."
   },
   {
    "id": "approval-governance.envelope.unsupported-format",

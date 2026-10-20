@@ -23,10 +23,32 @@ import { canonicalize, type JsonValue } from "@mission/core";
 import type { Database } from "@mission/store";
 import type { ApprovalBasis, ApprovalBasisGovernedPolicy, MissionRecord } from "./types.js";
 
-/** @spec approval-governance#envelope: the JWS protected `typ`. */
-export const AGR_JWS_TYP = "application/mission-approval-governance+jws";
-/** @spec approval-governance#envelope: the JWS protected `cty`. */
-export const AGR_JWS_CTY = "application/mission-approval-governance+json";
+/**
+ * @spec approval-governance#envelope: the JWS protected `typ` the issuer
+ * emits: the registered media type with `application/` omitted (Section 4.1.9
+ * of RFC 7515).
+ */
+export const AGR_JWS_TYP = "mission-approval-governance+jws";
+/** @spec approval-governance#envelope: the JWS protected `cty` the issuer emits (Section 4.1.10 of RFC 7515). */
+export const AGR_JWS_CTY = "mission-approval-governance+json";
+/** The registered media types the emitted `typ` and `cty` abbreviate. */
+const AGR_MEDIA_TYPE_JWS = "application/mission-approval-governance+jws";
+const AGR_MEDIA_TYPE_JSON = "application/mission-approval-governance+json";
+
+/**
+ * @spec approval-governance#envelope: whether a protected `typ` or `cty`
+ * names a registered media type, compared as Sections 4.1.9 and 4.1.10 of
+ * RFC 7515 direct: a value with no `/` reads as if `application/` were
+ * prepended, and type and subtype names compare case-insensitively. The
+ * Approval Governance media types define no parameter, so a value carrying
+ * one does not match. Only the comparison normalizes; nothing signed is
+ * rewritten.
+ */
+export function jwsMediaTypeMatches(value: unknown, mediaType: string): boolean {
+  if (typeof value !== "string" || value.length === 0) return false;
+  const full = value.includes("/") ? value : `application/${value}`;
+  return full.toLowerCase() === mediaType.toLowerCase();
+}
 /** @spec approval-governance#envelope: the one `format` this document defines. */
 export const AGR_ENVELOPE_FORMAT = "jws-compact";
 
@@ -136,7 +158,7 @@ export function approvalGovernanceRecordDigest(record: ApprovalGovernanceRecord)
 /**
  * @spec approval-governance#envelope: the verifier's steps, in order, refusing
  * on any failure: resolve the signing key from the protected `kid`; verify the
- * signature and the exact protected `typ`/`cty`; recompute the JCS canonical
+ * signature and the protected `typ`/`cty` as media types (either form); recompute the JCS canonical
  * bytes of the record with `envelope` removed; require byte-for-byte equality
  * with the decoded payload; validate the mission binding against the Mission
  * record the record is retained with. An unsupported `format` is refused, never
@@ -166,7 +188,7 @@ export function verifyApprovalGovernanceRecord(
   if (header.alg !== "ES256") throw new ApprovalGovernanceError("unsupported alg");
   const signed = verify("sha256", Buffer.from(`${h}.${p}`, "utf8"), { key, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url"));
   if (!signed) throw new ApprovalGovernanceError("signature does not verify");
-  if (header.typ !== AGR_JWS_TYP || header.cty !== AGR_JWS_CTY) {
+  if (!jwsMediaTypeMatches(header.typ, AGR_MEDIA_TYPE_JWS) || !jwsMediaTypeMatches(header.cty, AGR_MEDIA_TYPE_JSON)) {
     throw new ApprovalGovernanceError("protected typ and cty are not the Approval Governance pair");
   }
   // Steps 3 and 4: the payload is exactly the canonical record minus envelope.
