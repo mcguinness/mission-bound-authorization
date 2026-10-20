@@ -27594,7 +27594,7 @@
    "id": "substrate.statement.capability-table-required",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "The Statement MUST then include a capability table with one row for each capability in {{capabilities}}.",
+   "text": "The Statement MUST then include a capability list with one entry for each capability in {{capabilities}}.",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27606,7 +27606,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Statement includes a capability table with one row for each of the eight optional capabilities"
+    "normative": "the Statement includes a capability list with one entry for each of the eight optional capabilities"
    },
    "level": "unit",
    "coverage": "todo",
@@ -27616,7 +27616,7 @@
    "id": "substrate.statement.binary-supplied-state",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "Each row MUST say `supplied` or `not supplied`",
+   "text": "Each entry MUST say `supplied` or `not supplied`",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27628,7 +27628,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a capability row states supplied or not supplied; there is no third (retired conditional) state"
+    "normative": "a capability entry states supplied or not supplied; there is no third (retired conditional) state"
    },
    "level": "unit",
    "coverage": "todo",
@@ -27638,7 +27638,7 @@
    "id": "substrate.statement.supplied-row-requirements",
    "spec": "draft-mcguinness-mission-substrate.md",
    "anchor": "statement",
-   "text": "A supplied row MUST:",
+   "text": "A supplied entry MUST:",
    "role": "Controller",
    "strength": "MUST",
    "applicability": {
@@ -27650,7 +27650,7 @@
    "surface": "mission-statement",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a supplied row cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
+    "normative": "a supplied entry cites the satisfying binding sections, states its mode and operational scope, states its activation conditions (or `always`), states its temporal elements (freshness at use, decision/artifact lifetime, and post-non-active residual interval, each stated directly or expressly inherited from the bounded-reliance floor), states its failure behavior for absent/stale/unknown/incomparable/invalid/unavailable input, and lists material limitations"
    },
    "level": "unit",
    "coverage": "todo",

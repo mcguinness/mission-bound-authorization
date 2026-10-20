@@ -965,14 +965,14 @@ For the kernel, the Statement MUST provide a checkable mapping for:
 9. governance-record event coverage, ordering, integrity, access, and
    retention.
 
-The Statement MUST then include a capability table with one row for
-each capability in {{capabilities}}.  Each row MUST say `supplied` or
-`not supplied`: a capability is supplied in a named scope when the
-row's stated activation conditions hold, or it is not supplied.
+The Statement MUST then include a capability list with one entry for
+each capability in {{capabilities}}.  Each entry MUST say `supplied`
+or `not supplied`: a capability is supplied in a named scope when the
+entry's stated activation conditions hold, or it is not supplied.
 There is no third state.  An activation condition states separately
 what a specification defines, what an implementation supports, what
 a deployment enables, and where the resulting property applies.  A
-supplied row MUST:
+supplied entry MUST:
 
 * cite the binding sections that satisfy the capability;
 * state its mode and operational scope;
@@ -993,20 +993,87 @@ activation conditions are active.
 
 The following is a non-normative skeleton:
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Controller permission decisions | Previously issued resource credentials expire independently |
-| State-Observable | supplied | Status extension active | Status responses | Maximum staleness is deployment-configured |
-| Structured Authority | not supplied | -- | -- | Approved Context is descriptive |
-| Monotonic Derivation | not supplied | -- | -- | No authority comparison relation is defined |
-| Credential-Bound | supplied | always | Native authorization artifact | Covers correlation, not context disclosure |
-| Authorized Context Correlation | supplied | Verified join active | Join assertions | Joining authority is the Controller |
-| Independently Verifiable | supplied | Signed receipt profile active | Signed receipts | Proves approval as of issuance, not current state |
-| Portable Evidence | not supplied | -- | -- | Governance record is Controller-local |
-{: title="Illustrative Mission Substrate Statement capability table"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
 
-A real Statement also carries each supplied row's temporal elements
-and failure behavior; the skeleton omits those columns for width.
+  Activation: always
+
+  Scope and defining sections: Controller permission decisions
+
+  Limitations: Previously issued resource credentials expire
+  independently
+
+State-Observable:
+: Claim: supplied
+
+  Activation: Status extension active
+
+  Scope and defining sections: Status responses
+
+  Limitations: Maximum staleness is deployment-configured
+
+Structured Authority:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: Approved Context is descriptive
+
+Monotonic Derivation:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: No authority comparison relation is defined
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: Native authorization artifact
+
+  Limitations: Covers correlation, not context disclosure
+
+Authorized Context Correlation:
+: Claim: supplied
+
+  Activation: Verified join active
+
+  Scope and defining sections: Join assertions
+
+  Limitations: Joining authority is the Controller
+
+Independently Verifiable:
+: Claim: supplied
+
+  Activation: Signed receipt profile active
+
+  Scope and defining sections: Signed receipts
+
+  Limitations: Proves approval as of issuance, not current state
+
+Portable Evidence:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: Governance record is Controller-local
+{: #illustrative-statement-capabilities newline="true"}
+
+A real Statement also states each supplied entry's temporal elements
+and failure behavior, in the entry or in one statement that covers
+every entry.  For the skeleton, one sentence after the list would
+serve: "Each supplied entry's temporal elements are inherited from
+the reliance floor of {{bounded-reliance}}, and absent, stale,
+unknown, incomparable, invalid, or unavailable input refuses the
+decision."
 
 Text outside the Statement cannot silently broaden a capability claim.
 If another specification adds a capability, that specification MUST
@@ -1272,6 +1339,12 @@ reference to it; no change is ever made solely to move words.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Mission Substrate Statement's capability table is a capability
+  list with one entry per capability, which fits the text rendering.
+  Each entry states what a row stated, with the same obligations, and
+  the skeleton shows one sentence stating temporal elements and
+  failure behavior for every entry (#1382).
 
 - Family Use names the accountable human by the OAuth binding's
   record member `approval_basis.consent_principal`, following that
