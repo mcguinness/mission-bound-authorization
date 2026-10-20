@@ -1821,6 +1821,7 @@
    "adoption_alias": "mission-continuation",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion"
    ],
    "adoption_requires": [
@@ -1864,7 +1865,8 @@
    "summary": "Lets a single Mission be honored by Authorization Servers in other trust domains: the originating issuer projects audience-scoped authority through a short-lived, sender-constrained cross-domain grant, and the Resource AS mints its own local Mission-bound tokens preserving the `mission` claim.",
    "pull_when": "A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
@@ -1876,6 +1878,7 @@
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
@@ -2205,7 +2208,8 @@
    "summary": "Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration.",
    "pull_when": "The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"

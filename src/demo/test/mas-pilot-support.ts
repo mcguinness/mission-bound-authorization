@@ -11,7 +11,7 @@
 import { generateKeyPair } from "jose";
 import { validateMissionIntent } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
-import { CANONICAL_RESOURCE, createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
+import { CANONICAL_RESOURCE, canonicalHtu, createHttpMediatedClient, type DpopKeys, dpopProofFor } from "@mission/mcp-payments";
 import type { EvaluationRequest } from "@mission/pdp";
 import { composeMasPilot, type MasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
@@ -60,7 +60,13 @@ export interface Credential {
 
 /** A pilot over the live OpenFGA whose decision requests are recorded, so "reached the PDP" is observable. */
 export async function composeRecorded(
-  extra: { config?: MasPilotConfig; mappingNow?: () => Date; resourcePolicyStore?: ResourcePolicyStore } = {},
+  extra: {
+    config?: MasPilotConfig;
+    mappingNow?: () => Date;
+    resourcePolicyStore?: ResourcePolicyStore;
+    introspectionEndpoint?: string;
+    introspectionNow?: () => Date;
+  } = {},
 ): Promise<{ pilot: MasPilot; requests: EvaluationRequest[] }> {
   const requests: EvaluationRequest[] = [];
   const pilot = await composeMasPilot({
@@ -71,6 +77,8 @@ export async function composeRecorded(
     },
     config: extra.config ?? loadMasPilotConfig(),
     ...(extra.mappingNow ? { mappingNow: extra.mappingNow } : {}),
+    ...(extra.introspectionEndpoint ? { introspectionEndpoint: extra.introspectionEndpoint } : {}),
+    ...(extra.introspectionNow ? { introspectionNow: extra.introspectionNow } : {}),
   });
   return { pilot, requests };
 }
@@ -159,4 +167,30 @@ export function admin(pilot: MasPilot, ...argv: string[]): Promise<string> {
     },
     TOPOLOGY.openfga,
   );
+}
+
+/**
+ * The HTTP status of an MCP `initialize` presenting `credential` with a fresh
+ * DPoP proof at `url`: 401 or 503 when the route refuses the credential before
+ * any session (and so before any PEP decision), 200 when it admits it.
+ */
+export async function handshakeStatus(pilot: MasPilot, credential: Credential, missionId: string, url = pilot.gateway.url): Promise<number> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+      authorization: `DPoP ${credential.token}`,
+      dpop: await dpopProofFor(credential.dpopKeys, canonicalHtu(url), "POST", credential.token),
+      "mission-reference": reference(pilot, missionId),
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "mas-pilot-test", version: "0" } },
+    }),
+  });
+  await res.arrayBuffer();
+  return res.status;
 }

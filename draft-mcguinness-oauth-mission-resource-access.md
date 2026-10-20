@@ -51,6 +51,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -64,14 +72,6 @@ informative:
   I-D.draft-mcguinness-mission-metering:
     title: "Mission Consumption Metering"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-oauth-mission-cross-domain:
-    title: "Mission Cross-Domain Projection for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
     author:
       -
         ins: K. McGuinness
@@ -272,8 +272,10 @@ with these members:
 `delegation`:
 : OPTIONAL. An object. The delegation policy for this entry
   ({{delegate-eligibility}}). When absent, this entry's authority is
-  non-delegable: it MUST NOT appear in a delegated token. When present,
-  it has these members:
+  non-delegable: it MUST NOT appear in a delegated token. This applies
+  to the entry the authorization server evaluates for a delegated
+  token, not to a copy a cross-domain grant conveys without the member
+  ({{delegate-eligibility}}). When present, it has these members:
 
   `max_depth`:
   : REQUIRED. An integer. The maximum delegation depth at which this
@@ -1024,6 +1026,16 @@ consistent with the subset rule ({{subset}}). Surviving entries are
 carried with their `delegation` member intact, so the next hop is
 evaluated the same way.
 
+A cross-domain grant separates two stages. Eligibility for the grant
+itself is decided as above, against the approved entry in the Mission
+Record. The copy the grant conveys keeps `delegation` only as
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}} allows, and an
+omitted member ends onward delegation from that copy. Neither stage
+lets an entry without `delegation` in the Mission Record appear in a
+delegated token. The dependency on that profile, here and in the
+absent-member exception of {{resource-access-type}}, binds only an
+authorization server that issues cross-domain grants.
+
 **Inherited eligibility.** A derived entry's `allowed_delegates`
 restricts eligibility; it never replaces an obligation the derivation
 inherits. An entry derived from a reference entry that has no
@@ -1043,7 +1055,9 @@ that provenance with the Mission. It evaluates every later exchange
 against the approved entry in the Mission Record
 ({{I-D.draft-mcguinness-oauth-mission}}) and that provenance, never
 against a presented token alone. Where it cannot resolve either, the
-entry narrows out of the delegated token.
+entry narrows out of the delegated token. A cross-domain grant conveys
+no such provenance; {{I-D.draft-mcguinness-oauth-mission-cross-domain}}
+specifies how its conveyed copy treats `delegation`.
 
 ### Matching `allowed_delegates` {#matching-allowed-delegates}
 

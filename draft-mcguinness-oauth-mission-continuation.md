@@ -41,11 +41,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-
-informative:
-  RFC9700:
-  I-D.draft-zhu-oauth-async-delegation:
-  I-D.draft-mcguinness-oauth-id-continuation-assertion:
   I-D.draft-mcguinness-oauth-mission-cross-domain:
     title: "Mission Cross-Domain Projection for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
@@ -54,6 +49,11 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+
+informative:
+  RFC9700:
+  I-D.draft-zhu-oauth-async-delegation:
+  I-D.draft-mcguinness-oauth-id-continuation-assertion:
   I-D.draft-mcguinness-oauth-mission-template:
     title: "Mission Template for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html
@@ -405,6 +405,17 @@ another Resource Authorization Server, or returning to an earlier
 actor, never restarts the count. Where the IdP cannot read a hop's
 complete ancestry, it issues nothing.
 
+The onward ID-JAG conveys each entry's `delegation` member under the
+cross-domain projection rule
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}, Section
+"Conveyed Delegation Policy"), so a requested authorization detail
+that keeps an omitted `delegation` exceeds the grant's authority and
+is refused. The rule changes only the conveyed copy: the delegation
+constraints at this exchange apply at the depth counted above, `act`
+attributes the same actors, and that profile's depth reset does not
+apply. The dependency on that profile binds only a deployment that
+adopts this transport.
+
 ## Async Delegation Transport {#transport-async}
 
 Async delegation ({{I-D.draft-zhu-oauth-async-delegation}}) is the
@@ -613,6 +624,12 @@ constrains their use and introduces none of its own.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Identity Continuation Transport's onward ID-JAG conveys
+  `delegation` under the cross-domain projection rule, so a requested
+  authorization detail that keeps an omitted member exceeds the
+  grant's authority; the transport's depth count and `act` attribution
+  are unchanged, with no depth reset (#1374).
 
 - The Identity Continuation Transport's codes replace the issuance
   profile's Token Exchange code, now `invalid_request`; the codes
