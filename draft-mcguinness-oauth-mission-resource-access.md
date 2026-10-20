@@ -1108,7 +1108,10 @@ and to send messages through a messaging MCP server:
 [
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
-    "actions": ["query_invoices", "post_adjustment"],
+    "actions": ["query_invoices"] },
+  { "type": "mission_resource_access",
+    "resource": "https://finance.example.com/mcp",
+    "actions": ["post_adjustment"],
     "constraints": {
       "max_amount": { "amount": "500.00", "currency": "USD" }
     } },
@@ -1118,6 +1121,10 @@ and to send messages through a messaging MCP server:
     "constraints": { "recipient_domain": "example.com" } }
 ]
 ~~~
+
+An entry's `constraints` bind every action it lists, so the read tool
+has an entry of its own, outside the `max_amount` bound that applies to
+the adjustment tool.
 
 Delegation to a sub-agent uses the same `delegation` member
 ({{delegate-eligibility}}). The following example shows an Authority Set
