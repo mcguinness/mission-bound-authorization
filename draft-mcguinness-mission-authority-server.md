@@ -1221,7 +1221,7 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "mode": "cached",
       "freshness_at": "2026-11-02T08:14:00Z"
     },
-    "actor": { "client_id": "client_erp-recon-agent" },
+    "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
       "expires_at": "2026-11-02T09:14:00Z",
@@ -1764,7 +1764,7 @@ Assertion:
     "jkt": "NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
   },
   "join": {
-    "client_id": "client_erp-recon-agent",
+    "client_id": "s6BhdRkqt3",
     "disposition": "client"
   },
   "aud": "https://pdp.example.com",
