@@ -841,6 +841,8 @@ Intent carries only the three required members, as in the Submission
 envelope example ({{submission-via-par}}). The following summary is
 informative; the member definitions after it are authoritative.
 
+## Intent Members {#intent-members}
+
 | Member | Required | What the AS does with it |
 | --- | --- | --- |
 | `goal` | yes | Records it and renders it to the Approver as inert text; never interprets it |
