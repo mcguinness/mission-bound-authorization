@@ -622,8 +622,11 @@ All times are UTC on the same day.
    ({{mission-response-parameters}}). The access token's five-minute
    lifetime is distinct from the Mission's one-hour lifetime
    ({{mission-bound-tokens}}).
-4. **Use.** The ERP, a Mission-aware Resource Server, validates the
-   token and proof of possession and permits the authorized read; the
+4. **Use.** The ERP is a Mission-aware Resource Server: it enforces
+   the `mission_resource_access` entry itself, work a plain
+   {{RFC9068}} resource server does not do ({{conformance}}). It
+   validates the token and proof of possession and permits the
+   authorized read; the
    token grants no write authority. The resource request involves no
    Mission-state lookup or complete-set retrieval ({{rs-enforcement}}).
 5. **Stop further issuance.** At 12:02 an authorized revocation makes
