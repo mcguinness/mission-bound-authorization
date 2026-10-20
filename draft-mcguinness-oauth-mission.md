@@ -2972,8 +2972,10 @@ the normative statement of the base OAuth error for each failure they
 list. A rule elsewhere in this document that names one of these
 codes ({{submission-via-par}}, {{authority-proposal}},
 {{intent-submission-evidence}}, {{authorization-derivation}},
-{{approval-authentication}}, {{issuance-gating}}, {{rs-enforcement}},
-{{self-exchange}}, {{delegation-constraints}}) applies this mapping.
+{{approval-authentication}}, {{grant-binding-resolution}},
+{{issuance-gating}}, {{scope-projection}}, {{rs-enforcement}},
+{{designation}}, {{self-exchange}}, {{delegation-constraints}})
+applies this mapping.
 
 An AS that performs an applicable check early, at PAR, responds with
 the same error class the check would yield at the authorization or
