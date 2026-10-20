@@ -1235,7 +1235,13 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
         kind: "service",
         decision: "approve",
         decided_at: createdAt,
-        authority: { model_id: o.model.id, model_version: o.model.version },
+        // The model is the whole logic here, so the logic pair names it too.
+        authority: {
+          logic_id: o.model.id,
+          logic_version: o.model.version,
+          model_id: o.model.id,
+          model_version: o.model.version,
+        },
         ...(o.remove?.length ? { reason: "narrowed" } : {}),
       }),
     ),
