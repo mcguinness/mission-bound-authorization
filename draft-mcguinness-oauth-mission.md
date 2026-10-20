@@ -2316,6 +2316,8 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
+## Token Claims {#token-claims}
+
 {{RFC9068}} fixes the JWT's required claims (including `jti`), the `typ`
 header parameter value `at+jwt`, and resource server validation
 ({{Section 2.1 of RFC9068}}, {{Section 2.2 of RFC9068}},
@@ -2361,6 +2363,8 @@ tokens signed under it remain valid.
 
 Every emitted `authorization_details` entry is a subset of a Mission
 Authority Set entry ({{subset}}).
+
+## Audience and Token Response {#token-response}
 
 The AS audience-restricts the token per {{Section 2 of RFC8707}} and
 {{Section 3 of RFC9068}}; `aud` names resource server(s), APIs, or
@@ -2451,6 +2455,8 @@ intact:
 }
 ~~~
 
+## Refresh Tokens {#refresh-tokens}
+
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
 binding: on refresh, the AS authenticates the client and verifies
@@ -2463,6 +2469,8 @@ be sender-constrained or use refresh token rotation
 The AS can rotate either client type's refresh token; rotation
 detects replay of a consumed refresh token
 ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic binding.
+
+## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
 A derived token's authority comes from the Mission, not from a fresh
 authentication. Authentication claims (`acr`, `amr`, `auth_time`) on
