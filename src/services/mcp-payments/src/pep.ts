@@ -84,6 +84,7 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
+import { type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 
@@ -699,6 +700,13 @@ export interface PepDeps {
    * a same-id different-issuer request rather than the wrong Mission.
    */
   loadView: (ref: MissionReference) => LoadedView | undefined;
+  /**
+   * @spec authority-server#mission-join rule 2 (#818, D560): a remote Mission
+   * view source, read once at the start of each enforcement; `loadView` then
+   * answers from that read (view-source.ts). Absent, the in-process loader
+   * is the only read, unchanged.
+   */
+  viewSource?: MissionViewSource;
   instanceEpoch: string;
   now?: () => Date;
   /** Trusted catalog serving this executor, never a caller-supplied digest. */
@@ -1525,6 +1533,9 @@ export class Pep {
     if (!establishedBoundary.ok) return { permitted: false, refusal_reason: establishedBoundary.refusal_reason };
     const { boundary, version: boundaryVersion } = establishedBoundary;
     if (!mapping) return await this.refuse(boundary, token, "unknown_tool", tool);
+    // #818 (D560): the one remote view read, where the deployment has a
+    // remote source; acted on only at a view miss below.
+    const prepared = await prepareRequestView(this.deps.viewSource, token.mission, signals?.missionReference);
 
     let view: MissionView;
     let observation: MissionStateObservation;
@@ -1574,7 +1585,7 @@ export class Pep {
       }
 
       const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action);
+      if (!loaded) return await this.refuse(boundary, token, viewMissRefusal(prepared), mapping.action);
 
       // @spec authority-server#reference-verification — the locally loaded
       // Mission view is the PEP's own binding source; a credential whose
@@ -1609,7 +1620,7 @@ export class Pep {
       }
 
       const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
-      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action, undefined, propagated.id);
+      if (!loaded) return await this.refuse(boundary, token, viewMissRefusal(prepared), mapping.action, undefined, propagated.id);
 
       // Rule 8, bound 1: the acting credential's OWN authority, resolved by a
       // PEP-side deployment hook over TokenFacts (@spec
@@ -2360,6 +2371,8 @@ export class Pep {
             id: missionAnchor.id,
             issuer: missionAnchor.issuer,
           });
+          // #818 (D560): a remote source's read has lapsed; no observation.
+          if (!loaded && this.deps.viewSource) return undefined;
           const entry = loaded?.view.authority_set.find(
             (e) => entryMatchesTarget(e, listEffective.resource) && e.actions.includes(listEffective.action),
           );
@@ -2691,6 +2704,14 @@ export class Pep {
       id: attempt.mission.id,
       issuer: attempt.mission.issuer,
     });
+    // #818 (D560): with a remote view source, a read that has lapsed leaves
+    // the scope's Mission binding unestablishable at use (@spec
+    // authzen#failure-condition-coverage `target_drift`), never recomputed
+    // from no view at all.
+    if (!loaded && this.deps.viewSource) {
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
+    }
     const entry = loaded?.view.authority_set.find(
       (e) => entryMatchesTarget(e, effective.resource) && e.actions.includes(effective.action),
     );
