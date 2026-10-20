@@ -286,6 +286,7 @@
    "request-provenance.intake",
    "expansion.adjudication",
    "expansion.interactive-completion",
+   "expansion.related-to-correlation",
    "continuation.async-transport",
    "aauth.supervision-server",
    "aauth.supervision-proof",
@@ -51520,7 +51521,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "expansion.adjudication"
+    "capability": "expansion.related-to-correlation"
    },
    "profiles": [],
    "surface": "derivation",
@@ -51751,6 +51752,116 @@
    "coverage": "todo",
    "tests": [],
    "notes": "No reference client implements expansion; the endpoint tests drive the wire directly."
+  },
+  {
+   "id": "expansion.related-to.resolve-before-approval",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "MUST authorize and resolve the reference, in its own namespace, before the new Mission's approval completes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a related_to reference that is unauthorized, unresolved in the issuer's namespace, or cross-issuer is settled before the new Mission's approval completes, never recorded unresolved"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.atomic-at-creation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "MUST set `related_to` atomically when the Mission Record is created",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "related_to is present on the Mission Record from the creation commit, written in the same transaction"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.immutable",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "MUST NOT add or change it afterward.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "no operation after creation adds, replaces or removes a Mission's related_to"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.non-disclosing-failure",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "An unresolved or unauthorized reference is never recorded: deployment policy either rejects the creation uniformly or proceeds without the relationship, applied consistently across requests, and neither behavior discloses whether the referenced Mission exists.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an unresolved or unauthorized related_to reference is never recorded, and the creation outcome (uniform refusal or creation without the relationship) is the same whether or not the referenced Mission exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.no-predecessor",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "A Mission created this way MUST NOT carry the `predecessor` member",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created by independent continuation carries no predecessor member on its record or mission claim"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
