@@ -32,7 +32,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
 import { IntentError } from "../src/kernel/intent.js";
-import { consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
+import { ceilingAuthorityLeftUndrawn, consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, LifecycleCommit, MissionRecord } from "../src/kernel/types.js";
 import {
   ApprovalSessionStore,
@@ -985,6 +985,54 @@ describe("drawdown bounds (@spec progressive#drawdown-bounds)", () => {
     expect(fell.status, JSON.stringify(fellBody)).toBe(400);
     expect(fellBody.error).toBe("authorization_pending");
     expect(as.kernel.allMissions().length).toBe(before);
+  });
+
+  it("a ceiling entry's authority split across several successor entries counts as held: that final increment falls back", async () => {
+    const q3 = { resource_issued_after: "2026-07-01T00:00:00Z", resource_issued_before: "2026-09-30T23:59:59Z" };
+    const firstHalf = { ...ACME, resource_issued_after: "2026-07-01T00:00:00Z", resource_issued_before: "2026-08-16T00:00:00Z" };
+    const secondHalf = { ...ACME, resource_issued_after: "2026-08-16T00:00:00Z", resource_issued_before: "2026-09-30T23:59:59Z" };
+    const LIST = ["payments:invoice.list"];
+    const split = [entry(LIST, ACME), entry(READ, firstHalf), entry(READ, secondHalf)];
+    // The two windows together hold the ceiling's whole Q3 read grant. The
+    // two-action policy keeps the per-drawdown bound out of the way.
+    const whole = await issueMission(LIST, {
+      ...ceilingOf("drawdown-wide"),
+      authority_ceiling: [entry(LIST, ACME), entry(READ, { ...ACME, ...q3 })],
+    });
+    const before = as.kernel.allMissions().length;
+    const fell = await expandWith(whole.accessToken, split);
+    const fellBody = (await fell.json()) as { error?: string };
+    expect(fell.status, JSON.stringify(fellBody)).toBe(400);
+    expect(fellBody.error).toBe("authorization_pending");
+    expect(as.kernel.allMissions().length).toBe(before);
+    // With ceiling authority left over, the same split is adjudicated by policy.
+    const partial = await issueMission(LIST, {
+      ...ceilingOf("drawdown-wide"),
+      authority_ceiling: [
+        entry(LIST, ACME),
+        entry(READ, { ...ACME, ...q3 }),
+        entry(["payments:payment.schedule"], cap("500.00")),
+      ],
+    });
+    const res = await expandWith(partial.accessToken, split);
+    expect(res.status, JSON.stringify(await res.json())).toBe(200);
+  });
+
+  it("ceiling authority split across successor entries by vendor or amount counts as held (unit)", () => {
+    const at = (actions: string[], constraints: Record<string, unknown>) => entry(actions, constraints);
+    const ceiling = [at(READ, { vendors: ["acme", "globex"] })];
+    // One entry per vendor holds the two-vendor grant.
+    expect(ceilingAuthorityLeftUndrawn([at(READ, { vendors: ["acme"] }), at(READ, { vendors: ["globex"] })], ceiling)).toBe(false);
+    expect(ceilingAuthorityLeftUndrawn([at(READ, { vendors: ["acme"] })], ceiling)).toBe(true);
+    // An amount cap is held only up to its highest successor cap.
+    const capped = [at(["payments:payment.schedule"], cap("500.00"))];
+    expect(ceilingAuthorityLeftUndrawn([at(["payments:payment.schedule"], cap("200.00"))], capped)).toBe(true);
+    expect(
+      ceilingAuthorityLeftUndrawn(
+        [at(["payments:payment.schedule"], cap("200.00")), at(["payments:payment.schedule"], cap("500.00"))],
+        capped,
+      ),
+    ).toBe(false);
   });
 });
 

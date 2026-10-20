@@ -616,14 +616,14 @@ compromised agent reaches through unattended drawdowns.
 
 A single policy-adjudicated in-ceiling drawdown MUST NOT activate the
 entire remaining ceiling. A drawdown activates the entire remaining
-ceiling when its successor's Authority Set holds all the authority the
-ceiling grants: every `authority_ceiling` entry, taken one action at a
-time, is a subset of some entry of the successor's Authority Set under
-the issuance profile's subset rule, constraints and resource narrowing
-included ({{I-D.draft-mcguinness-oauth-mission}}). A comparison the
-subset rule cannot decide counts as activating it. Policy adjudication
-therefore never reaches the entire ceiling: the final increment always
-takes a fresh human approval.
+ceiling unless the Mission Issuer can show a request the ceiling
+admits that no entry of the successor's Authority Set authorizes: one
+of an `authority_ceiling` entry's actions, with resource and
+constraint values that entry admits ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Subset Rule"). The successor's entries are judged together,
+so ceiling authority it splits across several entries counts as held.
+Policy adjudication therefore never reaches the entire ceiling: the
+final increment always takes a fresh human approval.
 
 The drawdown policy MUST bound each drawdown incrementally, by one or
 both of:
@@ -1282,9 +1282,11 @@ Denial Reasons Registry"):
   continue either way (#1413, #1415, D555).
 - Drawdown Bounds: a drawdown that would activate the entire remaining
   ceiling, or that exceeds the per-drawdown bound or the chain rate
-  bound, falls back to a fresh human approval. The entire remaining
-  ceiling is defined by the subset rule, one action at a time, so the
-  final increment always takes a fresh human approval (#1414, D555).
+  bound, falls back to a fresh human approval. A drawdown activates the
+  entire remaining ceiling unless the Mission Issuer can show ceiling
+  authority that the successor's entries, judged together, do not
+  authorize, so the final increment always takes a fresh human approval
+  (#1414, D555).
 - Editorial: In-Ceiling Expansion in subsections, Relationship and
   Terminology under the Introduction, a Protocol Overview, Title Case
   headings, Security Considerations in subsections, and the IANA
