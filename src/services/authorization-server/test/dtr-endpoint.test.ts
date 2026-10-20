@@ -606,17 +606,22 @@ describe("the AROP deferral is bound to the Mission's client and the opening key
     expect(ownBeyond.error_description).toMatch(/exceeds the active Mission/);
   });
 
-  it("a poll by another client under the opening key is refused invalid_grant as an unknown code is, with no token and no derivation; the Mission's own client then redeems the deferral", async () => {
+  it("a poll by another client, under the opening key or another, is refused invalid_grant as an unknown code is, with no token and no derivation; the Mission's own client then redeems the deferral", async () => {
     const code = await approvedOwnDeferral();
+    const otherKeys = await generateKeyPair("ES256", { extractable: true });
     const unknown = (await (await pollAs("dfr_does-not-exist", dpopKeys, reconciler)).json()) as Body;
     const before = derivations();
 
-    const res = await pollAs(code, dpopKeys, reconciler);
-    const body = (await res.json()) as Body;
-    expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
-    expect(body.error_description).toBe(unknown.error_description);
-    expect(body.access_token).toBeUndefined();
+    // Under another key too: the client check comes first, so the key
+    // refusal (DTR Section 10.1) never tells another client the code exists.
+    for (const [label, keys] of [["the opening key", dpopKeys], ["another key", otherKeys]] as const) {
+      const res = await pollAs(code, keys, reconciler);
+      const body = (await res.json()) as Body;
+      expect(res.status, `${label}: ${JSON.stringify(body)}`).toBe(400);
+      expect(body.error, label).toBe("invalid_grant");
+      expect(body.error_description, label).toBe(unknown.error_description);
+      expect(body.access_token, label).toBeUndefined();
+    }
     expect(derivations()).toBe(before);
 
     // The refusal took nothing from the deferral.
@@ -625,17 +630,16 @@ describe("the AROP deferral is bound to the Mission's client and the opening key
     expect(derivations()).toBe(before + 1);
   });
 
-  it("a poll by the Mission's own client under another key is refused invalid_grant as an unknown code is, with no token and no derivation; the opening key then redeems the deferral", async () => {
+  it("a poll by the Mission's own client under another key is refused invalid_dpop_proof (DTR Section 10.1), with no token and no derivation; the opening key then redeems the deferral", async () => {
     const code = await approvedOwnDeferral();
     const otherKeys = await generateKeyPair("ES256", { extractable: true });
-    const unknown = (await (await pollAs("dfr_does-not-exist", otherKeys)).json()) as Body;
     const before = derivations();
 
     const res = await pollAs(code, otherKeys);
     const body = (await res.json()) as Body;
     expect(res.status, JSON.stringify(body)).toBe(400);
-    expect(body.error).toBe("invalid_grant");
-    expect(body.error_description).toBe(unknown.error_description);
+    expect(body.error).toBe("invalid_dpop_proof");
+    expect(body.error_description).toMatch(/not the key bound to this deferral_code/);
     expect(body.access_token).toBeUndefined();
     expect(derivations()).toBe(before);
 

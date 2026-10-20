@@ -2508,8 +2508,9 @@ export function newResourceServer(
  *    error renderer (err_out) drops any member other than error/error_description.
  *    Only the Mission's own client may open one, and the deferral records that
  *    client and its DPoP key (#1348).
- *  - Poll/redeem: `deferral_code` present, polled by the recording client
- *    under the recorded key -> `deferrals.redeem(code)`. Error
+ *  - Poll/redeem: `deferral_code` present -> `deferrals.redeem(code)`, once
+ *    the poller is the recording client (else `invalid_grant`, as an unknown
+ *    code) and its proof is under the recorded key (else `invalid_dpop_proof`). Error
  *    states map to the RFC 8628-shaped OAuth errors (all HTTP 400); a
  *    DeferredToken mints a REAL resource-bound mission JWT (see mintDeferredToken).
  *
@@ -2554,20 +2555,27 @@ async function handleDeferredGrant(
       refuseTokenEndpointProof(ctx, verified);
       return;
     }
-    // @spec DTR -00 Sections 5.5.1 and 5.6 (#1348): a code issued to another
-    // client is answered as an unknown one. So is a poll under a key other
-    // than the one that opened the deferral, and a deferral whose recorded
-    // client is not the Mission's own client. All are refused before redeem, so
-    // the deferral and the Mission's derivation count are unchanged.
+    // Both checks run before redeem, so a refused poll leaves the deferral and
+    // the Mission's derivation count unchanged (#1348).
     const recorded = deferrals.recorded(params.deferral_code);
     if (recorded) {
+      // @spec DTR -00 Sections 5.5.1 and 5.6: a code issued to another client
+      // is answered as an unknown one, and so is a deferral whose recorded
+      // client is not the Mission's own client. Checked first, so a refusal
+      // to any other client never reveals that the code exists.
       const mission = opts.kernel.get(recorded.missionId);
       if (
         recorded.clientId !== ctx.oidc.client?.clientId ||
-        recorded.jkt !== verified.proof.jkt ||
         (mission !== undefined && mission.client_id !== recorded.clientId)
       ) {
         throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+      }
+      // @spec DTR -00 Section 10.1: the code is this client's, so a proof
+      // under another key is invalid_dpop_proof; the deferral stays
+      // redeemable under the key that opened it.
+      if (recorded.jkt !== verified.proof.jkt) {
+        refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
+        return;
       }
     }
     const r = deferrals.redeem(params.deferral_code);

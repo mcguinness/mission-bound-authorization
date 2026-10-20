@@ -144,15 +144,14 @@ this matrix and the `@spec` tags to the affected code and tests.
   presenting its grant, the client binding is local behavior (#1348). Only the
   Mission's own client opens a deferral; any other client is answered
   `invalid_request` exactly as an unknown Mission is. The deferral records
-  that client and its DPoP key. A poll by another client, under another key,
-  or of a deferral whose recorded client is not the Mission's own is answered
-  as an unknown code (`invalid_grant`, §5.5.1, §5.6), before redeem. Two
-  local choices: DPoP is required at initiation, as the poll requires it
-  (§10.1 lets a `private_key_jwt` client omit it); and a key mismatch answers
-  `invalid_grant`, as the Mission approval deferral on the same grant and the
-  expansion deferral (polled on Token Exchange) do, not §10.1's
-  `invalid_dpop_proof`. Selecting the Mission from a
-  client-supplied `mission_id` still departs from `mission#grant-binding`.
+  that client and its DPoP key. Before redeem, a poll by another client, or of
+  a deferral whose recorded client is not the Mission's own, is answered as
+  an unknown code (`invalid_grant`, §5.5.1, §5.6), whatever key it uses; only
+  then does a poll under another key get `invalid_dpop_proof` (§10.1), with
+  the deferral left redeemable. DPoP is required at initiation, as the poll
+  requires it (§10.1 lets a `private_key_jwt` client omit it). Selecting the
+  Mission from a client-supplied `mission_id` still departs from
+  `mission#grant-binding` (#1356).
 - Deferred Mission Approval (#1185) carries `completion_mode=deferred` as DTR
   `-00` does: the pre-token hint on PAR and the opt-in on the
   `authorization_code` token request. The token-endpoint hook is a wrapper
