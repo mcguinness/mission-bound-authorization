@@ -410,12 +410,13 @@ A Mission is created and used in a single chain:
    **Mission** whose record associates the disclosed task, the
    approved authority, and the approval basis ({{mission-record}}).
 4. **Bind the grant.** The AS binds the OAuth grant the approval
-   produces to that Mission, server-side: every later derivation from
-   that grant lineage resolves to exactly this Mission, and the client
-   never selects or reassigns it ({{grant-binding}}). Under a profile,
-   the AS can bind a further lineage to the same Mission, such as a
-   refresh-token family a continuation transport establishes; each
-   lineage resolves to exactly one Mission.
+   produces to that Mission, server-side ({{grant-binding}}). Each
+   later issuance operation from that grant lineage, such as a
+   refresh, is a derivation ({{issuance-gating}}) and resolves to
+   exactly this Mission; the client never selects or reassigns it.
+   Under a profile, the AS can bind a further lineage to the same
+   Mission, such as a refresh-token family a continuation transport
+   establishes; each lineage resolves to exactly one Mission.
 5. **Issue and enforce.** Every derived authority is no broader than
    the approved Authority Set ({{subset}}). Every access token the
    agent obtains under the Mission carries the derived authorization
@@ -431,14 +432,16 @@ A Mission is created and used in a single chain:
 Steps 3 to 6 state the properties this document provides;
 {{conformance}} states the requirements that realize them.
 
-A user thus approves a task once, and that approval, not a
-per-request scope grant, bounds and outlives every token the agent
-derives. The Mission Record commits the consented authority once,
-as `authority_hash`, and a party holding the full Authority Set can
-verify it independently ({{consent-binding}}).
-Mission Approved-Set Verification
+A user thus approves the authority for a task once, and that
+approval, not a per-request scope grant, bounds and outlives every
+token the agent derives. The Mission Record commits the consented
+authority once, as `authority_hash`; a party holding the complete
+Authority Set can recompute the commitment and compare the result
+with `authority_hash` ({{consent-binding}}). Mission Approved-Set
+Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
-defines that check for a token that carries only a narrowed subset.
+defines how a token that carries only a narrowed subset is checked
+against the complete set.
 
 This chain is the first of two enforcement layers, and a deployment
 can run it alone: a resource server need not be Mission-aware unless
