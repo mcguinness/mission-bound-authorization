@@ -111,7 +111,7 @@ export class TokenAudienceError extends Error {
 }
 
 /**
- * @spec authority-server#mapping-contract (#818) — the one credential format an
+ * @spec authority-server#mapping-contract (#818): the one credential format an
  * estate route (`ordinaryOnly`) accepts: an RFC 9068 JWT access token, `typ`
  * `at+jwt`, with the string `sub`, `client_id` and `jti` and the numeric `exp`
  * and `iat` the profile requires, and a `scope` string when present. Signature,
@@ -434,7 +434,7 @@ export interface McpServerDeps {
   keyRoles: KeyRoles;
   issuer: string;
   /**
-   * @spec authority-server#limitations, #high-consequence-binding (#818) —
+   * @spec authority-server#limitations, #high-consequence-binding (#818):
    * `issuer` is an estate authorization server that is NOT a Mission Issuer:
    * it issues ordinary OAuth tokens only. Every credential this server
    * verifies is then ordinary; one carrying a `mission` claim is refused,

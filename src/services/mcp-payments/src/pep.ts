@@ -822,7 +822,7 @@ export interface PepDeps {
       missionClientId: string,
     ) => number | undefined;
     /**
-     * @spec authority-server#mapping-contract (#818) — the deployment's
+     * @spec authority-server#mapping-contract (#818): the deployment's
      * versioned mapping contract, for a route whose credentials come from an
      * issuer outside the Mission's subject and client namespace. Called ONCE
      * per joined request; that one snapshot supplies the credential bound
@@ -835,7 +835,7 @@ export interface PepDeps {
      */
     mappingContract?: () => JoinMappingContract;
     /**
-     * @spec authority-server#high-consequence-binding (#818) — forwarded to
+     * @spec authority-server#high-consequence-binding (#818): forwarded to
      * the PDP as `missionBoundOnlyClasses`: the action classes this route
      * admits only under a Mission-bound credential, so a joined request in one
      * is denied rather than evaluated under the join.
@@ -1542,7 +1542,7 @@ export class Pep {
     // case, where no delegate policy is consulted at all).
     let isBaselineJoin = false;
     let delegateDepth: number | undefined;
-    // @spec authority-server#mapping-contract (#818) — the one contract
+    // @spec authority-server#mapping-contract (#818): the one contract
     // snapshot this joined request applies, forwarded to the PDP below.
     let joinMapping: JoinMappingContract | undefined;
     // @spec authzen#context-credential (#825, D312) — the credential's own

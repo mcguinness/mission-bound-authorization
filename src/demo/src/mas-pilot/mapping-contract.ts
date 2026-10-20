@@ -112,7 +112,7 @@ function status(v: unknown, ctx: string): "active" | "disabled" {
 const keyOf = (iss: string, id: string): string => JSON.stringify([iss, id]);
 
 /**
- * @spec authority-server#mapping-contract — the strict loader. It refuses an
+ * @spec authority-server#mapping-contract: the strict loader. It refuses an
  * unknown or missing member, a malformed value, and an AMBIGUOUS mapping: a
  * second row for one issuer-qualified estate subject or client, since one
  * credential identity mapping to two Mission identities cannot be resolved.
@@ -329,7 +329,7 @@ class MappingSnapshot implements JoinMappingContract {
 }
 
 /**
- * @spec authority-server#mapping-contract (#818) — the governed cache. It
+ * @spec authority-server#mapping-contract (#818): the governed cache. It
  * holds at most one installed contract version. `install` accepts only a
  * contract the strict loader accepts with a version above the installed one,
  * so a replayed or rolled-back export is refused; a refused install leaves the

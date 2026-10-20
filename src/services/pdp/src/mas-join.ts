@@ -81,7 +81,7 @@ export type BaselineJoinResult =
 
 /**
  * @spec authority-server#mission-join rules 3 and 4,
- * authority-server#mapping-contract (#818) — the authenticated subject and
+ * authority-server#mapping-contract (#818): the authenticated subject and
  * client a credential's own namespace names, mapped into the referenced
  * Mission's namespace under the deployment's documented mapping contract.
  */
@@ -91,7 +91,7 @@ export interface JoinIdentityResolution {
 }
 
 /**
- * @spec authority-server#mapping-contract (#818) — one snapshot of a
+ * @spec authority-server#mapping-contract (#818): one snapshot of a
  * deployment's versioned mapping contract, as the join applies it where the
  * acting credential's issuer is not the Mission's subject and client
  * namespace (rule 3: "otherwise the deployment MUST document the mapping, and
@@ -147,7 +147,7 @@ export interface JoinMappingContract {
 }
 
 /**
- * @spec authority-server#mapping-contract (#818) — the contract a caller
+ * @spec authority-server#mapping-contract (#818): the contract a caller
  * substitutes when its configured source has no usable snapshot: it resolves
  * nothing, so the join fails closed rather than falling back to the
  * shared-namespace comparison an unconfigured deployment uses.

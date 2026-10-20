@@ -629,7 +629,7 @@ export interface EvaluateOptions {
   delegatePolicy?: DelegatePolicy;
   /**
    * @spec authority-server#mapping-contract, authority-server#mission-join
-   * rules 3 and 4 (#818) — the deployment's mapping contract, one snapshot
+   * rules 3 and 4 (#818): the deployment's mapping contract, one snapshot
    * per request. Present: a joined request's authenticated subject and client
    * are mapped under it, qualified by `context.credential.issuer`, before the
    * join compares them with the Mission's own; a request the contract does not
