@@ -13,9 +13,12 @@
  *   as the AS-native target does (D293); Mission Status over HTTP is not part
  *   of this slice.
  * - The gateway: a MAS-governed HTTP MCP route whose resource server trusts
- *   ONLY the estate issuer's published keys and admits only ordinary RFC 9068
- *   tokens (`ordinaryOnly`). It joins each credential to the Mission its
- *   `Mission-Reference` names, under the versioned mapping contract.
+ *   ONLY the estate issuer: RFC 9068 JWTs under the keys the estate publishes,
+ *   and opaque tokens through RFC 7662 introspection at the estate as the
+ *   gateway's registered introspection client (#818 slice 3). Every credential
+ *   it admits is ordinary (`ordinaryOnly`). It joins each credential to the
+ *   Mission its `Mission-Reference` names, under the versioned mapping
+ *   contract.
  * - The resource route: the payments resource's own Mission-bound route,
  *   which trusts only the Mission Issuer's keys. In MAS mode nothing issues
  *   such a token, so it admits no estate credential.
@@ -87,6 +90,14 @@ export interface MasPilotOptions {
    * install a snapshot that is already stale.
    */
   mappingNow?: () => Date;
+  /**
+   * The introspection endpoint the gateway calls. Defaults to the one the
+   * estate publishes. A test points it at a forwarding proxy to inject a
+   * timeout or an error on the path to the estate.
+   */
+  introspectionEndpoint?: string;
+  /** The introspection cache's clock. Defaults to `now`. */
+  introspectionNow?: () => Date;
 }
 
 export interface MasPilot {
@@ -136,6 +147,8 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
   const estateClients = new Map<string, EstateClientRegistration>(
     config.estate.clients.map((c) => [c.client_id, { ...c, client_secret: crypto.randomUUID() }]),
   );
+  // The gateway's introspection client at the estate, its secret generated here.
+  const introspectionClient = { client_id: config.introspection.client_id, client_secret: crypto.randomUUID() };
   const opened: (() => Promise<void> | void)[] = [];
   const close = async (): Promise<void> => {
     for (const release of opened.splice(0).reverse()) await release();
@@ -148,6 +161,7 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
       port: config.estate.port,
       accounts: config.estate.accounts,
       clients: [...estateClients.values()],
+      introspectionClients: [introspectionClient],
       resourceServers: config.estate.resource_servers,
     });
     opened.push(estate.close);
@@ -276,6 +290,14 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
       keyRoles: { accessToken: estateKids, attenuationRoot: [], transactionToken: [] },
       issuer: estate.issuer,
       ordinaryOnly: true,
+      introspection: {
+        endpoint: opts.introspectionEndpoint ?? estate.introspectionEndpoint,
+        clientId: introspectionClient.client_id,
+        clientSecret: introspectionClient.client_secret,
+        timeoutMs: config.introspection.timeout_ms,
+        cacheMaxSeconds: config.introspection.cache_max_seconds,
+        ...((opts.introspectionNow ?? opts.now) ? { now: (opts.introspectionNow ?? opts.now) as () => Date } : {}),
+      },
       transaction,
       writeReservations,
     });

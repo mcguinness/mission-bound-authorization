@@ -4,27 +4,28 @@ The pilot contract for #253's second reference path: the **legacy-estate/MAS
 route** that D284 adopted and D508 ruled executable, owned by #818 (Sketch
 steps 3 and 4). A legacy estate keeps its own authorization server; its
 ordinary tokens are joined to Missions at a gateway, under a versioned mapping
-contract. This document records slices 1 and 2 of that evidence (slice 2:
-the Resource policy, §4). It is not a
+contract. This document records slices 1 to 3 of that evidence (slice 2:
+the Resource policy, §4; slice 3: opaque tokens by introspection, §5). It is
+not a
 conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `739a5c50`
+Every statement here is true of the reference implementation at `3814a053`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
-(`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`)
-need a live OpenFGA, because the Resource policy is stored entitlements, and
-are skipped without one; the mapping, estate-route and PDP unit files always
-run.
+(`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
+`demo/test/mas-pilot-introspection.test.ts`) need a live OpenFGA, because the Resource policy is stored entitlements, and
+are skipped without one; the mapping, estate-route, introspection and PDP
+unit files always run.
 
 ## 1. Components
 
 | Component | What it is | Trust |
 |---|---|---|
-| Estate AS | A stock `oidc-provider` instance (`demo/src/mas-pilot/estate-as.ts`) with no Mission code: its own issuer, a signing key generated at each boot, a directory of accounts and its own client registrations. Authorization code grant with PKCE, `client_secret_basic`, resource indicators, DPoP-bound RFC 9068 JWT access tokens. | Issues ordinary tokens only. |
+| Estate AS | A stock `oidc-provider` instance (`demo/src/mas-pilot/estate-as.ts`) with no Mission code: its own issuer, a signing key generated at each boot, a directory of accounts and its own client registrations. Authorization code grant with PKCE, `client_secret_basic`, resource indicators, DPoP-bound access tokens: an RFC 9068 JWT, or an opaque reference for a client registered with `token_format: "opaque"`. RFC 7662 introspection open only to the gateway's registered introspection client; RFC 7009 revocation of a client's own tokens. | Issues ordinary tokens only. |
 | MAS | The reference Mission kernel under its own issuer (`https://mas.pilot.invalid`), which issues no tokens in this mode. The PEP reads its committed records through the projection the shared demo stack also uses (`demo/src/kernel-mission-view.ts`), containment and discharge deltas included. | Holds the Missions the joins name. |
-| Gateway route | A MAS-governed HTTP MCP route (`createHttpMcpChannel(…, { masGoverned: true })`) whose resource server trusts only the keys the estate publishes at its `jwks_uri`, fetched over HTTP at boot, and sets `ordinaryOnly` (`services/mcp-payments/src/server.ts`). | Admits estate credentials, and only through the join. |
+| Gateway route | A MAS-governed HTTP MCP route (`createHttpMcpChannel(…, { masGoverned: true })`) whose resource server sets `ordinaryOnly` (`services/mcp-payments/src/server.ts`) and trusts only the estate: a JWT under the keys the estate publishes at its `jwks_uri`, fetched over HTTP at boot, or an opaque token through introspection at the estate (§5). | Admits estate credentials, and only through the join. |
 | Resource route | The payments resource's own Mission-bound route, trusting only the Mission Issuer's keys. Nothing signs with them in MAS mode. | Admits no estate credential. |
 | PEP and PDP | The reference `Pep` and decision point over one payments store. Every crossing on either route goes through the PEP. | Apply the join, the credential bound and Resource policy. |
 | Resource policy | Stored OpenFGA entitlements (`fgaResourcePolicy`, #828) for principals under the estate issuer, read by the decision point with no Mission input. The PEP's Mission-authority check reads the same store. | Independently administered (§4). |
@@ -39,7 +40,7 @@ The estate's client identifiers (`estate-ap-bot-7f3`, `estate-extractor-2c1`,
 is a separate identifier in the Mission Issuer's namespace. The estate
 deliberately registers a client named `ap-agent`, the Mission's own
 `client_id`, and an account named `alice`, the Mission subject's `sub`, so the
-namespace tests in §6 run against real estate registrations.
+namespace tests in §7 run against real estate registrations.
 
 ## 2. The mapping contract
 
@@ -101,7 +102,7 @@ resolution (`MappingContractCache`):
   mapping has the same freshness.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
-  install and invalidation. The record is in memory only (§8).
+  install and invalidation. The record is in memory only (§9).
 
 ## 4. Resource policy
 
@@ -156,7 +157,49 @@ pnpm resource-policy grant --iss http://127.0.0.1:14818 --sub u-1001 --relation 
 
 The tests drive the same code path (`resourcePolicyAdmin`).
 
-## 5. Routes and consequential-path inventory
+## 5. Opaque tokens and introspection
+
+The estate issues an opaque, DPoP-bound access token to a client registered
+with `token_format: "opaque"` (`estate-opaque-bot-4e2`). The gateway's estate
+route validates it by RFC 7662 introspection at the estate
+(`TokenIntrospector`, `services/mcp-payments/src/introspection.ts`); a compact
+JWS still takes the JWT path. The facts are built exactly as the JWT path
+builds them, so the same join, mapping contract, Resource policy and class
+reservation apply.
+
+- **The call.** An authenticated POST (`client_secret_basic`, as the gateway's
+  registered introspection client `mas-gateway-introspector`, its secret
+  generated at each boot) naming the token, bounded by
+  `introspection.timeout_ms` (2000).
+- **What it requires.** `active: true`; an `iss`, when present, that is the
+  estate's; `token_type` `DPoP`; an `exp` still ahead; non-empty `sub` and
+  `client_id`; an `aud`; and `cnf.jkt`. The audience rule is the JWT path's
+  (`aud` must name this boundary, under the token profile
+  `token-introspection`), and the request's DPoP proof must be bound to the
+  introspected `cnf.jkt` and to the token (`ath`). The identity is qualified
+  by the route's own issuer, the estate, never by a value the response
+  supplies.
+- **Expiry after the awaits.** The adapter reads its clock again once the
+  answer arrives, checks `exp` against that reading and starts the cache
+  entry from it; admission re-checks `exp` after its own awaits. A token that
+  expires while it is being introspected is refused. The PDP's own
+  credential-expiry check (`context.credential.expires_at`) was always a
+  second line, so the earlier gap, found in review of #1400, concerned
+  credential admission, not a demonstrated tool-execution bypass.
+- **Fail closed.** No answer (a timeout, a network error, a non-200 status, a
+  body that is not a JSON object) is refused 503 `temporarily_unavailable`;
+  any other refusal is 401. Neither reaches the PEP, so no decision is made.
+- **Cache and revocation latency.** A positive result is cached, keyed by the
+  token's SHA-256, for at most `introspection.cache_max_seconds` (60) and
+  never past the token's `exp`; a negative result is never cached. A token
+  revoked at the estate is therefore refused within 60 seconds of its last
+  successful introspection.
+- **The estate's own controls,** as configured (`estate-as.ts`; no pilot test
+  exercises either): introspection is allowed only to the registered
+  introspection client, so any other caller reads `active: false`, and a
+  client may revoke only its own tokens.
+
+## 6. Routes and consequential-path inventory
 
 `config/mas-pilot.json` `routes` names the two routes and `inventory` names
 every payments tool, its action class and its disposition on the gateway:
@@ -178,7 +221,7 @@ reservation it permits the remittance. The reservation is the control, not a
 side effect of another check. This is the pilot's inventory choice; the
 reference claims no `mas.enterprise` capability.
 
-## 6. What the pilot witnesses
+## 7. What the pilot witnesses
 
 Against D284's evidence list (tests in `demo/test/mas-pilot.test.ts` unless
 named):
@@ -187,7 +230,7 @@ named):
 |---|---|---|
 | Gateway bypass refused | Covered for this composition | `MAS pilot: the gateway joins … > refuses the same estate credential on the resource's own route before any decision, though the gateway admits it (bypass)`: a whole attempt (the MCP handshake and a tool call) is refused, the handshake answered 401, with no decision request and no evidence record; the gateway permits the same credential. |
 | Different issuer and client registrations | Covered | `MAS pilot: the estate is a separate issuer … > issues an ordinary RFC 9068 token under the estate issuer, with no mission claim and a client the MAS never registered`; `… > refuses to issue for a resource the client's estate registration does not name (invalid_target)`. |
-| Credential-authority adapter | Covered for one format | Scope to authority from an RFC 9068 JWT: `… > bounds a joined credential by its own scope as the contract maps it`. Other formats refused: `services/mcp-payments/test/estate-route.test.ts`, `estate route: ordinary credentials only … > refuses every other credential format`. Introspection to authority is not built. |
+| Credential-authority adapter | Covered for two formats | Scope to authority from an RFC 9068 JWT: `… > bounds a joined credential by its own scope as the contract maps it`; and from an RFC 7662 introspection response for an opaque token: `MAS pilot introspection: opaque estate tokens at the gateway … > bounds the opaque token by its introspected scope …` (slice 3, below). Other formats refused: `services/mcp-payments/test/estate-route.test.ts`, `estate route: ordinary credentials only … > refuses every other credential format`. |
 | Mapping provenance and freshness | Covered | `demo/test/mas-pilot-mapping.test.ts`, `mapping contract cache: versions and freshness …` (reassignment, refused rollback, staleness bound, usability, invalidation) and `… > resolves two estate accounts mapped to one Mission subject, and audits which account each decision resolved`. At the gateway, `MAS pilot: an unavailable mapping fails the join, not the credential bound …`: an invalidated and a stale contract each deny `mission_binding_failed` at the PDP's join and permit again after a new install; a usable contract that does not map the action refuses `out_of_authority` before any decision. |
 | Committed Mission state on the joined path | Covered for containment | `MAS pilot: a committed containment narrows a joined Mission … > denies authority_contained for the action a containment removed, while the uncontained read still permits`. The discharge delta rides the same shared projection; no pilot test discharges an entry. |
 | Same `sub` or `client_id` in another namespace | Covered | `… > never conflates an estate client registered under the Mission's own client_id string`; `… > never conflates estate account "alice" with the Mission subject alice`; PDP: `services/pdp/test/evaluate-join-mapping.test.ts`. |
@@ -211,20 +254,44 @@ revoked (#818 slice 2)` unless named), all over the stored policy:
 | A restart attached to the store keeps a revocation | `MAS pilot Resource policy: a restart attached to the same store keeps a revocation … > a pilot attached to the first pilot's store and model reads the revocation made before the restart, and the grant that follows` |
 | The seed loads and refuses as the shipped seed does | `demo/test/mas-pilot-mapping.test.ts`, `pilot configuration: the estate's development Resource-policy grants …` |
 
+Slice 3's introspection witnesses: end to end in
+`demo/test/mas-pilot-introspection.test.ts` (describe `MAS pilot
+introspection: opaque estate tokens at the gateway (#818 slice 3)`), with the
+gateway's introspection calls through a forwarding proxy that can delay,
+fail or rewrite them; the adapter in
+`services/mcp-payments/test/token-introspection.test.ts`; the estate route in
+`services/mcp-payments/test/estate-route-introspection.test.ts`.
+
+| Property | Witness |
+|---|---|
+| An opaque token permits end to end, its identity from introspection | `… > permits a joined read with an opaque token, its identity read from the estate's introspection` |
+| The introspected scope is the credential bound | `… > bounds the opaque token by its introspected scope: an action that scope does not carry is refused out_of_authority, and a scope that carries it permits` |
+| An inactive token is refused with no decision | `… > refuses a token the estate reports inactive, with no decision` (401); adapter: `token introspection: fail-closed refusals … > refuses an inactive token, and does not cache the refusal` |
+| A token expiring while its introspection is in flight is refused | adapter: `token introspection: expiry is checked after the answer arrives … > refuses a token that expires while its introspection is in flight, and keeps no cache entry for it`; admission: `estate route with introspection: expiry is re-checked at admission … > refuses a token whose exp passes after the adapter accepted it, before admission completes` |
+| A revocation at the estate is refused within the cache bound | `… > stops admitting a token revoked at the estate once its positive cache entry ends, within cache_max_seconds`; adapter: `token introspection: the cache bounds …` (at most `cacheMaxSeconds`, never past `exp`) |
+| A timeout and an error fail closed | `… > fails closed when introspection does not answer within its timeout, with no decision` and `… > fails closed when introspection answers with an error or a body that is not JSON, with no decision` (503) |
+| A token for another resource is refused | `… > refuses an opaque token the estate issued for another of its resources, with no decision`; estate route: `… > refuses an opaque token introspected for another resource, under the same audience rule as a JWT` |
+| The introspected `cnf` is enforced | `… > enforces the introspected cnf: the same opaque token with another DPoP key is refused` |
+| Namespaces stay apart | `… > refuses an introspection answer that names another issuer, so an introspected identity is only ever the estate's`; `… > keeps namespaces apart on the opaque path: estate account alice joins dana's Mission and never alice's` |
+| The same Resource policy and class reservation apply | `… > applies the same Resource policy to the introspected client: revoking its authorized_client denies resource_policy`; `… > applies the same class reservation: a remittance under an opaque token is denied though scope, Mission and Resource policy allow it` |
+
 Each test was proved by introducing the defect it guards against and
 confirming its assertion fails.
 
-## 7. AS capabilities and adopter code for the baseline join
+## 8. AS capabilities and adopter code for the baseline join
 
 What the estate AS needed, all by configuration of an unmodified library:
 RFC 9068 JWT access tokens carrying `scope`, `sub` and `client_id`;
-DPoP-bound tokens (`cnf.jkt`); a published `jwks_uri`; and per-client
-resource and scope restrictions. RFC 7662 introspection is enabled in its
-configuration and not exercised by any test.
+DPoP-bound tokens (`cnf.jkt`); a published `jwks_uri`; per-client resource
+and scope restrictions; and, for opaque tokens, a per-client access token
+format, RFC 7662 introspection restricted to registered introspection clients
+(its response carrying `active`, `iss`, `sub`, `client_id`, `scope`, `aud`,
+`exp` and `cnf`), and RFC 7009 revocation.
 
 What the adopter wrote: the gateway's resource-server configuration (trusted
-estate keys, `ordinaryOnly`), the mapping contract and its cache, the estate's
-Resource-policy grants, and the composition. The PEP and PDP changes are reference code
+estate keys, `ordinaryOnly`, the introspection client and its bounds), the
+mapping contract and its cache, the estate's Resource-policy grants, and the
+composition. The PEP and PDP changes are reference code
 (`joinMapping`, `missionBoundOnlyClasses`, `mappingContract`).
 
 Sender-bound Join Assertions are not built. They would additionally need the
@@ -232,7 +299,7 @@ MAS to introspect or validate the estate token and report its `cnf`
 (MAS §enterprise-prerequisites), and a Join Assertion endpoint, which the
 reference does not implement.
 
-## 8. Residuals and exclusions
+## 9. Residuals and exclusions
 
 - **The Resource policy administers estate principals only.** A request
   whose subject is not under the estate issuer has no principal and is
@@ -256,7 +323,13 @@ reference does not implement.
 - **The estate's login page is a stand-in:** its interaction logs in the
   account named by `login_hint`.
 - **The gateway fetches the estate's keys once, at boot;** key rotation is
-  not handled.
+  not handled. The introspection endpoint is likewise read from the estate's
+  metadata at boot.
+- **Revocation latency on the opaque path is up to
+  `introspection.cache_max_seconds` (60)**, never past the token's `exp`; the
+  JWT path has no revocation check beyond the token's own lifetime, as for any
+  RFC 9068 resource. Introspection answers are plain JSON (no RFC 9701 signed
+  responses), over the estate's endpoint as configured.
 - **No instance-bound join and no Join Assertion.**
 - **Tool listing:** an ordinary credential is listed no tools
   (`McpPaymentsServer.toolsList`, an existing remainder); calls are enforced.
@@ -276,36 +349,38 @@ reference does not implement.
 - The shared demo's MAS-governed channel (`config/mas-join.json`) is
   unchanged and keeps its shared-namespace join.
 
-## 9. Remaining slices
+## 10. Remaining slices
 
-1. Introspection to authority: an opaque-token estate route resolving `scope`
-   and `cnf` through RFC 7662, with its timeout and cache bounds.
-2. A separated MAS: Mission Status over HTTP as the state source, with the
+1. A separated MAS: Mission Status over HTTP as the state source, with the
    runtime profile's freshness bounds (#1101).
-3. A retained, signed mapping audit record, or the mapping version in
+2. A retained, signed mapping audit record, or the mapping version in
    evidence, if the owner selects one.
-4. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
-   step 5's second half).
-5. A launcher and an operator walkthrough for the pilot topology, attaching
+3. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
+   step 5's second half); the introspection adapter here is what a MAS would
+   use to inspect the estate token.
+4. A launcher and an operator walkthrough for the pilot topology, attaching
    to an administered Resource-policy store.
-6. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
+5. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
    demo's join documents no contract); the `mas.enterprise` rows stay `todo`.
 
 The component matrix in MAS §deployment-adoption (Sketch steps 1 and 2)
 merged as #1352 (D523).
 
-## 10. Run it
+## 11. Run it
 
 From `src/`, with a live OpenFGA (`OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`,
 and `OPENFGA_CA_CERT` where it serves TLS):
 
 ```sh
 pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.test.ts \
-  demo/test/mas-pilot-mapping.test.ts services/mcp-payments/test/estate-route.test.ts \
-  services/pdp/test/evaluate-join-mapping.test.ts
+  demo/test/mas-pilot-introspection.test.ts demo/test/mas-pilot-mapping.test.ts \
+  services/mcp-payments/test/estate-route.test.ts services/mcp-payments/test/estate-route-introspection.test.ts \
+  services/mcp-payments/test/token-introspection.test.ts services/pdp/test/evaluate-join-mapping.test.ts
 ```
 
 Each end-to-end file bootstraps its own development store. The estate AS
-binds `127.0.0.1:14818` in `mas-pilot.test.ts` and `127.0.0.1:14824` in
-`mas-pilot-resource-policy.test.ts` (the configuration relocated, so the two
-files run in parallel); the gateway and resource routes bind ephemeral ports.
+binds `127.0.0.1:14818` in `mas-pilot.test.ts`, `127.0.0.1:14824` in
+`mas-pilot-resource-policy.test.ts` and `127.0.0.1:14825` in
+`mas-pilot-introspection.test.ts` (the configuration relocated, so the files
+run in parallel); the gateway, the resource route and the introspection proxy
+bind ephemeral ports.

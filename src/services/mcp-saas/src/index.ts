@@ -45,21 +45,50 @@ const CONSTRAINT_GATES: Readonly<Record<string, (value: unknown, args: Record<st
  */
 export const SAAS_ENFORCED_CONSTRAINTS: readonly string[] = Object.freeze(Object.keys(CONSTRAINT_GATES));
 
+/** The one `authorization_details` type this resource implements. */
+const ENTRY_TYPE = "mission_resource_access";
+
+/**
+ * @spec resource-access#rs-enforcement (#1362): the resource-server role of
+ * each entry member this resource recognizes. The five evaluated members are
+ * enforced. `delegation` is applied at issuance, so it is disregarded here
+ * whole, members a companion profile adds inside it included. This resource
+ * implements no extension member, so any other member (`locations`,
+ * `capability_sources`, or a name it does not recognize) has no role and
+ * makes the entry one it cannot fully enforce. Decided by presence, never by
+ * value.
+ */
+const ENTRY_MEMBER_ROLES: Readonly<Record<string, "enforced" | "disregarded">> = {
+  type: "enforced",
+  resource: "enforced",
+  resource_match: "enforced",
+  actions: "enforced",
+  constraints: "enforced",
+  delegation: "disregarded",
+};
+
 interface SaasEntry {
+  type?: unknown;
   resource: string;
   resource_match?: unknown;
   actions: string[];
   constraints?: unknown;
+  /** Any other member, which {@link ENTRY_MEMBER_ROLES} classifies. */
+  [member: string]: unknown;
 }
 
 /**
- * @spec resource-access#rs-enforcement: whether one entry, on its own, covers
- * the request. An entry carrying a `constraints` key this resource does not
- * enforce, or a malformed `constraints` member, provides no authority: no key
- * is ever set aside as advisory.
+ * @spec resource-access#rs-enforcement, mission#rs-enforcement: whether one
+ * entry, on its own, covers the request. An entry of a type this resource
+ * does not implement, one carrying a member with no role here, one carrying a
+ * `constraints` key this resource does not enforce, or one with a malformed
+ * `constraints` member provides no authority: nothing is ever set aside as
+ * advisory.
  */
 function entryCovers(entry: SaasEntry, target: string, action: string, args: Record<string, unknown>): boolean {
-  if (!entry || typeof entry !== "object") return false;
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+  if (entry.type !== ENTRY_TYPE) return false;
+  if (!Object.keys(entry).every((member) => Object.hasOwn(ENTRY_MEMBER_ROLES, member))) return false;
   // The entry matches the operation target with the Resource Access matcher (#1276).
   if (!entryMatchesTarget(entry, target) || !Array.isArray(entry.actions) || !entry.actions.includes(action)) {
     return false;
@@ -161,7 +190,8 @@ export class SaasMcpServer {
    * Token-only enforcement: one entry of the token's audience-scoped
    * authority must cover the request on its own (@spec
    * resource-access#rs-enforcement). Entries are alternatives, never
-   * combined, and one this resource cannot fully enforce lends nothing.
+   * combined, and one this resource cannot fully enforce lends nothing but
+   * leaves the others to authorize on their own.
    */
   async callTool(
     tool: string,

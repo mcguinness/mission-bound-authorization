@@ -64,6 +64,13 @@ import {
   type SubjectTokenCase,
   UNHELD_KEY_CNF,
 } from "./subject-possession.helper.js";
+import {
+  delegationWithMatcher,
+  MATCHER_LIST_CASES,
+  MATCHER_REPRODUCTION,
+  type MatcherList,
+  WELL_FORMED_MATCHER,
+} from "./malformed-matcher.helper.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -671,6 +678,48 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
       expect(body.refresh_token).toBeUndefined();
       expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
       expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+    }
+  });
+
+  // @spec resource-access#matching-allowed-delegates (#1373): confinement
+  // rebuilds each delegate matcher from `sub` and `sub_profile`, so a
+  // requested matcher carrying another member is refused rather than confined
+  // without it.
+  it("confinement: a requested entry whose delegate matcher carries an unrecognized member is refused invalid_authorization_details, opening no family and counting no derivation", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const requestWith = (matcher: Readonly<Record<string, string>>, list: MatcherList) =>
+      confinedAuthority().map((e) => ({ ...e, delegation: delegationWithMatcher(matcher, list) }));
+    for (const [list, description] of MATCHER_LIST_CASES) {
+      // The handle request is itself a counted derivation, so it is taken first.
+      const handle = await delegationHandle(baseAccessToken);
+      const countBefore = as.kernel.get(missionId)?.derivation_count;
+      const res = await asyncDelegate(handle, {
+        rawSubject: true,
+        authorizationDetails: requestWith(MATCHER_REPRODUCTION, list),
+      });
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        access_token?: string;
+        refresh_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe(description);
+      expect(body.access_token).toBeUndefined();
+      expect(body.refresh_token).toBeUndefined();
+      expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+    }
+    // Positive control: with a well-formed matcher, the same request opens a family.
+    for (const [list] of MATCHER_LIST_CASES) {
+      const handle = await delegationHandle(baseAccessToken);
+      const res = await asyncDelegate(handle, {
+        rawSubject: true,
+        authorizationDetails: requestWith(WELL_FORMED_MATCHER, list),
+      });
+      const body = (await res.json()) as { access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
     }
   });
 });

@@ -41,6 +41,7 @@ import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel
 import {
   ID_JAG_TOKEN_TYPE,
   AuthorityNarrowedToEmptyError,
+  conveyedCopy,
   DestinationClientUnresolvedError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
@@ -48,6 +49,7 @@ import {
 } from "../kernel/cross-domain.js";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import {
+  malformedMatcherInRequest,
   refusedMemberInRequest,
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
@@ -801,9 +803,14 @@ export async function handleTokenExchangeGrant(
     return;
   }
   // The grant's authority: the entries this delegate may carry, narrowed to
-  // the requested resources (continuationResourceFilter).
+  // the requested resources (continuationResourceFilter), as the grant would
+  // convey them. @spec cross-domain#conveyed-delegation (#1374): the same
+  // conveyed-copy rule the mint applies after the gate (conveyedCopy), so a
+  // request that keeps an omitted `delegation` is refused here, before any
+  // derivation is reserved or counted, like every other requested-authority
+  // refusal at this exchange.
   const resourceFilter = continuationResourceFilter(resources);
-  const grantable = resourceFilter(delegable);
+  const grantable = conveyedCopy(record, audienceCandidates, resourceFilter(delegable));
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the grant's authority:
   // the Mission's Effective Authority Set for this audience, as this delegate
@@ -1175,6 +1182,14 @@ export async function handleAsyncDelegationExchange(
     const refusedMember = refusedMemberInRequest(requested);
     if (refusedMember) {
       txError(ctx, 400, "invalid_authorization_details", refusedMember);
+      return;
+    }
+    // @spec resource-access#matching-allowed-delegates (#1373): confinement
+    // rebuilds each delegate matcher from `sub` and `sub_profile`, so a
+    // requested matcher carrying another member is refused at the same point.
+    const malformedMatcher = malformedMatcherInRequest(requested);
+    if (malformedMatcher) {
+      txError(ctx, 400, "invalid_authorization_details", malformedMatcher);
       return;
     }
     requestedSubset = requested as AuthorityEntry[];
