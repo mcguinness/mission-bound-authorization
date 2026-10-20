@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-20T21:50:21Z
-Source repository commit: d11e5626bf39cfe57e9c5c86f74ca69d7a34b441
+Generated: 2026-10-20T22:10:02Z
+Source repository commit: 75594a8b8332f87191e754061ad5821e38528fc7
 Member count: 9
 
 Reading order:
@@ -12961,37 +12961,37 @@ Table of Contents
    This document requests registration of the following in the "OAuth
    Parameters" registry:
 
-   *  Name: mission_intent
+   *  Parameter name: mission_intent
 
-   *  Parameter Usage Location: authorization request
+   *  Parameter usage location: authorization request
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 4.2
+   *  Specification document(s): this document, Section 4.2
 
-   *  Name: mission_id
+   *  Parameter name: mission_id
 
-   *  Parameter Usage Location: token response
+   *  Parameter usage location: token response
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 6.10.4
+   *  Specification document(s): this document, Section 6.10.4
 
-   *  Name: mission_error
+   *  Parameter name: mission_error
 
-   *  Parameter Usage Location: token response
+   *  Parameter usage location: token response
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 7
+   *  Specification document(s): this document, Section 7
 
-   *  Name: mission_expires_at
+   *  Parameter name: mission_expires_at
 
-   *  Parameter Usage Location: token response
+   *  Parameter usage location: token response
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 6.10.4
+   *  Specification document(s): this document, Section 6.10.4
 
    PAR [RFC9126] carries authorization-request parameters without a
    distinct usage location, so the pushed submission of mission_intent
@@ -13011,15 +13011,16 @@ Table of Contents
    This document requests registration of the following in the "OAuth
    Extensions Error" registry [RFC6749]:
 
-   *  Name: invalid_mission_intent_evidence
+   *  Error name: invalid_mission_intent_evidence
 
-   *  Usage Location: authorization endpoint, token endpoint
+   *  Error usage location: authorization endpoint, token endpoint
 
-   *  Protocol Extension: Intent Submission Evidence (Section 4.4)
+   *  Related protocol extension: Intent Submission Evidence
+      (Section 4.4)
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 4.4
+   *  Specification document(s): this document, Section 4.4
 
    A code distinct from invalid_request lets a client tell a malformed
    submission from missing or untrusted evidence, and remedy each
@@ -33237,13 +33238,13 @@ Table of Contents
    This document requests registration of the following in the "OAuth
    Parameters" registry:
 
-   *  Name: mission_shaping_evidence_hash
+   *  Parameter name: mission_shaping_evidence_hash
 
-   *  Parameter Usage Location: authorization request
+   *  Parameter usage location: authorization request
 
-   *  Change Controller: IETF
+   *  Change controller: IETF
 
-   *  Specification Document(s): this document, Section 4.6
+   *  Specification document(s): this document, Section 4.6
 
    PAR [RFC9126] carries authorization-request parameters without a
    distinct usage location, so the pushed parameter needs no separate
