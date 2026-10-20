@@ -1674,7 +1674,7 @@ export class Pep {
         ? joinMapping.clientFor({ iss: token.credential?.issuer ?? "", clientId: token.clientId }, this.now())
         : token.clientId;
       delegateDepth =
-        depthClientId === undefined
+        depthClientId === undefined || loaded.view.client_id === undefined
           ? undefined
           : this.deps.masJoin.resolveDelegateDepth?.(
               { id: propagated.id, issuer: propagated.issuer },
