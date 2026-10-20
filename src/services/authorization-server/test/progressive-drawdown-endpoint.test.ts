@@ -22,7 +22,7 @@
  * is a browser Approver's `mfa` login inside the floor's age bound (#1255).
  */
 
-import { floorApprovalHeaders } from "./approval-fixture.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
@@ -49,6 +49,9 @@ const PORT = 14839;
 const ISSUER = `http://localhost:${PORT}`;
 const OFF_PORT = 14840;
 const OFF_ISSUER = `http://localhost:${OFF_PORT}`;
+/** A deployment whose policy refuses requests outside the ceiling (#1413). */
+const REFUSE_PORT = 14844;
+const REFUSE_ISSUER = `http://localhost:${REFUSE_PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const FAR_EXP = "2027-01-01T00:00:00Z";
@@ -60,9 +63,11 @@ type Client = { id: string; kid: string; key: CryptoKey; dpop: DpopKeys };
 
 let as: BuiltAs;
 let asOff: BuiltAs;
+let asRefuse: BuiltAs;
 let servers: Server[] = [];
 let ap: Client;
 let apOff: Client;
+let apRefuse: Client;
 let second: Client;
 let verifierSeq = 0;
 const commits: LifecycleCommit[] = [];
@@ -70,6 +75,7 @@ const commits: LifecycleCommit[] = [];
 const approvalSessions = new Map([
   [ISSUER, new ApprovalSessionStore()],
   [OFF_ISSUER, new ApprovalSessionStore()],
+  [REFUSE_ISSUER, new ApprovalSessionStore()],
 ]);
 
 /** The deployment's drawdown policies: a JSON snapshot stating the per-drawdown bound and the review cadence. */
@@ -387,9 +393,16 @@ beforeAll(async () => {
     approvalSessions: approvalSessions.get(OFF_ISSUER) as ApprovalSessionStore,
     activationPolicies: POLICIES,
   });
-  servers = [as.provider.listen(PORT), asOff.provider.listen(OFF_PORT)];
+  asRefuse = await buildAuthorizationServer({
+    issuer: REFUSE_ISSUER,
+    approvalSessions: approvalSessions.get(REFUSE_ISSUER) as ApprovalSessionStore,
+    activationPolicies: POLICIES,
+    progressive: { ...PROGRESSIVE, beyondCeiling: "refuse" },
+  });
+  servers = [as.provider.listen(PORT), asOff.provider.listen(OFF_PORT), asRefuse.provider.listen(REFUSE_PORT)];
   ap = await shippedClient("ap-agent", "ap-agent-auth", as.agentClientJwk);
   apOff = await shippedClient("ap-agent", "ap-agent-auth", asOff.agentClientJwk);
+  apRefuse = await shippedClient("ap-agent", "ap-agent-auth", asRefuse.agentClientJwk);
 });
 
 afterAll(() => {
@@ -674,18 +687,192 @@ describe("approval_event_id per drawdown reservation (@spec progressive#in-ceili
   });
 });
 
-describe("out of ceiling (@spec progressive#in-ceiling-expansion, progressive#denial-reason)", () => {
-  it("refuses a successor outside the consented ceiling with out_of_ceiling: no successor, the predecessor untouched, nothing reserved", async () => {
+/** The request outside READ_CEILING the beyond-ceiling tests make: the read action plus payment scheduling. */
+const BEYOND = [...READ, "payments:payment.schedule"];
+
+/** Open an expansion and expect the fresh-approval response: its deferral code, no denial reason, nothing created. */
+async function openFreshApproval(
+  predecessorId: string,
+  subjectToken: string,
+  actions: string[],
+): Promise<string> {
+  const before = as.kernel.allMissions().length;
+  const res = await tokenRequest(expansionParams(subjectToken, crypto.randomUUID(), actions));
+  const body = (await res.json()) as { error?: string; deferral_code?: string; mission_denial_reason?: string };
+  expect(res.status, JSON.stringify(body)).toBe(400);
+  expect(body.error).toBe("authorization_pending");
+  expect(body.mission_denial_reason).toBeUndefined();
+  expect(as.kernel.allMissions().length).toBe(before);
+  expect(as.kernel.get(predecessorId)?.state).toBe("active");
+  return body.deferral_code as string;
+}
+
+/** The deployment's review surface approves the deferral (optionally re-consenting a ceiling); the client's poll completes it. */
+async function approveAndPoll(
+  deferralCode: string,
+  approver: { iss: string; sub: string },
+  ceiling?: CeilingDecision,
+): Promise<{ access_token: string; mission_id: string }> {
+  as.expansionDeferrals.approve(deferralCode, {
+    approver,
+    authentication: FIXTURE_BROWSER_LOGIN,
+    approvalEventId: `apev-${crypto.randomUUID()}`,
+    approvedUntil: FAR_EXP,
+    ...(ceiling ? { ceiling } : {}),
+  });
+  const res = await tokenRequest({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    deferral_code: deferralCode,
+  });
+  const body = (await res.json()) as { access_token: string; mission_id: string };
+  expect(res.status, JSON.stringify(body)).toBe(200);
+  return body;
+}
+
+describe("beyond the ceiling (@spec progressive#ceiling-test, progressive#denial-reason)", () => {
+  it("a request outside the consented ceiling is never adjudicated by policy: it falls back to a fresh human approval whose response carries no out_of_ceiling", async () => {
     const pred = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING));
+    expect(typeof (await openFreshApproval(pred.missionId, pred.accessToken, BEYOND))).toBe("string");
+  });
+
+  it("a deployment whose policy refuses beyond-ceiling expansions refuses, creating and reserving nothing; this reference carries out_of_ceiling on that refusal", async () => {
+    const pred = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING), { issuer: REFUSE_ISSUER, client: apRefuse });
     const crid = crypto.randomUUID();
-    const before = as.kernel.allMissions().length;
-    const res = await tokenRequest(expansionParams(pred.accessToken, crid, [...READ, "payments:payment.schedule"]));
+    const before = asRefuse.kernel.allMissions().length;
+    const res = await tokenRequest(expansionParams(pred.accessToken, crid, BEYOND), apRefuse, REFUSE_ISSUER);
     const body = (await res.json()) as { error?: string; mission_denial_reason?: string };
     expect(res.status, JSON.stringify(body)).toBe(400);
+    // An implementation choice the MAY permits, not a conformance requirement.
     expect(body.mission_denial_reason).toBe("out_of_ceiling");
-    expect(as.kernel.allMissions().length).toBe(before);
-    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
-    expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
+    expect(asRefuse.kernel.allMissions().length).toBe(before);
+    expect(asRefuse.kernel.get(pred.missionId)?.state).toBe("active");
+    expect(asRefuse.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
+  });
+});
+
+describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis)", () => {
+  // The ceiling was consented by the fixture Approver (bob); the Subject, also an
+  // activator of the source, approves the expansion: a different Approver.
+  const ALICE = { iss: ISSUER, sub: "alice" };
+
+  it("without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it", async () => {
+    const root = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING));
+    const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
+    const approved = await approveAndPoll(await openFreshApproval(root.missionId, root.accessToken, BEYOND), ALICE);
+    const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
+    expect(s1.predecessor).toBe(root.missionId);
+    expect(s1.approval_basis.type).toBe("direct");
+    expect(s1.approval_basis.consent_principal).toEqual(ALICE);
+    expect(s1.authority_set.some((e) => e.actions.includes("payments:payment.schedule"))).toBe(true);
+    expect(s1.authority_ceiling).toEqual(rootRecord.authority_ceiling);
+    expect(s1.drawdown_policy).toEqual(rootRecord.drawdown_policy);
+    expect(s1.ceiling_hash).toBe(rootRecord.ceiling_hash);
+    expect(s1.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
+    // The ceiling's consenting Approver (bob) is carried, not the successor's own (alice).
+    expect(s1.ceiling_consent_principal).toEqual(rootRecord.approval_basis.consent_principal);
+    expect(s1.ceiling_consent_principal).not.toEqual(ALICE);
+    expect(s1.drawdown_count).toBe(rootRecord.drawdown_count);
+    // A later request that keeps the beyond-ceiling authority is outside the ceiling.
+    await openFreshApproval(s1.id, approved.access_token, [...READ_LIST, "payments:payment.schedule"]);
+    // One that drops it is drawn by policy under the original consent.
+    const drawn = await drawdown(approved.access_token, crypto.randomUUID(), READ_LIST);
+    const s2 = as.kernel.get(drawn.mission_id) as MissionRecord;
+    expect(s2.approval_basis).toMatchObject({
+      type: "ceiling_drawdown",
+      consent_principal: rootRecord.approval_basis.consent_principal,
+      root_commitment: rootRecord.ceiling_hash,
+      approved_at: rootRecord.ceiling_consented_at,
+      activation: { policy_id: "drawdown-std", policy_version: "1" },
+    });
+    expect(s2.drawdown_count).toBe((rootRecord.drawdown_count ?? 0) + 1);
+  });
+
+  it("an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence", async () => {
+    // A one-second review cadence, already lapsed when the Approver re-consents.
+    const root = await issueMission(READ, ceilingOf("drawdown-short", READ_CEILING));
+    const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
+    await new Promise((r) => setTimeout(r, 1100));
+    const raised = [...READ_CEILING, { ...(FULL_CEILING[1] as AuthorityEntry), actions: ["payments:payment.schedule"] }];
+    const approved = await approveAndPoll(
+      await openFreshApproval(root.missionId, root.accessToken, BEYOND),
+      ALICE,
+      ceilingOf("drawdown-std", raised),
+    );
+    const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
+    expect(s1.authority_ceiling).toEqual(raised);
+    expect(s1.drawdown_policy?.id).toBe("drawdown-std");
+    expect(s1.ceiling_hash).toBe(
+      computeAnchor("mission-authority-ceiling", ISSUER, {
+        authority_ceiling: raised,
+        drawdown_policy: s1.drawdown_policy,
+      } as unknown as JsonValue),
+    );
+    expect(s1.ceiling_hash).not.toBe(rootRecord.ceiling_hash);
+    expect(Date.parse(s1.ceiling_consented_at as string)).toBeGreaterThan(Date.parse(rootRecord.ceiling_consented_at as string));
+    expect(s1.ceiling_consent_principal).toEqual(ALICE);
+    // Under the lapsed consent this would fall back; under the re-consent it is drawn by policy.
+    const drawn = await drawdown(approved.access_token, crypto.randomUUID(), [...READ_LIST, "payments:payment.schedule"]);
+    const s2 = as.kernel.get(drawn.mission_id) as MissionRecord;
+    expect(s2.approval_basis).toMatchObject({
+      type: "ceiling_drawdown",
+      consent_principal: ALICE,
+      root_commitment: s1.ceiling_hash,
+      approved_at: s1.ceiling_consented_at,
+    });
+  });
+
+  // vendor.read is an external-communication action: requesting it always falls back.
+  const VENDOR = "payments:vendor.read";
+
+  it("a re-consent clears no containment restriction of the chain", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    as.kernel.contain(root.missionId, {
+      event: {
+        type: "tainted_read",
+        source: "https://siem.example/detections",
+        observed_at: "2026-07-02T00:00:00Z",
+        event_id: `evt-${crypto.randomUUID()}`,
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:payment.schedule.cancel"] }],
+    });
+    const renewed = await approveAndPoll(
+      await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]),
+      ALICE,
+      ceilingOf(),
+    );
+    // Policy-eligible but for the chain's containment restriction: still a fresh approval.
+    await openFreshApproval(renewed.mission_id, renewed.access_token, [
+      ...READ,
+      VENDOR,
+      "payments:payment.schedule.cancel",
+    ]);
+    // An unrestricted widening under the same re-consent is drawn by policy.
+    await drawdown(renewed.access_token, crypto.randomUUID(), [...READ, VENDOR, "payments:payment.schedule"]);
+  });
+
+  it("a re-consent continues the chain's drawdown count and rate window", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const first = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const renewed = await approveAndPoll(
+      await openFreshApproval(first.mission_id, first.access_token, [...READ_LIST, VENDOR]),
+      ALICE,
+      ceilingOf(),
+    );
+    expect((as.kernel.get(renewed.mission_id) as MissionRecord).drawdown_count).toBe(1);
+    const second = await drawdown(renewed.access_token, crypto.randomUUID(), [
+      ...READ_LIST,
+      VENDOR,
+      "payments:payment.schedule",
+    ]);
+    expect((as.kernel.get(second.mission_id) as MissionRecord).drawdown_count).toBe(2);
+    // Eligible on every other guard; the window (two per hour) still counts the drawdown before the re-consent.
+    await openFreshApproval(second.mission_id, second.access_token, [
+      ...READ_LIST,
+      VENDOR,
+      "payments:payment.schedule",
+      "payments:payment.schedule.cancel",
+    ]);
   });
 });
 

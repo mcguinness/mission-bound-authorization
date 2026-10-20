@@ -107,6 +107,14 @@ export interface MissionCeiling {
   drawdown_policy?: ActivationPolicyRef;
   ceiling_hash: string;
   ceiling_consented_at: string;
+  /**
+   * @spec progressive#ceiling-drawdown-basis, progressive#ceiling-reconsent
+   * (#1413): the Approver who consented this ceiling, the `consent_principal`
+   * of every drawdown under it. Kept with the ceiling because a
+   * human-approved successor's own Approver need not be the ceiling's.
+   * Absent on a record stored before #1413; its `approval_basis` then names it.
+   */
+  ceiling_consent_principal?: { iss: string; sub: string };
   drawdown_count: number;
 }
 
@@ -169,6 +177,7 @@ export function consentCeiling(
   registry: ActivationPolicyRegistry | undefined,
   consent: CeilingConsent,
   consentedAt: string,
+  consentPrincipal?: { iss: string; sub: string },
 ): MissionCeiling {
   const ceiling = consentedCeilingEntries(consent);
   const drawdownPolicy = consentedDrawdownPolicy(iss, registry, consent);
@@ -177,8 +186,47 @@ export function consentCeiling(
     ...(drawdownPolicy ? { drawdown_policy: drawdownPolicy } : {}),
     ceiling_hash: ceilingHash(iss, ceiling, drawdownPolicy),
     ceiling_consented_at: consentedAt,
+    ...(consentPrincipal ? { ceiling_consent_principal: consentPrincipal } : {}),
     drawdown_count: 0,
   };
+}
+
+/** A ceiling re-consented at a fresh human approval: committed, with that approval's consent instant. */
+export type ReconsentedCeiling = Omit<MissionCeiling, "drawdown_count">;
+
+/**
+ * @spec progressive#ceiling-reconsent (#1413): the ceiling members of a
+ * successor a fresh human approval creates. Approving the successor's
+ * authority and re-consenting the ceiling are separate decisions: without an
+ * explicit re-consent the predecessor's members and consent instant carry
+ * unchanged, so authority approved beyond the ceiling stays outside it; a
+ * re-consent replaces them. The chain's cumulative drawdown count continues
+ * either way, and its restrictions are read through `predecessor` links.
+ */
+export function successorCeilingMembers(
+  predecessor: MissionRecord,
+  reconsent?: ReconsentedCeiling,
+): Partial<MissionCeiling> {
+  const drawdownCount = predecessor.drawdown_count ?? 0;
+  if (reconsent) return { ...reconsent, drawdown_count: drawdownCount };
+  if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) return {};
+  return {
+    authority_ceiling: predecessor.authority_ceiling,
+    ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
+    ceiling_hash: predecessor.ceiling_hash,
+    ceiling_consented_at: predecessor.ceiling_consented_at,
+    ceiling_consent_principal: ceilingConsentPrincipal(predecessor),
+    drawdown_count: drawdownCount,
+  };
+}
+
+/**
+ * @spec progressive#ceiling-drawdown-basis: the Approver who consented the
+ * record's ceiling. A record stored before #1413 lacks the member; its chain
+ * then had no human-approved successor, so its `approval_basis` names them.
+ */
+export function ceilingConsentPrincipal(record: MissionRecord): { iss: string; sub: string } {
+  return record.ceiling_consent_principal ?? record.approval_basis.consent_principal;
 }
 
 /** The stored form of a record's ceiling members, or null when it carries none. */
@@ -189,6 +237,7 @@ export function serializeCeiling(record: MissionRecord): string | null {
     ...(record.drawdown_policy ? { drawdown_policy: record.drawdown_policy } : {}),
     ceiling_hash: record.ceiling_hash,
     ceiling_consented_at: record.ceiling_consented_at,
+    ...(record.ceiling_consent_principal ? { ceiling_consent_principal: record.ceiling_consent_principal } : {}),
     drawdown_count: record.drawdown_count ?? 0,
   };
   return JSON.stringify(stored);
@@ -240,6 +289,14 @@ export interface ProgressiveDrawdownOptions {
   actionClasses: Readonly<Record<string, RuntimeActionClass>>;
   /** Actions that satisfy the runtime profile's external-communication predicate. */
   externalCommunicationActions?: readonly string[];
+  /**
+   * @spec progressive#ceiling-test (#1413): the deployment's policy for a
+   * request outside the consented ceiling, never adjudicated by policy.
+   * `fresh_approval` (the default) takes it to an ordinary, freshly approved
+   * expansion; `refuse` refuses it, and this reference carries
+   * `out_of_ceiling` on that refusal (a MAY, #1415).
+   */
+  beyondCeiling?: "fresh_approval" | "refuse";
 }
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
@@ -266,6 +323,9 @@ export function validateProgressiveDrawdownOptions(
   }
   if (o.externalCommunicationActions !== undefined && !o.externalCommunicationActions.every((a) => typeof a === "string")) {
     throw new Error("progressive externalCommunicationActions must be action identifiers");
+  }
+  if (o.beyondCeiling !== undefined && o.beyondCeiling !== "fresh_approval" && o.beyondCeiling !== "refuse") {
+    throw new Error("progressive beyondCeiling must be fresh_approval or refuse");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
@@ -630,7 +690,10 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   const approvalEventId = `cdd_${randomBytes(16).toString("base64url")}`;
   const approvalBasis: ApprovalBasis = {
     type: "ceiling_drawdown",
-    consent_principal: predecessor.approval_basis.consent_principal,
+    // @spec progressive#ceiling-drawdown-basis: the Approver who consented the
+    // ceiling, which after a human-approved successor need not be the
+    // predecessor's own Approver (#1413).
+    consent_principal: ceilingConsentPrincipal(predecessor),
     activation: { policy_id: input.policy.ref.id, policy_version: input.policy.ref.version },
     activation_actor: input.activationActor,
     root_commitment: predecessor.ceiling_hash,
@@ -669,6 +732,7 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: predecessor.ceiling_hash,
     ceiling_consented_at: predecessor.ceiling_consented_at,
+    ceiling_consent_principal: ceilingConsentPrincipal(predecessor),
     // @spec progressive#audit-linkage: the chain's cumulative drawdown count.
     drawdown_count: (predecessor.drawdown_count ?? 0) + 1,
   };
