@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-20T05:01:05Z
-Source repository commit: 046709e22de4d6a1df021f40091ad071fdfe8590
+Generated: 2026-10-20T05:56:19Z
+Source repository commit: b1ccb4900de02af2d27d4ec3c5ee6d3b17ff343b
 Member count: 7
 
 Reading order:
@@ -10217,71 +10217,57 @@ Table of Contents
    Every bound this document defines is enforced by a party this
    document names.  The following table summarizes which party enforces
    each bound a Mission carries and what holds when that enforcer is
-   absent:
+   absent.  Where a row names a type specification, it is the one for
+   mission_resource_access
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]):
 
-   +===========+======================================================+=============+
-   |Bound      |Enforced by                                           |When that    |
-   |           |                                                      |enforcer is  |
-   |           |                                                      |absent       |
-   +===========+======================================================+=============+
-   |resource   |any resource server that enforces                     |a scope-only |
-   |and actions|mission_resource_access per its type specification    |resource     |
-   |           |([I-D.draft-mcguinness-oauth-mission-resource-access],|server is    |
-   |           |Section 9)                                            |served only  |
-   |           |                                                      |where the AS |
-   |           |                                                      |established a|
-   |           |                                                      |safe scope   |
-   |           |                                                      |projection   |
-   |           |                                                      |(Section     |
-   |           |                                                      |8.1); the AS |
-   |           |                                                      |refuses      |
-   |           |                                                      |issuance to  |
-   |           |                                                      |it otherwise |
-   +-----------+------------------------------------------------------+-------------+
-   |per-entry  |a resource server that understands and enforces the   |a Mission-   |
-   |constraints|key, per that type's specification                    |aware        |
-   |           |([I-D.draft-mcguinness-oauth-mission-resource-access],|Resource     |
-   |           |Section 9)                                            |Server fails |
-   |           |                                                      |closed; a    |
-   |           |                                                      |scope-only   |
-   |           |                                                      |resource     |
-   |           |                                                      |server is    |
-   |           |                                                      |served only  |
-   |           |                                                      |where the    |
-   |           |                                                      |projection   |
-   |           |                                                      |independently|
-   |           |                                                      |accounts for |
-   |           |                                                      |the          |
-   |           |                                                      |constraint   |
-   |           |                                                      |(Section 8.1)|
-   +-----------+------------------------------------------------------+-------------+
+   +=============+=========================+==========================+
+   | Bound       | Enforced by             | When that enforcer is    |
+   |             |                         | absent                   |
+   +=============+=========================+==========================+
+   | resource    | any resource server     | a scope-only resource    |
+   | and actions | that enforces           | server is served only    |
+   |             | mission_resource_access | where the AS established |
+   |             | per its type            | a safe scope projection  |
+   |             | specification           | (Section 8.1); the AS    |
+   |             | (Section 9)             | refuses issuance to it   |
+   |             |                         | otherwise                |
+   +-------------+-------------------------+--------------------------+
+   | per-entry   | a resource server that  | a Mission-aware Resource |
+   | constraints | understands and         | Server fails closed; a   |
+   |             | enforces the key, per   | scope-only resource      |
+   |             | that type's             | server is served only    |
+   |             | specification           | where the projection     |
+   |             | (Section 9)             | independently accounts   |
+   |             |                         | for the constraint       |
+   |             |                         | (Section 8.1)            |
+   +-------------+-------------------------+--------------------------+
 
-                                  Table 4
+                                 Table 4
 
 9.1.  Remediation Grains
 
    A denial can carry independent remediation grains, each naming a next
    step without granting anything.  This document's own grain is
-   mission_denial (Section 9): which path a denial leads into.
+   mission_denial (Section 9): which path a denial leads into.  The
+   three remediation grains are:
 
-   +==========================+======================+===============================================+
-   |Grain                     |Carriage              |Defined by                                     |
-   +==========================+======================+===============================================+
-   |mission_denial            |WWW-Authenticate      |This document (Section 9)                      |
-   |                          |attribute             |                                               |
-   +--------------------------+----------------------+-----------------------------------------------+
-   |insufficient_authorization|WWW-Authenticate error|[I-D.draft-ietf-oauth-rar-metadata-remediation]|
-   |with                      |code and parameter    |                                               |
-   |authorization_remediation |                      |                                               |
-   +--------------------------+----------------------+-----------------------------------------------+
-   |Requestable denial        |AuthZEN denial        |[AuthZEN.ARAP], profiled by                    |
-   |                          |response:             |[I-D.draft-mcguinness-mission-authzen]         |
-   |                          |context.access_request|                                               |
-   |                          |with next_action:     |                                               |
-   |                          |request               |                                               |
-   +--------------------------+----------------------+-----------------------------------------------+
+   mission_denial:
+      *  Carriage: WWW-Authenticate attribute
 
-                   Table 5: The three remediation grains
+      *  Defined by: This document (Section 9)
+
+   insufficient_authorization with authorization_remediation:
+      *  Carriage: WWW-Authenticate error code and parameter
+
+      *  Defined by: [I-D.draft-ietf-oauth-rar-metadata-remediation]
+
+   Requestable denial:
+      *  Carriage: AuthZEN denial response: context.access_request with
+         next_action: request
+
+      *  Defined by: [AuthZEN.ARAP], profiled by
+         [I-D.draft-mcguinness-mission-authzen]
 
    A resource server can also respond with the
    insufficient_authorization error code and the
@@ -10326,118 +10312,198 @@ Table of Contents
    Section 7.2, Section 9, Section 12.3, Section 12.4) applies this
    mapping.
 
-   +==========================================================+================================================+=================+
-   |Surface / failing input                                   |Base OAuth error                                |Optional detail  |
-   +==========================================================+================================================+=================+
-   |PAR: malformed Submission envelope or Intent (schema,     |invalid_request (Section 5.2 of [RFC6749])      |safe             |
-   |unknown member, invalid value)                            |                                                |error_description|
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |PAR, or a companion's token-endpoint submission: a        |invalid_mission_intent_evidence (Section 4.3)   |safe             |
-   |presented evidence entry of an unsupported type, or       |                                                |error_description|
-   |failing its type's validation or verification             |                                                |                 |
-   |(Section 4.3), or a required evidence type absent         |                                                |                 |
-   |([I-D.draft-mcguinness-oauth-mission-submission-evidence])|                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |PAR or authorization: malformed or unsupported actual RAR |invalid_authorization_details (Section 5 of     |RAR-defined      |
-   |object (an entry of a submitted authorization_details     |[RFC9396])                                      |detail           |
-   |proposal)                                                 |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |PAR: a proposed entry, valid for its type, whose resource |invalid_request (Section 5.2 of [RFC6749])      |safe             |
-   |is not among the Intent's target_resources (Section 4.2)  |                                                |error_description|
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Request from a client registered as Mission-governed:     |invalid_request (Section 4.1.2.1 of [RFC6749],  |safe             |
-   |authorization_details without mission_intent (Section 4.2)|Section 5.2 of [RFC6749])                       |error_description|
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Authorization or token request: invalid, unknown, or      |invalid_target (Section 2 of [RFC8707])         |safe             |
-   |malformed actual RFC 8707 resource parameter, or a token- |                                                |error_description|
-   |endpoint resource outside the Mission's Authority Set     |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Authorization or token request: the target's scope-       |invalid_target (Section 2 of [RFC8707])         |safe             |
-   |projection mapping is unknown, ambiguous, or stale,       |                                                |error_description|
-   |whether or not the request names a scope value, or the    |                                                |                 |
-   |target is scope-only and no safe projection exists for the|                                                |                 |
-   |applicable entries when the request names no scope value  |                                                |                 |
-   |(Section 8.1); or, where the AS applies Section 9's       |                                                |                 |
-   |delegated-token routing rule at issuance, the delegated   |                                                |                 |
-   |token's target is not known to be Mission-aware           |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Authorization or token request: an explicitly requested   |invalid_scope (Section 4.1.2.1 of [RFC6749],    |safe             |
-   |scope value the issuance cannot grant under a scope-      |Section 5.2 of [RFC6749])                       |error_description|
-   |projection mapping the AS trusts (Section 8.1)            |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Authorization request: scope includes openid and the      |invalid_scope (Section 4.1.2.1 of [RFC6749])    |safe             |
-   |Approver is not the Subject (Section 6.9)                 |                                                |error_description|
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Authorization decision: the Approver declines, approval   |access_denied (Section 4.1.2.1 of [RFC6749])    |none unless a    |
-   |authentication fails the floor or a requested acr_values/ |                                                |defined extension|
-   |max_age, or a well-formed request (including configured-  |                                                |applies          |
-   |mapping mode) is refused by AS policy                     |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token endpoint: the Mission is terminated (revoked,       |invalid_request on a Token Exchange             |mission_error    |
-   |expired, superseded, or another termination reason)       |(Section 2.2.2 of [RFC8693]), invalid_grant     |(Section 22)     |
-   |                                                          |(Section 5.2 of [RFC6749]) on any other grant,  |                 |
-   |                                                          |or the code a Token Exchange profile assigns    |                 |
-   |                                                          |(Section 7.2)                                   |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token endpoint: the requested RAR subset exceeds the      |invalid_authorization_details (Section 6 of     |safe detail      |
-   |Mission's granted authority                               |[RFC9396])                                      |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token exchange: a subject_token or actor_token that is    |invalid_request (Section 2.2.2 of [RFC8693]),   |safe             |
-   |invalid, whose sender constraint is not proven, or that is|unless a Token Exchange profile assigns the     |error_description|
-   |unacceptable for the exchange                             |failure its own code; a required DPoP proof that|                 |
-   |                                                          |is missing, or a DPoP proof that fails its own  |                 |
-   |                                                          |validation, is invalid_dpop_proof (Section 5 of |                 |
-   |                                                          |[RFC9449]), not an unproven sender constraint;  |                 |
-   |                                                          |an authorization server that requires a DPoP    |                 |
-   |                                                          |nonce answers a proof lacking its current nonce |                 |
-   |                                                          |with use_dpop_nonce and a DPoP-Nonce header     |                 |
-   |                                                          |(Section 8 of [RFC9449]), not invalid_dpop_proof|                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token exchange with no actor (Section 12.3): the          |invalid_request (Section 2.2.2 of [RFC8693])    |safe             |
-   |authenticated client is not the Mission's approved agent  |                                                |error_description|
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Delegated token exchange (Section 12): the subject_token  |invalid_request (Section 2.2.2 of [RFC8693])    |safe             |
-   |is not a designation this AS issued naming the requesting |                                                |error_description|
-   |client                                                    |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Designation (Section 12.1): the AS cannot establish that  |invalid_target (Section 2.2.2 of [RFC8693])     |safe             |
-   |no resource server accepts the named client's identifier  |                                                |error_description|
-   |as an audience for its access tokens, including an alias  |                                                |                 |
-   |it never issues                                           |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Delegated token exchange (Section 12.4): narrowing leaves |invalid_target (Section 2.2.2 of [RFC8693])     |safe             |
-   |no entries for the delegate                               |                                                |error_description|
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token exchange using Section 12.2: required Client        |invalid_client_attestation (Section 5.2 of      |no instance-     |
-   |Attestation fails validation                              |[I-D.draft-mcguinness-oauth-client-instance-id])|identity         |
-   |                                                          |                                                |disclosure       |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Token exchange using Section 12.2: required instance-to-  |invalid_request (Section 2.2.2 of [RFC8693])    |no instance-     |
-   |delegate or output-key association cannot be established  |                                                |identity         |
-   |                                                          |                                                |disclosure       |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Protected resource: a token lacking the mission claim,    |invalid_token (Section 3.1 of [RFC6750])        |none             |
-   |where the resource requires it (Section 9)                |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Protected resource: weak or stale authentication of the   |insufficient_user_authentication (Section 3 of  |acr_values/      |
-   |token's Subject, where the deployment conveys it          |[RFC9470])                                      |max_age          |
-   |(Section 9)                                               |                                                |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Protected resource: DPoP proof missing, invalid, or       |DPoP invalid_token challenge (Section 7.1 of    |none             |
-   |mismatched                                                |[RFC9449])                                      |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Protected resource: DPoP nonce required, missing, or stale|DPoP use_dpop_nonce challenge (Section 9 of     |fresh nonce      |
-   |                                                          |[RFC9449])                                      |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Protected resource: certificate-bound token's presented   |Bearer invalid_token challenge (Section 3.1 of  |none             |
-   |certificate mismatch                                      |[RFC6750], per Section 3 of [RFC8705])          |                 |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
-   |Protected resource: insufficient carried authority, or an |insufficient_scope (Section 3.1 of [RFC6750]) or|mission_denial   |
-   |unenforceable constraint                                  |the RAR-remediation challenge (Section 9.1)     |(Section 9),     |
-   |                                                          |                                                |minimized        |
-   +----------------------------------------------------------+------------------------------------------------+-----------------+
+   +===============================+===================================+
+   | Surface / failing input       | Base OAuth error and optional     |
+   |                               | detail                            |
+   +===============================+===================================+
+   | PAR: malformed Submission     | invalid_request (Section 5.2 of   |
+   | envelope or Intent (schema,   | [RFC6749]).  Detail: safe         |
+   | unknown member, invalid       | error_description                 |
+   | value)                        |                                   |
+   +-------------------------------+-----------------------------------+
+   | PAR, or a companion's token-  | invalid_mission_intent_evidence   |
+   | endpoint submission: a        | (Section 4.3).  Detail: safe      |
+   | presented evidence entry of   | error_description                 |
+   | an unsupported type, or       |                                   |
+   | failing its type's            |                                   |
+   | validation or verification    |                                   |
+   | (Section 4.3), or a required  |                                   |
+   | evidence type absent          |                                   |
+   +-------------------------------+-----------------------------------+
+   | PAR or authorization:         | invalid_authorization_details     |
+   | malformed or unsupported      | (Section 5 of [RFC9396]).         |
+   | actual RAR object (an entry   | Detail: RAR-defined detail        |
+   | of a submitted                |                                   |
+   | authorization_details         |                                   |
+   | proposal)                     |                                   |
+   +-------------------------------+-----------------------------------+
+   | PAR: a proposed entry, valid  | invalid_request (Section 5.2 of   |
+   | for its type, whose resource  | [RFC6749]).  Detail: safe         |
+   | is not among the Intent's     | error_description                 |
+   | target_resources              |                                   |
+   | (Section 4.2)                 |                                   |
+   +-------------------------------+-----------------------------------+
+   | Request from a client         | invalid_request (Section 4.1.2.1  |
+   | registered as Mission-        | of [RFC6749], Section 5.2 of      |
+   | governed:                     | [RFC6749]).  Detail: safe         |
+   | authorization_details         | error_description                 |
+   | without mission_intent        |                                   |
+   | (Section 4.2)                 |                                   |
+   +-------------------------------+-----------------------------------+
+   | Authorization or token        | invalid_target (Section 2 of      |
+   | request: invalid, unknown,    | [RFC8707]).  Detail: safe         |
+   | or malformed actual RFC 8707  | error_description                 |
+   | resource parameter, or a      |                                   |
+   | token-endpoint resource       |                                   |
+   | outside the Mission's         |                                   |
+   | Authority Set                 |                                   |
+   +-------------------------------+-----------------------------------+
+   | Authorization or token        | invalid_target (Section 2 of      |
+   | request: the target's scope-  | [RFC8707]).  Detail: safe         |
+   | projection mapping is         | error_description                 |
+   | unknown, ambiguous, or        |                                   |
+   | stale, whether or not the     |                                   |
+   | request names a scope value,  |                                   |
+   | or the target is scope-only   |                                   |
+   | and no safe projection        |                                   |
+   | exists for the applicable     |                                   |
+   | entries when the request      |                                   |
+   | names no scope value          |                                   |
+   | (Section 8.1); or, where the  |                                   |
+   | AS applies Section 9's        |                                   |
+   | delegated-token routing rule  |                                   |
+   | at issuance, the delegated    |                                   |
+   | token's target is not known   |                                   |
+   | to be Mission-aware           |                                   |
+   +-------------------------------+-----------------------------------+
+   | Authorization or token        | invalid_scope (Section 4.1.2.1 of |
+   | request: an explicitly        | [RFC6749], Section 5.2 of         |
+   | requested scope value the     | [RFC6749]).  Detail: safe         |
+   | issuance cannot grant under   | error_description                 |
+   | a scope-projection mapping    |                                   |
+   | the AS trusts (Section 8.1)   |                                   |
+   +-------------------------------+-----------------------------------+
+   | Authorization request: scope  | invalid_scope (Section 4.1.2.1 of |
+   | includes openid and the       | [RFC6749]).  Detail: safe         |
+   | Approver is not the Subject   | error_description                 |
+   | (Section 6.9)                 |                                   |
+   +-------------------------------+-----------------------------------+
+   | Authorization decision: the   | access_denied (Section 4.1.2.1 of |
+   | Approver declines, approval   | [RFC6749]).  Detail: none unless  |
+   | authentication fails the      | a defined extension applies       |
+   | floor or a requested          |                                   |
+   | acr_values or max_age, or a   |                                   |
+   | well-formed request           |                                   |
+   | (including configured-        |                                   |
+   | mapping mode) is refused by   |                                   |
+   | AS policy                     |                                   |
+   +-------------------------------+-----------------------------------+
+   | Token endpoint: the Mission   | invalid_request on a Token        |
+   | is terminated (revoked,       | Exchange (Section 2.2.2 of        |
+   | expired, superseded, or       | [RFC8693]), invalid_grant         |
+   | another termination reason)   | (Section 5.2 of [RFC6749]) on any |
+   |                               | other grant, or the code a Token  |
+   |                               | Exchange profile assigns          |
+   |                               | (Section 7.2).  Detail:           |
+   |                               | mission_error (Section 22)        |
+   +-------------------------------+-----------------------------------+
+   | Token endpoint: the           | invalid_authorization_details     |
+   | requested RAR subset exceeds  | (Section 6 of [RFC9396]).         |
+   | the Mission's granted         | Detail: safe detail               |
+   | authority                     |                                   |
+   +-------------------------------+-----------------------------------+
+   | Token exchange: a             | invalid_request (Section 2.2.2 of |
+   | subject_token or actor_token  | [RFC8693]), unless a Token        |
+   | that is invalid, whose        | Exchange profile assigns the      |
+   | sender constraint is not      | failure its own code; a required  |
+   | proven, or that is            | DPoP proof that is missing, or a  |
+   | unacceptable for the          | DPoP proof that fails its own     |
+   | exchange                      | validation, is invalid_dpop_proof |
+   |                               | (Section 5 of [RFC9449]), not an  |
+   |                               | unproven sender constraint; an    |
+   |                               | authorization server that         |
+   |                               | requires a DPoP nonce answers a   |
+   |                               | proof lacking its current nonce   |
+   |                               | with use_dpop_nonce and a DPoP-   |
+   |                               | Nonce header (Section 8 of        |
+   |                               | [RFC9449]), not                   |
+   |                               | invalid_dpop_proof.  Detail: safe |
+   |                               | error_description                 |
+   +-------------------------------+-----------------------------------+
+   | Token exchange with no actor  | invalid_request (Section 2.2.2 of |
+   | (Section 12.3): the           | [RFC8693]).  Detail: safe         |
+   | authenticated client is not   | error_description                 |
+   | the Mission's approved agent  |                                   |
+   +-------------------------------+-----------------------------------+
+   | Delegated token exchange      | invalid_request (Section 2.2.2 of |
+   | (Section 12): the             | [RFC8693]).  Detail: safe         |
+   | subject_token is not a        | error_description                 |
+   | designation this AS issued    |                                   |
+   | naming the requesting client  |                                   |
+   +-------------------------------+-----------------------------------+
+   | Designation (Section 12.1):   | invalid_target (Section 2.2.2 of  |
+   | the AS cannot establish that  | [RFC8693]).  Detail: safe         |
+   | no resource server accepts    | error_description                 |
+   | the named client's            |                                   |
+   | identifier as an audience     |                                   |
+   | for its access tokens,        |                                   |
+   | including an alias it never   |                                   |
+   | issues                        |                                   |
+   +-------------------------------+-----------------------------------+
+   | Delegated token exchange      | invalid_target (Section 2.2.2 of  |
+   | (Section 12.4): narrowing     | [RFC8693]).  Detail: safe         |
+   | leaves no entries for the     | error_description                 |
+   | delegate                      |                                   |
+   +-------------------------------+-----------------------------------+
+   | Token exchange using          | invalid_client_attestation.       |
+   | Section 12.2: required        | Detail: no instance-identity      |
+   | Client Attestation fails      | disclosure                        |
+   | validation                    |                                   |
+   +-------------------------------+-----------------------------------+
+   | Token exchange using          | invalid_request (Section 2.2.2 of |
+   | Section 12.2: required        | [RFC8693]).  Detail: no instance- |
+   | instance-to-delegate or       | identity disclosure               |
+   | output-key association        |                                   |
+   | cannot be established         |                                   |
+   +-------------------------------+-----------------------------------+
+   | Protected resource: a token   | invalid_token (Section 3.1 of     |
+   | lacking the mission claim,    | [RFC6750]).  Detail: none         |
+   | where the resource requires   |                                   |
+   | it (Section 9)                |                                   |
+   +-------------------------------+-----------------------------------+
+   | Protected resource: weak or   | insufficient_user_authentication  |
+   | stale authentication of the   | (Section 3 of [RFC9470]).         |
+   | token's Subject, where the    | Detail: acr_values or max_age     |
+   | deployment conveys it         |                                   |
+   | (Section 9)                   |                                   |
+   +-------------------------------+-----------------------------------+
+   | Protected resource: DPoP      | DPoP invalid_token challenge      |
+   | proof missing, invalid, or    | (Section 7.1 of [RFC9449]).       |
+   | mismatched                    | Detail: none                      |
+   +-------------------------------+-----------------------------------+
+   | Protected resource: DPoP      | DPoP use_dpop_nonce challenge     |
+   | nonce required, missing, or   | (Section 9 of [RFC9449]).         |
+   | stale                         | Detail: fresh nonce               |
+   +-------------------------------+-----------------------------------+
+   | Protected resource:           | Bearer invalid_token challenge    |
+   | certificate-bound token's     | (Section 3.1 of [RFC6750], per    |
+   | presented certificate         | Section 3 of [RFC8705]).  Detail: |
+   | mismatch                      | none                              |
+   +-------------------------------+-----------------------------------+
+   | Protected resource:           | insufficient_scope (Section 3.1   |
+   | insufficient carried          | of [RFC6750]) or the RAR-         |
+   | authority, or an              | remediation challenge             |
+   | unenforceable constraint      | (Section 9.1).  Detail:           |
+   |                               | mission_denial (Section 9),       |
+   |                               | minimized                         |
+   +-------------------------------+-----------------------------------+
 
-        Table 6: Endpoint x parameter x failure-stage error mapping
+        Table 5: Endpoint x parameter x failure-stage error mapping
+
+   In the table, which evidence types are required follows
+   [I-D.draft-mcguinness-oauth-mission-submission-evidence], and
+   invalid_client_attestation is the error code that Section 5.2 of
+   [I-D.draft-mcguinness-oauth-client-instance-id] specifies.
 
    An AS that performs an applicable check early, at PAR, responds with
    the same error class the check would yield at the authorization or
@@ -12948,7 +13014,7 @@ Table of Contents
    |            |          | reason.        |            | 7.1        |
    +------------+----------+----------------+------------+------------+
 
-                                 Table 7
+                                 Table 6
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations.  A Designated
@@ -13005,7 +13071,7 @@ Table of Contents
     |         | equals it.         |         |            | 7.1       |
     +---------+--------------------+---------+------------+-----------+
 
-                                  Table 8
+                                  Table 7
 
    Each further document that defines a termination reason requests that
    reason's registration in its own IANA considerations.
@@ -13082,7 +13148,7 @@ Table of Contents
     |                |      |                    |          |Section 4|
     +----------------+------+--------------------+----------+---------+
 
-                Table 9: Core-defined Mission Intent members
+                Table 8: Core-defined Mission Intent members
 
    Each further document that defines a Mission Intent member requests
    that member's registration in its own IANA considerations.
@@ -14112,105 +14178,105 @@ Appendix C.  Role Mapping
 
    *  what decided it (adjudication).
 
-   The companion profiles cited below define the scenarios; the table
-   shows how each assigns the three roles.
+   The companion profiles cited below define the scenarios; the list
+   shows how each assigns the three roles: its accountability root
+   (consent_principal), activation actor (activation_actor), and
+   adjudication (where a profile or deployment populates it).
 
-   +=======================================================+===================+==================+==================+
-   |Scenario                                               |Accountability root|Activation actor  |Adjudication      |
-   |                                                       |(consent_principal)|(activation_actor)|(where a profile  |
-   |                                                       |                   |                  |or deployment     |
-   |                                                       |                   |                  |populates it)     |
-   +=======================================================+===================+==================+==================+
-   |Direct approval                                        |The approving human|Equal to          |kind: human; the  |
-   |                                                       |                   |consent_principal:|deciding human is |
-   |                                                       |                   |the Approver      |consent_principal |
-   |                                                       |                   |triggers their own|itself            |
-   |                                                       |                   |approval          |                  |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |Relocated human approval                               |The human who      |Equal to          |kind: human, as   |
-   |([I-D.draft-mcguinness-oauth-mission-approval])        |completes the      |consent_principal,|direct            |
-   |                                                       |relocated approval |unchanged from the|                  |
-   |                                                       |event              |direct case: the  |                  |
-   |                                                       |                   |instance activates|                  |
-   |                                                       |                   |at that human's   |                  |
-   |                                                       |                   |decision, not at  |                  |
-   |                                                       |                   |any earlier       |                  |
-   |                                                       |                   |submission        |                  |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |Template dispatch                                      |The template's     |The Dispatcher    |kind: policy,     |
-   |([I-D.draft-mcguinness-oauth-mission-template])        |human approver,    |that requested the|policy naming the |
-   |                                                       |fixed at template  |Dispatch, distinct|template's        |
-   |                                                       |creation           |from              |dispatch_policy id|
-   |                                                       |                   |consent_principal |and version       |
-   |                                                       |                   |                  |(already carried  |
-   |                                                       |                   |                  |in the dispatched |
-   |                                                       |                   |                  |Mission's template|
-   |                                                       |                   |                  |lineage member),  |
-   |                                                       |                   |                  |never the         |
-   |                                                       |                   |                  |Template's own id/|
-   |                                                       |                   |                  |template_version  |
-   |                                                       |                   |                  |nor the Dispatcher|
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |Policy drawdown                                        |The Parent         |The requesting    |kind: policy,     |
-   |([I-D.draft-mcguinness-oauth-mission-child-delegation])|Mission's human    |parent Agent,     |naming the child- |
-   |                                                       |Approver           |distinct from     |creation policy's |
-   |                                                       |                   |consent_principal |id/version where  |
-   |                                                       |                   |                  |the entry carries |
-   |                                                       |                   |                  |one, otherwise the|
-   |                                                       |                   |                  |Parent Mission's  |
-   |                                                       |                   |                  |approved          |
-   |                                                       |                   |                  |delegation entry; |
-   |                                                       |                   |                  |never the         |
-   |                                                       |                   |                  |requesting parent |
-   |                                                       |                   |                  |Agent             |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |Ceiling drawdown                                       |The Approver who   |The requesting    |kind: policy,     |
-   |([I-D.draft-mcguinness-oauth-mission-progressive])     |consented the      |client, distinct  |naming the        |
-   |                                                       |ceiling            |from              |drawdown policy's |
-   |                                                       |                   |consent_principal |policy_id/        |
-   |                                                       |                   |                  |policy_version    |
-   |                                                       |                   |                  |carried in        |
-   |                                                       |                   |                  |activation; never |
-   |                                                       |                   |                  |the requesting    |
-   |                                                       |                   |                  |client            |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |Governed policy approval                               |The human who      |The authenticated |kind: policy,     |
-   |([I-D.draft-mcguinness-mission-approval-governance])   |approved the exact |client that       |policy naming the |
-   |                                                       |policy version the |requested the     |deciding policy's |
-   |                                                       |instance activates |activation,       |id/version (the   |
-   |                                                       |under              |distinct from     |approved policy   |
-   |                                                       |                   |consent_principal |itself or the     |
-   |                                                       |                   |                  |evaluator it      |
-   |                                                       |                   |                  |commits), with    |
-   |                                                       |                   |                  |governance_record:|
-   |                                                       |                   |                  |true; never the   |
-   |                                                       |                   |                  |requesting client |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |AGR-backed direct approval                             |The approving      |Equal to          |kind: human,      |
-   |([I-D.draft-mcguinness-mission-approval-governance])   |human, whose own   |consent_principal,|governance_record:|
-   |                                                       |human assertion is |as for direct     |true; how other   |
-   |                                                       |the Approval       |approval          |assertions        |
-   |                                                       |Governance Record's|                  |contribute is     |
-   |                                                       |accountable        |                  |Approval          |
-   |                                                       |assertion          |                  |Governance's      |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
-   |AGR-backed template or drawdown activation             |Unchanged from the |Unchanged from the|kind: policy, as  |
-   |([I-D.draft-mcguinness-mission-approval-governance])   |underlying basis,  |underlying basis  |the underlying    |
-   |                                                       |whose              |                  |basis assigns it, |
-   |                                                       |approval_basis     |                  |with              |
-   |                                                       |stands in for an   |                  |governance_record:|
-   |                                                       |accountable        |                  |true; the full    |
-   |                                                       |assertion          |                  |assertion set is  |
-   |                                                       |                   |                  |never collapsed   |
-   |                                                       |                   |                  |into a single     |
-   |                                                       |                   |                  |principal         |
-   +-------------------------------------------------------+-------------------+------------------+------------------+
+   Direct approval:
+      *  Accountability root: The approving human
 
-                                  Table 10
+      *  Activation actor: Equal to consent_principal: the Approver
+         triggers their own approval
+
+      *  Adjudication: kind: human; the deciding human is
+         consent_principal itself
+
+   Relocated human approval
+   ([I-D.draft-mcguinness-oauth-mission-approval]):
+      *  Accountability root: The human who completes the relocated
+         approval event
+
+      *  Activation actor: Equal to consent_principal, unchanged from
+         the direct case: the instance activates at that human's
+         decision, not at any earlier submission
+
+      *  Adjudication: kind: human, as direct
+
+   Template dispatch ([I-D.draft-mcguinness-oauth-mission-template]):
+      *  Accountability root: The template's human approver, fixed at
+         template creation
+
+      *  Activation actor: The Dispatcher that requested the Dispatch,
+         distinct from consent_principal
+
+      *  Adjudication: kind: policy, policy naming the template's
+         dispatch_policy id and version (already carried in the
+         dispatched Mission's template lineage member), never the
+         Template's own id/template_version nor the Dispatcher
+
+   Policy drawdown
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]):
+      *  Accountability root: The Parent Mission's human Approver
+
+      *  Activation actor: The requesting parent Agent, distinct from
+         consent_principal
+
+      *  Adjudication: kind: policy, naming the child-creation policy's
+         id/version where the entry carries one, otherwise the Parent
+         Mission's approved delegation entry; never the requesting
+         parent Agent
+
+   Ceiling drawdown
+   ([I-D.draft-mcguinness-oauth-mission-progressive]):
+      *  Accountability root: The Approver who consented the ceiling
+
+      *  Activation actor: The requesting client, distinct from
+         consent_principal
+
+      *  Adjudication: kind: policy, naming the drawdown policy's
+         policy_id/policy_version carried in activation; never the
+         requesting client
+
+   Governed policy approval
+   ([I-D.draft-mcguinness-mission-approval-governance]):
+      *  Accountability root: The human who approved the exact policy
+         version the instance activates under
+
+      *  Activation actor: The authenticated client that requested the
+         activation, distinct from consent_principal
+
+      *  Adjudication: kind: policy, policy naming the deciding policy's
+         id/version (the approved policy itself or the evaluator it
+         commits), with governance_record: true; never the requesting
+         client
+
+   AGR-backed direct approval
+   ([I-D.draft-mcguinness-mission-approval-governance]):
+      *  Accountability root: The approving human, whose own human
+         assertion is the Approval Governance Record's accountable
+         assertion
+
+      *  Activation actor: Equal to consent_principal, as for direct
+         approval
+
+      *  Adjudication: kind: human, governance_record: true; how other
+         assertions contribute is Approval Governance's
+
+   AGR-backed template or drawdown activation
+   ([I-D.draft-mcguinness-mission-approval-governance]):
+      *  Accountability root: Unchanged from the underlying basis, whose
+         approval_basis stands in for an accountable assertion
+
+      *  Activation actor: Unchanged from the underlying basis
+
+      *  Adjudication: kind: policy, as the underlying basis assigns it,
+         with governance_record: true; the full assertion set is never
+         collapsed into a single principal
 
    Direct approval is the degenerate case where one human fills every
    role.  Where a profile or deployment does not populate adjudication
-   (Section 13), the table shows the value it would carry.
+   (Section 13), the list shows the value it would carry.
 
 Appendix D.  Derivation Policy
 
@@ -14381,7 +14447,7 @@ D.5.  Ownership and Operational Signals
     |                     | issuer policy |                          |
     +---------------------+---------------+--------------------------+
 
-                                 Table 11
+                                 Table 9
 
    Templates amortize authoring across Missions and do not bypass the
    ceilings.  The unmapped-resource rate, template-hit rate, and rule-
@@ -14728,7 +14794,7 @@ Appendix F.  OAuth Binding Mapping Assessment
    |             |        |active        |                                                     |issuer-local|
    +-------------+--------+--------------+-----------------------------------------------------+------------+
 
-              Table 12: OAuth Mission binding capability table
+              Table 10: OAuth Mission binding capability table
 
    Temporal elements: every issued credential's exp is capped by the
    record's effective expires_at; state observations carry their
@@ -14778,6 +14844,13 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Editorial (#1380): four tables fit the 69-column text rendering.
+      The resource server enforcement table and the error mapping cite
+      their companion documents in a sentence beside the table instead
+      of in its cells, and the error mapping carries each optional
+      detail in its error cell.  The remediation grains and the Role
+      Mapping scenarios are lists.  No requirement changes.
 
    *  Editorial (#1379): the Introduction says what a Mission is beside
       an OAuth grant, drawn from Design Context, and that under a
