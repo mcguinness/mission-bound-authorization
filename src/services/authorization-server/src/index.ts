@@ -1647,14 +1647,14 @@ export async function buildAuthorizationServer(opts: {
   // existed, while its creation operation is retained.
   // @spec expansion#verification-order step 4 (#1349, D516): revoke any
   // successor created through another client's committed deferral, as its
-  // retained deferral identifies it. Then deliver the revocations' durable
-  // effects (family grants) before serving a request. A failed revocation
-  // throws, so the assembly is not served.
+  // retained deferral identifies it. Then attempt the durable effects (family
+  // grants) of every transition the sweeps committed before serving a
+  // request: unconditionally, since the expiry clock each sweep runs first
+  // can commit an `expired` transition that no revocation count reports. A
+  // failed revocation throws, so the assembly is not served.
   const revokedChildren = revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency);
   const successorRemediation = revokeSuccessorsExpandedByAnotherClient(kernel, expansionDeferrals);
-  if (revokedChildren.length + successorRemediation.revoked.length > 0) {
-    await kernel.drainLifecycleOutbox();
-  }
+  await kernel.drainLifecycleOutbox();
   // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
   // persisted schedule, delivering any whose deadline passed while the
   // process was down, before this assembly serves a request.

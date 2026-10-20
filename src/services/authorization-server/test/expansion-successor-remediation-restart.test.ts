@@ -99,7 +99,7 @@ const versions = (as: BuiltAs): Record<string, number> =>
   Object.fromEntries(as.kernel.allMissions().map((m) => [m.id, m.version]));
 
 describe("successor remediation at build (@spec expansion#verification-order step 4, #1349)", () => {
-  it("revokes the active, suspended and committed-but-unreleased successors another client's deferral created; leaves own-client, terminal, later and unrelated Missions; repeats with no further commit", async () => {
+  it("revokes the active, suspended, committed-but-unreleased and late-denied successors another client's deferral created; leaves own-client, terminal, later and unrelated Missions; repeats with no further commit", async () => {
     const dir = mkdtempSync(join(tmpdir(), "successor-remediation-"));
     dirs.push(dir);
     const file = join(dir, "kernel.db");
@@ -124,6 +124,11 @@ describe("successor remediation at build (@spec expansion#verification-order ste
     first.expansionDeferrals.db
       .prepare("UPDATE expansion_deferrals SET completion_released = 0 WHERE deferral_code = ?")
       .run(unreleased.code);
+    // Denied after its completion committed: `deny` rewrites the deferral's
+    // state, not its completion marker or links.
+    const pLateDenied = seed.predecessor();
+    const lateDenied = seed.expand(pLateDenied.id, OTHER);
+    first.expansionDeferrals.deny(lateDenied.code);
 
     // Terminal before the remediation: completed, and expired by the next boot.
     const pCompleted = seed.predecessor();
@@ -172,7 +177,9 @@ describe("successor remediation at build (@spec expansion#verification-order ste
     let afterSecond: { versions: Record<string, number>; events: number };
     try {
       const report = second.startupRemediation.successors;
-      expect([...report.revoked].sort()).toEqual([active.successor, suspended.successor, unreleased.successor].sort());
+      expect([...report.revoked].sort()).toEqual(
+        [active.successor, suspended.successor, unreleased.successor, lateDenied.successor].sort(),
+      );
       for (const id of report.revoked) {
         const m = second.kernel.get(id);
         expect(m?.state).toBe("terminated");
@@ -182,7 +189,7 @@ describe("successor remediation at build (@spec expansion#verification-order ste
       // The cascade reaches the active successor's child.
       expect(second.kernel.get(child.id)?.termination?.reason).toBe("parent_terminated");
       // Each predecessor stays superseded, byte-identical, naming its successor.
-      for (const p of [pActive, pSuspended, pUnreleased]) {
+      for (const p of [pActive, pSuspended, pUnreleased, pLateDenied]) {
         expect(second.kernel.get(p.id)).toEqual(before.get(p.id));
         expect(second.kernel.get(p.id)?.termination?.reason).toBe("superseded");
       }
@@ -227,6 +234,35 @@ describe("successor remediation at build (@spec expansion#verification-order ste
       expect(lifecycleEvents(third)).toBe(afterSecond.events);
     } finally {
       third.kernel.close();
+    }
+  });
+
+  it("attempts the family-grant revocation of a successor the expiry clock terminates before the AS is returned, when the sweep revokes nothing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "successor-remediation-expiry-"));
+    dirs.push(dir);
+    const file = join(dir, "kernel.db");
+    const startedAt = Date.now();
+    const first = await build(file);
+    const pExpiring = seeding(first).predecessor();
+    const expiring = seeding(first).expand(pExpiring.id, OTHER, new Date(startedAt + 10 * 60_000).toISOString());
+    first.delegationFamilyStore.record({ grantId: `grant-${crypto.randomUUID()}`, missionId: expiring.successor });
+    first.kernel.close();
+
+    const second = await build(file, () => new Date(startedAt + 60 * 60_000));
+    try {
+      expect(second.startupRemediation.successors.revoked).toEqual([]);
+      expect(second.kernel.get(expiring.successor)?.termination?.reason).toBe("expired");
+      expect(
+        second.kernel.db
+          .prepare(
+            `SELECT d.disposition AS disposition, d.attempts AS attempts
+               FROM lifecycle_deliveries d JOIN lifecycle_events e ON e.seq = d.seq
+              WHERE e.mission_id = ? AND d.subscriber = 'delegation-family-grant-revoke'`,
+          )
+          .all(expiring.successor),
+      ).toEqual([{ disposition: "accepted", attempts: 1 }]);
+    } finally {
+      second.kernel.close();
     }
   });
 });

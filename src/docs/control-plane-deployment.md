@@ -304,9 +304,10 @@ before it serves a request:
   `client_id`. The child record names no creating client, so this row is the
   only link.
 - An expansion successor created through another client's deferral. Its
-  `expansion_deferrals` row (`state = 'approved'`, `redeemed = 1`) records the
-  client that opened it and the approval event it completed under, and
-  deferral rows are never deleted. The successor carries the predecessor's
+  `expansion_deferrals` row records the client that opened it and the
+  approval event it completed under, and its `redeemed = 1` marker is set in
+  the transaction that created the successor. A later `deny` rewrites the
+  row's `state` but not the marker, and deferral rows are never deleted. The successor carries the predecessor's
   client, so its own record cannot show the defect. The AS acts only when
   exactly one Mission carries the deferral's predecessor and approval event,
   the predecessor's `superseded` termination names it, it carries the

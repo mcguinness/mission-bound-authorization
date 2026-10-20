@@ -680,7 +680,9 @@ export class ExpansionDeferralStore {
    * whose completion committed (`redeemed`, set in the activation
    * transaction), with the client that opened it and the approval event it
    * completed under. Deferral rows are never deleted, so this is the durable
-   * link from a successor to the client whose request created it.
+   * link from a successor to the client whose request created it. Selected by
+   * that marker alone: `deny` rewrites `state` even after redemption, and a
+   * late denial does not undo the committed successor.
    */
   retainedCommittedExpansions(): Array<{
     deferralCode: string;
@@ -690,7 +692,7 @@ export class ExpansionDeferralStore {
   }> {
     const rows = this.db
       .prepare(
-        "SELECT deferral_code, predecessor_id, client_id, approval_event_id FROM expansion_deferrals WHERE state = 'approved' AND redeemed = 1 ORDER BY created_at, deferral_code",
+        "SELECT deferral_code, predecessor_id, client_id, approval_event_id FROM expansion_deferrals WHERE redeemed = 1 ORDER BY created_at, deferral_code",
       )
       .all() as Array<{ deferral_code: string; predecessor_id: string; client_id: string; approval_event_id: string | null }>;
     return rows.map((r) => ({
