@@ -20,6 +20,7 @@ import {
   isSubsetSet,
   refusedEntryMember,
   SUPPORTED_CONSTRAINT_KEYS,
+  unsupportedEntryMember,
 } from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
@@ -80,6 +81,10 @@ function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
  * derived entry. An entry carrying it, whatever its value, is refused here,
  * over the full ceiling and proposal, so a programmatic caller that bypasses
  * intake and the config loader cannot have it silently dropped.
+ *
+ * @spec mission#subset (#1399, D538): the same holds for any member outside
+ * the supported set ({@link unsupportedEntryMember}): `intersect` would drop
+ * it and erase a restriction it may express, so it is refused here too.
  */
 function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
@@ -88,6 +93,13 @@ function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry carries ${member}, which the mission_resource_access type does not use; refusing rather than silently dropping it`,
+      );
+    }
+    const unsupported = unsupportedEntryMember(entry);
+    if (unsupported !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry carries ${unsupported}, which is not a supported member of the mission_resource_access type; refusing rather than silently dropping it`,
       );
     }
   }
@@ -816,6 +828,12 @@ function intersectForProjection(
 ): AuthorityEntry | null {
   if (candidate.type !== effective.type) return null;
   if (candidate.resource !== effective.resource) return null;
+  // @spec mission#subset (#1399, D538): a top-level member outside the
+  // supported set, `locations` included, makes the pairing unprovable: the
+  // member-by-member rebuild below would drop it and erase a restriction it
+  // may express. Drop the fragment, as for an unprojectable constraint key.
+  if (unsupportedEntryMember(candidate) !== undefined) return null;
+  if (unsupportedEntryMember(effective) !== undefined) return null;
   const actions = candidate.actions.filter((a) => effective.actions.includes(a));
   if (actions.length === 0) return null;
   // A constraint key this projection cannot intersect makes the pairing

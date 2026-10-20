@@ -24,6 +24,7 @@ import {
   refusedEntryMember,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
+  unsupportedEntryMember,
 } from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
 
@@ -1024,6 +1025,15 @@ function rejectRefusedMember(file: string, e: Record<string, unknown>, ctx: stri
     throw new ConfigError(
       file,
       `${ctx} carries ${member}, which the mission_resource_access type does not use`,
+    );
+  }
+  // @spec mission#subset (#1399, D538): likewise any member outside the
+  // supported set, which the member-by-member rebuild below would drop.
+  const unsupported = unsupportedEntryMember(e);
+  if (unsupported !== undefined) {
+    throw new ConfigError(
+      file,
+      `${ctx} carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
     );
   }
 }

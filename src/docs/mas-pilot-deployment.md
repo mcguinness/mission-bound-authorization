@@ -5,13 +5,15 @@ route** that D284 adopted and D508 ruled executable, owned by #818 (Sketch
 steps 3 and 4). A legacy estate keeps its own authorization server; its
 ordinary tokens are joined to Missions at a gateway, under a versioned mapping
 contract. This document records slices 1 to 3 of that evidence (slice 2:
-the Resource policy, §4; slice 3: opaque tokens by introspection, §5). It is
+the Resource policy, §4; slice 3: opaque tokens by introspection, §5), and
+the first part of slice 4: the Mission Status surface and resolver a
+separated MAS needs, which the pilot does not use yet (§10). It is
 not a
 conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `3814a053`
+Every statement here is true of the reference implementation at `3c7a35e6`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -310,8 +312,9 @@ reference does not implement.
 - **The development seed is the pilot's own** (`config/mas-pilot.json`
   `resource_policy`); a production estate attaches to its administered store.
 - **Mission state is an in-process kernel read**, as on the AS-native target
-  (D293). Mission Status over HTTP from a separated MAS is not built (#1101's
-  concern for a separated realization).
+  (D293). The Join Disclosure a separated MAS serves on Mission Status and the
+  PDP's resolver that reads it over HTTP are built (§10), but the pilot
+  composition does not use them yet (§11).
 - **The mapping audit log is in memory**, unsigned and not retained. Decision
   Evidence carries `join_view_id`, which commits the authenticated (estate)
   client, not the mapping version.
@@ -349,10 +352,78 @@ reference does not implement.
 - The shared demo's MAS-governed channel (`config/mas-join.json`) is
   unchanged and keeps its shared-namespace join.
 
-## 10. Remaining slices
+## 10. Toward a separated MAS: Join Disclosure and the Status resolver
 
-1. A separated MAS: Mission Status over HTTP as the state source, with the
-   runtime profile's freshness bounds (#1101).
+Slice 4's first part: the two pieces a separated MAS needs, each tested on
+its own against the reference authorization server over HTTP. The pilot
+composition is unchanged (§9, §11).
+
+**Join Disclosure on Mission Status** (MAS §join-disclosure). The reference
+authorization server's Status operation discloses `mission.subject` (`iss`,
+`sub`) and `mission.client_id` only to a service principal that its
+`enrolledJoinPdps` option enrolls for the requested `audience`
+(`buildAuthorizationServer`; `joinDisclosureFor` in
+`services/authorization-server/src/adapters/provider.ts`, `joinDisclosure` in
+`MissionKernel.observeInCallerTx`). Audience-scoped entries carry their
+recorded `delegation` for every caller, as before. Every other response is
+unchanged:
+`Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > discloses subject, client_id and each entry's recorded delegation to a PDP enrolled for the requested enforcement scope`,
+`Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > includes neither member for any other caller: a principal enrolled for nothing, the enrolled PDP for another scope or for no scope, an inherited-name principal`,
+`Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the response the kernel's default observation signs, byte for byte`.
+
+**The PDP's remote Mission Status resolver** (MAS §join-rules rule 2):
+`MissionStatusResolver` (`services/pdp/src/mission-status-resolver.ts`), one
+per Mission issuer and enforcement scope, with no handle on the issuer's
+store.
+
+| Property | How |
+|---|---|
+| One verifier | `verifyMissionStatusResponse` (`services/pdp/src/state-observation.ts`), the function `verifyStateAssertion` also runs: the Status `typ`, a declared key, `iss`, `aud` equal to the enforcement scope, `exp` and `iat` both required (a response without either does not verify, on this path and the PEP-carried assertion's), not expired, the requested Mission under that issuer, a signed `fresh_until`. |
+| Its own checks | The request's `nonce` echoed; `iat` not in the future; `state` one of `active`, `suspended`, `terminated`; `version`, `authority_hash`, `subject`, `client_id` and each entry (with its `delegation`) well formed. A reference naming another issuer is never read; the identifier travels as one percent-encoded path segment, and a dot segment is never requested. |
+| Keys | The issuer's published JWKS, restricted to the declared status `kid`s (`declaredStatusKeys`): a key published for another purpose verifies nothing. |
+| Authentication | This PDP's service credential holding `mission_status`, in `x-service-token`, as the reference Status route requires. |
+| Bounds | One deadline covers connecting, the headers and the body; the body is counted against a byte cap as it arrives; a redirect is never followed. |
+| Fail closed | A typed failure (`unavailable`, `unauthorized`, `not_found`, `unverifiable`, `stale`), never thrown and never cached. |
+| Reliance bounds | Every observation the resolver returns, read now (a `fresh: true` read included) or reused from the cache, is before its signed `fresh_until`, within `iat` plus the issuer's `mission_max_stale_seconds`, and within the caller's `maxAgeSeconds`, with no skew allowance on the old side. One function holds the three bounds for both paths (`boundPassed`); an observation read now that has passed one verified but is refused `stale`, and is not cached. |
+| Cache | Keyed on the Mission within one resolver; `fresh: true` reads the source whatever the cache holds; an older observation never replaces a newer one. |
+| View | The audience-scoped effective set; each `delegation` mapped to `join_delegation` by `deriveJoinDelegation`; `subject` and `client_id` only where disclosed; no containment or discharge delta. |
+
+Witnesses: `services/pdp/test/mission-status-resolver.test.ts` (a Status
+server double: every answer that must establish nothing, a response without
+`exp` or `iat`, an observation read now that is past a reliance bound, the
+cache bounds, the configuration), the PEP-carried assertion signed without
+`exp` or `iat` in `services/pdp/test/evaluate-authzen-members.test.ts`
+(`AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004) > a present assertion is verified against the declared state source's key > an assertion signed without exp, or without iat, denies stale_state`), and `services/authorization-server/test/mission-status-resolver-as.test.ts`
+(the reference authorization server over HTTP, configured from its published
+metadata: the Join Disclosure an enrolled PDP reads and one it does not, a
+revocation seen at once on a fresh read and after the signed bound on a
+cached one, the server stopped and restarted, a source slower than the
+deadline).
+
+Gaps, both owned by #1407 (Status read conformance):
+
+- **The envelope `sub`.** The reference signs the Mission's `client_id` (or
+  a Lifecycle request's acting party) as `sub` for every caller. MAS
+  §join-disclosure says the envelope `sub` identifies the requesting caller,
+  and Status consumer check 6 has the consumer require that. A caller not
+  enrolled therefore still learns the Mission's `client_id` from `sub`, so
+  `mas.join-disclosure.not-to-others` stays `partial`. The resolver does not
+  check `sub`.
+- **The request shape.** The reference Status operation is
+  `GET /missions/{id}/status` with `audience` and `nonce` as query
+  parameters and the `x-service-token` stand-in, and its metadata advertises
+  no `mission_status_endpoint`; the Status profile defines a form `POST` at
+  that endpoint. The resolver takes the operation's URL as configuration
+  (`statusUrl`).
+
+## 11. Remaining slices
+
+1. A separated MAS, the rest of slice 4: the composition with no kernel
+   handle (the MAS in its own process), the PDP resolving through §10's
+   resolver under `pdp` placement with the signed `iat` as the observation
+   point, a permit ceiling from the signed `fresh_until`, the commit phase
+   reading fresh, the join over a view without disclosure, and the
+   end-to-end witnesses (#1101 selects the adapter).
 2. A retained, signed mapping audit record, or the mapping version in
    evidence, if the owner selects one.
 3. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
@@ -362,11 +433,16 @@ reference does not implement.
    to an administered Resource-policy store.
 5. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
    demo's join documents no contract); the `mas.enterprise` rows stay `todo`.
+   `mas.join-disclosure.members` is `tested` and
+   `mas.join-disclosure.not-to-others` `partial` (the envelope `sub`, #1407),
+   both at the Controller role on §10's Join Disclosure tests; the join's
+   rule 2 (resolve at the MAS) has no row of its own yet, and its PDP-role
+   witness is the rest of slice 4.
 
 The component matrix in MAS §deployment-adoption (Sketch steps 1 and 2)
 merged as #1352 (D523).
 
-## 11. Run it
+## 12. Run it
 
 From `src/`, with a live OpenFGA (`OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`,
 and `OPENFGA_CA_CERT` where it serves TLS):
@@ -375,8 +451,16 @@ and `OPENFGA_CA_CERT` where it serves TLS):
 pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.test.ts \
   demo/test/mas-pilot-introspection.test.ts demo/test/mas-pilot-mapping.test.ts \
   services/mcp-payments/test/estate-route.test.ts services/mcp-payments/test/estate-route-introspection.test.ts \
-  services/mcp-payments/test/token-introspection.test.ts services/pdp/test/evaluate-join-mapping.test.ts
+  services/mcp-payments/test/token-introspection.test.ts services/pdp/test/evaluate-join-mapping.test.ts \
+  services/authorization-server/test/status-join-disclosure.test.ts \
+  services/authorization-server/test/mission-status-resolver-as.test.ts services/pdp/test/mission-status-resolver.test.ts \
+  services/pdp/test/evaluate-authzen-members.test.ts
 ```
+
+§10's four files need no OpenFGA. The reference authorization server binds
+`localhost:14826` in `status-join-disclosure.test.ts` and `localhost:14827` in
+`mission-status-resolver-as.test.ts`; the Status server double and the
+forwarding proxy bind ephemeral ports.
 
 Each end-to-end file bootstraps its own development store. The estate AS
 binds `127.0.0.1:14818` in `mas-pilot.test.ts`, `127.0.0.1:14824` in

@@ -1778,9 +1778,10 @@ Owner:
 
 Projection preserves authority across the boundary rather than narrowing
 it to a sub-actor, which makes it a distinct verb from Delegate.
-Downstream revocation latency is the local token lifetime plus, where
-the Resource AS checks no Mission state when it mints from the
-projection grant, that grant's remaining lifetime ({{validity-model}}).
+Downstream revocation latency is bounded by the projection grant's
+remaining lifetime: a local token minted from the grant expires no
+later than the grant, and the grant establishes no renewal authority
+at the Resource AS ({{validity-model}}).
 
 ## Continue
 
@@ -4318,6 +4319,12 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Project verb bounds downstream revocation latency by the
+  projection grant's remaining lifetime, matching Cross-Domain
+  Projection: a local token expires no later than the grant, and the
+  grant establishes no renewal authority at the Resource AS (#1180).
+  No profile's requirements change.
 
 - The Standing-Agent Pattern states its two paths: a charter whose
   policy-approved Child Missions go to distinct worker clients, and
