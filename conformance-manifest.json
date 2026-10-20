@@ -49467,7 +49467,7 @@
    "id": "expansion.reconciliation.completion-refusal-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "If any check fails, the Mission Issuer MUST refuse the completion with `invalid_grant` and the applicable reconciliation status from the closed set below",
+   "text": "If any check fails, the Mission Issuer MUST refuse the completion with the applicable reconciliation status from the closed set below, alongside the error code of the step that completes it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -49478,8 +49478,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused `invalid_grant` with the reconciliation status on a code redemption or deferred poll, and `invalid_request` for a predecessor no longer `active` where the token-exchange response completes it",
-    "local": "the reference's deferred poll answers a predecessor revoked during the window with access_denied rather than invalid_grant and a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
+    "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, and, where the token-exchange response completes it, invalid_request for a predecessor no longer `active` and invalid_grant for check 3",
+    "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
    },
    "level": "endpoint",
    "coverage": "todo",

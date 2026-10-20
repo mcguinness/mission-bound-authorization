@@ -1484,12 +1484,19 @@ predecessor, the Mission Issuer MUST verify:
    restriction disclosed.
 
 If any check fails, the Mission Issuer MUST refuse the completion
-with `invalid_grant` and the applicable reconciliation status from the
-closed set below; where the token-exchange response completes the
-expansion, a failed first or second check, a predecessor no longer
-`active`, is refused with `invalid_request` instead
-({{predecessor-active}}). The losing or otherwise stale expansion is
-rejected at completion; it activates no successor.
+with the applicable reconciliation status from the closed set below,
+alongside the error code of the step that completes it:
+
+- a deferred poll answers `access_denied`, the deferred token
+  response's outcome for a request that resolved with an error;
+- an authorization code redemption answers `invalid_grant`; and
+- where the token-exchange response completes the expansion, a failed
+  first or second check, a predecessor no longer `active`, answers
+  `invalid_request` ({{predecessor-active}}), and a failed third check
+  answers `invalid_grant`.
+
+The losing or otherwise stale expansion is rejected at completion; it
+activates no successor.
 
 The third check catches narrowing that occurs between adjudication and
 activation: authority contained or discharged after the approval
@@ -1545,9 +1552,9 @@ response member:
 `mission_expansion_status`:
 : A string carrying one reconciliation status from the closed set
   above, returned by the step that failed. At the token endpoint (the
-  token exchange response and a deferred token response poll,
-  {{completion-modes}}), it is a member of the JSON error response
-  body, alongside the OAuth `error` member. On the interactive path's
+  token exchange response, a deferred token response poll, and an
+  authorization code redemption), it is a member of the JSON error
+  response body, alongside the OAuth `error` member. On the interactive path's
   front-channel authorization error response, which carries error
   parameters rather than a JSON body, it is an error response
   parameter of the same name. Adjudication denial reasons use the
@@ -1562,7 +1569,7 @@ Content-Type: application/json
 Cache-Control: no-store
 
 {
-  "error": "invalid_grant",
+  "error": "access_denied",
   "mission_expansion_status": "superseded_by_concurrent_expansion"
 }
 ~~~
