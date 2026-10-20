@@ -198,6 +198,28 @@ describe("the request's reference must equal an authorizing entry's (@spec authz
 });
 
 describe("a retained contract relaxes no other decision input (@spec runtime#resource-contract rule 2, #249)", () => {
+  it("under a retained superseded v1, a lapsed entitlement of the mapped principal still refuses", async () => {
+    const LOCAL = { iss: "https://local.test", sub: "alice" };
+    const crossDomain = (): EvaluationRequest => {
+      const req = request(V1);
+      return {
+        ...req,
+        subject: { id: "alice", properties: { iss: LOCAL.iss } },
+        context: { ...req.context, mission: { ...req.context.mission, subject: { iss: "https://origin.test", sub: "alice@origin" } } },
+      };
+    };
+    const dualAxis = (entitled: boolean) =>
+      options(BOTH, view(V1), {
+        principalMapping: {
+          resolve: async () => ({ local: LOCAL, policy: { id: "map", version: "1" }, observed_at: NOW.toISOString(), valid_until: "2026-10-21T00:00:00Z" }),
+        },
+        entitlement: { resolve: async () => ({ entitled, observed_at: NOW.toISOString() }) },
+        entitlementStalenessBoundSeconds: 60,
+      });
+    expect(await reason(crossDomain(), dualAxis(true))).toBe("permit");
+    expect(await reason(crossDomain(), dualAxis(false))).toBe("principal_mapping_failed");
+  });
+
   it("under a retained superseded v1, an inactive Mission, contained authority and a Resource-policy refusal each still refuse", async () => {
     expect(await reason(request(V1), options(BOTH))).toBe("permit");
     expect(await reason(request(V1), options(BOTH, view(V1, { state: "suspended" })))).toBe("mission_inactive");
