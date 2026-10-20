@@ -1336,13 +1336,15 @@ Table of Contents
 
    At the approval event for Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-, the Mission Issuer records
-   Consent Evidence and registers it.  It does not put the disclosure in
-   the log; it signs a Signed Statement whose payload is the hash of the
-   Consent Evidence, carried inline, with the hash algorithm and the
-   evidence media type in the protected header (Section 5.1).  The sub
-   is the Mission feed, derived from the Mission issuer and id; the iss
-   is the Mission Issuer.  Protected header, in CBOR extended diagnostic
-   notation ([RFC8610], Appendix G):
+   Consent Evidence (the worked evidence cns_7rP2kL9mQ4 of
+   [I-D.draft-mcguinness-oauth-mission-consent-evidence]) and registers
+   it.  It does not put the disclosure in the log; it signs a Signed
+   Statement whose payload is the hash of the Consent Evidence, carried
+   inline, with the hash algorithm and the evidence media type in the
+   protected header (Section 5.1).  The sub is the Mission feed, derived
+   from the Mission issuer and id; the iss is the Mission Issuer.
+   Protected header, in CBOR extended diagnostic notation ([RFC8610],
+   Appendix G):
 
    {
      / alg /                    1: -7,   / ES256 /
@@ -1360,7 +1362,7 @@ Table of Contents
    The payload is the SHA-256 digest of the JCS canonical bytes of the
    retained Consent Evidence object, evidence_envelope included
    (Section 5.3), carried inline as the raw digest whose base64url form
-   is CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz, not that display
+   is ABgvgPAXUukhkxer0K6MzkH6XEL8VBc2WRwjXvt5Wa4, not that display
    string.  The Transparency Service appends the statement and returns a
    Receipt, a COSE_Sign1 with an inclusion proof in its unprotected
    header, which the Mission Issuer keeps with the evidence as a
