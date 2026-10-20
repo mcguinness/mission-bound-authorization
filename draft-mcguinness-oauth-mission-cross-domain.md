@@ -1375,8 +1375,12 @@ appendix across a trust boundary: from the home domain
 internal microservice call chain. It is illustrative and adds no
 normative requirements. The final intra-domain hop shows one
 deployment-local way to carry Mission context in a Transaction Token
-{{I-D.draft-ietf-oauth-transaction-tokens}}. Identifiers and hash
-values are illustrative and are not computed from the displayed JSON.
+{{I-D.draft-ietf-oauth-transaction-tokens}}. Identifiers are
+illustrative. The Mission's `intent_hash` and `authority_hash` are
+its integrity anchors ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Integrity Anchors") over the issuance profile example's
+Intent and Authority Set, each with the partner values the scenario
+names appended.
 
 The chain crosses boundaries in two distinct ways, and seeing why is
 the point of the example:
@@ -1400,21 +1404,22 @@ from Status or Signals.
 
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in a partner ERP
-under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`. Stage 0 (agent
+under Mission `msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY`. Stage 0 (agent
 identity) and Stage 1 (Mission creation at the home AS) are the base
 profile's single-domain walkthrough, extended here in one way: the
 Mission Intent's `target_resources` also names the partner ERP
 `https://erp.partner.example.com`, so the approved Authority Set
 additionally carries, for that resource, an `invoices.read` entry
-(delegable to `ai_agent` actors at depth 1) and a
-`journal-entries.write` entry capped at a `max_amount` of 500.00
-USD. The
+(for invoices issued in 2026-Q3, delegable to `ai_agent` actors at
+depth 1) and a `journal-entries.write` entry capped at a
+`max_amount` of 500.00 USD. The
 Mission was recorded `active` with `authority_hash`
-`sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg` and
+`sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM` and
 `intent_hash`
-`sha-256:SSDZGp4CRwv7ZL4_ttfKb-qTWn-aHy8Ffc8a_dE4Nkk` (illustrative;
-this Mission's Intent and Authority Set extend the single-domain
-walkthrough's, so its anchors differ from that example's). The partner ERP
+`sha-256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o` (this Mission
+is not the single-domain walkthrough's: its Intent and Authority Set
+extend that example's, so its identifier and anchors differ). The
+partner ERP
 is behind the Resource AS `ras.partner.example.com`, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.
@@ -1440,14 +1445,18 @@ audience-scoped authority for the ERP:
   "aud": "https://ras.partner.example.com",
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "partner-agent-042",
-  "iat": 1793606400,
-  "exp": 1793606700,
+  "iat": 1793606410,
+  "exp": 1793606710,
   "jti": "idjag_4Kp9sT2vN7xR1mZ8bQ",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 1,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -1459,10 +1468,10 @@ audience-scoped authority for the ERP:
         { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 ~~~
@@ -1507,6 +1516,10 @@ token's `client_id` names that registration:
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 1,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -1518,17 +1531,17 @@ token's `client_id` names that registration:
         { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 ~~~
 
 The issuing `iss` is now the Resource AS, but `mission.issuer` remains
 the home AS. The token's `exp` (1793606690) is below the ID-JAG's
-(1793606700) and far below the Mission's `expires_at`. The Resource
+(1793606710) and far below the Mission's `expires_at`. The Resource
 AS-local `sub` is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document. `client_id` (`partner-agent-042`) is the
@@ -1562,8 +1575,8 @@ The agent calls the ERP resource server (`erp.partner.example.com`)
 with that token. The resource server validates the JWT and the `cnf`
 binding and enforces the `authorization_details` whose `resource`
 matches the operation target, `https://erp.partner.example.com`,
-permitting `invoices.read` and `journal-entries.write` up to a
-`max_amount` of 500.00 USD
+permitting `invoices.read` within the Q3 issuance window and
+`journal-entries.write` up to a `max_amount` of 500.00 USD
 ({{I-D.draft-mcguinness-oauth-mission}}, Section
 "Resource Server Enforcement"). It treats the
 `mission` claim as an audit anchor; holding only this audience's
@@ -1607,10 +1620,10 @@ operation:
     "constraints": { "invoice_id": "inv_2026Q3_1042" }
   },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 ~~~
@@ -1634,7 +1647,7 @@ no call to `mission.issuer`.
 
 | Hop (mechanism) | Mission anchor | Authority or context | Expiry |
 |---|---|---|---|
-| ID-JAG (between domains) | unchanged | ERP: read + write | 1793606700 |
+| ID-JAG (between domains) | unchanged | ERP: read + write | 1793606710 |
 | Resource AS token | unchanged | ERP: read + write | 1793606690 |
 | Txn Token (within domain) | unchanged | one ledger lookup | 1793606520 |
 
