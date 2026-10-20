@@ -26,6 +26,7 @@ import {
   OperationProfileRegistry,
   type ProviderCapability,
   type SigningKeySource,
+  startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
@@ -617,6 +618,10 @@ export async function composeStack(opts: {
         },
       },
     }));
+    // #1326, #1349: what this boot revoked from a kernel written before #1340.
+    for (const n of startupRemediationNotices(as.startupRemediation)) {
+      (n.level === "warn" ? console.warn : console.log)(`${n.message}: ${JSON.stringify(n.detail)}`);
+    }
     const asServer = as.provider.listen(asPort);
     // A port already in use refuses startup here, releasing what construction
     // opened, rather than surfacing as an unhandled error event. @spec #250:

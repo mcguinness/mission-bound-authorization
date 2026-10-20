@@ -15,7 +15,13 @@ import { join } from "node:path";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { afterAll, describe, expect, it } from "vitest";
 import { FIXTURE_BROWSER_LOGIN } from "./approval-fixture.js";
-import { buildAuthorizationServer, type BuiltAs, createChildMission, validateMissionIntent } from "../src/index.js";
+import {
+  buildAuthorizationServer,
+  type BuiltAs,
+  createChildMission,
+  startupRemediationNotices,
+  validateMissionIntent,
+} from "../src/index.js";
 import type { MissionRecord } from "../src/kernel/types.js";
 
 const ISSUER = "http://localhost:14849";
@@ -198,6 +204,8 @@ describe("successor remediation at build (@spec expansion#verification-order ste
         ]),
       );
       expect(report.unresolved).toHaveLength(2);
+      // The launchers log both: the revocations, and a warning for the rest.
+      expect(startupRemediationNotices(second.startupRemediation).map((n) => n.level)).toEqual(["info", "warn"]);
       // The retained provenance is untouched.
       expect(
         second.expansionDeferrals.db
@@ -214,6 +222,7 @@ describe("successor remediation at build (@spec expansion#verification-order ste
     try {
       expect(third.startupRemediation.successors.revoked).toEqual([]);
       expect(third.startupRemediation.successors.unresolved).toHaveLength(2);
+      expect(startupRemediationNotices(third.startupRemediation).map((n) => n.level)).toEqual(["warn"]);
       expect(versions(third)).toEqual(afterSecond.versions);
       expect(lifecycleEvents(third)).toBe(afterSecond.events);
     } finally {

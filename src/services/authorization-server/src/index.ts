@@ -1686,3 +1686,31 @@ export async function buildAuthorizationServer(opts: {
     startupRemediation: { revokedChildren, successors: successorRemediation },
   };
 }
+
+/**
+ * #1326, #1349: the operator notices a launcher logs for a build's startup
+ * remediation (what it revoked from a kernel written before #1340, and the
+ * committed expansions from another client it could not resolve); none when
+ * it did nothing.
+ */
+export function startupRemediationNotices(
+  remediation: BuiltAs["startupRemediation"],
+): Array<{ level: "info" | "warn"; message: string; detail: Record<string, unknown> }> {
+  const { revokedChildren, successors } = remediation;
+  return [
+    ...(revokedChildren.length + successors.revoked.length > 0
+      ? [{
+          level: "info" as const,
+          message: "revoked Missions another client created before #1340",
+          detail: { revokedChildren, revokedSuccessors: successors.revoked },
+        }]
+      : []),
+    ...(successors.unresolved.length > 0
+      ? [{
+          level: "warn" as const,
+          message: "committed expansions from another client whose successor could not be identified",
+          detail: { unresolved: successors.unresolved },
+        }]
+      : []),
+  ];
+}

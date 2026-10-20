@@ -325,7 +325,8 @@ operation. A later boot finds nothing left to revoke and commits nothing. A
 revocation that fails stops the build, so the AS never serves with an
 identified live Mission. `BuiltAs.startupRemediation` lists what was revoked
 and each committed deferral from another client whose successor could not be
-identified, and `server.ts` logs both. A reported deferral is left alone.
+identified, and each shipped launcher (`server.ts`, `pnpm as-native` and
+`pnpm issuance-only`) logs both. A reported deferral is left alone.
 
 Residuals:
 

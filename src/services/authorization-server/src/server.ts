@@ -2,7 +2,13 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { initTelemetry } from "@mission/telemetry";
-import { buildAuthorizationServer, kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "./index.js";
+import {
+  buildAuthorizationServer,
+  kernelStoreFromEnv,
+  type SigningKeySource,
+  signingKeysFromEnv,
+  startupRemediationNotices,
+} from "./index.js";
 
 const port = Number(process.env.AS_PORT ?? 4400);
 const issuer = process.env.AS_ISSUER ?? `http://localhost:${port}`;
@@ -28,15 +34,7 @@ const { provider, signingKeyMode, kernel, startupRemediation } = await buildAuth
   signingKeys,
   ...(kernelStore ? { kernelStore } : {}),
 });
-// #1326, #1349: what boot revoked from before the acting-client checks, and
-// the committed expansions from another client it could not resolve.
-const { revokedChildren, successors } = startupRemediation;
-if (revokedChildren.length + successors.revoked.length > 0) {
-  logger.info({ revokedChildren, revokedSuccessors: successors.revoked }, "revoked Missions another client created before #1340");
-}
-if (successors.unresolved.length > 0) {
-  logger.warn({ unresolved: successors.unresolved }, "committed expansions from another client whose successor could not be identified");
-}
+for (const notice of startupRemediationNotices(startupRemediation)) logger[notice.level](notice.detail, notice.message);
 provider.listen(port, () =>
   logger.info({ issuer, port, signingKeyMode, kernelStore: kernelStore?.file ?? "memory" }, "authorization-server listening"),
 );
