@@ -13,6 +13,7 @@ import {
   type AuthoritySourceCatalog,
   type CapabilitySourceResolver,
   eligibleGovernedPolicyConsents,
+  evaluateGovernedPolicyRules,
   type GovernedActivation,
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConfigError,
@@ -861,5 +862,50 @@ describe("governed activation retains child-actor provenance (@spec child-delega
     expect(children.allowed_child_actors).toEqual([{ sub_profile: "ai_agent" }]);
     expect(mission.child_actor_provenance).toEqual(["policy"]);
     expect(kernel.get(mission.id)?.child_actor_provenance).toEqual(["policy"]);
+  });
+});
+
+describe("a governed removal pairs with entries through the shared matcher (@spec approval-governance#governed-policy-activation, resource-access#subset, #1440)", () => {
+  const MODEL = { id: "risk-model", version: "3" };
+  const SERVICE = "https://erp.example.com";
+  const LEDGER = "https://ledger.example.com";
+  const at = (resource: string, resource_match?: "prefix", actions = ["invoices.read", "invoices.pay"]): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource,
+    ...(resource_match ? { resource_match } : {}),
+    actions,
+  });
+  const decide = (authority: AuthorityEntry[], remove: NonNullable<RecordedModelOutput["remove"]>) =>
+    evaluateGovernedPolicyRules(
+      { models: [MODEL] },
+      {
+        client_id: "svc-agent",
+        subject: { iss: ISS, sub: "bob" },
+        authority_source: "organizational",
+        intent_hash: "sha-256:intent",
+        purpose_present: false,
+        authority,
+        model_outputs: [
+          { model: MODEL, approval_event_id: "ape-1440", intent_hash: "sha-256:intent", authority_hash: "sha-256:set", verdict: "no_objection", remove },
+        ],
+      },
+    );
+
+  it("a removal naming a descendant of a prefix entry narrows that whole entry, a removal naming a service narrows an entry within its tree, and a sibling sharing the base's characters is untouched", () => {
+    // The removed descendant cannot be split out of the prefix entry, so the
+    // named action leaves the whole entry; the unrelated entry is unchanged.
+    expect(
+      decide([at(`${SERVICE}/invoices`, "prefix"), at(LEDGER)], [{ resource: `${SERVICE}/invoices/inv-1`, actions: ["invoices.pay"] }]),
+    ).toEqual({ decision: "approve", authority: [at(`${SERVICE}/invoices`, "prefix", ["invoices.read"]), at(LEDGER)] });
+    // A whole-resource removal naming the service removes an entry beneath it.
+    expect(decide([at(`${SERVICE}/invoices/inv-1`), at(LEDGER)], [{ resource: SERVICE }])).toEqual({
+      decision: "approve",
+      authority: [at(LEDGER)],
+    });
+    // A sibling sharing the characters of the removed resource is outside its tree.
+    expect(decide([at(`${SERVICE}/invoices-archive`)], [{ resource: `${SERVICE}/invoices` }])).toEqual({
+      decision: "approve",
+      authority: [at(`${SERVICE}/invoices-archive`)],
+    });
   });
 });
