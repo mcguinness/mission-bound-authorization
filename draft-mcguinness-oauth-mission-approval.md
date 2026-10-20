@@ -351,9 +351,10 @@ may stand behind one deferred approval. Mission Approval Governance
 ({{I-D.draft-mcguinness-mission-approval-governance}}) defines the
 Approval Governance Record for exactly that state, and it is
 ceremony-independent: a deployment records it for a deferred approval
-under this profile precisely as for a synchronous one. Where that
-document's recording triggers hold for a deferred approval, the
-issuer records the Approval Governance Record joined by
+under this profile precisely as for a synchronous one. Where a profile
+that adopts that document's recording triggers applies and a trigger
+holds for a deferred approval, the issuer records the Approval
+Governance Record joined by
 `approval_event_id` and committed atomically with the approval
 decision it governs; the pending window changes when the decision
 happens, never what is recorded about it.
@@ -578,6 +579,11 @@ the deferred grant type are registered by the deferred substrate
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Approval Governance Record is recorded for a deferred approval
+  where a profile that adopts Mission Approval Governance's recording
+  triggers applies and a trigger holds, matching that document's rule
+  that the triggers bind only under an adopting profile (#1436).
 
 - Policy Completion: a pending approval can complete under Mission
   Approval Governance's `governed_policy` basis, with the deferral's
