@@ -34,7 +34,7 @@
 import { TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
 import { declaredStatusKeys, type MissionView, MissionStatusResolver, type ResolvedMission } from "@mission/pdp";
-import { assembleMasPilot, type MasPilotOptions, type MasPilotParts, type PdpDecide } from "./compose.js";
+import { assembleMasPilot, type MasPilotOptions, type MasPilotParts, type PdpDecide, requireDeclaredMappingContract } from "./compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
 
 export interface SeparatedMasPilotOptions extends MasPilotOptions {
@@ -118,6 +118,7 @@ export function statusViewSource(resolver: Pick<MissionStatusResolver, "resolve"
 /** Assemble the separated pilot against a running MAS. `close()` releases what it opened; the MAS is the caller's. */
 export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): Promise<SeparatedMasPilot> {
   const config: MasPilotConfig = opts.config ?? loadMasPilotConfig();
+  requireDeclaredMappingContract(config);
   const source = config.separated_mas.state_source;
   const base = opts.mas.url.replace(/\/$/, "");
   // Configured from what the MAS publishes, over HTTP.
