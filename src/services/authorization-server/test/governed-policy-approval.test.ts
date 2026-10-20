@@ -853,6 +853,33 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
   });
 
+  it("binds a narrowing model output to the Authority Set it evaluated, which the issuer records with the activation's inputs", () => {
+    const MODEL = { id: "risk-model", version: "3" };
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-n", intent: intent(), clientId: "svc-agent" });
+    const output: RecordedModelOutput = {
+      model: MODEL,
+      approval_event_id: view.approval_event_id,
+      intent_hash: view.intent_hash,
+      authority_hash: view.authority_hash,
+      verdict: "no_objection",
+      remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }],
+    };
+    const { mission, record } = activate(kernel, c.consent_id, { approvalEventId: "ape-n", modelOutputs: [output] });
+    // Counted, though bound to the set it evaluated rather than the narrowed result.
+    expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
+    expect(mission.authority_hash).not.toBe(output.authority_hash);
+    expect(record.mission.authority_hash).toBe(mission.authority_hash);
+    // The issuer records that set with the activation's inputs, and the committed set lies within it.
+    const retained = kernel.governedPolicyConsents.activation(mission.id);
+    if (!retained) throw new Error("no retained activation");
+    expect(authorityHash(ISS, retained.inputs.authority as never)).toBe(output.authority_hash);
+    const pairs = (set: AuthorityEntry[]) => set.flatMap((e) => e.actions.map((a) => `${e.resource} ${a}`));
+    const evaluated = new Set(pairs(retained.inputs.authority));
+    expect(pairs(mission.authority_set).every((p) => evaluated.has(p))).toBe(true);
+  });
+
   it("leaves no Mission, no record, and no retained inputs when signing or persistence fails", () => {
     const signing = makeKernel();
     const c1 = consent(signing);

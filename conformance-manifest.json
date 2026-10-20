@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "caf2420b9b4551ae4462771b23322fd660cf1116",
-    "content_sha256": "8678e27c2e3a04e75bd7aaf5073b83036ac765a716a516887caa2ba031791f4d"
+    "revision": "defc4a380fae8ba12925f2018d416d62cc2aa0a6",
+    "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -4220,10 +4220,10 @@
    "assertion": "replay",
    "observation": {
     "normative": "an assertion captured for another approval event, another Intent or another Authority Set is not counted toward the evaluation",
-    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. The reference binds a model output to the Authority Set the policy evaluated, before any narrowing; where a model narrows, that set differs from the record's mission.authority_hash, so the authority_hash clause is not witnessed as written (#1436 item 16)."
+    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. A narrowing output's Authority Set binding is the set it evaluated (approval-governance.assertion.narrowing-binds-evaluated-set)."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -4238,7 +4238,42 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness."
+   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness. #1436 item 16 settles the Authority Set binding of a narrowing assertion, so the row is tested again."
+  },
+  {
+   "id": "approval-governance.assertion.narrowing-binds-evaluated-set",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "An assertion that can narrow the authority, such as a model output an activation consults, is made against the `authority_hash` of the set it evaluated rather than of the narrowed result",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a narrowing model output bound to the authority_hash of the set the deciding policy evaluated is counted even though the record's mission.authority_hash covers the narrowed set; the issuer retains that evaluated set with the activation's inputs, the committed set lies within it, and an output bound to any other set is not counted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > binds a narrowing model output to the Authority Set it evaluated, which the issuer records with the activation's inputs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion captured for another activation's approval event",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 16: the binding the reference already applies, stated. Mutations: binding outputs to the narrowed final set; retaining the inputs without the evaluated set."
   },
   {
    "id": "approval-governance.assertion.policy-authorized",
@@ -46761,7 +46796,7 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id and the Mission's intent_hash, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
+    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
     "local": "The reference implementation has no Relying Auditor role, so nothing exercises a re-check."
    },
    "level": "unit",
