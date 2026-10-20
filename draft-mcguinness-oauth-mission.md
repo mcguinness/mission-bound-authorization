@@ -2848,12 +2848,14 @@ token whose holder its deployment accepts learning the distinction
 
 Every bound this document defines is enforced by a party this document
 names. The following table summarizes which party enforces each bound a
-Mission carries and what holds when that enforcer is absent:
+Mission carries and what holds when that enforcer is absent; the type
+specification it names is that of `mission_resource_access`
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}):
 
 | Bound | Enforced by | When that enforcer is absent |
 |---|---|---|
-| `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
-| per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{I-D.draft-mcguinness-oauth-mission-resource-access}}, {{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
+| `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
+| per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
 
 ## Remediation Grains {#remediation-grains}
 
