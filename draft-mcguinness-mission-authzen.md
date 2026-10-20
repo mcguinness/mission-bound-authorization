@@ -1268,7 +1268,7 @@ Resource-policy evaluation, not the operation target.
 
 The `policy_view_id` values in this document's examples
 (`sha-256:kP3xR9sQ...`) differ from the runtime profile's worked
-materialized-view value (`sha-256:kFxuopgt...`): the two manifests
+materialized-view value (`sha-256:RBI8j_YN...`): the two manifests
 name different compilers. Both are valid views of the same Mission.
 
 For the ERP reconciliation Mission:
