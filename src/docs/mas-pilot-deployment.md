@@ -6,18 +6,19 @@ steps 3 and 4). A legacy estate keeps its own authorization server; its
 ordinary tokens are joined to Missions at a gateway, under a versioned mapping
 contract. This document records slices 1 to 3 of that evidence (slice 2:
 the Resource policy, §4; slice 3: opaque tokens by introspection, §5), and
-the first part of slice 4: the Mission Status surface and resolver a
-separated MAS needs, which the pilot does not use yet (§10). It is
+slice 4: the Mission Status surface and resolver a separated MAS needs
+(§10), and the separated configuration that reads Missions through them
+(§11). It is
 not a
 conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `3c7a35e6`
+Every statement here is true of the reference implementation at `8a8b68de`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
-`demo/test/mas-pilot-introspection.test.ts`) need a live OpenFGA, because the Resource policy is stored entitlements, and
+`demo/test/mas-pilot-introspection.test.ts`, `demo/test/mas-pilot-separated.test.ts`) need a live OpenFGA, because the Resource policy is stored entitlements, and
 are skipped without one; the mapping, estate-route, introspection and PDP
 unit files always run.
 
@@ -70,6 +71,14 @@ row for one issuer-qualified estate subject or client. Several estate
 identities mapping to one Mission identity (**many-to-one**) is accepted and
 disclosed: the shipped contract maps `u-1001` and `u-1002` to `alice`, and
 every mapping decision records which estate identity it resolved.
+
+Both configurations, in process and separated (§11), refuse to start without
+a contract this loader accepts, before they build or connect to anything
+(`requireDeclaredMappingContract`, `demo/src/mas-pilot/compose.ts`). The
+shared demo stack's join declares its own contract
+(`config/mas-join.json` `mapping_contract`) and refuses the same way
+(`composeStack`):
+`every join-enabling deployment declares the mapping contract its joins apply (@spec authority-server#mapping-contract, #818) > refuses to start a composition that would mount a join route with no declared contract, before it connects to anything`.
 
 Where the mapping applies: the PDP maps the authenticated subject and client,
 qualified by `context.credential.issuer`, before the join compares them with
@@ -296,10 +305,40 @@ mapping contract and its cache, the estate's Resource-policy grants, and the
 composition. The PEP and PDP changes are reference code
 (`joinMapping`, `missionBoundOnlyClasses`, `mappingContract`).
 
-Sender-bound Join Assertions are not built. They would additionally need the
-MAS to introspect or validate the estate token and report its `cnf`
-(MAS §enterprise-prerequisites), and a Join Assertion endpoint, which the
-reference does not implement.
+Sender-bound Join Assertions (MAS §join-assertion) are not built; #1454
+owns building them and the Enterprise tier. What they would additionally
+need, by party:
+
+- **The estate AS** (MAS §enterprise-prerequisites): sender-constrained
+  access tokens carrying a `cnf` key, and introspection responses or
+  validatable RFC 9068 claims that report it. The pilot's estate already
+  provides all three as configured: DPoP-bound tokens with `cnf.jkt`, JWTs
+  under its published keys, and RFC 7662 introspection reporting `cnf`
+  (§5). Nothing changes there.
+- **The MAS**: the join-assertion endpoint (MAS §join-assertion-request),
+  advertised as `mission_join_assertion_endpoint`, with caller
+  authentication, the visibility set and its anti-oracle split, and
+  per-caller rate limiting; verifying the acting token centrally (by
+  introspection at the estate, or RFC 9068 validation) and refusing one
+  with no `cnf`; the subject and client joins under its own mapping
+  contract, and a delegate's depth from actor records; and minting the
+  artifact (MAS §join-assertion-artifact, `typ` `mission-join+jwt`): the
+  `mission`, the `token` binding (`sha256` and `jkt` or `x5t#S256`), the
+  `join` result, an `aud` naming an enrolled PDP, an `exp` within the
+  token's own, and `mapping_version`, the contract version the joins were
+  evaluated under. Each minting is a retained join evidence event. The
+  reference MAS (`mas-serve.ts`) has none of this.
+- **The PDP** (MAS §join-assertion-pdp): verifying the assertion
+  (signature under the MAS's keys, `typ`, `alg`, `iss` and `mission`,
+  `exp`, `aud`) and the token binding against
+  `context.mission_join.token_sha256` and the reported thumbprint, then
+  taking the joining client, disposition and depth from `join` in place of
+  its own mapping checks; and the PEP carrying the token digest and
+  thumbprint in `context.mission_join`. Neither is built.
+
+The mapping version in join evidence belongs to that artifact's
+`mapping_version` claim. Baseline Decision Evidence carries no mapping
+version, and no draft requires one there.
 
 ## 9. Residuals and exclusions
 
@@ -311,10 +350,9 @@ reference does not implement.
   that refuses it is the PDP's (`issuerLocalPrincipals`).
 - **The development seed is the pilot's own** (`config/mas-pilot.json`
   `resource_policy`); a production estate attaches to its administered store.
-- **Mission state is an in-process kernel read**, as on the AS-native target
-  (D293). The Join Disclosure a separated MAS serves on Mission Status and the
-  PDP's resolver that reads it over HTTP are built (§10), but the pilot
-  composition does not use them yet (§11).
+- **In the in-process configuration, Mission state is a kernel read**, as on
+  the AS-native target (D293). The separated configuration (§11) reads it
+  through the MAS's signed Mission Status instead.
 - **The mapping audit log is in memory**, unsigned and not retained. Decision
   Evidence carries `join_view_id`, which commits the authenticated (estate)
   client, not the mapping version.
@@ -355,8 +393,8 @@ reference does not implement.
 ## 10. Toward a separated MAS: Join Disclosure and the Status resolver
 
 Slice 4's first part: the two pieces a separated MAS needs, each tested on
-its own against the reference authorization server over HTTP. The pilot
-composition is unchanged (§9, §11).
+its own against the reference authorization server over HTTP. The
+separated configuration (§11) composes the pilot on them.
 
 **Join Disclosure on Mission Status** (MAS §join-disclosure). The reference
 authorization server's Status operation discloses `mission.subject` (`iss`,
@@ -416,33 +454,121 @@ Gaps, both owned by #1407 (Status read conformance):
   that endpoint. The resolver takes the operation's URL as configuration
   (`statusUrl`).
 
-## 11. Remaining slices
+## 11. The separated configuration
 
-1. A separated MAS, the rest of slice 4: the composition with no kernel
-   handle (the MAS in its own process), the PDP resolving through §10's
-   resolver under `pdp` placement with the signed `iat` as the observation
-   point, a permit ceiling from the signed `fresh_until`, the commit phase
-   reading fresh, the join over a view without disclosure, and the
-   end-to-end witnesses (#1101 selects the adapter).
-2. A retained, signed mapping audit record, or the mapping version in
-   evidence, if the owner selects one.
-3. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
-   step 5's second half); the introspection adapter here is what a MAS would
-   use to inspect the estate token.
-4. A launcher and an operator walkthrough for the pilot topology, attaching
-   to an administered Resource-policy store.
-5. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
-   demo's join documents no contract); the `mas.enterprise` rows stay `todo`.
-   `mas.join-disclosure.members` is `tested` and
+Slice 4's second part (D560). `composeSeparatedMasPilot`
+(`demo/src/mas-pilot/separated.ts`) assembles everything §1 lists except the
+Mission kernel. Both configurations share `assembleMasPilot`
+(`demo/src/mas-pilot/compose.ts`), which never holds a Mission store; the
+separated pilot's type (`SeparatedMasPilot`) has no kernel member, and it
+knows the MAS only by URL and credential. The MAS is the reference
+authorization server running as its own OS process
+(`demo/src/mas-pilot/mas-serve.ts`, started by `mas-process.ts`) under the
+pilot's derivation ceiling (`mas-policy.ts`, shared with the in-process
+kernel), configured by `config/mas-pilot.json` `separated_mas`. Its URL is
+the Mission issuer.
+
+| Property | How |
+|---|---|
+| Source | The MAS's Mission Status, read by §10's `MissionStatusResolver` as `separated_mas.pdp_principal_id`, whose credential is generated at each boot and registered at the MAS with `mission_status` only. The resolver is configured from what the MAS publishes over HTTP: its metadata (`issuer`, `jwks_uri`, `mission_max_stale_seconds`) and its status-response key. |
+| Disclosure | `separated_mas.enrolled_pdps` is the MAS-held enrollment (`enrolledJoinPdps`). A PDP it does not enroll reads no `subject` or `client_id`, and its join denies `mission_binding_failed` (`resolveBaselineJoin`; `MissionView.subject` and `client_id` are optional). |
+| Placement | `pdp` (`separated_mas.state_source.placement`; the loader refuses any other). The PEP sends no `mission_state_observation`. |
+| The PDP's read | Every decision reads its own (`ownReadDecide`): within the action class's staleness window (`maxAgeSeconds`), and from the MAS now (`fresh: true`) for a commit-phase decision. `stateObservedAt` is the response's signed `iat`, never the time of the fetch or of a cache hit; `stateFreshUntil` is its signed `fresh_until`, which caps the permit through the `signed_state_fresh_until` ceiling (`services/pdp/src/own-read-ceiling.ts`). A read that establishes nothing gives the decision no state, so it denies `stale_state` (authzen#pdp-request rule 1). The non-commit read answers from the resolver's cache the PEP's read filled, under its own window. |
+| The PEP's read | One per enforcement, awaited at its start (`PepDeps.viewSource`, `statusViewSource`). A Mission the MAS does not hold or show refuses `unknown_mission`; every other failure, including the MAS refusing the PDP's credential, refuses `state_unavailable` (authzen#failure-condition-coverage, "Mission state not establishable at the PEP"); both on a signed Refusal Record before any decision. The PEP's synchronous reads (`loadView`) answer from the resolver's cache within its bounds (`peek`). With a remote source, a list read whose view lapses before re-verification is suppressed `target_drift`, recording no digest it could not observe; `toolsList` lists nothing for a credential with no view, as before (`McpPaymentsServer.toolsList` stays synchronous). |
+| Bounds | The signed `fresh_until` (60 s on the reference MAS), `iat` plus `mission_max_stale_seconds` (300), the class window; nothing is cached from a failed read; the read's deadline (`timeout_ms`) and body cap (`max_response_bytes`). |
+| Lifecycle | Revocation and containment go to the MAS's Lifecycle surface over HTTP. A test approves Missions and moves the MAS's clock through the process's operator channel (IPC), which is test harness, not a protocol surface. A key ring and a kernel store keep the MAS's keys and Missions across a restart. |
+
+**Declared diagnostic.** The Authority Set is the Status response's
+audience-scoped effective set (MAS rule 7), which carries no containment or
+discharge delta. An action that a containment or a discharge removed at the
+MAS is outside that set, so the decision denies `out_of_authority`; the
+in-process configuration, which reads the deltas, denies
+`authority_contained` or `authority_discharged`. Containment is witnessed;
+discharge follows from the same projection and is not exercised here.
+
+**No missing-authority remediation from a projection.** An effective-set view
+gives no `insufficient_authorization` hint for an absent action unless it
+proves it holds the committed set: its `authority_hash` recomputes over its
+entries (`viewHoldsCommittedSet`, D335, the proof the PDP applies to the
+credential bound; `absenceMeansNeverGranted` in
+`services/mcp-payments/src/view-source.ts`). After a containment or a
+discharge, or when the Mission has entries for another audience, the Status
+view cannot prove it, so the refusal stands with no hint: a narrowed
+capability is restored only through Expansion. A Status view whose effective
+set is the committed set (one audience, nothing contained or discharged)
+proves it, and a never-granted action there keeps its hint. A loader with no
+remote source is read as the committed set, as before.
+
+Witnesses: `demo/test/mas-pilot-separated.test.ts` (each refusal asserts no
+committed effect and its carrier, the PDP's Decision Evidence or the PEP's
+Refusal Record):
+
+- `the separated MAS pilot: the PDP reads Missions through the MAS's signed Mission Status (#818 slice 4b) > permits a joined read on the Status view, with Join Disclosure, the MAS's own state version, and a permit capped by the signed fresh_until`
+  (the Decision Evidence's `policy_view_id` commits the version and `authority_hash` a direct Status read returns);
+- `… > denies the action a containment at the MAS removed out_of_authority, the Status view's declared diagnostic, while the uncontained read still permits` (and gives no `insufficient_authorization`);
+- `… > proposes a never-granted action back on a Status view that proves it holds the committed set`;
+- `… > observes a revocation at the MAS within the signed bound: relied on until its fresh_until, then mission_inactive`;
+- `… > refuses the commit crossing of a Mission revoked after its prepare: the commit-phase decision reads the MAS now, and commits nothing`;
+- `the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an answer that does not verify (#818 slice 4b) > an unenrolled PDP reads no Subject or client, so the join denies mission_binding_failed and nothing is permitted`;
+- `… > a source slower than the deadline establishes no state: the PEP refuses state_unavailable before any decision`;
+- `… > a Status answer that does not verify establishes no state: the PEP refuses state_unavailable before any decision`;
+- `the separated MAS pilot: the MAS stops and starts (#818 slice 4b) > with the MAS down, a commit decision denies stale_state and an expired read refuses state_unavailable; restarted with its key ring and store, it reads again`.
+
+Unit witnesses: `services/pdp/test/evaluate-own-read.test.ts` (the
+signed-ceiling cap and a passed one, the join without a disclosed
+`subject` or `client_id`), `services/mcp-payments/test/view-source.test.ts`
+(the PEP's one read, its lapsed list re-verification, and the remediation
+guard with a complete view, an effective projection, and no remote source), and
+`demo/test/mas-pilot-separated-wiring.test.ts` (the class window, the
+commit-phase fresh read, the signed `iat` and `fresh_until`, and the
+refusal mapping).
+
+Gaps:
+
+- **The commit-phase witness uses a test scope.** The shipped scope mapping
+  maps no estate scope to `payments:payment.execute`, so the gateway cannot
+  prepare a transfer; the test's configuration adds one
+  (`payments.execute`, for `estate-ap-bot-7f3`).
+- **`maxAgeSeconds` binds before the MAS's 60 s `fresh_until`** only for a
+  class whose window is shorter (`irreversible_action` and
+  `privileged_administration`, 30 s). The gateway's one such crossing is the
+  commit, which reads fresh, so the class window is witnessed at the adapter,
+  not end to end.
+- **Keys are read once, at composition.** A MAS restarted with new keys
+  verifies nothing until the pilot is composed again: every read refuses
+  `state_unavailable`. Key rotation is not handled.
+- **#1407** still owns the Status envelope `sub` and the request shape (§10).
+
+## 12. Remaining slices
+
+1. Sender-bound Join Assertions and the Enterprise tier (Sketch step 5's
+   second half), with the mapping version carried as the assertion's
+   `mapping_version` claim: #1454 (§8 lists what they need). The
+   introspection adapter here is what a MAS would use to inspect the estate
+   token.
+2. A launcher and an operator walkthrough for either topology, attaching to
+   an administered Resource-policy store: #818's slice 5B. The separated MAS
+   has a process entry (`mas-serve.ts`) but no operator command.
+3. Ledger: `mas.mapping-contract.floor-documented` is `tested` on
+   `demo/test/mas-join-contract.test.ts`: every shipped deployment that
+   mounts a join route declares its mapping contract (this pilot's in §2;
+   the shared demo stack's in `config/mas-join.json` `mapping_contract`,
+   described in `config/README.md`), and a composition that would mount
+   one without it refuses to start. The
+   `mas.enterprise`, `mas.join-assertion` and `mas.hc.mission-bound-instance-check`
+   rows and `mas.mapping-contract.enterprise-publishes` stay `todo`, owned by
+   #1454. `mas.join-disclosure.members` is `tested` and
    `mas.join-disclosure.not-to-others` `partial` (the envelope `sub`, #1407),
-   both at the Controller role on §10's Join Disclosure tests; the join's
-   rule 2 (resolve at the MAS) has no row of its own yet, and its PDP-role
-   witness is the rest of slice 4.
+   both at the Controller role on §10's Join Disclosure tests. Join rule 2's
+   two rows (`mas.baseline-join.resolve-at-mas`,
+   `mas.baseline-join.mas-state-source`) are `tested` on §11's witnesses at
+   the PDP role, and rule 7 (`mas.baseline-join.authority-from-mission`) cites
+   two of them beside its earlier tests.
 
 The component matrix in MAS §deployment-adoption (Sketch steps 1 and 2)
 merged as #1352 (D523).
 
-## 12. Run it
+## 13. Run it
 
 From `src/`, with a live OpenFGA (`OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`,
 and `OPENFGA_CA_CERT` where it serves TLS):
@@ -454,10 +580,12 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   services/mcp-payments/test/token-introspection.test.ts services/pdp/test/evaluate-join-mapping.test.ts \
   services/authorization-server/test/status-join-disclosure.test.ts \
   services/authorization-server/test/mission-status-resolver-as.test.ts services/pdp/test/mission-status-resolver.test.ts \
-  services/pdp/test/evaluate-authzen-members.test.ts
+  services/pdp/test/evaluate-authzen-members.test.ts \
+  demo/test/mas-pilot-separated.test.ts demo/test/mas-pilot-separated-wiring.test.ts \
+  services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts
 ```
 
-§10's four files need no OpenFGA. The reference authorization server binds
+§10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
 `localhost:14826` in `status-join-disclosure.test.ts` and `localhost:14827` in
 `mission-status-resolver-as.test.ts`; the Status server double and the
 forwarding proxy bind ephemeral ports.
@@ -467,4 +595,7 @@ binds `127.0.0.1:14818` in `mas-pilot.test.ts`, `127.0.0.1:14824` in
 `mas-pilot-resource-policy.test.ts` and `127.0.0.1:14825` in
 `mas-pilot-introspection.test.ts` (the configuration relocated, so the files
 run in parallel); the gateway, the resource route and the introspection proxy
-bind ephemeral ports.
+bind ephemeral ports. In `mas-pilot-separated.test.ts` the MAS process binds
+`127.0.0.1:14835` (the shipped `separated_mas.port` is 14834), and the four
+pilots it composes run their estates on `127.0.0.1:14843`, `14847`, `14850`
+and `14852`; the slow proxy and the Status double bind ephemeral ports.
