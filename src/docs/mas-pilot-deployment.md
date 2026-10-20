@@ -11,7 +11,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `9cf3b158`
+Every statement here is true of the reference implementation at `3814a053`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -179,6 +179,13 @@ reservation apply.
   introspected `cnf.jkt` and to the token (`ath`). The identity is qualified
   by the route's own issuer, the estate, never by a value the response
   supplies.
+- **Expiry after the awaits.** The adapter reads its clock again once the
+  answer arrives, checks `exp` against that reading and starts the cache
+  entry from it; admission re-checks `exp` after its own awaits. A token that
+  expires while it is being introspected is refused. The PDP's own
+  credential-expiry check (`context.credential.expires_at`) was always a
+  second line, so the earlier gap, found in review of #1400, concerned
+  credential admission, not a demonstrated tool-execution bypass.
 - **Fail closed.** No answer (a timeout, a network error, a non-200 status, a
   body that is not a JSON object) is refused 503 `temporarily_unavailable`;
   any other refusal is 401. Neither reaches the PEP, so no decision is made.
@@ -260,6 +267,7 @@ fail or rewrite them; the adapter in
 | An opaque token permits end to end, its identity from introspection | `… > permits a joined read with an opaque token, its identity read from the estate's introspection` |
 | The introspected scope is the credential bound | `… > bounds the opaque token by its introspected scope: an action that scope does not carry is refused out_of_authority, and a scope that carries it permits` |
 | An inactive token is refused with no decision | `… > refuses a token the estate reports inactive, with no decision` (401); adapter: `token introspection: fail-closed refusals … > refuses an inactive token, and does not cache the refusal` |
+| A token expiring while its introspection is in flight is refused | adapter: `token introspection: expiry is checked after the answer arrives … > refuses a token that expires while its introspection is in flight, and keeps no cache entry for it`; admission: `estate route with introspection: expiry is re-checked at admission … > refuses a token whose exp passes after the adapter accepted it, before admission completes` |
 | A revocation at the estate is refused within the cache bound | `… > stops admitting a token revoked at the estate once its positive cache entry ends, within cache_max_seconds`; adapter: `token introspection: the cache bounds …` (at most `cacheMaxSeconds`, never past `exp`) |
 | A timeout and an error fail closed | `… > fails closed when introspection does not answer within its timeout, with no decision` and `… > fails closed when introspection answers with an error or a body that is not JSON, with no decision` (503) |
 | A token for another resource is refused | `… > refuses an opaque token the estate issued for another of its resources, with no decision`; estate route: `… > refuses an opaque token introspected for another resource, under the same audience rule as a JWT` |
