@@ -8658,6 +8658,41 @@
    "notes": "#869 (D449): proven by disabling the code it covers: recording a designation one level deeper fails the depth-2 witness."
   },
   {
+   "id": "core.delegation-constraints.cross-domain-carriage",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "it is carried with the entries wherever they go, including across a cross-domain projection where that profile's provenance rule keeps it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a list-origin entry's delegation policy crosses a cross-domain projection equal to the approved entry's, and a policy-origin entry crosses without it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > list origin: the conveyed copy keeps `delegation`, equal to the approved entry's and so no wider than its list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with a list the proposal added: the conveyed copy omits `delegation`, while the approved entry keeps its list",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped fails the policy-origin witness."
+  },
+  {
    "id": "core.designation.holder-proves-possession",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "designation",
@@ -36199,6 +36234,287 @@
    "notes": "#1180, D378. The delayed-redemption witness redeems five seconds before the grant's exp, where the RAS's 120 s local lifetime would outlive the grant, and fails when the grant bound is dropped from the RAS expiry clamp. The older \"M9 scenario 12 > the local token dies with its lease (exp never exceeds the grant)\" test redeems immediately, inside the 300 s grant, and passes with that bound removed, so it is not cited."
   },
   {
+   "id": "cross-domain.conveyed-delegation.provenance-rule",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "the Mission Issuer MUST omit the `delegation` member from a conveyed entry unless the retained provenance of every approved entry it derives from resolves to a committed `allowed_delegates` list",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cross-domain grant conveys an entry's delegation member only when every approved entry the entry resolves to has a retained list origin, the conveyed member commits allowed_delegates, and it is no broader than each approved entry's; a policy origin, alone or combined with a list, an unresolved or ambiguous origin, or an entry that resolves to no approved entry is conveyed without delegation, in the depth-0 projection and in the depth > 0 continuation alike",
+    "local": "each carried entry resolves by identity to the audience-scoped candidate it was taken from (kernel/cross-domain.ts conveyedCopy, conveysDelegation); the no-broader test is the whole-entry subset rule against each approved entry"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with a list the proposal added: the conveyed copy omits `delegation`, while the approved entry keeps its list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with no list: the conveyed copy omits `delegation`, and with it the nested `children` grant",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > missing or unreadable provenance: the conveyed copy of a list-origin entry omits `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > list origin: the conveyed copy keeps `delegation`, equal to the approved entry's and so no wider than its list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > overlapping approved entries keep their own origins: the policy-origin entry is conveyed without `delegation`, the list-origin entry with it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > an entry the authority filter rebuilt resolves to no approved entry: its conveyed copy omits `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > a Child Mission entry within a policy-origin and a list-origin parent entry combines to policy: omitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > a Child Mission entry within two list-origin parent entries combines to list: kept, no wider than the child's approved list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a list-origin entry the list admits at depth 1 keeps `delegation` on the conveyed copy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > several list origins: kept when the conveyed member is no wider than every approved entry, omitted when wider than any one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > a list and policy combination never selects the more permissive origin: omitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > an unresolved or ambiguous resolution is omitted: no approved entry, or any origin unresolved",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > a list origin whose conveyed member commits no list is omitted: absence would defer to the receiving AS's policy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy and list both permit: the delegate is issued the entry, its approved list intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Witnessed at both mint branches (kernel) and at the ICA continuation exchange. Proven by disabling the code it covers: conveying the filtered entries unstripped fails every omission witness, kernel and endpoint; keeping on any list origin fails the combination and unresolved witnesses; keeping an entry that resolves to no candidate fails the rebuilt-entry witness; dropping the no-broader check or the list-presence check fails its own witness. A conveyed entry resolving to several approved entries is reached only through the exported keep test: effectiveDelegationCandidates gives each audience-scoped entry one origin, and Child Missions witness combined origins end to end."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.current-hop-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "The omission never admits an entry that decision excludes and never makes a non-delegable entry delegable.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at delegation depth above 0 a candidate the delegation gate excludes (policy-denied, or unresolved provenance under a permitting policy) is refused before anything is signed, and an approved entry without delegation is never carried whatever the policy; a policy-origin entry the gate admits is carried, its conveyed copy without delegation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > the omission never admits what the gate excluded: a policy-denied candidate, and an unresolved one under a permitting policy, are refused before export",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the exclusion and non-delegable witnesses; applying the omission before the gate fails the admitted witnesses (the gate then sees no delegation and narrows the entry out)."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.record-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "The Mission Record, its Authority Set, and `authority_hash` are unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a projection that omits delegation, the Mission Record's Authority Set, retained provenance and authority_hash read back unchanged, the grant's mission.authority_hash equals the record's, and the approved entries the projection read keep their delegation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > the approved record, its `authority_hash` and the projection's audience-scoped set are unchanged",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: deleting the member from the entry in place, instead of conveying a copy, fails the witness on the approved entries the projection read. The store read-backs would detect any write of the record; the mint performs none."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.nested-members-omitted",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "Omitting `delegation` also omits every member nested in it, including a `children` grant",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry conveyed without delegation carries no children grant, although the approved entry it derives from keeps one"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with no list: the conveyed copy omits `delegation`, and with it the nested `children` grant",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entry unstripped carries the children grant and fails the witness."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.resource-as-non-delegable",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "An entry conveyed without `delegation` is non-delegable at the Resource AS",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "cross-domain.projection",
+     "core.delegation"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS issuing delegated tokens of its own never carries an entry the cross-domain grant conveyed without delegation into a delegated token"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1374. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens; redeem() mints one local token per grant and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own (core.delegation in the partner domain); hence the all_of gate."
+  },
+  {
+   "id": "cross-domain.resource-as.sub-profile-local-classification",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "A Resource AS evaluates a conveyed `sub_profile` matcher against the classification it asserts for its own delegates.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "cross-domain.projection",
+     "core.delegation"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS issuing delegated tokens of its own admits a delegate under a conveyed sub_profile matcher only by the classification it asserts for that delegate, never by the originating domain's or the delegate's own, and treats the value as naming no equivalent class unless pre-established trust fixes a shared vocabulary"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1374. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens; redeem() mints one local token per grant and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own (core.delegation in the partner domain); hence the all_of gate."
+  },
+  {
    "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "cross-domain-revocation",
@@ -36467,6 +36783,112 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "continuation.ica-transport.conveyed-delegation",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "The onward ID-JAG conveys each entry's `delegation` member under the cross-domain projection rule",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at the ICA continuation exchange a policy-origin entry the delegation gate admits is issued without delegation, and a list-origin entry keeps its delegation policy"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy and list both permit: the delegate is issued the entry, its approved list intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped fails the policy-origin witnesses."
+  },
+  {
+   "id": "continuation.ica-transport.kept-delegation-request-refused",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "a requested authorization detail that keeps an omitted `delegation` exceeds the grant's authority and is refused",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose authorization_details keeps delegation on an entry the onward ID-JAG conveys without it is refused, issues no grant and records no hop, and leaves the assertion unconsumed; the same assertion presented without that request is issued",
+    "local": "invalid_authorization_details (ICA -02 Section 5.5.6), with one derivation counted under a reserved, unreleased reservation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a request that keeps the omitted `delegation` is refused invalid_authorization_details: no hop and the assertion unconsumed, with the derivation counted under a reserved reservation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a requested `authorization_details` that keeps an omitted `delegation` exceeds the conveyed copy: refused before beforeSign; a request without it is issued",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped issues the request (200). Signing-side effects before the refusal (moving beforeSign ahead of the requested-authority check) fail the hop witness and, with it removed, the unconsumed-assertion witness. The refusal is raised inside the mint after the derivation gate admits, because the adapter's rule-7 pre-check compares the request with the unstripped grant authority; one derivation is therefore counted under an unreleased reservation, which the witness asserts (refunding it fails the witness)."
+  },
+  {
+   "id": "continuation.ica-transport.conveyed-copy-only",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "the delegation constraints at this exchange apply at the depth counted above, `act` attributes the same actors, and that profile's depth reset does not apply",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a continuation grant that conveys no delegation, the next actor is still counted from the approved agent (a second delegate atop the first is depth 2 and refused above max_depth 1; the first delegate atop itself stays at depth 1), and act names the delegate over the approved agent"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: capping the Mission delegation depth at 1 fails the depth-2 witness; replacing the onward act with the current actor alone fails the attribution witness."
   },
   {
    "id": "continuation.async-transport.handle-audience",
@@ -38813,6 +39235,82 @@
    "notes": "#1277 review finding 2 (D454); #1275 (D457). Retained as authorization-server state (MissionRecord.eligibility_provenance, persisted with the record, never on the wire); the endpoint witness approves through PAR and the interaction and reads the origin back from the store. Direct approval and child creation are witnessed; expansion, progressive drawdown, template dispatch, governed-policy activation and carryover replacement record it through the same derivation but have no witness here. Later exchanges evaluate the approved entry and its origin, not the presented token: a later ICA exchange decides the next hop against the approved entry and the current policy although the grant it continues conveyed no `delegation` (#1374), a policy change between designation and redemption is enforced at redemption, and the policy is asked again at the ICA mint. Proven by disabling the code it covers: not persisting the provenance, caching the policy decision, skipping the gate at the mint or at redemption, or resolving an origin by resource each fails its witness."
   },
   {
+   "id": "resource-access.delegate-eligibility.cross-domain-current-hop",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "Eligibility for the grant itself is decided as above, against the approved entry in the Mission Record.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated cross-domain grant's eligibility is decided against the approved entry and its retained provenance, and the grant's conveyed copy restricts only onward delegation: a policy-origin entry the policy admits is issued without delegation, and the next hop is decided against the approved entry and the current policy although the grant it continues conveyed none"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a later exchange is decided against the approved entry, not the grant's conveyed copy: the next hop is admitted only while the policy permits",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: answering the policy question without asking it fails the later-exchange witness (the denied delegate is admitted); applying the omission before the gate fails the admitted witnesses."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.cross-domain-no-new-delegation",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "Neither stage lets an entry without `delegation` in the Mission Record appear in a delegated token.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approved entry without delegation is never carried in a delegated cross-domain grant, whatever the delegation-authorization policy, while the conveyed copy's omission of delegation does not by itself exclude an entry the gate admits"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 carries the non-delegable entry and fails the witness."
+  },
+  {
    "id": "resource-access.delegate-eligibility.matcher-conjunction",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "matching-allowed-delegates",
@@ -39720,6 +40218,47 @@
     }
    ],
    "notes": "#1310 (D480). Before it the runtime validator checked only that resource is a string, though the advertised schema says format uri. Proved by mutation, each guard alone: removing the schema validator's check fails the PAR witness and both intake unit tests; removing the loader check fails the four loader witnesses; removing the derivation guard fails both derivation witnesses; a grammar that admits a fragment fails every seam's refusal list."
+  },
+  {
+   "id": "resource-access.type.absent-delegation-judged-on-evaluated-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "This applies to the entry the authorization server evaluates for a delegated token, not to a copy a cross-domain grant conveys without the member",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry without delegation in the Mission Record never appears in a delegated token, while a delegable approved entry the gate admits appears in a delegated cross-domain grant as a copy without delegation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the non-delegable witness; applying the omission before the gate fails the admitted witnesses."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
