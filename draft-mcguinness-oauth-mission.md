@@ -2654,8 +2654,8 @@ The following is an example of a decoded Mission-bound token payload:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606405,
+  "exp": 1793606705,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
     { "type": "mission_resource_access",
@@ -3171,7 +3171,7 @@ projection omits them.
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "s6BhdRkqt3",
   "aud": "https://erp.example.com",
-  "exp": 1797840300,
+  "exp": 1793606705,
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
@@ -3195,9 +3195,9 @@ projection omits them.
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "proposal_hash":
-      "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo",
+      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
     "state": "active"
   }
 }
@@ -5494,8 +5494,9 @@ This appendix follows one Mission in a single trust domain through
 Mission creation, token issuance, and resource server enforcement.
 It is illustrative and adds no requirements. The OAuth steps follow
 this document; the identity setup follows
-{{I-D.draft-ietf-wimse-aims}}. Identifiers and hash values are
-illustrative, not computed from the displayed JSON.
+{{I-D.draft-ietf-wimse-aims}}. Identifiers are illustrative; the hash
+values are computed over the displayed objects
+({{integrity-anchors}}).
 
 The example uses the baseline issuance path: stateless enforcement
 bounded only by token lifetime. Stage 3 notes where the optional
@@ -5594,11 +5595,11 @@ The AS (`as.example.com`) validates both, derives this Authority Set
 After approval, the AS records Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` in the `active` state with
 `authority_hash`
-`sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ`,
+`sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM`,
 `intent_hash`
-`sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY`, and
+`sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0`, and
 `proposal_hash`
-`sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo`.
+`sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo`.
 
 ## Stage 2: Mission-Bound Token Issuance {#stage-2-mission-bound-token-issuance}
 
@@ -5648,8 +5649,8 @@ The following is an example of the decoded access token payload:
   "sub": "user_3p2q8mN1a0kV7tR",
   "aud": "https://erp.example.com",
   "client_id": "s6BhdRkqt3",
-  "iat": 1797840000,
-  "exp": 1797840300,
+  "iat": 1793606405,
+  "exp": 1793606705,
   "jti": "at_9Kp2vN7sR1tY8mZ3qX5b",
   "authorization_details": [
     { "type": "mission_resource_access",
