@@ -3203,8 +3203,9 @@ projection omits them.
 }
 ~~~
 
-The following is an example of the response for the same token after
-the Mission is revoked ({{composite-active}}):
+The following is an example of the response, after the Mission is
+revoked, for an unexpired token the AS issued on refresh before the
+revocation ({{composite-active}}):
 
 ~~~ json
 {
@@ -3213,11 +3214,11 @@ the Mission is revoked ({{composite-active}}):
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
-      "terminated_at": "2026-11-02T08:30:00Z"
+      "terminated_at": "2026-11-02T08:53:20Z"
     }
   }
 }
