@@ -841,6 +841,8 @@ Intent carries only the three required members, as in the Submission
 envelope example ({{submission-via-par}}). The following summary is
 informative; the member definitions after it are authoritative.
 
+## Intent Members {#intent-members}
+
 | Member | Required | What the AS does with it |
 | --- | --- | --- |
 | `goal` | yes | Records it and renders it to the Approver as inert text; never interprets it |
@@ -1472,6 +1474,8 @@ apparatus is type-agnostic toward every supported type:
 - evaluating the entry against a concrete request is the runtime
   layer's responsibility ({{runtime-boundary}}), not the AS's.
 
+### Declared Transformation Capabilities {#transformation-capabilities}
+
 The subset rule is fully defined only for a type whose specification
 defines it. For every supported type, the AS declares three
 independent transformation capabilities; understanding one
@@ -1523,6 +1527,8 @@ three OPTIONAL boolean members, `narrowing`, `delegation`, and
 `projection`; an absent member leaves that capability undeclared by
 this carrier, falling through to the next carrier in the order
 above.
+
+### Policy-Language Types {#policy-language-types}
 
 Type-agnosticism lets policy-language profiles compose without this
 document defining them: for example, an entry carrying a Cedar policy
@@ -3975,7 +3981,9 @@ that adjudicated the instance. A companion profile MUST NOT flatten a
 policy's or an Approval Governance Record's assertion set into a
 single principal member.
 
-**Activation policy commitment.** Where a standing-consent basis lets
+### Activation Policy Commitment {#activation-policy-commitment}
+
+Where a standing-consent basis lets
 a separate policy artifact adjudicate activation (a dispatch,
 drawdown, or child-creation policy, rather than the consented object
 itself), the object the accountable human consented to MUST carry
@@ -3997,7 +4005,9 @@ Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
 does not apply.
 
-**Standing-consent recency.** A deployment can declare a maximum
+### Standing-Consent Recency {#standing-consent-recency}
+
+A deployment can declare a maximum
 standing-consent age (a recency ceiling), overall or per
 consequence class. Where a declared ceiling applies, the activating
 issuer MUST refuse to activate an instance whose `approved_at` is
@@ -4583,6 +4593,8 @@ Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class.
 
+## Conformance Roles {#conformance-roles}
+
 An implementation conforms in one of three roles.
 
 A **Mission Issuer** (the authorization server) implements the core
@@ -4636,6 +4648,8 @@ A **Mission Client** implements the client surfaces:
   or the `mission` claim's `id` ({{mission-response-parameters}}),
   treating it as a reference, not a credential.
 
+## Optional Capabilities {#optional-capabilities}
+
 Beyond these mandatory roles, an implementation can additionally claim
 three OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
@@ -4676,6 +4690,8 @@ defines an independent check, by a resource server or policy decision
 point, that a token's carried authority is a subset of the complete
 approved Authority Set; conformance to this document does not
 require it.
+
+## Claiming Conformance {#claiming-conformance}
 
 A conforming implementation names the optional capabilities it supports
 (for example, "Mission Issuer with Delegation and Cross-Domain"); each
@@ -6825,6 +6841,11 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1404): Mission Intent, Conformance, Standing-Consent
+  Bases, and Authorization Details Types have subsections at their
+  existing paragraph boundaries; Standing-Consent Bases' two run-in
+  labels become its subsection headings. No requirement changes.
 
 - Editorial (#1401): Mission Authority, Mission-Bound Access Tokens,
   Resource Server Enforcement, and the Mission Record have
