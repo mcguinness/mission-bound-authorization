@@ -4583,6 +4583,8 @@ Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class.
 
+## Conformance Roles {#conformance-roles}
+
 An implementation conforms in one of three roles.
 
 A **Mission Issuer** (the authorization server) implements the core
@@ -4636,6 +4638,8 @@ A **Mission Client** implements the client surfaces:
   or the `mission` claim's `id` ({{mission-response-parameters}}),
   treating it as a reference, not a credential.
 
+## Optional Capabilities {#optional-capabilities}
+
 Beyond these mandatory roles, an implementation can additionally claim
 three OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
@@ -4676,6 +4680,8 @@ defines an independent check, by a resource server or policy decision
 point, that a token's carried authority is a subset of the complete
 approved Authority Set; conformance to this document does not
 require it.
+
+## Claiming Conformance {#claiming-conformance}
 
 A conforming implementation names the optional capabilities it supports
 (for example, "Mission Issuer with Delegation and Cross-Domain"); each
