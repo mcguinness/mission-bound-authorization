@@ -445,11 +445,12 @@ against the complete set.
 
 This chain is the first of two enforcement layers, and a deployment
 can run it alone: a resource server need not be Mission-aware unless
-it receives delegated tokens ({{rs-enforcement}}). The chain provides
-task-bound issuance, auditability, and a revocation gate over future
-derivation. Every token carries a subset of the approved Authority
-Set ({{subset}}) that no resource server over-grants on
-({{scope-projection}}).
+it receives delegated tokens ({{rs-enforcement}}). A Mission-unaware
+resource server that authorizes only from `scope` operates within the
+Mission only where the AS establishes that its scope projection and
+the resource's independent controls cannot over-grant
+({{scope-projection}}). The chain provides task-bound issuance,
+auditability, and a revocation gate over future derivation.
 
 The chain does not evaluate individual actions, so token lifetime
 and narrow authority bound the exposure between issuance and use.
@@ -469,13 +470,9 @@ times. The following table lists where each implementer reads next.
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
 | Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
-
-On this starting path, a scope-only resource is eligible only when the
-AS establishes that its scope projection and the resource's
-independent controls cannot over-grant ({{scope-projection}}).
 
 Some duties apply only when their condition holds:
 
