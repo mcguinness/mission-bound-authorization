@@ -67,6 +67,7 @@ informative:
   RFC9493:
   RFC9635:
   RFC8628:
+  RFC8792:
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
@@ -648,7 +649,9 @@ token on its next request after revocation, through the composite
 {::boilerplate bcp14-tagged}
 
 All JSON shown in this document is non-normative and illustrative; the
-member definitions in the surrounding text are authoritative.
+member definitions in the surrounding text are authoritative. An
+example line too long for the page is folded with the single backslash
+strategy of {{RFC8792}}.
 
 Agent (Client):
 : The OAuth client acting for the Mission's Subject, identified by
@@ -934,12 +937,15 @@ those a companion profile the AS implements defines
 The following is an example of a Mission Intent:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
-  "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+  "goal": "Reconcile Q3 invoices and post adjustments of at most \
+    USD 500 per journal entry.",
   "target_resources": ["https://erp.example.com"],
   "task_bounds": [
     "Read only invoices issued in 2026-Q3.",
-    "Post journal entries under $500."
+    "Post journal entries of at most USD 500 each."
   ],
   "purpose": "urn:example:purpose:reconcile",
   "expires_at": "2026-12-31T23:59:59Z"
@@ -1052,9 +1058,12 @@ compact Intent and one evidence entry of an illustrative,
 deployment-defined type:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
@@ -5505,13 +5514,16 @@ through PAR ({{submission-via-par}}), carrying the Mission Intent and
 no evidence:
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "intent": {
-    "goal": "Reconcile Q3 invoices and post adjustments under $500.",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "target_resources": ["https://erp.example.com"],
     "task_bounds": [
       "Read only invoices issued in 2026-Q3.",
-      "Post journal entries under $500."
+      "Post journal entries of at most USD 500 each."
     ],
     "purpose": "urn:example:purpose:reconcile",
     "expires_at": "2026-12-31T23:59:59Z"
