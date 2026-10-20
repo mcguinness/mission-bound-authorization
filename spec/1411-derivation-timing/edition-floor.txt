@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-20T19:04:49Z
-Source repository commit: 2f6db5fdebba58913ce263864a5615f7c9cfcb2e
+Generated: 2026-10-20T21:24:52Z
+Source repository commit: bae1df50e45cfea1d854aaffabf4ddd70151281f
 Member count: 7
 
 Reading order:
@@ -8620,9 +8620,9 @@ Table of Contents
    3.  Validate any authority proposal: refuse an entry of a type the AS
        does not support, or one that fails its type's definition or a
        schema advertised for it or established out of band, with
-       invalid_authorization_details, and a proposed entry whose
-       resource is not among the Intent's target_resources, with
-       invalid_request (Section 4.3).
+       invalid_authorization_details, and a proposed entry that carries
+       a resource member whose value is not among the Intent's
+       target_resources, with invalid_request (Section 4.3).
 
    4.  Compute the provisional intent_hash over the intent object
        (Section 14.1).
@@ -8639,10 +8639,10 @@ Table of Contents
        presented entry under its type's rules (Section 4.4).
 
    7.  Apply admission policy and derive the Authority Set independently
-       (Section 5), including, where a proposal was submitted, that each
-       derived entry is a same-type subset of a proposed entry
-       (Section 4.3), and each entry's target_resources membership
-       (Section 5.1).
+       (Section 5), including the target_resources membership of each
+       entry that carries a resource member (Section 5.1) and, where a
+       proposal was submitted, that each derived entry is a same-type
+       subset of a proposed entry (Section 4.3).
 
    8.  Render the Intent, the Authority Set, and the material verified
        provenance for approval; a change to any of them before the
