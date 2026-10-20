@@ -35,8 +35,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "cb2d17c9638dc6278fb1dcdbdfa7abfe81c58745",
-    "content_sha256": "b9ca6eb7a58c14c8326c0d06aa31a5125b9605daf1490abd904e39bb0bdeaccf"
+    "revision": "93ec2cba54f5a58f8fb48255c25807f2130e48e2",
+    "content_sha256": "f12ed2bf343eaf2802f0b234b536e21700ba31fd84cc9e1e3ffe2194a4e095db"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "5a1e06044ef2d0ab5e1e29cdb4ec7efeff29e920",
@@ -2063,12 +2063,13 @@
     "capability": "cross-domain.projection"
    },
    "profiles": [],
-   "surface": "derivation",
+   "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a requesting client the destination-scoped mapping does not cover at the target Resource AS, or covers with two distinct registrations, is refused (invalid_target) rather than answered with the client's identifier at the originating AS; entries naming the same registration count once"
+    "normative": "a requesting client the destination-scoped mapping does not cover at the target Resource AS, or covers with two distinct registrations, is refused (invalid_target) rather than answered with the client's identifier at the originating AS; entries naming the same registration count once",
+    "local": "witnessed at the token endpoint on the continuation exchange (ICA -02 Section 5.5.5): a missing or an ambiguous mapping returns HTTP 400 with invalid_target, and the Mission records no new hop and no derivation"
    },
-   "level": "unit",
+   "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
@@ -2088,8 +2089,15 @@
      "name": "resolveDestinationClientId (@spec cross-domain#cross-domain-grant, #1166, D510) > entries that name the same registration count once",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@spec id-continuation-assertion) > (f6) the onward grant names the client's registration at the target RAS; a missing or ambiguous mapping is invalid_target, with no hop and no derivation (#1166, D510; ICA -02 5.5.5)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "The resolver tests witness the missing, ambiguous and duplicate-entry cases of the mapping; the continuation test witnesses the token-endpoint error mapping. The reference implementation has no HTTP surface for the base refresh-token-mode grant exchange (the demo calls issueCrossDomainGrant directly), so the continuation exchange is the endpoint witness."
   },
   {
    "id": "cross-domain.error-responses.unresolved-subject-invalid-request",
