@@ -254,6 +254,7 @@
    "progressive.ceiling-drawdown",
    "progressive.drawdown-derivation-limits",
    "cross-domain.projection",
+   "cross-domain.resource-as-delegated-issuance",
    "approved-set-verification.verification",
    "authzen.runtime-evidence",
    "authzen.obligations",
@@ -36306,7 +36307,7 @@
     "kind": "capabilities",
     "all_of": [
      "cross-domain.projection",
-     "core.delegation"
+     "cross-domain.resource-as-delegated-issuance"
     ]
    },
    "profiles": [],
@@ -36318,7 +36319,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1180, D378. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens. redeem() mints one local token per grant, and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own, which applies the issuance profile's delegation (core.delegation) in the partner domain; hence the all_of gate."
+   "notes": "#1180, D378. The clause binds only a Resource AS that issues delegated tokens of its own, so the row is gated on cross-domain.resource-as-delegated-issuance, which no deployment claims. core.delegation does not gate it, because the reference implements that capability at the originating AS, not at the Resource AS. The reference Resource AS lacks the capability: in src/services/ras/src/index.ts, redeem() mints one local token per grant and returns only access_token and expires_in, metadata() advertises only the JWT-bearer grant, and the class has no token exchange or other delegation path. No witness exists, so the row stays todo."
   },
   {
    "id": "cross-domain.resource-as.local-token-exp-bounded-by-grant",
