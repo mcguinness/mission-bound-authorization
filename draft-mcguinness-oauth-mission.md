@@ -382,6 +382,16 @@ OAuth does not define a task record that links approval of a task to
 every grant obtained for it. Without that linkage, withdrawing task
 approval need not stop issuance under those grants.
 
+No existing OAuth object fills that role ({{why-a-new-object}}); an
+`authorization_details` entry ({{RFC9396}}), for example, expresses
+authority but not the task it serves or a lifecycle of its own. A
+Mission, held by the AS beside the grant, does. It commits the
+disclosed task with its approved authority and has an identifier and
+a lifecycle independent of any grant. It can be revoked by that
+identifier through an authenticated means, independent of possession
+of any token ({{revocation}}), and a token derived from it by Token
+Exchange identifies the same Mission ({{grant-binding}}).
+
 A Mission is created and used in a single chain:
 
 1. **Submit.** The client submits a structured **Mission Intent**
