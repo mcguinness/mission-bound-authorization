@@ -587,32 +587,43 @@ occur.
 # Evaluation and Atomic Commitment {#atomic-commitment}
 
 Where a deployment records the Approval Governance Record for an
-approval, the record and the Mission are one commit: the issuer
-evaluates the assertions under the referenced policy, and the
-Mission Record MUST NOT be created `active` unless the evaluation's
-`decision` is `approved` and the signed record persists atomically
-with the Mission's creation. Failure to authenticate the
-contributing assertions, to complete the evaluation, or to persist
-the record MUST prevent activation; there is no Mission whose
-governance record was meant to exist and does not. A governance
-evaluation that denies creates no Mission and no committed record:
-negative assertions retained inside a committed record document
-dissent ({{assertion-requirements}}), and a wholly declined
-approval's evidence surface is consent evidence's declined outcome
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which
-exists without a Mission Record. The issuer signs
-the evaluated record ({{envelope}}) and persists the signed form in
-the same commit as the Mission's creation; signing follows
-evaluation and precedes persistence, never the reverse.
+approval, the record and the Mission are one commit. Within that commit,
+the issuer:
 
-Where the record carries `approval_context_commitment` ({{record}}),
-the issuer computes it in this same commit, from the Mission Record
-being created, and before signing. A value computed after the commit
-is not covered by the record's signature and MUST NOT be added to a
-committed record.
+1. validates the assertions ({{assertion-requirements}});
+2. evaluates them under the referenced policy version;
+3. where the record carries `approval_context_commitment`
+   ({{record-members}}), computes it from the Mission Record being
+   created;
+4. signs the evaluated record ({{envelope}}); and
+5. persists the signed record in the same commit as the Mission's
+   creation.
 
-A committed record is immutable. A subsequent governance action, a
-re-review or an incident finding, is a new record about a new event,
+Signing follows evaluation and precedes persistence, never the reverse,
+and `approval_context_commitment` is computed before signing. A value of
+`approval_context_commitment` computed after the commit is not covered
+by the record's signature and MUST NOT be added to a committed record.
+
+Where a deployment records the Approval Governance Record for an
+approval, the Mission Record MUST NOT be created `active` unless the
+evaluation's `decision` is `approved` and the signed record persists
+atomically with the Mission's creation. Failure to authenticate the
+contributing assertions, to complete the evaluation, or to persist the
+record MUST prevent activation; there is no Mission whose governance
+record was meant to exist and does not.
+
+A governance evaluation that denies creates no Mission and no committed
+record:
+
+- negative assertions retained inside a committed record document
+  dissent ({{assertion-validation}}); and
+- a wholly declined approval's evidence surface is consent evidence's
+  declined outcome
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which
+  exists without a Mission Record.
+
+A committed record is immutable. A subsequent governance action, such as
+a re-review or an incident finding, is a new record about a new event,
 never an edit.
 
 # Policy-Approval Recency {#policy-approval-recency}
