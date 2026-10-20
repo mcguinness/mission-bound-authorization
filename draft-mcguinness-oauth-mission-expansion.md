@@ -71,7 +71,7 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-gerber-oauth-deferred-token-response:
+  I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-mission-approval:
     title: "Mission Deferred Approval for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-approval.html
@@ -354,7 +354,7 @@ Successor activation:
    nothing is refused.
 4. An expansion always widens authority, so a fresh consent supplies
    the broader authority, obtained through the deferred token response
-   ({{I-D.draft-gerber-oauth-deferred-token-response}}) or the
+   ({{I-D.draft-ietf-oauth-deferred-token-response}}) or the
    deployment's interactive approval ({{completion-modes}}). The
    successor's authority comes only from that consent.
 5. When the successor's authority is issued, the successor activates
@@ -522,7 +522,7 @@ The following is an example of an expansion request in the scenario of
 {{example}}, with client authentication omitted (line breaks for
 display purposes only). The client also opts in to deferred completion
 with the deferred token response's `completion_mode` parameter
-({{Section 4.1 of I-D.draft-gerber-oauth-deferred-token-response}}):
+({{Section 4.1 of I-D.draft-ietf-oauth-deferred-token-response}}):
 
 ~~~ http
 POST /token HTTP/1.1
@@ -747,7 +747,7 @@ possession-proven token exchange ({{expansion-request}}).
 Deferred:
 : When approval is asynchronous and the exchange opts in, the Mission
   Issuer returns the deferred token response
-  ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
+  ({{I-D.draft-ietf-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
   `authorization_pending` with a `deferral_code`, its `expires_in`, and
   a polling `interval`. The Approver acts on the deployment's
@@ -825,7 +825,7 @@ Cache-Control: no-store
 {: #fig-deferred title="Deferred Response"}
 
 The following is an example of the client's poll with the deferred grant
-type ({{Section 5.5 of I-D.draft-gerber-oauth-deferred-token-response}})
+type ({{Section 5.5 of I-D.draft-ietf-oauth-deferred-token-response}})
 and a DPoP proof, with client authentication omitted (line breaks for
 display purposes only):
 
@@ -2355,7 +2355,7 @@ already-registered token-exchange parameters `subject_token`,
 `subject_token_type`, `requested_token_type`, `actor_token`, and
 `actor_token_type`; none of these needs registration by this document.
 The deferred completion mode uses the deferred token response
-({{I-D.draft-gerber-oauth-deferred-token-response}}) and registers
+({{I-D.draft-ietf-oauth-deferred-token-response}}) and registers
 nothing here.
 
 The `predecessor` cross-check is carried in the token exchange request

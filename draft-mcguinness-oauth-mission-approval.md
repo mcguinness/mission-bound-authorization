@@ -29,7 +29,7 @@ author:
 
 normative:
   RFC9126:
-  I-D.draft-gerber-oauth-deferred-token-response:
+  I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -126,7 +126,7 @@ a Proposed Mission and must wait, sometimes for a long time, for a
 decision.
 
 This document supplies that. It profiles OAuth Deferred Token Response
-{{I-D.draft-gerber-oauth-deferred-token-response}} (the "deferred
+{{I-D.draft-ietf-oauth-deferred-token-response}} (the "deferred
 substrate") so a Mission approval can be deferred and polled.
 
 A reviewer that will grant only a narrowed subset of the proposed
@@ -154,14 +154,14 @@ natively asynchronous and this re-sequencing is not needed.
 
 This profile tracks an in-progress substrate. It depends normatively on
 OAuth Deferred Token Response
-({{I-D.draft-gerber-oauth-deferred-token-response}}), an early
-Internet-Draft that is not ratified and whose details may change, so
+({{I-D.draft-ietf-oauth-deferred-token-response}}), an OAuth working
+group Internet-Draft whose details may change before publication, so
 this profile is not yet a stable interface and will track the substrate
 as it evolves. Synchronous Mission approval, which needs only the
 issuance profile, is the stable path; deploy deferred approval for
-evaluation rather than as a stable interface. This document is
-Standards Track despite that posture because it tracks its substrate
-and stabilizes with it.
+evaluation rather than as a stable interface. This document is Standards
+Track despite that posture because it tracks its substrate and
+stabilizes with it.
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
@@ -191,7 +191,7 @@ A Mission approval MAY be deferred. The client submits the Mission
 Intent through PAR as the issuance profile requires, and includes
 `deferred` among the `completion_mode` values on the resulting token
 request, opting in to the deferred substrate
-({{I-D.draft-gerber-oauth-deferred-token-response}}). When the Mission
+({{I-D.draft-ietf-oauth-deferred-token-response}}). When the Mission
 Issuer cannot decide the approval immediately, for example because it
 routes the Proposed Mission to a human reviewer, it returns the
 substrate's deferred response (`authorization_pending` with a
@@ -210,7 +210,7 @@ to the asynchronous review surface:
 
 1. The client submits the Proposed Mission via PAR {{RFC9126}} and the
    authorization request completes into a deferred state per the
-   deferred substrate ({{I-D.draft-gerber-oauth-deferred-token-response}}).
+   deferred substrate ({{I-D.draft-ietf-oauth-deferred-token-response}}).
 2. Before approval only the pending request exists. The authorization
    artifact represents a pending authorization, never authority, and no
    Mission exists. A `deferral_code` and any PAR `request_uri` are
@@ -306,7 +306,7 @@ effective-expiry recheck moves it to `denied`, never `approved`
 `expired`
 ({{pending-staleness}}), and client cancellation under the deferred
 substrate moves it to `cancelled`
-({{I-D.draft-gerber-oauth-deferred-token-response}}). `approved`,
+({{I-D.draft-ietf-oauth-deferred-token-response}}). `approved`,
 `denied`, `expired`, and `cancelled` are terminal.
 
 ~~~ text
@@ -423,9 +423,9 @@ Consent evidence:
   commits.
 
 Shaping:
-: A client-side shaper ({{I-D.draft-mcguinness-mission-shaping}})
-  narrows the Mission Intent before submission, which reduces the
-  chance a deferred review is refused. After an `access_denied` resolution, the
+:  A client-side shaper ({{I-D.draft-mcguinness-mission-shaping}})
+  narrows the Mission Intent before submission, which reduces the chance
+  a deferred review is refused. After an `access_denied` resolution, the
   shaper constructs the fresh, narrower Mission Intent the client
   resubmits.
 
@@ -494,10 +494,11 @@ Cache-Control: no-store
 
 The token carries the `mission` claim as the issuance profile defines
 it; the response also surfaces the optional `mission_id` parameter
-({{I-D.draft-mcguinness-oauth-mission}}) for correlation. Had `alice` approved only a subset, the deferral would
-resolve to `access_denied` and the agent would submit a fresh, narrower
-Mission Intent, unless the deployment runs the experimental revision
-companion ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}).
+({{I-D.draft-mcguinness-oauth-mission}}) for correlation. Had `alice`
+approved only a subset, the deferral would resolve to `access_denied`
+and the agent would submit a fresh, narrower Mission Intent, unless the
+deployment runs the experimental revision companion
+({{I-D.draft-mcguinness-oauth-mission-approval-revision}}).
 
 A headless agent can drive the request itself. Agent
 `ledger-reconciler`, with no user present, submits its Mission Intent
@@ -570,7 +571,7 @@ same controls as other approval-event records.
 
 This document has no IANA actions. The `deferred` completion mode and
 the deferred grant type are registered by the deferred substrate
-({{I-D.draft-gerber-oauth-deferred-token-response}}).
+({{I-D.draft-ietf-oauth-deferred-token-response}}).
 
 --- back
 
