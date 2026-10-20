@@ -396,15 +396,12 @@ An Approval Governance Record is a JSON object. {{record-members}} and
 : OPTIONAL. A string. The Approval Context Commitment over the governed
   Mission's immutable creation facts ({{approval-context-commitment}}),
   in the encoded form {{conventions-and-definitions}} fixes. It is a
-  member of this record, never of the Mission Record: the profile adds
-  no Mission Record member ({{approval-context-computation}}). An issuer
-  that records it computes it in the same commit that creates the
-  Mission and persists this record, before the record is signed
-  ({{atomic-commitment}}), so the signed payload commits to it. Its
-  presence lets this record and another authenticated artifact
-  disclosing the same commitment be matched to one approval transaction
-  without either re-deriving the other's fields. A verifier checks it
-  against the Mission Record ({{envelope}}).
+  member of this record, never of the Mission Record
+  ({{approval-context-computation}}). An issuer that records it computes
+  it in the same commit that creates the Mission and persists this
+  record, before the record is signed ({{atomic-commitment}}), so the
+  signed payload commits to it. A verifier checks it against the Mission
+  Record ({{envelope}}).
 
 `envelope`:
 : REQUIRED. An object. Integrity protection over the members above, in
