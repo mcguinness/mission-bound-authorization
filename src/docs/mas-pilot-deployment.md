@@ -396,14 +396,15 @@ revocation seen at once on a fresh read and after the signed bound on a
 cached one, the server stopped and restarted, a source slower than the
 deadline).
 
-Gaps:
+Gaps, both owned by #1407 (Status read conformance):
 
 - **The envelope `sub`.** The reference signs the Mission's `client_id` (or
   a Lifecycle request's acting party) as `sub` for every caller. MAS
   §join-disclosure says the envelope `sub` identifies the requesting caller,
-  and Status consumer check 6 has the consumer require that. The resolver
-  does not check `sub`, and the reference is unchanged here; an owner ruling
-  decides which side moves.
+  and Status consumer check 6 has the consumer require that. A caller not
+  enrolled therefore still learns the Mission's `client_id` from `sub`, so
+  `mas.join-disclosure.not-to-others` stays `partial`. The resolver does not
+  check `sub`.
 - **The request shape.** The reference Status operation is
   `GET /missions/{id}/status` with `audience` and `nonce` as query
   parameters and the `x-service-token` stand-in, and its metadata advertises
@@ -428,8 +429,9 @@ Gaps:
    to an administered Resource-policy store.
 5. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
    demo's join documents no contract); the `mas.enterprise` rows stay `todo`.
-   `mas.join-disclosure.members` and `mas.join-disclosure.not-to-others` are
-   `tested` at the Controller role on §10's Join Disclosure tests; the join's
+   `mas.join-disclosure.members` is `tested` and
+   `mas.join-disclosure.not-to-others` `partial` (the envelope `sub`, #1407),
+   both at the Controller role on §10's Join Disclosure tests; the join's
    rule 2 (resolve at the MAS) has no row of its own yet, and its PDP-role
    witness is the rest of slice 4.
 

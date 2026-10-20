@@ -47925,7 +47925,7 @@
     "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
@@ -47940,7 +47940,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the kernel's default observation. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. Open: the envelope sub of the reference response names the Mission's client_id for every caller, which the Status consumer check and Join Disclosure's 'sub still identifies the requesting caller' read differently; left unchanged and not asserted here, pending an owner ruling."
+   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the kernel's default observation. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. Partial: the reference response's envelope sub names the Mission's client_id for every caller, so a caller not enrolled still learns the client the mission object withholds, contrary to Join Disclosure's 'sub still identifies the requesting caller' and Status consumer check 6. Tested once the envelope sub names the requesting caller (#1407)."
   },
   {
    "id": "mas.join-inputs.pep-carries-member",
