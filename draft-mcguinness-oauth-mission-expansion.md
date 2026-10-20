@@ -396,26 +396,24 @@ them.
 To expand a predecessor Mission, the requester MUST prove possession of
 the predecessor Mission's authority through a sender-constrained proof,
 and a reusable bearer refresh credential MUST NOT be the carrier of
-that proof. This is the abstract requirement expansion rests on, stated
-once and independent of any wire binding.
+that proof.
 
-On the OAuth wire this document binds that requirement to an {{RFC8693}}
-token exchange at the token endpoint ({{submission}}), in which the
-predecessor's own sender-constrained Mission-bound access token is the
-`subject_token` and possession is proven against that token's
-confirmation key ({{request-binding}}). The Mission Authority Server
-profile ({{I-D.draft-mcguinness-mission-authority-server}}) binds the
-same abstract requirement to an authenticated-client submission on its
-token-less surface; the two are peer bindings of one requirement.
+This document binds that requirement to an {{RFC8693}} token exchange
+at the token endpoint ({{submission}}): the predecessor's own
+sender-constrained Mission-bound access token is the `subject_token`,
+and possession is proven against that token's confirmation key
+({{request-binding}}). The Mission Authority Server profile
+({{I-D.draft-mcguinness-mission-authority-server}}) binds the same
+requirement to an authenticated-client submission on its token-less
+surface; the two are peer bindings of one requirement.
 
 ## Token Exchange Request {#submission}
 
-A client initiates an expansion as an {{RFC8693}} token exchange at the
-token endpoint. The request carries:
+The client sends an {{RFC8693}} token exchange request to the token
+endpoint with the following parameters:
 
 `grant_type`:
-: REQUIRED. `urn:ietf:params:oauth:grant-type:token-exchange`, the
-  {{RFC8693}} token-exchange grant type.
+: REQUIRED. `urn:ietf:params:oauth:grant-type:token-exchange`.
 
 `requested_token_type`:
 : REQUIRED. `urn:ietf:params:oauth:token-type:access_token`. This value
@@ -426,9 +424,8 @@ token endpoint. The request carries:
 
 `subject_token`:
 : REQUIRED. The predecessor Mission's sender-constrained Mission-bound
-  access token. The Mission Issuer resolves the predecessor from this
-  token ({{request-binding}}); this token, not any identifier, selects
-  the predecessor authoritatively.
+  access token. This token, not any identifier, selects the predecessor
+  authoritatively ({{request-binding}}).
 
 `subject_token_type`:
 : REQUIRED. `urn:ietf:params:oauth:token-type:access_token`. The
@@ -440,82 +437,80 @@ token endpoint. The request carries:
 `actor_token`:
 : OPTIONAL. A token identifying the acting agent, per {{RFC8693}}.
   Where it is absent, the request's client authentication identifies
-  the acting agent. This document carries the acting-agent identity; it
-  does not restructure any act chain. A successor Mission begins its own
-  act chain afresh under its own approval.
+  the acting agent. This document does not restructure any act chain:
+  a successor Mission begins its own act chain afresh under its own
+  approval.
 
 `actor_token_type`:
 : REQUIRED when `actor_token` is present, per {{RFC8693}}.
 
 `mission_intent`:
 : REQUIRED. The successor's Mission Intent Submission envelope, per
-  {{I-D.draft-mcguinness-oauth-mission}}: its `intent` is the
-  successor's Mission Intent, and its OPTIONAL `evidence` array
-  carries Intent Submission Evidence under that profile's dispatch,
-  refusal, and never-authority rules and those of
+  {{I-D.draft-mcguinness-oauth-mission}}. Its `intent` is the
+  successor's Mission Intent and describes the broadened task: the
+  `goal`, `target_resources`, `task_bounds`, and any other Mission
+  Intent member the successor needs, including the authority the
+  denied action required. Its OPTIONAL `evidence` array carries Intent
+  Submission Evidence under that profile's dispatch, refusal, and
+  never-authority rules and those of
   {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}. The
-  Intent describes the
-  broadened task: the `goal`, `target_resources`, `task_bounds`, and
-  any other Mission Intent member the successor needs, including the
-  authority the denied action required. The Mission Issuer derives the successor's
-  Authority Set from this Intent and bounds it by policy exactly as
-  for any Mission; this document adds no authority-derivation rule.
+  Mission Issuer derives the successor's Authority Set from this
+  Intent and bounds it by policy exactly as for any Mission; this
+  document adds no authority-derivation rule.
 
 `authorization_details`:
-: OPTIONAL. The successor's authority proposal: the standard
-  {{RFC9396}} parameter carried on the same token request, itself
-  ordinary {{RFC9396}} token-request usage. This parameter is this
-  exchange's proposal carriage, replacing the issuance profile's
-  PAR-only carriage rule; that profile's validation, derivation,
-  recording, and hashing semantics apply unchanged
-  ({{I-D.draft-mcguinness-oauth-mission}}). It is a proposal, never
-  authority: the Mission Issuer derives and bounds the successor's
-  Authority Set by policy regardless of what was proposed. A
-  successor created from an exchange carrying one records
+: OPTIONAL. The successor's authority proposal, an ordinary
+  {{RFC9396}} token request parameter. It is this exchange's proposal
+  carriage and replaces the issuance profile's PAR-only carriage rule;
+  that profile's validation, derivation, recording, and hashing
+  semantics apply unchanged ({{I-D.draft-mcguinness-oauth-mission}}).
+  It is a proposal, never authority: the Mission Issuer derives and
+  bounds the successor's Authority Set by policy regardless of what was
+  proposed. A successor created from an exchange carrying one records
   `proposed_authority` and `proposal_hash`.
 
 `predecessor`:
-: OPTIONAL. A string. The `mission_id` of the predecessor, a
-  non-authoritative cross-check and audit value only. The Mission Issuer
-  resolves and selects the predecessor from `subject_token`
+: OPTIONAL. A string: the `mission_id` of the predecessor, a
+  non-authoritative cross-check and audit value only. The Mission
+  Issuer resolves and selects the predecessor from `subject_token`
   ({{request-binding}}); when `predecessor` is present the Mission
   Issuer MUST verify it names that same resolved Mission and refuse a
-  mismatch with `invalid_grant`. `predecessor` does not select or
-  authorize a predecessor: a client MUST NOT be able to expand a Mission
-  merely by naming its `mission_id`.
+  mismatch with `invalid_grant`. The `predecessor` parameter does not
+  select or authorize a predecessor: a client MUST NOT be able to
+  expand a Mission merely by naming its `mission_id`.
 
 `creation_request_id`:
-: REQUIRED. The creation idempotency identifier: an ASCII string of at
-  most 255 octets, opaque to the Mission Issuer beyond equality, that
-  identifies this one Mission-creation operation across every
-  completion mode ({{creation-idempotency}}). At least 128 bits of
-  client-generated randomness is RECOMMENDED; a UUID {{RFC9562}}
-  satisfies this. The Mission Issuer MUST refuse an exchange missing
-  it with `invalid_request`.
+: REQUIRED. The creation idempotency identifier
+  ({{creation-idempotency}}): an ASCII string of at most 255 octets,
+  opaque to the Mission Issuer beyond equality, that identifies this
+  one Mission-creation operation across every completion mode. At
+  least 128 bits of client-generated randomness is RECOMMENDED; a UUID
+  {{RFC9562}} satisfies this. The Mission Issuer MUST refuse an
+  exchange missing it with `invalid_request`.
 
-The presence of `mission_intent` on a token exchange marks it as a
-Mission-creation exchange under this suite; an exchange whose
-`subject_token` resolves to a Mission and that carries no `child_actor`
-is an expansion. A token exchange carrying both a `predecessor`
-cross-check and the child-delegation profile's `child_actor`
+A `mission_intent` on a token exchange marks it as a Mission-creation
+exchange. An exchange whose `subject_token` resolves to a Mission and
+that carries no `child_actor` is an expansion. A token exchange
+carrying both a `predecessor` cross-check and the child-delegation
+profile's `child_actor`
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) MUST be
 refused with `invalid_request`: the operations do not combine.
 
 The possession proof of {{request-binding}} is presented only on the
 token endpoint's authenticated back channel and MUST NOT appear on any
-front channel. Where a deployment completes an expansion through its
-retained interactive approval ({{completion-modes}}), the front-channel
-approval ceremony carries only the consent decision; the predecessor
-binding and possession proof are established by the token exchange in
-every completion mode.
+front channel. The token exchange establishes the predecessor binding
+and the possession proof in every completion mode; an interactive
+completion's front-channel approval ceremony carries only the consent
+decision ({{interactive-handoff}}).
 
 ## Proving Possession of the Predecessor {#request-binding}
 
 The issuance profile resolves a Mission from the credential the client
 presents, never from a client-supplied `mission_id`
-({{I-D.draft-mcguinness-oauth-mission}}, grant binding). An expansion
-resolves the predecessor from the `subject_token` the client presents
-and proves possession against that token's own confirmation:
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Binding the Mission
+to the Grant"). An expansion resolves the predecessor from the
+`subject_token` the client presents and proves possession against
+that token's own confirmation:
 
 1. The Mission Issuer MUST resolve the predecessor Mission from
    `subject_token`, applying the issuance profile's token-to-Mission
@@ -536,42 +531,38 @@ and proves possession against that token's own confirmation:
 
 The confirmation key, not the identifier, authorizes the expansion. A
 client that does not hold the predecessor's Mission-bound access token
-and its sender-constraint key cannot present a valid `subject_token`
-and so cannot expand the predecessor. Establishing this at the token
-exchange, before any approval, means the Mission Issuer confirms the
-predecessor is real, active, and possessed before prompting an Approver,
-so expansion cannot drive approval prompts against another party's
-Mission.
+and its sender-constraint key cannot present a valid `subject_token`,
+so it cannot expand the predecessor. No expansion ticket or other new
+bearer credential is needed: the client proves possession of a
+credential it already holds.
 
-Stated as the eligibility rule rather than a consequence: this
-profile's expansion requires a sender-constrained Mission-bound access
-token to present, and a deployment that issues only bearer tokens for a
-Mission, or none, forgoes it. Nothing else is lost. Succession stays
-reachable through a fresh approval, a new Mission whose disclosure
-references the work it continues, since the successor's authority comes
-only from the fresh consent in any case; and the Subject or an
-administrator acts on the predecessor at the management plane
-regardless, whose standing is the authenticated principal, never a
-token's possession ({{I-D.draft-mcguinness-oauth-mission-status}}).
-
-The possession proof gates the proposal channel (who may put an
-expansion wearing this predecessor's name in front of the Approver, and
-who may trigger the atomic supersession), never the authority: no proof
-failure can widen anything.
+These checks run at the token exchange, before any approval, so the
+Mission Issuer confirms that the predecessor is real, active, and
+possessed before it prompts an Approver; expansion cannot drive
+approval prompts against another party's Mission. The proof gates the
+proposal channel (who may put an expansion of this predecessor in
+front of the Approver, and who may trigger the atomic supersession),
+never the authority: no proof failure can widen anything.
 
 The Mission Issuer MUST record each expansion presentation and count it
 toward the deployment's anomaly detection, and the per-predecessor rate
-limit ({{policy-probing}}) applies unconditionally. Because the
-`subject_token` is a short-lived, sender-constrained access token rather
-than a reusable refresh credential, presenting it for expansion carries
-no refresh rotation or replay-detection interaction: it is consumed only
-to resolve and bind the predecessor, never to refresh.
+limit ({{policy-probing}}) applies unconditionally. The `subject_token`
+is consumed only to resolve and bind the predecessor, never to
+refresh, so presenting it has no interaction with refresh token
+rotation or replay detection.
 
-Because expansion binds to the predecessor's Mission-bound access token,
-it needs no opaque expansion ticket or other new bearer: the predecessor
-is identified and authorized by a credential the client already holds
-and can prove possession of, and a client cannot name an arbitrary
-predecessor.
+Expansion therefore requires a sender-constrained Mission-bound access
+token. A deployment that issues only bearer tokens for a Mission, or
+none, forgoes expansion of that Mission, and nothing else:
+
+- the work can continue under a freshly approved Mission whose
+  disclosure references the work it continues, since a successor's
+  authority comes only from fresh consent in any case
+  ({{independent-continuation}}); and
+- the Subject or an administrator acts on the predecessor at the
+  management plane, whose standing is the authenticated principal,
+  never a token's possession
+  ({{I-D.draft-mcguinness-oauth-mission-status}}).
 
 ## Predecessor Must Be Active {#predecessor-active}
 
@@ -592,24 +583,23 @@ is not `active` MUST be refused with `invalid_request`
   {{I-D.draft-mcguinness-oauth-mission-status}} is deployed, the status
   is `predecessor_not_active`.
 
-Issuance gating in the issuance profile already refuses to derive from a
-non-active Mission; this rule extends the same gate to adjudicating an
+This rule extends the issuance profile's issuance gating, which
+refuses to derive from a non-active Mission, to adjudicating an
 expansion of one.
 
 # Adjudication {#adjudication}
 
-Adjudication of an expansion derives the successor's Authority Set from
-the submitted Mission Intent and bounds it by policy, exactly as for any
-Mission. The successor's authority is whatever this derivation and the
-completion of {{completion-modes}} yield; it is not the predecessor's
-authority plus a delta computed by this document. A deployment that
-wants the successor to retain the predecessor's authority expresses that
-authority in the expansion Mission Intent so the derivation reproduces
-it.
+The Mission Issuer derives the successor's Authority Set from the
+submitted Mission Intent and bounds it by policy, exactly as for any
+Mission. The successor's authority is what that derivation and the
+completion yield, not the predecessor's authority plus a delta;
+authority the successor keeps from the predecessor is expressed in
+the expansion Mission Intent ({{replacement}}).
 
-The Mission Issuer processes an expansion token exchange in the
-verification order of {{verification-order}} and completes it in one of
-the modes of {{completion-modes}}.
+The Mission Issuer evaluates an expansion in the order of
+{{verification-order}}, completes it in one of the modes of
+{{completion-modes}}, and activates the successor as
+{{successor-activation}} describes.
 
 ## Verification Order {#verification-order}
 
@@ -649,23 +639,26 @@ order, refusing on the first failure:
 On any failure the Mission Issuer MUST refuse and MUST NOT create a
 successor. A failure to which this document assigns a code, such as a
 `predecessor` mismatch or a denial reason ({{denial-reasons}}), uses
-that code. Otherwise, a `subject_token` or `actor_token` that is
-invalid, whose sender constraint is not proven, or that is unacceptable
-for the exchange is refused with `invalid_request`
-({{Section 2.2.2 of RFC8693}}); a required DPoP proof that is missing,
-or a DPoP proof that fails its own validation, with `invalid_dpop_proof`
-({{Section 5 of RFC9449}}); and any other failure with
-`invalid_request`, `invalid_grant`, or `invalid_token` as appropriate.
+that code. Otherwise:
+
+- a `subject_token` or `actor_token` that is invalid, whose sender
+  constraint is not proven, or that is unacceptable for the exchange is
+  refused with `invalid_request` ({{Section 2.2.2 of RFC8693}});
+- a required DPoP proof that is missing, or a DPoP proof that fails its
+  own validation, is refused with `invalid_dpop_proof`
+  ({{Section 5 of RFC9449}}); and
+- any other failure is refused with `invalid_request`,
+  `invalid_grant`, or `invalid_token` as appropriate.
+
 An authorization server that requires a DPoP nonce answers a proof
 lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce`
 header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`.
 
-The predecessor's Effective Authority Set, the right-hand side of step
-7's subset test, is the term {{I-D.draft-mcguinness-oauth-mission-status}}
-defines: the approved Authority Set after applying every issuer-held
-narrowing mechanism the deployment runs, including the containment
-profile's overlay where deployed
-({{I-D.draft-mcguinness-oauth-mission-containment}}).
+Step 7 compares against the predecessor's Effective Authority Set as
+{{I-D.draft-mcguinness-oauth-mission-status}} defines it: the approved
+Authority Set after applying every issuer-held narrowing mechanism the
+deployment runs, including the containment profile's overlay where
+deployed ({{I-D.draft-mcguinness-oauth-mission-containment}}).
 
 Authority the predecessor once held but containment or discharge has
 removed is therefore never `nothing_to_expand`: a request for it
@@ -682,23 +675,20 @@ name the discharged entry and the condition that discharged it
 
 ## Completion Modes {#completion-modes}
 
-An expansion completes in one of two modes, each obtaining the fresh
-approval the successor's authority requires. The deferred token
-response is a completion mode, not a replacement: both modes rest on
-the same possession-proven token exchange ({{expansion-request}}), and
-the interactive path is retained.
+An expansion completes in one of two modes. Both obtain the fresh
+approval the successor's authority requires, and both rest on the same
+possession-proven token exchange ({{expansion-request}}).
 
 Deferred:
 : When approval is asynchronous, the Mission Issuer returns the
-  deferred token response of the family's Mission Deferred Approval
-  substrate
+  deferred token response
   ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
-  `authorization_pending` with a polling `interval`. The Approver acts
-  on the deployment's asynchronous review surface; the client polls;
-  the poll resolves to the successor's access token on approval, or to
-  `access_denied` or `expired_token`. This document references that
-  substrate and does not redefine it.
+  `authorization_pending` with a `deferral_code` and a polling
+  `interval`. The Approver acts on the deployment's asynchronous review
+  surface, and the client polls. The poll resolves to the successor's
+  access token on approval, or to `access_denied` or `expired_token`.
+  This document references that substrate and does not redefine it.
 
 Interactive:
 : When approval is interactive, the Mission Issuer answers the token
@@ -709,53 +699,38 @@ Interactive:
   ({{I-D.draft-mcguinness-oauth-mission}}), and the client redeems the
   resulting authorization code for the successor's authority.
 
-This document defines no synchronous exchange completion for an
-expansion that takes fresh consent. An expansion response is a
-successor or a refusal, never a token derived under the predecessor: a
-request whose derived authority is a subset of the predecessor's own
-Effective Authority Set is refused with `nothing_to_expand`
-({{verification-order}}, {{denial-reasons}}). Policy-adjudicated
-expansion within a pre-consented authority ceiling is the experimental
-progressive authorization companion's concern
-({{I-D.draft-mcguinness-oauth-mission-progressive}}): an in-ceiling
-drawdown that passes that companion's policy-adjudication guards
-completes synchronously in the token-exchange response, returning the
-successor's access token, as that companion defines; one that falls
-back to a fresh human approval completes in one of the two modes
-above.
+This document defines no synchronous completion for an expansion that
+takes fresh consent. An expansion response is a successor or a
+refusal, never a token derived under the predecessor: a request whose
+derived authority is a subset of the predecessor's own Effective
+Authority Set is refused with `nothing_to_expand`
+({{verification-order}}, {{denial-reasons}}).
 
-Whichever mode completes, obtaining the fresh approval means the Mission
-Issuer authenticates the Approver against the published approval-
-authentication floor, obtains fresh consent for the
-derived Authority Set, satisfies any requested `acr_values`/`max_age`
-strength, and renders the
-Subject when the Approver is not the Subject, per the issuance profile's
-approval event. The consent disclosure MUST reflect the successor's
-authority being adjudicated. Expansion never widens authority without a
-new consent: if the Approver declines, no successor is created and the
+Policy-adjudicated expansion within a pre-consented authority ceiling
+belongs to the experimental progressive authorization companion
+({{I-D.draft-mcguinness-oauth-mission-progressive}}). An in-ceiling
+drawdown that passes that companion's policy-adjudication guards
+completes synchronously in the token-exchange response, which returns
+the successor's access token. One that falls back to a fresh human
+approval completes in one of the two modes above.
+
+In either mode, obtaining the fresh approval follows the issuance
+profile's approval event. The Mission Issuer:
+
+- authenticates the Approver against the published
+  approval-authentication floor;
+- obtains fresh consent for the derived Authority Set;
+- satisfies any requested `acr_values` or `max_age` strength; and
+- renders the Subject when the Approver is not the Subject.
+
+The consent disclosure MUST reflect the successor's authority being
+adjudicated. If the Approver declines, no successor is created and the
 predecessor is untouched ({{denial-reasons}}).
 
-At completion the Mission Issuer computes the successor's integrity
-anchors (`intent_hash`, `authority_hash`, and, where the exchange
-carried an authority proposal, `proposal_hash`) and, at the point the
-successor's authority is issued (the resolving poll for a deferred
-completion, the code redemption for an interactive completion, or the
-token-exchange response for a policy-adjudicated drawdown under the
-progressive authorization companion),
-creates the successor Mission record in the `active` state, with
-its `predecessor` member set
-({{predecessor-member}}), atomically with the predecessor's transition
-to `terminated` with reason `superseded` ({{superseded-state}}). Until
-the successor activates
-the predecessor remains `active`; an expansion that never completes,
-whose deferred approval lapses, or whose authorization code is never
-redeemed or expires, creates no successor and leaves the predecessor
-`active`.
-
-Whichever mode is selected, the exchange's `creation_request_id`
-reservation ({{creation-idempotency}}) makes completion recoverable:
-a client that loses the response recovers the one committed
-operation, never a second creation.
+In either mode, the exchange's `creation_request_id` reservation
+({{creation-idempotency}}) makes completion recoverable: a client that
+loses the response recovers the one committed operation, never a
+second creation.
 
 ## Interactive Handoff {#interactive-handoff}
 
@@ -776,22 +751,27 @@ error response ({{Section 5.2 of RFC6749}}), HTTP status 400, carrying:
 : A number: the handle's remaining lifetime in seconds, the approval
   window of the operation.
 
-A client tells the outcomes apart from the response alone: an issued
-token is the {{RFC8693}} success, `authorization_pending` is deferred
-completion ({{completion-modes}}), and `mission_interaction_required`
-is this handoff.
+The client tells the outcomes apart from the response alone:
+
+- an issued token is the {{RFC8693}} success;
+- `authorization_pending` is deferred completion ({{completion-modes}});
+  and
+- `mission_interaction_required` is this handoff.
 
 The client then sends a pushed authorization request
-({{Section 2 of RFC9126}}) carrying `mission_continuation`, with
-`response_type=code`, its `redirect_uri` and `state`, and the PKCE
-`S256` challenge or DPoP binding the issuance profile requires for an
-authorization code ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Approval"). It carries no `mission_intent` and no
-`authorization_details`: the token exchange is this operation's
-carriage ({{submission}}). Client authentication at the pushed
-authorization request endpoint binds the handle to the client, so the
-handle alone does not give its holder the operation. The Mission
-Issuer:
+({{Section 2 of RFC9126}}) carrying:
+
+- `mission_continuation`;
+- `response_type=code`, its `redirect_uri`, and `state`; and
+- the PKCE `S256` challenge or DPoP binding the issuance profile
+  requires for an authorization code
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval").
+
+It carries no `mission_intent` and no `authorization_details`: the
+token exchange is this operation's carriage ({{submission}}). Client
+authentication at the pushed authorization request endpoint binds the
+handle to the client, so the handle alone does not give its holder the
+operation. The Mission Issuer:
 
 - MUST refuse a pushed request whose `mission_continuation` is unknown,
   expired, or bound to another client, with `invalid_request`;
@@ -808,9 +788,10 @@ ceremony and one outcome. The Mission Issuer MUST serialize
 adjudication per operation and record at most one approval outcome
 for it: the first ceremony to conclude records approval or denial, and
 every other ceremony or pushed request for the continuation resumes
-from that recorded outcome instead of adjudicating again. When a
-`request_uri` expires, the user agent consumes it, or the authorization
-response is lost, the client pushes again with the same
+from that recorded outcome instead of adjudicating again.
+
+When a `request_uri` expires, the user agent consumes it, or the
+authorization response is lost, the client pushes again with the same
 `mission_continuation`:
 
 - before an outcome is recorded, the push starts no second
@@ -822,22 +803,61 @@ response is lost, the client pushes again with the same
   refuse the push with `access_denied`, and a `creation_request_id`
   retry receives `access_denied`.
 
-Redemption of an authorization code verifies the PKCE or DPoP binding
-and, in the same atomic step as activation, that the continuation has
-not expired and the recorded outcome is approval; it then activates
-the successor under the checks of {{reconciliation}}, atomically with
-the predecessor's supersession. The continuation's expiry is the
-operation's deadline, a clock separate from the authorization code's
-own lifetime ({{Section 4.1.2 of RFC6749}}): the Mission Issuer MUST
-refuse redemption at or after it with `invalid_grant`, and nothing
-activates. `subject_token` expiry during the window does not gate
-redemption ({{deferred-window}}). After activation the Mission Issuer MUST
-refuse a further pushed request for the continuation and MUST refuse
-redemption of any other code issued for the operation with
-`invalid_grant`. A lost redemption response is recovered by repeating
-the token exchange with the same `creation_request_id`
-({{creation-recovery}}); an operation whose continuation expired
-before activation answers that retry with `expired_token`.
+Redemption of an authorization code for the operation:
+
+1. verifies the PKCE or DPoP binding;
+2. verifies, in the same atomic step as activation, that the
+   continuation has not expired and the recorded outcome is approval;
+   and
+3. activates the successor under the checks of {{reconciliation}},
+   atomically with the predecessor's supersession
+   ({{successor-activation}}).
+
+The continuation's expiry is the operation's deadline, a clock
+separate from the authorization code's own lifetime
+({{Section 4.1.2 of RFC6749}}): the Mission Issuer MUST refuse
+redemption at or after it with `invalid_grant`, and nothing activates.
+`subject_token` expiry during the window does not gate redemption
+({{deferred-window}}).
+
+After activation the Mission Issuer MUST refuse a further pushed
+request for the continuation and MUST refuse redemption of any other
+code issued for the operation with `invalid_grant`. A lost redemption
+response is recovered by repeating the token exchange with the same
+`creation_request_id` ({{creation-recovery}}); an operation whose
+continuation expired before activation answers that retry with
+`expired_token`.
+
+## Successor Activation {#successor-activation}
+
+A successor activates at the point its authority is issued:
+
+- the resolving poll, for a deferred completion;
+- the code redemption, for an interactive completion; or
+- the token-exchange response, for a policy-adjudicated drawdown
+  under the progressive authorization companion
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+At completion the Mission Issuer computes the successor's integrity
+anchors: `intent_hash`, `authority_hash`, and, where the exchange
+carried an authority proposal, `proposal_hash`. At activation it
+creates the successor Mission record in the `active` state, with its
+`predecessor` member set ({{predecessor-member}}), atomically with the
+predecessor's transition to `terminated` with reason `superseded`
+({{superseded-state}}). The same atomic step applies:
+
+- the compare-and-set checks of {{reconciliation}};
+- the Subject and authority-source checks of {{successor-source}};
+- the effective-expiry check of {{successor-expiry}}; and
+- where Child Mission Carryover is approved, the carryover rules of
+  {{superseded-state}}.
+
+Until the successor activates, the predecessor remains `active`. An
+expansion that never completes, whose deferred approval lapses, or
+whose authorization code is never redeemed or expires, creates no
+successor and leaves the predecessor `active`. It therefore never
+strands the task's authority or cascade-terminates the predecessor's
+Child Missions.
 
 ## The Deferred Window {#deferred-window}
 
@@ -901,17 +921,20 @@ the ordinary cascade notice and per-child re-creation above remain the floor.
 
 The successor's effective `expires_at` follows the issuance profile's
 requested-versus-effective rule
-({{I-D.draft-mcguinness-oauth-mission}}). It MUST NOT be later than
-the expansion submission's `intent.expires_at`, the requested
-ceiling. It MUST NOT exceed the predecessor's
-`expires_at` unless the Mission Issuer's policy explicitly permits
-extension and the extension is disclosed to the Approver at the
-expansion consent event, which records the exact approved extension
-ceiling. Expansion is an authority-addition mechanism, not a silent
-lifetime-extension mechanism. The issuance profile caps every derived
-credential's `exp` at the Mission's `expires_at`; a successor that
-silently outlived its predecessor would let expansion launder a
-longer-lived Mission past the originally approved horizon.
+({{I-D.draft-mcguinness-oauth-mission}}), with two bounds:
+
+- It MUST NOT be later than the expansion submission's
+  `intent.expires_at`, the requested ceiling.
+- It MUST NOT exceed the predecessor's `expires_at` unless the Mission
+  Issuer's policy explicitly permits extension and the extension is
+  disclosed to the Approver at the expansion consent event, which
+  records the exact approved extension ceiling.
+
+Expansion adds authority; it does not silently extend lifetime. The
+issuance profile caps every derived credential's `exp` at the
+Mission's `expires_at`, so a successor that silently outlived its
+predecessor would carry a longer-lived Mission past the originally
+approved horizon.
 
 The completing success response, the resolving poll or the code
 redemption, MUST carry the effective value in the issuance profile's
@@ -922,14 +945,18 @@ pending, completion creates no successor Mission and the exchange
 fails with this profile's denial semantics ({{denial-reasons}}).
 
 An auditor verifies the successor record by inequalities, never by
-matching a recomputed minimum: in every case the effective value is
-no later than the submission's `intent.expires_at`; without an
-approved extension it is also no later than the predecessor's
-`expires_at`; with one, it MAY be later than the predecessor's
-`expires_at` only when the Mission Issuer's policy permits the
-extension and the exact effective value was rendered and approved at
-the expansion consent event. Any further shortening is justified by
-recorded policy.
+matching a recomputed minimum:
+
+- in every case, the effective value is no later than the submission's
+  `intent.expires_at`;
+- without an approved extension, it is also no later than the
+  predecessor's `expires_at`; and
+- with one, it MAY be later than the predecessor's `expires_at` only
+  when the Mission Issuer's policy permits the extension and the exact
+  effective value was rendered and approved at the expansion consent
+  event.
+
+Any further shortening is justified by recorded policy.
 
 An approved successor extension MUST NOT extend a carried child's expiry:
 carryover remains bounded by the old child and its new parent's effective

@@ -47793,7 +47793,7 @@
    "id": "expansion.verification-order.dpop-proof-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "verification-order",
-   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, with `invalid_dpop_proof`",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is refused with `invalid_dpop_proof`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
