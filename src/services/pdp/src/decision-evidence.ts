@@ -111,6 +111,13 @@ export interface RuntimeConditions {
   use_limit?: number;
   parameter_digest?: string;
   action_phase?: ActionPhase;
+  /**
+   * @spec authzen#response-context `resource_contract` (#249, D553): the
+   * live permit binding the executing PEP compares at every use. Like
+   * `parameter_digest`, it is not one of the record's `conditions` members
+   * (the emitter keeps `valid_until` and `use_limit` only).
+   */
+  resource_contract?: { id: string; version: string; digest: string };
 }
 
 /** @spec runtime-evidence#decision-evidence-object `action_class` (runtime profile's classes). */
