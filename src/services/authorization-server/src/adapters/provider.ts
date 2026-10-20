@@ -316,7 +316,7 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
-import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
+import { ceilingConsentOf, consentedCeilingEntries, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
 import { ID_JAG_TOKEN_TYPE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
@@ -5221,15 +5221,39 @@ async function decide(
     return;
   }
 
+  // @spec progressive#progressive-authorization: the authority ceiling and
+  // drawdown policy the Approver consented on this approval surface, read only
+  // where the deployment selects Progressive authorization. Its entries are
+  // validated here, before any write; a malformed ceiling refuses
+  // `invalid_request`.
+  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
+  let ceilingEntries: AuthorityEntry[] = [];
+  if (ceiling) {
+    try {
+      ceilingEntries = consentedCeilingEntries(ceiling);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({ error: e.code, error_description: e.message });
+        return;
+      }
+      throw e;
+    }
+  }
+
   // @spec mission#approval-authentication (#826, D425): the published
   // approval-authentication floor over the complete derived Authority Set,
   // after derivation and before any Mission, Grant or code exists. Both it and
   // the client's requested strength (checked above) must hold: an absent or
   // weaker request never relaxes the floor. The achieved context is the
   // approval surface's, never the request's.
+  // @spec progressive#progressive-authorization (#1255): a consented ceiling
+  // is classified with the derived set. A drawdown later grants its authority
+  // under this consent's `consent_principal` and `approved_at`, with no
+  // Approver authenticating, so the consent itself meets the floor for
+  // everything the ceiling admits.
   const floor = evaluateApprovalFloor(
     opts.approvalFloor,
-    authority,
+    [...authority, ...ceilingEntries],
     { acr: principal.acr, auth_time: principal.auth_time },
     { interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
   );
@@ -5276,10 +5300,11 @@ async function decide(
   //
   // @spec mission#approval-event (step 7) (#916) — the order of writes. The
   // approval is prepared first, so every refusal (above, and in
-  // `prepareApproval`) happens before anything is written, except that
-  // the progressive ceiling consent, established at the commit's creation
-  // instant, refuses after the grant save (an inert grant a retry
-  // overwrites). The provider grant
+  // `prepareApproval`) happens before anything is written, except that a
+  // consented ceiling's drawdown policy reference, minted at the commit's
+  // creation instant, refuses after the grant save (an inert grant a retry
+  // overwrites); the ceiling's entries and their floor are checked above.
+  // The provider grant
   // is saved next, under an identity derived from this interaction, and the
   // record then commits already bound to it. A failure before that commit
   // leaves an inert grant (no code, no Mission, no index entry) that a retry
@@ -5290,10 +5315,6 @@ async function decide(
   // another.
   const approvalEventId = `apev_${details.uid}`;
   const grantId = approvalGrantId(details.uid);
-  // @spec progressive#progressive-authorization: the authority ceiling and
-  // drawdown policy the Approver consented on this approval surface, read only
-  // where the deployment selects Progressive authorization.
-  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
   const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
