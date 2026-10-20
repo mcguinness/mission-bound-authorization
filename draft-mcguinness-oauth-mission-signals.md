@@ -472,7 +472,7 @@ Example SET (decoded), for a revocation:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1793610400,
+  "iat": 1793609600,
   "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
   "sub_id": {
     "format": "opaque",
@@ -488,11 +488,11 @@ Example SET (decoded), for a revocation:
       "state": "terminated",
       "termination": {
         "reason": "revoked",
-        "terminated_at": "2026-11-02T09:06:40Z",
-        "version": 2
+        "terminated_at": "2026-11-02T08:53:20Z",
+        "version": 4
       },
-      "version": 2,
-      "committed_at": "2026-11-02T09:06:40Z",
+      "version": 4,
+      "committed_at": "2026-11-02T08:53:20Z",
       "expires_at": "2026-12-31T23:59:59Z",
       "reason": "Quarterly reconcile completed early"
     }
@@ -507,7 +507,7 @@ Mission (`version` 1, no `prior_state`):
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1793602800,
+  "iat": 1793606400,
   "jti": "set_3Fw7bJ4nQ9xD2kM6vL1c",
   "sub_id": {
     "format": "opaque",
@@ -521,7 +521,7 @@ Mission (`version` 1, no `prior_state`):
       },
       "state": "active",
       "version": 1,
-      "committed_at": "2026-11-02T07:00:00Z",
+      "committed_at": "2026-11-02T08:00:00Z",
       "expires_at": "2026-12-31T23:59:59Z"
     }
   }
@@ -539,12 +539,12 @@ Example SET (decoded), for a supersession, whose `termination` carries
   "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
   "sub_id": {
     "format": "opaque",
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    "id": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
   },
   "events": {
     "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
       "mission": {
-        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "id": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS",
         "issuer": "https://as.example.com"
       },
       "prior_state": "active",
@@ -778,19 +778,22 @@ purposes independent of any consumer's enforcement posture.
 
 # Worked Example {#example}
 
-A partner ERP (`erp.partner.example.com`) consumes Mission lifecycle
+The ERP resource server (`erp.example.com`) consumes Mission lifecycle
 signals so it can stop honoring a Mission promptly rather than wait out
-token lifetimes. `alice` cancels her Q3 reconciliation Mission. The
-Mission Issuer commits the transition to `terminated` with reason
+token lifetimes. The agent `s6BhdRkqt3` revokes `alice`'s Q3
+reconciliation Mission under an explicit lifecycle authorization the
+deployment grants it for this Mission
+({{I-D.draft-mcguinness-oauth-mission-status}}). The Mission Issuer
+commits the transition to `terminated` with reason
 `revoked` and pushes a SET to the
 consumer's receiver ({{RFC8935}}). Decoded SET:
 
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "https://erp.partner.example.com",
-  "iat": 1793610000,
-  "jti": "set_5kQ8mP2vR9nT",
+  "aud": "https://erp.example.com",
+  "iat": 1793609600,
+  "jti": "set_9Kp2vN7sR1tY8mZ3qX5b",
   "sub_id": {
     "format": "opaque",
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
@@ -804,27 +807,27 @@ consumer's receiver ({{RFC8935}}). Decoded SET:
       "state": "terminated",
       "termination": {
         "reason": "revoked",
-        "terminated_at": "2026-11-02T09:00:00Z",
-        "version": 7
+        "terminated_at": "2026-11-02T08:53:20Z",
+        "version": 4
       },
       "prior_state": "active",
-      "version": 7,
-      "committed_at": "2026-11-02T09:00:00Z",
+      "version": 4,
+      "committed_at": "2026-11-02T08:53:20Z",
       "expires_at": "2026-12-31T23:59:59Z",
-      "reason": "user_cancelled"
+      "reason": "Quarterly reconcile completed early"
     }
   }
 }
 ~~~
 
 The consumer verifies the SET signature, `iss`, `aud`, and `jti`, sees
-`version` 7 is newer than any state it holds, and records the Mission as
-`terminated` with reason `revoked`. Because `terminated` is
-non-`active`, the consumer stops relying
+that `version` 4 follows the `version` 3 resume it last applied, and
+records the Mission as `terminated` with reason `revoked`. Because
+`terminated` is non-`active`, the consumer stops relying
 on the Mission: the next attempt to use a token bound to
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` is refused, seconds after the
-cancellation, well inside the token's remaining lifetime. Had a stale
-`active` event for an earlier `version` arrived afterward, the
+revocation, well inside the token's remaining lifetime. Had the
+`version` 3 resume event (`active`) been redelivered afterward, the
 `version` counter would cause the consumer to ignore it rather than
 revive the Mission.
 
