@@ -26,7 +26,7 @@ import type { EvaluationRequest } from "@mission/pdp";
 import { generateKeyPair } from "jose";
 import type { MasPilot } from "../src/mas-pilot/compose.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
-import { approve, call, composeRecorded, estateToken, openfgaReachable, READ_ACTIONS, reference } from "./mas-pilot-support.js";
+import { admin, approve, call, composeRecorded, estateToken, openfgaReachable, READ_ACTIONS, reference } from "./mas-pilot-support.js";
 
 const HIGH_CONSEQUENCE = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
@@ -248,16 +248,23 @@ d("MAS pilot: a joined ordinary token never takes a high-consequence path (#818,
     expect(new Set(pilot.config.mission_bound_only_classes)).toEqual(HIGH_CONSEQUENCE);
   });
 
-  it("denies a remittance under a joined credential whose scope and Mission both carry it, commits nothing, and still permits the joined read", async () => {
+  it("denies a remittance under a joined credential whose scope, Mission and Resource policy all carry it, commits nothing, and still permits the joined read", async () => {
     const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read remit.send");
-    const res = await call(pilot, credential, remitMission, "send_remittance_email", {
-      invoice_id: "inv-1",
-      idempotency_key: "mas-pilot-remit-0001",
-    });
-    expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("mission_binding_failed");
-    expect(requests.at(-1)?.context.action_class).toBe("external_commitment");
-    expect(pilot.connectors.committedEffects()).toEqual([]);
+    // Resource policy entitles the estate account to pay, so only the class
+    // reservation stands between the joined credential and the effect.
+    await admin(pilot, "grant", "--iss", pilot.estate.issuer, "--sub", "u-1001", "--relation", "payer", "--vendor", "acme");
+    try {
+      const res = await call(pilot, credential, remitMission, "send_remittance_email", {
+        invoice_id: "inv-1",
+        idempotency_key: "mas-pilot-remit-0001",
+      });
+      expect(res.ok).toBe(false);
+      expect(res.denial_reason).toBe("mission_binding_failed");
+      expect(requests.at(-1)?.context.action_class).toBe("external_commitment");
+      expect(pilot.connectors.committedEffects()).toEqual([]);
+    } finally {
+      await admin(pilot, "revoke", "--iss", pilot.estate.issuer, "--sub", "u-1001", "--relation", "payer", "--vendor", "acme");
+    }
     const read = await call(pilot, credential, remitMission, "get_invoice", { invoice_id: "inv-1" });
     expect(read.ok, JSON.stringify(read)).toBe(true);
   });

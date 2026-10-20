@@ -16,6 +16,7 @@ import type { EvaluationRequest } from "@mission/pdp";
 import { composeMasPilot, type MasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
+import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
 import type { ResourcePolicyStore } from "../src/resource-policy-store.js";
 
 const CA = process.env.OPENFGA_CA_CERT;
@@ -143,4 +144,19 @@ export async function call(
   } finally {
     await close();
   }
+}
+
+/** `pnpm resource-policy` (its own code path), attached to this pilot's store and model. */
+export function admin(pilot: MasPilot, ...argv: string[]): Promise<string> {
+  return resourcePolicyAdmin(
+    argv,
+    {
+      OPENFGA_STORE_ID: pilot.resourcePolicy.storeId,
+      OPENFGA_MODEL_ID: pilot.resourcePolicy.modelId,
+      OPENFGA_HTTP_URL: OPENFGA.apiUrl,
+      OPENFGA_PRESHARED_KEY: OPENFGA.presharedKey,
+      ...(OPENFGA.caCertPath ? { OPENFGA_CA_CERT: OPENFGA.caCertPath } : {}),
+    },
+    TOPOLOGY.openfga,
+  );
 }

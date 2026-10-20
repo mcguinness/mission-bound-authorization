@@ -15,12 +15,10 @@
  */
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { TOPOLOGY } from "@mission/demo-data";
 import type { EvaluationRequest } from "@mission/pdp";
 import type { MasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig } from "../src/mas-pilot/config.js";
-import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
-import { approve, call, composeRecorded, estateToken, OPENFGA, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
+import { admin, approve, call, composeRecorded, estateToken, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
 
 const up = await openfgaReachable();
 const d = up ? describe : describe.skip;
@@ -32,21 +30,6 @@ const config = relocateEstate(loadMasPilotConfig(), ESTATE_PORT);
 const ESTATE = config.estate.issuer;
 const MAS = config.mission_issuer;
 const TENANT = config.resource_policy.tenants[0]?.tenant as string;
-
-/** `pnpm resource-policy`, attached to this pilot's store and model. */
-function admin(pilot: MasPilot, ...argv: string[]): Promise<string> {
-  return resourcePolicyAdmin(
-    argv,
-    {
-      OPENFGA_STORE_ID: pilot.resourcePolicy.storeId,
-      OPENFGA_MODEL_ID: pilot.resourcePolicy.modelId,
-      OPENFGA_HTTP_URL: OPENFGA.apiUrl,
-      OPENFGA_PRESHARED_KEY: OPENFGA.presharedKey,
-      ...(OPENFGA.caCertPath ? { OPENFGA_CA_CERT: OPENFGA.caCertPath } : {}),
-    },
-    TOPOLOGY.openfga,
-  );
-}
 
 /** Grant or revoke the Mission-side identity u-1001 and estate-ap-bot-7f3 map to (alice, ap-agent), in full. */
 async function missionSideIdentity(pilot: MasPilot, op: "grant" | "revoke"): Promise<void> {
