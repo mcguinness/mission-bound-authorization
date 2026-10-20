@@ -1331,7 +1331,9 @@ against alteration after registration, not against a split view.
 
 At the approval event for Mission
 `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`, the Mission Issuer records
-Consent Evidence and registers it. It does not put the disclosure in the
+Consent Evidence (the worked evidence `cns_7rP2kL9mQ4` of
+{{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) and registers
+it. It does not put the disclosure in the
 log; it signs a Signed Statement whose payload is the hash of the Consent
 Evidence, carried inline, with the hash algorithm and the evidence media
 type in the protected header ({{hash-commitment}}). The `sub` is the
@@ -1357,7 +1359,7 @@ the Mission Issuer. Protected header, in CBOR extended diagnostic notation
 The payload is the SHA-256 digest of the JCS canonical bytes of the
 retained Consent Evidence object, `evidence_envelope` included
 ({{evidence-types}}), carried inline as the raw digest whose
-base64url form is `CnS3nT9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4xVz`, not that
+base64url form is `ABgvgPAXUukhkxer0K6MzkH6XEL8VBc2WRwjXvt5Wa4`, not that
 display string. The Transparency Service appends the statement
 and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
 unprotected header, which the Mission Issuer keeps with the evidence as a
