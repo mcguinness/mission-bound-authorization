@@ -71,8 +71,8 @@
     "content_sha256": "b5b0f2e926915a920b0def153fdaf8e6f104d5aa5f3f90ee3a9184ad7145415e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "72226e0ec75c55004217e58bd770a6dc3b36e7a5",
-    "content_sha256": "e817da1d8f01a5cb84c2c25187bf38ea13e4d05e8b7d493c2ebe1bacd8850f2e"
+    "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
+    "content_sha256": "7b767e1bb56356fbbafd8237ba563fe816093fa499e8d3617ee2fd600ad8c0ca"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
