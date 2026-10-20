@@ -629,105 +629,113 @@ never an edit.
 # Policy-Approval Recency {#policy-approval-recency}
 
 This section bounds staleness on the AGR `policy` assertion path: it
-governs a `policy` assertion's `authority.approved_at` and the
-`kind` of the accountable-approver's assertion. It does not apply to
-a `human` assertion, whose `decided_at` is the approval instant
+governs a `policy` assertion's `authority.approved_at` and the `kind` of
+the accountable assertion ({{accountable-assertion}}). It does not apply
+to a `human` assertion, whose `decided_at` is the approval instant
 itself.
+
+## Recency Declarations {#recency-declarations}
 
 A Recording Issuer that admits `policy` assertions MUST declare a
 maximum policy-approval age per consequence class (a **recency
 ceiling**) and a bounded clock-skew allowance, and MAY declare, per
 class, an **exception** admitting a `policy` assertion as the
-accountable approver's assertion for that class, each exception
-carrying its own maximum age. The ceiling, the skew allowance, and
-any exception MUST be part of the retained `approval_policy` snapshot
-that `approval_policy.digest` commits ({{record}}), or a separately
-versioned declaration committed from that snapshot. A mutable,
-out-of-band deployment statement MUST NOT serve this role: it would
-make the evaluation impossible to reproduce, contrary to the promise
-of {{record}} that the retained policy lets an auditor re-run the
-decision.
+accountable approver's assertion for that class, each exception carrying
+its own maximum age.
+
+The ceiling, the skew allowance, and any exception MUST be part of the
+retained `approval_policy` snapshot that `approval_policy.digest`
+commits ({{approval-policy}}), or a separately versioned declaration
+committed from that snapshot. A mutable, out-of-band deployment
+statement MUST NOT serve this role: it would make the evaluation
+impossible to reproduce, contrary to the purpose of the retained policy,
+which lets an auditor re-run the decision ({{approval-policy}}).
+
+## Evaluating Recency {#recency-evaluation}
 
 At evaluation, the issuer MUST classify the committed Mission's
 consequence classes from the derived Authority Set and from any
 consumption bound the Mission Intent carries
 ({{I-D.draft-mcguinness-mission-metering}}). The issuer MUST select,
-across every class either source carries, the strictest maximum age
-that applies, accounting for any declared exception. This is a
-property of the whole committed Mission the record's
-`mission.authority_hash` and `mission.intent_hash` bind to
-({{record}}), never of one assertion or entry in isolation.
+across every class either source carries, the strictest maximum age that
+applies, accounting for any declared exception. This is a property of
+the whole committed Mission the record's `mission.authority_hash` and
+`mission.intent_hash` bind to ({{record-members}}), never of one
+assertion or entry in isolation.
 
 For each `policy` assertion the evaluation would count toward the
 applicable maximum, the issuer:
 
 - MUST verify `authority.approved_at` from retained, authenticated
-  governance state for the exact `policy_id` and `version` the
-  assertion names;
+  governance state for the exact `policy_id` and `version` the assertion
+  names;
 - MUST measure the assertion's age as `evaluation.evaluated_at` minus
   `authority.approved_at`, using the atomic-commitment instant
   ({{atomic-commitment}});
 - MUST enforce `authority.approved_at` <= `decided_at` <=
   `evaluation.evaluated_at`, subject to the declared clock-skew
   allowance; and
-- MUST reject the assertion if `authority.approved_at` or
-  `decided_at` is later than the issuer's own clock at evaluation,
-  beyond that allowance.
+- MUST reject the assertion if `authority.approved_at` or `decided_at`
+  is later than the issuer's own clock at evaluation, beyond that
+  allowance.
 
-A `policy` assertion whose age exceeds the applicable maximum, or
-whose ordering the previous paragraph does not admit, fails
-policy-authorization under {{assertion-requirements}}: the issuer
-MUST NOT count it toward the evaluation, and by
-{{atomic-commitment}} the Mission MUST NOT be created `active` on an
-evaluation that depended on it. An `evaluation.evaluated_at` later
-than the issuer's own clock, beyond the declared allowance, is a
-defect of the record rather than of one assertion: the evaluation
-MUST NOT be treated as complete, and by {{atomic-commitment}} the
-Mission MUST NOT be created `active` on it.
+A `policy` assertion whose age exceeds the applicable maximum, or whose
+ordering the checks above do not admit, fails policy-authorization under
+{{assertion-validation}}: the issuer MUST NOT count it toward the
+evaluation, and by {{atomic-commitment}} the Mission MUST NOT be created
+`active` on an evaluation that depended on it.
 
-This is issuance-time eligibility. It determines whether a Mission
-activates and does not reach back into a Mission already `active`:
-that Mission's governing policy approval was measured fresh at its
-own approval event, and a later change to the ceiling, the exception,
-or the policy's freshness does not narrow or terminate it.
+An `evaluation.evaluated_at` later than the issuer's own clock, beyond
+the declared allowance, is a defect of the record rather than of one
+assertion: the evaluation MUST NOT be treated as complete, and by
+{{atomic-commitment}} the Mission MUST NOT be created `active` on it.
 
-Four conditions are the high-risk classes the issuance profile
-defines: irreversible action, external commitment, privileged
-administration, and a consumption bound
-({{I-D.draft-mcguinness-oauth-mission}}). Where the committed
-Mission's derived Authority Set or Mission Intent
-({{I-D.draft-mcguinness-mission-metering}}) carries one, the
-assertion satisfying the accountable-approver rule of
-{{assertion-requirements}} MUST be `kind: human`, unless a committed,
-class-named exception under this section admits `kind: policy` for
-that class. Only `governed_policy` has a `policy` accountable
-assertion ({{assertion-requirements}}), so a governed policy
-activates a Mission carrying one of these classes only under such an
-exception.
+## High-Risk Classes {#recency-high-risk}
+
+Four conditions are the high-risk classes the issuance profile defines:
+irreversible action, external commitment, privileged administration, and
+a consumption bound ({{I-D.draft-mcguinness-oauth-mission}}). Where the
+committed Mission's derived Authority Set or Mission Intent
+({{I-D.draft-mcguinness-mission-metering}}) carries one, the assertion
+satisfying the accountable-approver rule of {{accountable-assertion}}
+MUST be `kind: human`, unless a committed, class-named exception under
+{{recency-declarations}} admits `kind: policy` for that class. Only
+`governed_policy` has a `policy` accountable assertion
+({{accountable-assertion}}), so a governed policy activates a Mission
+carrying one of these classes only under such an exception.
 
 The same default binds a Mission whose accountable-approver rule is
 satisfied through its own `approval_basis` record rather than an
-assertion ({{assertion-requirements}}): recording an AGR for such a
+assertion ({{accountable-assertion}}): recording an AGR for such a
 Mission carrying one of the four classes requires a committed,
-class-named exception under this section; absent it, the record MUST
-NOT be created and, by {{atomic-commitment}}, the Mission MUST NOT be
-created `active`.
+class-named exception under {{recency-declarations}}; absent it, the
+record MUST NOT be created and, by {{atomic-commitment}}, the Mission
+MUST NOT be created `active`.
 
-Approval Governance is an optional extension
-({{introduction}}); the rules of this section are a conservative
-default of that profile, not a family-wide guarantee, and a
-deployment that records no Approval Governance Record is unbounded
-by them. `kind: human` is not by itself an assurance property: the
+## Scope of the Recency Rules {#recency-scope}
+
+Recency is issuance-time eligibility. It determines whether a Mission
+activates and does not reach back into a Mission already `active`: that
+Mission's governing policy approval was measured fresh at its own
+approval event, and a later change to the ceiling, the exception, or the
+policy's freshness does not narrow or terminate it.
+
+Approval Governance is an optional extension ({{introduction}}). The
+rules of {{policy-approval-recency}} are a conservative default of this
+document, not a family-wide guarantee, and a deployment that records no
+Approval Governance Record is unbounded by them.
+
+`kind: human` is not by itself an assurance property: the
 authentication-strength, rendering, and accountable-principal
 requirements the issuance profile and {{assertion-requirements}}
-otherwise impose still carry that property; this section only
-decides which assertion kind MUST be present.
+otherwise impose still carry that property; {{policy-approval-recency}}
+only decides which assertion kind MUST be present.
 
 ## Relationship to Standing-Consent Recency {#recency-standing-consent}
 
 {{policy-approval-recency}} bounds the AGR `policy` assertion path and,
 by extension, a standing-consent Mission whose `approval_basis` record
-stands in for that assertion ({{assertion-requirements}}).
+stands in for that assertion ({{accountable-assertion}}).
 
 The issuance profile's standing-consent bases carry their own
 human-approval instant in `approval_basis.approved_at`, traced through
