@@ -3975,7 +3975,9 @@ that adjudicated the instance. A companion profile MUST NOT flatten a
 policy's or an Approval Governance Record's assertion set into a
 single principal member.
 
-**Activation policy commitment.** Where a standing-consent basis lets
+### Activation Policy Commitment {#activation-policy-commitment}
+
+Where a standing-consent basis lets
 a separate policy artifact adjudicate activation (a dispatch,
 drawdown, or child-creation policy, rather than the consented object
 itself), the object the accountable human consented to MUST carry
@@ -3997,7 +3999,9 @@ Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
 does not apply.
 
-**Standing-consent recency.** A deployment can declare a maximum
+### Standing-Consent Recency {#standing-consent-recency}
+
+A deployment can declare a maximum
 standing-consent age (a recency ceiling), overall or per
 consequence class. Where a declared ceiling applies, the activating
 issuer MUST refuse to activate an instance whose `approved_at` is
