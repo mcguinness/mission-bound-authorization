@@ -7,6 +7,8 @@ import {
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
   narrowToCeiling,
+  SUPPORTED_ENTRY_MEMBERS,
+  unsupportedEntryMember,
 } from "../src/index.js";
 
 const entry: AuthorityEntry = {
@@ -240,5 +242,49 @@ describe("a foreign entry carrying locations is unsupported (@spec resource-acce
     expect(isAuthorityEntry(entry)).toBe(true);
     expect(isAuthorityEntry(bound)).toBe(true);
     expect(narrowToCeiling([bound], [entry])[0]).toBe(bound);
+  });
+});
+
+describe("a foreign entry carrying an unsupported member is unsupported (@spec mission#subset, #1399)", () => {
+  // A restriction-shaped member no specification defines for this type:
+  // dropped by a member-by-member rebuild, it would widen the entry.
+  const carrying = { ...entry, invoice_ids: ["INV-7"] } as AuthorityEntry;
+
+  it("SUPPORTED_ENTRY_MEMBERS is the type's own members and capability_sources", () => {
+    expect([...SUPPORTED_ENTRY_MEMBERS].sort()).toEqual([
+      "actions",
+      "capability_sources",
+      "constraints",
+      "delegation",
+      "resource",
+      "resource_match",
+      "type",
+    ]);
+  });
+
+  it("unsupportedEntryMember names a member outside the set by presence, whatever its value, and nothing for a supported entry", () => {
+    for (const value of [["INV-7"], [], null, "", { id: "INV-7" }]) {
+      expect(unsupportedEntryMember({ ...entry, invoice_ids: value })).toBe("invoice_ids");
+    }
+    expect(unsupportedEntryMember({ ...entry, locations: [] })).toBe("locations");
+    expect(unsupportedEntryMember(entry)).toBeUndefined();
+    expect(
+      unsupportedEntryMember({
+        ...entry,
+        resource_match: "exact",
+        capability_sources: [binding],
+        delegation: { max_depth: 1 },
+      }),
+    ).toBeUndefined();
+  });
+
+  it("isAuthorityEntry refuses an entry carrying an unsupported member", () => {
+    expect(isAuthorityEntry(carrying)).toBe(false);
+  });
+
+  it("narrowToCeiling retains no entry carrying an unsupported member, on either operand", () => {
+    expect(narrowToCeiling([carrying], [entry])).toEqual([]);
+    expect(narrowToCeiling([{ ...carrying, actions: ["read"] }], [entry])).toEqual([]);
+    expect(narrowToCeiling([entry], [carrying])).toEqual([]);
   });
 });

@@ -19,6 +19,7 @@
  */
 
 import type { AuthorityEntry } from "./authority-entry.js";
+import { SUPPORTED_ENTRY_MEMBERS } from "./authority-subset.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /**
@@ -254,16 +255,11 @@ export function parseScopeProjectionMapping(raw: unknown): ScopeProjectionMappin
   return { audiences: out };
 }
 
-/** The entry members this projection understands; any other member fails closed. */
-const KNOWN_ENTRY_MEMBERS = new Set([
-  "type",
-  "resource",
-  "resource_match",
-  "actions",
-  "constraints",
-  "delegation",
-  "capability_sources",
-]);
+/**
+ * The entry members this projection understands, the shared supported set
+ * (#1399); any other member fails closed.
+ */
+const KNOWN_ENTRY_MEMBERS: ReadonlySet<string> = new Set(SUPPORTED_ENTRY_MEMBERS);
 
 /**
  * @spec resource-access#scope-projection — is `value` a safe projection of

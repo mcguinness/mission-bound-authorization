@@ -456,6 +456,33 @@ describe("requested entries on the deferral initiation (@spec resource-access#en
   });
 });
 
+describe("requested entries carrying an unsupported member on the deferral initiation (@spec mission#subset, #1399)", () => {
+  // The deferred token carries the requested entries as submitted, and the
+  // subset check reads no member outside the supported set, so without this
+  // refusal the token would carry a member no enforcement point reads.
+  it("refuses a requested entry carrying an unsupported member with invalid_authorization_details, opening no deferral", async () => {
+    const count = () =>
+      (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+    for (const invoice_ids of [["INV-7"], []]) {
+      const before = count();
+      const requested = subset(["payments:remittance.send"]).map((e) => ({ ...e, invoice_ids }));
+      const res = await initiate(requested as AuthorityEntry[]);
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        deferral_code?: string;
+        access_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/invoice_ids is not a supported member/);
+      expect(body.deferral_code).toBeUndefined();
+      expect(body.access_token).toBeUndefined();
+      expect(count()).toBe(before);
+    }
+  });
+});
+
 describe("requested delegate matchers on the deferral initiation (@spec resource-access#matching-allowed-delegates, #1373)", () => {
   // The deferred token carries the requested entries as submitted, and the
   // subset check reads a delegate matcher's `sub` and `sub_profile` only, so a

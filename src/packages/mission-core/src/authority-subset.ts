@@ -69,9 +69,9 @@ export const SUPPORTED_CONSTRAINT_KEYS: readonly string[] = Object.freeze([
  * refused. This is the SINGLE declaration every boundary that admits an
  * entry of this type consults (PAR and the other proposal intakes, the typed
  * config loaders, and derivation), so none admits the member and then drops
- * it in a member-by-member rebuild. Refused by name only: the entry's top
- * level stays open to a member another specification defines for this type,
- * such as `capability_sources`.
+ * it in a member-by-member rebuild. Refused by name, so it keeps its own
+ * refusal; every other member outside {@link SUPPORTED_ENTRY_MEMBERS} is
+ * refused by {@link unsupportedEntryMember} at the same boundaries.
  */
 export const REFUSED_ENTRY_MEMBERS = ["locations"] as const;
 
@@ -86,6 +86,41 @@ export const REFUSED_ENTRY_MEMBERS = ["locations"] as const;
 export function refusedEntryMember(entry: unknown): string | undefined {
   if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
   return REFUSED_ENTRY_MEMBERS.find((member) => Object.hasOwn(entry, member));
+}
+
+/**
+ * @spec mission#subset, resource-access#entry-validation (#1399, D538): the
+ * top-level members a `mission_resource_access` entry may carry: the members
+ * the type defines (`type`, `resource`, `resource_match`, `actions`,
+ * `constraints`, `delegation`) and `capability_sources`, which Capability
+ * Binding defines for the type. This is the SINGLE declaration of that set.
+ * Every boundary that consults {@link refusedEntryMember} also consults
+ * {@link unsupportedEntryMember}, so none admits another member and then drops
+ * it in a member-by-member rebuild, erasing a restriction it may express:
+ * where the comparison cannot decide a member, the posture is conservative
+ * refusal. Nested members are each structure's own rule (closed `constraints`
+ * keys, delegate matchers); this set is the top level only.
+ */
+export const SUPPORTED_ENTRY_MEMBERS: readonly string[] = Object.freeze([
+  "type",
+  "resource",
+  "resource_match",
+  "actions",
+  "constraints",
+  "delegation",
+  "capability_sources",
+]);
+
+/**
+ * The first member `entry` carries outside {@link SUPPORTED_ENTRY_MEMBERS},
+ * or undefined. Decided by property presence, never by value. A boundary
+ * applies {@link refusedEntryMember} first, so `locations` keeps its own
+ * refusal, and maps a hit here to its own error, exactly as for a refused
+ * member.
+ */
+export function unsupportedEntryMember(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  return Object.keys(entry).find((member) => !SUPPORTED_ENTRY_MEMBERS.includes(member));
 }
 
 /**
@@ -158,14 +193,16 @@ export function entryDelegateMatcherViolation(entry: unknown): string | undefine
 
 /**
  * Validate the subset engine's supported input before a foreign grant can use
- * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member is unsupported,
- * decided by presence: a destination redeeming a signed grant from a
- * configurable trusted issuer refuses it rather than minting it into a local
- * token, so it never reaches a resource (#1278).
+ * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member, or any member
+ * outside {@link SUPPORTED_ENTRY_MEMBERS}, is unsupported, decided by
+ * presence: a destination redeeming a signed grant from a configurable
+ * trusted issuer refuses it rather than minting it into a local token, so it
+ * never reaches a resource (#1278, #1399).
  */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   if (refusedEntryMember(value) !== undefined) return false;
+  if (unsupportedEntryMember(value) !== undefined) return false;
   const e = value as Record<string, unknown>;
   const strings = (v: unknown): v is string[] =>
     Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
