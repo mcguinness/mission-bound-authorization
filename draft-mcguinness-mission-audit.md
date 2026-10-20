@@ -1364,11 +1364,12 @@ unprotected header, which the Mission Issuer keeps with the evidence as a
 Transparent Statement.
 
 As the Mission proceeds, its other producers write to the same `sub`:
-the Mission Issuer registers a derivation record when it derives the
-agent's token ({{derivation-record}}), the
+the Mission Issuer registers a derivation record each time it derives
+a token ({{derivation-record}}), the
 PDP registers a decision-evidence commitment when it permits the
 `journal-entries.write`, and the Mission Issuer registers a
-lifecycle-change commitment when `alice` later completes the Mission.
+lifecycle-change commitment as the Mission is suspended, resumed, and
+then revoked.
 Collecting the records registered under that one `sub` ({{retrieval}})
 gives the Mission's whole history, in order, append-only:
 
@@ -1378,9 +1379,12 @@ https://as.example.com/missions/msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
   #1  approval-event        iss=as.example.com    t0
   #2  consent-evidence      iss=as.example.com    t0
-  #3  derivation-record     iss=as.example.com    t0
-  #4  decision-evidence     iss=pdp.example.com   t0+6h
-  #5  lifecycle: completed  iss=as.example.com    t0+6h
+  #3  derivation-record     iss=as.example.com    t0+5s
+  #4  derivation-record     iss=as.example.com    t0+14m
+  #5  decision-evidence     iss=pdp.example.com   t0+14m03s
+  #6  lifecycle: suspended  iss=as.example.com    t0+20m
+  #7  lifecycle: active     iss=as.example.com    t0+30m
+  #8  lifecycle: revoked    iss=as.example.com    t0+53m20s
 ~~~
 
 A compliance auditor in another domain, holding none of these
