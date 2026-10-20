@@ -859,10 +859,10 @@ submitted proposal cannot supply its own standing consent.
 
 The root and a separate evaluator keep distinct digest domains:
 `approval_policy.digest` commits the root under `typ`
-`mission-approval-policy` ({{approval-policy}}), and the activation policy
-reference commits the evaluator under `typ`
-`mission-activation-policy`. The issuer MUST NOT accept either digest
-in place of the other.
+`mission-approval-policy` ({{approval-policy}}), and the activation
+policy reference commits the evaluator under `typ`
+`mission-activation-policy`. The issuer MUST NOT accept either digest in
+place of the other.
 
 ## Instance Record {#governed-policy-record}
 
@@ -1166,13 +1166,14 @@ and evidence metadata, never authority.
 
 # Conformance {#conformance}
 
-A **Recording Issuer** MUST:
+This document has two conformance targets. A Recording Issuer MUST:
 
 - authenticate, event-bind, and policy-authorize every contributing
-  assertion ({{assertion-requirements}});
-- record denials;
-- include the accountable-approver assertion;
-- evaluate under the retained policy version;
+  assertion ({{assertion-validation}});
+- record denials ({{assertion-validation}});
+- include the accountable-approver assertion
+  ({{accountable-assertion}});
+- evaluate under the retained policy version ({{approval-policy}});
 - enforce the strictest applicable policy-approval maximum age across
   the consequence classes the committed Mission's derived Authority
   Set and Mission Intent carry, from a committed ceiling
@@ -1191,18 +1192,22 @@ A **Recording Issuer** MUST:
 - retain the record and the referenced policy for the Mission's
   audit horizon ({{I-D.draft-mcguinness-oauth-mission}}).
 
-A **Relying Auditor** MUST verify the envelope by byte equality, MUST
+A Relying Auditor MUST verify the envelope by byte equality, MUST
 validate the mission binding, and MUST obtain the retained policy
 version before treating the evaluation as re-checked
 ({{envelope}}).
 
 # Security Considerations {#security-considerations}
 
+The security considerations of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) apply. The following
+considerations are specific to the Approval Governance Record.
+
 ## Forged or Padded Assertions
 
 A forged or padded assertion is an authorization attack before
 commitment, not an audit defect: the assertion requirements of
-{{assertion-requirements}} are the control, and a deployment that
+{{assertion-validation}} are the control, and a deployment that
 records assertions without authenticating them has built an approval
 bypass rather than an evidence trail.
 
@@ -1210,17 +1215,16 @@ bypass rather than an evidence trail.
 
 Without `approval_policy.digest` and its retention, a later reading
 cannot prove which policy governed the evaluation. The digest and
-the audit-horizon retention of {{record}} are the control.
+the audit-horizon retention of {{approval-policy}} are the control.
 
 ## Manufactured Accountability
 
-The accountable-approver assertion rule of
-{{assertion-requirements}} prevents a set of service and policy
-assertions from claiming a Mission whose named Approver never
-asserted anything. Because that assertion is never `service`, a
-model-backed service cannot become the accountable approver: no
-human-approved policy stands behind its decision, so it contributes
-only as a governance input.
+The accountable-approver rule of {{accountable-assertion}} prevents a
+set of service and policy assertions from claiming a Mission whose named
+Approver never asserted anything. Because that assertion is never
+`service`, a model-backed service cannot become the accountable
+approver: no human-approved policy stands behind its decision, so it
+contributes only as a governance input.
 
 ## Stale Policy Approval
 
@@ -1247,20 +1251,25 @@ a substitute for key custody.
 
 # Privacy Considerations {#privacy-considerations}
 
-Assertion principals and decision times are PII about reviewers. The
-record is control-plane state retained by the issuer, never
-disclosed on wire surfaces, and access to a retained record follows
-the issuer's audit-log discipline for approval-event records
+The privacy considerations of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) apply. Assertion principals and
+decision times are personal data about reviewers. The record is
+control-plane state retained by the issuer, never disclosed on wire
+surfaces, and access to a retained record follows the issuer's audit-log
+discipline for approval-event records
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 # IANA Considerations {#iana}
 
 ## Media Type Registration
 
-IANA is requested to register two media types per {{RFC6838}}: the
-Approval Governance Record object, and the JWS-secured representation
-its `envelope` carries (using the `+jws` structured syntax suffix
-already registered with IANA).
+IANA is requested to register two media types per {{RFC6838}}:
+
+- `application/mission-approval-governance+jws`, the JWS-secured
+  representation that a record's `envelope` carries, using the `+jws`
+  structured syntax suffix; and
+- `application/mission-approval-governance+json`, the Approval
+  Governance Record object.
 
 ### application/mission-approval-governance+jws
 
