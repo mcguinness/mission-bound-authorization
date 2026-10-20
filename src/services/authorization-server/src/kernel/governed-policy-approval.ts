@@ -1381,7 +1381,8 @@ function recordingResolution(resolver: CapabilitySourceResolver | undefined): {
 /**
  * A resolver that answers from a retained resolution, for each entry only
  * the resolutions naming that entry's resource and actions; null replays no
- * resolver at all, as at an activation that had none.
+ * resolver at all, as at an activation that had none. A resolution names the
+ * resolved entry's own `resource`, so string equality pairs it exactly (#1440).
  */
 function replayResolution(recorded: CapabilitySourceResolution[] | null): CapabilitySourceResolver | undefined {
   if (!recorded) return undefined;
