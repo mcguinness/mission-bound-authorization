@@ -74,6 +74,10 @@
     "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
     "content_sha256": "27edd07822a1d48d0d33f71a8708fc36836218a466d924f07d04eefdb85dcc1c"
    },
+   "draft-mcguinness-oauth-mission-attenuation.md": {
+    "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
+    "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
+   },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
@@ -39874,6 +39878,76 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1258 item 10 (D447 disposition 3). Cases rm-prefix-15, rm-resolve-04. Prefix matching is not implemented; a prefix entry provides no authority (#1276)."
+  },
+  {
+   "id": "attenuation.root-mapping.target-restriction-every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "every operation a mapped tool can perform at each audience in the root's `aud` MUST have an operation target, as that resource server's operation contract establishes it, that matches the entry's `resource` under the entry's `resource_match`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each tool a root maps from an entry reaches, at every audience the root names, only operation targets the entry's resource matches under its resource_match; an aud value equal to (or naming) a coarser identifier never widens a finer entry to it",
+    "local": "the reference carries the restriction in each tool identifier (<resource>#<action>), which the consumer reads back as an exact entry naming that resource and matches against the operation target, whatever the root's aud; the mapping never reads aud"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation-target-restriction.test.ts",
+     "name": "an attenuation root keeps a finer entry's target restriction at a coarser audience (@spec attenuation#root-mapping, #1276) > the root's tool names the entry's invoice, and at the service audience it covers that invoice alone, never the service or another invoice",
+     "level": "cross-component",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276 (D457), the attenuation target-restriction proof. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, covers that invoice alone at the payments resource: under the argument-derived invoice contract another invoice is refused out_of_authority, and under the shipped service-level contract the service target is refused out_of_authority too. Mutation: mapping each entry at the root's first aud instead of its resource fails the cross-component witness. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
+  },
+  {
+   "id": "attenuation.root-mapping.refuse-unestablishable-tool",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "An issuer that cannot establish this for a tool at every audience MUST NOT map the entry to that tool, and never maps it with the restriction removed",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose target restriction a tool cannot carry is not mapped to that tool; the root is never minted with that tool narrowed, widened or relaxed to a different restriction",
+    "local": "the reference refuses the whole root mapping (throws) for an entry whose resource_match is present and not exact, and for an action whose tool identifier would read back as a different (resource, action) pair"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Kernel derivation refuses non-exact entries earlier (#1264), so the first guard is defense in depth until prefix lands (#1399)."
   },
   {
    "id": "resource-access.subset.same-matcher",
