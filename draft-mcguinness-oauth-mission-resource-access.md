@@ -150,7 +150,9 @@ This document is that specification for one type,
   Constraints with their subset and intersection rules
   ({{common-constraints}});
 - resource server enforcement ({{rs-enforcement}}) and delegate
-  eligibility ({{delegate-eligibility}}); and
+  eligibility ({{delegate-eligibility}});
+- the resource contract reference an entry can commit at approval, and
+  its exact preservation ({{resource-contract}}); and
 - the conditions under which an entry can be projected to `scope`
   ({{scope-projection}}), and the type's declaration under the issuance
   profile's transformation-capability map
@@ -299,6 +301,27 @@ with these members:
   for it MUST NOT be broader than the parent entry's, and a member the
   authorization server does not understand is carried unchanged.
 
+`resource_contract`:
+: OPTIONAL. An object. A reference to the resource contract under which
+  the resource interprets the entry's `actions` and `constraints`
+  ({{resource-contract}}). The entry's `type` stays
+  `mission_resource_access`; the reference carries the version. When
+  present, it has exactly these members:
+
+  `id`:
+  : REQUIRED. A string containing an absolute URI that names the
+    contract across its versions.
+
+  `version`:
+  : REQUIRED. A non-empty string naming one version of the contract.
+
+  `digest`:
+  : REQUIRED. A string. The SHA-256 digest of the JCS {{RFC8785}}
+    serialization of that version's contract document, in the
+    integrity-anchor encoded form
+    ({{I-D.draft-mcguinness-oauth-mission}}): `sha-256:` followed by
+    the base64url encoding of the digest, without padding.
+
 The following example shows an Authority Set with two entries for one
 resource:
 
@@ -366,6 +389,9 @@ The authorization server also refuses an entry with the
 - an `allowed_delegates` matcher carries neither `sub` nor
   `sub_profile`, or carries any other member
   ({{matching-allowed-delegates}});
+- its `resource_contract` is not an object with exactly the members
+  `id`, `version`, and `digest`, or one of them does not have the form
+  {{resource-access-type}} gives it;
 - its `time_window` Common Constraint has a `not_before` later than its
   `not_after`, a window that admits no instant; or
 - its `recipient_domain` Common Constraint is not a DNS name in ASCII
@@ -629,6 +655,10 @@ Mission entry B when all of the following hold:
      specification-defined rule when K is a Common Constraint
      ({{common-constraints}}), the deployment-defined comparison
      otherwise.
+4. **Contract.** A carries `resource_contract` exactly when B does,
+   and then with `id`, `version`, and `digest` each equal to B's
+   ({{resource-contract}}). Removing, replacing, or adding a reference
+   is never narrowing.
 
 The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
@@ -968,6 +998,7 @@ or none:
 
 - `type`, `resource`, `resource_match`, `actions`, and `constraints` are
   enforced as above;
+- `resource_contract` is enforced as {{resource-contract}} requires;
 - `delegation` has no resource-server enforcement role: the
   authorization server applies it at issuance
   ({{delegate-eligibility}}), so a resource server MAY disregard it,
@@ -998,6 +1029,93 @@ resource metadata ({{RFC9728}}):
   ({{resource-access-type}}), and lets a client predict a fail-closed
   constraint mismatch before making a request. When absent, that
   knowledge is established out of band.
+
+## Resource Contracts {#resource-contract}
+
+An entry's `actions` and `constraints` carry meaning only at the
+resource that defines them ({{resource-access-type}}), and the resource
+can change that meaning while action names and parameter values stay
+the same. The `resource_contract` member fixes, at approval, the
+version of that meaning the entry was approved under.
+
+A **resource contract** is a JSON document, identified by an `id` and a
+`version`, whose bytes never change for that pair. It fixes the
+operation contract ({{resource-matching}}) of each operation it covers,
+including the members of each action family it defines, and, where the
+deployment adopts Mission-Bound Runtime Enforcement, the further
+material that document lists ({{I-D.draft-mcguinness-mission-runtime}}).
+It assembles those definitions and overrides none of them: a Common
+Constraint keeps the semantics its definition gives it
+({{common-constraints}}). A resource that changes any of that material
+publishes a new version with its own `digest`. The resource publishes
+its contracts and their references through its operation contract
+documentation or other deployment documentation; this document defines
+no metadata member or endpoint for them.
+
+The following entry references version `2026-10-01` of a payments
+contract:
+
+~~~ json
+{ "type": "mission_resource_access",
+  "resource": "https://payments.example/mcp",
+  "actions": ["execute_wire_transfer"],
+  "constraints": {
+    "max_amount": { "amount": "500.00", "currency": "USD" } },
+  "resource_contract": {
+    "id": "https://payments.example/contracts/payments",
+    "version": "2026-10-01",
+    "digest":
+      "sha-256:Tvvs9KfBVei4YUbtWRfmCKsquFxzgWvqxhSAsWPiu_o" } }
+~~~
+
+**Approval.** The authorization server assembles the reference from
+trusted resource or deployment configuration, which states whether an
+entry's `resource` requires a reference and which contract version is
+current for it. A `resource_contract` a client proposes is a proposal,
+never an authoritative declaration. Before approval, the authorization
+server:
+
+- MUST refuse, with the `invalid_authorization_details` error code, a
+  proposed entry whose `resource_contract` does not equal, member for
+  member, the reference of a contract its configuration names as current
+  for the entry's `resource` and that defines every action and action
+  family the entry lists; and
+- MUST, where its configuration requires a reference for the entry's
+  `resource` and the proposal carries none, record the current
+  contract's reference in the entry, so that the Approver approves the
+  entry with it.
+
+A superseded or retired version is never current
+({{I-D.draft-mcguinness-mission-runtime}}), so no new approval
+references one. The reference is assembled from configuration, not
+narrowed: a policy ceiling a proposal is narrowed against need not
+carry one, and step 4 of {{subset}} applies to entries derived from an
+approved entry. An authorization server that does not implement this
+section refuses a proposed or carried entry that carries
+`resource_contract`, with the `invalid_authorization_details` error
+code, and never drops the member.
+
+**Preservation.** The reference is part of the entry, so
+`authority_hash` commits it ({{I-D.draft-mcguinness-oauth-mission}}).
+Every derivation, narrowing, and delegation of the entry preserves it
+exactly ({{subset}}), and scope projection never drops it
+({{scope-projection}}). An entry approved without a reference gains one
+only through a new approval of an entry that carries it; a derivation
+never attaches the current contract to it.
+
+**Enforcement.** A resource server MUST NOT treat an entry carrying
+`resource_contract` as authorizing an operation unless it performs that
+operation under exactly the referenced contract: the one whose `id`,
+`version`, and `digest` all equal the reference's. Where the resource
+server's operation contract requires a reference for an operation, an
+applicable entry without one provides no authority for it. In both
+cases the entry is one the resource server cannot fully enforce
+({{rs-enforcement}}). The reference fixes meaning, not state: it
+supplies no observation of the resource, and it exempts no operation
+from the resource's other authorization checks. Which versions a
+resource still performs, and for which entries, is set by
+{{I-D.draft-mcguinness-mission-runtime}} where the deployment adopts
+it.
 
 ## Delegate Eligibility {#delegate-eligibility}
 
@@ -1108,10 +1226,12 @@ resource server:
 
 - the `scope` value or values it emits;
 - the `resource` and `resource_match` the mapping covers;
-- the `actions` value or values each `scope` value stands for; and
+- the `actions` value or values each `scope` value stands for;
 - for every `constraints` key an entry may carry, whether the target
   independently and identically enforces that key on the
-  `scope`-authorized path.
+  `scope`-authorized path; and
+- where an entry may carry `resource_contract`, the contract under which
+  the target performs the operations each `scope` value permits.
 
 Projecting a `mission_resource_access` entry's authority to `scope` is
 safe only when all of the following hold:
@@ -1138,6 +1258,13 @@ safe only when all of the following hold:
    name as independently enforced fails the condition for that entry, as
    an unenforced key fails closed at a resource server that consumes
    `authorization_details` directly.
+4. **The contract is preserved.** For an entry carrying
+   `resource_contract`, the mapping states that the target performs
+   every operation the mapped `scope` value permits under exactly the
+   referenced contract ({{resource-contract}}). A `scope` value conveys
+   no contract reference of its own. An entry without the member
+   satisfies this condition only where the target requires no reference
+   for those operations.
 
 Advertising a key in `mission_constraints_supported`
 ({{protected-resource-metadata}}) is not evidence that a projection
@@ -1303,7 +1430,10 @@ An **authorization server** conforms by supporting
 implements:
 
 - schema validation of a proposed or carried entry against the type
-  definition ({{resource-access-type}}); and
+  definition ({{resource-access-type}});
+- either the approval-time assembly and validation of a
+  `resource_contract` reference, or refusal of every entry that carries
+  one ({{resource-contract}}); and
 - the Transformation Capabilities declaration
   ({{transformation-capabilities}}), stating which of narrowing,
   delegation, and projection it claims for this type.
@@ -1315,7 +1445,7 @@ implements:
   rules ({{subset}}, {{common-constraints}});
 - **delegation**: the delegate eligibility test
   ({{delegate-eligibility}}); and
-- **projection**: the three per-entry, per-target safety conditions of
+- **projection**: the four per-entry, per-target safety conditions of
   {{scope-projection}} before emitting `scope`.
 
 An authorization server that does not claim `projection` MUST NOT emit
@@ -1353,7 +1483,7 @@ anchors, and issuance gating. Three risks are specific to this type:
 - **A safe projection is per entry, not per type.** That
   `mission_resource_access` defines a projection relation
   ({{scope-projection}}) does not make every entry of the type safely
-  projectable: {{scope-projection}}'s three conditions must hold for the
+  projectable: {{scope-projection}}'s four conditions must hold for the
   specific entry and mapping in force, and the type's general capability
   does not extend to an entry by default.
 
