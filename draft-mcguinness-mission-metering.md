@@ -1318,6 +1318,10 @@ this registry.
 
 \[\[ To be removed from the final specification ]]
 
+- Editorial (#1176): examples of the canonical Mission follow one
+  dated history; an example line too long for the page is folded per
+  RFC 8792. No requirement changes.
+
 - Duration-Lease Renewal: the renewal example carries
   `resource.properties.operation_target` (#1276).
 
