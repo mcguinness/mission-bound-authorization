@@ -36714,7 +36714,7 @@
    "id": "progressive.ceiling-review.review-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "Its consent disclosure MUST render the chain's record since the prior review",
+   "text": "Its consent disclosure MUST render the chain's record since the prior review or, for the chain's first review, since the initial ceiling consent",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36725,12 +36725,95 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the review approval that re-consents or narrows a ceiling renders the chain's drawdown count and rate, escalated guard exceptions, out_of_ceiling refusals, discharge and containment restrictions, and metered consumption since the prior review"
+    "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017)."
+   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent."
+  },
+  {
+   "id": "progressive.ceiling-review.review-is-reconsent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "A ceiling review is a fresh human approval that explicitly re-consents the ceiling and drawdown policy, a narrowed ceiling included",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh human approval that re-consents the ceiling restarts the review cadence; no separate request is needed",
+    "local": "The re-consent rides the deferral approval (ExpansionApproval.ceiling)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-review.overdue-not-reconsent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "Where the Approver approves only the successor's authority, the ceiling consent stays overdue and policy adjudication stays unavailable",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after an overdue chain's fresh human approval that does not re-consent, the ceiling consent instant is unchanged and the next policy-eligible widening still falls back",
+    "local": "successorCeilingMembers carries the consent instant unchanged without a re-consent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an overdue chain's fresh human approval without a re-consent is not a review: the ceiling consent stays overdue and policy adjudication unavailable",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by restarting the consent instant on any human approval (the test fails)."
+  },
+  {
+   "id": "progressive.ceiling-review.policy-narrowing-not-review",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "A ceiling narrowed by a policy-adjudicated drawdown ({{drawdown-successor}}) has not been reviewed: the narrowing keeps the instant of the consent it narrows, and the cadence does not restart",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a ceiling narrowed by a policy-adjudicated drawdown keeps the narrowed consent's instant, so the review cadence does not restart",
+    "local": "The reference carries the ceiling unchanged on every policy-adjudicated successor and never narrows it by policy."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",

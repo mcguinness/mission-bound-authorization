@@ -309,8 +309,10 @@ through a chain of successor Missions:
    admit it, the Mission Issuer creates the successor, supersedes the
    predecessor, and returns the successor's access token in the
    token-exchange response ({{drawdown-successor}}).
-6. A review approval re-consents to or narrows the ceiling, which
-   restarts the review cadence ({{ceiling-review}}).
+6. A ceiling review, a fresh human approval that explicitly
+   re-consents the ceiling (a narrowed one included), restarts the
+   review cadence; approving a successor's authority alone does not
+   ({{ceiling-review}}).
 
 ~~~ ascii-art
    Approver consents to Mission M0, ceiling C, drawdown policy P
@@ -786,7 +788,9 @@ recomputed `ceiling_hash`, with the re-consent's instant and Approver
 as those of the ceiling consent. The ceiling review cadence restarts
 from that instant ({{ceiling-review}}). The consent disclosure MUST
 render the re-consented ceiling and policy as at the initial approval
-({{progressive-authorization}}).
+({{progressive-authorization}}). A re-consent is a ceiling review, so
+its disclosure also renders the chain's record that
+{{ceiling-review}} requires.
 
 Either way the expansion chain continues: its root, `predecessor`
 links, rate-bound window, cumulative drawdown count, and every
@@ -977,15 +981,29 @@ Because `ceiling_hash` commits that policy's `digest`, the cadence is
 anchored with it. Changing the cadence changes the policy snapshot, so
 a drawdown under the changed policy no longer matches the committed
 `digest` and falls back to a fresh human approval until a review
-approval re-consents the ceiling under the new policy. An auditor
+re-consents the ceiling under the new policy. An auditor
 recovers the cadence that governed a given drawdown from the retained
 snapshot that `digest` names, exactly as it resolves the drawdown
 logic itself.
 
-The review approval is an ordinary expansion approval that
-re-consents, or narrows, the ceiling ({{ceiling-reconsent}}). Its
-consent disclosure MUST render the chain's record since the prior
-review:
+A ceiling review is a fresh human approval that explicitly
+re-consents the ceiling and drawdown policy, a narrowed ceiling
+included ({{ceiling-reconsent}}). No request asks for a review on its
+own: a review rides a fresh human approval of an expansion in the
+chain.
+
+An overdue cadence sends the chain's next widening to a fresh human
+approval but does not require a re-consent. Where the Approver
+approves only the successor's authority, the ceiling consent stays
+overdue and policy adjudication stays unavailable. A ceiling narrowed
+by a policy-adjudicated drawdown ({{drawdown-successor}}) has not been
+reviewed: the narrowing keeps the instant of the consent it narrows,
+and the cadence does not restart.
+
+Every re-consent is a review, including one before the cadence
+expires. Its consent disclosure MUST render the chain's record since
+the prior review or, for the chain's first review, since the initial
+ceiling consent:
 
 - the drawdown count and rate;
 - the guard exceptions escalated to human approval;
@@ -1150,7 +1168,8 @@ Authorization** is a conforming expansion-capable Mission Issuer
   drawdown count ({{drawdown-bounds}}, {{audit-linkage}});
 - bound each chain by the published ceiling review cadence, refusing
   policy adjudication past it, rendering the chain's record since the
-  prior review in the review approval's disclosure, and stating the
+  prior review, or since the initial ceiling consent, in every
+  re-consent's disclosure, and stating the
   cadence effective under each drawdown policy version in that
   policy's own versioned content ({{ceiling-review}}); and
 - where the deployment also adopts Mission Derivation Limits, carry a

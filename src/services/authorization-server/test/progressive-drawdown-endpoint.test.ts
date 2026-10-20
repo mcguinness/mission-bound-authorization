@@ -874,6 +874,19 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
       "payments:payment.schedule.cancel",
     ]);
   });
+
+  it("an overdue chain's fresh human approval without a re-consent is not a review: the ceiling consent stays overdue and policy adjudication unavailable", async () => {
+    // A one-second review cadence, lapsed before the chain's next widening.
+    const root = await issueMission(READ, ceilingOf("drawdown-short"));
+    const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
+    await new Promise((r) => setTimeout(r, 1100));
+    // The overdue cadence sends the widening to a human, who approves only the successor.
+    const approved = await approveAndPoll(await openFreshApproval(root.missionId, root.accessToken, READ_LIST), ALICE);
+    const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
+    expect(s1.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
+    // Eligible on every other guard, the next widening still falls back.
+    await openFreshApproval(s1.id, approved.access_token, [...READ_LIST, "payments:payment.schedule"]);
+  });
 });
 
 describe("fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review)", () => {
