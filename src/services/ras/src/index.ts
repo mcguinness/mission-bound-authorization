@@ -14,6 +14,7 @@ import {
   narrowToCeiling,
   type EntitlementAuthorityEntry,
   type EntitlementResolver,
+  entryOverlapsResource,
   type LocalMappingPolicy,
   narrowToEntitledAuthority,
   type OriginPrincipal,
@@ -90,9 +91,10 @@ export interface RasConfig {
    * (#1266): per destination resource, the `constraints` keys its resource
    * server is known to enforce, for example from that resource's
    * `mission_constraints_supported` metadata. This is the RAS's only
-   * enforcement knowledge: a resource not listed here, or every resource
-   * when the member is absent, is known to enforce no key. A minted entry
-   * carrying a key its resource is not known to enforce is dropped whole,
+   * enforcement knowledge: an entry is checked against every listed resource
+   * whose tree overlaps it, and one overlapping no listed resource (every
+   * entry, when the member is absent) is known to be enforced nowhere. A
+   * minted entry carrying a key not known to be enforced is dropped whole,
    * never stripped of the key, which would widen it. An entry with no
    * `constraints` key needs no such knowledge.
    */
@@ -407,17 +409,21 @@ export class ResourceAuthorizationServer {
   }
 
   /**
-   * Whether every `constraints` key of `entry` is one its resource is known to
-   * enforce. A resource {@link RasConfig.resourceConstraintsSupported} does
-   * not list is known to enforce none, so only an entry with no key passes
-   * for it: the RAS never assumes support it was not given.
+   * Whether every `constraints` key of `entry` is one each resource it
+   * applies to is known to enforce. The listed resources it applies to are
+   * those whose resource tree overlaps it ({@link entryOverlapsResource}): the
+   * one it names, a listed resource serving the finer resource it names, and
+   * each listed resource within a `prefix` entry's base. An entry overlapping
+   * no listed resource is known to be enforced nowhere, so only an entry with
+   * no key passes then: the RAS never assumes support it was not given.
    */
   private constraintsEnforcedFor(entry: AuthorityEntry): boolean {
     const keys = Object.keys(entry.constraints ?? {});
     if (keys.length === 0) return true;
-    const supported = this.cfg.resourceConstraintsSupported;
-    const enforced = supported && Object.hasOwn(supported, entry.resource) ? (supported[entry.resource] ?? []) : [];
-    return keys.every((key) => enforced.includes(key));
+    const supported = this.cfg.resourceConstraintsSupported ?? {};
+    const overlapping = Object.keys(supported).filter((resource) => entryOverlapsResource(entry, resource));
+    if (overlapping.length === 0) return false;
+    return overlapping.every((resource) => keys.every((key) => (supported[resource] ?? []).includes(key)));
   }
 
   /** @spec MCP EMA: the RAS declares enterprise-managed auth in its metadata. */

@@ -117,10 +117,13 @@ enforces (`@spec resource-access#resource-access-type`, #1266), and, for a
 
 `mission_constraints_supported` mirrors the target's protected resource
 metadata member of the same name. A Mission-bound token issued for an
-`authorization_details` target carries an entry for that target only when
-every `constraints` key of the entry is listed; otherwise the issuance is
-refused `invalid_target`, never narrowed by dropping the key. An absent list
-names no key, so any constrained entry for that target is refused.
+`authorization_details` target carries an entry the target serves (one
+naming the target, one for a finer resource within it, or a `prefix` entry
+whose base contains it) only when every `constraints` key of the entry is
+listed; otherwise the issuance is refused `invalid_target`, never narrowed by
+dropping the key. A token with several such audiences meets each one's list.
+An absent list names no key, so any constrained entry that target serves is
+refused.
 
 - **Owner.** The deployment operator responsible for each target Resource
   Server owns that audience's entry, because it describes how that server

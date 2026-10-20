@@ -252,6 +252,7 @@ export {
   type AudienceScopeMapping,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  entryOverlapsResource,
   OIDC_SCOPE_VALUES,
   parseScopeProjectionMapping,
   projectScope,

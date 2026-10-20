@@ -761,6 +761,59 @@ describe("RAS emits only the constraints keys the destination resource enforces 
     expect(details(result.access_token)).toEqual([otherOpen, DEFAULT_CEILING[0]]);
   });
 
+  describe("an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276)", () => {
+    const ORIGIN = "https://saas.example.test/";
+    const ADMIN = `${AUDIENCE}/admin`;
+    const SIBLING = "https://saas.example.test/mcp-other";
+    /** A destination ceiling over the whole origin, so only the key filter narrows. */
+    const ORIGIN_CEILING: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: ORIGIN, resource_match: "prefix", actions: ["invoices.read"] },
+    ];
+    const at = (resource: string, constraints: Record<string, unknown>, prefix = false): AuthorityEntry =>
+      ({
+        type: "mission_resource_access",
+        resource,
+        ...(prefix ? { resource_match: "prefix" } : {}),
+        actions: ["invoices.read"],
+        constraints,
+      }) as AuthorityEntry;
+    const VENDORS = { vendors: ["acme"] };
+    const WINDOW = { time_window: { not_after: FAR_FUTURE } };
+    const mint = async (supported: Record<string, string[]>, entries: AuthorityEntry[]) => {
+      const server = await ras({ localCeiling: ORIGIN_CEILING, resourceConstraintsSupported: supported });
+      return details((await server.redeem(await mintGrant({ authorizationDetails: entries }), clientJkt)).access_token);
+    };
+
+    it("checks a finer exact entry and a prefix entry within a listed resource against that resource's keys", async () => {
+      const kept = [at(`${AUDIENCE}/invoices/inv-1`, VENDORS), at(`${AUDIENCE}/invoices`, VENDORS, true)];
+      const dropped = [at(`${AUDIENCE}/invoices/inv-2`, WINDOW), at(`${AUDIENCE}/archive`, WINDOW, true)];
+      expect(await mint({ [AUDIENCE]: ["vendors"] }, [...kept, ...dropped])).toEqual(kept);
+    });
+
+    it("checks a prefix entry whose base contains listed resources against each one's keys", async () => {
+      const supported = { [AUDIENCE]: ["vendors"], [ADMIN]: ["vendors", "time_window"] };
+      const vendors = at(ORIGIN, VENDORS, true);
+      // Both listed resources lie within the base: the key must be listed for each.
+      expect(await mint(supported, [vendors, at(ORIGIN, WINDOW, true)])).toEqual([vendors]);
+    });
+
+    it("checks an entry overlapping two listed resources against both lists", async () => {
+      const supported = { [AUDIENCE]: ["vendors", "time_window"], [ADMIN]: ["vendors"] };
+      const vendors = at(`${ADMIN}/users`, VENDORS);
+      // Within both the audience's tree and the admin tree: admin lacks time_window.
+      expect(await mint(supported, [vendors, at(`${ADMIN}/users`, WINDOW)])).toEqual([vendors]);
+    });
+
+    it("does not pair a listed resource with a sibling outside its segment boundary (boundary)", async () => {
+      const open = at(SIBLING, {});
+      const { constraints: _none, ...openEntry } = open;
+      // The sibling overlaps no listed resource, so it is known to be enforced nowhere.
+      expect(await mint({ [AUDIENCE]: ["vendors"] }, [at(SIBLING, VENDORS), openEntry as AuthorityEntry])).toEqual([
+        openEntry,
+      ]);
+    });
+  });
+
   it("refuses when no entry survives, without consuming the grant", async () => {
     const supported = ["vendors"];
     const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: supported } });

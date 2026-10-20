@@ -21,6 +21,7 @@
 import type { AuthorityEntry } from "./authority-entry.js";
 import { resourceWithin } from "./authority-subset.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
 
 /**
  * @spec mission#scope-projection — the `scope` values with their own (OIDC)
@@ -440,27 +441,51 @@ export function delegatedRoutingRefusal(
 }
 
 /**
+ * @spec resource-access#resource-access-type, resource-access#resource-matching
+ * (#1266, #1276): whether an entry applies to the resource server whose
+ * resource is `served`, so that server can receive and enforce it. Their
+ * resource trees overlap when the entry names `served` itself; when `served`
+ * is a `//` base and the entry's resource is within it (an `exact` or
+ * `prefix` entry for a finer resource that server serves); or when the entry
+ * is `prefix` and `served` is within its base. Containment is the Resource
+ * Access matcher's ({@link prefixAdmits}); a `served` value that is not a
+ * `//` base overlaps only an entry naming it exactly.
+ */
+export function entryOverlapsResource(
+  entry: { readonly resource?: unknown; readonly resource_match?: unknown },
+  served: string,
+): boolean {
+  const resource = entry.resource;
+  if (typeof resource !== "string") return false;
+  if (resource === served) return true;
+  if (isEnforceablePrefixBase(served) && prefixAdmits(served, resource)) return true;
+  return entry.resource_match === "prefix" && prefixAdmits(resource, served);
+}
+
+/**
  * @spec resource-access#resource-access-type (#1266): "the authorization
  * server SHOULD emit for a given `resource` only `constraints` keys that the
  * resource server serving it is known to understand and enforce". A token
  * is emitted for its audiences, and a resource server receives an entry only
- * in a token issued for it, so the entries checked are those whose
- * `resource` is one of the token's audiences. An entry for another resource
- * is not served to that resource's server by this token; it is checked when
- * a token is issued for that resource.
+ * in a token issued for it, so an entry is checked against every token
+ * audience whose resource tree overlaps it ({@link entryOverlapsResource}):
+ * the audience it names, an audience that serves the finer resource it
+ * names, and each audience within a `prefix` entry's base. The token reaches
+ * every such audience, so each one's own list applies, not only the closest.
+ * An entry overlapping no audience is not served by this token; it is
+ * checked when a token is issued for its resource.
  *
- * This authorization server's knowledge is the trusted mapping: an entry for
- * an `authorization_details` audience may carry only the keys that
- * audience's `mission_constraints_supported` names, and an audience with no
- * such list is known to enforce none. A key it cannot vouch for refuses the
- * issuance; it is never dropped from the entry, which would widen it, and
- * the entry is never omitted to repair it. An entry for a `scope`-only
- * audience is left to the projection's condition 3
- * ({@link scopeValueSafeForEntry}): that target reads `scope`, never the
- * entry's `constraints`. Keyed on presence: an entry with no `constraints`
- * key needs no knowledge. An audience the mapping does not name is refused
- * before this check ({@link projectScope}). Returns the refusal reason, or
- * undefined.
+ * This authorization server's knowledge is the trusted mapping: an entry may
+ * carry only the keys each overlapping `authorization_details` audience's
+ * `mission_constraints_supported` names, and an audience with no such list
+ * is known to enforce none. A key it cannot vouch for refuses the issuance;
+ * it is never dropped from the entry, which would widen it, and the entry is
+ * never omitted to repair it. A `scope`-only audience is left to the
+ * projection's condition 3 ({@link scopeValueSafeForEntry}): that target
+ * reads `scope`, never the entry's `constraints`. Keyed on presence: an
+ * entry with no `constraints` key needs no knowledge. An audience the
+ * mapping does not name is refused before this check ({@link projectScope}).
+ * Returns the refusal reason, or undefined.
  */
 export function unenforcedConstraintRefusal(
   mapping: ScopeProjectionMapping | undefined,
@@ -469,21 +494,26 @@ export function unenforcedConstraintRefusal(
 ): string | undefined {
   for (const entry of entries) {
     if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
-    const { resource, constraints } = entry as { resource?: unknown; constraints?: unknown };
-    if (typeof resource !== "string" || !audiences.includes(resource)) continue;
+    const e = entry as { resource?: unknown; resource_match?: unknown; constraints?: unknown };
+    const applicable = audiences.filter((aud) => entryOverlapsResource(e, aud));
+    if (applicable.length === 0) continue;
+    const { resource, constraints } = e;
     if (constraints === undefined) continue;
     if (constraints === null || typeof constraints !== "object" || Array.isArray(constraints)) {
-      return `an authorization_details entry for ${resource} carries a constraints member that is not an object`;
+      return `an authorization_details entry for ${String(resource)} carries a constraints member that is not an object`;
     }
     const keys = Object.keys(constraints);
     if (keys.length === 0) continue;
     const known = mapping?.audiences;
-    const m = known && Object.hasOwn(known, resource) ? known[resource] : undefined;
-    if (m?.mode === "scope_only") continue;
-    const enforced = m?.mission_constraints_supported ?? [];
-    const unenforced = keys.find((key) => !enforced.includes(key));
-    if (unenforced !== undefined) {
-      return `resource ${String(resource)} is not known to enforce the constraints key ${unenforced}`;
+    for (const aud of applicable) {
+      const m = known && Object.hasOwn(known, aud) ? known[aud] : undefined;
+      if (m?.mode === "scope_only") continue;
+      const enforced = m?.mission_constraints_supported ?? [];
+      const unenforced = keys.find((key) => !enforced.includes(key));
+      if (unenforced !== undefined) {
+        const carrier = resource === aud ? "" : ` carried by an entry for ${String(resource)}`;
+        return `resource ${aud} is not known to enforce the constraints key ${unenforced}${carrier}`;
+      }
     }
   }
   return undefined;
