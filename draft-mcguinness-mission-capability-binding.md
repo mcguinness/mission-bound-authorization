@@ -536,6 +536,15 @@ value.
 
 \[\[ To be removed from the final specification ]]
 
+- Approval and Commitment (#1447): where the issuance profile
+  renders a candidate Authority Set for human approval, the
+  validating server resolves the capability bindings before the
+  rendering, presents each bound action's operation, what it
+  authorizes, its source and publisher, and the drift refusal,
+  revalidates the bindings at the approval decision, and commits
+  exactly the consented bindings. An unrelated catalog edit is not a
+  binding change unless `catalog_digest` was recorded.
+
 - Decision-Time Verification reads whether an action is
   catalog-sourced, and which digests were recorded, from the approved
   entry the Mission Issuer recorded at derivation, through the
