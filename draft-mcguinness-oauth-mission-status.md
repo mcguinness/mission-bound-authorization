@@ -563,7 +563,7 @@ Decoded JWS payload:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "client_erp-recon-agent",
+  "sub": "s6BhdRkqt3",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
   "iat": 1793606400,
   "exp": 1793606460,
@@ -571,16 +571,30 @@ Decoded JWS payload:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "active",
-    "version": 4,
+    "version": 1,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:00:45Z"
   },
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"] }
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "500.00", "currency": "USD" }
+      } }
   ]
 }
 ~~~
@@ -910,19 +924,18 @@ for a token whose Mission is `active`:
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "iat": 1793606400,
+  "iat": 1793606410,
   "token_introspection": {
     "active":  true,
     "client_id": "s6BhdRkqt3",
     "sub":     "user_3p2q8mN1a0kV7tR",
-    "scope":   "invoices.read",
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+        "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
       "state":   "active",
-      "fresh_until": "2026-11-02T08:00:45Z"
+      "fresh_until": "2026-11-02T08:00:55Z"
     }
   }
 }
@@ -1330,8 +1343,8 @@ Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "client_erp-recon-agent",
-  "sub": "client_erp-recon-agent",
+  "aud": "s6BhdRkqt3",
+  "sub": "s6BhdRkqt3",
   "nonce": "nonce_8Y3vN0sM6tP1xR9bQ5",
   "iat": 1793609600,
   "exp": 1793609660,
@@ -1339,14 +1352,14 @@ Decoded JWS payload:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
       "terminated_at": "2026-11-02T08:53:20Z",
-      "version": 7
+      "version": 4
     },
-    "version": 7,
+    "version": 4,
     "expires_at":  "2026-12-31T23:59:59Z",
     "fresh_until": "2026-11-02T08:54:05Z"
   }
