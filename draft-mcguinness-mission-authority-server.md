@@ -713,7 +713,18 @@ Cache-Control: no-store
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read", "journal-entries.write"],
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
       "constraints": {
         "max_amount": { "amount": "500.00", "currency": "USD" }
       } }
@@ -1201,7 +1212,7 @@ the other decision inputs per {{I-D.draft-mcguinness-mission-authzen}}:
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://mas.example.com",
       "authority_hash":
-        "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+        "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs"
     },
     "mission_state_observation": {
       "state": "active",
@@ -1746,7 +1757,7 @@ Assertion:
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://mas.example.com",
     "authority_hash":
-      "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+      "sha-256:rspctkzaH13fMUjC6FxL5npl9HREFVrQIk0WN8O_CGs"
   },
   "token": {
     "sha256": "rN2kQ4mZ7tP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2n",
@@ -1757,8 +1768,8 @@ Assertion:
     "disposition": "client"
   },
   "aud": "https://pdp.example.com",
-  "iat": 1793606400,
-  "exp": 1793608200
+  "iat": 1793607240,
+  "exp": 1793609040
 }
 ~~~
 
