@@ -226,7 +226,7 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
     expect(() => masPilotLaunchOptions({ ...store, MAS_PILOT_CONFIG: invalid }, "separated")).toThrow(/declares no usable mapping contract/);
   });
 
-  it("refuses a running MAS that is unreachable or answers under another issuer, before reaching OpenFGA", async () => {
+  it("refuses a running MAS that is unreachable or answers under another issuer, and a MAS process that fails to start, without opening the Resource-policy store", async () => {
     const bootstrap = vi.spyOn(Fga, "bootstrap").mockRejectedValue(new Error("OpenFGA was reached"));
     const attach = vi.spyOn(Fga, "attach").mockRejectedValue(new Error("OpenFGA was reached"));
     const env = { MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1", MAS_PILOT_PDP_TOKEN: "pdp" };
@@ -247,9 +247,27 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
       impostor.closeAllConnections();
       await new Promise<void>((resolve) => impostor.close(() => resolve()));
     }
+    // The MAS process this launcher starts cannot listen: its startup
+    // failure is the launcher's.
+    const local = { ...keys, MAS_PILOT_CONFIG: env.MAS_PILOT_CONFIG, MAS_PILOT_DEVELOPMENT_STORE: "1" };
+    const blocker: Server = createServer();
+    await new Promise<void>((resolve) => blocker.listen(14863, "127.0.0.1", resolve));
+    try {
+      await expect(launchMasPilot(masPilotLaunchOptions(local, "separated"))).rejects.toThrow(
+        /^startup failed: http:\/\/127\.0\.0\.1:14863 cannot listen/,
+      );
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
     expect(bootstrap).not.toHaveBeenCalled();
     expect(attach).not.toHaveBeenCalled();
-  });
+
+    // The control: a launch that gets as far as the store reaches the stub,
+    // and its failure releases what it had opened.
+    await expect(launchMasPilot(masPilotLaunchOptions(local, "in-process"))).rejects.toThrow(/OpenFGA was reached/);
+    expect(bootstrap).toHaveBeenCalledTimes(1);
+    for (const url of ["http://127.0.0.1:14862", "http://127.0.0.1:14863"]) expect(await refusesConnection(url), url).toBe(true);
+  }, 60_000);
 
   it("refuses a running MAS's address in process, and one of the address and the PDP credential without the other", () => {
     const env = { ...keys, MAS_PILOT_CONFIG: configFile(14862, 14863), MAS_PILOT_DEVELOPMENT_STORE: "1" };
