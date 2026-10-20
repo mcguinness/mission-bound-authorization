@@ -207,6 +207,17 @@ describe("MAS pilot: the gateway joins estate credentials under the mapping cont
     const decided = requests.length;
     const retained = evidence.all().length;
     const url = pilot.resourceRoute.url;
+    // A whole attempt on the resource's own route: the MCP handshake, then the
+    // read the gateway permits. Nothing reaches the PEP: no decision request
+    // and no evidence record (refusals and decisions are both retained).
+    const attempt = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" }, url).then(
+      (result) => ({ admitted: true, result }),
+      () => ({ admitted: false }),
+    );
+    expect(requests.length).toBe(decided);
+    expect(evidence.all().length).toBe(retained);
+    expect(attempt.admitted).toBe(false);
+    // The route answers the handshake 401.
     const res = await fetch(url, {
       method: "POST",
       headers: {
@@ -224,8 +235,6 @@ describe("MAS pilot: the gateway joins estate credentials under the mapping cont
       }),
     });
     expect(res.status).toBe(401);
-    expect(requests.length).toBe(decided);
-    expect(evidence.all().length).toBe(retained);
     // Positive control: the gateway admits and permits the same credential.
     const viaGateway = await call(pilot, credential, aliceMission, "get_invoice", { invoice_id: "inv-1" });
     expect(viaGateway.ok, JSON.stringify(viaGateway)).toBe(true);
