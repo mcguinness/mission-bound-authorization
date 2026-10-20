@@ -39458,7 +39458,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped. #1377: the inventory of every rule a narrowing declaration would claim, which makes no declaration, is src/docs/resource-access-transformation-capabilities.md; any declaration awaits the owner ruling #1377 asks for."
+   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped. #1377: the inventory of every rule a narrowing declaration would claim, which makes no declaration, is src/docs/resource-access-transformation-capabilities.md. D538 rules a qualified supported-subset declaration through a reviewable change; none is made yet."
   },
   {
    "id": "resource-access.transformation-capabilities.undeclared-per-carrier",
