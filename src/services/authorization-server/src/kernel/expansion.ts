@@ -14,6 +14,7 @@ import { inheritCapabilitySources } from "./capability-binding.js";
 import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { type ReconsentedCeiling, successorCeilingMembers } from "./progressive.js";
 import {
   type ApprovalBasis,
   type AuthorityEntry,
@@ -63,6 +64,13 @@ export interface ExpansionInput {
    * no authority: this member only fixes which identifier the record takes.
    */
   successorId?: string;
+  /**
+   * @spec progressive#ceiling-reconsent (#1413) — a ceiling and drawdown
+   * policy the Approver explicitly re-consented at this approval, already
+   * committed with its consent instant. Absent, a predecessor's ceiling
+   * members carry unchanged.
+   */
+  ceilingReconsent?: ReconsentedCeiling;
 }
 
 /**
@@ -229,6 +237,9 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     grant_id: null,
     status_list_idx: null,
     predecessor: input.predecessorId,
+    // @spec progressive#ceiling-reconsent (#1413): a chain's ceiling members
+    // carry to a human-approved successor unchanged, or as re-consented.
+    ...successorCeilingMembers(predecessor, input.ceilingReconsent),
   };
   kernel.insertRecord(record, undefined, { source: resolvedSource });
 
