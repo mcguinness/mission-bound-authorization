@@ -1,14 +1,29 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   type ApprovalContextManifestInput,
+  type AuthorityEntry,
   approvalContextCommitment,
   approvalContextManifest,
   computeAnchor,
+  isSubsetSetIgnoringCapabilitySources,
   submissionEvidenceCommitment,
   verifyApprovalContextCommitment,
 } from "../src/index.js";
 
 const ISS = "https://as.example.com";
+
+// The canonical baseline Mission (#1176 item 5), whose Authority Set the
+// vectors' always-present members commit.
+const BASELINE_AUTHORITY_SET = (
+  JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL("../../../../vectors/baseline-q3/baseline-q3.json", import.meta.url)),
+      "utf8",
+    ),
+  ) as { record: { authority_set: AuthorityEntry[] } }
+).record.authority_set;
 
 // approval-governance § approval-context-vectors: the always-present members,
 // reused byte-exact from core's canonical Worked Example Mission Record.
@@ -75,25 +90,38 @@ describe("Approval Context Commitment vectors (approval-governance § approval-c
     // Progressive's own ceiling_hash construction (draft-mcguinness-oauth-mission-progressive
     // § progressive-authorization): typ mission-authority-ceiling over
     // {authority_ceiling, drawdown_policy}.
+    const authorityCeiling: AuthorityEntry[] = [
+      {
+        type: "mission_resource_access",
+        resource: "https://erp.example.com",
+        actions: ["invoices.read"],
+        delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+      },
+      {
+        type: "mission_resource_access",
+        resource: "https://erp.example.com",
+        actions: ["invoices.write", "journal-entries.write"],
+      },
+    ];
+    // The vector says its ceiling covers the baseline Authority Set, its read
+    // delegation included (#1395 review).
+    expect(isSubsetSetIgnoringCapabilitySources(BASELINE_AUTHORITY_SET, authorityCeiling)).toBe(
+      true,
+    );
+
     const ceilingHash = computeAnchor("mission-authority-ceiling", ISS, {
-      authority_ceiling: [
-        {
-          type: "mission_resource_access",
-          resource: "https://erp.example.com",
-          actions: ["invoices.read", "invoices.write", "journal-entries.write"],
-        },
-      ],
+      authority_ceiling: authorityCeiling,
       drawdown_policy: {
         id: "erp-drawdown",
         version: "1",
         digest: "sha-256:_hLEAl_ir1vxnex2tgbS6eRR99lyL1r6yyeB4RrC184",
       },
     });
-    expect(ceilingHash).toBe("sha-256:JaGArrkON1yHM16a_QRe5QqlIbhaxhXLUV7wtReyvD0");
+    expect(ceilingHash).toBe("sha-256:I0TgJBsdSkkmaHt4EayPfIjs8uoYiuQvP_O5b9Tlec8");
 
     const manifest = approvalContextManifest({ ...ALWAYS_PRESENT, ceiling_hash: ceilingHash });
     expect(approvalContextCommitment(ISS, manifest)).toBe(
-      "sha-256:PG7CiXyNLp3QXptmC3cBQolXHDmmeWf_0j17gwY-U5g",
+      "sha-256:85y0i-t8pwRsM-SwHgZ9EaBIQFbnWjYDjBNEO1TTQWA",
     );
   });
 
