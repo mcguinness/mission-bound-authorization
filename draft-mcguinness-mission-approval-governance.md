@@ -1006,15 +1006,19 @@ facts, so they do not conflict:
 
 # Mission Evidence {#audit-evidence}
 
-The AGR is registrable Mission evidence under the audit
-transparency profile's evidence-type pattern
-({{I-D.draft-mcguinness-mission-audit}}): canonical bytes are the
-JCS canonical bytes of the complete record, `envelope` included, the
-record-digest preimage ({{envelope}}); `payload-preimage-content-type` is
-`application/mission-approval-governance+json`; the authoritative
-producer is the Mission `issuer`. Registration is optional
-transparency hardening; retention and immutability do not depend on
-it.
+The AGR is registrable Mission evidence under the audit transparency
+profile's evidence-type pattern
+({{I-D.draft-mcguinness-mission-audit}}), with:
+
+- canonical bytes: the JCS canonical bytes of the complete record,
+  `envelope` included, which are the record-digest preimage
+  ({{envelope}});
+- `payload-preimage-content-type`:
+  `application/mission-approval-governance+json`; and
+- authoritative producer: the Mission `issuer`.
+
+Registration is optional transparency hardening; retention and
+immutability do not depend on it.
 
 # Approval Context Commitment {#approval-context-commitment}
 
