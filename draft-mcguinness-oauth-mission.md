@@ -383,6 +383,16 @@ OAuth does not define a task record that links approval of a task to
 every grant obtained for it. Without that linkage, withdrawing task
 approval need not stop issuance under those grants.
 
+No existing OAuth object fills that role ({{why-a-new-object}}); an
+`authorization_details` entry ({{RFC9396}}), for example, expresses
+authority but not the task it serves or a lifecycle of its own. A
+Mission, held by the AS beside the grant, does. It commits the
+disclosed task with its approved authority and has an identifier and
+a lifecycle independent of any grant. It can be revoked by that
+identifier through an authenticated means, independent of possession
+of any token ({{revocation}}), and a token derived from it by Token
+Exchange identifies the same Mission ({{grant-binding}}).
+
 A Mission is created and used in a single chain:
 
 1. **Submit.** The client submits a structured **Mission Intent**
@@ -392,38 +402,56 @@ A Mission is created and used in a single chain:
 2. **Derive authority.** The AS derives **authorization details**
    ({{RFC9396}}), the **Authority Set**: the concrete authority the
    task needs.
-3. **Approve.** At an **approval event**, the Approver consents to
-   that authority. The AS commits the task as **`intent_hash`** and
-   the authority as **`authority_hash`**, and records a durable
-   **Mission**.
+3. **Approve.** At an **approval event**, the approval rendering
+   shows the Intent's task, and the Approver consents to the derived
+   Authority Set itself, not to the task description alone
+   ({{approval-event}}). The AS commits the Mission Intent as
+   **`intent_hash`** and the approved Authority Set as
+   **`authority_hash`** ({{integrity-anchors}}). It records a durable
+   **Mission** whose record associates the disclosed task, the
+   approved authority, and the approval basis ({{mission-record}}).
 4. **Bind the grant.** The AS binds the OAuth grant the approval
-   produces to that Mission, server-side: every later derivation from
-   that grant lineage resolves to exactly this Mission, and the client
-   never selects or reassigns it ({{grant-binding}}).
-5. **Issue and enforce.** Every access token the agent obtains under
-   the Mission carries the derived authorization details and a
-   **`mission` claim** identifying that Mission (`id`, `issuer`). A
-   resource server enforces statelessly from the token.
+   produces to that Mission, server-side ({{grant-binding}}). Each
+   later issuance operation from that grant lineage, such as a
+   refresh, is a derivation ({{issuance-gating}}) and resolves to
+   exactly this Mission; the client never selects or reassigns it.
+   Under a profile, the AS can bind a further lineage to the same
+   Mission, such as a refresh-token family a continuation transport
+   establishes; each lineage resolves to exactly one Mission.
+5. **Issue and enforce.** Every derived authority is no broader than
+   the approved Authority Set ({{subset}}). Every access token the
+   agent obtains under the Mission carries the derived authorization
+   details and a **`mission` claim** identifying that Mission (`id`,
+   `issuer`). A resource server enforces statelessly from the token.
 6. **Stop issuance.** Token issuance and refresh are **gated on
-   Mission state**, so revoking or expiring the Mission stops the
-   agent from obtaining further authority.
+   Mission state**: a Mission that is not `active` yields no further
+   derivation ({{issuance-gating}}), including from any grant lineage
+   bound to it ({{grant-binding-state}}). Revoking or expiring the
+   Mission therefore stops the agent from obtaining further
+   authority.
 
-A user thus approves a task once, and that approval, not a
-per-request scope grant, bounds and outlives every token the agent
-derives. The Mission Record commits the consented authority once,
-as `authority_hash`, and a party holding the full Authority Set can
-verify it independently ({{consent-binding}}).
-Mission Approved-Set Verification
+Steps 3 to 6 state the properties this document provides;
+{{conformance}} states the requirements that realize them.
+
+A user thus approves the authority for a task once, and that
+approval, not a per-request scope grant, bounds and outlives every
+token the agent derives. The Mission Record commits the consented
+authority once, as `authority_hash`; a party holding the complete
+Authority Set can recompute the commitment and compare the result
+with `authority_hash` ({{consent-binding}}). Mission Approved-Set
+Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
-defines that check for a token that carries only a narrowed subset.
+defines how a token that carries only a narrowed subset is checked
+against the complete set.
 
 This chain is the first of two enforcement layers, and a deployment
 can run it alone: a resource server need not be Mission-aware unless
-it receives delegated tokens ({{rs-enforcement}}). The chain provides
-task-bound issuance, auditability, and a revocation gate over future
-derivation. Every token carries a subset of the approved Authority
-Set ({{subset}}) that no resource server over-grants on
-({{scope-projection}}).
+it receives delegated tokens ({{rs-enforcement}}). A Mission-unaware
+resource server that authorizes only from `scope` operates within the
+Mission only where the AS establishes that its scope projection and
+the resource's independent controls cannot over-grant
+({{scope-projection}}). The chain provides task-bound issuance,
+auditability, and a revocation gate over future derivation.
 
 The chain does not evaluate individual actions, so token lifetime
 and narrow authority bound the exposure between issuance and use.
@@ -432,26 +460,6 @@ The second layer, a separately specified runtime layer
 classes whose consequence needs one.
 
 ## Implementation Map {#implementation-map}
-
-This document establishes six properties; {{conformance}} states the
-requirements that realize them:
-
-1. The task is disclosed: the approval rendering shows the Intent's
-   task, and the AS commits the Intent as `intent_hash`
-   ({{approval-event}}, {{integrity-anchors}}).
-2. The authority is explicitly approved: the Approver consents to the
-   derived Authority Set itself, not to the task description alone
-   ({{approval-event}}).
-3. The Mission Record durably associates the disclosed task, the
-   approved authority, and the approval basis; separate commitments
-   protect the recorded Intent and Authority Set ({{mission-record}},
-   {{integrity-anchors}}).
-4. The OAuth grant lineage is bound to exactly one Mission,
-   server-side ({{grant-binding}}).
-5. Every derived authority is no broader than the approved Authority
-   Set ({{subset}}).
-6. A Mission that is not `active` yields no further derivation
-   ({{issuance-gating}}).
 
 The starting path is one client, one authorization server, direct
 approval, and a single resource audience, with no runtime profile,
@@ -463,13 +471,9 @@ times. The following table lists where each implementer reads next.
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
 | Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on its state and limits | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
-
-On this starting path, a scope-only resource is eligible only when the
-AS establishes that its scope projection and the resource's
-independent controls cannot over-grant ({{scope-projection}}).
 
 Some duties apply only when their condition holds:
 
@@ -520,21 +524,11 @@ is a task whose purpose, authority, and bounds the Approver can
 evaluate together ({{approval-comprehension}}).
 
 Optional companions can reduce repeated approvals through standing
-consent ({{standing-consent-bases}}), for example:
-
-- Mission Template ({{I-D.draft-mcguinness-oauth-mission-template}})
-  creates bounded instances of recurring tasks.
-- Progressive Authorization
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}) permits
-  successor Missions within a previously approved authority ceiling
-  as a task evolves.
-- Mission Approval Governance
-  ({{I-D.draft-mcguinness-mission-approval-governance}}) lets a
-  policy version a human approved decide an agent's own proposals.
-
-The template, ceiling, or policy still needs a meaningful human
-approval, and no such mechanism removes its profile's human-approval
-requirement for high-consequence authority.
+consent ({{standing-consent-bases}}): for example, a template, an
+authority ceiling, or a policy that a human approved once governs
+later Missions. The template, ceiling, or policy still needs a
+meaningful human approval, and no such mechanism removes its
+profile's human-approval requirement for high-consequence authority.
 
 The unit of governance is the action, not the content. A Mission
 bounds where an agent may act (resources, actions) and how much
@@ -629,8 +623,11 @@ All times are UTC on the same day.
    ({{mission-response-parameters}}). The access token's five-minute
    lifetime is distinct from the Mission's one-hour lifetime
    ({{mission-bound-tokens}}).
-4. **Use.** The ERP, a Mission-aware Resource Server, validates the
-   token and proof of possession and permits the authorized read; the
+4. **Use.** The ERP is a Mission-aware Resource Server: it enforces
+   the `mission_resource_access` entry itself, work a plain
+   {{RFC9068}} resource server does not do ({{conformance}}). It
+   validates the token and proof of possession and permits the
+   authorized read; the
    token grants no write authority. The resource request involves no
    Mission-state lookup or complete-set retrieval ({{rs-enforcement}}).
 5. **Stop further issuance.** At 12:02 an authorized revocation makes
@@ -3872,13 +3869,20 @@ with no fresh human approval per instance; each instance is still
 created at its own approval event ({{approval-event}}). The following
 `type` values are such bases:
 
-- `template` ({{I-D.draft-mcguinness-oauth-mission-template}})
+- `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
+  bounded instances of a recurring task;
 - `policy_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): Child
+  Missions that a parent agent requests and a policy adjudicates with
+  no human interaction, rooted in the Parent Mission's accountable
+  human;
 - `ceiling_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}})
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}): successor
+  Missions within a previously approved authority ceiling as a task
+  evolves; and
 - `governed_policy`
-  ({{I-D.draft-mcguinness-mission-approval-governance}})
+  ({{I-D.draft-mcguinness-mission-approval-governance}}): an agent's
+  own proposals, decided by a policy version that a human approved.
 
 For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
@@ -6634,6 +6638,21 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1379): the Introduction says what a Mission is beside
+  an OAuth grant, drawn from Design Context, and that under a profile
+  the AS can bind a further grant lineage to the same Mission. The
+  creation chain states the properties the document establishes,
+  replacing the Implementation Map's separate list, and glosses
+  "derivation" as an issuance operation. The layering paragraph
+  states the scope-projection condition for a resource server that
+  authorizes only from `scope`, replacing the Implementation Map's
+  copy, and the Implementation Map names the issuance checks. A
+  holder of the complete Authority Set is described as recomputing
+  `authority_hash`. Applicability points to Standing-Consent Bases,
+  which now describes each basis type, and the worked example says
+  why its resource server is a Mission-aware Resource Server. No
+  requirement changes.
 
 - Editorial (#1176): the examples of the canonical Mission follow one
   dated history, with the Intent in full and anchors computed over the
