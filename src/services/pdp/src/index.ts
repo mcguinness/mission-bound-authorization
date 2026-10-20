@@ -87,6 +87,12 @@ export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.
 export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionCapabilitiesFor, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";
 export {
+  createDurationLeaseLedger,
+  type DurationActivity,
+  type DurationLeaseDomain,
+  type LeaseContinuity,
+} from "./duration-lease.js";
+export {
   type ClaimChannel,
   claimChannelFor,
   createDecisionPoint,
