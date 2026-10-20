@@ -19,7 +19,9 @@ import { type ContextActor, validateContextActor } from "@mission/actor-chain";
 import {
   AUTHORITY_ENTRY_TYP,
   type AuthorityEntry as CoreAuthorityEntry,
-  commonConstraintGates,
+  type CollectionMemberFacts,
+  collectionMemberConstraintFacts,
+  commonConstraintGatesOverMembers,
   compareAmounts,
   computeAnchor,
   type ConstraintFacts,
@@ -207,6 +209,16 @@ export interface EvaluationRequest {
        * `data_classification` bound reads it; an absent label satisfies none.
        */
       data_classification?: string;
+      /**
+       * @spec resource-access#initial-common-constraints (#1266): for an
+       * action over a collection, every member the action reads, each with
+       * the facts the PEP read from that member's own record. Present, the
+       * issuance, tenant and classification bounds read each member's facts
+       * instead of the single-object members above, and one member that
+       * fails or lacks a fact denies the whole action. A list that cannot be
+       * read establishes no member fact.
+       */
+      members?: CollectionMemberFacts[];
     };
   };
   action: {
@@ -1431,9 +1443,10 @@ async function evaluateInner(
   // 5. Authority entry match: the approved entry's resource is matched
   //    against the PEP-established operation target with the Resource Access
   //    matcher (@spec resource-access#resource-matching, #1276, D457):
-  //    literal `exact`, and an entry under `prefix` or an unrecognized
-  //    `resource_match` provides no authority. Never the audience, never the
-  //    AuthZEN resource object's type/id. On the baseline-Join path (4b
+  //    literal `exact`, or `prefix` at a path-segment boundary after the one
+  //    URI normalization; an unrecognized `resource_match`, or a `prefix`
+  //    base the matcher cannot enforce, provides no authority. Never the
+  //    audience, never the AuthZEN resource object's type/id. On the baseline-Join path (4b
   //    above), matched against the JOINED authority set, never the Mission's
   //    raw view.authority_set.
   // @spec runtime#input-authority — "For any other `authorization_details`
@@ -1591,6 +1604,23 @@ async function evaluateInner(
         }
       : {}),
   };
+  // @spec resource-access#initial-common-constraints (#1266): a collection
+  // read's members, each with its own facts. A list with any member that
+  // cannot be read is unreadable as a whole: it is carried as empty, which
+  // establishes no member fact, rather than filtered to the members that read.
+  const rawMembers = req.resource.properties?.members as unknown;
+  const memberFacts =
+    rawMembers === undefined
+      ? undefined
+      : Array.isArray(rawMembers)
+        ? rawMembers.map(collectionMemberConstraintFacts)
+        : [undefined];
+  const constraintMembers: ConstraintFacts[] | undefined =
+    memberFacts === undefined
+      ? undefined
+      : memberFacts.every((m): m is ConstraintFacts => m !== undefined)
+        ? memberFacts
+        : [];
   let viewHoldsFullSet: boolean | undefined;
   const credentialDischarge = (
     c: CredentialAuthorityEntry,
@@ -1599,21 +1629,27 @@ async function evaluateInner(
     if (!conditions?.length) return { state: "live" };
     viewHoldsFullSet ??= viewHoldsCommittedSet(view);
     if (!viewHoldsFullSet) return { state: "unestablished" };
+    // @spec resource-access#subset step 1 (#1276): each side keeps its
+    // `resource_match`, so a credential entry is sourced only from a Mission
+    // entry whose resource set contains its own.
     const asEntry: CoreAuthorityEntry = {
       type: c.type,
       resource: c.resource,
+      ...(c.resource_match !== undefined ? { resource_match: c.resource_match } : {}),
       actions: c.actions,
       ...(c.constraints ? { constraints: c.constraints } : {}),
     };
     let sources = 0;
     for (const m of view.authority_set) {
       if (m.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
-      const source: CoreAuthorityEntry = {
+      const match = (m as { resource_match?: unknown }).resource_match;
+      const source = {
         type: m.type,
         resource: m.resource,
+        ...(match !== undefined ? { resource_match: match } : {}),
         actions: m.actions,
         ...(m.constraints ? { constraints: m.constraints } : {}),
-      };
+      } as CoreAuthorityEntry;
       if (!isSubsetEntry(asEntry, source)) continue;
       if (!conditionsNoBroader(m.constraints?.terminal_when, conditions)) continue;
       sources++;
@@ -1631,6 +1667,7 @@ async function evaluateInner(
     vendorIds: credentialVendorIds,
     ...(req.context.amount ? { amount: req.context.amount } : {}),
     constraintFacts,
+    ...(constraintMembers !== undefined ? { constraintMembers } : {}),
   };
   const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
   if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
@@ -1843,7 +1880,8 @@ async function evaluateInner(
   // evaluated against the facts the PEP established, through the same shared
   // gate the credential bound uses. Keyed on the constraint's own presence; an
   // absent fact or a malformed value refuses, never permits open.
-  const commonGates = commonConstraintGates(entry.constraints, constraintFacts);
+  // A collection read's members are each evaluated with their own facts.
+  const commonGates = commonConstraintGatesOverMembers(entry.constraints, constraintFacts, constraintMembers);
   for (const key of commonGates.evaluated) contributions.add(key);
   if (!commonGates.satisfied) return deny("parameter_violation", "mission");
 

@@ -14,7 +14,10 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type CollectionMemberFacts,
+  type ConstraintFacts,
   type CredentialAuthorityEntry,
+  collectionMemberConstraintFacts,
   coveringCredentialEntries,
   credentialEntriesFromAuthority,
   entryMatchesTarget,
@@ -23,6 +26,7 @@ import {
   idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
+  MEMBER_FACT_CONSTRAINTS,
   type OperationContract,
   type OperationTargetResolution,
   type PropagatedMissionReference,
@@ -70,6 +74,7 @@ import {
   buildListEffectiveParams,
   type EffectiveParams,
   type ListEffectiveParams,
+  listMembers,
   parameterDigest,
 } from "./effective-params.js";
 import type {
@@ -512,6 +517,36 @@ function deriveVendorScope(
     return { vendor_scope: [...allowedVendors].sort(), vendor_scope_source: "entry" };
   }
   return { vendor_scope: [...new Set(invoiceVendorIds)].sort(), vendor_scope_source: "all" };
+}
+
+/**
+ * @spec resource-access#initial-common-constraints (#1266): whether any entry
+ * a bound `list_invoices` read could rely on (a Mission or credential entry
+ * naming the target and the action) carries a bound whose input is a member
+ * fact. Only then does the read evaluate, carry and bind its members: a read
+ * no such bound narrows keeps its decision bytes.
+ */
+function readsMemberFacts(
+  entries: ReadonlyArray<{ resource: string; resource_match?: unknown; actions: readonly string[]; constraints?: unknown }>,
+  target: string,
+  action: string,
+): boolean {
+  return entries.some(
+    (e) =>
+      entryMatchesTarget(e, target) &&
+      e.actions.includes(action) &&
+      MEMBER_FACT_CONSTRAINTS.some((key) => (e.constraints as Record<string, unknown> | undefined)?.[key] !== undefined),
+  );
+}
+
+/**
+ * The members of a collection read as the facts the Common Constraints read.
+ * A member that does not read (unreachable for members this PEP built) makes
+ * the whole list establish no member fact.
+ */
+function memberConstraintFacts(members: readonly CollectionMemberFacts[]): ConstraintFacts[] {
+  const facts = members.map(collectionMemberConstraintFacts);
+  return facts.every((f): f is ConstraintFacts => f !== undefined) ? facts : [];
 }
 
 /**
@@ -1392,6 +1427,8 @@ type TargetObject = {
     issued_at?: string;
     tenant?: string;
     data_classification?: string;
+    /** @spec resource-access#initial-common-constraints (#1266): a collection read's members, each with its own facts. */
+    members?: CollectionMemberFacts[];
   };
 };
 
@@ -1778,6 +1815,8 @@ export class Pep {
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: TargetObject = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
+    /** A bound list read's members, when a bound it could rely on reads a member fact (#1266). */
+    let listMemberFacts: CollectionMemberFacts[] | undefined;
     let targetVendorId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
@@ -1879,7 +1918,24 @@ export class Pep {
         if (requestedVendorId === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       }
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
-      listEffective = buildListEffectiveParams({ action: mapping.action, resource: operationTarget, ...scope });
+      // @spec resource-access#initial-common-constraints (#1266): a bound that
+      // reads a member fact (issuance, tenant, classification) is evaluated
+      // for every invoice the read returns, with that invoice's own facts.
+      // The members ride the decision request and bind into the digest, so a
+      // member added, removed or changed before release is a mismatch.
+      const reliedOn = [
+        ...view.authority_set,
+        ...((token.mission !== undefined ? token.credentialAuthority : carriedAuthority) ?? []),
+      ];
+      if (readsMemberFacts(reliedOn, operationTarget, mapping.action)) {
+        listMemberFacts = listMembers(this.deps.payments, scope.vendor_scope, requestedVendorId);
+      }
+      listEffective = buildListEffectiveParams({
+        action: mapping.action,
+        resource: operationTarget,
+        ...scope,
+        ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+      });
       listDigest = parameterDigest(listEffective);
       // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
       // additional authorization-enforcement control, not the binding itself:
@@ -1890,7 +1946,14 @@ export class Pep {
         // A named vendor_id binds through the SAME vendor-constraint check
         // every invoice-scoped action here uses (out-of-scope -> denied
         // out_of_authority at the FGA step below, same as get_invoice).
-        resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
+        resourceObj = {
+          type: "vendor",
+          id: requestedVendorId,
+          properties: {
+            vendor_id: requestedVendorId,
+            ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+          },
+        };
       } else {
         // Bulk form: bind the RESULT SET to the normalized scope, the
         // entry's own allowlist (never the unconstrained store) or, for an
@@ -1918,7 +1981,11 @@ export class Pep {
         resourceObj = {
           type: "vendor",
           id: representative,
-          properties: { vendor_id: representative, vendor_ids: scope.vendor_scope },
+          properties: {
+            vendor_id: representative,
+            vendor_ids: scope.vendor_scope,
+            ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+          },
         };
       }
     }
@@ -1968,6 +2035,9 @@ export class Pep {
         ...(recipients ? { recipients } : {}),
         tool,
       },
+      // @spec resource-access#initial-common-constraints (#1266): a bound list
+      // read's members, each evaluated with its own facts.
+      ...(listMemberFacts !== undefined ? { constraintMembers: memberConstraintFacts(listMemberFacts) } : {}),
     };
     if (token.mission !== undefined) {
       const covered =
@@ -2429,12 +2499,9 @@ export class Pep {
           );
           const requestedVendorId =
             listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
-          const fresh = buildListEffectiveParams({
-            action: listEffective.action,
-            resource: listEffective.resource,
-            ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
-          });
-          return parameterDigest(fresh);
+          return parameterDigest(
+            this.freshListParams(listEffective, deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds())),
+          );
         }
         return undefined;
       },
@@ -2768,17 +2835,38 @@ export class Pep {
     );
     const requestedVendorId =
       effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
-    const fresh = buildListEffectiveParams({
-      action: effective.action,
-      resource: effective.resource,
-      ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
-    });
+    const fresh = this.freshListParams(
+      effective,
+      deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
+    );
     const freshDigest = parameterDigest(fresh);
     if (freshDigest !== expectedDigest) {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
     return { ok: true, effectiveParameterDigest: freshDigest };
+  }
+
+  /**
+   * @spec runtime#read-binding, resource-access#initial-common-constraints
+   * (#1266): a bound list read's normal form recomputed from current state,
+   * over `scope` as just re-derived. The members are recomputed from the
+   * store exactly when the decided form bound them, so a member added,
+   * removed or changed since the decision changes the digest.
+   */
+  private freshListParams(
+    decided: ListEffectiveParams,
+    scope: { vendor_scope: string[]; vendor_scope_source: "requested" | "entry" | "all" },
+  ): ListEffectiveParams {
+    const requestedVendorId = decided.vendor_scope_source === "requested" ? decided.vendor_scope[0] : undefined;
+    return buildListEffectiveParams({
+      action: decided.action,
+      resource: decided.resource,
+      ...scope,
+      ...(decided.members !== undefined
+        ? { members: listMembers(this.deps.payments, scope.vendor_scope, requestedVendorId) }
+        : {}),
+    });
   }
 
   /**

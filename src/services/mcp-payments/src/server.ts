@@ -657,11 +657,16 @@ export class McpPaymentsServer {
       // accepts tokens with no `mission` claim, so it does not advertise
       // Mission-bound-only acceptance (#818).
       ...(this.deps.ordinaryOnly ? {} : { mission_bound_authorization_required: true }),
-      // @spec resource-access#protected-resource-metadata (#1266): only keys
-      // this resource enforces against its own authoritative facts.
+      // @spec resource-access#protected-resource-metadata (#1266): exactly the
+      // keys this resource enforces: against its own authoritative facts, and
+      // through its PDP the action-bound approval requirement (step 8) and a
+      // Discharge condition (step 5b), so a client predicts no fail-closed
+      // mismatch that would not happen.
       mission_constraints_supported: [
         "max_amount",
         "vendors",
+        "requires_action_approval",
+        "terminal_when",
         "resource_issued_after",
         "resource_issued_before",
         "tenant",
@@ -1316,7 +1321,10 @@ export class McpPaymentsServer {
     // the admission call above is not the last word on either.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) return { ok: false, refusal_reason: live.error };
-    return { ok: true, result: this.execute(tool, args, res.list_vendor_scope) };
+    return {
+      ok: true,
+      result: this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id)),
+    };
   }
 
   /** @spec runtime#idempotency (#918): the Operation Profile keys this tool as a reversible write. */
@@ -2142,13 +2150,23 @@ export class McpPaymentsServer {
    * decision. The store filter on `args.vendor_id` stays as a first pass;
    * this filter is the actual binding enforcement, applied regardless of
    * what the caller asked for, and an absent scope returns nothing.
+   * `listMemberIds` (@spec resource-access#initial-common-constraints, #1266)
+   * are the invoices whose own facts the decision evaluated, when it bound
+   * them; no other invoice is returned.
    */
-  private execute(tool: string, args: Record<string, unknown>, listVendorScope?: string[]): unknown {
+  private execute(
+    tool: string,
+    args: Record<string, unknown>,
+    listVendorScope?: string[],
+    listMemberIds?: string[],
+  ): unknown {
     switch (tool) {
       case "list_invoices": {
         const invoices = this.deps.payments.listInvoices(args.vendor_id ? String(args.vendor_id) : undefined);
         const scope = listVendorScope ?? [];
-        return invoices.filter((inv) => scope.includes(inv.vendor_id));
+        return invoices.filter(
+          (inv) => scope.includes(inv.vendor_id) && (listMemberIds === undefined || listMemberIds.includes(inv.id)),
+        );
       }
       case "get_invoice":
         return this.deps.payments.getInvoice(String(args.invoice_id));

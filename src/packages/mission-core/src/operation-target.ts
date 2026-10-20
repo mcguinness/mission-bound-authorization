@@ -19,10 +19,13 @@
  *   arguments (the order or invoice the operation acts on). A caller that
  *   supplies no arguments supports only the service-level form, and any other
  *   form is `unsupported_contract`.
- * - Matching: only `exact` (the default when `resource_match` is absent), a
- *   literal comparison of the entry's JSON-decoded `resource` with the target.
- *   A `prefix` entry, or any `resource_match` value not recognized here, is
- *   `unsupported`: it provides no authority, and is never read as `exact`.
+ * - Matching: `exact` (the default when `resource_match` is absent), a
+ *   literal comparison of the entry's JSON-decoded `resource` with the
+ *   target; and `prefix`, a path-segment-boundary comparison after the one
+ *   URI normalization Resource Matching defines ({@link prefixAdmits}). A
+ *   `prefix` entry whose `resource` this matcher cannot enforce (a query, or
+ *   no `//` authority), and any `resource_match` value not recognized here,
+ *   is `unsupported`: it provides no authority, and is never read as `exact`.
  */
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -160,24 +163,205 @@ export function isOperationTarget(value: unknown): value is string {
 /** The outcome of matching one entry against an operation target. */
 export type ResourceMatch = "match" | "no-match" | "unsupported";
 
-/** The `resource_match` forms this implementation enforces. */
-export const ENFORCED_RESOURCE_MATCHES: readonly string[] = Object.freeze(["exact"]);
+/**
+ * The `resource_match` forms this implementation enforces: the two values
+ * Resource Access defines ("These two values are the only ones defined").
+ */
+export const ENFORCED_RESOURCE_MATCHES: readonly string[] = Object.freeze(["exact", "prefix"]);
+
+/** `unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"` (RFC 3986 Section 2.3), one character. */
+const UNRESERVED_CHAR = /^[A-Za-z0-9\-._~]$/;
+
+/**
+ * Steps 3 and 4 of the normalization over one component: uppercase the
+ * hexadecimal digits of every percent-encoding, and decode the encoded octets
+ * of unreserved characters. A reserved octet (`%2F` included) stays encoded,
+ * so it never becomes a delimiter.
+ */
+function normalizePercentEncoding(component: string): string {
+  return component.replace(/%([0-9A-Fa-f]{2})/g, (_triplet, hex: string) => {
+    const decoded = String.fromCharCode(Number.parseInt(hex, 16));
+    return UNRESERVED_CHAR.test(decoded) ? decoded : `%${hex.toUpperCase()}`;
+  });
+}
+
+/** Step 1 over the host: lowercase its letters, leaving each percent-encoding for step 3. */
+function lowercaseOutsideEncodings(host: string): string {
+  return host.replace(/%[0-9A-Fa-f]{2}|[^%]+/g, (part) =>
+    part.startsWith("%") ? part : part.toLowerCase(),
+  );
+}
+
+/** `remove_dot_segments` (RFC 3986 Section 5.2.4), over a path that begins with `/`. */
+function removeDotSegments(path: string): string {
+  let input = path;
+  let output = "";
+  while (input.length > 0) {
+    if (input.startsWith("../")) input = input.slice(3);
+    else if (input.startsWith("./")) input = input.slice(2);
+    else if (input.startsWith("/./")) input = input.slice(2);
+    else if (input === "/.") input = "/";
+    else if (input.startsWith("/../") || input === "/..") {
+      input = input === "/.." ? "/" : input.slice(3);
+      output = output.slice(0, Math.max(0, output.lastIndexOf("/")));
+    } else if (input === "." || input === "..") input = "";
+    else {
+      const next = input.indexOf("/", input.startsWith("/") ? 1 : 0);
+      const segment = next < 0 ? input : input.slice(0, next);
+      output += segment;
+      input = input.slice(segment.length);
+    }
+  }
+  return output;
+}
+
+/** A URI in the form a `prefix` comparison reads: normalized scheme, authority and path, and its query. */
+interface PrefixForm {
+  readonly scheme: string;
+  readonly authority: string;
+  readonly path: string;
+  readonly query: string | undefined;
+}
+
+/** The default port of a scheme whose default this matcher knows (RFC 9110 Sections 4.2.1, 4.2.2). */
+const DEFAULT_PORTS: Readonly<Record<string, string>> = { http: "80", https: "443" };
+
+/**
+ * @spec resource-access#resource-matching (#1276): one {@link isAbsoluteUri}
+ * value in the form a `prefix` comparison reads, after the normalization
+ * Resource Matching defines from RFC 3986 Sections 6.2.2 and 6.2.3, in its
+ * order: (1) lowercase the scheme and host; (2) remove a default port; (3)
+ * uppercase the hexadecimal digits of any percent-encoding; (4) decode
+ * percent-encoded octets of unreserved characters; and (5) remove
+ * dot-segments. "An empty path and `/` denote the same base", so an empty
+ * path reads as `/`; no other `//` or trailing-slash difference is coalesced.
+ *
+ * Comparison only, never hashing: the recorded value is not rewritten. A value
+ * that is not an absolute URI, or has no `//` authority, is `undefined`: the
+ * comparison is drawn over "the entry's scheme and authority", so a URI with
+ * no authority has no boundary this matcher can draw. A default port is
+ * removed only for a scheme whose default this matcher knows (`http`, `https`)
+ * and, per RFC 3986 Section 6.2.3, an empty port with it; any other port is
+ * kept as given. Hosts are compared in the form given (no IDNA conversion).
+ */
+function prefixForm(value: string): PrefixForm | undefined {
+  if (!isAbsoluteUri(value)) return undefined;
+  const colon = value.indexOf(":");
+  const scheme = value.slice(0, colon).toLowerCase();
+  const rest = value.slice(colon + 1);
+  if (!rest.startsWith("//")) return undefined;
+  const queryAt = rest.indexOf("?");
+  const hier = queryAt < 0 ? rest : rest.slice(0, queryAt);
+  const query = queryAt < 0 ? undefined : rest.slice(queryAt + 1);
+  const pathAt = hier.indexOf("/", 2);
+  const rawAuthority = pathAt < 0 ? hier.slice(2) : hier.slice(2, pathAt);
+  const rawPath = pathAt < 0 ? "" : hier.slice(pathAt);
+  const at = rawAuthority.indexOf("@");
+  const userinfo = at < 0 ? undefined : rawAuthority.slice(0, at);
+  const hostPort = at < 0 ? rawAuthority : rawAuthority.slice(at + 1);
+  const portAt = hostPort.startsWith("[")
+    ? hostPort.indexOf(":", hostPort.indexOf("]"))
+    : hostPort.indexOf(":");
+  const host = portAt < 0 ? hostPort : hostPort.slice(0, portAt);
+  const port = portAt < 0 ? undefined : hostPort.slice(portAt + 1);
+  const keepPort = port !== undefined && port !== "" && port !== DEFAULT_PORTS[scheme];
+  const authority =
+    (userinfo === undefined ? "" : `${normalizePercentEncoding(userinfo)}@`) +
+    normalizePercentEncoding(lowercaseOutsideEncodings(host)) +
+    (keepPort ? `:${port}` : "");
+  const path = removeDotSegments(normalizePercentEncoding(rawPath));
+  return { scheme, authority, path: path === "" ? "/" : path, query };
+}
+
+/**
+ * Whether `resource` is a base this implementation can match under `prefix`:
+ * an absolute URI in the `//` authority form, with no query. Resource Access
+ * refuses a `prefix` entry whose `resource` carries a query or fragment (a
+ * fragment never passes {@link isAbsoluteUri}).
+ */
+export function isEnforceablePrefixBase(resource: unknown): resource is string {
+  if (typeof resource !== "string") return false;
+  const form = prefixForm(resource);
+  return form !== undefined && form.query === undefined;
+}
+
+/**
+ * @spec resource-access#resource-matching (#1276): whether the `prefix` base
+ * `base` admits `target`. After normalizing both, "a target is within a
+ * `prefix` entry when it has the entry's scheme and authority and its path
+ * equals the base path or extends it at a path-segment boundary. If the base
+ * path ends in `/`, a descendant's path begins with the complete base path;
+ * otherwise it begins with the base path followed by `/`." The target's query
+ * is excluded from this path comparison only. False when `base` is not an
+ * {@link isEnforceablePrefixBase} value or `target` has no prefix form.
+ *
+ * This is the single comparison the resource server's matching and the
+ * authorization server's subset test both apply, so issuance and enforcement
+ * draw the same boundary.
+ */
+export function prefixAdmits(base: string, target: string): boolean {
+  if (!isEnforceablePrefixBase(base)) return false;
+  const b = prefixForm(base);
+  const t = prefixForm(target);
+  if (b === undefined || t === undefined) return false;
+  if (b.scheme !== t.scheme || b.authority !== t.authority) return false;
+  if (t.path === b.path) return true;
+  return t.path.startsWith(b.path.endsWith("/") ? b.path : `${b.path}/`);
+}
+
+/**
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1276): why an entry's `resource_match` cannot be admitted, or undefined.
+ * Every boundary that admits an entry (PAR and the other proposal intakes,
+ * derivation, the subset engine's input check) reads this one rule: a value
+ * other than the two Resource Access defines, and a `prefix` entry whose
+ * `resource` carries a query ("A `resource` value under `prefix` MUST NOT
+ * carry a query or fragment component"), are refused. A `prefix` entry whose
+ * `resource` has no `//` authority is refused too: the draft draws the
+ * boundary over "the entry's scheme and authority", so this implementation
+ * has none to draw. The `resource` itself is the caller's {@link isAbsoluteUri}
+ * check.
+ */
+export function resourceMatchViolation(entry: {
+  readonly resource?: unknown;
+  readonly resource_match?: unknown;
+}): string | undefined {
+  const form = entry.resource_match;
+  if (form === undefined || form === "exact") return undefined;
+  if (form !== "prefix") {
+    return `resource_match ${JSON.stringify(form)} is not a value Resource Access defines`;
+  }
+  if (typeof entry.resource !== "string" || !isAbsoluteUri(entry.resource)) return undefined;
+  const parsed = prefixForm(entry.resource);
+  if (parsed === undefined) {
+    return `a prefix resource ${JSON.stringify(entry.resource)} has no // authority; this implementation matches prefix entries in that form only`;
+  }
+  if (parsed.query !== undefined) {
+    return `a prefix resource ${JSON.stringify(entry.resource)} carries a query component`;
+  }
+  return undefined;
+}
 
 /**
  * Match one entry's `resource` against an operation target under the entry's
  * `resource_match`. `exact` (or absent) compares the JSON-decoded `resource`
  * and the target character for character: no case folding, default-port
  * removal, percent-decoding, query removal or trailing-slash equivalence.
- * Any other `resource_match`, `prefix` included, is `unsupported`, which the
- * caller treats as providing no authority.
+ * `prefix` applies {@link prefixAdmits}, normalizing before the comparison,
+ * never after. A `prefix` entry whose `resource` is not an {@link
+ * isEnforceablePrefixBase} value, and any other `resource_match`, is
+ * `unsupported`, which the caller treats as providing no authority.
  */
 export function matchResource(
   entry: { readonly resource: unknown; readonly resource_match?: unknown },
   target: string,
 ): ResourceMatch {
   const form = entry.resource_match;
-  if (form !== undefined && !ENFORCED_RESOURCE_MATCHES.includes(form as string))
-    return "unsupported";
+  if (form === "prefix") {
+    if (!isEnforceablePrefixBase(entry.resource)) return "unsupported";
+    return prefixAdmits(entry.resource, target) ? "match" : "no-match";
+  }
+  if (form !== undefined && form !== "exact") return "unsupported";
   return typeof entry.resource === "string" && entry.resource === target ? "match" : "no-match";
 }
 
