@@ -216,6 +216,11 @@ with these members:
     not one action.
   - An authorization server SHOULD treat deriving a family as high-risk
     breadth.
+  - A resource that documents an action family SHOULD treat the family's
+    membership as part of its authorization contract, and SHOULD place
+    an action that confers materially different authority under a new
+    family or namespace version rather than under an existing family
+    ({{action-family-growth}}).
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource bounds (for
@@ -1247,6 +1252,22 @@ A deployment MAY agree out of band on the canonicalization profile its
 authorization server and resource servers apply; this document defines
 one rule ({{resource-matching}}), so no profile identifier is required
 for interoperation.
+
+## Action Family Growth {#action-family-growth}
+
+An action family ({{resource-access-type}}) authorizes every action
+under its name, including an action the resource adds after approval. A
+durable approval naming `invoices.*` therefore authorizes an `invoices`
+action the resource defines later, which can confer more authority than
+any action the Approver saw.
+
+The family guidance in {{resource-access-type}} narrows this risk but
+does not remove it. It is a recommendation to the resource and does not
+freeze an existing family's membership, and this document defines no
+rule that binds an entry to the action semantics its resource
+documented at approval. An Approver or authorization server that needs
+a fixed set of actions approves or derives literal actions rather than
+a family.
 
 # Privacy Considerations {#privacy-considerations}
 
