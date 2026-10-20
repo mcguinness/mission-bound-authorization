@@ -2230,6 +2230,14 @@ carried in Decision Evidence:
   enforce it and refuses ({{I-D.draft-mcguinness-mission-runtime}}).
   This is distinct from `parameter_violation`, which is a constraint the
   PDP evaluated and found violated.
+- `resource_contract_drift`: a resource contract applies to the action
+  and the applicable entry's reference is missing or does not resolve
+  under the resource's declared contract states
+  ({{I-D.draft-mcguinness-mission-runtime}}). The entry names the
+  action; what no longer holds is the contract it was approved under.
+  It is therefore distinct from `out_of_authority`, and from
+  `capability_drift`, which compares one capability's extracted
+  definition.
 - `history_not_satisfied`: a deployment- or Resource-policy-required
   history predicate ({{context-history}}) is not satisfied: the PDP
   established it false, could not establish it, could not consult
@@ -2454,6 +2462,7 @@ carrier's extensibility rule.
 | Named target object not resolvable at the enforcement surface | Refusal Record | `target_unresolvable` |
 | Operation target not establishable as one unambiguous target at the PEP | Refusal Record | `target_unresolvable` |
 | Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
+| Resource contract the operation requires not resolvable before the decision request | Refusal Record | `resource_contract_unresolvable` |
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
@@ -2479,6 +2488,7 @@ carrier's extensibility rule.
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
 | Unsupported `authorization_details` type | PDP denial | `unsupported_authorization_type` |
 | Unrecognized or unmetered constraint | PDP denial | `constraint_unsupported` |
+| Resource contract reference missing where required, or not resolvable, established by the PDP | PDP denial | `resource_contract_drift` |
 | Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
 | Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
 | Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
@@ -2491,6 +2501,7 @@ carrier's extensibility rule.
 | Permit carries a decision condition the executing PEP does not recognize | Execution Evidence | `condition_unrecognized` |
 | Store the executing PEP takes single use in is unreachable | Execution Evidence | `consumption_unavailable` |
 | Capability definition the permit was decided against not re-resolvable at use | Execution Evidence | `capability_source_unresolvable` |
+| Resource contract the permit was decided under not re-resolvable at use | Execution Evidence | `resource_contract_unresolvable` |
 | Obligation attached to a permit could not be fulfilled | Execution Evidence | `obligation_unfulfilled` |
 | Operator or safety control suppressed execution | Execution Evidence | `kill_switch` |
 
@@ -2527,6 +2538,13 @@ on two carriers, and the carrier records whether the resolution
 failure happened before the decision request or at use; a resolution
 failure is never reported as `parameter_violation` or
 `parameter_mismatch`.
+
+`resource_contract_unresolvable` likewise appears on two carriers, the
+carrier recording whether the PEP found the contract unresolvable
+before the decision request or at use; `resource_contract_drift` is
+the PDP's denial between them. A contract failure is never reported as
+a parameter deviation or as `target_drift`, even when the parameters
+and the target are unchanged.
 
 ## Permit binding in split topologies {#permit-binding-split}
 
@@ -3095,6 +3113,12 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Runtime Denial Classification and Failure-condition coverage: a
+  resource contract reference missing where required, or not
+  resolvable, is denied `resource_contract_drift`; the PEP records
+  `resource_contract_unresolvable` before the decision request or at
+  use (#249).
 
 - `resource.properties.audience` carries the runtime profile's
   boundary identifier, the boundary the PEP established, byte for
