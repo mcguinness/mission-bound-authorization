@@ -2876,7 +2876,8 @@ A PEP conforming to the Decision Base MUST:
   it can perform in `supported_obligations` ({{obligations}});
 - honor every decision condition present (`parameter_digest`,
   `valid_until`, `use_limit`, `action_phase`,
-  `evaluation_context_digest`) at every use of the permit,
+  `evaluation_context_digest`, `resource_contract`) at every use of
+  the permit,
   applying its own deployment classification floor to that duty
   independent of any class the PDP applied internally
   ({{response-context}}), fulfill every obligation attached to a
@@ -3145,9 +3146,10 @@ The `action.properties.parameters`,
 `action.properties.parameter_digest`,
 `action.properties.idempotency_key`, and
 `action.properties.parameter_attributes` members carried inside the
-AuthZEN `action` object, and the `resource.properties.operation_target`
-and `resource.properties.audience` members carried inside the AuthZEN
-`resource` object ({{pdp-request}}), are likewise AuthZEN extension
+AuthZEN `action` object, and the `resource.properties.operation_target`,
+`resource.properties.audience`, and `resource.properties.resource_contract`
+members carried inside the AuthZEN `resource` object ({{pdp-request}}),
+are likewise AuthZEN extension
 data. The
 `action.properties.external_communication` member carried inside that
 same `action` object is likewise AuthZEN extension data, registered
