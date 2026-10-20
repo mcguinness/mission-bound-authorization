@@ -75,6 +75,7 @@ export {
   narrowToCeiling,
   REFUSED_ENTRY_MEMBERS,
   refusedEntryMember,
+  resourceWithin,
   SUPPORTED_CONSTRAINT_KEYS,
   SUPPORTED_ENTRY_MEMBERS,
   unsupportedEntryMember,
@@ -211,17 +212,22 @@ export {
   parseMissionReferenceField,
 } from "./mission-reference.js";
 export {
+  type ArgumentDerivedContract,
+  contractCanEstablish,
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,
   establishOperationTarget,
   isAbsoluteUri,
+  isEnforceablePrefixBase,
   isOperationTarget,
   matchResource,
   type OperationContract,
   type OperationTargetRefusal,
   type OperationTargetResolution,
+  prefixAdmits,
   type ResourceMatch,
   resolveOperationTarget,
+  resourceMatchViolation,
   type ServiceLevelContract,
 } from "./operation-target.js";
 export {

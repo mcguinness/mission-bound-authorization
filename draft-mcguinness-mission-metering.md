@@ -1124,9 +1124,9 @@ re-evaluation request that carries the prior permit's `evaluation_id`
 in `context.prior_evaluation_id`, so the PDP continues the same metered
 activity rather than opening a new reservation.
 
-The PDP MUST verify that the renewal's Mission, subject, action, and
-audience match the evaluation named by `prior_evaluation_id`. A
-deployment sizes lease
+The PDP MUST verify that the renewal's Mission, subject, action,
+operation target and audience match the evaluation named by
+`prior_evaluation_id`. A deployment sizes lease
 intervals to amortize renewals: an interval materially shorter than
 the action class's staleness bound adds decision load without
 tightening the revocation cutoff. This exchange requires
@@ -1327,6 +1327,9 @@ this registry.
 
 - The `exclusive` selector matches a consequential action whose
   operation target equals the selector's `resource` (#1276).
+
+- Duration-Lease Renewal: the PDP also verifies that the renewal's
+  operation target matches the evaluation it renews (#1276).
 
 - Settlement by Evidence State and Reservation starvation: the
   reservation lease bounds how long an unsettled reservation waits

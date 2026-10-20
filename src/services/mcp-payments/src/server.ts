@@ -2128,8 +2128,9 @@ export class McpPaymentsServer {
     const mapping = TOOL_ACTIONS[tool];
     if (!mapping?.needsInvoice) return undefined;
     // @spec resource-access#resource-matching (#1276): the operation target
-    // the enforcement path establishes, from the same trusted contract.
-    const target = this.deps.pep.operationTargetFor(tool);
+    // the enforcement path establishes, from the same trusted contract and
+    // the same validated arguments.
+    const target = this.deps.pep.operationTargetFor(tool, args);
     if (!target.ok) return undefined;
     const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;

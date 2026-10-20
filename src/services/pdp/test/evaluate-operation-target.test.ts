@@ -140,17 +140,22 @@ describe("the PDP matches entries against the PEP-established operation target (
     }
   });
 
-  it("a prefix entry or an unrecognized resource_match provides no authority, even for its own base; a credential carrying one is refused credential_invalid", async () => {
-    for (const resource_match of ["prefix", "glob"]) {
-      const dec = await evaluate(read({ audience: AUDIENCE, operation_target: SERVICE }), options({ view: view([entry(SERVICE, { resource_match })]) }));
-      expect(dec.decision, resource_match).toBe(false);
-      expect(dec.context.denial_reason, resource_match).toBe("out_of_authority");
+  it("an unrecognized resource_match, or a prefix entry whose resource carries a query, provides no authority, even for its own base; a credential carrying one is refused credential_invalid", async () => {
+    const variants: Array<[string, Record<string, unknown>]> = [
+      ["glob", { resource_match: "glob" }],
+      ["prefix with a query", { resource_match: "prefix", resource: `${SERVICE}?tenant=a` }],
+    ];
+    for (const [label, over] of variants) {
+      const target = typeof over.resource === "string" ? over.resource : SERVICE;
+      const dec = await evaluate(read({ audience: AUDIENCE, operation_target: target }), options({ view: view([entry(SERVICE, over)]) }));
+      expect(dec.decision, label).toBe(false);
+      expect(dec.context.denial_reason, label).toBe("out_of_authority");
       const cred = await evaluate(
-        read({ audience: AUDIENCE, operation_target: SERVICE }, credential(credentialEntry(SERVICE, { resource_match }))),
-        options(),
+        read({ audience: AUDIENCE, operation_target: target }, credential(credentialEntry(SERVICE, over))),
+        options({ view: view([entry(target)]) }),
       );
-      expect(cred.decision, resource_match).toBe(false);
-      expect(cred.context.denial_reason, resource_match).toBe("credential_invalid");
+      expect(cred.decision, label).toBe(false);
+      expect(cred.context.denial_reason, label).toBe("credential_invalid");
     }
     // Control: an entry stating exact is enforced as exact.
     const stated = await evaluate(
@@ -158,6 +163,50 @@ describe("the PDP matches entries against the PEP-established operation target (
       options({ view: view([entry(SERVICE, { resource_match: "exact" })]) }),
     );
     expect(stated.decision, JSON.stringify(stated.context)).toBe(true);
+  });
+
+  it("a prefix entry covers its base and the targets beneath it at a path-segment boundary, after the one normalization, in the Mission and the credential bound alike (@spec resource-access#resource-matching, #1276)", async () => {
+    const INVOICES = `${SERVICE}/invoices`;
+    const decide = (target: string, authority: MissionView["authority_set"], cred?: Record<string, unknown>[]) =>
+      evaluate(read({ audience: AUDIENCE, operation_target: target }, cred ? credential(...cred) : {}), options({ view: view(authority) }));
+    const permits: Array<[string, string]> = [
+      [INVOICES, INVOICES],
+      [INVOICES, `${INVOICES}/inv-1`],
+      [INVOICES, `${INVOICES}/2026/inv-1?view=full`],
+      [INVOICES, "HTTP://LOCALHOST:4403/mcp/invoices/inv-1"],
+      [`${INVOICES}/`, `${INVOICES}/inv-1`],
+      ["http://localhost:4403/mcp/admin", `${INVOICES}/%2e%2e/admin`],
+    ];
+    for (const [base, target] of permits) {
+      const dec = await decide(target, [entry(base, { resource_match: "prefix" })]);
+      expect(dec.decision, `${base} admits ${target}: ${JSON.stringify(dec.context)}`).toBe(true);
+    }
+    const denies: Array<[string, string]> = [
+      [INVOICES, `${SERVICE}/invoices-archive/inv-1`],
+      [INVOICES, `${SERVICE}/invoicesx`],
+      [INVOICES, `${INVOICES}%2Finv-1`],
+      [INVOICES, `${INVOICES}/%2e%2e/admin`],
+      [INVOICES, `${SERVICE}/Invoices/inv-1`],
+      [`${INVOICES}/`, INVOICES],
+    ];
+    for (const [base, target] of denies) {
+      const dec = await decide(target, [entry(base, { resource_match: "prefix" })]);
+      expect(dec.decision, `${base} must not admit ${target}`).toBe(false);
+      expect(dec.context.denial_reason, `${base} must not admit ${target}`).toBe("out_of_authority");
+    }
+    // An exact entry never covers a target beneath it.
+    const exact = await decide(`${INVOICES}/inv-1`, [entry(INVOICES)]);
+    expect(exact.context.denial_reason).toBe("out_of_authority");
+    // The credential bound reads the same matcher: a prefix credential entry
+    // covers a descendant the Mission names exactly, and not a sibling.
+    const INV1 = `${INVOICES}/inv-1`;
+    const credentialPrefix = credentialEntry(INVOICES, { resource_match: "prefix" });
+    const covered = await decide(INV1, [entry(INV1)], [credentialPrefix]);
+    expect(covered.decision, JSON.stringify(covered.context)).toBe(true);
+    const ARCHIVED = `${SERVICE}/invoices-archive/inv-1`;
+    const sibling = await decide(ARCHIVED, [entry(ARCHIVED)], [credentialPrefix]);
+    expect(sibling.decision).toBe(false);
+    expect(sibling.context.denial_reason).toBe("out_of_authority");
   });
 
   it("a missing, malformed or ambiguous target is refused before evaluation as operation_target_invalid, with no decision, no Decision Evidence and no fallback to the audience or to type and id", async () => {
@@ -396,5 +445,53 @@ describe("the PDP matches entries against the PEP-established operation target (
     const registered = await ask(server, { operation_target: ADMIN });
     expect(registered.decision, JSON.stringify(registered.context)).toBe(true);
     expect(refusals).toHaveLength(2);
+  });
+
+  it("the remote PDP admits every target a registered argument-derived contract establishes, and refuses any other before evaluation as operation_target_invalid", async () => {
+    const INVOICES = { template: `${SERVICE}/invoices/{invoice_id}` };
+    const INV1 = `${SERVICE}/invoices/inv-1`;
+    const INV2 = `${SERVICE}/invoices/inv-2`;
+    const evaluations = { n: 0 };
+    const refusals: PdpRefusal[] = [];
+    handle = await createPdpHttpServer({
+      peps: new Map([[PEP_ID, { secret: SECRET, scopes: [AUDIENCE], operationContracts: [INVOICES] }]]),
+      getOptions: () => options({ view: view([entry(SERVICE), entry(INV1), entry(INV2)]) }),
+      evaluateFn: async (r, o) => {
+        evaluations.n += 1;
+        return evaluateRequest(r, o);
+      },
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      refusals: (r) => refusals.push(r),
+    });
+    const server = handle;
+    const ask = (operation_target: string) =>
+      evaluateRemote(withCredential(read({ audience: AUDIENCE, operation_target })), { url: server.url, pepId: PEP_ID, secret: SECRET });
+
+    // Each invoice the contract establishes is within the PEP's scope; no finite list names them.
+    for (const target of [INV1, INV2]) {
+      const served = await ask(target);
+      expect(served.decision, `${target}: ${JSON.stringify(served.context)}`).toBe(true);
+    }
+    expect(evaluations.n).toBe(2);
+    expect(refusals).toHaveLength(0);
+
+    // Not one the contract establishes: the service identifier itself (only an
+    // argument-derived contract is registered), a second segment, a
+    // non-canonical encoding, a dot-segment and another collection, though
+    // the Mission names the service identifier and the audience is in scope.
+    const outside = [
+      SERVICE,
+      `${INV1}/lines`,
+      `${SERVICE}/invoices/inv%2d1`,
+      `${SERVICE}/invoices/..`,
+      `${SERVICE}/bills/inv-1`,
+    ];
+    for (const target of outside) {
+      const refused = await ask(target);
+      expect(refused.decision, target).toBe(false);
+      expect(refused.context, target).toMatchObject({ denial_reason: "decision_channel_refused", channel_status: 403 });
+    }
+    expect(evaluations.n).toBe(2);
+    expect(refusals.map((r) => r.denial_reason)).toEqual(outside.map(() => "operation_target_invalid"));
   });
 });

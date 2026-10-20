@@ -19,6 +19,7 @@
  */
 
 import type { AuthorityEntry } from "./authority-entry.js";
+import { resourceWithin } from "./authority-subset.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 
 /**
@@ -297,10 +298,12 @@ const KNOWN_ENTRY_MEMBERS = new Set([
  * @spec resource-access#scope-projection — is `value` a safe projection of
  * the single entry `entry`? All of:
  *
- * 1. Resource: the value's rights and the entry name the same `resource`
- *    under the same `resource_match` (absent = `exact`). A `prefix` value is
- *    never safe for an `exact` entry, and a value over a different (broader
- *    ancestor) resource is never safe for a narrower entry. An unrecognized
+ * 1. Resource: the value's rights cover a resource set within the entry's,
+ *    under the subset rule's resource step (`resourceWithin`, #1276): the
+ *    same `exact` resource for an `exact` entry; for a `prefix` entry, "that
+ *    same prefix, or ... a narrower resource within it". A `prefix` value is
+ *    never safe for an `exact` entry, and a value over a broader ancestor is
+ *    never safe for a narrower `prefix` entry. An unrecognized
  *    `resource_match` fails closed.
  * 2. Actions: every action the value grants is one the entry grants, by
  *    literal membership. A value that aggregates actions the entry does not
@@ -322,11 +325,10 @@ export function scopeValueSafeForEntry(value: ScopeValueMapping, entry: unknown)
   if (Object.keys(e).some((k) => !KNOWN_ENTRY_MEMBERS.has(k))) return false;
   if (e.type !== value.rights.type) return false;
   if (e.capability_sources !== undefined) return false;
-  // 1. resource and resource_match, byte-exact.
-  const entryMatch = e.resource_match === undefined ? "exact" : e.resource_match;
-  if (entryMatch !== "exact" && entryMatch !== "prefix") return false;
-  if (entryMatch !== value.rights.match) return false;
-  if (e.resource !== value.rights.resource) return false;
+  // 1. the value's resource set within the entry's.
+  const rights = { resource: value.rights.resource, resource_match: value.rights.match };
+  if (!resourceWithin(rights, { resource: e.resource, resource_match: e.resource_match }))
+    return false;
   // 2. actions: no aggregation.
   if (!Array.isArray(e.actions)) return false;
   const actions = e.actions as unknown[];

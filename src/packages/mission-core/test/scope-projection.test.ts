@@ -171,6 +171,45 @@ describe("mission_resource_access scope-projection conditions (@spec resource-ac
     ).toBe(false);
   });
 
+  it("narrower resource: a prefix entry projects safely to a value over that prefix or a narrower resource within it, never a sibling, a dot-segment escape or an ancestor; an exact entry only to its own resource (#1276)", () => {
+    const REPORTS = `${RS}/reports`;
+    const prefixEntry = entry(["read"], { resource: REPORTS, resource_match: "prefix" });
+    for (const over of [
+      { resource: REPORTS, match: "prefix" as const },
+      { resource: `${REPORTS}/2026` },
+      { resource: `${REPORTS}/2026`, match: "prefix" as const },
+      { resource: `${REPORTS}/`, match: "prefix" as const },
+      { resource: "https://RS.EXAMPLE:443/api/reports/2026" },
+    ]) {
+      expect(scopeValueSafeForEntry(value(["read"], over), prefixEntry), JSON.stringify(over)).toBe(
+        true,
+      );
+    }
+    for (const over of [
+      { resource: `${RS}/reports-archive` },
+      { resource: `${REPORTS}/%2e%2e/admin` },
+      { resource: RS, match: "prefix" as const },
+      { resource: RS },
+    ]) {
+      expect(scopeValueSafeForEntry(value(["read"], over), prefixEntry), JSON.stringify(over)).toBe(
+        false,
+      );
+    }
+    // An exact entry: a narrower value under another resource is not the entry's resource set.
+    expect(
+      scopeValueSafeForEntry(
+        value(["read"], { resource: `${REPORTS}/2026` }),
+        entry(["read"], { resource: REPORTS }),
+      ),
+    ).toBe(false);
+    expect(
+      scopeValueSafeForEntry(
+        value(["read"], { resource: REPORTS }),
+        entry(["read"], { resource: REPORTS }),
+      ),
+    ).toBe(true);
+  });
+
   it("constraints: every carried key needs an independently enforced control at least as tight", () => {
     const capped = entry(["read"], {
       constraints: { max_amount: { amount: "500.00", currency: "USD" } },

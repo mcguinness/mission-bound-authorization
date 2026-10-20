@@ -1,14 +1,14 @@
-# payments-runtime-profile-v10
+# payments-runtime-profile-v11
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v10`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v11`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
-- **v10** (#1266): a `list_invoices` read evaluates each invoice it
+- **v11** (#1266): a `list_invoices` read evaluates each invoice it
   returns against the issuance, tenant and classification bounds, with
   that invoice's own facts, instead of refusing for want of a single
   object. When an entry the read could rely on carries one of those
@@ -18,7 +18,14 @@ The file name is the document's stable name and does not carry the version.
   whole read. `mission_constraints_supported` also names
   `requires_action_approval` and `terminal_when`, which the resource
   enforces through its PDP. Every other read's decision bytes are
-  unchanged from v9.
+  unchanged from v10.
+
+- **v10** (#1276): the PDP and the PEP match a `prefix` entry, in the
+  Mission and in the credential, with the Resource Access matcher: after
+  the one URI normalization, at a path-segment boundary, the target's
+  query excluded from the path comparison only. A v9 component refused
+  every `prefix` entry. Decision bytes for `exact` entries are unchanged
+  from v9.
 
 - **v9** (#853, D487): the canonical resource URI is the enforcement
   boundary identifier the Enforcement Scope Statement declares for
@@ -124,19 +131,31 @@ Matching). Actions and constraints determine the permitted operations
 within that service. Each `TOOL_ACTIONS` row declares the contract
 (`target: { service: <canonical resource URI> }`); it is never assumed.
 
-- The PEP establishes the target from that declaration alone, before any
+- The PEP establishes the target from that declaration, before any
   decision request: never from an entry, the token's audience, or an
-  argument. A tool with no declaration, a finer contract form (one deriving
-  the target from arguments, which this profile does not support), or
-  declarations naming different targets is refused
+  argument the contract does not name. Every shipped tool declares the
+  service-level contract. A deployment's Operation Profile may instead
+  declare the argument-derived invoice contract for an invoice-scoped tool
+  (`PAYMENTS_INVOICE_CONTRACT`,
+  `{ template: "<canonical resource URI>/invoices/{invoice_id}" }`), whose
+  target is the invoice the validated `invoice_id` names, percent-encoded
+  as one path segment; the PEP derives it again from the executing
+  arguments before every release. A tool with no declaration, an
+  unsupported contract form, a missing, list-valued or malformed argument,
+  or declarations naming different targets is refused
   `operation_target_unresolvable` (`target_unresolvable`) before any
   decision request.
 - The decision request carries the target as
   `resource.properties.operation_target`. The PDP matches the credential's
   and the Mission's entries against it with the Resource Access matcher:
-  literal `exact` only; a `prefix` entry or an unrecognized
-  `resource_match` provides no authority, and a credential carrying one is
-  refused. `audience` is the boundary identifier, the token-validation
+  `exact` is literal; `prefix` normalizes both URIs (scheme and host case,
+  default port, percent-encoding case, unreserved octets, dot-segments)
+  and admits the base and each target beneath it at a path-segment
+  boundary, so `<canonical resource URI>/invoices` covers
+  `.../invoices/inv-1` but not `.../invoices-archive/inv-1`. An
+  unrecognized `resource_match`, or a `prefix` entry whose `resource`
+  carries a query or names no `//` authority, provides no authority, and a
+  credential carrying one is refused. `audience` is the boundary identifier, the token-validation
   and decision-channel scope input, and an audience alias never rewrites
   an entry or the target; `resource.type` and `resource.id` stay
   Resource-policy object identity.
