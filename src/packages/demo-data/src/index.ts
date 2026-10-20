@@ -21,6 +21,7 @@ import {
   isAuthorityEntry,
   parseScopeProjectionMapping,
   parseStrictJson,
+  ResourceContractDeclarations,
   refusedEntryMember,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
@@ -483,12 +484,45 @@ export function templatePaymentsResource(statement: unknown, from: string, to: s
       }
     }
   }
+  // @spec runtime#resource-contract (#249): a contract declaration names the
+  // resource it serves; it follows the override like the mediated resources.
+  // The contract documents name their targets symbolically, so their digests
+  // never depend on the deployment's URI.
+  const extensions = stmt.extensions as Record<string, unknown> | undefined;
+  const contracts = Array.isArray(extensions?.resource_contracts)
+    ? (extensions.resource_contracts as unknown[]).map((d) =>
+        d !== null && typeof d === "object" && !Array.isArray(d)
+          ? { ...d, resource: remap((d as { resource?: unknown }).resource) }
+          : d,
+      )
+    : undefined;
   return {
     ...stmt,
     mediated_scope: { ...scope, resources: remap(scope.resources) },
     ...(boundaries !== undefined ? { enforcement_boundaries: boundaries } : {}),
+    ...(contracts !== undefined
+      ? { extensions: { ...extensions, resource_contracts: contracts } }
+      : {}),
   };
 }
+
+/**
+ * @spec runtime#resource-contract, resource-access#resource-contract (#249,
+ * D553): the contract versions the payments resource declares in its
+ * Enforcement Scope Statement (`extensions.resource_contracts`), validated at
+ * load, digests recomputed over the declared documents. The one trusted
+ * source the authorization server (approval-time assembly), the PDP and the
+ * PEP (resolution) and the Transaction Authorization Server read.
+ */
+export const RESOURCE_CONTRACTS: ResourceContractDeclarations = (() => {
+  const extensions = asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement")
+    .extensions as Record<string, unknown> | undefined;
+  try {
+    return new ResourceContractDeclarations(extensions?.resource_contracts ?? []);
+  } catch (e) {
+    throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
+  }
+})();
 const runtimeStateSource = asObject(
   "enforcement-scope.json",
   asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,
