@@ -50291,6 +50291,28 @@
    "tests": []
   },
   {
+   "id": "expansion.lineage.related-to-record-only",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "predecessor-member",
+   "text": "It is a member of the Mission Record and is not carried on the `mission` claim.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.adjudication"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission's related_to appears on its Mission record and never on the mission claim of a token derived under it",
+    "local": "the reference AS records related_to only in carryover replacement records"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": []
+  },
+  {
    "id": "aauth-management.person-path.authorize-as-person",
    "spec": "draft-mcguinness-mission-aauth-management.md",
    "anchor": "person-caller",

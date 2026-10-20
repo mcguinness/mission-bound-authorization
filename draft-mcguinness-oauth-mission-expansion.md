@@ -1140,8 +1140,10 @@ member.
   related to by lineage without superseding it, used for a
   non-superseding link such as a branch ({{replacement}}) or an
   independent continuation ({{independent-continuation}}). Unlike
-  `predecessor`, its presence does not imply that the referenced
-  Mission was superseded, and it carries no lifecycle consequence.
+    `predecessor`, its presence does not imply that the referenced
+  Mission was superseded, and it carries no lifecycle consequence. It
+  is a member of the Mission Record and is not carried on the
+  `mission` claim.
 
 `successor`:
 : REQUIRED in the `termination` of a Mission terminated with reason
