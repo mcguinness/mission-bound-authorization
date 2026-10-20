@@ -36747,15 +36747,28 @@
    },
    "profiles": [],
    "surface": "token-endpoint",
-   "assertion": "refusal",
+   "assertion": "ignore",
    "observation": {
     "normative": "a ceiling or drawdown policy that only a client supplied, without the Approver's consent on the approval surface, is never recorded as consented",
-    "local": "The reference reads the ceiling only from the approval surface's decision body (ceilingConsentOf); no test yet shows a client-supplied ceiling ignored."
+    "local": "The pushed authorization request and the token endpoint strip parameters they do not declare, and the reference reads the ceiling only from the approval surface's decision body (ceilingConsentOf). A client-sent authority_ceiling and drawdown_policy leave a Mission with no ceiling, and on an expansion request leave the successor under the consented ceiling, so authority only the client's ceiling admits falls back to a fresh human approval."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent (@spec progressive#progressive-authorization) > a ceiling and drawdown policy the client sends on the authorization request are never consented: the Mission carries none",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent (@spec progressive#progressive-authorization) > a ceiling and drawdown policy the client sends on an expansion request are not the successor's: the consented ones govern",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572. Proved by adopting a client-pushed ceiling at the approval decision and a client-sent ceiling at the drawdown."
   },
   {
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
@@ -37819,7 +37832,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a deployment of progressive authorization bounds successor lifetimes, constrains its ceilings, and runs runtime enforcement",
-    "local": "Deployment guidance; the reference deployment declares no successor lifetime bound of its own."
+    "local": "Deployment guidance. No reference deployment selects Progressive authorization (the AS option is default off and the demo stack does not set it), so this SHOULD binds no reference deployment; recorded as a departure, not a failure (CONTRIBUTING, Conformance Traceability Convention)."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -37842,12 +37855,19 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
-    "local": "Deployment governance; versioning is visible in the activation policy registry, review is outside the reference."
+    "local": "Versioning is enforced: a drawdown policy edited under an unchanged version no longer reproduces the committed digest, so it authorizes nothing and the request falls back, and the commit refuses a snapshot whose bytes do not hash to that digest. Review is a deployment process the reference cannot witness."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown policy edited after consent, here its review cadence under an unchanged version, authorizes nothing: the request falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row. Proved by skipping the digest comparison at adjudication and at snapshot retention."
   },
   {
    "id": "progressive.audit.cumulative-drawdown-count",
