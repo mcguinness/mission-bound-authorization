@@ -14,6 +14,10 @@
     "revision": "d08ef5881483daa4b09beb50e1806e7afa89805f",
     "content_sha256": "33e8ae6138b82668731a7d5e6cb125e183c49750144caa3438903e5c719c8cbc"
    },
+   "draft-mcguinness-mission-metering.md": {
+    "revision": "6667b68f9afece5e490ea65022196e6c4991dd1b",
+    "content_sha256": "8cd8d68437668e5a6268b3ffa5e158017d5d71ef4129d4250ef70da2f3beb317"
+   },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "1df0e37958729923a4ea977df0da22b45c5bae4d",
     "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
@@ -25527,6 +25531,27 @@
     }
    ],
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). Witnessed at the PDP's projections (operation identity, authorization binding, cache key) and its idempotency claim, not at a PEP-side projection; the payments PEP keeps no permit cache of its own. Mutations M7 and M8 fail P9 and C1."
+  },
+  {
+   "id": "metering.lease-renewal.continuity-with-renewed-evaluation",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The PDP MUST verify that the renewal's Mission, subject, action, operation target and audience match the evaluation named by `prior_evaluation_id`.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a duration-lease renewal whose Mission, subject, action, operation target or audience differs from the evaluation named by context.prior_evaluation_id does not continue that metered activity; one that matches in all five does"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1276 (D457, D475). The reference implements no duration-lease renewal: nothing in src/ reads context.prior_evaluation_id or reports measured_duration, so no part of this check (the operation target included) has a witness. #1285 deferred the operation-target clause until a renewal path exists; the row stays todo until one is built."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
