@@ -121,7 +121,7 @@ the store.
 | Trusted approval input and achieved authentication context | Yes, both configurations | `/interaction/{uid}/decide` route, then `decide()` (§3.1) | In request, before any write; no commit of its own | None | Approval sessions and pending interactions are in memory and are lost; nothing to recover | Yes, HTTP (§3.1) | Achieved context checked, not retained; no render-to-decision binding (§3.1) |
 | Canonical Subject resolution and approve-for authorization | Yes | `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
 | Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | Decision-time `scope` check ignores `capability_sources` (§3.3) |
-| Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, except the progressive ceiling consent at the commit; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
+| Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, except a consented ceiling's drawdown policy reference at the commit; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | The count stays consumed; nothing reconciles it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a failure after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
 | Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
 | Scope projection | Yes (`plain-rs` is `scope_only`) | `earlyScopeRefusal`; the decision check; `decideMissionScope`; `preCheckRefreshProjection`; the JWT customizer (§3.7) | In request, before the state gate and before refresh consumption; reads only | None | The mapping is configuration, strictly loaded at boot | Yes, HTTP; the JWT customizer directly and on a delegated mint (§3.7) | Code-exchange refusal after code consumption (§3.7) |
@@ -164,7 +164,11 @@ the store.
   remittance (`irreversible_action`, `external_commitment`) invoke the
   `high-risk-authority` floor, which only a browser Approver satisfies, with
   an achieved `acr` of `mfa` and an `auth_time` at most 300 seconds old. A
-  headless service's registered context never satisfies it. Both the request
+  headless service's registered context never satisfies it. Where the
+  deployment selects Progressive authorization, the authority ceiling the
+  decision consents is validated (`consentedCeilingEntries`) and classified
+  with the derived set, so a ceiling that admits high-risk authority needs the
+  same Approver (#1255). Both the request
   and the floor must hold, so an absent or weaker request never relaxes the
   floor. A miss of either finishes the interaction `access_denied`, before any
   Mission, Grant or code.
@@ -193,6 +197,8 @@ the store.
   - `> classifies the complete derived set: a high-risk entry after a low-risk one still invokes the floor`
   - `> refuses admitted authority the classification does not name: unclassified authority fails closed`
   - `the floor and the client's requested strength are conjunctive (@spec mission#approval-authentication, #826, D425) > a satisfied weaker request does not relax the floor: Alice requests and achieves password, and the floor refuses`
+  - `the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code`
+  - `> approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it`
   - `the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425) > the high-risk payments actions are exactly those with an irreversible or external-commitment operation`
 - **Tests (HTTP, the upstream Approver login, `approver-login.test.ts`):**
   - `the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496) > admits high-risk authority after a login whose validated ID Token carries mfa: the mapped Approver, the token's acr and auth_time, and the selected Subject are recorded`
@@ -417,9 +423,11 @@ the store.
   1. `kernel.prepareApproval`: the principal checks, the derived Authority
      Set with its capability-source bindings, and the authority source with
      its ceiling. Every refusal happens here or before, so nothing is written
-     for a refused decision, except the progressive ceiling consent: `approve`
-     establishes it at the commit's creation instant, so its refusal comes
-     after the grant save and leaves an inert grant a retry overwrites.
+     for a refused decision, except a consented ceiling's drawdown policy
+     reference: `approve` mints it at the commit's creation instant, so its
+     refusal comes after the grant save and leaves an inert grant a retry
+     overwrites. The ceiling's entries and their floor are checked before
+     any write (§3.1).
   2. `kernel.reserveApproval`: a synchronous reservation of the interaction's
      approval event for this decision's Approver, Subject, client and grant,
      taken with no await since the checks before it. A later or concurrent
@@ -469,8 +477,8 @@ the store.
   (`ON CONFLICT DO NOTHING`). An approval grant the index resolves (one its
   Mission's `grant_id` no longer names) still counts against the derivation
   limit (`missionGateTarget`), so no approval grant escapes the count.
-- **Boundary.** Every refusal happens before any write, except the
-  progressive ceiling consent and the source revalidation at the commit (steps 1 and 4). The grant save, the
+- **Boundary.** Every refusal happens before any write, except a consented
+  ceiling's drawdown policy reference and the source revalidation at the commit (steps 1 and 4). The grant save, the
   record commit with its binding, and the code are separate writes, in two
   stores and two requests; the bound-grant index is written right after the
   record commit, on its own handle, and a bound record resolves through

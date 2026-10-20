@@ -25,6 +25,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import type { ApprovalFloorPolicy } from "@mission/demo-data";
 import {
   type ActivationPolicyRef,
   authorityHash,
@@ -108,18 +109,13 @@ export interface MissionCeiling {
 }
 
 /**
- * @spec progressive#progressive-authorization: validate a consented ceiling
- * and commit it. Each entry has an Authority Set entry's shape; the drawdown
- * policy reference is minted over the snapshot this issuer holds, and a
- * policy it does not hold at that version is refused: the approval cannot
- * commit content the issuer cannot evaluate.
+ * @spec progressive#progressive-authorization: the consented ceiling's
+ * entries, each with an Authority Set entry's shape. A malformed ceiling is
+ * refused `invalid_request`. The approval decision reads them before any
+ * write, to hold the ceiling to the approval-authentication floor
+ * (mission#approval-authentication, #1255).
  */
-export function consentCeiling(
-  iss: string,
-  registry: ActivationPolicyRegistry | undefined,
-  consent: CeilingConsent,
-  consentedAt: string,
-): MissionCeiling {
+export function consentedCeilingEntries(consent: CeilingConsent): AuthorityEntry[] {
   const entries = consent.authority_ceiling as unknown;
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new IntentError("invalid_request", "authority_ceiling must be a non-empty array");
@@ -133,7 +129,23 @@ export function consentCeiling(
     }
     resources.push(resource);
   }
-  const ceiling = validateAuthorityProposal(JSON.stringify(entries), resources);
+  return validateAuthorityProposal(JSON.stringify(entries), resources);
+}
+
+/**
+ * @spec progressive#progressive-authorization: validate a consented ceiling
+ * and commit it. Each entry has an Authority Set entry's shape; the drawdown
+ * policy reference is minted over the snapshot this issuer holds, and a
+ * policy it does not hold at that version is refused: the approval cannot
+ * commit content the issuer cannot evaluate.
+ */
+export function consentCeiling(
+  iss: string,
+  registry: ActivationPolicyRegistry | undefined,
+  consent: CeilingConsent,
+  consentedAt: string,
+): MissionCeiling {
+  const ceiling = consentedCeilingEntries(consent);
   let drawdownPolicy: ActivationPolicyRef | undefined;
   if (consent.drawdown_policy !== undefined) {
     const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };
@@ -217,8 +229,15 @@ export interface ProgressiveDrawdownOptions {
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
-/** Validate the typed deployment configuration; throws on any malformed member. */
-export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions): ProgressiveDrawdownOptions {
+/**
+ * Validate the typed deployment configuration; throws on any malformed member,
+ * and on a mapping that disagrees with the approval-authentication floor
+ * ({@link assertDrawdownClassesMeetApprovalFloor}).
+ */
+export function validateProgressiveDrawdownOptions(
+  o: ProgressiveDrawdownOptions,
+  approvalFloor: ApprovalFloorPolicy,
+): ProgressiveDrawdownOptions {
   if (!isPositiveInteger(o?.chainRateBound?.maxDrawdowns) || !isPositiveInteger(o.chainRateBound.windowSeconds)) {
     throw new Error("progressive chainRateBound needs positive integer maxDrawdowns and windowSeconds");
   }
@@ -233,7 +252,38 @@ export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions
   if (o.externalCommunicationActions !== undefined && !o.externalCommunicationActions.every((a) => typeof a === "string")) {
     throw new Error("progressive externalCommunicationActions must be action identifiers");
   }
+  assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion, mission#approval-authentication
+ * (#1255): the drawdown's published mapping agrees with the
+ * approval-authentication floor's classification. An action the floor
+ * classifies, at any resource, in a class some floor `applies_to` must not map
+ * in `actionClasses` to a class outside the fresh-approval set, or a drawdown
+ * would grant by policy alone authority whose approval the floor guards.
+ * `actionClasses` is keyed by action alone, so one floor-invoking
+ * classification of the action is enough to refuse. An action with no
+ * `actionClasses` entry needs nothing here: its drawdown falls back
+ * (`unclassified_action`). Throws, so the deployment does not start.
+ */
+export function assertDrawdownClassesMeetApprovalFloor(
+  o: ProgressiveDrawdownOptions,
+  approvalFloor: ApprovalFloorPolicy,
+): void {
+  const invoking = new Set<string>(approvalFloor.floors.flatMap((f) => f.applies_to));
+  for (const entry of approvalFloor.classification) {
+    for (const [action, floorClass] of Object.entries(entry.actions)) {
+      if (!invoking.has(floorClass) || !Object.hasOwn(o.actionClasses, action)) continue;
+      const mapped = o.actionClasses[action] as RuntimeActionClass;
+      if (!FRESH_APPROVAL_CLASSES.has(mapped)) {
+        throw new Error(
+          `progressive actionClasses: ${action} maps to ${mapped}, which a drawdown grants by policy, but the approval-authentication floor ${approvalFloor.policy_id} classifies it ${floorClass} at ${entry.resource}, which invokes a floor`,
+        );
+      }
+    }
+  }
 }
 
 /**

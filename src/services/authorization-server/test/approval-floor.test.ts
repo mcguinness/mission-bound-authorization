@@ -32,8 +32,10 @@ import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeader
 
 const PORT = 14791;
 const OVERRIDE_PORT = 14792;
+const PROGRESSIVE_PORT = 14793;
 const ISSUER = `http://localhost:${PORT}`;
 const OVERRIDE_ISSUER = `http://localhost:${OVERRIDE_PORT}`;
+const PROGRESSIVE_ISSUER = `http://localhost:${PROGRESSIVE_PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const PAYMENTS = DERIVATION_POLICY.ceiling[0].resource as string;
 const VERIFIER = "approval-floor-verifier-0123456789-0123456789-0123";
@@ -76,11 +78,46 @@ const OVERRIDE_POLICY: ApprovalFloorPolicy = {
   }),
 };
 
+/**
+ * The Progressive AS's deployment (#1255): a drawdown mapping that agrees
+ * with the shipped floor, and a drawdown policy the Approver can consent.
+ */
+const PROGRESSIVE_DEPLOYMENT = {
+  progressive: {
+    chainRateBound: { maxDrawdowns: 2, windowSeconds: 3600 },
+    actionClasses: {
+      "payments:invoice.read": "consequential_read",
+      "payments:payment.execute": "irreversible_action",
+      "payments:remittance.send": "external_commitment",
+    },
+  },
+  activationPolicies: {
+    "drawdown-std": {
+      version: "1",
+      content_type: "application/json",
+      content: JSON.stringify({ max_added_actions: 1, ceiling_review_cadence_s: 2_592_000 }),
+    },
+  },
+} satisfies Pick<Parameters<typeof buildAuthorizationServer>[0], "progressive" | "activationPolicies">;
+
+/** The payments ceiling as the derivation policy states it: it admits payment execution and remittance. */
+const PAYMENTS_CEILING = DERIVATION_POLICY.ceiling.filter((e) => e.resource === PAYMENTS) as unknown as AuthorityEntry[];
+const CEILING_CONSENT = {
+  authority_ceiling: PAYMENTS_CEILING,
+  drawdown_policy: { id: "drawdown-std", version: "1" },
+};
+
 type Server2 = { as: BuiltAs; server: Server; sessions: ApprovalSessionStore; key: CryptoKey; issuer: string };
 let shipped: Server2;
 let override: Server2;
+let progressive: Server2;
 
-async function start(issuer: string, port: number, approvalFloor?: ApprovalFloorPolicy): Promise<Server2> {
+async function start(
+  issuer: string,
+  port: number,
+  approvalFloor?: ApprovalFloorPolicy,
+  deployment: Partial<typeof PROGRESSIVE_DEPLOYMENT> = {},
+): Promise<Server2> {
   const sessions = new ApprovalSessionStore();
   const as = await buildAuthorizationServer({
     issuer,
@@ -88,6 +125,7 @@ async function start(issuer: string, port: number, approvalFloor?: ApprovalFloor
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approvalSessions: sessions,
     ...(approvalFloor ? { approvalFloor } : {}),
+    ...deployment,
   });
   const server = as.provider.listen(port);
   const key = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -97,11 +135,13 @@ async function start(issuer: string, port: number, approvalFloor?: ApprovalFloor
 beforeAll(async () => {
   shipped = await start(ISSUER, PORT);
   override = await start(OVERRIDE_ISSUER, OVERRIDE_PORT, OVERRIDE_POLICY);
+  progressive = await start(PROGRESSIVE_ISSUER, PROGRESSIVE_PORT, undefined, PROGRESSIVE_DEPLOYMENT);
 });
 
 afterAll(() => {
   shipped?.server.close();
   override?.server.close();
+  progressive?.server.close();
 });
 
 afterEach(() => {
@@ -129,7 +169,14 @@ type Approval =
  */
 async function authorize(
   s: Server2,
-  args: { authority?: AuthorityEntry[]; scope?: string; extra?: Record<string, string>; approval: Approval },
+  args: {
+    authority?: AuthorityEntry[];
+    scope?: string;
+    extra?: Record<string, string>;
+    approval: Approval;
+    /** The ceiling members the decision consents (#1255). */
+    ceiling?: Record<string, unknown>;
+  },
 ): Promise<{ code?: string; error?: string; description?: string; jar: Jar; missions: number; grants: number }> {
   const jar: Jar = new Map();
   const missionsBefore = s.as.kernel.allMissions().length;
@@ -188,7 +235,7 @@ async function authorize(
       method: "POST",
       redirect: "manual",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve" }),
+      body: JSON.stringify({ decision: "approve", ...(args.ceiling ?? {}) }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
     keep(jar, res);
@@ -325,6 +372,42 @@ describe("the floor and the client's requested strength are conjunctive (@spec m
     });
     expect(r.code, r.description).toBeTruthy();
     expect(r.missions).toBe(1);
+  });
+});
+
+describe("the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255)", () => {
+  // The derived set is read-only, which invokes no floor; the ceiling admits
+  // payment execution and remittance, which a later drawdown could grant
+  // under this consent with no Approver authenticating.
+  it("refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code", async () => {
+    const r = await authorize(progressive, {
+      authority: READ,
+      ceiling: CEILING_CONSENT,
+      approval: { browser: { sub: "bob", acr: "password", subject: "alice" } },
+    });
+    await expectRefusedClean(progressive, r);
+    expect(r.description).toMatch(/high-risk-authority floor/);
+    // Without the ceiling, the same derived set and login are approved: the ceiling invoked the floor.
+    const uncapped = await authorize(progressive, {
+      authority: READ,
+      approval: { browser: { sub: "bob", acr: "password", subject: "alice" } },
+    });
+    expect(uncapped.code, uncapped.description).toBeTruthy();
+    expect(uncapped.missions).toBe(1);
+  });
+
+  it("approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it", async () => {
+    const r = await authorize(progressive, {
+      authority: READ,
+      ceiling: CEILING_CONSENT,
+      approval: { browser: { sub: "bob", acr: "mfa", auth_time: now() - 1, subject: "alice" } },
+    });
+    expect(r.code, r.description).toBeTruthy();
+    expect(r.missions).toBe(1);
+    const created = progressive.as.kernel.allMissions().at(-1);
+    expect(created?.authority_ceiling).toEqual(PAYMENTS_CEILING);
+    expect(created?.drawdown_policy?.id).toBe("drawdown-std");
+    expect(typeof created?.ceiling_hash).toBe("string");
   });
 });
 
