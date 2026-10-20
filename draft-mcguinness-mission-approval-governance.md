@@ -780,9 +780,8 @@ accountable assertion for its class and never lengthens the ceiling.
 For each `policy` assertion the evaluation would count toward the
 applicable maximum, the issuer:
 
-- MUST verify `authority.approved_at` from retained, authenticated
-  governance state for the exact `policy_id` and `version` the assertion
-  names;
+- uses the `authority.approved_at` it verified under
+  {{assertion-authority}};
 - MUST measure the assertion's age as `evaluation.evaluated_at` minus
   `authority.approved_at`, using the atomic-commitment instant
   ({{atomic-commitment}});
