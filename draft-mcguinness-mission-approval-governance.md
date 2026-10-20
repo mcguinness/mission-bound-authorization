@@ -217,12 +217,14 @@ document does not define a second canonicalization.
 A digest is encoded in the integrity-anchor encoded form of
 {{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix followed
 by the base64url, no-padding encoding of the digest. This document
-defines no digest algorithm of its own. Its two digests are classified
-under the substrate's default commitment construction, which this
-document imports normatively
-({{I-D.draft-mcguinness-mission-substrate}}): `approval_policy.digest`
-is an envelope anchor, and the record digest ({{envelope}}) is a
-canonical-object digest.
+defines no digest algorithm of its own. Its digests are constructed with
+the issuance profile's commitment mechanisms
+({{I-D.draft-mcguinness-oauth-mission}}) and classified under the
+substrate's default commitment construction, which this document imports
+normatively ({{I-D.draft-mcguinness-mission-substrate}}):
+`approval_policy.digest`, `approval_context_commitment`, and
+`submission_evidence_commitment` are envelope anchors, and the record
+digest ({{envelope}}) is a canonical-object digest.
 
 The terms Mission, Mission Record, Mission Issuer, Approver, Subject,
 approval event, Mission Intent, Authority Set, audit horizon,
@@ -389,15 +391,20 @@ protection.
 : REQUIRED. An object recording the outcome, with these members:
 
     `decision`:
-    : A string. The only value a committed record carries is `approved`,
-      since a record exists only for an approval that committed
-      ({{atomic-commitment}}).
+    : REQUIRED. A string. The only value a committed record carries is
+      `approved`, since a record exists only for an approval that
+      committed ({{atomic-commitment}}).
 
     `evaluated_at`:
-    : An RFC 3339 timestamp.
+    : REQUIRED. An RFC 3339 timestamp.
 
     `contributing`:
-    : An array of the `assertion_id` values the evaluation relied on.
+    : REQUIRED. An array of the `assertion_id` values the evaluation
+      counted toward the rule the approval satisfied. A denial the
+      policy evaluated that did not block the approval is recorded but
+      not contributing, and a blocking denial leaves no committed record
+      ({{atomic-commitment}}), so a `deny` assertion never appears in
+      `contributing`.
 
 `approval_context_commitment`:
 : OPTIONAL. A string. The Approval Context Commitment over the governed
@@ -430,7 +437,12 @@ Each element of `assertions` is an object with these members:
     version its `authority` names (where a consented root commits a
     separate evaluator that decides, the human who approved that root),
     as the issuer's retained, authenticated governance state records.
-    The policy is the decision mechanism, never the principal.
+    Where several humans approved that version together, as under dual
+    control, it is the one human that state names as accountable for the
+    approval, as the issuance profile records one accountable Approver
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Single Accountable
+    Approver"). The policy is the decision mechanism, never the
+    principal.
   - For a `service` assertion, the service that produced the decision.
 
 `kind`:
@@ -537,7 +549,7 @@ integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}}),
 canonicalized with JCS {{RFC8785}}, with these members:
 
 - `typ`: `mission-approval-policy`, which domain-separates this anchor
-  from every other anchor in the family;
+  from every other integrity anchor;
 - `iss`: the Mission Issuer, which prevents cross-issuer replay; and
 - `value`: an object of `content_type` (the snapshot's media type) and
   `content` (the base64url, no-padding encoding of the snapshot bytes).
@@ -634,17 +646,73 @@ The following rules apply to the assertions in a record:
   `service` or `policy` assertion through an integrity-protected channel
   or signature the issuer verifies.
 - Every assertion MUST be bound to this approval event: an assertion is
-  made against this `approval_event_id` and this `authority_hash`, and
-  an assertion captured for one event MUST NOT be replayed into another.
-- Every contributing assertion MUST be policy-authorized: the issuer
-  verifies the asserting principal was eligible to assert under the
-  referenced `approval_policy` version before counting it.
+  made against this `approval_event_id`, this `intent_hash`, and this
+  `authority_hash`, and an assertion captured for one event MUST NOT be
+  replayed into another.
+- Every contributing assertion MUST be policy-authorized: before
+  counting it, the issuer verifies that the asserting principal was
+  eligible to assert under the referenced `approval_policy` version. For
+  a `policy` assertion, that means both that the policy its `authority`
+  names was eligible to decide under `approval_policy` and that its
+  principal was eligible to approve that policy version (or, where a
+  consented root commits a separate evaluator that decides, that root).
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
 
 An assertion that fails authentication, event binding, or policy
 authorization MUST NOT contribute to the evaluation and MUST NOT be
 counted toward any policy rule.
+
+The following example shows the `assertions` and `evaluation` members of
+a record, other members omitted, whose delegation-of-authority policy
+requires one finance approval beside the accountable approver's. Alice
+approves directly; one finance approver approves and another denies.
+Under that policy a finance denial does not block an approval that
+another finance approver supports, so the denial is recorded but not
+contributing.
+
+~~~ json
+{
+  "assertions": [
+    { "assertion_id": "ast_1",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-11-02T08:00:00Z",
+      "authority": {
+        "acr": "urn:example:acr:phishing-resistant",
+        "amr": ["pwd", "hwk"],
+        "auth_time": "2026-11-02T07:59:00Z" } },
+    { "assertion_id": "ast_2",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_t1yd3CZCLPOis5n" },
+      "kind": "human", "decision": "approve",
+      "decided_at": "2026-11-02T07:58:10Z",
+      "authority": {
+        "acr": "urn:example:acr:phishing-resistant",
+        "amr": ["pwd", "hwk"],
+        "auth_time": "2026-11-02T07:58:00Z" } },
+    { "assertion_id": "ast_3",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_Kq-iUUKDYl8jhWF" },
+      "kind": "human", "decision": "deny",
+      "decided_at": "2026-11-02T07:57:40Z",
+      "authority": {
+        "acr": "urn:example:acr:phishing-resistant",
+        "amr": ["pwd", "hwk"],
+        "auth_time": "2026-11-02T07:57:30Z" },
+      "reason": "Asks for a lower journal-entry cap." }
+  ],
+  "evaluation": {
+    "decision": "approved",
+    "evaluated_at": "2026-11-02T08:00:00Z",
+    "contributing": ["ast_1", "ast_2"]
+  }
+}
+~~~
+
+More than one principal contributes and a threshold rule is evaluated,
+so the second and fourth recording triggers hold ({{triggers}}).
 
 ## Accountable Assertion {#accountable-assertion}
 
@@ -722,14 +790,16 @@ across every class either source carries, the strictest maximum age that
 applies, accounting for any declared exception. This is a property of
 the whole committed Mission the record's `mission.authority_hash` and
 `mission.intent_hash` bind to ({{record-members}}), never of one
-assertion or entry in isolation.
+assertion or entry in isolation. For a class with a declared exception,
+the maximum that applies is the smaller of that class's recency ceiling
+and the exception's maximum age: an exception admits a `policy`
+accountable assertion for its class and never lengthens the ceiling.
 
 For each `policy` assertion the evaluation would count toward the
 applicable maximum, the issuer:
 
-- MUST verify `authority.approved_at` from retained, authenticated
-  governance state for the exact `policy_id` and `version` the assertion
-  names;
+- uses the `authority.approved_at` it verified under
+  {{assertion-authority}};
 - MUST measure the assertion's age as `evaluation.evaluated_at` minus
   `authority.approved_at`, using the atomic-commitment instant
   ({{atomic-commitment}});
@@ -784,8 +854,9 @@ policy's freshness does not narrow or terminate it.
 
 Approval Governance is an optional extension ({{introduction}}). The
 rules of {{policy-approval-recency}} are a conservative default of this
-document, not a family-wide guarantee, and a deployment that records no
-Approval Governance Record is unbounded by them.
+document, not a guarantee of every Mission-Bound Authorization
+deployment, and a deployment that records no Approval Governance Record
+is unbounded by them.
 
 The `kind: human` requirement is not by itself an assurance property:
 the authentication-strength, rendering, and accountable-principal
@@ -841,10 +912,13 @@ the issuer:
 - persists the signed record in the same commit as the Mission's
   creation.
 
-Signing follows evaluation and precedes persistence, never the reverse,
-and `approval_context_commitment` is computed before signing. A value of
-`approval_context_commitment` computed after the commit is not covered
-by the record's signature and MUST NOT be added to a committed record.
+The only order the commit fixes is evaluate, then sign, then persist,
+with `approval_context_commitment` computed before signing; the other
+checks this document requires, including those of
+{{governed-policy-activation}}, complete before signing, in whatever
+order their inputs allow. A value of `approval_context_commitment`
+computed after the commit is not covered by the record's signature and
+MUST NOT be added to a committed record.
 
 Where a deployment records the Approval Governance Record for an
 approval, the Mission Record MUST NOT be created `active` unless the
@@ -946,6 +1020,47 @@ one byte sequence every external reference names:
   and
 - consent evidence's `approval_governance_digest` equals exactly this
   value ({{consent-evidence-relationship}}).
+
+# Re-checking an Evaluation {#re-check}
+
+A Relying Auditor re-checks an evaluation by replaying it from retained
+evidence: the policy and any evaluator that decided, the inputs they
+evaluated, and the recorded assertions. Conformance requires it to
+obtain the retained policy version before treating the evaluation as
+re-checked ({{conformance}}). The re-check has these steps:
+
+1. Verify the record ({{envelope}}).
+2. Obtain the retained snapshot of the `approval_policy` version the
+   record names, and recompute `approval_policy.digest` over it
+   ({{approval-policy}}).
+3. Where that snapshot commits a separate evaluator that decides, as a
+   `governed_policy` root can ({{governed-policy-root}}), obtain the
+   retained snapshot of that evaluator and recompute its activation
+   policy reference digest ({{I-D.draft-mcguinness-oauth-mission}},
+   Section "Activation Policy Commitment").
+4. Obtain the inputs the deciding policy or evaluator evaluated, as the
+   issuer recorded them ({{I-D.draft-mcguinness-oauth-mission}}, Section
+   "Principals and Approval Basis"). These include each model output in
+   full, with its verdict and any narrowing, which the matching
+   `service` assertion records only by identifier. Confirm that each
+   input carries this record's `approval_event_id` and the Mission's
+   `intent_hash`, and that each contributing `service` assertion
+   corresponds to one of them.
+5. Re-run the deciding policy or evaluator, at its exact version, over
+   those inputs and the recorded assertions, and confirm that it
+   approves, counting exactly the assertions `contributing` lists
+   ({{record-members}}).
+6. Apply the recency rules of {{policy-approval-recency}}, as the
+   snapshot or the declaration it commits states them, with
+   `evaluation.evaluated_at` as the evaluation instant.
+
+Where a snapshot, the evaluator, or an input cannot be obtained, a
+recomputed digest does not match, a binding does not hold, or the replay
+reaches a different outcome, the evaluation is not re-checked.
+
+A re-check does not re-authenticate an assertion: the record carries an
+assertion's authentication context ({{assertion-authority}}), not the
+authentication itself.
 
 # Governed Policy Approval {#governed-policy}
 
@@ -1464,7 +1579,7 @@ A Recording Issuer MUST:
 A Relying Auditor MUST verify the envelope by byte equality, MUST
 validate the mission binding, and MUST obtain the retained policy
 version before treating the evaluation as re-checked ({{envelope}},
-{{approval-policy}}).
+{{approval-policy}}, {{re-check}}).
 
 # Security Considerations {#security-considerations}
 
@@ -1526,7 +1641,12 @@ decision times are personal data about reviewers. The record is
 control-plane state retained by the issuer, never disclosed on wire
 surfaces, and access to a retained record follows the issuer's audit-log
 discipline for approval-event records
-({{I-D.draft-mcguinness-oauth-mission}}).
+({{I-D.draft-mcguinness-oauth-mission}}). The
+`approval_context_commitment` value is the same in every artifact that
+discloses it, so it correlates those artifacts
+({{approval-context-carriage}}). A `service` assertion's `authority`
+discloses the identifiers and versions of the logic and model that took
+part in a decision ({{assertion-authority}}).
 
 # IANA Considerations {#iana}
 
@@ -1913,6 +2033,18 @@ same rule as vector 5.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Resolutions of the remaining #1436 questions. An assertion binds to
+  the approval event's `intent_hash` as well. Policy-authorization says
+  what it checks for a `policy` assertion. `contributing` lists what the
+  satisfied rule counted, so a `deny` assertion never appears in it. An
+  exception never lengthens its class's recency ceiling. The members of
+  `evaluation` are marked as required. Evaluating Recency points at the
+  one `approved_at` verification rule. Conventions names both digest
+  sources. Re-checking an Evaluation defines the Relying Auditor's
+  re-check. Privacy Considerations name two correlators. A policy
+  version that several humans approved names its one accountable human
+  as the principal.
 
 - Four rulings on the #1436 questions (D568), each a change in
   requirements. The recording triggers bind only under a profile that

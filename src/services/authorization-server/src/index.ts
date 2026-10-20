@@ -543,6 +543,7 @@ export {
   approvalGovernanceRecordDigest,
   assertAccountableApprover,
   assertAssertionAuthority,
+  assertContributing,
   assertGovernedPolicyRecord,
   type HumanAuthority,
   jwsMediaTypeMatches,

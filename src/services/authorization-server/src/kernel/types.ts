@@ -505,6 +505,12 @@ export interface ApprovalBasisCeilingDrawdown {
   activation: { policy_id: string; policy_version: string };
   /** The requesting client. */
   activation_actor: { iss: string; sub: string };
+  /**
+   * @spec progressive#ceiling-drawdown-basis (#1438, D572): REQUIRED. The
+   * drawdown policy evaluated, naming the same `id` and `version` as
+   * `activation`.
+   */
+  adjudication: { kind: "policy"; policy: { id: string; version: string } };
   /** The `ceiling_hash`. */
   root_commitment: string;
   /**
