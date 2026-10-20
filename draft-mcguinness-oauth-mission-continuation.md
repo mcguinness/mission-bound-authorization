@@ -410,9 +410,10 @@ cross-domain projection rule
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}, Section
 "Conveyed Delegation Policy"), so a requested authorization detail
 that keeps an omitted `delegation` exceeds the grant's authority and
-is refused. The rule changes only the conveyed copy: the delegation constraints at this
-exchange apply at the depth counted above, `act` attributes the same
-actors, and that profile's depth reset does not apply.
+is refused. The rule changes only the conveyed copy: the delegation
+constraints at this exchange apply at the depth counted above, `act`
+attributes the same actors, and that profile's depth reset does not
+apply.
 
 ## Async Delegation Transport {#transport-async}
 
