@@ -35531,6 +35531,42 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
+   "id": "progressive.ceiling-drawdown-basis.adjudication-required",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "`adjudication`: REQUIRED for this basis, the decision mechanism",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every ceiling_drawdown basis carries adjudication with kind policy and the id and version of the drawdown policy evaluated, equal to activation's",
+    "local": "Set from the verified policy reference in createCeilingDrawdownInCallerTx."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by a constant version (M-a) and a constant id (M-b)."
+  },
+  {
    "id": "progressive.in-ceiling.approved-at-retained",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
@@ -36499,10 +36535,33 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row."
   },
   {
+   "id": "progressive.sec.drawdown-policy-reviewed-versioned",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "sec-drawdown-policy",
+   "text": "it MUST be reviewed and versioned like approval policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
+    "local": "Deployment governance; versioning is visible in the activation policy registry, review is outside the reference."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row."
+  },
+  {
    "id": "progressive.audit.cumulative-drawdown-count",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record MUST carry the chain's cumulative drawdown count",
+   "text": "Every Mission record in a chain that carries a ceiling MUST carry the chain's cumulative drawdown count as `drawdown_count`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36513,12 +36572,18 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each policy-adjudicated successor's record carries the number of policy-adjudicated drawdowns in its chain, its own included",
+    "normative": "every Mission record of a ceiling-bearing chain carries drawdown_count: zero at the ceiling consent, one more on each committed ceiling_drawdown successor",
     "local": "Carried as the record member drawdown_count: 0 on the Mission that consented the ceiling and the predecessor's count plus one on each policy-adjudicated successor."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
@@ -36532,7 +36597,55 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: named `drawdown_count`."
+  },
+  {
+   "id": "progressive.audit.drawdown-count-semantics",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "audit-linkage",
+   "text": "A retried or refused request leaves it unchanged, and a human-approved successor carries it unchanged, a re-consent included; neither a review nor a narrowing resets it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "drawdown_count is unchanged by a recovered retry, by a request that falls back, and by a human-approved successor with or without a re-consent",
+    "local": "successorCeilingMembers carries the count; recovery creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent continues the chain's drawdown count and rate window",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor."
   },
   {
    "id": "progressive.audit.ceiling-retained-in-chain",
