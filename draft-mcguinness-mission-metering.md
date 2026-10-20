@@ -1173,7 +1173,7 @@ prior permit expires; the action is not parameter-bound, so no
   "action": { "name": "reconciliation.run" },
   "context": {
     "mission": {
-      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+      "id": "msn_YJRRFCK6J8RraBk7ryPypDdFbezmGlLg",
       "issuer": "https://as.example.com"
     },
     "mission_state_observation": {
@@ -1184,7 +1184,7 @@ prior permit expires; the action is not parameter-bound, so no
     "actor": { "client_id": "s6BhdRkqt3" },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z",
+      "expires_at": "2026-11-02T08:48:00Z",
       "authority": [
         {
           "type": "mission_resource_access",
