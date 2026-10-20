@@ -49,6 +49,7 @@ import {
 } from "../kernel/cross-domain.js";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import {
+  malformedMatcherInRequest,
   refusedMemberInRequest,
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
@@ -1181,6 +1182,14 @@ export async function handleAsyncDelegationExchange(
     const refusedMember = refusedMemberInRequest(requested);
     if (refusedMember) {
       txError(ctx, 400, "invalid_authorization_details", refusedMember);
+      return;
+    }
+    // @spec resource-access#matching-allowed-delegates (#1373): confinement
+    // rebuilds each delegate matcher from `sub` and `sub_profile`, so a
+    // requested matcher carrying another member is refused at the same point.
+    const malformedMatcher = malformedMatcherInRequest(requested);
+    if (malformedMatcher) {
+      txError(ctx, 400, "invalid_authorization_details", malformedMatcher);
       return;
     }
     requestedSubset = requested as AuthorityEntry[];

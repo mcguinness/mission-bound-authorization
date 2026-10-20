@@ -1,33 +1,64 @@
 #!/usr/bin/env node
 // Structural tripwire for Mission Substrate Statement AND Mapping
-// Assessment capability tables (#554 review, item 6; kind-tagged per the
-// #717 review on #708). Three binding Statements retained the retired
-// three-state vocabulary and omitted an entire capability without any
-// validator noticing; this check makes both classes of drift fail CI.
+// Assessment capability lists (#554 review, item 6; kind-tagged per the
+// #717 review on #708; list form per #1382). Three binding Statements
+// retained the retired three-state vocabulary and omitted an entire
+// capability without any validator noticing; this check makes both
+// classes of drift fail CI.
 //
-// The registry covers two distinct kinds sharing one table format (the
-// substrate requires a Mapping Assessment to use "the Statement's form"):
-// a Statement (kind "statement") is a conforming binding's own normative
+// The registry covers two distinct kinds sharing one form (the substrate
+// requires a Mapping Assessment to use "the Statement's form"): a
+// Statement (kind "statement") is a conforming binding's own normative
 // conformance result; an Assessment (kind "assessment") is a non-claiming
 // specification's informative self-description, never a conformance
 // result, and never implies the assessed specification takes a normative
 // dependency on the substrate. The structural checks below apply
-// identically to both kinds; only the summary line and any future
-// kind-specific rule would differ.
+// identically to both kinds, and to the substrate's own non-normative
+// skeleton (SKELETON, kept out of REGISTRY so the substrate never counts
+// as a binding); only the summary line and any future kind-specific rule
+// would differ.
 //
-// Checks, per registered table:
+// The form (#1382) is a kramdown definition list with one entry per
+// capability, closed by an anchor attribute list that locates it:
+//
+//   Lifecycle-Gated Authorization:
+//   : Claim: supplied
+//
+//     Activation: always
+//
+//     Scope and defining sections: ... ({{section}})
+//
+//     Limitations: ...
+//
+//   State-Observable:
+//   : Claim: ...
+//   ...
+//   {: #<anchor> newline="true"}
+//
+// Each entry's term is a capability name with a trailing colon; its
+// definition is exactly four paragraphs, each led by its label in this
+// order: Claim, Activation, Scope and defining sections, Limitations.
+// Wrapped lines are joined with single spaces before the checks below.
+//
+// Checks, per registered list (and the skeleton):
 //   (a) exactly the canonical eight capabilities, in canonical order;
-//   (b) the Claim column says only `supplied` or `not supplied`;
-//   (c) every supplied row states an activation condition (never empty,
-//       never `--`) and carries non-empty Scope and Limitations cells,
-//       the cells that hold its temporal and failure elements; and
-//   (d) every not-supplied row uses `--` for Activation and Scope and
+//   (b) the Claim member says only `supplied` or `not supplied`;
+//   (c) every supplied entry states an activation condition (never
+//       empty, never `--`) and carries non-empty Scope and Limitations
+//       members, the members that hold its temporal and failure
+//       elements; and
+//   (d) every not-supplied entry uses `--` for Activation and Scope and
 //       states its reason in Limitations.
 // Plus repo-wide tripwires:
 //   (e) the retired `supported`/`conditional`/`not supported` claim
-//       vocabulary appears in no draft table cell;
-//   (f) any table titled "…substrate capabilities" outside the registry
-//       fails, so a new binding's Statement must register here; and
+//       vocabulary appears in no draft table cell and no Claim member;
+//   (f) every capability entry anywhere in the corpus (a `: Claim:`
+//       member, or a canonical capability term opening a definition)
+//       lies inside a registered list or the skeleton, so a new
+//       binding's Statement must register here; the retired five-column
+//       table form, and any table titled "...substrate capabilities",
+//       fail wherever they appear; and a "Mission Substrate Statement"
+//       section must live in a file that registers a Statement; and
 //   (g) every consumer capability-consumption table (any table with the
 //       `| Capability | Consumption | Scope of consumption |` header,
 //       found by the header itself rather than a filename allowlist, so
@@ -60,43 +91,168 @@ const CAPABILITIES = [
 ];
 
 // Every registered Statement or Assessment is a Mission binding: publishing
-// a capability table here is what "binding" means architecturally (the
+// a capability list here is what "binding" means architecturally (the
 // README says as much: new bindings are authored against the substrate and
 // claim their capabilities through a Statement, or, for a non-claiming
 // specification, are assessed through an Assessment). `slug` names the
-// family-manifest.json draft the table is FOR, which is not always the
-// file it lives in. scripts/generate-drafts-index.mjs imports this array as
-// the single source of truth for "which manifest slugs are bindings," so
-// this list is exhaustive by construction: the tripwires below
-// (statement-unregistered) already fail CI the moment a new Statement or
-// Assessment table appears anywhere in the corpus without a matching entry
-// here.
+// family-manifest.json draft the list is FOR, which is not always the
+// file it lives in; `anchor` is the list's closing `{: #anchor}`.
+// scripts/generate-drafts-index.mjs imports this array as the single
+// source of truth for "which manifest slugs are bindings," so this list is
+// exhaustive by construction: the tripwires below (statement-unregistered)
+// already fail CI the moment a capability entry appears anywhere in the
+// corpus outside a registered list.
 export const REGISTRY = [
-  { file: "draft-mcguinness-oauth-mission.md", title: "OAuth Mission binding capability table", slug: "draft-mcguinness-oauth-mission", kind: "assessment" },
-  { file: "draft-mcguinness-mission-authority-server.md", title: "Standalone MAS Mission substrate capabilities", slug: "draft-mcguinness-mission-authority-server", kind: "statement" },
-  { file: "draft-mcguinness-mission-aauth.md", title: "AAuth Mission substrate capabilities", slug: "draft-mcguinness-mission-aauth", kind: "statement" },
-  { file: "draft-mcguinness-mission-uma.md", title: "UMA Mission substrate capabilities", slug: "draft-mcguinness-mission-uma", kind: "statement" },
-  { file: "draft-mcguinness-mission-gnap.md", title: "GNAP Mission substrate capabilities", slug: "draft-mcguinness-mission-gnap", kind: "statement" },
+  { file: "draft-mcguinness-oauth-mission.md", anchor: "oauth-mission-binding-capabilities", slug: "draft-mcguinness-oauth-mission", kind: "assessment" },
+  { file: "draft-mcguinness-mission-authority-server.md", anchor: "standalone-mas-mission-substrate-capabilities", slug: "draft-mcguinness-mission-authority-server", kind: "statement" },
+  { file: "draft-mcguinness-mission-aauth.md", anchor: "aauth-mission-substrate-capabilities", slug: "draft-mcguinness-mission-aauth", kind: "statement" },
+  { file: "draft-mcguinness-mission-uma.md", anchor: "uma-mission-substrate-capabilities", slug: "draft-mcguinness-mission-uma", kind: "statement" },
+  { file: "draft-mcguinness-mission-gnap.md", anchor: "gnap-mission-substrate-capabilities", slug: "draft-mcguinness-mission-gnap", kind: "statement" },
 ];
 
-const HEADER = "| Capability | Claim | Activation | Scope and defining sections | Limitations |";
+// The substrate's own non-normative skeleton: validated in the same form,
+// never a binding.
+const SKELETON = { file: "draft-mcguinness-mission-substrate.md", anchor: "illustrative-statement-capabilities", kind: "skeleton" };
+
+const LABELS = ["Claim", "Activation", "Scope and defining sections", "Limitations"];
+const RETIRED_HEADER = "| Capability | Claim | Activation | Scope and defining sections | Limitations |";
 const RETIRED = /\|\s*(supported|conditional|not supported)\s*\|/;
+const RETIRED_CLAIM = /^(?::|\s)\s*Claim:\s*(supported|conditional|not supported)\s*$/;
+const CLAIM_MEMBER = /^:\s+Claim:/;
 const CONSUMER_HEADER = "| Capability | Consumption | Scope of consumption |";
 const CONSUMER_SEPARATOR = "| --- | --- | --- |";
 const CONSUMER_CLAIM = /^(required( and produced)?|required when .+|not consumed|produced)$/;
 
-function tableEndingAt(lines, titleIdx) {
-  const rows = [];
-  for (let i = titleIdx - 1; i >= 0; i--) {
-    const line = lines[i];
-    if (!line.startsWith("|")) break;
-    rows.unshift(line);
-  }
-  return rows;
-}
-
 function cells(row) {
   return row.split("|").slice(1, -1).map((c) => c.trim());
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// A definition-list term: an unindented, non-empty line whose next line
+// opens a definition.
+function isTerm(lines, i) {
+  const line = lines[i];
+  return line !== "" && !line.startsWith(" ") && !line.startsWith(":") && !line.startsWith("{:") && (lines[i + 1] ?? "").startsWith(": ");
+}
+
+// Locate a capability list by its closing anchor and parse its entries.
+// Returns { start, end, entries, errors }: `start` is the first term's
+// line index and `end` the anchor's; each entry is { name, line, members }
+// with members keyed by label. `errors` lists format findings.
+export function parseCapabilityList(lines, anchor) {
+  const re = new RegExp(`^\\{:.*#${escapeRegExp(anchor)}(?=[\\s}])`);
+  const end = lines.findIndex((l) => re.test(l));
+  if (end === -1) return { missing: true };
+  const errors = [];
+  if (end === 0 || lines[end - 1] === "") {
+    errors.push(`the {: #${anchor}} line must directly follow the list's last line`);
+    return { start: end, end, entries: [], errors };
+  }
+  // Walk up from the anchor through the definition list it closes.
+  let start = end;
+  for (let i = end - 1; i >= 0; i--) {
+    const line = lines[i];
+    if (line === "" || line.startsWith("  ") || line.startsWith(": ") || isTerm(lines, i)) {
+      start = i;
+      continue;
+    }
+    break;
+  }
+  while (start < end && !isTerm(lines, start)) start += 1;
+  if (start === end) {
+    errors.push(`no definition-list entries precede {: #${anchor}}`);
+    return { start, end, entries: [], errors };
+  }
+  if (start > 0 && lines[start - 1] !== "") {
+    errors.push(`line ${start}: a blank line must separate the list from the text before it`);
+  }
+
+  const entries = [];
+  let cur = null;
+  for (let i = start; i < end; i++) {
+    const line = lines[i];
+    if (isTerm(lines, i)) {
+      if (cur && lines[i - 1] !== "") {
+        errors.push(`line ${i + 1}: a blank line must precede the term "${line}"`);
+      }
+      cur = { name: line.replace(/:$/, ""), line: i + 1, raw: [] };
+      entries.push(cur);
+      continue;
+    }
+    const first = cur.raw.length === 0;
+    if (first ? !line.startsWith(": ") : line !== "" && !line.startsWith("  ")) {
+      errors.push(`line ${i + 1} (${cur.name}): ${first ? 'a definition opens with ": "' : "definition lines are blank or indented two spaces"}`);
+    }
+    cur.raw.push(line.slice(2));
+  }
+
+  for (const entry of entries) {
+    const paragraphs = [];
+    let para = [];
+    for (const l of entry.raw) {
+      if (l.trim() === "") {
+        if (para.length) paragraphs.push(para.join(" "));
+        para = [];
+      } else {
+        para.push(l.trim());
+      }
+    }
+    if (para.length) paragraphs.push(para.join(" "));
+    entry.members = {};
+    const labelled = paragraphs.length === LABELS.length && paragraphs.every((p, k) => p.startsWith(`${LABELS[k]}:`));
+    if (!labelled) {
+      errors.push(`line ${entry.line} (${entry.name}): an entry's definition is exactly four paragraphs led by ${LABELS.map((l) => `"${l}:"`).join(", ")}, in that order`);
+      continue;
+    }
+    paragraphs.forEach((p, k) => {
+      entry.members[LABELS[k]] = p.slice(LABELS[k].length + 1).trim();
+    });
+    delete entry.raw;
+  }
+  return { start, end, entries, errors };
+}
+
+// Checks (a) to (d) on one located list. Returns findings as [tag, msg].
+export function validateCapabilityList(parsed, where) {
+  const findings = [];
+  if (parsed.errors.length > 0) {
+    for (const e of parsed.errors) findings.push(["statement-format", `${where}: ${e}`]);
+    return findings;
+  }
+  const names = parsed.entries.map((e) => e.name);
+  if (names.length !== CAPABILITIES.length || names.some((n, i) => n !== CAPABILITIES[i])) {
+    findings.push(["statement-capabilities", `${where}: entries must be exactly the canonical eight capabilities in order; found [${names.join(", ")}]`]);
+    return findings;
+  }
+  for (const { name, members } of parsed.entries) {
+    const claim = members.Claim;
+    const activation = members.Activation;
+    const scope = members["Scope and defining sections"];
+    const limitations = members.Limitations;
+    if (claim !== "supplied" && claim !== "not supplied") {
+      findings.push(["statement-claim", `${where} ${name}: claim must be "supplied" or "not supplied", found "${claim}"`]);
+      continue;
+    }
+    if (claim === "supplied") {
+      if (!activation || activation === "--") {
+        findings.push(["statement-activation", `${where} ${name}: a supplied entry must state its activation condition`]);
+      }
+      if (!scope || scope === "--" || !limitations) {
+        findings.push(["statement-elements", `${where} ${name}: a supplied entry must carry Scope and Limitations members (the temporal and failure elements)`]);
+      }
+    } else {
+      if (activation !== "--" || scope !== "--") {
+        findings.push(["statement-not-supplied", `${where} ${name}: a not-supplied entry uses "--" for Activation and Scope`]);
+      }
+      if (!limitations) {
+        findings.push(["statement-not-supplied", `${where} ${name}: a not-supplied entry states its reason in Limitations`]);
+      }
+    }
+  }
+  return findings;
 }
 
 // Guarded so importing REGISTRY (scripts/generate-drafts-index.mjs does, as
@@ -110,80 +266,56 @@ function main() {
     console.error(`[${tag}] ${msg}`);
   };
 
-  for (const entry of REGISTRY) {
-    const filePath = path.join(ROOT, entry.file);
+  // Line ranges of every located list, per file, for tripwire (f).
+  const covered = new Map();
+  for (const entry of [...REGISTRY, SKELETON]) {
+    const where = `${entry.file} (#${entry.anchor})`;
     let text;
     try {
-      text = readFileSync(filePath, "utf8");
+      text = readFileSync(path.join(ROOT, entry.file), "utf8");
     } catch {
       fail("statement-missing", `${entry.file}: file not found`);
       continue;
     }
-    const lines = text.split("\n");
-    const titleIdx = lines.findIndex((l) => l.includes(`{: title="${entry.title}"}`));
-    if (titleIdx === -1) {
-      fail("statement-missing", `${entry.file}: no table titled "${entry.title}"`);
+    const parsed = parseCapabilityList(text.split("\n"), entry.anchor);
+    if (parsed.missing) {
+      fail("statement-missing", `${entry.file}: no capability list closed by {: #${entry.anchor}}`);
       continue;
     }
-    const rows = tableEndingAt(lines, titleIdx);
-    if (rows.length < 2 || rows[0].trim() !== HEADER) {
-      fail("statement-format", `${entry.file} ("${entry.title}"): header must be exactly the five-column Statement header`);
-      continue;
-    }
-    const body = rows.slice(2); // header + separator
-    const names = body.map((r) => cells(r)[0]);
-    if (names.length !== CAPABILITIES.length || names.some((n, i) => n !== CAPABILITIES[i])) {
-      fail("statement-capabilities", `${entry.file} ("${entry.title}"): rows must be exactly the canonical eight capabilities in order; found [${names.join(", ")}]`);
-      continue;
-    }
-    for (const row of body) {
-      const [name, claim, activation, scope, limitations] = cells(row);
-      if (claim !== "supplied" && claim !== "not supplied") {
-        fail("statement-claim", `${entry.file} ("${entry.title}") ${name}: claim must be "supplied" or "not supplied", found "${claim}"`);
-        continue;
-      }
-      if (claim === "supplied") {
-        if (!activation || activation === "--") {
-          fail("statement-activation", `${entry.file} ("${entry.title}") ${name}: a supplied row must state its activation condition`);
-        }
-        if (!scope || scope === "--" || !limitations) {
-          fail("statement-elements", `${entry.file} ("${entry.title}") ${name}: a supplied row must carry Scope and Limitations cells (the temporal and failure elements)`);
-        }
-      } else {
-        if (activation !== "--" || scope !== "--") {
-          fail("statement-not-supplied", `${entry.file} ("${entry.title}") ${name}: a not-supplied row uses "--" for Activation and Scope`);
-        }
-        if (!limitations) {
-          fail("statement-not-supplied", `${entry.file} ("${entry.title}") ${name}: a not-supplied row states its reason in Limitations`);
-        }
-      }
-    }
+    if (!covered.has(entry.file)) covered.set(entry.file, []);
+    covered.get(entry.file).push([parsed.start, parsed.end]);
+    for (const [tag, msg] of validateCapabilityList(parsed, where)) fail(tag, msg);
   }
 
   // Repo-wide tripwires.
-  const registered = new Set(REGISTRY.map((e) => `${e.file}::${e.title}`));
   let consumerTables = 0;
   for (const file of readdirSync(ROOT).filter((f) => f.startsWith("draft-") && f.endsWith(".md"))) {
     const lines = readFileSync(path.join(ROOT, file), "utf8").split("\n");
+    const ranges = covered.get(file) ?? [];
+    const inList = (i) => ranges.some(([s, e]) => i >= s && i <= e);
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (line.startsWith("|") && RETIRED.test(line)) {
-        fail("retired-vocabulary", `${file}:${i + 1}: retired capability-claim vocabulary in a table row`);
+      if ((line.startsWith("|") && RETIRED.test(line)) || RETIRED_CLAIM.test(line)) {
+        fail("retired-vocabulary", `${file}:${i + 1}: retired capability-claim vocabulary in a table row or Claim member`);
+      }
+      // A capability entry outside every located list: a Claim member, or
+      // a canonical capability opening a definition. Either one is a
+      // Statement, Assessment, or skeleton that is not registered here.
+      if (!inList(i) && (CLAIM_MEMBER.test(line) || (isTerm(lines, i) && CAPABILITIES.includes(line.replace(/:$/, ""))))) {
+        fail("statement-unregistered", `${file}:${i + 1}: a capability entry outside every list registered in check-substrate-statements.mjs`);
+      }
+      // The retired table form (#1382) fails wherever it appears, under
+      // its header or its old "...substrate capabilities" title.
+      if (line.trim() === RETIRED_HEADER) {
+        fail("statement-unregistered", `${file}:${i + 1}: the retired five-column Statement table; the Statement form is a capability list`);
       }
       const m = line.match(/\{: title="([^"]*substrate capabilities[^"]*)"\}/i);
-      if (m && !registered.has(`${file}::${m[1]}`)) {
-        fail("statement-unregistered", `${file}:${i + 1}: Statement table "${m[1]}" is not registered in check-substrate-statements.mjs`);
+      if (m) {
+        fail("statement-unregistered", `${file}:${i + 1}: a table titled "${m[1]}"; the Statement form is a capability list`);
       }
-      // A differently titled table cannot evade registration: any table using
-      // the exact five-column Statement header must be registered, and any
-      // section titled "Mission Substrate Statement" must live in a file that
-      // registers a Statement here. The substrate document itself is exempt
-      // (as it already is on the "Mission Substrate Statement" heading check
-      // below): its own non-normative skeleton illustrates the header without
-      // being a binding's Statement.
-      if (line.trim() === HEADER && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
-        fail("statement-unregistered", `${file}:${i + 1}: a five-column Statement table in a file with no registered Statement`);
-      }
+      // A section titled "Mission Substrate Statement" must live in a file
+      // that registers a Statement here. The substrate document itself is
+      // exempt: it defines the section.
       if (/^#+\s.*Mission Substrate Statement/.test(line) && !REGISTRY.some((e) => e.file === file) && file !== "draft-mcguinness-mission-substrate.md") {
         fail("statement-unregistered", `${file}:${i + 1}: a "Mission Substrate Statement" section in a file with no registered Statement`);
       }
@@ -232,7 +364,7 @@ function main() {
   }
   const statementCount = REGISTRY.filter((e) => e.kind === "statement").length;
   const assessmentCount = REGISTRY.filter((e) => e.kind === "assessment").length;
-  console.log(`substrate-statements check OK: ${statementCount} Statements, ${assessmentCount} Assessments, ${consumerTables} consumer tables validated.`);
+  console.log(`substrate-statements check OK: ${statementCount} Statements, ${assessmentCount} Assessments, the substrate skeleton, ${consumerTables} consumer tables validated.`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

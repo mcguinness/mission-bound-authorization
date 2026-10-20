@@ -35,6 +35,12 @@
  *  - An EMPTY matcher (`{}`, carrying neither `sub` nor `sub_profile`) asserts no
  *    eligibility and therefore matches nothing: a malformed config entry must not
  *    silently become allow-all.
+ *
+ * Intake, configuration load and derivation refuse a matcher carrying any
+ * member other than `sub` and `sub_profile`, carrying neither, or carrying an
+ * empty or non-string value (#1373, `delegateMatcherListViolation` in
+ * `@mission/core`), so a committed entry never holds one. The checks above
+ * stay fail-closed for any value that reaches this predicate regardless.
  */
 
 import { parseSubProfile } from "@mission/actor-chain";

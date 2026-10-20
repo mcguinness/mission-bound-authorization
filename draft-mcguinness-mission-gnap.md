@@ -1145,19 +1145,102 @@ The contextual-governance kernel maps as follows:
 
 The binding declares these capabilities:
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | Token issuance, grant modification, and token rotation at the AS ({{gating}}) | A structured token without a state check remains usable only for its bounded lifetime |
-| State-Observable | supplied | {{RFC9767}} introspection deployed, or Mission Status active | Resource servers via per-use introspection with a declared cache bound; any authorized consumer via Mission Status ({{state-surfaces}}) | Token lifetime alone is not observation |
-| Structured Authority | supplied | always | Access rights admitted through the authority adapter; the AS owns each supported type's semantics; comparison in the type's declared value space ({{authority-adapter}}, {{subset}}) | Unsupported types refuse at intake; exact-carry types compare by equality only; consumption bounds bind at the runtime layer |
-| Monotonic Derivation | supplied | always | The no-broader-than relation of adapter-supported types at issuance, modification adjudication, and rotation refusal ({{subset}}, {{drawdown}}, {{gating}}) | Exact-carry types classify exact matches or refuse; covers this issuer's boundary |
-| Credential-Bound | supplied | always | Key-bound token with a protected `mission` claim, or the authenticated introspection assertion; fact semantics: lifecycle-gated issuance ({{mission-claim}}) | Introspection carriage is an online issuer assertion; a `bearer`-flagged token weakens holder proof |
-| Authorized Context Correlation | not supplied | -- | -- | The Controller binds Mission, Actor, Subject, and tokens natively; no cross-authority join is defined |
-| Independently Verifiable | supplied | structured token format issued, or signed Mission Status active | Offline verification of issuance-under-Mission and of state as of a signed observation ({{mission-claim}}, {{state-surfaces}}) | Key distribution is deployment-configured; GNAP publishes no client-facing key surface |
-| Portable Evidence | supplied | Consent Evidence, Mission Mandate, or Audit Transparency active | The adopted profile's artifact and verification procedure | The base assessment log is Controller-local |
-{: title="GNAP Mission substrate capabilities"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
 
-Each supplied row's temporal elements inherit the reliance floor of
+  Activation: always
+
+  Scope and defining sections: Token issuance, grant modification, and
+  token rotation at the AS ({{gating}})
+
+  Limitations: A structured token without a state check remains usable
+  only for its bounded lifetime
+
+State-Observable:
+: Claim: supplied
+
+  Activation: {{RFC9767}} introspection deployed, or Mission Status
+  active
+
+  Scope and defining sections: Resource servers via per-use
+  introspection with a declared cache bound; any authorized consumer via
+  Mission Status ({{state-surfaces}})
+
+  Limitations: Token lifetime alone is not observation
+
+Structured Authority:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: Access rights admitted through the
+  authority adapter; the AS owns each supported type's semantics;
+  comparison in the type's declared value space ({{authority-adapter}},
+  {{subset}})
+
+  Limitations: Unsupported types refuse at intake; exact-carry types
+  compare by equality only; consumption bounds bind at the runtime layer
+
+Monotonic Derivation:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The no-broader-than relation of
+  adapter-supported types at issuance, modification adjudication, and
+  rotation refusal ({{subset}}, {{drawdown}}, {{gating}})
+
+  Limitations: Exact-carry types classify exact matches or refuse;
+  covers this issuer's boundary
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: Key-bound token with a protected
+  `mission` claim, or the authenticated introspection assertion; fact
+  semantics: lifecycle-gated issuance ({{mission-claim}})
+
+  Limitations: Introspection carriage is an online issuer assertion; a
+  `bearer`-flagged token weakens holder proof
+
+Authorized Context Correlation:
+: Claim: not supplied
+
+  Activation: --
+
+  Scope and defining sections: --
+
+  Limitations: The Controller binds Mission, Actor, Subject, and tokens
+  natively; no cross-authority join is defined
+
+Independently Verifiable:
+: Claim: supplied
+
+  Activation: structured token format issued, or signed Mission Status
+  active
+
+  Scope and defining sections: Offline verification of
+  issuance-under-Mission and of state as of a signed observation
+  ({{mission-claim}}, {{state-surfaces}})
+
+  Limitations: Key distribution is deployment-configured; GNAP publishes
+  no client-facing key surface
+
+Portable Evidence:
+: Claim: supplied
+
+  Activation: Consent Evidence, Mission Mandate, or Audit Transparency
+  active
+
+  Scope and defining sections: The adopted profile's artifact and
+  verification procedure
+
+  Limitations: The base assessment log is Controller-local
+{: #gnap-mission-substrate-capabilities newline="true"}
+
+Each supplied entry's temporal elements inherit the reliance floor of
 {{gating}} unless stated: freshness at use is established at the
 gated operation or at introspection, artifact lifetime is the
 token's expiry capped by the Mission's `expires_at`, and the
@@ -1166,7 +1249,7 @@ remaining lifetime of structured tokens or the declared
 introspection cache bound. Failure behavior is uniformly
 fail-closed: absent, stale, unknown, incomparable, invalid, or
 unavailable input refuses the gated operation. The Portable Evidence
-row is supplied only while its activation profile
+entry is supplied only while its activation profile
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}},
 {{I-D.draft-mcguinness-mission-mandate}},
 {{I-D.draft-mcguinness-mission-audit}}) is adopted; the referenced

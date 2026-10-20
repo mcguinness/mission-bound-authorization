@@ -201,6 +201,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
@@ -508,8 +516,10 @@ A state source is a component, reachable under the deployment's own
 trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
-status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. A materialized
+status or event feed (such as the lifecycle events of
+{{I-D.draft-mcguinness-oauth-mission-signals}}), or a short-lived
+derived credential whose lifetime is the deployment's accepted state
+lease. A materialized
 policy view ({{policy-view}}) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.
@@ -2446,7 +2456,7 @@ implementers of the same operation bind the same bytes:
   ({{evaluation-context-binding}});
 - for each Common Constraint or other registered constraint the
   operation's authority entries can carry
-  ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the authoritative
   operation input or derived attribute that satisfies it, and the
   extraction and normalization rule mapping that input into the
   constraint's own value domain.  The constraint's defining
