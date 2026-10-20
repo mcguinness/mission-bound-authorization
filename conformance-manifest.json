@@ -18181,7 +18181,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v10, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), and declares each operation's execution capabilities (#817); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
