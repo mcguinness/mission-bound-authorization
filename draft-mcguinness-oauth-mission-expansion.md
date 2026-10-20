@@ -515,6 +515,54 @@ and the possession proof in every completion mode; an interactive
 completion's front-channel approval ceremony carries only the consent
 decision ({{interactive-handoff}}).
 
+The following is an example of an expansion request in the scenario of
+{{example}}, with client authentication omitted (line breaks for
+display purposes only). The client also opts in to deferred completion
+with the deferred token response's `completion_mode` parameter
+({{Section 4.1 of I-D.draft-gerber-oauth-deferred-token-response}}):
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange
+&requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
+  access_token
+&subject_token=eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...
+&subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3A
+  access_token
+&mission_intent=%7B%22intent%22%3A%7B%22goal%22%3A%22Reconcile...
+&predecessor=msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS
+&creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7
+&completion_mode=deferred
+&client_id=s6BhdRkqt3
+~~~
+{: #fig-request title="Expansion Request"}
+
+The `mission_intent` value, decoded, raises the journal-entry cap from
+USD 500 to USD 2,000 and keeps the rest of the predecessor's task:
+
+~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
+{
+  "intent": {
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 2,000 per journal entry.",
+    "target_resources": ["https://erp.example.com"],
+    "task_bounds": [
+      "Read only invoices issued in 2026-Q3.",
+      "Post journal entries of at most USD 2,000 each."
+    ],
+    "purpose": "urn:example:purpose:reconcile",
+    "expires_at": "2026-12-31T23:59:59Z"
+  }
+}
+~~~
+{: #fig-intent title="Decoded Successor Mission Intent"}
+
 ## Proving Possession of the Predecessor {#request-binding}
 
 The issuance profile resolves a Mission from the credential the client
@@ -744,6 +792,82 @@ In either mode, the exchange's `creation_request_id` reservation
 loses the response recovers the one committed operation, never a
 second creation.
 
+The following example shows a deferred completion of the request in
+{{fig-request}}. The Mission Issuer defers it:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "authorization_pending",
+  "deferral_code": "dfc_DK-IqhQDOOy21T3Wu7mQYt",
+  "expires_in": 600,
+  "interval": 5
+}
+~~~
+{: #fig-deferred title="Deferred Response"}
+
+The client polls with the deferred grant type
+({{Section 5.5 of I-D.draft-gerber-oauth-deferred-token-response}}) and
+a DPoP proof (line breaks for display purposes only):
+
+~~~ http
+POST /token HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adeferred
+&deferral_code=dfc_DK-IqhQDOOy21T3Wu7mQYt
+&client_id=s6BhdRkqt3
+~~~
+{: #fig-poll title="Deferred Poll"}
+
+After the Approver approves, the next poll activates the successor
+({{successor-activation}}) and returns its access token. The response
+carries the token exchange's `issued_token_type`
+({{Section 2.2.1 of RFC8693}}), the successor's `mission_id`, the
+effective expiry in `mission_expires_at` ({{successor-expiry}}), and
+the successor's complete Authority Set:
+
+~~~ http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
+  "issued_token_type":
+    "urn:ietf:params:oauth:token-type:access_token",
+  "token_type": "DPoP",
+  "expires_in": 300,
+  "mission_id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
+  "mission_expires_at": "2026-12-31T23:59:59Z",
+  "authorization_details": [
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+      } },
+    { "type": "mission_resource_access",
+      "resource": "https://erp.example.com",
+      "actions": ["journal-entries.write"],
+      "constraints": {
+        "max_amount": { "amount": "2000.00", "currency": "USD" }
+      } }
+  ]
+}
+~~~
+{: #fig-success title="Successful Completion"}
+
 ## Interactive Handoff {#interactive-handoff}
 
 An {{RFC8693}} success carries an issued token
@@ -770,6 +894,21 @@ The client tells the outcomes apart from the response alone:
   and
 - `mission_interaction_required` is this handoff.
 
+The following is an example of the interaction-required response:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "mission_interaction_required",
+  "mission_continuation": "e8GpKnzx1X8-SzJQ3aVRj7",
+  "expires_in": 600
+}
+~~~
+{: #fig-handoff title="Interaction-Required Response"}
+
 The client then sends a pushed authorization request
 ({{Section 2 of RFC9126}}) carrying:
 
@@ -780,10 +919,30 @@ The client then sends a pushed authorization request
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Approval").
 
 It carries no `mission_intent` and no `authorization_details`: the
-token exchange is this operation's carriage ({{submission}}). Client
-authentication at the pushed authorization request endpoint binds the
-handle to the client, so the handle alone does not give its holder the
-operation. The Mission Issuer:
+token exchange is this operation's carriage ({{submission}}). Client authentication at the pushed authorization request endpoint
+binds the handle to the client, so the handle alone does not give its
+holder the operation.
+
+The following is an example of the pushed authorization request, with
+client authentication omitted (line breaks for display purposes
+only):
+
+~~~ http
+POST /par HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+response_type=code
+&client_id=s6BhdRkqt3
+&redirect_uri=https%3A%2F%2Fagent.example.com%2Fcb
+&state=af0ifjsldkj
+&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+&code_challenge_method=S256
+&mission_continuation=e8GpKnzx1X8-SzJQ3aVRj7
+~~~
+{: #fig-par title="Pushed Authorization Request Carrying the Continuation"}
+
+The Mission Issuer:
 
 - MUST refuse a pushed request whose `mission_continuation` is unknown,
   expired, or bound to another client, with `invalid_request`;
@@ -1027,6 +1186,7 @@ token claims omitted):
   }
 }
 ~~~
+{: #fig-claim title="Successor Mission Claim"}
 
 # The Superseded Termination Reason {#superseded-state}
 
@@ -1103,6 +1263,37 @@ The transition has these properties:
   include `superseded` among the termination reasons its issuer may
   report. Consumers rely on the issuance profile's forward-compatibility
   rule: a `terminated` Mission, whatever its reason, is non-deriving.
+
+The following example shows the predecessor's `state` and
+`termination` after supersession (other Mission record members
+omitted):
+
+~~~ json
+{
+  "state": "terminated",
+  "termination": {
+    "reason": "superseded",
+    "terminated_at": "2026-11-02T09:40:00Z",
+    "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
+  }
+}
+~~~
+{: #fig-termination title="Superseded Predecessor"}
+
+A later refresh under the predecessor is refused with the issuance
+profile's `mission_error` diagnostic:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_grant",
+  "mission_error": "superseded"
+}
+~~~
+{: #fig-superseded-refusal title="Refused Derivation under a Superseded Mission"}
 
 ## Child Missions of the Predecessor {#predecessor-children}
 
@@ -1354,6 +1545,21 @@ response member:
   parameters rather than a JSON body, it is an error response
   parameter of the same name. Adjudication denial reasons use the
   separate `mission_denial_reason` member ({{denial-reasons}}).
+
+The following is an example of a resolving poll refused because a
+concurrent expansion of the same predecessor activated first:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_grant",
+  "mission_expansion_status": "superseded_by_concurrent_expansion"
+}
+~~~
+{: #fig-reconciliation title="Reconciliation Refusal"}
 
 # Creation Idempotency {#creation-idempotency}
 
@@ -1661,6 +1867,21 @@ member:
   alongside the OAuth `error` member; and
 - on the interactive path's front-channel authorization error
   response, as an error response parameter of the same name.
+
+The following is an example of the refusal of an expansion request
+that widens nothing:
+
+~~~ http
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+  "error": "invalid_request",
+  "mission_denial_reason": "nothing_to_expand"
+}
+~~~
+{: #fig-denial title="Denial with nothing_to_expand"}
 
 The `mission_denial_reason` member is the shared carrier for
 adjudication denial
@@ -2109,75 +2330,45 @@ Error Registry" ({{Section 11.4 of RFC6749}}):
 
 --- back
 
-# Worked Example {#example}
+# End-to-End Example {#example}
 
-A Q3 reconciliation Mission `msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS`,
-not the single-domain walkthrough's, authorizes reading invoices and
-posting journal entries of at most USD 500. Mid-task the agent finds an
-adjustment of $1,200, outside the active Mission's authority. It cannot
-widen in place; it requests an expansion as a token exchange presenting
-the predecessor's Mission-bound access token as the `subject_token`,
-proving possession with a DPoP proof over the token's confirmation key:
+This appendix follows one expansion through deferred completion. A Q3
+reconciliation Mission `msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS`, issued
+by `https://as.example.com` to the client `s6BhdRkqt3` acting for
+`alice`, authorizes reading Q3 invoices and posting journal entries of
+at most USD 500 each. Mid-task the agent finds an adjustment of
+USD 1,200, outside the active Mission's authority. It cannot widen the
+Mission in place.
 
-~~~ http
-POST /token HTTP/1.1
-Host: as.example.com
-Content-Type: application/x-www-form-urlencoded
-DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
+1. The agent sends an expansion request ({{fig-request}}). It presents
+   the predecessor's Mission-bound access token as the
+   `subject_token`, proves possession with a DPoP proof over that
+   token's confirmation key, and carries a Mission Intent that raises
+   the cap to USD 2,000 ({{fig-intent}}).
+2. The Mission Issuer resolves the predecessor from `subject_token`,
+   verifies possession, confirms that the `predecessor` cross-check
+   names that Mission and that it is `active`, and derives the
+   successor's Authority Set, which widens the predecessor's
+   ({{verification-order}}).
+3. The widening requires fresh consent, and the deployment approves
+   asynchronously, so the Mission Issuer defers ({{fig-deferred}}) and
+   the client polls ({{fig-poll}}).
+4. `alice` approves the widened cap on the review surface. At 09:40:00
+   UTC on 2026-11-02 the next poll activates the successor
+   `msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX` and supersedes the
+   predecessor in one atomic step, and the response delivers the
+   successor's access token ({{fig-success}}). Until then the
+   predecessor stays `active`.
+5. The successor's tokens carry the `predecessor` member
+   ({{fig-claim}}), and the predecessor's record names the successor
+   ({{fig-termination}}).
+6. The predecessor derives no new tokens ({{fig-superseded-refusal}}).
+   Its already-issued access tokens run out their short lifetimes, and
+   the task continues under the successor.
 
-grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Atoken-exchange&
-requested_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
-subject_token=<predecessor%20Mission-bound%20access%20token>&
-subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
-mission_intent=%7B%22intent%22%3A
-  %7B...journal-entries%20cap%20%242000...%7D%7D&
-predecessor=msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS&
-creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
-client_id=s6BhdRkqt3
-~~~
-
-The Mission Issuer resolves the predecessor from `subject_token`,
-verifies the presenter controls the token's confirmation key, confirms
-the `predecessor` cross-check names that Mission and that it is
-`active`, and derives the successor's Authority Set. The widening
-requires fresh consent and the deployment approves asynchronously, so
-the Mission Issuer returns a deferred token response;
-`alice` approves the widened cap on the review surface, and the client's
-next poll delivers the successor's access token. At that issuance the
-Mission Issuer activates the successor and supersedes the predecessor
-atomically; until then the predecessor stays `active`. The successor's
-token carries a `predecessor` member:
-
-~~~ json
-{
-  "mission": {
-    "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
-    "issuer": "https://as.example.com",
-    "predecessor": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
-  }
-}
-~~~
-
-The predecessor is now `terminated` with reason `superseded`: it
-derives no new tokens, its already-issued tokens run out their short
-lifetimes, and the task continues under the successor. Its record
-carries (other members omitted):
-
-~~~ json
-{
-  "state": "terminated",
-  "termination": {
-    "reason": "superseded",
-    "terminated_at": "2026-11-02T09:40:00Z",
-    "successor": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX"
-  }
-}
-~~~
-
-The widening came only from `alice`'s
-fresh consent; the successor's `authority_hash` commits the widened
-Authority Set it was actually approved for, not the predecessor's plus a
-delta.
+The widening came only from `alice`'s fresh consent: the successor's
+`authority_hash` commits the complete widened Authority Set she
+approved, not the predecessor's authority plus a delta.
 
 # Document History {#document-history}
 
