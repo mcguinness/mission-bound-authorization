@@ -9,8 +9,10 @@
  * the versioned mapping contract. Nothing is stubbed across the estate seam:
  * the estate's keys, client registrations and accounts are its own, and the
  * gateway trusts the keys the estate publishes at its jwks_uri. The decision
- * point's Resource policy and FGA client are the reference fixtures, so this
- * file needs no live OpenFGA.
+ * point's Resource policy is the pilot's own, stored OpenFGA entitlements for
+ * the estate's identities (slice 2), so this file needs a live OpenFGA and is
+ * skipped without one; the always-run anchors are the mapping, estate-route
+ * and PDP unit files.
  *
  * Each D284 vector here is a gateway outcome: bypass of the gateway, the same
  * `sub` or `client_id` string in another namespace, disabled and reassigned
@@ -18,128 +20,24 @@
  * ordinary token on a high-consequence path.
  */
 
-import { generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { validateMissionIntent } from "@mission/authorization-server";
-import {
-  CANONICAL_RESOURCE,
-  canonicalHtu,
-  createEphemeralEvidenceKeys,
-  createHttpMediatedClient,
-  type DpopKeys,
-  dpopProofFor,
-  EvidenceStore,
-  TOOL_ACTIONS,
-} from "@mission/mcp-payments";
-import type { EvaluationRequest, Fga } from "@mission/pdp";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
-import { composeMasPilot, type MasPilot } from "../src/mas-pilot/compose.js";
+import { CANONICAL_RESOURCE, canonicalHtu, dpopProofFor, TOOL_ACTIONS } from "@mission/mcp-payments";
+import type { EvaluationRequest } from "@mission/pdp";
+import { generateKeyPair } from "jose";
+import type { MasPilot } from "../src/mas-pilot/compose.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
+import { approve, call, composeRecorded, estateToken, openfgaReachable, READ_ACTIONS, reference } from "./mas-pilot-support.js";
 
-const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
-const READ_ACTIONS = ["payments:invoice.read", "payments:invoice.list", "payments:vendor.read"];
 const HIGH_CONSEQUENCE = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
-interface Credential {
-  token: string;
-  dpopKeys: DpopKeys;
-}
-
-/** A pilot whose decision requests are recorded, so "reached the PDP" is observable. */
-async function composeRecorded(
-  extra: { mappingNow?: () => Date } = {},
-): Promise<{ pilot: MasPilot; requests: EvaluationRequest[]; evidence: EvidenceStore }> {
-  const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
-  const evidence = new EvidenceStore(keys.signing, keys.resolver);
-  const requests: EvaluationRequest[] = [];
-  const pilot = await composeMasPilot({
-    decide: async (req, opts) => {
-      requests.push(req);
-      return keys.decide(req, opts);
-    },
-    evidence,
-    fga: alwaysAllowFga,
-    modelId: "mas-pilot-model",
-    ...extra,
-  });
-  return { pilot, requests, evidence };
-}
-
-/** A Mission the MAS kernel approves for `sub` and `clientId` in the Mission's own namespace. */
-function approve(
-  pilot: MasPilot,
-  sub: string,
-  opts: { actions?: string[]; clientId?: string; delegable?: string; label: string },
-): string {
-  const actions = opts.actions ?? READ_ACTIONS;
-  const intent = validateMissionIntent(
-    JSON.stringify({ goal: `MAS pilot: ${opts.label}`, target_resources: [CANONICAL_RESOURCE], expires_at: "2027-06-01T00:00:00Z" }),
-  );
-  return pilot.kernel.approve({
-    intent,
-    proposedAuthority: [
-      {
-        type: "mission_resource_access",
-        resource: CANONICAL_RESOURCE,
-        actions,
-        constraints: {
-          vendors: ["acme"],
-          ...(actions.some((a) => !READ_ACTIONS.includes(a)) ? { max_amount: { amount: "500.00", currency: "USD" } } : {}),
-        },
-        ...(opts.delegable ? { delegation: { max_depth: 1, allowed_delegates: [{ sub: opts.delegable }] } } : {}),
-      },
-    ],
-    subject: { iss: pilot.missionIssuer, sub },
-    approver: { iss: pilot.missionIssuer, sub: "bob" },
-    clientId: opts.clientId ?? "ap-agent",
-    approvalEventId: `apev-mas-pilot-${opts.label}`,
-  }).id;
-}
-
-/** An ordinary access token from the estate AS, for one of its registered clients and directory accounts. */
-async function estateToken(pilot: MasPilot, clientId: string, account: string, scope: string): Promise<Credential> {
-  const registration = pilot.estateClients.get(clientId);
-  if (!registration) throw new Error(`no estate client ${clientId}`);
-  const dpopKeys = await generateKeyPair("ES256", { extractable: true });
-  const result = await obtainEstateToken({
-    issuer: pilot.estate.issuer,
-    clientId,
-    clientSecret: registration.client_secret,
-    redirectUri: registration.redirect_uri,
-    account,
-    resource: CANONICAL_RESOURCE,
-    scope,
-    dpopKeys,
-  });
-  if (!result.ok) throw new Error(`estate token: ${JSON.stringify(result)}`);
-  return { token: result.accessToken, dpopKeys };
-}
-
-const reference = (pilot: MasPilot, missionId: string) => `id="${missionId}", issuer="${pilot.missionIssuer}"`;
-
-/** One tool call over the gateway (or another route) with the propagated reference. */
-async function call(
-  pilot: MasPilot,
-  credential: Credential,
-  missionId: string,
-  tool: string,
-  args: Record<string, unknown>,
-  url = pilot.gateway.url,
-) {
-  const { client, close } = await createHttpMediatedClient(url, credential.token, credential.dpopKeys, {
-    "mission-reference": reference(pilot, missionId),
-  });
-  try {
-    return await client.callTool(tool, args);
-  } finally {
-    await close();
-  }
-}
+const up = await openfgaReachable();
+const d = up ? describe : describe.skip;
+if (!up) console.warn("OpenFGA unreachable; skipping the MAS pilot end-to-end tests");
 
 const claimsOf = (token: string) =>
   JSON.parse(Buffer.from(token.split(".")[1] as string, "base64url").toString()) as Record<string, unknown>;
 
-describe("MAS pilot: the estate is a separate issuer with its own client registrations (#818)", () => {
+d("MAS pilot: the estate is a separate issuer with its own client registrations (#818)", () => {
   let pilot: MasPilot;
   beforeAll(async () => {
     ({ pilot } = await composeRecorded());
@@ -175,15 +73,14 @@ describe("MAS pilot: the estate is a separate issuer with its own client registr
   });
 });
 
-describe("MAS pilot: the gateway joins estate credentials under the mapping contract (#818, D284)", () => {
+d("MAS pilot: the gateway joins estate credentials under the mapping contract (#818, D284)", () => {
   let pilot: MasPilot;
   let requests: EvaluationRequest[];
-  let evidence: EvidenceStore;
   let aliceMission: string;
   let danaMission: string;
 
   beforeAll(async () => {
-    ({ pilot, requests, evidence } = await composeRecorded());
+    ({ pilot, requests } = await composeRecorded());
     aliceMission = approve(pilot, "alice", { label: "alice-reads" });
     danaMission = approve(pilot, "dana", { label: "dana-reads" });
   }, 30_000);
@@ -208,7 +105,7 @@ describe("MAS pilot: the gateway joins estate credentials under the mapping cont
   it("refuses the same estate credential on the resource's own route before any decision, though the gateway admits it (bypass)", async () => {
     const credential = await estateToken(pilot, "estate-ap-bot-7f3", "u-1001", "invoices.read");
     const decided = requests.length;
-    const retained = evidence.all().length;
+    const retained = pilot.evidence.all().length;
     const url = pilot.resourceRoute.url;
     // A whole attempt on the resource's own route: the MCP handshake, then the
     // read the gateway permits. Nothing reaches the PEP: no decision request
@@ -218,7 +115,7 @@ describe("MAS pilot: the gateway joins estate credentials under the mapping cont
       () => ({ admitted: false }),
     );
     expect(requests.length).toBe(decided);
-    expect(evidence.all().length).toBe(retained);
+    expect(pilot.evidence.all().length).toBe(retained);
     expect(attempt.admitted).toBe(false);
     // The route answers the handshake 401.
     const res = await fetch(url, {
@@ -300,7 +197,7 @@ describe("MAS pilot: the gateway joins estate credentials under the mapping cont
   });
 });
 
-describe("MAS pilot: delegates need a recorded actor edge under the Mission (#818, D284)", () => {
+d("MAS pilot: delegates need a recorded actor edge under the Mission (#818, D284)", () => {
   let pilot: MasPilot;
   let delegableMission: string;
   beforeAll(async () => {
@@ -326,7 +223,7 @@ describe("MAS pilot: delegates need a recorded actor edge under the Mission (#81
   });
 });
 
-describe("MAS pilot: a joined ordinary token never takes a high-consequence path (#818, D284)", () => {
+d("MAS pilot: a joined ordinary token never takes a high-consequence path (#818, D284)", () => {
   let pilot: MasPilot;
   let requests: EvaluationRequest[];
   let remitMission: string;
@@ -366,7 +263,7 @@ describe("MAS pilot: a joined ordinary token never takes a high-consequence path
   });
 });
 
-describe("MAS pilot: a newer contract version moves a reassigned account (#818, D284)", () => {
+d("MAS pilot: a newer contract version moves a reassigned account (#818, D284)", () => {
   let pilot: MasPilot;
   let aliceMission: string;
   let danaMission: string;
@@ -413,7 +310,7 @@ function contractVersion(pilot: MasPilot, version: number): Record<string, unkno
   };
 }
 
-describe("MAS pilot: a committed containment narrows a joined Mission (#818 review P1)", () => {
+d("MAS pilot: a committed containment narrows a joined Mission (#818 review P1)", () => {
   let pilot: MasPilot;
   beforeAll(async () => {
     ({ pilot } = await composeRecorded());
@@ -439,7 +336,7 @@ describe("MAS pilot: a committed containment narrows a joined Mission (#818 revi
   });
 });
 
-describe("MAS pilot: an unavailable mapping fails the join, not the credential bound (#818 review P2)", () => {
+d("MAS pilot: an unavailable mapping fails the join, not the credential bound (#818 review P2)", () => {
   let pilot: MasPilot;
   let requests: EvaluationRequest[];
   let aliceMission: string;
