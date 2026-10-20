@@ -636,8 +636,9 @@ is not `active` MUST be refused with `invalid_request`
 
 - if the predecessor made a terminal exit from `active` (it is
   `terminated`, with reason `revoked`, `expired`, already `superseded`
-  ({{superseded-state}}), or another), the status is
-  `predecessor_state_changed`;
+  ({{superseded-state}}), or another), the status is one of the two
+  terminal-exit codes, chosen by the attribution rule of
+  {{reconciliation}};
 - if the predecessor is in a non-terminal non-active state, for example
   `suspended` where the Mission Status profile
   {{I-D.draft-mcguinness-oauth-mission-status}} is deployed, the status
