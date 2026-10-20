@@ -77,7 +77,10 @@ const refusesConnection = async (url: string): Promise<boolean> => {
 async function walk(launch: MasPilotLaunch, masConsole: string) {
   const pilotConsole = launch.consoles.pilot;
   // The console refuses a request without its bearer.
-  expect((await consoleRequest(launch, pilotConsole, "/missions/x/evidence", undefined, "wrong")).status).toBe(401);
+  for (const wrong of ["wrong", "x".repeat(launch.consoles.token.length)]) {
+    expect((await consoleRequest(launch, pilotConsole, "/missions/x/evidence", undefined, wrong)).status).toBe(401);
+    expect((await consoleRequest(launch, masConsole, "/missions", {}, wrong)).status).toBe(401);
+  }
 
   const approved = await consoleRequest(launch, masConsole, "/missions", { subject: "alice", label: "launcher-read" });
   expect(approved, JSON.stringify(approved)).toMatchObject({ status: 201, body: { issuer: launch.pilot.missionIssuer } });
