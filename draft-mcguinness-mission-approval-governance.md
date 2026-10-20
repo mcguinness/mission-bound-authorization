@@ -135,7 +135,7 @@ It gives an estate first-class, auditable answers to who approved,
 under which authority, and why the decision satisfied governance,
 without adding any wire artifact. The record never appears on
 tokens, protocol messages, or enforcement projections, and the
-Mission record's single accountable Approver is unchanged. The
+Mission Record's single accountable Approver is unchanged. The
 document also defines a governed policy approval basis, under which a
 policy version that an accountable human approved activates a Mission
 proposal.
@@ -174,7 +174,7 @@ record is evidence: immutable, signed, and consumed by audit, never
 by enforcement.
 
 This document is optional. A deployment that records nothing beyond
-the Mission record's accountable `approval_basis.consent_principal`
+the Mission Record's accountable `approval_basis.consent_principal`
 is fully conformant to its Mission binding and unaffected by this
 document. Profiles MAY
 require this record; the Enterprise Mission Authority Profile does
@@ -230,7 +230,7 @@ Recording trigger:
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
-The Mission record carries exactly one accountable principal,
+The Mission Record carries exactly one accountable principal,
 `approval_basis.consent_principal`, and this document does not change
 that: the accountable Approver remains the only principal any
 downstream projection, token, or enforcement point consumes. The
@@ -239,7 +239,7 @@ approval, never a second authorization surface visible outside the
 issuer.
 
 `approval_event_id` joins the record to the approval event and to
-the Mission record it governs
+the Mission Record it governs
 ({{I-D.draft-mcguinness-oauth-mission}}). The record never appears on
 tokens or in any protocol message; it is issuer-retained
 control-plane state. Where the governed Mission populates
@@ -305,13 +305,13 @@ still binds that record directly.
 Defined here so a profile cites one list. The record is REQUIRED for
 an approval event when any of the following holds:
 
-- the Mission record's `approval_basis.consent_principal` differs from
+- the Mission Record's `approval_basis.consent_principal` differs from
   its `subject`;
 - more than one principal contributes to the decision;
 - a non-human assertion contributes to the decision;
 - a threshold, veto, or separation-of-duty rule is evaluated; or
 - validating any assertion requires authority standing outside the
-  Mission record.
+  Mission Record.
 
 The Approver is always `approval_basis.consent_principal`
 ({{I-D.draft-mcguinness-oauth-mission}}), so a Mission whose Approver
@@ -321,7 +321,7 @@ Mission Authority Profile
 Approval Governance Record for it.
 
 Direct self-approval by one authenticated human is the degenerate
-case: the Mission record already carries it completely, and no
+case: the Mission Record already carries it completely, and no
 record is required.
 This presumes the human resolved approval on the approval surface itself;
 where an agent resolves it on its own behalf, there is no human decision
@@ -335,14 +335,14 @@ plus the integrity `envelope` {{envelope}} defines.
 
 `approval_event_id`:
 : REQUIRED. A string. The approval event's identifier, equal to the
-  Mission record's `approval_event_id`
+  Mission Record's `approval_event_id`
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `mission`:
 : REQUIRED. An object binding the record to the approved Mission:
   `issuer` (the Mission Issuer), `intent_hash`, and `authority_hash`,
-  each equal to the committed Mission record member of the same
-  name. A record whose binding does not match the Mission record it
+  each equal to the committed Mission Record member of the same
+  name. A record whose binding does not match the Mission Record it
   is retained with is invalid.
 
 `approval_context_commitment`:
@@ -350,13 +350,13 @@ plus the integrity `envelope` {{envelope}} defines.
   governed Mission's immutable creation facts
   ({{approval-context-commitment}}), in the encoded form
   {{conventions-and-definitions}} fixes. It is a member of this
-  record, never of the Mission record: the profile adds no Mission
-  record member ({{approval-context-computation}}). An issuer that
+  record, never of the Mission Record: the profile adds no Mission
+  Record member ({{approval-context-computation}}). An issuer that
   records it computes it in the same commit that creates the Mission
   and persists this record, before the record is signed
   ({{atomic-commitment}}), so the signed payload commits to it. The
   `mission` member above carries no Mission `id`, so a verifier
-  recomputes this value from the Mission record this record is
+  recomputes this value from the Mission Record this record is
   retained with, the record the mission binding check already
   resolves ({{envelope}}, step 5), and rejects the reference on a
   mismatch ({{approval-context-computation}}). Its presence is what
@@ -520,7 +520,7 @@ These rules are the record's security core.
   referenced `approval_policy` version before counting it.
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
-- Exactly one assertion MUST match the Mission record's accountable
+- Exactly one assertion MUST match the Mission Record's accountable
   `approval_basis.consent_principal` and carry an `approve` decision;
   the record supports the approval it claims to govern or it does not
   commit. The matching
@@ -559,7 +559,7 @@ These rules are the record's security core.
 Where a deployment records the Approval Governance Record for an
 approval, the record and the Mission are one commit: the issuer
 evaluates the assertions under the referenced policy, and the
-Mission record MUST NOT be created `active` unless the evaluation's
+Mission Record MUST NOT be created `active` unless the evaluation's
 `decision` is `approved` and the signed record persists atomically
 with the Mission's creation. Failure to authenticate the
 contributing assertions, to complete the evaluation, or to persist
@@ -570,13 +570,13 @@ negative assertions retained inside a committed record document
 dissent ({{assertion-requirements}}), and a wholly declined
 approval's evidence surface is consent evidence's declined outcome
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which
-exists without a Mission record. The issuer signs
+exists without a Mission Record. The issuer signs
 the evaluated record ({{envelope}}) and persists the signed form in
 the same commit as the Mission's creation; signing follows
 evaluation and precedes persistence, never the reverse.
 
 Where the record carries `approval_context_commitment` ({{record}}),
-the issuer computes it in this same commit, from the Mission record
+the issuer computes it in this same commit, from the Mission Record
 being created, and before signing. A value computed after the commit
 is not covered by the record's signature and MUST NOT be added to a
 committed record.
@@ -708,7 +708,7 @@ treat a record as verified if any step fails:
    unauthenticated regardless of whether the signature itself
    verifies.
 5. Validate the mission binding of {{record}} against the Mission
-   record it is retained with.
+   Record it is retained with.
 
 The JWS protected header MUST carry a `kid` resolvable in the Mission
 Issuer's published key material, a `typ` of
@@ -1006,7 +1006,7 @@ Mission's immutable creation facts, fixed at the approval event
 Mission Record member for it; an Approval Governance Record MAY carry
 it as a member of its own signed record ({{record}}), which is a
 disclosure of the computed value, not a second place the Mission
-record holds it. A deployment MAY cache the computed
+Record holds it. A deployment MAY cache the computed
 value; a cached value is derived state and MUST NOT be treated as
 authoritative where it disagrees with a fresh computation from the
 record.
@@ -1550,7 +1550,7 @@ same rule as vector 5.
   `adjudication.kind`; this document, not the OAuth binding, holds
   both rules (#1185).
 
-- The accountable principal is the Mission record's
+- The accountable principal is the Mission Record's
   `approval_basis.consent_principal`. The Approval Context Manifest
   keeps its `approver` member, sourced from that value, so
   `mission-approval-context-v1` and vectors 1 to 6 are unchanged; the
