@@ -93,18 +93,17 @@ Table of Contents
        3.1.6.  Ceiling Re-Consent
        3.1.7.  The ceiling_drawdown Approval Basis
        3.1.8.  Derivation Limits
-     3.2.  What It Bounds, and What It Does Not
-     3.3.  The Ceiling Review
-     3.4.  Realizing an Approved Access Request
+     3.2.  The Ceiling Review
+     3.3.  Realizing an Approved Access Request
    4.  The out_of_ceiling Denial Reason
    5.  Audit Linkage
    6.  Conformance
    7.  Security Considerations
-     7.1.  Unattended Drawdown
+     7.1.  What Progressive Authorization Bounds
      7.2.  The Drawdown Policy as Governance
      7.3.  The Ceiling as a Consent Artifact
      7.4.  Probing the Ceiling
-     7.5.  Consent Decay
+     7.5.  Periodic Review
    8.  Privacy Considerations
    9.  IANA Considerations
      9.1.  Mission Denial Reasons Registration
@@ -171,7 +170,10 @@ Table of Contents
    *  the issuance profile's approval event, integrity-anchor envelope,
       and subset rule.
 
-   Other companions interact with a drawdown as follows:
+   The following table summarizes how other companions interact with a
+   drawdown.  The cited sections control each requirement and when it
+   applies; adopting this document does not require adopting any listed
+   companion.
 
    +=============+========================================+============+
    | Companion   | Effect on a drawdown                   | Section    |
@@ -202,10 +204,10 @@ Table of Contents
    | Mission     | Commits the ceiling and review         | Section    |
    | Consent     | disclosures                            | 3,         |
    | Evidence    |                                        | Section    |
-   |             |                                        | 3.3        |
+   |             |                                        | 3.2        |
    +-------------+----------------------------------------+------------+
    | Mission     | Defines the encounter adjudication     | Section    |
-   | Open-World  | contract for a self-declared resource  | 5          |
+   | Open-World  | contract for a self-declared resource  | 3.1.1      |
    | Discovery   |                                        |            |
    +-------------+----------------------------------------+------------+
 
@@ -263,7 +265,7 @@ Table of Contents
        approved expansion when it meets a fresh-approval condition
        (Section 3.1.3), when it exceeds a drawdown bound or would
        activate the entire remaining ceiling (Section 3.1.4), when the
-       chain is past its ceiling review cadence (Section 3.3), or when
+       chain is past its ceiling review cadence (Section 3.2), or when
        the drawdown policy does not authorize it (Section 3.1.2).
 
    5.  Otherwise the drawdown policy adjudicates the request.  If the
@@ -273,7 +275,7 @@ Table of Contents
        token-exchange response (Section 3.1.5).
 
    6.  A review approval re-consents to or narrows the ceiling, which
-       restarts the review cadence (Section 3.3).
+       restarts the review cadence (Section 3.2).
 
       Approver consents to Mission M0, ceiling C, drawdown policy P
                                    |
@@ -363,8 +365,9 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission]), and the ceiling is a bound on
    future expansions, not present authority.
 
-   The consent disclosure MUST render the ceiling and the fact that in-
-   ceiling expansion is policy-adjudicated
+   At the initial approval, the consent disclosure MUST render the
+   ceiling to the Approver, together with the fact that in-ceiling
+   expansion is policy-adjudicated
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
    A Mission that carries no authority_ceiling has no progressive
@@ -415,7 +418,7 @@ Table of Contents
    policy snapshot that digest commits has content_type application/json
    and consists of exactly the following bytes, which state the per-
    drawdown bound and the ceiling review cadence in seconds
-   (Section 3.3):
+   (Section 3.2):
 
    {"ceiling_review_cadence":2592000,"max_added_actions":1}
 
@@ -438,6 +441,17 @@ Table of Contents
    resource, under the same resource-narrowing semantics the subset rule
    fixes: a successor entry's resource is in-ceiling when it narrows the
    ceiling entry's.
+
+   Where a drawdown is triggered by the agent encountering a resource
+   not named at approval, and the resource self-declares its operations
+   and consequences in a content-addressed form, the adjudication MUST
+   evaluate the declaration against the ceiling, and the drawdown's
+   record carries the declaration's digest (Section 5).  An AAuth
+   deployment adopting Rich Resource Requests composes one such self-
+   declaring substrate ([I-D.draft-mcguinness-mission-aauth]).  The
+   discovery companion ([I-D.draft-mcguinness-mission-discovery])
+   defines the encounter adjudication contract, the identity pinning,
+   and the floors this drawdown path carries.
 
    The Mission Issuer MUST NOT policy-adjudicate a requested authority
    that is not within the consented authority_ceiling.  Such a request
@@ -530,36 +544,35 @@ Table of Contents
    falls back to a fresh human approval, at which that notice can be
    rendered.
 
-   *Discharged authority.* The drawdown policy MUST NOT policy-
-   adjudicate a successor whose complete Authority Set, including
-   authority carried forward from its predecessor, overlaps in authority
-   the authority a discharge restriction of its expansion chain covers
-   ([I-D.draft-mcguinness-oauth-mission-discharge]).  The test is
-   overlap in authority, not structural equality or entry identity.
-   Such a request falls back to a fresh human approval whose consent
-   disclosure names the discharged entry and the condition that
-   discharged it.
+   *Discharged authority.* The Mission Issuer MUST NOT policy-adjudicate
+   a successor whose complete Authority Set, including authority carried
+   forward from its predecessor, overlaps in authority the authority a
+   discharge restriction of its expansion chain covers
+   ([I-D.draft-mcguinness-oauth-mission-discharge]), whatever its
+   drawdown policy permits.  The test is overlap in authority, not
+   structural equality or entry identity.  Such a request falls back to
+   a fresh human approval whose consent disclosure names the discharged
+   entry and the condition that discharged it.
 
    The Mission Issuer MUST apply this test to every drawdown in the
    chain after the discharge, not only to one from the Mission that
    holds the discharged entry, and neither an approval of unrelated
-   authority nor a ceiling review clears the restriction (Section 3.3).
-   Completion-discharged authority therefore cannot be resurrected by
-   policy.
+   authority nor a ceiling review clears the restriction (Section 3.2).
+   Policy adjudication cannot restore discharged authority.
 
-   *Contained authority.* The drawdown policy MUST NOT policy-adjudicate
+   *Contained authority.* The Mission Issuer MUST NOT policy-adjudicate
    a successor whose complete Authority Set, including authority carried
    forward from its predecessor, overlaps in authority capability under
    a containment restriction of its expansion chain
-   ([I-D.draft-mcguinness-oauth-mission-containment]).  Such a request
-   falls back to a fresh human approval whose consent disclosure names
-   the contained capability and the event class that caused its
-   containment.
+   ([I-D.draft-mcguinness-oauth-mission-containment]), whatever its
+   drawdown policy permits.  Such a request falls back to a fresh human
+   approval whose consent disclosure names the contained capability and
+   the event class that caused its containment.
 
    The Mission Issuer MUST apply this test to every drawdown in the
    chain after the containment, not only to one from the Mission that
    holds the overlay, and neither an approval of unrelated authority nor
-   a ceiling review clears the restriction (Section 3.3).  A drawdown
+   a ceiling review clears the restriction (Section 3.2).  A drawdown
    whose authority overlaps no restricted capability remains eligible
    for policy adjudication under the other guards of Section 3.1.
    Contained authority therefore cannot be restored by policy.
@@ -570,7 +583,7 @@ Table of Contents
    Expansion Reconciliation").
 
    *Review cadence.* A drawdown for a chain past its ceiling review
-   cadence also falls back to a fresh human approval (Section 3.3).
+   cadence also falls back to a fresh human approval (Section 3.2).
 
 3.1.4.  Drawdown Bounds
 
@@ -732,7 +745,7 @@ Table of Contents
    authority_ceiling and the selected drawdown_policy under a recomputed
    ceiling_hash, with the re-consent's instant and Approver as those of
    the ceiling consent.  The ceiling review cadence restarts from that
-   instant (Section 3.3).  The consent disclosure MUST render the re-
+   instant (Section 3.2).  The consent disclosure MUST render the re-
    consented ceiling and policy as at the initial approval (Section 3).
 
    Either way the expansion chain continues: its root, predecessor
@@ -894,31 +907,11 @@ Table of Contents
    derivations through the drawdown succession only, not a Mission's
    descendants, other tokens, or resource effects.
 
-3.2.  What It Bounds, and What It Does Not
+3.2.  The Ceiling Review
 
-   The ceiling is broad by construction, since it must cover the open-
-   ended task.  What stays narrow is the active authority any single
-   Mission in the chain yields: each in-ceiling successor is derived for
-   the authority actually needed at that step and is independently gated
-   and revocable.
-
-   A compromised agent cannot instantly wield the ceiling.  It can
-   exercise only the current active authority and request in-ceiling
-   drawdown, which is policy-gated, bounded per drawdown and rate-
-   limited per chain (Section 3.1.4), recorded for audit (Section 5),
-   and enforced per action by the runtime layer
-   ([I-D.draft-mcguinness-mission-runtime]).
-
-   Progressive authorization bounds, and does not eliminate, standing-
-   authority exposure.  A deployment SHOULD pair it with short successor
-   lifetimes, constraint-bounded ceilings, and runtime enforcement.
-
-3.3.  The Ceiling Review
-
-   A pre-consented ceiling is standing consent, and standing consent
-   decays: a chain renewed indefinitely on policy alone is a standing
-   grant.  This profile therefore bounds the chain in time, not only per
-   drawdown and per unit time (Section 3.1.4).
+   A pre-consented ceiling is standing consent.  Standing consent
+   requires periodic human review, so this profile bounds the chain in
+   time, not only per drawdown and per unit time (Section 3.1.4).
 
    A deployment MUST publish a *ceiling review cadence* in its Mission
    Deployment Profile.  The Mission Issuer MUST NOT policy-adjudicate an
@@ -975,11 +968,11 @@ Table of Contents
 
    Where consent evidence is claimed, that disclosure is committed like
    any other ([I-D.draft-mcguinness-oauth-mission-consent-evidence]), so
-   the record shows the reviewer saw the cycle they renewed.  The review
-   is where decay is caught; Section 7.5 names the tells a reviewer
-   checks the records for.
+   the record shows the reviewer saw the cycle they renewed.
+   Section 7.5 lists the signs in the chain's records that a reviewer
+   checks.
 
-3.4.  Realizing an Approved Access Request
+3.3.  Realizing an Approved Access Request
 
    Progressive authorization grows authority that a deployment
    anticipated well enough to express as a ceiling.  The runtime
@@ -1071,21 +1064,12 @@ Table of Contents
    retained drawdown policy document at the policy_version each
    drawdown's ceiling_drawdown approval basis already records, that it
    was adjudicated within the cadence that applied at the time
-   (Section 3.3).
+   (Section 3.2).
 
-   Where a drawdown is triggered by the agent encountering a resource
-   not named at approval, and the resource self-declares its operations
-   and consequences in a content-addressed form, the adjudication MUST
-   evaluate the declaration against the ceiling.  The record of such a
-   drawdown MUST carry the declaration's digest as
-   resource_declaration_digest, so the encounter is reproducible in
+   The record of a drawdown whose adjudication evaluated a resource's
+   self-declaration (Section 3.1.1) MUST carry the declaration's digest
+   as resource_declaration_digest, so the encounter is reproducible in
    audit: what the resource claimed to be when authority bound to it.
-   An AAuth deployment adopting Rich Resource Requests composes one such
-   self-declaring substrate ([I-D.draft-mcguinness-mission-aauth]).
-
-   The discovery companion ([I-D.draft-mcguinness-mission-discovery])
-   defines the encounter adjudication contract, the identity pinning,
-   and the floors this drawdown path carries.
 
 6.  Conformance
 
@@ -1142,7 +1126,7 @@ Table of Contents
       policy adjudication past it, rendering the chain's record since
       the prior review in the review approval's disclosure, and stating
       the cadence effective under each drawdown policy version in that
-      policy's own versioned content (Section 3.3); and
+      policy's own versioned content (Section 3.2); and
 
    *  where the deployment also adopts Mission Derivation Limits, carry
       a policy-adjudicated drawdown's derivation count and limit
@@ -1156,14 +1140,27 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion]).  This document adds
    the drawdown surface.
 
-7.1.  Unattended Drawdown
+7.1.  What Progressive Authorization Bounds
 
-   The ceiling is consented once and drawn on many times.  A compromised
-   agent can request in-ceiling drawdown unattended.  The mitigations
-   are the rate bound (Section 3.1.4), the prohibited-class rule
-   (Section 3.1.3), the fall-back to human approval for unauthorized
-   drawdowns (Section 3.1.2), and per-action runtime enforcement
-   ([I-D.draft-mcguinness-mission-runtime]).
+   The ceiling is broad by construction, since it must cover the open-
+   ended task.  What stays narrow is the active authority any single
+   Mission in the chain yields: each in-ceiling successor is derived for
+   the authority actually needed at that step and is independently gated
+   and revocable.
+
+   The ceiling is consented once and drawn on many times, so a
+   compromised agent can request in-ceiling drawdown unattended.  It
+   cannot instantly wield the ceiling: it can exercise only the current
+   active authority, and each drawdown it requests is bounded per
+   drawdown and rate-limited per chain (Section 3.1.4), held to the
+   prohibited-class rule (Section 3.1.3), taken to a fresh human
+   approval when the drawdown policy does not authorize it
+   (Section 3.1.2), recorded for audit (Section 5), and enforced per
+   action by the runtime layer ([I-D.draft-mcguinness-mission-runtime]).
+
+   Progressive authorization bounds, and does not eliminate, standing-
+   authority exposure.  A deployment SHOULD pair it with short successor
+   lifetimes, constraint-bounded ceilings, and runtime enforcement.
 
 7.2.  The Drawdown Policy as Governance
 
@@ -1174,11 +1171,12 @@ Table of Contents
 
 7.3.  The Ceiling as a Consent Artifact
 
-   The ceiling is a consent artifact.  It MUST be rendered to the
-   Approver at the initial approval with the fact that in-ceiling
-   expansion is policy-adjudicated (Section 3); a ceiling the Approver
-   did not knowingly consent to is standing authority obtained by
-   omission.
+   The ceiling is a consent artifact: every drawdown it later admits
+   acts on a consent the Approver gave once, at the initial approval.
+   Section 3 requires that approval's disclosure to render the ceiling
+   and the fact that in-ceiling expansion is policy-adjudicated.
+   Without this disclosure, the Approver has not knowingly consented to
+   the ceiling.
 
 7.4.  Probing the Ceiling
 
@@ -1190,25 +1188,25 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-expansion], Section "Policy
    Probing").
 
-7.5.  Consent Decay
+7.5.  Periodic Review
 
-   Consent decays even when nothing is misconfigured: the drawdown and
-   rate bounds cap rate, not duration, and the ceiling review
-   (Section 3.3) is the temporal bound.  The tells of decay are
-   checkable from the chain's own records:
+   Standing consent requires periodic human review even when nothing is
+   misconfigured: the drawdown and rate bounds cap rate, not duration,
+   and the ceiling review (Section 3.2) is the temporal bound.  The
+   chain's own records show when the consent no longer matches the work:
 
    *  reviews that never narrow the ceiling;
 
    *  ceilings that only grow;
 
    *  guard exceptions trending toward zero because the policy was
-      quietly widened; and
+      widened; and
 
    *  discharge that never fires because no unit of work is scoped
       tightly enough to complete.
 
-   A review that cannot cite the evidence of the cycle it renews has not
-   reviewed it.
+   The review uses the chain evidence listed in Ceiling Review
+   (Section 3.2).
 
 8.  Privacy Considerations
 
@@ -1363,6 +1361,16 @@ Appendix A.  Document History
 
    -01
 
+   *  Rulings on the editorial restructure's author's calls (D569): the
+      discharge and containment prohibitions bind the Mission Issuer,
+      whatever its drawdown policy permits; one ceiling-disclosure
+      requirement remains, in Progressive Authorization, with Security
+      cross-referencing it; What It Bounds moves into Security, merged
+      with Unattended Drawdown; declaration evaluation moves into
+      Ceiling Test, with the resource_declaration_digest record in Audit
+      Linkage; plain statements replace persuasive phrases; the
+      companion table is labelled a summary.
+
    *  Ceiling Test and new Ceiling Re-Consent: a request outside the
       ceiling is never policy-adjudicated and falls back to an ordinary,
       freshly approved expansion, subject to the Mission Issuer's
@@ -1468,7 +1476,7 @@ Appendix A.  Document History
       approved_at, reproducible from the drawdown policy's own versioned
       content identified by the existing policy_id/policy_version rather
       than a new commitment or a new, separately versioned member
-      (Section 3.3, Section 5).
+      (Section 3.2, Section 5).
 
 Acknowledgments
 

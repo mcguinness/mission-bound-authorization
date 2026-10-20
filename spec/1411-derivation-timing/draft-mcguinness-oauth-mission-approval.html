@@ -1528,9 +1528,10 @@ may stand behind one deferred approval. Mission Approval Governance
 (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) defines the
 Approval Governance Record for exactly that state, and it is
 ceremony-independent: a deployment records it for a deferred approval
-under this profile precisely as for a synchronous one. Where that
-document's recording triggers hold for a deferred approval, the
-issuer records the Approval Governance Record joined by
+under this profile precisely as for a synchronous one. Where a profile
+that adopts that document's recording triggers applies and a trigger
+holds for a deferred approval, the issuer records the Approval
+Governance Record joined by
 <code>approval_event_id</code> and committed atomically with the approval
 decision it governs; the pending window changes when the decision
 happens, never what is recorded about it.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
@@ -1883,13 +1884,19 @@ the deferred grant type are registered by the deferred substrate
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Policy Completion: a pending approval can complete under Mission
+          <p id="appendix-A-2.1.1">The Approval Governance Record is recorded for a deferred approval
+where a profile that adopts Mission Approval Governance's recording
+triggers applies and a trigger holds, matching that document's rule
+that the triggers bind only under an adopting profile (#1436).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Policy Completion: a pending approval can complete under Mission
 Approval Governance's <code>governed_policy</code> basis, with the deferral's
 polling, cancellation, client binding, and token delivery unchanged
 and no client-selected approval basis. A policy evaluation that does
 not authorize activation leaves the request for a full <code>direct</code>
 human approval or <code>denied</code>, never a <code>governed_policy</code> activation
-(#1185).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+(#1185).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
