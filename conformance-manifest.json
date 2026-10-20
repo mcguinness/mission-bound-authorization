@@ -34775,7 +34775,7 @@
    "id": "progressive.drawdown-derivation.exhaustion-refuses",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits' Enforcement at Issuance section refuses a derivation (`invalid_grant`, with its `mission_error` diagnostic), creating no successor, superseding no predecessor, and counting nothing",
+   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits refuses a derivation ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\"), with `invalid_grant` and its `mission_error` diagnostic, creating no successor, superseding no predecessor, and counting nothing",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -34883,7 +34883,7 @@
    "id": "progressive.drawdown-derivation.ceiling-consent-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "MUST state this inheritance, as Mission Derivation Limits' Approval Rendering section requires of a standing consent: policy-adjudicated successors carry forward the Mission's derivation count and never exceed its rendered `derivation_limit`, or, where the Mission has none, no finite limit is guaranteed for them",
+   "text": "MUST state this inheritance, as Mission Derivation Limits requires of a standing consent ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Approval Rendering\"): policy-adjudicated successors carry forward the Mission's derivation count and never exceed its rendered `derivation_limit`, or, where the Mission has none, no finite limit is guaranteed for them",
    "role": "AS",
    "strength": "MUST",
    "applicability": {

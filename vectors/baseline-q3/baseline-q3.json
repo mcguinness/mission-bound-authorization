@@ -440,7 +440,7 @@
         "issuer": "https://as.example.com",
         "id": "msn_pasG9An7Ivj9cOdd3RqWWonuaLAbDHtM"
       },
-      "differs_by": "Holds only the invoice-read entry, with Alice's consent to an authority ceiling (the baseline's two entries plus `invoices.write`) under drawdown policy `q3-reconcile-drawdown` version 1. A policy-adjudicated drawdown at 09:15:00 adds the journal-write entry and supersedes it with `msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb`, whose request at 10:05:00 for a 2,000 USD cap is refused `out_of_ceiling`.",
+      "differs_by": "Holds only the invoice-read entry, with Alice's consent to an authority ceiling (the baseline's two entries plus `invoices.write`) under drawdown policy `q3-reconcile-drawdown` version 1. A policy-adjudicated drawdown at 09:15:00 adds the journal-write entry and supersedes it with `msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb`, whose request at 09:18:00 for a 2,000 USD cap is refused `out_of_ceiling`.",
       "drafts": [
         "progressive"
       ]
