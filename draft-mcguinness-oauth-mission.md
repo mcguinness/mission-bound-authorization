@@ -6500,7 +6500,7 @@ resolve before interoperating.
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: 544a843d5bfd57cf -->
+<!-- assessed-substrate-digest: 8c925f899cc8ee9d -->
 
 This appendix is informative. It is this document's Mapping
 Assessment of itself against the kernel and capabilities of the
@@ -6573,19 +6573,98 @@ For the kernel:
    evidence and lifecycle history, retained for the audit horizon,
    with integrity resting on record custody and the typed anchors.
 
-The capability table:
+The capability list:
 
-| Capability | Claim | Activation | Scope and defining sections | Limitations |
-| --- | --- | --- | --- | --- |
-| Lifecycle-Gated Authorization | supplied | always | State-gated issuance and every derivation gate | Outstanding credentials run to their own `exp`; the residual is bounded, not zero |
-| State-Observable | supplied | Status, introspection, or Signals companion active | Those surfaces | Staleness bounded by each surface's declared freshness |
-| Structured Authority | supplied | always | `authorization_details` of AS-supported types ({{other-types}}), each type's own specification defining semantics (for `mission_resource_access`, the Mission Resource Access Profile's Common Constraints, {{I-D.draft-mcguinness-oauth-mission-resource-access}}) | Semantics exist per supported type, not universally |
-| Monotonic Derivation | supplied | always | The subset rule over covered types at every derivation, delegation, and attenuation point | Covered transitions are `attenuate`; a cross-vocabulary transition is `decide_anew`, never silent attenuation |
-| Credential-Bound | supplied | always | The `mission` claim on issued tokens | Fact semantics: issuance under the Mission, authority derivation, lifecycle-gated issuance; state-as-of only via the State-Observable surfaces |
-| Authorized Context Correlation | supplied | the Delegation capability active ({{delegation}}) | The Token Exchange join at delegated issuance: the AS, as joining authority, joins the Mission and Subject carried by the Mission-bound `subject_token` with the delegate identity independently established by the `actor_token` or the delegate's own client authentication, binding both to the newly issued credential | The base grant binding at issuance co-establishes its facts and is not a join; cross-authority joins are the Mission Authority Server's machinery, not this binding's |
-| Independently Verifiable | supplied | Mandate, signed Status, or audit companion active | Anchor recomputation and signed artifacts per those profiles | Signature verification never establishes current state |
-| Portable Evidence | supplied | Evidence, Mandate, or audit companion active | Per those profiles | The governance record is otherwise issuer-local |
-{: title="OAuth Mission binding capability table"}
+Lifecycle-Gated Authorization:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: State-gated issuance and every derivation
+  gate
+
+  Limitations: Outstanding credentials run to their own `exp`; the
+  residual is bounded, not zero
+
+State-Observable:
+: Claim: supplied
+
+  Activation: Status, introspection, or Signals companion active
+
+  Scope and defining sections: Those surfaces
+
+  Limitations: Staleness bounded by each surface's declared freshness
+
+Structured Authority:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: `authorization_details` of AS-supported
+  types ({{other-types}}), each type's own specification defining
+  semantics (for `mission_resource_access`, the Mission Resource Access
+  Profile's Common Constraints,
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}})
+
+  Limitations: Semantics exist per supported type, not universally
+
+Monotonic Derivation:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The subset rule over covered types at
+  every derivation, delegation, and attenuation point
+
+  Limitations: Covered transitions are `attenuate`; a cross-vocabulary
+  transition is `decide_anew`, never silent attenuation
+
+Credential-Bound:
+: Claim: supplied
+
+  Activation: always
+
+  Scope and defining sections: The `mission` claim on issued tokens
+
+  Limitations: Fact semantics: issuance under the Mission, authority
+  derivation, lifecycle-gated issuance; state-as-of only via the
+  State-Observable surfaces
+
+Authorized Context Correlation:
+: Claim: supplied
+
+  Activation: the Delegation capability active ({{delegation}})
+
+  Scope and defining sections: The Token Exchange join at delegated
+  issuance: the AS, as joining authority, joins the Mission and Subject
+  carried by the Mission-bound `subject_token` with the delegate
+  identity independently established by the `actor_token` or the
+  delegate's own client authentication, binding both to the newly issued
+  credential
+
+  Limitations: The base grant binding at issuance co-establishes its
+  facts and is not a join; cross-authority joins are the Mission
+  Authority Server's machinery, not this binding's
+
+Independently Verifiable:
+: Claim: supplied
+
+  Activation: Mandate, signed Status, or audit companion active
+
+  Scope and defining sections: Anchor recomputation and signed artifacts
+  per those profiles
+
+  Limitations: Signature verification never establishes current state
+
+Portable Evidence:
+: Claim: supplied
+
+  Activation: Evidence, Mandate, or audit companion active
+
+  Scope and defining sections: Per those profiles
+
+  Limitations: The governance record is otherwise issuer-local
+{: #oauth-mission-binding-capabilities newline="true"}
 
 Temporal elements: every issued credential's `exp` is capped by the
 record's effective `expires_at`; state observations carry their
@@ -6593,13 +6672,13 @@ surface's declared freshness; the residual after non-active is the
 outstanding credential lifetime.
 Failure behavior: an unknown lifecycle state is non-active; an
 unresolvable reference, a failed anchor verification, and an unknown
-`authorization_details` type fail closed; where a row's activation
+`authorization_details` type fail closed; where an entry's activation
 condition does not hold, the property is not supplied, and a consumer
 cannot rely on it.
 
 This document's three optional capabilities ({{conformance}}) are
 surfaces an implementation may or may not offer, each independent of
-the others. The capability table above states scoped guarantee
+the others. The capability list above states scoped guarantee
 claims: properties this document supplies and the conditions under
 which each is supplied. The entries below relate each optional
 capability to those claims. Declaring an optional capability never
@@ -6638,6 +6717,10 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1382): the OAuth Binding Mapping Assessment's
+  capability table is a capability list, one entry per capability,
+  which fits the text rendering. No requirement changes.
 
 - Editorial (#1379): the Introduction says what a Mission is beside
   an OAuth grant, drawn from Design Context, and that under a profile
