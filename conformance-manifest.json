@@ -35453,7 +35453,7 @@
    "id": "progressive.drawdown-bounds.entire-ceiling-defined",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown activates the entire remaining ceiling when its successor's Authority Set holds all the authority the ceiling grants",
+   "text": "A drawdown activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -35464,8 +35464,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a drawdown whose successor holds every ceiling entry, compared one action at a time under the subset rule with constraints and resource narrowing, activates the entire remaining ceiling; one that narrows a ceiling entry's constraint does not",
-    "local": "activatesEntireCeiling splits each ceiling entry into single-action entries and tests each with the subset relation against the successor's set."
+    "normative": "a drawdown is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
+    "local": "ceilingAuthorityLeftUndrawn searches the ceiling's actions, vendors and amount caps for a request no successor entry authorizes, assuming every other member covered: a witness found is genuine, and a missed one falls back."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -35481,15 +35481,21 @@
      "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a drawdown narrower than a ceiling entry's constraint does not activate the entire remaining ceiling; at the ceiling's own constraint it does",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a ceiling entry's authority split across several successor entries counts as held: that final increment falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by disabling the check (both tests fail) and by comparing action names only (the narrowed drawdown falls back)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414 review: proved by restoring the per-entry comparison (the split test and the unit test fail), by disabling the check, and by matching actions only."
   },
   {
-   "id": "progressive.drawdown-bounds.undecided-counts-as-entire",
+   "id": "progressive.drawdown-bounds.split-authority-held",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A comparison the subset rule cannot decide counts as activating it",
+   "text": "The successor's entries are judged together, so ceiling authority it splits across several entries counts as held",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -35500,13 +35506,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the subset rule cannot decide whether the successor holds a ceiling entry's authority, the drawdown falls back as if it activated the entire remaining ceiling",
-    "local": "The reference's subset relation is total over ceilings validated at consent (supported constraint keys, well-formed amounts), so no undecidable comparison reaches the check."
+    "normative": "a successor that holds a ceiling entry's authority split across several entries (by issuance window, vendor or amount) holds it: the final increment falls back rather than completing by policy",
+    "local": "The endpoint witness splits the Q3 issuance window across two entries; the unit witness splits two vendors and two amount caps, which the demo deployment's single-vendor derivation ceiling cannot reach end to end."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a ceiling entry's authority split across several successor entries counts as held: that final increment falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > ceiling authority split across successor entries by vendor or amount counts as held (unit)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414 review finding: restoring the per-entry comparison fails both witnesses."
   },
   {
    "id": "progressive.drawdown-bounds.entire-ceiling-falls-back",
