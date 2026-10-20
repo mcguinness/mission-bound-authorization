@@ -389,17 +389,17 @@ protection.
 : REQUIRED. An object recording the outcome, with these members:
 
     `decision`:
-    : A string. The only value a committed record carries is `approved`,
-      since a record exists only for an approval that committed
-      ({{atomic-commitment}}).
+    : REQUIRED. A string. The only value a committed record carries is
+      `approved`, since a record exists only for an approval that
+      committed ({{atomic-commitment}}).
 
     `evaluated_at`:
-    : An RFC 3339 timestamp.
+    : REQUIRED. An RFC 3339 timestamp.
 
     `contributing`:
-    : An array of the `assertion_id` values the evaluation counted
-      toward the rule the approval satisfied. A denial that did not
-      block the approval is recorded but not counted, and a blocking
+    : REQUIRED. An array of the `assertion_id` values the evaluation
+      counted toward the rule the approval satisfied. A denial that did
+      not block the approval is recorded but not counted, and a blocking
       denial leaves no committed record ({{atomic-commitment}}), so a
       `deny` assertion never appears in `contributing`.
 
