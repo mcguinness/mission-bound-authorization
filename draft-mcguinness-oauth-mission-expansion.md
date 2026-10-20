@@ -196,7 +196,7 @@ for it. The agent can meet an action that the approved Authority Set
 does not cover but that the deployment's governance policy would
 permit under a fresh consent. Expansion is the governed path from that
 shortfall to a new approval. It does not modify or widen the existing Mission. It creates a new Mission through the issuance profile's own
-approval event, with its own integrity anchors and Mission record,
+approval event, with its own integrity anchors and Mission Record,
 linked to the Mission it replaces. The successor's authority comes
 only from that approval.
 
@@ -220,7 +220,7 @@ without restating them:
 - the Mission Intent and its submission via PAR;
 - authority derivation and the subset rule;
 - the approval event and its integrity anchors;
-- the Mission record and the `mission` claim; and
+- the Mission Record and the `mission` claim; and
 - the lifecycle and issuance gating.
 
 It uses the terms Agent (Client), Subject, Approver, Mission Issuer,
@@ -1029,7 +1029,7 @@ A successor activates at the point its authority is issued:
 At completion the Mission Issuer computes the successor's integrity
 anchors: `intent_hash`, `authority_hash`, and, where the exchange
 carried an authority proposal, `proposal_hash`. At activation it
-creates the successor Mission record in the `active` state, with its
+creates the successor Mission Record in the `active` state, with its
 `predecessor` member set ({{predecessor-member}}), atomically with the
 predecessor's transition to `terminated` with reason `superseded`
 ({{superseded-state}}). The same atomic step applies:
@@ -1140,7 +1140,7 @@ member.
 : REQUIRED on a successor Mission; absent otherwise. A string: the
   `mission_id` of the Mission this Mission succeeded by expansion. It
   is carried on the successor's `mission` claim and recorded on the
-  successor's immutable Mission record, so the lineage is durable
+  successor's immutable Mission Record, so the lineage is durable
   independently of any derived token and the expansion chain is
   observable in audit.
 
@@ -1187,7 +1187,7 @@ The lineage members have these properties:
   expansion chain is expressed by walking `predecessor` links from a
   successor back toward the original Mission.
 - **Immutability.** The `predecessor` member is set at the
-  successor's approval event and MUST NOT change thereafter. The Mission record is immutable
+  successor's approval event and MUST NOT change thereafter. The Mission Record is immutable
   except for its `state` and its `termination`, which a supersession
   writes once on the predecessor with the `successor` link
   ({{superseded-state}}).
@@ -1286,7 +1286,7 @@ The transition has these properties:
   rule: a `terminated` Mission, whatever its reason, is non-deriving.
 
 The following is an example of the predecessor's `state` and
-`termination` after supersession (other Mission record members
+`termination` after supersession (other Mission Record members
 omitted):
 
 ~~~ json
@@ -1452,7 +1452,7 @@ The Mission Issuer:
 - MUST authorize and resolve the reference, in its own namespace,
   before the new Mission's approval completes (a cross-issuer
   relationship requires a structured extension);
-- MUST set `related_to` atomically when the Mission record is created;
+- MUST set `related_to` atomically when the Mission Record is created;
   and
 - MUST NOT add or change it afterward.
 
@@ -1993,7 +1993,7 @@ A conforming **expansion-capable Mission Issuer** MUST:
   successor and verify that source in the activating commit
   ({{successor-source}});
 - record the `predecessor` member on the successor's `mission` claim
-  and Mission record ({{predecessor-member}});
+  and Mission Record ({{predecessor-member}});
 - activate the successor and transition the predecessor to
   `terminated` with reason `superseded`, its `termination` carrying
     `successor`, atomically when the successor's authority is issued
