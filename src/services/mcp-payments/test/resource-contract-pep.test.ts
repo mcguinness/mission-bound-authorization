@@ -68,7 +68,7 @@ const ACTIONS = [...new Set(Object.values(TOOL_ACTIONS).map((m) => m.action))];
 const NOW = () => new Date("2026-10-20T12:00:00Z");
 
 /** A retained Operation Profile under which `get_invoice` targets the invoice, not the service. */
-const RETAINED_PROFILE = "payments-runtime-profile-v12-retained";
+const RETAINED_PROFILE = "payments-retained-profile";
 const RETAINED_TABLE: Record<string, ActionMapping> = {
   ...TOOL_ACTIONS,
   get_invoice: { ...(TOOL_ACTIONS.get_invoice as ActionMapping), target: PAYMENTS_INVOICE_CONTRACT },

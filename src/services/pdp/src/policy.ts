@@ -2,7 +2,7 @@ import { postureStalenessBound, RUNTIME_POSTURE, type StalenessBound } from "./r
 
 /**
  * Deployment policy for the payments estate: action -> FGA relation mapping
- * and per-class staleness bounds (payments-runtime-profile-v12; O-8 numbers).
+ * and per-class staleness bounds (payments-runtime-profile-v13; O-8 numbers).
  */
 
 /**
