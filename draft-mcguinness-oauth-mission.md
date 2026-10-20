@@ -415,9 +415,8 @@ A Mission is created and used in a single chain:
    later issuance operation from that grant lineage, such as a
    refresh, is a derivation ({{issuance-gating}}) and resolves to
    exactly this Mission; the client never selects or reassigns it.
-   Under a profile, the AS can bind a further lineage to the same
-   Mission, such as a refresh-token family a continuation transport
-   establishes; each lineage resolves to exactly one Mission.
+   Under a profile, the AS can bind a further grant lineage to the
+   same Mission; each lineage resolves to exactly one Mission.
 5. **Issue and enforce.** Every derived authority is no broader than
    the approved Authority Set ({{subset}}). Every access token the
    agent obtains under the Mission carries the derived authorization
