@@ -191,9 +191,11 @@ function viewOf(
     return "subject";
   }
   if (mission.client_id !== undefined && (typeof mission.client_id !== "string" || mission.client_id === "")) return "client_id";
-  if (details !== undefined && !Array.isArray(details)) return "authorization_details";
+  // Absent is the empty set; present, it is an array.
+  const listed: unknown[] | undefined = Array.isArray(details) ? details : details === undefined ? [] : undefined;
+  if (listed === undefined) return "authorization_details";
   const authoritySet: AuthorityEntry[] = [];
-  for (const raw of (details as unknown[] | undefined) ?? []) {
+  for (const raw of listed) {
     const entry = entryOf(raw);
     if (entry === undefined) return "authorization_details entry";
     authoritySet.push(entry);

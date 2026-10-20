@@ -287,6 +287,19 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
+  it("allows no more clock skew than the issuer's mission_max_stale_seconds", async () => {
+    // Expired 20 seconds ago: inside the profile's 30-second allowance, past
+    // a 10-second advertised maximum staleness.
+    const expired = (p: Record<string, unknown>) => {
+      p.iat = nowS() - 80;
+      p.exp = nowS() - 20;
+    };
+    handler = respond(expired);
+    expect(await resolver().resolve(ref)).toMatchObject({ ok: true });
+    handler = respond(expired);
+    await expectRefusedUncached(resolver({ maxStaleSeconds: 10 }), "unverifiable");
+  });
+
   it("refuses a response whose signed fresh_until has passed, or that carries none", async () => {
     handler = respond((p) => {
       mission(p).fresh_until = new Date((nowS() - 1) * 1000).toISOString();
