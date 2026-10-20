@@ -33,9 +33,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import type { ResourcePolicyStore } from "../resource-policy-store.js";
-import { composeMasPilot, type MasPilotParts } from "./compose.js";
+import { composeMasPilot, type MasPilotParts, requireDeclaredMappingContract } from "./compose.js";
 import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "./config.js";
-import { parseMappingContract } from "./mapping-contract.js";
 import { buildPilotMas, masIssuer } from "./mas-as.js";
 import { masConsoleRoutes, type OperatorConsole, pilotConsoleRoutes, startOperatorConsole } from "./operator-console.js";
 import { composeSeparatedMasPilot } from "./separated.js";
@@ -71,13 +70,9 @@ export function masPilotLaunchOptions(env: Readonly<Record<string, string | unde
   const configPath = env.MAS_PILOT_CONFIG;
   if (configPath !== undefined && !existsSync(configPath)) throw new Error(`MAS_PILOT_CONFIG names ${configPath}, which does not exist`);
   const loaded = configPath ? loadMasPilotConfig(configPath) : loadMasPilotConfig();
-  // @spec authority-server#mapping-contract: the gateway mounts a join route,
-  // so the contract it applies is declared, and loads, before anything starts.
-  try {
-    parseMappingContract(loaded.mapping_contract);
-  } catch (e) {
-    throw new Error(`the configuration declares no usable mapping contract: ${(e as Error).message}`);
-  }
+  // @spec authority-server#mapping-contract: the compositions' own guard, here
+  // before the launcher starts a MAS process or opens anything.
+  requireDeclaredMappingContract(loaded);
   const config = relocateMissionIssuer(loaded, masIssuer(loaded));
 
   const apiUrl = env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url;

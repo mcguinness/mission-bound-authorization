@@ -73,7 +73,7 @@ import {
   type EstateClientRegistration,
   startEstateAuthorizationServer,
 } from "./estate-as.js";
-import { MappingContractCache } from "./mapping-contract.js";
+import { MappingContractCache, parseMappingContract } from "./mapping-contract.js";
 import { pilotMissionPolicy } from "./mas-policy.js";
 
 export interface MasPilotOptions {
@@ -173,9 +173,25 @@ function missionLoader(kernel: MissionKernel): (ref: MissionReference) => Loaded
   };
 }
 
+/**
+ * @spec authority-server#mapping-contract (#818): "Every deployment documents
+ * the mapping contract its joins apply." The pilot's gateway mounts a join
+ * route, so either configuration refuses to start, before it builds or
+ * connects to anything, unless `mapping_contract` is a contract the strict
+ * contract loader accepts.
+ */
+export function requireDeclaredMappingContract(config: MasPilotConfig): void {
+  try {
+    parseMappingContract(config.mapping_contract);
+  } catch (e) {
+    throw new Error(`the MAS pilot mounts a join route, but declares no usable mapping contract: ${(e as Error).message}`);
+  }
+}
+
 /** Assemble and start the pilot. `close()` releases every listener and store it opened. */
 export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> {
   const config = opts.config ?? loadMasPilotConfig();
+  requireDeclaredMappingContract(config);
   const missionIssuer = config.mission_issuer;
   // #818 slice 5B: a launcher's MAS is the reference authorization server in
   // this process, and the pilot reads that server's kernel; the server owns it.

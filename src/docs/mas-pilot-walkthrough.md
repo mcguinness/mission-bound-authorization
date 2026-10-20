@@ -84,7 +84,9 @@ line and exits 1:
   identifiers;
 - a `MAS_PILOT_CONFIG` that names no file, a configuration with no
   `mapping_contract` (the configuration loader), or one whose contract does
-  not load ("the configuration declares no usable mapping contract");
+  not load (`requireDeclaredMappingContract`, the compositions' own guard,
+  applied before the launcher starts anything: "the MAS pilot mounts a join
+  route, but declares no usable mapping contract");
 - `MAS_PILOT_MAS_URL` or `MAS_PILOT_PDP_TOKEN` in process, or one of them
   without the other;
 - a MAS that is unreachable, a MAS whose metadata names another issuer
