@@ -614,7 +614,7 @@ Authority Set freshly derived and bound by the ceiling, its
 `subject` and `authority_source` are the predecessor's, and the commit
 that activates it checks that source's ceiling
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Successor
-Subject and authority source").
+Subject and Authority Source").
 
 An in-ceiling successor MUST carry the predecessor's
 `authority_ceiling` and `drawdown_policy` unchanged or narrowed,
@@ -838,7 +838,7 @@ derivations:
   repeating its accounting; returning the existing access token adds
   no derivation. A fresh delivery token minted on recovery is ordinary
   issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
-  "Recovery is delivery"), counted against and gated by the
+  "Recovery Is Delivery"), counted against and gated by the
   successor's `derivation_limit`.
 
 The ceiling consent's disclosure ({{progressive-authorization}}) MUST
@@ -1148,7 +1148,7 @@ than any single Mission's Authority Set.
 The expansion profile's predecessor-chain correlation considerations
 apply to the drawdown chain
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
-"Predecessor-chain correlation"). Access to the ceiling and drawdown
+"Predecessor-Chain Correlation"). Access to the ceiling and drawdown
 records SHOULD be scoped to parties with a governance need.
 
 # IANA Considerations {#iana}
