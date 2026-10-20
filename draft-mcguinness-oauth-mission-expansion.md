@@ -712,8 +712,8 @@ that code. Otherwise:
 - a required DPoP proof that is missing, or a DPoP proof that fails its
   own validation, is refused with `invalid_dpop_proof`
   ({{Section 5 of RFC9449}}); and
-- any other failure is refused with `invalid_request`,
-  `invalid_grant`, or `invalid_token` as appropriate.
+- any other failure is refused with `invalid_request` or
+  `invalid_grant` as appropriate ({{Section 5.2 of RFC6749}}).
 
 An authorization server that requires a DPoP nonce answers a proof
 lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce`
