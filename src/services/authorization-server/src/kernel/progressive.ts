@@ -325,6 +325,7 @@ export type DrawdownFallbackReason =
   | "cross_domain"
   | "live_children"
   | "restricted_overlap"
+  | "entire_remaining_ceiling"
   | "per_drawdown_bound"
   | "chain_rate_bound";
 
@@ -349,6 +350,20 @@ function widenedPairs(requested: readonly AuthorityEntry[], effective: readonly 
     }
   }
   return out;
+}
+
+/**
+ * @spec progressive#drawdown-bounds: the successor would hold all the
+ * authority the ceiling grants. Each ceiling entry, one action at a time, is
+ * compared under the subset relation, constraints and resource included, so
+ * entry boundaries and counts do not decide it. The relation is total here:
+ * ceiling entries were validated at consent, and the successor already passed
+ * the ceiling test over the same members.
+ */
+function activatesEntireCeiling(requested: readonly AuthorityEntry[], ceiling: readonly AuthorityEntry[]): boolean {
+  return ceiling.every((c) =>
+    c.actions.every((action) => isSubsetSetIgnoringCapabilitySources([{ ...c, actions: [action] }], requested)),
+  );
 }
 
 /** The Missions of an expansion chain, from `missionId` back to its root. */
@@ -446,6 +461,9 @@ export function adjudicateDrawdown(
   const chain = chainOf(kernel, predecessor.id);
   const restrictions = chainRestrictions(chain);
   if (requested.some((e) => restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
+  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
+  // policy; the final increment takes a fresh human approval.
+  if (activatesEntireCeiling(requested, ceiling)) return fallback("entire_remaining_ceiling");
   if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
   const windowStart = nowMs - options.chainRateBound.windowSeconds * 1000;
   const recent = chain.filter(

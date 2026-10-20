@@ -754,6 +754,53 @@ describe("fresh-approval fallback (@spec progressive#in-ceiling-expansion, progr
   });
 });
 
+describe("drawdown bounds (@spec progressive#drawdown-bounds)", () => {
+  // Ceiling and proposal entries keep the configured entry's delegation grant,
+  // which derivation carries onto the successor; only actions and constraints vary.
+  const entry = (actions: string[], constraints: Record<string, unknown>): AuthorityEntry =>
+    ({ ...(FULL_CEILING[0] as AuthorityEntry), actions, constraints }) as unknown as AuthorityEntry;
+  const ACME = { vendors: ["acme"] };
+  const cap = (amount: string) => ({ max_amount: { amount, currency: "USD" }, vendors: ["acme"] });
+
+  /** An expansion proposing exactly these entries. */
+  async function expandWith(subjectToken: string, entries: AuthorityEntry[]): Promise<Response> {
+    return tokenRequest({
+      ...expansionParams(subjectToken, crypto.randomUUID(), READ),
+      authorization_details: JSON.stringify(entries),
+    });
+  }
+
+  it("a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds", async () => {
+    // The ceiling's only authority beyond the Mission is invoice.list: one
+    // widened action, the chain's first drawdown, a consequential read.
+    const whole = await issueMission(READ, { ...ceilingOf(), authority_ceiling: [entry(READ_LIST, ACME)] });
+    await expectFreshApproval(whole.missionId, whole.accessToken, READ_LIST);
+    // The same request, with ceiling authority still undrawn after it, is adjudicated by policy.
+    const partial = await issueMission(READ, {
+      ...ceilingOf(),
+      authority_ceiling: [entry(READ_LIST, ACME), entry(["payments:payment.schedule"], cap("500.00"))],
+    });
+    await drawdown(partial.accessToken, crypto.randomUUID(), READ_LIST);
+  });
+
+  it("a drawdown narrower than a ceiling entry's constraint does not activate the entire remaining ceiling; at the ceiling's own constraint it does", async () => {
+    const ceiling = [entry(READ, ACME), entry(["payments:payment.schedule"], cap("500.00"))];
+    const narrow = await issueMission(READ, { ...ceilingOf(), authority_ceiling: ceiling });
+    const res = await expandWith(narrow.accessToken, [entry(READ, ACME), entry(["payments:payment.schedule"], cap("200.00"))]);
+    const body = (await res.json()) as Completed;
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(successorsOf(narrow.missionId).map((m) => m.id)).toEqual([body.mission_id]);
+
+    const full = await issueMission(READ, { ...ceilingOf(), authority_ceiling: ceiling });
+    const before = as.kernel.allMissions().length;
+    const fell = await expandWith(full.accessToken, [entry(READ, ACME), entry(["payments:payment.schedule"], cap("500.00"))]);
+    const fellBody = (await fell.json()) as { error?: string };
+    expect(fell.status, JSON.stringify(fellBody)).toBe(400);
+    expect(fellBody.error).toBe("authorization_pending");
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+});
+
 describe("containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration)", () => {
   const containEvent = (id: string) => ({
     type: "tainted_read",
