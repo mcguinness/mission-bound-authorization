@@ -37421,7 +37421,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Witnessed at the payments resource for a key the matched Mission entry carries (the PDP refuses it whole), and at the SaaS resource, which enforces only `vendors`, for registered keys it does not enforce (`time_window`, `max_amount`), an unregistered key and a malformed value (review on PR #1298). A payments credential carrying such a key is refused when it is read (parseCredentialAuthority), witnessed at helper level only, so the row stays partial."
+   "notes": "#1266. Witnessed at the payments resource for a key the matched Mission entry carries (the PDP refuses it whole), and at the SaaS resource, which enforces only `vendors`, for registered keys it does not enforce (`time_window`, `max_amount`), an unregistered key and a malformed value (review on PR #1298), on RAS-issued tokens minted directly, since a RAS that knows SaaS's metadata never mints such a key (#1266). A payments credential carrying such a key is refused when it is read (parseCredentialAuthority), witnessed at helper level only, so the row stays partial."
   },
   {
    "id": "resource-access.protected-resource-metadata.enforced-keys",
@@ -37441,14 +37441,14 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a resource advertising mission_constraints_supported names only constraints keys it enforces",
-    "local": "the payments resource names max_amount, vendors and each implemented Common Constraint, and no Common Constraint it does not enforce; the SaaS resource names only vendors, the one key it enforces"
+    "local": "the payments resource names max_amount, vendors, requires_action_approval and terminal_when (both enforced through its PDP) and each implemented Common Constraint, exactly the set the authorization server admits; the SaaS resource names only vendors, the one key it enforces"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > advertises exactly max_amount, vendors and the Common Constraints it enforces, and no other",
+     "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > advertises exactly the constraints keys it enforces, the set the Authorization Server admits, and no other",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -37459,7 +37459,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints from the metadata fails the test. SaaS (review on PR #1298): omitting the member fails its test."
+   "notes": "#1266. Proved by mutation: dropping any one of the seven implemented Common Constraints, or terminal_when, from the payments metadata fails the test. SaaS (review on PR #1298): omitting the member fails its test."
   },
   {
    "id": "resource-access.rs-enforcement.no-disclosure-only-constraint",
@@ -37563,7 +37563,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read with such a member",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -37596,9 +37596,21 @@
      "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent issuance instant: an entry bounded by resource_issued_after covers nothing",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > an empty collection establishes no member fact: a read returning nothing is refused under a bound that reads one, and permitted without one (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). The row stays partial."
+   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). The row stays partial. #1266 round 2: a list read whose member lacks the fact, or that returns no member, refuses whole."
   },
   {
    "id": "resource-access.common-constraints.unsatisfiable-entry-no-authority",
@@ -37835,7 +37847,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an operation on a resource whose authoritative issuance instant precedes resource_issued_after is refused; one issued at or after it, the bound included, is permitted",
-    "local": "the payments resource reads the invoice record's issued_at; a record without one, a list read and a vendor read are refused under the bound"
+    "local": "the payments resource reads the invoice record's issued_at, and a list read reads each invoice it returns; a record without one, a list read with such a member, and a vendor read (a vendor record has no issuance instant) are refused under the bound"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -37863,9 +37875,21 @@
      "name": "the payments resource enforces resource_issued_after and resource_issued_before on the credential bound (@spec runtime#input-authority) > a credential narrower than its Mission is refused at the PEP, before any decision, outside its window",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read, returning nothing, when any one member's record is outside the bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266 slice 1. Proved by mutation: skipping the PDP gate, making the after-bound exclusive, letting a missing fact satisfy, and skipping the credential gate each fail these tests."
+   "notes": "#1266 slice 1. Proved by mutation: skipping the PDP gate, making the after-bound exclusive, letting a missing fact satisfy, and skipping the credential gate each fail these tests. #1266 round 2: a list read evaluates each member with its own facts (resource.properties.members, bound into parameter_digest) and refuses whole on any member; proved by mutation (any member instead of every, the PDP ignoring members, the PEP never or always carrying members, reverification reusing the decided members)."
   },
   {
    "id": "resource-access.common-constraints.issued-before-enforced",
@@ -38074,6 +38098,24 @@
      "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses a write whose invoice's issuance fact changed between decision and execution",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses at release a read one of whose members changed, or that gained a member, after the decision, with no result",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
    "notes": "#1375. One row for both issuance bounds, which read the same input."
@@ -38170,7 +38212,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an operation on a resource whose authoritative owning tenant differs from the tenant bound, or cannot be established, is refused; a client-supplied tenant cannot establish it",
-    "local": "the payments resource reads the vendor record's tenant (an invoice belongs to its vendor's tenant); a list read refuses under the bound, and a write whose vendor record changed refuses parameter_mismatch"
+    "local": "the payments resource reads the vendor record's tenant (an invoice belongs to its vendor's tenant), and a list read reads each invoice it returns; a list read with any member outside the bound or without a tenant refuses whole, and a write whose vendor record changed refuses parameter_mismatch"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -38183,7 +38225,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read with such a member",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -38204,9 +38246,21 @@
      "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > a credential bound to a tenant is refused at the PEP, before any decision, for another tenant's invoice",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member's record names the bound's tenant, carrying each member's facts, and returns exactly those members",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read, returning nothing, when any one member's record is outside the bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266 slice 2. Proved by mutation: ignoring the tenant fact, letting a missing fact satisfy, and the PEP omitting the store's tenant each fail these tests."
+   "notes": "#1266 slice 2. Proved by mutation: ignoring the tenant fact, letting a missing fact satisfy, and the PEP omitting the store's tenant each fail these tests. #1266 round 2: a list read evaluates each member with its own facts (resource.properties.members, bound into parameter_digest) and refuses whole on any member; proved by mutation (any member instead of every, the PDP ignoring members, the PEP never or always carrying members, reverification reusing the decided members)."
   },
   {
    "id": "resource-access.common-constraints.tenant-subset",
@@ -38313,13 +38367,25 @@
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
-     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read with such a member",
      "level": "endpoint",
      "surface": "resource-operation"
     },
     {
      "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
      "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a write whose vendor's tenant changed between decision and execution",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member's record names the bound's tenant, carrying each member's facts, and returns exactly those members",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > a credential bound reading a member fact is evaluated for each member at the PEP, before any decision",
      "level": "endpoint",
      "surface": "resource-operation"
     }
@@ -38784,7 +38850,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an operation on data whose trusted classification label is not among the named values, or whose label cannot be established, is refused; a label named in the request cannot establish it",
-    "local": "the payments resource reads the invoice record's classification; vendor and list reads refuse under the bound, and a write whose invoice was relabeled refuses parameter_mismatch"
+    "local": "the payments resource reads the invoice record's classification, and a list read reads each invoice it returns; a vendor read (a vendor record has no label) and a list read with any member outside the bound or unlabeled refuse under the bound, and a write whose invoice was relabeled refuses parameter_mismatch"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -38818,9 +38884,21 @@
      "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > a credential bound to labels is refused at the PEP, before any decision, for another label",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read, returning nothing, when any one member's record is outside the bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1266 slice 5. Proved by mutation: letting a missing label satisfy, the PDP or PEP dropping the store's label, and the credential gate losing the label each fail these tests."
+   "notes": "#1266 slice 5. Proved by mutation: letting a missing label satisfy, the PDP or PEP dropping the store's label, and the credential gate losing the label each fail these tests. #1266 round 2: a list read evaluates each member with its own facts (resource.properties.members, bound into parameter_digest) and refuses whole on any member; proved by mutation (any member instead of every, the PDP ignoring members, the PEP never or always carrying members, reverification reusing the decided members)."
   },
   {
    "id": "resource-access.common-constraints.data-classification-subset",
@@ -38930,6 +39008,18 @@
      "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses a write whose invoice was relabeled between decision and execution",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > permits a read whose every member was issued within the window, both bounds inclusive across offsets, and whose every label the bound names (boundary)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource evaluates each member of a collection read against the Common Constraints (@spec resource-access#initial-common-constraints) > refuses the whole read when any one member's record lacks the fact the bound reads (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
    "notes": "#1375."
@@ -38954,7 +39044,7 @@
     "normative": "a label among the bound's values, compared as exact strings, satisfies data_classification; another label, or an empty bound, does not"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
@@ -38967,9 +39057,21 @@
      "name": "PDP enforces data_classification against the resource's label (@spec resource-access#initial-common-constraints) > refuses when the PEP established no label, and under an empty bound",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP evaluates each member of a collection against the member-fact bounds (@spec resource-access#initial-common-constraints) > data_classification over a collection: every member's label must be among the values, compared as exact strings",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP evaluates each member of a collection against the member-fact bounds (@spec resource-access#initial-common-constraints) > refuses when any one member is outside a bound, or lacks the fact it reads",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1375. The PDP receives one label per decision, so the every-label clause is witnessed at the shared gate only (mission-core common-constraints.test.ts, data_classification enforcement); the row stays partial."
+   "notes": "#1375; #1266 round 2. The every-label clause is witnessed at the PDP over a collection's members, each carrying its own label (resource.properties.members): two labels both among the values permit, and one outside them refuses. Proved by mutation: evaluating any member instead of every member fails it."
   },
   {
    "id": "resource-access.common-constraints.allowed-tools-enforced",
@@ -40999,15 +41101,57 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "for a resource whose enforced keys are known (by registration, deployment policy or its mission_constraints_supported), the authorization server emits no entry carrying another constraints key",
-    "local": "the RAS applies this by deployment policy (resourceConstraintsSupported): for a listed resource it drops whole an entry carrying an unlisted key, never stripping the key, and refuses invalid_grant without consuming the grant when no entry survives"
+    "normative": "a token issued for a resource carries no entry for that resource with a constraints key the resource server serving it is not known to enforce (by registration, deployment policy or its mission_constraints_supported)",
+    "local": "the main authorization server reads its knowledge from the trusted scope-projection mapping's per-audience mission_constraints_supported (absent: no key), at every Mission-bound access-token mint and at the transaction token, and refuses invalid_target, never dropping the key or omitting the entry; the RAS reads resourceConstraintsSupported (an unlisted resource, or no map: no key) and drops a constrained entry whole, refusing invalid_grant without consuming the grant when no entry survives"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > emits an entry whose every key the audience's mission_constraints_supported names, unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > refuses invalid_target, issuing no token, when an entry for the audience carries a key the audience is not known to enforce",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > a refresh re-checks against the current mapping: an audience whose key list no longer names a carried key refuses, and an audience with no list is known to enforce no key (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource rides in this token, and a token issued for that resource refuses it (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "transaction tokens carry only constraints keys the Challenge-Issuing Resource is known to enforce (@spec resource-access#resource-access-type) > refuses invalid_target, opening no approval, a challenge whose entry carries a key the mapping does not know the resource enforces, and admits it under the shipped mapping",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/ras/test/mapping-entitlement.test.ts",
-     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole an entry carrying a key the resource does not list, keeps listed keys intact, and leaves an unlisted resource as narrowed",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole an entry carrying a key the resource does not list, and keeps listed keys intact",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > drops whole a constrained entry for a resource it has no enforcement knowledge of, and keeps an unconstrained one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an empty key list admits only a resource's unconstrained entries (boundary)",
      "level": "unit",
      "surface": "token-endpoint"
     },
@@ -41022,9 +41166,33 @@
      "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > malformed resourceConstraintsSupported configuration fails at startup",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type) > accepts a key list on an authorization_details audience, an empty one included, and keeps it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type) > refuses a malformed list, a repeated key, and the member on a scope-only audience",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata) > the shipped scope-projection mapping vouches for this resource exactly the keys it advertises, and every shipped ceiling for it carries only those keys (#1266)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/saas-shipped-constraints.test.ts",
+     "name": "shipped SaaS ceilings stay enforceable at the SaaS resource > the shipped scope-projection mapping vouches for the SaaS resource exactly the keys it advertises (#1266)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#1298 review (D475, D480). Partial by design, and the requirement stays a SHOULD (D480). Recorded departures: a resource not listed in the RAS's resourceConstraintsSupported keeps its narrowed entries unfiltered, and the main authorization server emits the keys its configured ceilings carry without per-resource enforcement knowledge (it does not filter by mission_constraints_supported). A resource server that cannot enforce a key still fails closed (resource-access.rs-enforcement.constraints-fail-closed). Unit-level RAS witnesses; mutations M8 (filter passes everything), M9 (strip the key instead of dropping the entry) and M10 (configuration validation skipped) each fail them."
+   "notes": "#1266 round 2 (D480 departures closed). An entry for another resource rides only in tokens its resource server never receives; it is checked when a token is issued for that resource (the boundary case). The cross-domain ID-JAG goes to the RAS, not to the resource server: the RAS's destination policy governs emission to the destination resource and is now fail-closed. Introspection discloses what was minted and emits nothing new. A scope-only target stays governed by the scope projection's independently enforced controls. The shipped mapping vouches exactly what each resource's metadata advertises (payments, SaaS). Mutations: dropping the AS refusal, checking every carried entry regardless of audience, letting an absent list pass, disabling the transaction-token check, loosening the mapping parser, the RAS passing an unlisted resource, the RAS passing an empty list, and the RAS stripping the key instead of dropping the entry each fail these tests."
   },
   {
    "id": "resource-access.scope-projection.narrower-resource",
