@@ -36840,15 +36840,15 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request whose authorization_details keeps delegation on an entry the onward ID-JAG conveys without it is refused, issues no grant and records no hop, and leaves the assertion unconsumed; the same assertion presented without that request is issued",
-    "local": "invalid_authorization_details (ICA -02 Section 5.5.6), with one derivation counted under a reserved, unreleased reservation"
+    "normative": "a request whose authorization_details keeps delegation on an entry the onward ID-JAG conveys without it is refused, issues no grant, records no hop, counts no derivation and leaves the assertion unconsumed; the same assertion presented under a conforming request is issued",
+    "local": "invalid_authorization_details (ICA -02 Section 5.5.6), raised at the rule-7 pre-check, which compares the request with the copy the grant would convey through the same conveyedCopy rule the mint applies after the gate, so the refusal precedes any derivation reservation, like every other requested-authority refusal at this exchange"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
-     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a request that keeps the omitted `delegation` is refused invalid_authorization_details: no hop and the assertion unconsumed, with the derivation counted under a reserved reservation",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a request that keeps the omitted `delegation` is refused invalid_authorization_details before any derivation is reserved: no hop, no derivation, no reservation, the assertion unconsumed",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -36859,7 +36859,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped issues the request (200). Signing-side effects before the refusal (moving beforeSign ahead of the requested-authority check) fail the hop witness and, with it removed, the unconsumed-assertion witness. The refusal is raised inside the mint after the derivation gate admits, because the adapter's rule-7 pre-check compares the request with the unstripped grant authority; one derivation is therefore counted under an unreleased reservation, which the witness asserts (refunding it fails the witness)."
+   "notes": "#1374. Proven by disabling the code it covers: comparing the pre-check with the unstripped grant authority (the mint's order) lets the request reach the gate, which counts one derivation (\"expected { hops: 1, derivations: 1 } to deeply equal { hops: 1, derivations: +0 }\"), and with that assertion removed the reservation witness fails alone (\"expected 1 to be +0\"). The mint applies the same rule after the gate, so a state change between the two cannot widen the grant; the kernel witness refuses such a request before beforeSign, and conveying unstripped there issues it."
   },
   {
    "id": "continuation.ica-transport.conveyed-copy-only",

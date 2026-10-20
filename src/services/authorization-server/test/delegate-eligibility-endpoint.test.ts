@@ -452,7 +452,7 @@ describe("the continuation grant's conveyed delegation (@spec cross-domain#conve
     await granted(await continueAs(hB.hop, "svc-b"));
   });
 
-  it("a request that keeps the omitted `delegation` is refused invalid_authorization_details: no hop and the assertion unconsumed, with the derivation counted under a reserved reservation", async () => {
+  it("a request that keeps the omitted `delegation` is refused invalid_authorization_details before any derivation is reserved: no hop, no derivation, no reservation, the assertion unconsumed", async () => {
     const { missionId, root } = approve([entry(INHERIT, [READ])]);
     permitted.add("svc-b");
     const assertion = await mintICA(root, "svc-b", clients["svc-b"].jkt);
@@ -464,11 +464,12 @@ describe("the continuation grant's conveyed delegation (@spec cross-domain#conve
     expect(res.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_authorization_details");
     expect(body).not.toHaveProperty("access_token");
-    // No hop is recorded, and the gate counted one derivation it never released.
-    expect(sideEffects(missionId)).toEqual({ hops: before.hops, derivations: (before.derivations ?? 0) + 1 });
-    expect(reserved(missionId)).toBe(reservedBefore + 1);
-    // The assertion was not consumed: presented again without the request, it is issued.
-    const again = await granted(await continueAs(root, "svc-b", {}, assertion));
-    expect(again.details[0]).not.toHaveProperty("delegation");
+    // Refused before the gate: no hop, no counted derivation, no reservation left.
+    expect(sideEffects(missionId)).toEqual(before);
+    expect(reserved(missionId)).toBe(reservedBefore);
+    // The assertion was not consumed: presented again under a conforming request, it is issued.
+    const conforming = JSON.stringify([entry(INHERIT, [READ])]);
+    const again = await granted(await continueAs(root, "svc-b", { authorization_details: conforming }, assertion));
+    expect(again.details).toEqual([{ type: "mission_resource_access", resource: INHERIT, actions: [READ] }]);
   });
 });
