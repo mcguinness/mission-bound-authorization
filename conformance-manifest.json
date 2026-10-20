@@ -37517,7 +37517,7 @@
    "id": "progressive.audit.resource-declaration-digest",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record of a policy-adjudicated drawdown whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
+   "text": "The record of every successor whose adjudication, by policy or by a fresh human approval, evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37528,12 +37528,12 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a policy-adjudicated drawdown whose adjudication evaluated a resource's content-addressed self-declaration records that declaration's digest as resource_declaration_digest"
+    "normative": "a successor created by policy adjudication or by a fresh human approval, whose adjudication evaluated a resource's content-addressed self-declaration, records that declaration's digest as resource_declaration_digest; a refused request creates no successor and no such record"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated)."
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
