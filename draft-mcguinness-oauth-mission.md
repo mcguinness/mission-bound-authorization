@@ -1250,6 +1250,8 @@ submitted ({{authority-proposal}}), the AS derives the
 **Authority Set**: one or more {{RFC9396}} `authorization_details`
 entries of an AS-supported type ({{other-types}}).
 
+## Derivation Modes {#derivation-modes}
+
 Derivation is mechanical. It happens once, at the approval event, under
 the derivation policy then in force, as one procedure whose candidate
 entries depend on whether an authority proposal was submitted:
@@ -1320,6 +1322,8 @@ granted `authorization_details` in the token response
 granted; a client compares it against its proposal, which
 `proposal_hash` commits as submitted ({{integrity-anchors}}).
 
+## The Consented Authority Set {#consented-authority-set}
+
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
 commits it as `authority_hash` ({{approval-event}}). The Intent's
@@ -1354,6 +1358,8 @@ Authority is further bounded by:
 The approval surface renders the prose beside the derived Authority Set
 ({{approval-event}}) as the human check that the structure matches the
 words, not as a machine enforcement mechanism.
+
+## Derivation Policy and Open-Ended Tasks {#derivation-policy-tasks}
 
 Derivation is governed by local policy and is not a portable algorithm:
 different authorization servers can derive different Authority Sets from
@@ -2316,6 +2322,8 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
+## Token Claims {#token-claims}
+
 {{RFC9068}} fixes the JWT's required claims (including `jti`), the `typ`
 header parameter value `at+jwt`, and resource server validation
 ({{Section 2.1 of RFC9068}}, {{Section 2.2 of RFC9068}},
@@ -2361,6 +2369,8 @@ tokens signed under it remain valid.
 
 Every emitted `authorization_details` entry is a subset of a Mission
 Authority Set entry ({{subset}}).
+
+## Audience and Token Response {#token-response}
 
 The AS audience-restricts the token per {{Section 2 of RFC8707}} and
 {{Section 3 of RFC9068}}; `aud` names resource server(s), APIs, or
@@ -2451,6 +2461,8 @@ intact:
 }
 ~~~
 
+## Refresh Tokens {#refresh-tokens}
+
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
 binding: on refresh, the AS authenticates the client and verifies
@@ -2463,6 +2475,8 @@ be sender-constrained or use refresh token rotation
 The AS can rotate either client type's refresh token; rotation
 detects replay of a consumed refresh token
 ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic binding.
+
+## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
 A derived token's authority comes from the Mission, not from a fresh
 authentication. Authentication claims (`acr`, `amr`, `auth_time`) on
@@ -2693,6 +2707,8 @@ An opaque Mission-bound token is enforced from its active
 introspection response or issuer-local resolution instead, under the
 same rules ({{introspected-consumption}}).
 
+## Enforcement Requirements {#rs-requirements}
+
 A resource server:
 
 1. MUST treat `authorization_details` as the authoritative expression
@@ -2740,6 +2756,8 @@ A resource server can also:
 - where the AS offers it, introspect the token ({{introspection}}) to
   observe Mission state per request.
 
+## Mission-Unaware Resource Servers {#rs-mission-unaware}
+
 A deployment MUST NOT route a delegated Mission-bound token to a
 Mission-unaware resource server, or to logging or audit
 infrastructure, that authorizes or logs the caller on `client_id`
@@ -2765,6 +2783,8 @@ Constrained authority that no safe projection carries is enforced
 only where a resource server, or a runtime layer, evaluates
 `authorization_details`.
 
+## Carried Authority {#rs-carried-authority}
+
 An entry whose type-defined enforcement a resource server cannot
 complete fails closed because a type-defined constraint narrows
 authority: treating an unenforceable key or member as absent, or
@@ -2783,6 +2803,8 @@ the token signature. Mission Approved-Set Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
 defines an independent check for a resource server that needs more
 than that assertion.
+
+## Denial Responses {#rs-denials}
 
 A resource server denial falls into one of four cases, each using the
 OAuth challenge for its own failure class ({{error-mapping}} gives
@@ -2845,6 +2867,8 @@ A value the client does not recognize is treated as
 attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment accepts learning the distinction
 ({{denial-disclosure}}).
+
+## Enforcement Responsibilities {#rs-responsibilities}
 
 Every bound this document defines is enforced by a party this document
 names. The following table summarizes which party enforces each bound a
@@ -3623,7 +3647,9 @@ collision-resistant names. A companion profile that registers a
 termination reason defines that reason's `termination` members
 ({{termination}}).
 
-This document defines the following members:
+The following subsections define the record's members.
+
+## Identity and Lifecycle Members {#record-identity-members}
 
 `id`:
 : REQUIRED. A string. The canonical Mission Identifier
@@ -3646,6 +3672,8 @@ This document defines the following members:
 : CONDITIONAL. An object, present exactly when `state` is
   `terminated`: the reason and instant the Mission terminated
   ({{termination}}).
+
+## Approved Content and Commitments {#record-content-members}
 
 `intent`:
 : REQUIRED. An object. The approved Mission Intent.
@@ -3712,6 +3740,8 @@ This document defines the following members:
   profile whose threat model requires that proof commits normalized
   provenance under its own anchor `typ` ({{integrity-anchors}},
   {{extensibility}}).
+
+## Principals and Approval Basis {#record-principal-members}
 
 `subject`:
 : REQUIRED. An object. The Subject, an object with `iss` and `sub`.
@@ -3844,6 +3874,8 @@ This document defines the following members:
 `client_id`:
 : REQUIRED. A string. The Agent (OAuth client) that submitted the
   Mission Intent.
+
+## Provenance and Expiry {#record-provenance-members}
 
 `policy_version`:
 : REQUIRED. A string. An opaque audit correlator naming the
@@ -6793,6 +6825,11 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1401): Mission Authority, Mission-Bound Access Tokens,
+  Resource Server Enforcement, and the Mission Record have
+  subsections at their existing paragraph boundaries; no text moves.
+  No requirement changes.
 
 - Editorial (#1382): the OAuth Binding Mapping Assessment's
   capability table is a capability list, one entry per capability,
