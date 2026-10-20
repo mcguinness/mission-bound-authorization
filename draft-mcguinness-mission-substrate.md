@@ -1067,12 +1067,8 @@ Portable Evidence:
   Limitations: Governance record is Controller-local
 {: #illustrative-statement-capabilities newline="true"}
 
-A real Statement also states each supplied entry's temporal elements
-and failure behavior, in the entry or once for every entry.  For the
-skeleton, one sentence after the list would serve: "Each supplied entry's temporal elements are inherited from
-the reliance floor of {{bounded-reliance}}, and absent, stale,
-unknown, incomparable, invalid, or unavailable input refuses the
-decision."
+A real Statement also carries each supplied entry's temporal elements
+and failure behavior; the skeleton omits them for brevity.
 
 Text outside the Statement cannot silently broaden a capability claim.
 If another specification adds a capability, that specification MUST
@@ -1341,9 +1337,8 @@ reference to it; no change is ever made solely to move words.
 
 - The Mission Substrate Statement's capability table is a capability
   list with one entry per capability, which fits the text rendering.
-  Each entry states what a row stated, with the same obligations, and
-  the skeleton shows one sentence stating temporal elements and
-  failure behavior for every entry (#1382).
+  Each entry states what a row stated, with the same obligations
+  (#1382).
 
 - Family Use names the accountable human by the OAuth binding's
   record member `approval_basis.consent_principal`, following that
