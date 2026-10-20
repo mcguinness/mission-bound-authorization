@@ -341,6 +341,15 @@ export interface DecisionEvidenceEmitterConfig {
    * serve" ({{decision-evidence-integrity}}).
    */
   audience: string;
+  /**
+   * @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
+   * boundaries this emitter's key may sign for, read from the declared
+   * boundary context (the active version authorizes this emitter in the
+   * `pdp` role). Present, it replaces the single-`audience` comparison, so
+   * this producer switches with every other at a declared cutover and signs
+   * for no boundary the active version does not authorize it for.
+   */
+  authorizesAudience?: (audience: string) => boolean;
 }
 
 /**
@@ -367,7 +376,10 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
 
   return {
     emit: async (input: DecisionEvidenceEmissionInput): Promise<DecisionEvidenceObject> => {
-      if (input.audience !== config.audience) {
+      const authorized = config.authorizesAudience
+        ? config.authorizesAudience(input.audience)
+        : input.audience === config.audience;
+      if (!authorized) {
         throw new Error(
           `DecisionEvidenceEmitter: refusing to sign a record for audience "${input.audience}"; this emitter's key is published for "${config.audience}"`,
         );

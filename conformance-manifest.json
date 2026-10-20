@@ -221,6 +221,7 @@
    "runtime.mediated-execution",
    "runtime.agent-isolated-evidence-emission",
    "runtime.transaction-assurance-tier",
+   "runtime.reversible-write-single-use",
    "runtime.compromise-resistant",
    "runtime.trifecta-containment",
    "runtime.semantic-evaluator",
@@ -16473,9 +16474,28 @@
     "normative": "two PEPs at one enforcement boundary produce the same boundary identifier for a request whether the credential names the boundary directly or through an alias, in any audience order, and whatever entries it presents; the audience check validates against that boundary and never selects it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > two PEPs at one boundary produce byte-identical boundary values for direct, aliased, permuted and multi-recipient audiences",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > names each PEP location's own boundary, and none for an undeclared location or before any version is in force",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.pdp-accepts-from-authorized-pep",
@@ -16496,9 +16516,16 @@
     "normative": "a decision request naming a boundary the authenticated requesting PEP is not authorized for is refused before evaluation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > has the PDP accept a boundary identifier only from a PEP authorized for it under the version in force",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.same-identifier-everywhere",
@@ -16519,9 +16546,22 @@
     "normative": "for one request, the decision request's audience, the permit binding and cache key, the Decision Evidence, Execution Evidence and Refusal Record audience, and the boundary the evidence key is authorized for are the same byte string; a denial carries it without any permit"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > two PEPs at one boundary produce byte-identical boundary values for direct, aliased, permuted and multi-recipient audiences",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.unestablished-refused",
@@ -16542,9 +16582,22 @@
     "normative": "a request for which no enforcement boundary is established is refused, and no boundary identifier derived from the credential's audience, a default, or a guess reaches a decision request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses a request whose boundary cannot be established, supplying none from the credential or a default, and emits no record of any form",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > names each PEP location's own boundary, and none for an undeclared location or before any version is in force",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier.unestablished-no-evidence-record",
@@ -16565,9 +16618,16 @@
     "normative": "a refusal with no established boundary produces no Decision Evidence, Execution Evidence, or Refusal Record, and no record carries an invented audience"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The runtime core's evidence section and the runtime evidence companion's Refusal Record `audience` definition restate this rule; treated as duplicates of this row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses a request whose boundary cannot be established, supplying none from the credential or a default, and emits no record of any form",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The runtime core's evidence section and the runtime evidence companion's Refusal Record `audience` definition restate this rule; treated as duplicates of this row. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.versioned-statement",
@@ -16588,9 +16648,28 @@
     "normative": "a boundary identifier change is published as a new Enforcement Scope Statement version naming the old and new identifiers, the audience aliases per credential-profile scope, the evidence keys authorized for each identifier, and the effective cutover; no new record member, credential claim, or credential type carries it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > accepts the shipped statement and a declared change of identifier",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > refuses a change of a PEP location's boundary that names no replaces record, and a boundary that is not a mediated resource",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > refuses versions out of order, a replaces record naming a later version, and a PEP location under two boundaries",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). The reference keeps the statement versions as config/enforcement-scope.json `enforcement_boundaries`, a reference member, not a wire member. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.trusted-source",
@@ -16613,7 +16692,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). No witness: the reference reads its statement and resource identifier from local trusted configuration and performs no retrieval."
   },
   {
    "id": "runtime.boundary-identifier-change.retain-earlier-versions",
@@ -16634,9 +16713,34 @@
     "normative": "a superseded statement version and its key authorizations remain available to verifiers for the evidence retention window of the evidence produced under it"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the boundary declaration is refused at load unless it resolves (@spec runtime#boundary-identifier-change, #853) > accepts the shipped statement and a declared change of identifier",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/boundary-history-template.test.ts",
+     "name": "the payments resource override never rewrites retained boundary history (@spec runtime#boundary-identifier-change, #853) > loads a retained version verbatim when the override names the declared new boundary",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/boundary-history-template.test.ts",
+     "name": "the payments resource override never rewrites retained boundary history (@spec runtime#boundary-identifier-change, #853) > refuses an override that the retained declaration does not name as a current boundary",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: an earlier version stays loaded and verifies its records. Not witnessed: retention for the evidence retention window. Defect-checked in the #853 implementation (23 mutations). #853 review: the MCP_PAYMENTS_RESOURCE override loads a retained version byte for byte and refuses an override that would rewrite one."
   },
   {
    "id": "runtime.boundary-identifier-change.ordered-cutover",
@@ -16657,9 +16761,52 @@
     "normative": "consumers (PDPs, permit caches, evidence verifiers) accept the new version before any producer uses the new identifier; admission under the old identifier stops and each in-flight operation is drained, or refused or restarted under the new identifier; old permits and cache entries are invalidated; then every producer for the boundary switches together"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > switches at the declared cutover instant, for every reader of the same declaration",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover waits for every bound consumer, through the assembled PEP, PDP, evidence store, key set and settlement (@spec runtime#boundary-identifier-change, #853) > refuses the new boundary until the key set and the PDP's statement are provisioned, settles late evidence under the old one meanwhile, then serves both versions",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses a credential validated at the old boundary when the cutover falls after validation, through the mediated MCP path, and records the refusal at the new boundary",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > moves every assembled consumer to the new identifier together over the co-resident channel, keeps old records verifiable and keyed writes deduplicated",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > moves every assembled consumer to the new identifier together over the remote channel, keeps old records verifiable and keyed writes deduplicated",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > holds the cutover while the new boundary's key set lacks a key the new version authorizes",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: permits from before the cutover are suppressed (kill_switch) and every producer switches at the declared instant. Not witnessed: consumers accepting the new version before producers switch, and draining; the reference refuses in-flight operations. Defect-checked in the #853 implementation (23 mutations). #853 review (decisions 3, 7, 9): consumers bound to the boundary context (the published key set, the settlement verifier, the PDP claim domain's own statement) must be provisioned for a version before any producer uses its identifier; until then requests and credentials refuse with no record. In-flight operations are refused rather than drained (the step's refuse alternative): a credential validated under the old version, across the validation-to-decision interval included, and a permit decided before the cutover. Witnessed through the assembled payments server, PEP, PDP and claim domain, evidence store, key set and settlement, and through composeStack co-resident and over a remote hop. Not witnessed: draining, which the reference does not implement."
   },
   {
    "id": "runtime.boundary-identifier-change.old-permits-invalidated",
@@ -16680,9 +16827,40 @@
     "normative": "after the cutover a permit or cached permit bound to the old identifier, including a cacheable read and a later phase of a compound action, releases no effect"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a permit held for retransmission never takes a later statement version (@spec runtime#boundary-identifier-change, runtime#idempotency, #853) > the PDP answers a retry with the permit's key after the cutover duplicate_suppressed under the original claim, never with the earlier permit",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a permit held for retransmission never takes a later statement version (@spec runtime#boundary-identifier-change, runtime#idempotency, #853) > the PEP keeps a re-presented permit's own version: an earlier permit returned after the cutover is suppressed kill_switch at use, at its original boundary",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > never returns a permit held for retransmission after a same-identifier version change over the co-resident channel: the retry is suppressed with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > never returns a permit held for retransmission after a same-identifier version change over the remote channel: the retry is suppressed with no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed for a permit decided before the cutover. Not separately witnessed: a cached read permit and a later phase of a compound action. Defect-checked in the #853 implementation (23 mutations). #1327 re-review: the permit-cache entry the PDP holds for retransmission is never returned after a new statement version takes effect (the retry with its key is duplicate_suppressed and releases no effect, through the component fixture and composeStack co-resident and remote), and a permit re-presented after it keeps the version it was retained under and is suppressed kill_switch at use. Witnessed for a version that keeps the identifier, under the reference's policy of invalidating held permits at every version; an identifier change is a version change, so the same guards apply. Coverage stays partial: a cached read permit and a later phase of a compound action are not separately witnessed."
   },
   {
    "id": "runtime.boundary-identifier-change.producers-switch-together",
@@ -16703,9 +16881,22 @@
     "normative": "after the cutover every new decision request, permit, and record for the boundary carries the new identifier, and a permit comparison never matches the old identifier for a current request"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "the PEP establishes its boundary from configuration alone (@spec runtime#boundary-identifier, #853) > switches at the declared cutover instant, for every reader of the same declaration",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.late-evidence-historical",
@@ -16726,9 +16917,28 @@
     "normative": "a late record for an operation admitted before the cutover carries the old identifier and the original facts, verifies under the earlier statement version, and never authorizes an effect"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The Execution Evidence `audience` definition restates this rule; treated as a duplicate of this row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover waits for every bound consumer, through the assembled PEP, PDP, evidence store, key set and settlement (@spec runtime#boundary-identifier-change, #853) > refuses the new boundary until the key set and the PDP's statement are provisioned, settles late evidence under the old one meanwhile, then serves both versions",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The Execution Evidence `audience` definition restates this rule; treated as a duplicate of this row. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations). #853 review: late Execution Evidence for an operation admitted before the cutover keeps the old identifier, verifies under the old boundary's published key set and settles its claim, while the new boundary is held."
   },
   {
    "id": "runtime.boundary-identifier-change.correlation-rewrites-nothing",
@@ -16749,9 +16959,22 @@
     "normative": "cross-version correlation runs only on verified records, leaves every signed payload byte-identical, and never lets a key verify records for a boundary its version does not authorize it for"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > never lets a key authorized for the old boundary sign for the new one",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: records verify with unchanged bytes and a key never verifies for a boundary its version does not authorize. The reference performs no cross-version correlation of its own. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.alias-never-rewrites-entries",
@@ -16772,9 +16995,22 @@
     "normative": "an approved entry's resource and its commitments are byte-identical before and after the cutover, and an alias never makes an entry match a different operation target"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > never rewrites an approved entry through the alias: an entry naming the old identifier is refused after the change",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > keeps two operation targets under one boundary independently matched, and never lets an alias make an entry match",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.boundary-identifier-change.incompatible-entry-refused",
@@ -16795,9 +17031,16 @@
     "normative": "an action under an entry whose original operation-target authority the new identifier does not preserve is refused unless a new approval or derivation authorizes it; no existing approval or integrity preimage changes"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > never rewrites an approved entry through the alias: an entry naming the old identifier is refused after the change",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: an entry naming the old identifier is refused and no approval or preimage changes. Not witnessed: authorization through a new approval or derivation. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.classification.high-consequence-must-be-gated",
@@ -17692,7 +17935,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v8, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266) and refuses a lookup of a vendor the store does not hold before any decision (#1251, D484); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v9, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484) and declares its enforcement boundary identifier (#853, D487); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -17894,9 +18137,33 @@
      "name": "the Resource Server's DPoP proof verifier (@spec RFC 9449 Section 4.3, Section 11.1, #1173) > accepts an iat up to 60 s ahead and 240 s behind, and refuses one beyond either bound",
      "level": "unit",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses an absent, malformed, nonmatching, issuer-confused or profile-confused aud at token validation, before any PDP decision and with no record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses every token of an issuer and profile whose aliases map one value to two boundaries, the directly named one included",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses a credential validated at the old boundary when the cutover falls after validation, through the mediated MCP path, and records the refusal at the new boundary",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses the stale credential and its permit when a later version keeps the identifier but withdraws the alias it was validated through",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts)."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -17976,9 +18243,16 @@
     "normative": "the boundary identifier a PEP carries is the exact spelling of the guarded protected resource's RFC 9728 resource value, whether supplied by trusted static configuration or by metadata"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > ships a boundary identifier that is the protected resource's RFC 9728 resource string and a mediated scope entry",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed for trusted static configuration. The reference does no metadata retrieval. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.metadata-validated",
@@ -18001,7 +18275,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. Conditional on retrieving metadata; a PEP supplied by trusted static configuration fetches none."
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. Conditional on retrieving metadata; a PEP supplied by trusted static configuration fetches none. #853 implementation (D487). No witness: the reference reads its statement and resource identifier from local trusted configuration and performs no retrieval."
   },
   {
    "id": "runtime.oauth.boundary-audience.alias-from-trusted-config-only",
@@ -18022,9 +18296,22 @@
     "normative": "an aud value is accepted as an alias only through deployment configuration scoped to the validated issuer and token profile; a mapping asserted by the request or the token, or configured for another issuer, names no boundary"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses an absent, malformed, nonmatching, issuer-confused or profile-confused aud at token validation, before any PDP decision and with no record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > accepts an alias only from the issuer and token profile it is declared for",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487). Witnessed: an alias configured for another issuer or profile names no boundary. The reference has no surface through which a request or token could assert a mapping. Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.refusals",
@@ -18045,9 +18332,34 @@
     "normative": "a token with absent, malformed, or nonmatching aud, an aud that names the boundary only through another issuer's alias, or an issuer and token profile with an ambiguous alias is refused as a token-validation failure, with no PDP decision"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The direct nonmatching arm is already witnessed under runtime.token-validation.audience-and-pop (a token whose audience does not name this resource is refused); the alias, malformed, issuer-confusion, and ambiguity arms are not."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses an absent, malformed, nonmatching, issuer-confused or profile-confused aud at token validation, before any PDP decision and with no record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > refuses every token of an issuer and profile whose aliases map one value to two boundaries, the directly named one included",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > refuses an absent, malformed or nonmatching aud",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > refuses every token of an issuer and profile whose aliases map one value to two boundaries, and no other issuer's",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. The direct nonmatching arm is already witnessed under runtime.token-validation.audience-and-pop (a token whose audience does not name this resource is refused); the alias, malformed, issuer-confusion, and ambiguity arms are not. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.no-selection-from-aud",
@@ -18068,9 +18380,28 @@
     "normative": "for an aud array the PEP checks membership of the established boundary; permutations and duplicate aliases for the same boundary yield the same boundary identifier, permit binding, and evidence"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > two PEPs at one boundary produce byte-identical boundary values for direct, aliased, permuted and multi-recipient audiences",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > accepts a direct or aliased string, and every permutation, duplicate and extra recipient of an array, always binding the established boundary",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.other-recipients",
@@ -18091,9 +18422,16 @@
     "normative": "an otherwise valid token whose aud array also names other recipients is accepted at a boundary it names, and is refused at a boundary only another member names"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.stricter-profile-kept",
@@ -18114,9 +18452,16 @@
     "normative": "a token profile that requires a single audience still refuses a multi-audience token although the membership rule would accept it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > keeps the transaction token's stricter single-audience rule, and its aliases scoped to its own profile",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.carries-boundary-not-aud",
@@ -18137,9 +18482,16 @@
     "normative": "a token naming the boundary through a logical alias yields the same decision-request audience, permit binding, and evidence audience as one naming the resource identifier directly"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.boundary-audience.alias-across-change",
@@ -18160,9 +18512,28 @@
     "normative": "after a boundary identifier change, a token naming the old identifier is accepted only through an alias the new statement version declares, under its original validation and lifetime, and its entries are matched against their original resource values"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > never rewrites an approved entry through the alias: an entry naming the old identifier is refused after the change",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "aud is validated by membership against the established boundary (@spec runtime-oauth#boundary-audience, #853) > keeps a declared alias for the old identifier usable across a change",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "runtime.oauth.authority-operation-target-match",
@@ -19943,11 +20314,10 @@
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "runtime.reversible-write-single-use"
    },
-   "profiles": [
-    "runtime-enforced"
-   ],
+   "profiles": [],
    "surface": "resource-operation",
    "assertion": "replay",
    "observation": {
@@ -20537,9 +20907,27 @@
      "name": "the as-native target restarted on the same store files against a live OpenFGA (@spec runtime#idempotency, #253) > reopens the PEP's write reservations: a key scheduled before the restart is still recorded completed after it, and the restarted target schedules afresh (co-resident)",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of identifier keeps duplicate-effect protection (@spec runtime#idempotency, runtime#boundary-identifier-change, #853) > a retry of a keyed reversible write after the change retrieves its original disposition and never recreates a cancelled effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of identifier keeps duplicate-effect protection (@spec runtime#idempotency, runtime#boundary-identifier-change, #853) > a retry after the change of a write that still holds its effect returns the retained response, not schedule_exists",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of identifier keeps duplicate-effect protection (@spec runtime#idempotency, runtime#boundary-identifier-change, #853) > the reservation's own transaction reads a key held under a replaced identifier's scope as held, so a concurrent duplicate runs no effect",
+     "level": "unit",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed (#918): schedule_payment and cancel_scheduled_payment elect the idempotency-key control, and the enforcing PEP (mcp-payments-pep) reserves (idempotency scope, idempotency_key) in its own durable single-writer SQLite file (stores.pepWriteReservations.file), separate from the PDP claim domain and from transaction.ts. The schedule effect and its completed reservation and result commit in one local transaction, so eight concurrent attempts under one key that all found the pair free execute once and the other seven read the winner's record (concurrency). The record survives a close and reopen of the file, and is retained for the published P7D horizon: a retry after the 300 s permit expired resolves against it through its own fresh Decision, held to verifyPermitAtUse before release, without reaching admission, while the expired permit replayed into the effect step admits nothing; past the horizon the key is new. A changed operation conflicts, a fault inside the transaction leaves neither row, a fault after the commit resolves to the retained result, a reserved record is refused and never purged by time, and an unreachable store suppresses consumption_unavailable. This is a different store and mechanism from the high-consequence transaction-assurance tier; no transaction.ts test is cited. The reservation scope's actor is the shared stable identity (@mission/core idempotencyScopeActor, #1016 review): another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new, and an instance-profiled leaf with no client to key on yields no scope, so the write is refused after its permit with no effect and no reservation, recorded under the deployment-defined error https://payments.demo/execution-errors/actor_unkeyable (caller-visible actor_unkeyable). The PDP caps each keyed write's permit at the published permit_validity_max_seconds, which the loader holds shorter than the retention, so no permit outlives its record: with a 30 s maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes (#1028 review)."
+   "notes": "Witnessed (#918): schedule_payment and cancel_scheduled_payment elect the idempotency-key control, and the enforcing PEP (mcp-payments-pep) reserves (idempotency scope, idempotency_key) in its own durable single-writer SQLite file (stores.pepWriteReservations.file), separate from the PDP claim domain and from transaction.ts. The schedule effect and its completed reservation and result commit in one local transaction, so eight concurrent attempts under one key that all found the pair free execute once and the other seven read the winner's record (concurrency). The record survives a close and reopen of the file, and is retained for the published P7D horizon: a retry after the 300 s permit expired resolves against it through its own fresh Decision, held to verifyPermitAtUse before release, without reaching admission, while the expired permit replayed into the effect step admits nothing; past the horizon the key is new. A changed operation conflicts, a fault inside the transaction leaves neither row, a fault after the commit resolves to the retained result, a reserved record is refused and never purged by time, and an unreachable store suppresses consumption_unavailable. This is a different store and mechanism from the high-consequence transaction-assurance tier; no transaction.ts test is cited. The reservation scope's actor is the shared stable identity (@mission/core idempotencyScopeActor, #1016 review): another instance of the same client, carried as an instance-profiled leaf, retries into the same scope and executes nothing new, and an instance-profiled leaf with no client to key on yields no scope, so the write is refused after its permit with no effect and no reservation, recorded under the deployment-defined error https://payments.demo/execution-errors/actor_unkeyable (caller-visible actor_unkeyable). The PDP caps each keyed write's permit at the published permit_validity_max_seconds, which the loader holds shorter than the retention, so no permit outlives its record: with a 30 s maximum and a 60 s retention, the original permit replayed after the record expired is refused permit_expired and nothing executes (#1028 review). #853 review: the reserved-or-completed record is retained across a declared change of boundary identifier: retrieval and the reservation transaction read it under the scope of every identifier the boundary replaces."
   },
   {
    "id": "runtime.execution-reverification.mismatch-refusal",
@@ -21838,9 +22226,33 @@
      "name": "a decision bound to one resource is never honored at another (@spec runtime#security-considerations, Confused Deputy Across Resources) > an authority entry scoped to a different resource is never matched at this resource's boundary, and FGA is never consulted for it",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > a token naming several recipients is evaluated at each PEP's own boundary, never at whichever member comes first",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses a credential validated at the old boundary when the cutover falls after validation, through the mediated MCP path, and records the refusal at the new boundary",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses stale credential facts at intake and at the decision, and admits the retry validated afresh through the declared alias",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax."
+   "notes": "Resource/audience boundary (the two are structurally identical in this single-resource deployment, since context.audience is always CANONICAL_RESOURCE): an authority entry scoped to a different resource string is never matched here (out_of_authority, FGA never consulted). Operation boundary is covered elsewhere by the existing action-mismatch tests (e.g. enforcement.test.ts's insufficient_authorization case, where an entry present for one action never authorizes another). NOT tested: the tenant boundary -- mcp-payments models no tenant concept at all (single CANONICAL_RESOURCE, no tenant field on MissionView or AuthorityEntry), so there is nothing to relax or refuse to relax. #853 (D487): the audience boundary is now witnessed on its own: one multi-recipient token is decided at each PEP's own declared boundary, and a permit decided under one boundary identifier is refused at use after a declared change rather than crossing to the new one. The tenant boundary stays untested. #853 review: a credential validated at one boundary is never relabeled into another when a cutover falls between validation and decision."
   },
   {
    "id": "runtime.security.business-event-resource-deduplicates",
@@ -21899,7 +22311,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
-    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim or a PDP restart suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim, a PDP restart, or a statement version that took effect after the claim was made (the reference invalidates every permit at a new statement version, the identifier and cache key unchanged included) suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
    "coverage": "tested",
@@ -21963,8 +22375,21 @@
      "name": "the remote channel binds the claim requester (@spec runtime#idempotency, #917) > returns a prior permit only to the authenticated PEP epoch it was issued to",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it once a later statement version is in force, the boundary and cache key unchanged (@spec runtime#boundary-identifier-change)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > retransmission returns the prior decision only when every condition holds > does not return it when the cutover falls while the PEP is answering (@spec runtime#boundary-identifier-change)",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": " #1327 re-review: a claim records the statement version it was made under, and its stored permit is returned only while that version is in force, checked at the claim step and again after the PEP's consumption answer; a deliberate departure from the SHOULD across a version change, where the reference invalidates held permits."
   },
   {
    "id": "runtime.execution-reverification.stop-or-renew-before-lease-expires",
@@ -28597,9 +29022,33 @@
      "name": "configured evidence key-set scope resolution > never treats an absent or empty enforcement-point audience as a wildcard",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > never lets a key authorized for the old boundary sign for the new one",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > fails when the declared versions do not determine one key authorization, or one key, for the pair",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "each PEP establishes its boundary from configuration, and every consumer carries it byte for byte (@spec runtime#boundary-identifier, runtime-oauth#boundary-audience, #853) > carries the boundary, never the aud value or alias, in all three evidence forms, and signs each only under a key authorized for it",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/boundary-cutover-stack.test.ts",
+     "name": "a declared change of boundary identifier through the composed stack (@spec runtime#boundary-identifier-change, #853) > moves every assembled consumer to the new identifier together over the co-resident channel, keeps old records verifiable and keyed writes deduplicated",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations."
+   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations. #853 (D487): key authorization comes from the declared Enforcement Scope Statement versions (enforcement_boundaries): the verifier resolves a key only when the record's (audience, kid) pair determines one authorization naming its emitter and role and one published key, a key authorized for one boundary never verifies a record for another, and the PEP's evidence store refuses to sign for a boundary its key is not authorized for. Still partial: the keys remain per-boot, in-process key material. #853 review: each boundary publishes its keys at its own key-set location bound to it, so across a declared change a record verifies under its own boundary's set and never under the other's."
   },
   {
    "id": "evidence.integrity.historical-version",
@@ -28620,9 +29069,16 @@
     "normative": "a record from before a boundary identifier change verifies with its signed bytes unchanged under the statement version that authorizes its kid for its audience, and is rejected under a version that does not"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > verifies a record from before the change, bytes unchanged, under the version its audience and kid select, and never by its time",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "evidence.integrity.version-not-guessed",
@@ -28643,9 +29099,16 @@
     "normative": "when the declared versions admit the audience and kid pair under more than one boundary or key authorization, or under none, the record is not verified, whatever its evaluated_at or the verifier's clock"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-boundary.test.ts",
+     "name": "evidence keys are authorized per boundary and version (@spec runtime-evidence#decision-evidence-integrity, #853) > fails when the declared versions do not determine one key authorization, or one key, for the pair",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#853 (D487) specification slice. The reference implementation is built separately; no witness is cited yet. #853 implementation (D487).  Defect-checked in the #853 implementation (23 mutations)."
   },
   {
    "id": "evidence.integrity.compromise-boundary-gates-signature-step",

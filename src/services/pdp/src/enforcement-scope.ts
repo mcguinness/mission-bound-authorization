@@ -18,6 +18,7 @@
  */
 
 import { IDEMPOTENCY_SCOPE_DIMENSIONS, isScopeDimension, isVolatileScopeMember } from "@mission/core";
+import type { EnforcementBoundaries } from "./enforcement-boundary.js";
 
 /**
  * The per-entry perimeter disposition inside `mediated_scope`: whether an
@@ -232,6 +233,14 @@ export interface EnforcementScopeStatement extends EnforcementScopeBaseline {
    * have a matching, non-empty entry under `extensions`. */
   claims?: readonly EnforcementExtensionName[];
   extensions?: EnforcementExtensionDeclarations;
+  /**
+   * @spec runtime#runtime-conformance (#853, D487): the declared boundary
+   * identifier of each enforcement boundary, its trusted audience aliases,
+   * its evidence-key authorization and its versioned cutovers
+   * (`enforcement-boundary.ts`). A reference-statement representation, not
+   * a Runtime wire member.
+   */
+  enforcement_boundaries?: EnforcementBoundaries;
 }
 
 export interface EnforcementScopeFinding {
