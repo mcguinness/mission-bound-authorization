@@ -12,9 +12,12 @@
  * validator restores it after steps 1 and 2 and runs checkRar's own checks
  * there, so client authentication still precedes every Mission refusal.
  *
- * Only a request with one `mission_intent`, one `authorization_details` and
- * no `request` is changed. Any other request, including one that repeats
- * either parameter, passes through for the provider's own handling.
+ * Only a request with one non-empty `mission_intent`, one
+ * `authorization_details` and no `request` is changed. Any other request,
+ * including one that repeats either parameter, passes through for the
+ * provider's own handling. An empty `mission_intent` is absent to the provider
+ * (lib/helpers/params.js reads `params[prop] || undefined`), so its proposal
+ * stays with the provider's own RAR check.
  *
  * The same trades the device intake makes (device-authorization.ts): the
  * provider reads the already-read form from `ctx.request.body`
@@ -59,7 +62,8 @@ export async function pushedRequestIntake(ctx: KoaContextWithOIDC, next: () => P
   }
   const form = parseForm(raw);
   const proposal = form.authorization_details;
-  if (typeof form.mission_intent === "string" && typeof proposal === "string" && form.request === undefined) {
+  const missionIntent = form.mission_intent;
+  if (typeof missionIntent === "string" && missionIntent !== "" && typeof proposal === "string" && form.request === undefined) {
     delete form.authorization_details;
     intakes.set(ctx.req, { proposal });
   }

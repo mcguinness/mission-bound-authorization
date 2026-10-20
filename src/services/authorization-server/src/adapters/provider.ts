@@ -1802,15 +1802,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
           if (!intake) throw new errors.InvalidRequest("device authorization request not recognized");
           if (intake.proposal !== undefined) params.authorization_details = intake.proposal;
         }
-        if (value === undefined) return;
         // @spec mission#submission-processing (#1411): the PAR intake lifted
         // the proposal, so the envelope and the Intent (steps 1 and 2) are
         // validated before it (step 3), and evidence type dispatch waits for
-        // the evidence step (step 6).
+        // the evidence step (step 6). A lifted proposal is always restored and
+        // checked, even where the provider reads no `mission_intent`.
         const lifted =
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
             : undefined;
+        if (value === undefined) {
+          if (lifted) {
+            params.authorization_details = lifted.proposal;
+            checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
+          }
+          return;
+        }
         try {
           const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceDispatch: true });
           const { intent } = submission;

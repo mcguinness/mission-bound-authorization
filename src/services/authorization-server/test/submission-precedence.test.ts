@@ -184,6 +184,12 @@ describe("Submission Processing Order refusal precedence at PAR (@spec mission#s
     expect(res.status, JSON.stringify(res.body)).toBe(201);
   });
 
+  it("checks a proposal pushed with an empty mission_intent, which the provider reads as absent", async () => {
+    const res = await push(ISSUER, agentKey, { intent: INTENT }, MALFORMED_PROPOSAL, { mission_intent: "" });
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.error, JSON.stringify(res.body)).toBe("invalid_authorization_details");
+  });
+
   it("an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request", async () => {
     const invalidIntent = { intent: { ...INTENT, goal: 17 } };
     await expectRefusals(ISSUER, agentKey, [
