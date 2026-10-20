@@ -497,8 +497,9 @@ endpoint with the following parameters:
   ({{creation-idempotency}}): an ASCII string of at most 255 octets,
   opaque to the Mission Issuer beyond equality, that identifies this
   one Mission-creation operation across every completion mode. At
-  least 128 bits of client-generated randomness is RECOMMENDED; a UUID
-  {{RFC9562}} satisfies this. The Mission Issuer MUST refuse an
+  least 122 bits of client-generated randomness is RECOMMENDED; a
+  version 4 UUID {{RFC9562}} satisfies this. The identifier is a
+  deduplication handle, not a secret ({{duplicate-creation}}). The Mission Issuer MUST refuse an
   exchange missing it with `invalid_request`.
 
 A `mission_intent` on a token exchange marks it as a Mission-creation
