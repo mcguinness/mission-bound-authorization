@@ -45340,6 +45340,35 @@
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval). #1185 wire path (capability deferred-approval, default off): PAR completion_mode=deferred, the pending-request code, the mdfr_ poll that runs the policy completion, and cancellation by revocation."
   },
   {
+   "id": "approval-governance.recency.exception-never-lengthens",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "recency-evaluation",
+   "text": "For a class with a declared exception, the maximum that applies is the smaller of that class's recency ceiling and the exception's maximum age",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a class's exception declares a longer maximum age than the class's recency ceiling, a policy approval older than the ceiling is refused for a Mission carrying the class"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > never lets an exception lengthen its class's recency ceiling: the smaller of the two applies",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 7: the stricter value, which the reference already takes (the minimum of the default ceiling, the class ceiling and the exception). Mutation: ignoring the class ceiling when an exception applies."
+  },
+  {
    "id": "approval-governance.governed-policy.check-event-binding",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "governed-policy-activation",

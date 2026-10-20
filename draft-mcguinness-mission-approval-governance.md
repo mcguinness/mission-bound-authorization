@@ -772,7 +772,10 @@ across every class either source carries, the strictest maximum age that
 applies, accounting for any declared exception. This is a property of
 the whole committed Mission the record's `mission.authority_hash` and
 `mission.intent_hash` bind to ({{record-members}}), never of one
-assertion or entry in isolation.
+assertion or entry in isolation. For a class with a declared exception,
+the maximum that applies is the smaller of that class's recency ceiling
+and the exception's maximum age: an exception admits a `policy`
+accountable assertion for its class and never lengthens the ceiling.
 
 For each `policy` assertion the evaluation would count toward the
 applicable maximum, the issuer:
