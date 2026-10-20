@@ -1621,11 +1621,11 @@ binding).<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-3-2.2">
           <p id="section-3-2.2.1"><strong>Approve and record.</strong> The authorization server derives and
-discloses an Authority Set (read invoices, post adjustments under
-a cap), and the Approver approves. The approval event creates the
-Mission, <code>active</code> with an expiry, and commits <code>intent_hash</code>,
-<code>authority_hash</code>, and, where a proposal was submitted,
-<code>proposal_hash</code>; Consent Evidence commits what was shown
+discloses an Authority Set (read invoices, post adjustments of at
+most USD 500 per journal entry), and the Approver approves. The
+approval event creates the Mission, <code>active</code> with an expiry, and
+commits <code>intent_hash</code>, <code>authority_hash</code>, and, where a proposal was
+submitted, <code>proposal_hash</code>; Consent Evidence commits what was shown
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-3-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-3-2.3">
@@ -1641,7 +1641,7 @@ concrete parameters and to current Mission state
 <span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-3-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-3-2.5">
-          <p id="section-3-2.5.1"><strong>Delegate.</strong> A sub-agent that verifies ledger entries receives a
+          <p id="section-3-2.5.1"><strong>Delegate.</strong> A read-only invoice extraction sub-agent receives a
 child Mission with strictly narrower authority and lineage
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-3-2.5.1" class="pilcrow">¶</a></p>
 </li>
@@ -1976,8 +1976,9 @@ the evidence surface crossing all of them:<a href="#section-4.3-5" class="pilcro
 <p id="section-4.4-1">A Mission commits its authority and intent once, at approval, but an
 agent's work is open-ended: the actions a task will take are not known
 when it is approved. "Reconcile Q3 invoices" must authorize reading
-any invoice and posting any adjustment under the cap, because the
-specific ones cannot be enumerated in advance.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+any invoice issued in the quarter and posting any adjustment within
+the per-entry cap, because the specific ones cannot be enumerated in
+advance.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
 <p id="section-4.4-2">So the Authority Set an Approver consents to is a <strong>capability
 envelope, not a task specification</strong>, and the gap between that
 envelope and what a given run actually does is where agent risk

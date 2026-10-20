@@ -2943,8 +2943,12 @@ appendix across a trust boundary: from the home domain
 internal microservice call chain. It is illustrative and adds no
 normative requirements. The final intra-domain hop shows one
 deployment-local way to carry Mission context in a Transaction Token
-<span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span>. Identifiers and hash
-values are illustrative and are not computed from the displayed JSON.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-ietf-oauth-transaction-tokens" class="cite xref">I-D.draft-ietf-oauth-transaction-tokens</a>]</span>. Identifiers are
+illustrative. The Mission's <code>intent_hash</code> and <code>authority_hash</code> are
+its integrity anchors (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
+Section "Integrity Anchors") over the issuance profile example's
+Intent and Authority Set, each with the partner values the scenario
+names appended.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-2">The chain crosses boundaries in two distinct ways, and seeing why is
 the point of the example:<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
@@ -2970,21 +2974,22 @@ point-of-use check, and Stage 3 gains prompt cross-domain revocation
 from Status or Signals.<a href="#appendix-A-4" class="pilcrow">¶</a></p>
 <p id="appendix-A-5">Scenario: agent <code>s6BhdRkqt3</code>, acting for <code>alice</code>
 (<code>user_3p2q8mN1a0kV7tR</code>), reconciles Q3 invoices in a partner ERP
-under Mission <code>msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-</code>. Stage 0 (agent
+under Mission <code>msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY</code>. Stage 0 (agent
 identity) and Stage 1 (Mission creation at the home AS) are the base
 profile's single-domain walkthrough, extended here in one way: the
 Mission Intent's <code>target_resources</code> also names the partner ERP
 <code>https://erp.partner.example.com</code>, so the approved Authority Set
 additionally carries, for that resource, an <code>invoices.read</code> entry
-(delegable to <code>ai_agent</code> actors at depth 1) and a
-<code>journal-entries.write</code> entry capped at a <code>max_amount</code> of 500.00
-USD. The
+(for invoices issued in 2026-Q3, delegable to <code>ai_agent</code> actors at
+depth 1) and a <code>journal-entries.write</code> entry capped at a
+<code>max_amount</code> of 500.00 USD. The
 Mission was recorded <code>active</code> with <code>authority_hash</code>
-        <code>sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg</code> and
+        <code>sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM</code> and
 <code>intent_hash</code>
-        <code>sha-256:SSDZGp4CRwv7ZL4_ttfKb-qTWn-aHy8Ffc8a_dE4Nkk</code> (illustrative;
-this Mission's Intent and Authority Set extend the single-domain
-walkthrough's, so its anchors differ from that example's). The partner ERP
+        <code>sha-256:PKG6dLDsex-HyP9hs4NJpxqAocHYUmpDmoMH4UaoW-o</code> (this Mission
+is not the single-domain walkthrough's: its Intent and Authority Set
+extend that example's, so its identifier and anchors differ). The
+partner ERP
 is behind the Resource AS <code>ras.partner.example.com</code>, so the agent's
 next step is a cross-domain projection rather than a home-domain
 access token.<a href="#appendix-A-5" class="pilcrow">¶</a></p>
@@ -3011,14 +3016,18 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
   "aud": "https://ras.partner.example.com",
   "sub": "user_3p2q8mN1a0kV7tR",
   "client_id": "partner-agent-042",
-  "iat": 1793606400,
-  "exp": 1793606700,
+  "iat": 1793606410,
+  "exp": 1793606710,
   "jti": "idjag_4Kp9sT2vN7xR1mZ8bQ",
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "authorization_details": [
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 1,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -3030,10 +3039,10 @@ audience-scoped authority for the ERP:<a href="#appendix-A.1-1" class="pilcrow">
         { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 </pre><a href="#appendix-A.1-2" class="pilcrow">¶</a>
@@ -3082,6 +3091,10 @@ token's <code>client_id</code> names that registration:<a href="#appendix-A.2-1"
     { "type": "mission_resource_access",
       "resource": "https://erp.partner.example.com",
       "actions": ["invoices.read"],
+      "constraints": {
+        "resource_issued_after": "2026-07-01T00:00:00Z",
+        "resource_issued_before": "2026-09-30T23:59:59Z"
+      },
       "delegation": {
         "max_depth": 1,
         "allowed_delegates": [{ "sub_profile": "ai_agent" }]
@@ -3093,17 +3106,17 @@ token's <code>client_id</code> names that registration:<a href="#appendix-A.2-1"
         { "amount": "500.00", "currency": "USD" } } }
   ],
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 </pre><a href="#appendix-A.2-2" class="pilcrow">¶</a>
 </div>
 <p id="appendix-A.2-3">The issuing <code>iss</code> is now the Resource AS, but <code>mission.issuer</code> remains
 the home AS. The token's <code>exp</code> (1793606690) is below the ID-JAG's
-(1793606700) and far below the Mission's <code>expires_at</code>. The Resource
+(1793606710) and far below the Mission's <code>expires_at</code>. The Resource
 AS-local <code>sub</code> is illustrative; its value is determined by the
 subject-resolution rules of the ID-JAG and identity chaining profiles,
 not by this document. <code>client_id</code> (<code>partner-agent-042</code>) is the
@@ -3139,8 +3152,8 @@ grant.<a href="#appendix-A.2-5" class="pilcrow">¶</a></p>
 with that token. The resource server validates the JWT and the <code>cnf</code>
 binding and enforces the <code>authorization_details</code> whose <code>resource</code>
 matches the operation target, <code>https://erp.partner.example.com</code>,
-permitting <code>invoices.read</code> and <code>journal-entries.write</code> up to a
-<code>max_amount</code> of 500.00 USD
+permitting <code>invoices.read</code> within the Q3 issuance window and
+<code>journal-entries.write</code> up to a <code>max_amount</code> of 500.00 USD
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Resource Server Enforcement"). It treats the
 <code>mission</code> claim as an audit anchor; holding only this audience's
@@ -3186,10 +3199,10 @@ operation:<a href="#appendix-A.4-2" class="pilcrow">¶</a></p>
     "constraints": { "invoice_id": "inv_2026Q3_1042" }
   },
   "mission": {
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+    "id": "msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:PmpS31yOFeuiMw1EtUwUx8W832zvUeVNP7GJ_MyYsEg"
+      "sha-256:fDkcX0Bc8GNrBpE-PU3ICbZlkNzSTEvie6phyNUrocM"
   }
 }
 </pre><a href="#appendix-A.4-3" class="pilcrow">¶</a>
@@ -3234,7 +3247,7 @@ no call to <code>mission.issuer</code>.<a href="#appendix-A.5-1" class="pilcrow"
               <td class="text-left" rowspan="1" colspan="1">ID-JAG (between domains)</td>
               <td class="text-left" rowspan="1" colspan="1">unchanged</td>
               <td class="text-left" rowspan="1" colspan="1">ERP: read + write</td>
-              <td class="text-left" rowspan="1" colspan="1">1793606700</td>
+              <td class="text-left" rowspan="1" colspan="1">1793606710</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Resource AS token</td>

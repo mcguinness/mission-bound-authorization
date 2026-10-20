@@ -408,11 +408,12 @@ Table of Contents
    trust rules, from which the PDP establishes the Mission's lifecycle
    state and the freshness of that observation.  Examples include a
    query to the Mission issuer, a local Mission database, an
-   authenticated status or event feed, or a short-lived derived
-   credential whose lifetime is the deployment's accepted state lease.
-   A materialized policy view (Section 7.1) is not a state source: it
-   commits the compiled authority, never the mutable lifecycle state a
-   decision consults.
+   authenticated status or event feed (such as the lifecycle events of
+   [I-D.draft-mcguinness-oauth-mission-signals]), or a short-lived
+   derived credential whose lifetime is the deployment's accepted state
+   lease.  A materialized policy view (Section 7.1) is not a state
+   source: it commits the compiled authority, never the mutable
+   lifecycle state a decision consults.
 
    The substrate this profile enforces against provides at least a
    lifecycle-gated capability (Mission state at the issuer, with
@@ -2598,10 +2599,10 @@ Table of Contents
 
    *  for each Common Constraint or other registered constraint the
       operation's authority entries can carry
-      ([I-D.draft-mcguinness-oauth-mission]): the authoritative
-      operation input or derived attribute that satisfies it, and the
-      extraction and normalization rule mapping that input into the
-      constraint's own value domain.  The constraint's defining
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]): the
+      authoritative operation input or derived attribute that satisfies
+      it, and the extraction and normalization rule mapping that input
+      into the constraint's own value domain.  The constraint's defining
       specification owns its syntax, subset, intersection, comparison,
       and point-of-use satisfaction semantics; an Operation Profile MUST
       NOT override them, and unit or currency conversion is never part
@@ -4392,6 +4393,12 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-
               discharge.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-resource-access]
+              McGuinness, K., "Mission Resource Access Profile for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-resource-
+              access.html>.
+
    [I-D.draft-mcguinness-oauth-mission-signals]
               McGuinness, K., "Mission Lifecycle Signals for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -4495,7 +4502,7 @@ Appendix B.  Policy View Worked Example
      "value": {
        "mission_id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
        "policy_version": "deploy-policy:v17",
        "compiler": {
          "profile": "https://as.example.com/policy-compiler",
@@ -4516,13 +4523,13 @@ Appendix B.  Policy View Worked Example
 
    {"iss":"https://as.example.com","typ":"mission-policy-view","value":
    {"artifact":{"digest":"sha-256:9ZqK3mP7xR2vN4tY6bD1eF8jC5wH0pV2nR3kQ
-   4mZ7tX","encoding":"application/vnd.example.policy-engine+bin"},"aut
-   hority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ","
+   4mZ7tU","encoding":"application/vnd.example.policy-engine+bin"},"aut
+   hority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","
    compiler":{"profile":"https://as.example.com/policy-compiler","versi
    on":"1.4.0"},"mission_id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-","po
    licy_version":"deploy-policy:v17"}}
 
-   policy_view_id = sha-256:kFxuopgt9C4G7S4BhP7ayGhP49wG55HBnq0BzH09UZ8
+   policy_view_id = sha-256:RBI8j_YN5EWm4XNr7IMhvAeMxOuOkc-_mVMp1mBExP0
 
    Because the identifier is a content hash, any change to the manifest
    yields a different policy_view_id (Section 7.1).

@@ -1491,7 +1491,8 @@ described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</s
 appear in all capitals, as shown here.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">This document uses JSON <span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> for the disclosure and evidence
 objects. JCS <span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span> is used when computing
-<code>consent_rendering_hash</code>.<a href="#section-3-2" class="pilcrow">¶</a></p>
+<code>consent_rendering_hash</code>. An example line too long for the page is
+folded with the single backslash strategy of <span>[<a href="#RFC8792" class="cite xref">RFC8792</a>]</span>.<a href="#section-3-2" class="pilcrow">¶</a></p>
 <p id="section-3-3">The terms Mission, Mission Intent, Authority Set, Mission Issuer,
 Approver, and approval event are used as defined in
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-3-3" class="pilcrow">¶</a></p>
@@ -2480,44 +2481,52 @@ in <a href="#integrity" class="auto internal xref">Section 7.1</a>.<a href="#sec
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-7-3">Example, over the worked disclosure of <a href="#disclosure-vector" class="auto internal xref">Appendix B</a>:<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-3">Example, over the worked disclosure of <a href="#disclosure-vector" class="auto internal xref">Appendix B</a>. The
+Mission's record carries the same <code>consent_rendering_hash</code>, which this
+profile adds to the record the issuance profile's Worked Example
+shows:<a href="#section-7-3" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-7-4">
 <pre>
 {
   "evidence_id": "cns_7rP2kL9mQ4",
   "mission": {
-    "id": "msn_4Xp8kQ2rW9vT6nL1yB5sD3zC7mF0jH",
+    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
     "intent_hash":
-      "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "authority_hash":
-      "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro",
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "proposal_hash":
+      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
     "consent_rendering_hash":
-      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
+      "sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24"
   },
   "approver": {
     "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR"
   },
+  "client": {
+    "client_id": "s6BhdRkqt3"
+  },
   "authentication_context": {
     "acr": "urn:example:acr:phishing-resistant",
     "amr": ["pwd", "hwk"],
-    "auth_time": "2026-06-30T17:54:00Z"
+    "auth_time": "2026-11-02T07:59:00Z"
   },
-  "approved_at": "2026-06-30T17:55:00Z",
+  "approved_at": "2026-11-02T08:00:00Z",
   "decision": "approved",
   "acknowledgments": [
     { "condition": "irreversible_action",
       "applies_to": { "resource": "https://erp.example.com",
         "action": "journal-entries.write" },
-      "acknowledged_at": "2026-06-30T17:54:50Z" }
+      "acknowledged_at": "2026-11-02T07:59:50Z" }
   ],
   "approval_policy_version": "approval-policy:v12",
   "sequence": 88127,
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY"
+      "sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -3359,8 +3368,12 @@ registration.<a href="#section-13.2-3" class="pilcrow">¶</a></p>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8725">[RFC8725]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc8725</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8792">[RFC8792]</dt>
+      <dd>
+<span class="refAuthor">Watsen, K.</span>, <span class="refAuthor">Auerswald, E.</span>, <span class="refAuthor">Farrel, A.</span>, and <span class="refAuthor">Q. Wu</span>, <span class="refTitle">"Handling Long Lines in Content of Internet-Drafts and RFCs"</span>, <span class="seriesInfo">RFC 8792</span>, <span class="seriesInfo">DOI 10.17487/RFC8792</span>, <time datetime="2020-06" class="refDate">June 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8792" class="reader-edition-ext-link" target="_blank" rel="noopener">https://www.rfc-editor.org/rfc/rfc8792</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -3462,24 +3475,29 @@ the ones the record satisfies and is never an integrity failure.<a href="#append
 <code>consent_rendering_hash</code> computation (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>) byte
 for byte. The disclosure is the one the evidence example of
 <a href="#consent-evidence" class="auto internal xref">Section 7</a> records. It renders the Authority Set of the
-issuance profile's test vectors
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>invoices.read</code> and
-<code>journal-entries.write</code> bounded by a <code>max_amount</code> of 500.00 USD on
+issuance profile's Worked Example Mission
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>): <code>invoices.read</code> on invoices
+issued in 2026-Q3, delegable to AI agents, and
+<code>journal-entries.write</code> bounded by a <code>max_amount</code> of 500.00 USD, on
 <code>https://erp.example.com</code>, approved by <code>alice</code>
-(<code>user_3p2q8mN1a0kV7tR</code>); <code>source_hashes</code> carries that profile's
-computed <code>intent_hash</code> and <code>authority_hash</code>. This Mission submitted
-no authority proposal, so <code>source_hashes</code> carries no <code>proposal_hash</code>. The <code>rendering_template_digest</code> value
-stands for the deployment's template commitment and is illustrative.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+(<code>user_3p2q8mN1a0kV7tR</code>); <code>source_hashes</code> carries that Mission's
+<code>intent_hash</code>, <code>authority_hash</code>, and <code>proposal_hash</code>. The
+<code>rendering_template_digest</code> value stands for the deployment's
+template commitment and is illustrative.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <p id="appendix-B-2">The Consent Disclosure object:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
 <div class="breakable lang-json sourcecode" id="appendix-B-3">
 <pre>
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "disclosure_id": "disc_4pQ9z",
   "source_hashes": {
     "intent_hash":
-      "sha-256:6mIFoCz79uCHNzKLfBpBwqFjoFXdpmpuc65486IqimQ",
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
     "authority_hash":
-      "sha-256:vUCCfjGulit9u0qJ0Z6pQSNerZtXMqRlfJNCr4PzLro"
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
+    "proposal_hash":
+      "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"
   },
   "template_id": "mission-consent-standard",
   "template_version": "2026-06",
@@ -3487,19 +3505,49 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
     "sha-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok",
   "locale": "en-US",
   "mission_summary": {
-    "goal": "Reconcile Q3 invoices",
+    "goal": "Reconcile Q3 invoices and post adjustments of at most \
+      USD 500 per journal entry.",
     "expires_at": "2026-12-31T23:59:59Z",
     "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
-    "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
+    "approver_display": "alice (user_3p2q8mN1a0kV7tR)",
+    "authority_source_display":
+      "Delegated by alice from her own authority."
   },
   "authority_summary": [
     {
       "resource": "https://erp.example.com",
-      "actions": ["invoices.read"]
+      "actions": ["invoices.read"],
+      "rendered": "The agent can read invoices in the ERP.",
+      "constraints": [
+        {
+          "constraint": "resource_issued_after",
+          "value": "2026-07-01T00:00:00Z",
+          "rendered":
+          "Only invoices issued at or after 2026-07-01T00:00:00Z."
+        },
+        {
+          "constraint": "resource_issued_before",
+          "value": "2026-09-30T23:59:59Z",
+          "rendered":
+          "Only invoices issued at or before 2026-09-30T23:59:59Z."
+        }
+      ],
+      "delegation": {
+        "max_depth": 2,
+        "allowed_delegates": [{ "sub_profile": "ai_agent" }],
+        "rendered":
+          "AI agents can receive it, at most two delegations deep."
+      },
+      "narrowed_from": {
+        "actions": ["invoices.*"],
+        "rendered":
+          "Asked for all invoice actions; only reading is granted."
+      }
     },
     {
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
+      "rendered": "The agent can post journal entries in the ERP.",
       "constraints": [
         {
           "constraint": "max_amount",
@@ -3519,6 +3567,15 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
       },
       "statement":
         "Posted journal entries are not automatically reversible."
+    },
+    {
+      "condition": "delegation",
+      "applies_to": {
+        "resource": "https://erp.example.com",
+        "action": "invoices.read"
+      },
+      "statement":
+        "The agent can pass its invoice read access to AI agents."
     }
   ],
   "risk_summary": [
@@ -3536,6 +3593,11 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
       "dimension": "irreversibility",
       "statement":
         "Posted journal entries alter the ledger of record."
+    },
+    {
+      "dimension": "delegation",
+      "statement":
+        "AI agents acting for the agent can read the same invoices."
     }
   ],
   "constraint_provenance": [
@@ -3547,6 +3609,16 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
       "source": "subject"
     }
   ],
+  "delegation_summary": {
+    "applies_to": {
+      "resource": "https://erp.example.com",
+      "action": "invoices.read"
+    },
+    "delegates": "AI agents",
+    "max_depth": 2,
+    "further_delegation": true,
+    "child_missions": false
+  },
   "approver": {
     "iss": "https://idp.example.com",
     "sub": "user_3p2q8mN1a0kV7tR",
@@ -3558,7 +3630,7 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
   },
   "display_context": {
     "channel": "web",
-    "rendered_at": "2026-06-30T17:54:30Z"
+    "rendered_at": "2026-11-02T07:59:30Z"
   },
   "approver_actions": [
     {
@@ -3573,7 +3645,21 @@ stands for the deployment's template commitment and is illustrative.<a href="#ap
 }
 </pre><a href="#appendix-B-3" class="pilcrow">¶</a>
 </div>
-<p id="appendix-B-4">The read entry carries no constraints, so its element renders none.
+<p id="appendix-B-4">The read element renders the entry's two Q3 issuance bounds with
+their registered semantics and its delegation right; because the
+entry is delegable, the disclosure also carries <code>delegation_summary</code>,
+a delegation notice, and a <code>delegation</code> risk dimension. The client
+proposed <code>invoices.*</code>, which the authorization server narrowed to
+<code>invoices.read</code>, so the read element's <code>narrowed_from</code> renders that
+narrowing; the write entry is derived as proposed and carries none.
+Each element states its action in <code>rendered</code>, and <code>mission_summary</code>
+identifies the user-delegated authority source in
+<code>authority_source_display</code>, as the issuance profile's rendering
+requires (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). This example
+chooses the <code>narrowed_from</code>, element-level <code>rendered</code>, and
+<code>authority_source_display</code> members to show those facts inside the
+committed disclosure; this document defines no interoperable members
+by those names.
 The write entry warrants a material notice and an <code>irreversibility</code>
 risk dimension because posted journal entries are not automatically
 reversible; <code>constraint_provenance</code> attributes the <code>max_amount</code>
@@ -3591,44 +3677,64 @@ here wrapped only for layout; remove the layout line breaks, adding no
 characters, to recover the canonical form. Note that JCS sorts object
 member names and preserves array order.<a href="#appendix-B-5" class="pilcrow">¶</a></p>
 <p id="appendix-B-6">Canonical bytes of the envelope:<a href="#appendix-B-6" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="appendix-B-7">
+<div class="breakable lang-text sourcecode" id="appendix-B-7">
 <pre>
 {"iss":"https://as.example.com","typ":"mission-consent-disclosure","
 value":{"approver":{"display":"alice","iss":"https://idp.example.com
 ","sub":"user_3p2q8mN1a0kV7tR"},"approver_actions":[{"action":"ackno
 wledge_notice","applies_to":{"action":"journal-entries.write","resou
 rce":"https://erp.example.com"},"condition":"irreversible_action"}],
-"authority_summary":[{"actions":["invoices.read"],"resource":"https:
-//erp.example.com"},{"actions":["journal-entries.write"],"constraint
-s":[{"constraint":"max_amount","rendered":"Each journal entry is cap
-ped at 500.00 US dollars (USD).","value":{"amount":"500.00","currenc
-y":"USD"}}],"resource":"https://erp.example.com"}],"constraint_prove
-nance":[{"applies_to":{"constraint":"max_amount","resource":"https:/
-/erp.example.com"},"source":"subject"}],"disclosure_id":"disc_4pQ9z"
-,"display_context":{"channel":"web","rendered_at":"2026-06-30T17:54:
-30Z"},"locale":"en-US","material_notices":[{"applies_to":{"action":"
-journal-entries.write","resource":"https://erp.example.com"},"condit
-ion":"irreversible_action","statement":"Posted journal entries are n
-ot automatically reversible."}],"mission_summary":{"approver_display
-":"alice (user_3p2q8mN1a0kV7tR)","expires_at":"2026-12-31T23:59:59Z"
-,"goal":"Reconcile Q3 invoices","subject_display":"alice (user_3p2q8
-mN1a0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNGlzi_v
-zZJNJbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s6BhdR
-kqt3","display":"Invoice Reconciler Agent"},"risk_summary":[{"dimens
-ion":"data_access","statement":"The agent can read invoices held in
- the ERP system."},{"dimension":"spend","statement":"The agent can p
-ost journal entries of up to 500 US dollars."},{"dimension":"irrever
-sibility","statement":"Posted journal entries alter the ledger of re
-cord."}],"source_hashes":{"authority_hash":"sha-256:vUCCfjGulit9u0qJ
-0Z6pQSNerZtXMqRlfJNCr4PzLro","intent_hash":"sha-256:6mIFoCz79uCHNzKL
-fBpBwqFjoFXdpmpuc65486IqimQ"},"template_id":"mission-consent-standar
-d","template_version":"2026-06"}}
+"authority_summary":[{"actions":["invoices.read"],"constraints":[{"c
+onstraint":"resource_issued_after","rendered":"Only invoices issued
+ at or after 2026-07-01T00:00:00Z.","value":"2026-07-01T00:00:00Z"},
+{"constraint":"resource_issued_before","rendered":"Only invoices iss
+ued at or before 2026-09-30T23:59:59Z.","value":"2026-09-30T23:59:59
+Z"}],"delegation":{"allowed_delegates":[{"sub_profile":"ai_agent"}],
+"max_depth":2,"rendered":"AI agents can receive it, at most two dele
+gations deep."},"narrowed_from":{"actions":["invoices.*"],"rendered"
+:"Asked for all invoice actions; only reading is granted."},"rendere
+d":"The agent can read invoices in the ERP.","resource":"https://erp
+.example.com"},{"actions":["journal-entries.write"],"constraints":[{
+"constraint":"max_amount","rendered":"Each journal entry is capped a
+t 500.00 US dollars (USD).","value":{"amount":"500.00","currency":"U
+SD"}}],"rendered":"The agent can post journal entries in the ERP.","
+resource":"https://erp.example.com"}],"constraint_provenance":[{"app
+lies_to":{"constraint":"max_amount","resource":"https://erp.example.
+com"},"source":"subject"}],"delegation_summary":{"applies_to":{"acti
+on":"invoices.read","resource":"https://erp.example.com"},"child_mis
+sions":false,"delegates":"AI agents","further_delegation":true,"max_
+depth":2},"disclosure_id":"disc_4pQ9z","display_context":{"channel":
+"web","rendered_at":"2026-11-02T07:59:30Z"},"locale":"en-US","materi
+al_notices":[{"applies_to":{"action":"journal-entries.write","resour
+ce":"https://erp.example.com"},"condition":"irreversible_action","st
+atement":"Posted journal entries are not automatically reversible."}
+,{"applies_to":{"action":"invoices.read","resource":"https://erp.exa
+mple.com"},"condition":"delegation","statement":"The agent can pass
+ its invoice read access to AI agents."}],"mission_summary":{"approv
+er_display":"alice (user_3p2q8mN1a0kV7tR)","authority_source_display
+":"Delegated by alice from her own authority.","expires_at":"2026-12
+-31T23:59:59Z","goal":"Reconcile Q3 invoices and post adjustments of
+ at most USD 500 per journal entry.","subject_display":"alice (user_
+3p2q8mN1a0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNG
+lzi_vzZJNJbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s
+6BhdRkqt3","display":"Invoice Reconciler Agent"},"risk_summary":[{"d
+imension":"data_access","statement":"The agent can read invoices hel
+d in the ERP system."},{"dimension":"spend","statement":"The agent c
+an post journal entries of up to 500 US dollars."},{"dimension":"irr
+eversibility","statement":"Posted journal entries alter the ledger o
+f record."},{"dimension":"delegation","statement":"AI agents acting
+ for the agent can read the same invoices."}],"source_hashes":{"auth
+ority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","i
+ntent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0","p
+roposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"}
+,"template_id":"mission-consent-standard","template_version":"2026-0
+6"}}
 </pre><a href="#appendix-B-7" class="pilcrow">¶</a>
 </div>
 <div class="lang-text sourcecode" id="appendix-B-8">
 <pre>
 consent_rendering_hash =
-  sha-256:y-XRrRqSKkeR6mjgXKqcM2DW8FMOwrjOqzZwjb1rNqY
+  sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24
 </pre><a href="#appendix-B-8" class="pilcrow">¶</a>
 </div>
 <p id="appendix-B-9">An implementation that canonicalizes the same envelope, computes
@@ -3645,24 +3751,29 @@ encoding difference to resolve before interoperating.<a href="#appendix-B-9" cla
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">The Consent Evidence <code>approver</code> correlates with the Mission record's
-<code>approval_basis.consent_principal</code> (#705).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.1.1">Editorial (#1176): examples of the canonical Mission follow one
+dated history; an example line too long for the page is folded per
+RFC 8792. No requirement changes.<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Binding to Mission Approval and the conformance floor apply at each
-human approval: a Mission instance activated by policy under a
-standing consent has no disclosure of its own (#1078).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.2.1">The Consent Evidence <code>approver</code> correlates with the Mission record's
+<code>approval_basis.consent_principal</code> (#705).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">Defined and registered the <code>mission_shaping_evidence_hash</code> request
-parameter, which carries a client-supplied <code>shaping_evidence_hash</code>
-in the pushed authorization request into the Consent Disclosure
-object, as a commitment that is never provenance or authority.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.3.1">Binding to Mission Approval and the conformance floor apply at each
+human approval: a Mission instance activated by policy under a
+standing consent has no disclosure of its own (#1078).<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.4">
-          <p id="appendix-C-2.4.1">Removed the uncited Mission Deferred Approval reference; the
+          <p id="appendix-C-2.4.1">Defined and registered the <code>mission_shaping_evidence_hash</code> request
+parameter, which carries a client-supplied <code>shaping_evidence_hash</code>
+in the pushed authorization request into the Consent Disclosure
+object, as a commitment that is never provenance or authority.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.5">
+          <p id="appendix-C-2.5.1">Removed the uncited Mission Deferred Approval reference; the
 Approval Governance Record is the cited home of approval-governance
-facts.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+facts.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

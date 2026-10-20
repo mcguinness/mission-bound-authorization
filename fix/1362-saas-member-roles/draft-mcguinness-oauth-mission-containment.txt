@@ -835,27 +835,27 @@ Table of Contents
    {
      "evidence_id": "cnt_4Tq9mV2xLp",
      "mission": {
-       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "id": "msn_boI-VDB1ZAjwTOvq9ZFAo-vsEGk6a_FU",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
      },
      "event": {
        "type": "session-taint",
        "source": "https://harness.example.com",
-       "observed_at": "2026-11-02T09:41:00Z",
+       "observed_at": "2026-11-02T08:41:00Z",
        "event_id": "evt_7pQ4mK1c"
      },
-     "policy": "contain-egress-on-taint-v3",
-     "prior_version": 4,
-     "new_version": 5,
+     "policy": "contain-writes-on-taint-v3",
+     "prior_version": 3,
+     "new_version": 4,
      "prior_containment_version": 0,
      "new_containment_version": 1,
      "removed": [
-       { "resource": "https://mail.example.com",
-         "actions": ["messages.send"] }
+       { "resource": "https://erp.example.com",
+         "actions": ["journal-entries.write"] }
      ],
-     "created_at": "2026-11-02T09:41:02Z"
+     "created_at": "2026-11-02T08:41:02Z"
    }
 
 17.2.  Canonical Bytes
@@ -911,21 +911,21 @@ Table of Contents
    {
      "receipt_id": "per_9wLq3XtN7m",
      "mission": {
-       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+       "id": "msn_boI-VDB1ZAjwTOvq9ZFAo-vsEGk6a_FU",
        "issuer": "https://as.example.com",
        "authority_hash":
-         "sha-256:tY2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQrR4"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
      },
      "event": {
        "type": "session-taint",
        "source": "https://harness.example.com",
-       "observed_at": "2026-11-02T09:40:55Z",
+       "observed_at": "2026-11-02T08:40:55Z",
        "event_id": "evt_2mK7pQ4c1x"
      },
      "outcome": "rejected",
      "rejection_reason": "source_not_trusted_for_type",
      "emitter": { "id": "as.example.com", "role": "issuer" },
-     "created_at": "2026-11-02T09:40:56Z"
+     "created_at": "2026-11-02T08:40:56Z"
    }
 
    A Protected Event Receipt's canonical bytes are its JCS [RFC8785]

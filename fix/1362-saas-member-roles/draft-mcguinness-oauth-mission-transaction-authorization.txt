@@ -115,9 +115,9 @@ Table of Contents
 
    The Mission family already supplies the policy model: the Common
    Constraint requires_action_approval
-   ([I-D.draft-mcguinness-oauth-mission]) designates an action as
-   requiring a fresh approval and is monotonic under the subset rule,
-   and Mission Runtime's action-bound approval
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]) designates an
+   action as requiring a fresh approval and is monotonic under the
+   subset rule, and Mission Runtime's action-bound approval
    ([I-D.draft-mcguinness-mission-runtime]) defines concrete-parameter
    binding, a maximum age, a fresh decision, and atomic consumption.
    What neither defines is the portable wire workflow that carries an
@@ -247,9 +247,9 @@ Table of Contents
 
    A delegated child MUST preserve requires_action_approval: true under
    the Common Constraints subset rule of
-   [I-D.draft-mcguinness-oauth-mission]. false remains equivalent to
-   omitting the member and cannot override a true ancestor.  This
-   profile defines no second approval constraint:
+   [I-D.draft-mcguinness-oauth-mission-resource-access]. false remains
+   equivalent to omitting the member and cannot override a true
+   ancestor.  This profile defines no second approval constraint:
    requires_action_approval stays the only Authority Set designation
    this profile reads.
 

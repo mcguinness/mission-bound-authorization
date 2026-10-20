@@ -95,6 +95,7 @@ Table of Contents
    4.  Conformance
    5.  Security Considerations
      5.1.  Resource Boundary Canonicalization
+     5.2.  Action Family Growth
    6.  Privacy Considerations
    7.  IANA Considerations
      7.1.  The Mission Resource Access Authorization Details Type
@@ -238,6 +239,12 @@ Table of Contents
       *  An authorization server SHOULD treat deriving a family as high-
          risk breadth.
 
+      *  A resource that documents an action family SHOULD treat the
+         family's membership as part of its authorization contract, and
+         SHOULD place an action that confers materially different
+         authority under a new family or namespace version rather than
+         under an existing family (Section 5.2).
+
    constraints:  OPTIONAL.  An object.  Machine-actionable per-resource
       bounds (for example, max_amount).  A member name defined as a
       Common Constraint (Section 3.4) has shared semantics across
@@ -331,6 +338,53 @@ Table of Contents
    an entry carrying locations with the invalid_authorization_details
    error code.
 
+   The authorization server also refuses an entry with the
+   invalid_authorization_details error code when:
+
+   *  its resource is not an absolute-URI (Section 4.3 of [RFC3986]), so
+      no entry's resource carries a fragment component;
+
+   *  its resource is an http or https URI without the // authority form
+      naming a non-empty host;
+
+   *  its actions array is empty, or one of its values is neither an
+      action identifier nor an action family (Section 3);
+
+   *  its delegation.max_depth is not a non-negative integer, so a
+      negative or fractional value is refused;
+
+   *  an allowed_delegates matcher carries neither sub nor sub_profile,
+      or carries any other member (Section 3.7.1);
+
+   *  its time_window Common Constraint has a not_before later than its
+      not_after, a window that admits no instant; or
+
+   *  its recipient_domain Common Constraint is not a DNS name in ASCII
+      form, with each internationalized label in its A-label form, or
+      ends in a dot.
+
+   Letter case does not make a recipient_domain invalid; values compare
+   case-insensitively (Section 3.4.2).
+
+   The following values are valid and carry a defined meaning:
+
+   *  A max_depth of 0 admits the entry into no delegated token, since a
+      delegated token's delegation depth is 1 or more (Section 3.7): the
+      entry supplies no in-Mission delegated authority.  Any other
+      delegation member stays intact; a member a companion profile
+      defines there, such as a child-creation grant, keeps the bound
+      that profile gives it.
+
+   *  An empty allowed_delegates array permits no delegate.  It differs
+      from an absent member, which defers eligibility to the
+      authorization server's delegation-authorization policy
+      (Section 3.7).
+
+   *  An action value that a consumer does not recognize for the entry's
+      resource grants nothing.  It does not make the entry
+      unenforceable: the entry's other actions remain enforceable
+      (Section 3.5).
+
 3.1.1.  Decimal Values
 
    A decimal-string value in a Common Constraint (max_amount's amount
@@ -390,6 +444,27 @@ Table of Contents
 
    *  MUST execute the operation on the target it matched: matching a
       different target never authorizes the execution.
+
+   *Operation contract.* An operation contract is the resource server's
+   documented, trusted statement of how it authorizes an operation.  For
+   each operation it covers, it establishes:
+
+   *  the rule that derives the operation target from the operation's
+      validated inputs;
+
+   *  the resource_match values the resource server supports for that
+      target;
+
+   *  the action identifier the operation exercises (Section 3); and
+
+   *  for each constraints key the operation supports, the authoritative
+      input that key's predicate reads (Section 3.4).
+
+   A resource URL or a protected resource metadata identifier alone is
+   not an operation contract.  A deployment that adopts Mission-Bound
+   Runtime Enforcement [I-D.draft-mcguinness-mission-runtime] records an
+   operation's action identifier and constraint inputs in that
+   document's Operation Profile.
 
    An operation contract preserves every resource distinction the
    deployment's authorization constrains; it cannot collapse /orders/123
@@ -696,6 +771,12 @@ Table of Contents
    *  *Intersection rule*: how two values for the same key combine; the
       result MUST be no broader than either operand.
 
+   *  *Input*: what the constraint reads at the point of use, which an
+      operation contract identifies for each operation (Section 3.2).
+
+   *  *Predicate*: the condition the input meets when the operation is
+      within the bound.
+
    Section 3.3 applies a constraint's subset rule.  Its intersection
    rule applies where a derivation combines two bounds for the same key,
    as in the proposal and policy-ceiling example of the Derivation
@@ -703,6 +784,16 @@ Table of Contents
    document does not require a derivation to run a particular
    intersection algorithm, and a ceiling whose specification defines a
    refusal rule is enforced by that rule, not silently intersected.
+
+   At the point of use (Section 3.5), the resource server applies the
+   predicate of each Common Constraint an applicable entry carries to
+   that constraint's input.  Any fact a predicate needs that is missing
+   or malformed makes the entry provide no authority.  An operation
+   contract may leave a constraint unsupported for that operation.  The
+   resource server MUST treat an applicable entry whose constraint it
+   cannot evaluate or satisfy as providing no authority.  It MUST refuse
+   the request unless another applicable entry independently authorizes
+   the whole request with every constraint satisfied.
 
    A constraints member whose name is a specification-defined Common
    Constraint is interpreted per its definition.  Any other member name
@@ -761,6 +852,12 @@ Table of Contents
          with the smaller amount; differing currencies have no
          intersection and the combination fails.
 
+      *  Input: the action's amount and its currency, as the operation
+         contract identifies them.
+
+      *  Predicate: the input currency equals currency, and the input
+         amount is less than or equal to amount in decimal value space.
+
    resource_issued_after:  The action applies only to resources issued
       at or after this instant.
 
@@ -769,6 +866,11 @@ Table of Contents
       *  Subset: no broader when greater than or equal to the reference.
 
       *  Intersection: the later instant.
+
+      *  Input: the recorded issuance instant of the resource the
+         operation acts on.
+
+      *  Predicate: the input is at or after the value.
 
    resource_issued_before:  The action applies only to resources issued
       at or before this instant.  The resource_ qualifier in both names
@@ -781,6 +883,11 @@ Table of Contents
 
       *  Intersection: the earlier instant.
 
+      *  Input: the recorded issuance instant of the resource the
+         operation acts on.
+
+      *  Predicate: the input is at or before the value.
+
    tenant:  The action applies only to resources of the named tenant.
 
       *  Value: a string.
@@ -789,6 +896,11 @@ Table of Contents
 
       *  Intersection: the common value when the two are equal;
          otherwise there is no intersection and the combination fails.
+
+      *  Input: the authoritative tenant of the resource the operation
+         acts on.
+
+      *  Predicate: the input equals the value.
 
    recipient_domain:  The action applies only to recipients within the
       named domain.  An action addressed to several recipients is within
@@ -802,6 +914,12 @@ Table of Contents
       *  Intersection: the narrower value when one is equal to or a
          subdomain of the other; otherwise there is no intersection and
          the combination fails.
+
+      *  Input: every final recipient of the action, after routing and
+         list expansion.
+
+      *  Predicate: the domain of every input recipient is equal to the
+         value or a subdomain of it.
 
    time_window:  The action may be exercised only within the window,
       evaluated at the point of use.  This differs from
@@ -823,6 +941,11 @@ Table of Contents
          not_after); an empty overlap has no intersection and the
          combination fails.
 
+      *  Input: the enforcement point's own clock at the time of use.
+
+      *  Predicate: the input is at or after not_before and at or before
+         not_after, for each member present.
+
    data_classification:  The action applies only to data whose
       classification label is among the named values.  Label semantics
       are deployment- or registry-defined; the comparison is not.
@@ -834,6 +957,12 @@ Table of Contents
 
       *  Intersection: the common members; an empty result has no
          intersection and the combination fails.
+
+      *  Input: the authoritative classification labels of all data the
+         operation reads or writes.
+
+      *  Predicate: every input label is among the values, compared as
+         exact strings.
 
    allowed_tools:  The action may be exercised only through a capability
       whose identifier is among the named values: a tool or function
@@ -848,6 +977,15 @@ Table of Contents
       *  Intersection: the common members; an empty result has no
          intersection and the combination fails.
 
+      *  Input: the identity of the capability the enforcement point
+         dispatches or verifies for the action.  Mission Capability
+         Binding [I-D.draft-mcguinness-mission-capability-binding]
+         defines one way to verify that identity against the
+         capability's approved source.
+
+      *  Predicate: the input is among the values, compared as exact
+         strings.
+
    requires_action_approval:  When true, each exercise of the action
       requires a fresh, action-bound approval at the point of use; the
       resource server, or a component that enforces on its behalf, MUST
@@ -860,6 +998,32 @@ Table of Contents
          reference (narrowing may add the requirement, never remove it).
 
       *  Intersection: the logical OR of the two values.
+
+      *  Input: none when the value is false; when it is true, the
+         action-bound approval presented for the action.
+
+      *  Predicate: when the value is true, an action-bound approval is
+         present and is:
+
+         -  verified by a trusted enforcement point;
+
+         -  fresh within a maximum age the deployment states;
+
+         -  bound to the action, the resource, and the action's
+            parameters;
+
+         -  never resolvable through approval authority the agent
+            supplies; and
+
+         -  consumed as a decision input, not as a bearer grant.
+
+      Mission-Bound Runtime Enforcement
+      [I-D.draft-mcguinness-mission-runtime] and the Mission Transaction
+      Authorization Profile
+      [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
+      define ways to obtain and verify such an approval, and the AuthZEN
+      profile [I-D.draft-mcguinness-mission-authzen] carries one as
+      decision input.
 
 3.4.2.  Value-Space Comparison
 
@@ -881,10 +1045,13 @@ Table of Contents
       insensitively and on whole labels, so mail.example.com is within
       example.com and example.net is not.
 
-   A Common Constraint definition MUST fix its subset and intersection
-   in value-space terms, so that independent deployments compute the
-   same result for the same values and the subset rule of Section 3.3 is
-   reproducible.
+   A predicate compares its input with the constraint value under the
+   same rules.
+
+   A Common Constraint definition MUST fix its subset rule, intersection
+   rule, and predicate in value-space terms, so that independent
+   deployments compute the same result for the same values and inputs,
+   and the subset rule of Section 3.3 is reproducible.
 
 3.5.  Resource Server Enforcement
 
@@ -924,7 +1091,8 @@ Table of Contents
    the request only through another applicable entry that it can fully
    enforce and that covers the whole request on its own: the entry's
    resource matches the target, the action is among its actions, and
-   every key in its constraints is satisfied.  The resource server:
+   every key in its constraints is satisfied (Section 3.4).  The
+   resource server:
 
    *  MUST NOT combine parts of several entries to authorize one
       request, or borrow authority from an entry it cannot fully
@@ -1117,6 +1285,16 @@ Table of Contents
        entry, as an unenforced key fails closed at a resource server
        that consumes authorization_details directly.
 
+   Advertising a key in mission_constraints_supported (Section 3.6) is
+   not evidence that a projection preserves the bound: condition 3 needs
+   a control that holds on every operation the projected scope value
+   permits, at a value at least as tight as the entry's.  For example,
+   where a target enforces a fixed 500.00 USD ceiling on every operation
+   payments.small permits, an entry whose max_amount is 500.00 USD
+   projects safely to payments.small.  An entry whose max_amount is
+   200.00 USD does not, because the scope value does not convey the
+   entry's value.
+
    An entry failing any condition MUST NOT be projected to scope.  Per
    [I-D.draft-mcguinness-oauth-mission]'s issuance algorithm, the
    authorization server then omits scope for that entry where the
@@ -1215,7 +1393,10 @@ Table of Contents
    [
      { "type": "mission_resource_access",
        "resource": "https://finance.example.com/mcp",
-       "actions": ["query_invoices", "post_adjustment"],
+       "actions": ["query_invoices"] },
+     { "type": "mission_resource_access",
+       "resource": "https://finance.example.com/mcp",
+       "actions": ["post_adjustment"],
        "constraints": {
          "max_amount": { "amount": "500.00", "currency": "USD" }
        } },
@@ -1224,6 +1405,10 @@ Table of Contents
        "actions": ["send_message"],
        "constraints": { "recipient_domain": "example.com" } }
    ]
+
+   An entry's constraints bind every action it lists, so the read tool
+   has an entry of its own, outside the max_amount bound that applies to
+   the adjustment tool.
 
    Delegation to a sub-agent uses the same delegation member
    (Section 3.7).  The following example shows an Authority Set entry,
@@ -1367,6 +1552,22 @@ Table of Contents
    defines one rule (Section 3.2), so no profile identifier is required
    for interoperation.
 
+5.2.  Action Family Growth
+
+   An action family (Section 3) authorizes every action under its name,
+   including an action the resource adds after approval.  A durable
+   approval naming invoices.* therefore authorizes an invoices action
+   the resource defines later, which can confer more authority than any
+   action the Approver saw.
+
+   The family guidance in Section 3 narrows this risk but does not
+   remove it.  It is a recommendation to the resource and does not
+   freeze an existing family's membership, and this document defines no
+   rule that binds an entry to the action semantics its resource
+   documented at approval.  An Approver or authorization server that
+   needs a fixed set of actions approves or derives literal actions
+   rather than a family.
+
 6.  Privacy Considerations
 
    This document defines no data element beyond what
@@ -1411,11 +1612,16 @@ Table of Contents
       registered;
 
    *  gives a JSON value syntax ([RFC8259]) precise enough for
-      independent implementations to agree on; and
+      independent implementations to agree on;
 
    *  states a subset rule and an intersection rule, both in value-space
       terms (Section 3.4.2), with the intersection of any two valid
-      values never broader than either operand.
+      values never broader than either operand; and
+
+   *  states the input the constraint reads at the point of use and the
+      predicate that input meets, in value-space terms, precisely enough
+      for independent resource servers to agree on which operations are
+      within the bound.
 
    A specification-defined name is coordinated through this registry.
    Any other constraints member name is either collision-resistant or
@@ -1434,6 +1640,11 @@ Table of Contents
    *  *Intersection Rule*: how two values for the key combine into a
       result no broader than either operand.
 
+   *  *Input*: what the constraint reads at the point of use.
+
+   *  *Predicate*: the condition the input meets when an operation is
+      within the bound.
+
    *  *Change Controller*: IETF, or the registrant for any other
       registration.
 
@@ -1442,7 +1653,8 @@ Table of Contents
    The initial contents of the registry are the Common Constraints of
    Section 3.4.1.  For every entry, the Change Controller is IETF and
    the Reference is Section 3.4.1 of this document, which holds the full
-   Subset Rule and Intersection Rule text; the table summarizes them.
+   Subset Rule, Intersection Rule, Input, and Predicate text; the tables
+   summarize them.
 
    +==========================+============+===========+==============+
    | Key Name                 | Value      | Subset    | Intersection |
@@ -1495,6 +1707,50 @@ Table of Contents
    +--------------------------+------------+-----------+--------------+
 
            Table 5: Initial Mission Common Constraints registry
+
+   +==========================+=====================+==================+
+   | Key Name                 | Input               | Predicate        |
+   +==========================+=====================+==================+
+   | max_amount               | The action's amount | Same currency;   |
+   |                          | and currency        | input amount     |
+   |                          |                     | <= bound         |
+   +--------------------------+---------------------+------------------+
+   | resource_issued_after    | The resource's      | Input >= value   |
+   |                          | recorded issuance   |                  |
+   |                          | instant             |                  |
+   +--------------------------+---------------------+------------------+
+   | resource_issued_before   | The resource's      | Input <= value   |
+   |                          | recorded issuance   |                  |
+   |                          | instant             |                  |
+   +--------------------------+---------------------+------------------+
+   | tenant                   | The resource's      | Equal            |
+   |                          | authoritative       |                  |
+   |                          | tenant              |                  |
+   +--------------------------+---------------------+------------------+
+   | recipient_domain         | Every final         | Every domain     |
+   |                          | recipient           | equal or a       |
+   |                          |                     | subdomain        |
+   +--------------------------+---------------------+------------------+
+   | time_window              | The enforcement     | Within the       |
+   |                          | point's clock at    | window,          |
+   |                          | use                 | inclusive        |
+   +--------------------------+---------------------+------------------+
+   | data_classification      | The labels of all   | Every label      |
+   |                          | data read or        | among the        |
+   |                          | written             | values           |
+   +--------------------------+---------------------+------------------+
+   | allowed_tools            | The dispatched or   | Among the        |
+   |                          | verified capability | values           |
+   |                          | identity            |                  |
+   +--------------------------+---------------------+------------------+
+   | requires_action_approval | When true, the      | When true, a     |
+   |                          | action-bound        | verified,        |
+   |                          | approval            | fresh, bound     |
+   |                          |                     | approval         |
+   +--------------------------+---------------------+------------------+
+
+      Table 6: Initial Mission Common Constraints registry: inputs and
+                                 predicates
 
 8.  References
 
@@ -1563,16 +1819,38 @@ Table of Contents
 
 8.2.  Informative References
 
+   [I-D.draft-mcguinness-mission-authzen]
+              McGuinness, K., "Mission-Bound Runtime Enforcement:
+              AuthZEN Profile", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              authzen.html>.
+
+   [I-D.draft-mcguinness-mission-capability-binding]
+              McGuinness, K., "Mission Capability Binding", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-capability-binding.html>.
+
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
+
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission-cross-domain]
               McGuinness, K., "Mission Cross-Domain Projection for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
               authorization/draft-mcguinness-oauth-mission-cross-
               domain.html>.
+
+   [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
+              McGuinness, K., "Mission Transaction Authorization Profile
+              for OAuth 2.0", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-oauth-
+              mission-transaction-authorization.html>.
 
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic

@@ -321,13 +321,13 @@ Table of Contents
       members above, in the form Section 9 defines.
 
    {
-     "approval_event_id": "ape_8K2nP4qV9rL3tY6sB1z",
+     "approval_event_id": "ape_hON9D0svLKQAMyy-uug",
      "mission": {
        "issuer": "https://as.example.com",
        "intent_hash":
-         "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+         "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
        "authority_hash":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
      },
      "approval_policy": {
        "id": "dlg-matrix",
@@ -337,16 +337,18 @@ Table of Contents
      },
      "assertions": [
        { "assertion_id": "ast_1",
-         "principal": { "iss": "https://login.example.com",
-           "sub": "manager@example.com" },
+         "principal": { "iss": "https://idp.example.com",
+           "sub": "user_3p2q8mN1a0kV7tR" },
          "kind": "human", "decision": "approve",
-         "decided_at": "2026-09-30T16:58:11Z",
-         "authority": { "role": "finance-manager" } },
+         "decided_at": "2026-11-02T08:00:00Z",
+         "authority": { "acr": "urn:example:acr:phishing-resistant",
+           "amr": ["pwd", "hwk"],
+           "auth_time": "2026-11-02T07:59:00Z" } },
        { "assertion_id": "ast_2",
          "principal": { "iss": "https://as.example.com",
            "sub": "policy:finance-charter" },
          "kind": "policy", "decision": "approve",
-         "decided_at": "2026-09-30T16:58:12Z",
+         "decided_at": "2026-11-02T08:00:00Z",
          "authority": { "policy_id": "dlg-matrix", "version": "v7",
            "approved_by": { "iss": "https://login.example.com",
              "sub": "cfo@example.com" },
@@ -354,7 +356,7 @@ Table of Contents
      ],
      "evaluation": {
        "decision": "approved",
-       "evaluated_at": "2026-09-30T16:58:13Z",
+       "evaluated_at": "2026-11-02T08:00:00Z",
        "contributing": ["ast_1", "ast_2"]
      },
      "envelope": {
@@ -363,14 +365,17 @@ Table of Contents
      }
    }
 
-   The Mission record's accountable approval_basis.consent_principal in
-   this example is manager@example.com; ast_1 is that principal's own
-   approve assertion, satisfying the accountable-approver rule of
-   Section 5 directly. ast_2 is a policy assertion carrying its own
-   provenance chain, recorded alongside rather than in place of the
-   accountable approver's assertion.  The envelope member's value is the
-   JWS whose payload is the JCS canonical bytes of this object with
-   envelope itself removed (Section 9).
+   The example's Mission, msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj, is not
+   the issuance profile's canonical Worked Example Mission, though it
+   shares that Mission's Intent and Authority Set and so its anchors.
+   Its record's accountable approval_basis.consent_principal is Alice
+   (user_3p2q8mN1a0kV7tR at https://idp.example.com); ast_1 is that
+   principal's own approve assertion, satisfying the accountable-
+   approver rule of Section 5 directly. ast_2 is a policy assertion
+   carrying its own provenance chain, recorded alongside rather than in
+   place of the accountable approver's assertion.  The envelope member's
+   value is the JWS whose payload is the JCS canonical bytes of this
+   object with envelope itself removed (Section 9).
 
 5.  Assertion Requirements
 
@@ -1017,15 +1022,15 @@ Table of Contents
      "issuer": "https://as.example.com",
      "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
      "intent_hash":
-       "sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqYY",
+       "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
      "authority_hash":
-       "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+       "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
      "subject": { "iss": "https://idp.example.com",
        "sub": "user_3p2q8mN1a0kV7tR" },
      "approver": { "iss": "https://idp.example.com",
        "sub": "user_3p2q8mN1a0kV7tR" },
      "client_id": "s6BhdRkqt3",
-     "created_at": "2026-10-15T14:32:11Z",
+     "created_at": "2026-11-02T08:00:00Z",
      "expires_at": "2026-12-31T23:59:59Z",
      "approval_basis": {
        "type": "direct",
@@ -1036,7 +1041,7 @@ Table of Contents
          "sub": "user_3p2q8mN1a0kV7tR" },
        "adjudication": { "kind": "human" },
        "root_commitment":
-         "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ"
+         "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
      },
      "authority_source": { "type": "user_delegated" },
      "policy_version": "deploy-policy:v17",
@@ -1054,45 +1059,45 @@ Table of Contents
    2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
    om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
    onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-   mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-   cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+   mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+   I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
    rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-   7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-   lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+   NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+   lient_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires_
    at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
-   -","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
-   Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+   -","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r
+   0","issuer":"https://as.example.com","policy_version":"deploy-policy
    :v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8mN
    1a0kV7tR"}}}
 
-   approval_context_commitment = sha-256:iRCrkxJWsQL1ZlXYQg1FUy2OIBKFpF
-   n99tYA-2qlC48
+   approval_context_commitment = sha-256:dPaMl8eUhPExoiVA2zHbz4wPzmDLVs
+   fZnHDxCYHDGos
 
    *Vector 2: conditional proposal_hash.* This is the canonical Mission
    unchanged: the always-present members above plus "proposal_hash":
-   "sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNvSqMrYo".
+   "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo".
 
    {"iss":"https://as.example.com","typ":"mission-approval-context-v1",
    "value":{"approval_basis":{"activation":{"approval_event_id":"ape_8K
    2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
    om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
    onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-   mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-   cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+   mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+   I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
    rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-   7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-   lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+   NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+   lient_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires_
    at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
-   -","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
-   Y","issuer":"https://as.example.com","policy_version":"deploy-policy
-   :v17","proposal_hash":"sha-256:kT2mR7vX4qL9nY5pB1sD8fJ6wZ3hC0aGeUoNv
-   SqMrYo","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8
+   -","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r
+   0","issuer":"https://as.example.com","policy_version":"deploy-policy
+   :v17","proposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyM
+   wroKGo","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8
    mN1a0kV7tR"}}}
 
-   approval_context_commitment = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGy
-   mVfrnMaIc8So0
+   approval_context_commitment = sha-256:pGxfIDuyBPfgpyox3J6GP477CQfUE6
+   FS9CfHirjwwvU
 
    *Vector 3: conditional ceiling_hash.* Diverges from the canonical
    Mission by adding a Progressive ceiling and carrying no proposal_hash
@@ -1100,24 +1105,43 @@ Table of Contents
    the Progressive profile's own construction
    ([I-D.draft-mcguinness-oauth-mission-progressive]): typ mission-
    authority-ceiling, value a two-member object of authority_ceiling and
-   drawdown_policy.
+   drawdown_policy.  The ceiling covers the Authority Set, its read
+   entry's delegation grant included, with the write actions in a
+   separate entry that grants no delegation, and drawdown_policy is an
+   activation policy reference whose digest stands for a policy snapshot
+   this example does not display.
 
    {
      "authority_ceiling": [
        { "type": "mission_resource_access",
          "resource": "https://erp.example.com",
-         "actions": ["invoices.read", "invoices.write"] }
+         "actions": ["invoices.read"],
+         "delegation": {
+           "max_depth": 2,
+           "allowed_delegates": [{ "sub_profile": "ai_agent" }]
+         } },
+       { "type": "mission_resource_access",
+         "resource": "https://erp.example.com",
+         "actions": ["invoices.write", "journal-entries.write"] }
      ],
-     "drawdown_policy": "https://as.example.com/policies/erp-drawdown-v1"
+     "drawdown_policy": {
+       "id": "erp-drawdown",
+       "version": "1",
+       "digest":
+         "sha-256:_hLEAl_ir1vxnex2tgbS6eRR99lyL1r6yyeB4RrC184"
+     }
    }
 
    {"iss":"https://as.example.com","typ":"mission-authority-ceiling","v
-   alue":{"authority_ceiling":[{"actions":["invoices.read","invoices.wr
-   ite"],"resource":"https://erp.example.com","type":"mission_resource_
-   access"}],"drawdown_policy":"https://as.example.com/policies/erp-dra
-   wdown-v1"}}
+   alue":{"authority_ceiling":[{"actions":["invoices.read"],"delegation
+   ":{"allowed_delegates":[{"sub_profile":"ai_agent"}],"max_depth":2},"
+   resource":"https://erp.example.com","type":"mission_resource_access"
+   },{"actions":["invoices.write","journal-entries.write"],"resource":"
+   https://erp.example.com","type":"mission_resource_access"}],"drawdow
+   n_policy":{"digest":"sha-256:_hLEAl_ir1vxnex2tgbS6eRR99lyL1r6yyeB4Rr
+   C184","id":"erp-drawdown","version":"1"}}}
 
-   ceiling_hash = sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q
+   ceiling_hash = sha-256:I0TgJBsdSkkmaHt4EayPfIjs8uoYiuQvP_O5b9Tlec8
 
    The manifest is the always-present members above plus this
    ceiling_hash:
@@ -1127,21 +1151,21 @@ Table of Contents
    2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
    om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
    onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-   mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-   cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+   mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+   I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
    rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-   7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-   eiling_hash":"sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q","
-   client_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires
+   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+   NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+   eiling_hash":"sha-256:I0TgJBsdSkkmaHt4EayPfIjs8uoYiuQvP_O5b9Tlec8","
+   client_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires
    _at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc
-   9-","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQq
-   YY","issuer":"https://as.example.com","policy_version":"deploy-polic
+   9-","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4
+   r0","issuer":"https://as.example.com","policy_version":"deploy-polic
    y:v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8m
    N1a0kV7tR"}}}
 
-   approval_context_commitment = sha-256:aj_DeEf0vbk7jZnXOMEFiFVSmD0SQg
-   5MEXIMUXSWLFs
+   approval_context_commitment = sha-256:85y0i-t8pwRsM-SwHgZ9EaBIQFbnWj
+   YDjBNEO1TTQWA
 
    *Vector 4: conditional submission_evidence_commitment.* Diverges from
    the canonical Mission by recording one verified Intent Submission
@@ -1170,7 +1194,7 @@ Table of Contents
      { "type": "mission-intent-admission-assertion",
        "artifact_hash":
          "sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miFuC6-T7jXU2-R8",
-       "verified_at": "2026-10-15T14:31:50Z",
+       "verified_at": "2026-11-02T07:59:39Z",
        "facts": {
          "admission_issuer": "https://admission.example.com",
          "status": "active"
@@ -1181,10 +1205,10 @@ Table of Contents
    1","value":[{"artifact_hash":"sha-256:EwtVufH4c6btTaI55w-3mDJaNg0miF
    uC6-T7jXU2-R8","facts":{"admission_issuer":"https://admission.exampl
    e.com","status":"active"},"type":"mission-intent-admission-assertion
-   ","verified_at":"2026-10-15T14:31:50Z"}]}
+   ","verified_at":"2026-11-02T07:59:39Z"}]}
 
-   submission_evidence_commitment = sha-256:TwDmwzJgsm8Ik86YuybyctIaMPZ
-   K-aKeU6a2BF0kTi0
+   submission_evidence_commitment = sha-256:jnXhfVteWUHvc1-wyJOMLaVFj-d
+   8ewQWE4R7f0t5otY
 
    The manifest is the always-present members above plus this
    submission_evidence_commitment:
@@ -1194,21 +1218,21 @@ Table of Contents
    2nP4qV9rL3tY6sB1z"},"activation_actor":{"iss":"https://idp.example.c
    om","sub":"user_3p2q8mN1a0kV7tR"},"adjudication":{"kind":"human"},"c
    onsent_principal":{"iss":"https://idp.example.com","sub":"user_3p2q8
-   mN1a0kV7tR"},"root_commitment":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1
-   cF8gH2vJ4kE5pNQ","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
+   mN1a0kV7tR"},"root_commitment":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcVi
+   I5c9jiyMbE4KvFM","type":"direct"},"approval_event_id":"ape_8K2nP4qV9
    rL3tY6sB1z","approver":{"iss":"https://idp.example.com","sub":"user_
-   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM
-   7sX1cF8gH2vJ4kE5pNQ","authority_source":{"type":"user_delegated"},"c
-   lient_id":"s6BhdRkqt3","created_at":"2026-10-15T14:32:11Z","expires_
+   3p2q8mN1a0kV7tR"},"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbykl
+   NcViI5c9jiyMbE4KvFM","authority_source":{"type":"user_delegated"},"c
+   lient_id":"s6BhdRkqt3","created_at":"2026-11-02T08:00:00Z","expires_
    at":"2026-12-31T23:59:59Z","id":"msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9
-   -","intent_hash":"sha-256:wQ7p4LHnX9Md0LqJ6sZJ8b8mZ3rN2xT5pV4lE6sQqY
-   Y","issuer":"https://as.example.com","policy_version":"deploy-policy
+   -","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r
+   0","issuer":"https://as.example.com","policy_version":"deploy-policy
    :v17","subject":{"iss":"https://idp.example.com","sub":"user_3p2q8mN
-   1a0kV7tR"},"submission_evidence_commitment":"sha-256:TwDmwzJgsm8Ik86
-   YuybyctIaMPZK-aKeU6a2BF0kTi0"}}
+   1a0kV7tR"},"submission_evidence_commitment":"sha-256:jnXhfVteWUHvc1-
+   wyJOMLaVFj-d8ewQWE4R7f0t5otY"}}
 
-   approval_context_commitment = sha-256:Msha2eEDtfucgANzT5nmO90gtCEXFQ
-   FdRfVUGmOwCZE
+   approval_context_commitment = sha-256:iYBvYGC_LpEQkhpPiIE3S1OFINjH2d
+   K0jYMrCwWHvKE
 
    *Vector 5: mutated-member rejection.* Vector 2's manifest with one
    member changed, approval_event_id from ape_8K2nP4qV9rL3tY6sB1z to
@@ -1216,8 +1240,8 @@ Table of Contents
    verifier to do when a recomputed digest disagrees with a disclosed
    one:
 
-   recomputed = sha-256:3ZcZC8vR2HiCkgZqop_fUBaAwmj6hLknF8ey9g44dD8
-   disclosed  = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGymVfrnMaIc8So0
+   recomputed = sha-256:4Ev4vJSv_VYjxB48tuJTsYKTSU81jfQRD48pOjazBf0
+   disclosed  = sha-256:pGxfIDuyBPfgpyox3J6GP477CQfUE6FS9CfHirjwwvU
 
    The two differ, so a verifier holding the mutated record and this
    disclosed vector-2 value MUST reject the reference.
@@ -1226,10 +1250,10 @@ Table of Contents
    committed under typ mission-approval-context-v2 instead of mission-
    approval-context-v1:
 
-   correct typ (v1) = sha-256:7ikugIQZvSkie-Pc25V_sJKGHU5HGymVfrnMaIc8S
-   o0
-   wrong typ (v2)   = sha-256:KSLVjgQRCWLHsswYmBJS2B_n0SPRAZjTvBnkIRqw-
-   aw
+   correct typ (v1) = sha-256:pGxfIDuyBPfgpyox3J6GP477CQfUE6FS9CfHirjww
+   vU
+   wrong typ (v2)   = sha-256:Al8UIKy7q4_WlWem_O_6kInpGUoOp_NvPQj_YNO4z
+   AY
 
    The two differ.  A verifier's recompute is always fixed to mission-
    approval-context-v1; presented with the wrong-typ value as if it were
