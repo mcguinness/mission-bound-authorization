@@ -6510,6 +6510,11 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1176): the examples of the canonical Mission follow one
+  dated history, with the Intent in full and anchors computed over the
+  displayed objects; an example line too long for the page is folded
+  per RFC 8792. No requirement changes.
+
 - Editorial (#910): the approval rules for another principal and for
   an external Subject sit in a Subject Establishment subsection that
   applies at step 2 of the direct approval steps, which points to it;
