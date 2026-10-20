@@ -1250,6 +1250,8 @@ submitted ({{authority-proposal}}), the AS derives the
 **Authority Set**: one or more {{RFC9396}} `authorization_details`
 entries of an AS-supported type ({{other-types}}).
 
+## Derivation Modes {#derivation-modes}
+
 Derivation is mechanical. It happens once, at the approval event, under
 the derivation policy then in force, as one procedure whose candidate
 entries depend on whether an authority proposal was submitted:
@@ -1320,6 +1322,8 @@ granted `authorization_details` in the token response
 granted; a client compares it against its proposal, which
 `proposal_hash` commits as submitted ({{integrity-anchors}}).
 
+## The Consented Authority Set {#consented-authority-set}
+
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
 commits it as `authority_hash` ({{approval-event}}). The Intent's
@@ -1354,6 +1358,8 @@ Authority is further bounded by:
 The approval surface renders the prose beside the derived Authority Set
 ({{approval-event}}) as the human check that the structure matches the
 words, not as a machine enforcement mechanism.
+
+## Derivation Policy and Open-Ended Tasks {#derivation-policy-tasks}
 
 Derivation is governed by local policy and is not a portable algorithm:
 different authorization servers can derive different Authority Sets from
