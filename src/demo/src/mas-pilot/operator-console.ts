@@ -57,6 +57,15 @@ const decodePayload = (jws: string): Json => {
   }
 };
 
+const parseJson = (text: string): Json | undefined => {
+  try {
+    const v: unknown = JSON.parse(text);
+    return v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Json) : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const stringArray = (v: unknown): string[] | undefined =>
   Array.isArray(v) && v.length > 0 && v.every((a) => typeof a === "string") ? (v as string[]) : undefined;
 
@@ -99,10 +108,14 @@ export function masConsoleRoutes(mas: Pick<PilotMas, "issuer" | "operator">): Co
         members.remove = JSON.stringify([{ resource: CANONICAL_RESOURCE, actions }]);
       }
       const res = await requestLifecycle(issuer, operator.lifecycle, members);
-      const signed = res.contentType.includes("jwt") ? (decodePayload(res.text).mission as Json | undefined) : undefined;
+      // A revocation answers with a signed Mission Status; a containment with
+      // the Mission's state as JSON.
+      const answered = res.contentType.includes("jwt") ? (decodePayload(res.text).mission as Json | undefined) : parseJson(res.text);
+      if (res.status !== 200 || answered === undefined) return { status: res.status, body: { lifecycle_response: res.text } };
+      const { state, version, containment_version } = answered;
       return {
-        status: res.status,
-        body: signed ? { mission_id: missionId, state: signed.state, version: signed.version } : { lifecycle_response: res.text },
+        status: 200,
+        body: { mission_id: missionId, state, version, ...(containment_version !== undefined ? { containment_version } : {}) },
       };
     }
     return undefined;

@@ -70,11 +70,14 @@ const refusesConnection = async (url: string): Promise<boolean> => {
 };
 
 /**
- * One topology's operator walk: approve two Missions, a joined read with a
+ * One topology's operator walk: approve three Missions, a joined read with a
  * JWT and with an opaque estate credential on the first, a revocation of the
- * second before any read of it, and the refusal with its Decision Evidence.
+ * second before any read of it and the refusal with its Decision Evidence,
+ * and a containment of the third before any read of it and its refusal
+ * (`authority_contained` in process; `out_of_authority`, the Status view's
+ * declared diagnostic, separated).
  */
-async function walk(launch: MasPilotLaunch, masConsole: string) {
+async function walk(launch: MasPilotLaunch, masConsole: string, containedReason: string) {
   const pilotConsole = launch.consoles.pilot;
   // The console refuses a request without its bearer.
   for (const wrong of ["wrong", "x".repeat(launch.consoles.token.length)]) {
@@ -119,6 +122,20 @@ async function walk(launch: MasPilotLaunch, masConsole: string) {
   expect(refused.body).toMatchObject({ ok: false, denial_reason: "mission_inactive" });
   const evidence = await consoleRequest(launch, pilotConsole, `/missions/${revokedMission}/evidence`);
   expect((evidence.body.records as Json[]).at(-1)).toMatchObject({ kind: "decision", decision: "deny", denial_reason: "mission_inactive" });
+
+  // A containment at the MAS's Lifecycle endpoint, before any read of the
+  // Mission: the contained read is refused with the topology's diagnostic.
+  const containedMission = (await consoleRequest(launch, masConsole, "/missions", { subject: "alice", label: "launcher-contain" })).body
+    .mission_id as string;
+  const contained = await consoleRequest(launch, masConsole, `/missions/${containedMission}/contain`, { actions: ["payments:invoice.read"] });
+  expect(contained, JSON.stringify(contained)).toMatchObject({ status: 200, body: { state: "active", containment_version: 1 } });
+  const containedRead = await consoleRequest(launch, pilotConsole, "/calls", {
+    credential_id: credential.body.credential_id,
+    mission_id: containedMission,
+    tool: "get_invoice",
+    arguments: { invoice_id: "inv-1" },
+  });
+  expect(containedRead.body).toMatchObject({ ok: false, denial_reason: containedReason });
 }
 
 async function launchFor(topology: MasPilotTopology, estatePort: number, masPort: number): Promise<MasPilotLaunch> {
@@ -131,11 +148,11 @@ async function launchFor(topology: MasPilotTopology, estatePort: number, masPort
 }
 
 d("the MAS pilot launcher, in process (#818 slice 5B)", () => {
-  it("starts, approves through the MAS's approval surface, permits joined reads for a JWT and an opaque estate credential, refuses after a revocation, and releases every port on shutdown", async () => {
+  it("starts, approves through the MAS's approval surface, permits joined reads for a JWT and an opaque estate credential, refuses after a revocation and a containment at the MAS, and releases every port on shutdown", async () => {
     const launch = await launchFor("in-process", 14859, 14858);
     try {
       expect(launch.masProcess).toBeUndefined();
-      await walk(launch, launch.consoles.pilot);
+      await walk(launch, launch.consoles.pilot, "authority_contained");
     } finally {
       await launch.close();
     }
@@ -178,7 +195,7 @@ d("the MAS pilot launcher, in process (#818 slice 5B)", () => {
 });
 
 d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
-  it("starts the MAS as its own process with no IPC channel, approves, permits, refuses after a revocation, and stops the process on shutdown", async () => {
+  it("starts the MAS as its own process with no IPC channel, approves, permits, refuses after a revocation and a containment, and stops the process on shutdown", async () => {
     const launch = await launchFor("separated", 14861, 14860);
     try {
       // No IPC channel: the MAS process takes no operator message.
@@ -186,7 +203,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
       expect(launch.masProcess?.send).toBeUndefined();
       expect(launch.masProcess?.connected).toBe(false);
       expect(launch.consoles.mas).toBeDefined();
-      await walk(launch, launch.consoles.mas as string);
+      await walk(launch, launch.consoles.mas as string, "out_of_authority");
     } finally {
       await launch.close();
     }
