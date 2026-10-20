@@ -1765,9 +1765,8 @@ resolves by fingerprint:
 - same fingerprint, operation reserved: return the same continuation
   or deferral, or a retryable in-progress result;
 - same fingerprint, operation failed: return the recorded failure,
-  directly or through the same deferral's next poll (`access_denied`
-  after a denial or a refused activation, `expired_token` after the
-  deadline); and
+  the error its completing step answered, directly or through the same
+  deferral's next poll; and
 - different fingerprint: refuse with `invalid_request`, since the
   identifier was reused for a different operation.
 
