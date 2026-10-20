@@ -539,12 +539,12 @@ Example SET (decoded), for a supersession, whose `termination` carries
   "jti": "set_6Tn4rW8pB3zK7qC2mV5j",
   "sub_id": {
     "format": "opaque",
-    "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    "id": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
   },
   "events": {
     "https://schemas.karlmcguinness.com/mission/lifecycle-change": {
       "mission": {
-        "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
+        "id": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS",
         "issuer": "https://as.example.com"
       },
       "prior_state": "active",
