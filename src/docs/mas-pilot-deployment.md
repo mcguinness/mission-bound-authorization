@@ -4,16 +4,19 @@ The pilot contract for #253's second reference path: the **legacy-estate/MAS
 route** that D284 adopted and D508 ruled executable, owned by #818 (Sketch
 steps 3 and 4). A legacy estate keeps its own authorization server; its
 ordinary tokens are joined to Missions at a gateway, under a versioned mapping
-contract. This document records slice 1 of that evidence. It is not a
+contract. This document records slices 1 and 2 of that evidence (slice 2:
+the Resource policy, §4). It is not a
 conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `568fa502`
+Every statement here is true of the reference implementation at `739a5c50`
 (paths relative to `src/`). Each names the code that does it or the exact test
-(`describe > it`) that shows it. A gap says so. No test here needs a live
-OpenFGA: the decision point's Resource policy and FGA client are the
-reference fixtures (§7).
+(`describe > it`) that shows it. A gap says so. The end-to-end files
+(`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`)
+need a live OpenFGA, because the Resource policy is stored entitlements, and
+are skipped without one; the mapping, estate-route and PDP unit files always
+run.
 
 ## 1. Components
 
@@ -24,6 +27,7 @@ reference fixtures (§7).
 | Gateway route | A MAS-governed HTTP MCP route (`createHttpMcpChannel(…, { masGoverned: true })`) whose resource server trusts only the keys the estate publishes at its `jwks_uri`, fetched over HTTP at boot, and sets `ordinaryOnly` (`services/mcp-payments/src/server.ts`). | Admits estate credentials, and only through the join. |
 | Resource route | The payments resource's own Mission-bound route, trusting only the Mission Issuer's keys. Nothing signs with them in MAS mode. | Admits no estate credential. |
 | PEP and PDP | The reference `Pep` and decision point over one payments store. Every crossing on either route goes through the PEP. | Apply the join, the credential bound and Resource policy. |
+| Resource policy | Stored OpenFGA entitlements (`fgaResourcePolicy`, #828) for principals under the estate issuer, read by the decision point with no Mission input. The PEP's Mission-authority check reads the same store. | Independently administered (§4). |
 
 The composition is `composeMasPilot` (`demo/src/mas-pilot/compose.ts`); its
 configuration is `config/mas-pilot.json`, read by a strict loader
@@ -35,7 +39,7 @@ The estate's client identifiers (`estate-ap-bot-7f3`, `estate-extractor-2c1`,
 is a separate identifier in the Mission Issuer's namespace. The estate
 deliberately registers a client named `ap-agent`, the Mission's own
 `client_id`, and an account named `alice`, the Mission subject's `sub`, so the
-namespace tests in §5 run against real estate registrations.
+namespace tests in §6 run against real estate registrations.
 
 ## 2. The mapping contract
 
@@ -97,9 +101,62 @@ resolution (`MappingContractCache`):
   mapping has the same freshness.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
-  install and invalidation. The record is in memory only (§7).
+  install and invalidation. The record is in memory only (§8).
 
-## 4. Routes and consequential-path inventory
+## 4. Resource policy
+
+The decision point's Resource policy is the AS-native target's model (#828):
+stored OpenFGA entitlements, `authorized_reader` and `authorized_payer` for a
+subject and `authorized_client` for a client, each granted on a vendor (an
+invoice inherits its owning vendor's) and counted only for a member of the
+vendor's tenant. Every check is an authoritative read with no cache, so a
+change applies to the next decision.
+
+**Which identity it evaluates.** For a joined request the principals are the
+subject and client the gateway authenticated, under the estate issuer:
+`user:<enc(estate iss)>|<enc(sub)>` and `client:<enc(estate iss)>|<enc(client_id)>`
+(`issuerLocalPrincipals` and `issuerLocalClients` over the estate issuer,
+`demo/src/mas-pilot/compose.ts`). Never the Mission-side identities the
+mapping contract resolves them to. Three reasons:
+
+- MAS §mission-join rule 8 bounds a joined permit by three independently
+  evaluated bounds. The mapping is part of the join, so a policy keyed on the
+  mapped identity would inherit every mapping error: one wrong row would
+  satisfy both the join and the policy.
+- The policy query is "the verified token subject and the issuer this
+  Resource authenticated it under" (`ResourcePolicyQuery.subject`,
+  `services/pdp/src/resource-policy.ts`); the request carries exactly that
+  (`subject.properties.iss` is the estate issuer, AuthZEN profile rule 10),
+  and the PDP's step 6b reads it unchanged.
+- A legacy estate administers its resources' entitlements against its own
+  accounts and clients.
+
+The two namespaces stay apart by construction: the Mission-side `alice`
+(`user:<enc(https://mas.pilot.invalid)>|alice`) and the estate account named
+`alice` are different principals, and neither entitlement satisfies the
+other.
+
+**The store.** `composeMasPilot` takes `resourcePolicyStore`: `attach` names a
+configured store and model, which are verified and never written, so a
+revocation made before a restart is what the next decision reads;
+`bootstrap: "development"` creates a fresh store and seeds it from
+`config/mas-pilot.json` `resource_policy` (estate subjects and clients, all
+under the estate issuer) plus the payments store's invoice ownership. Nothing
+in either is derived from a Mission or a token.
+
+**Administration.** `pnpm resource-policy` (`demo/src/resource-policy-admin.ts`)
+changes it, attached to `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`, naming the
+estate issuer:
+
+```sh
+pnpm resource-policy revoke --iss http://127.0.0.1:14818 --sub u-1001 --relation reader --vendor acme
+pnpm resource-policy grant --iss http://127.0.0.1:14818 --client estate-ap-bot-7f3 --relation client --vendor acme
+pnpm resource-policy grant --iss http://127.0.0.1:14818 --sub u-1001 --relation member --tenant estate-payments
+```
+
+The tests drive the same code path (`resourcePolicyAdmin`).
+
+## 5. Routes and consequential-path inventory
 
 `config/mas-pilot.json` `routes` names the two routes and `inventory` names
 every payments tool, its action class and its disposition on the gateway:
@@ -115,12 +172,13 @@ A joined request in a high-consequence class is denied before the join runs
 (`EvaluateOptions.missionBoundOnlyClasses`; local reason
 `mission_binding_failed`). A joined ordinary token is `credential-correlated`,
 and the stronger posture needs Mission-bound issuance, which this pilot does
-not include. Without the reservation, the remittance test permits the
-remittance: the reservation is the control, not a side effect of another
-check. This is the pilot's inventory choice; the reference claims no
-`mas.enterprise` capability.
+not include. The remittance test entitles the estate account to pay in the
+Resource policy, so every other bound allows the action; without the
+reservation it permits the remittance. The reservation is the control, not a
+side effect of another check. This is the pilot's inventory choice; the
+reference claims no `mas.enterprise` capability.
 
-## 5. What slice 1 witnesses
+## 6. What the pilot witnesses
 
 Against D284's evidence list (tests in `demo/test/mas-pilot.test.ts` unless
 named):
@@ -137,12 +195,26 @@ named):
 | Reassigned accounts | Covered | `MAS pilot: a newer contract version moves a reassigned account … > an outstanding estate token for u-1001 stops joining alice's Mission once version 2 reassigns the account to dana`. |
 | Many-to-one mappings | Covered | `… > joins two estate accounts mapped to one Mission subject (many-to-one), and the audit log keeps which account acted`. |
 | Missing delegate records | Covered | `MAS pilot: delegates need a recorded actor edge … > denies a mapped delegate with no actor record, then joins it once the deployment records the edge`. |
-| Joined token never takes the high-consequence posture | Covered for the pilot's reservation | `MAS pilot: a joined ordinary token never takes a high-consequence path … > denies a remittance under a joined credential whose scope and Mission both carry it, commits nothing, and still permits the joined read`; an estate token carrying a `mission` claim is refused: `estate-route.test.ts > … > refuses an estate token carrying a mission claim, which a Mission Issuer's route admits as Mission-bound`. |
+| Joined token never takes the high-consequence posture | Covered for the pilot's reservation | `MAS pilot: a joined ordinary token never takes a high-consequence path … > denies a remittance under a joined credential whose scope, Mission and Resource policy all carry it, commits nothing, and still permits the joined read`; an estate token carrying a `mission` claim is refused: `estate-route.test.ts > … > refuses an estate token carrying a mission claim, which a Mission Issuer's route admits as Mission-bound`. |
+
+Slice 2's Resource-policy witnesses (`demo/test/mas-pilot-resource-policy.test.ts`,
+describe `MAS pilot Resource policy: estate entitlements, administered and
+revoked (#818 slice 2)` unless named), all over the stored policy:
+
+| Property | Witness |
+|---|---|
+| An entitled estate identity permits | `… > permits a joined read for an estate subject and client entitled in the store under the estate issuer` |
+| Revoking only that entitlement denies, granting it back permits | `… > revoking only the estate subject's entitlement denies resource_policy with no result, and granting it back permits` (another estate account on the same Mission still reads) |
+| The estate identity is evaluated, not the mapped one | `… > evaluates the estate subject, not the Mission-side identity it maps to: with alice and ap-agent fully entitled, the revoked estate account is still denied` |
+| A colliding name in the other namespace is never satisfied | `… > keeps the two alices apart: the Mission-side alice's entitlement never satisfies the estate account named alice, and its own does` |
+| The client dimension applies to estate clients | `… > applies the client dimension to the estate client: revoking its authorized_client denies, the Mission-side identity never stands in, and restoring permits` |
+| A restart attached to the store keeps a revocation | `MAS pilot Resource policy: a restart attached to the same store keeps a revocation … > a pilot attached to the first pilot's store and model reads the revocation made before the restart, and the grant that follows` |
+| The seed loads and refuses as the shipped seed does | `demo/test/mas-pilot-mapping.test.ts`, `pilot configuration: the estate's development Resource-policy grants …` |
 
 Each test was proved by introducing the defect it guards against and
 confirming its assertion fails.
 
-## 6. AS capabilities and adopter code for the baseline join
+## 7. AS capabilities and adopter code for the baseline join
 
 What the estate AS needed, all by configuration of an unmodified library:
 RFC 9068 JWT access tokens carrying `scope`, `sub` and `client_id`;
@@ -151,8 +223,8 @@ resource and scope restrictions. RFC 7662 introspection is enabled in its
 configuration and not exercised by any test.
 
 What the adopter wrote: the gateway's resource-server configuration (trusted
-estate keys, `ordinaryOnly`), the mapping contract and its cache, and the
-composition. The PEP and PDP changes are reference code
+estate keys, `ordinaryOnly`), the mapping contract and its cache, the estate's
+Resource-policy grants, and the composition. The PEP and PDP changes are reference code
 (`joinMapping`, `missionBoundOnlyClasses`, `mappingContract`).
 
 Sender-bound Join Assertions are not built. They would additionally need the
@@ -160,11 +232,16 @@ MAS to introspect or validate the estate token and report its `cnf`
 (MAS §enterprise-prerequisites), and a Join Assertion endpoint, which the
 reference does not implement.
 
-## 7. Residuals and exclusions
+## 8. Residuals and exclusions
 
-- **Resource policy and FGA are fixtures.** Independently administered
-  Resource policy for estate identities is not witnessed; an
-  OpenFGA-backed composition is a later slice.
+- **The Resource policy administers estate principals only.** A request
+  whose subject is not under the estate issuer has no principal and is
+  refused `resource_policy`. In MAS mode nothing issues a Mission-bound token,
+  so the Mission-side direction (an estate entitlement presented for a
+  Mission-side subject) is not reachable end to end; the issuer-local mapping
+  that refuses it is the PDP's (`issuerLocalPrincipals`).
+- **The development seed is the pilot's own** (`config/mas-pilot.json`
+  `resource_policy`); a production estate attaches to its administered store.
 - **Mission state is an in-process kernel read**, as on the AS-native target
   (D293). Mission Status over HTTP from a separated MAS is not built (#1101's
   concern for a separated realization).
@@ -192,39 +269,43 @@ reference does not implement.
 - **No action-bound approval gate on the pilot PEP.** It configures no
   `requiresActionApproval`, unlike the AS-native PEP's remittance gate. The
   remittance class is reserved on the gateway and nothing issues a
-  Mission-bound token for the resource route, so the reservation is the
-  only control on that path (the remittance mutation proof shows it).
+  Mission-bound token for the resource route, so with a payer entitlement in
+  the Resource policy the reservation is the only control on that path (the
+  remittance mutation proof shows it).
 - **No launcher:** the pilot runs in its tests only.
 - The shared demo's MAS-governed channel (`config/mas-join.json`) is
   unchanged and keeps its shared-namespace join.
 
-## 8. Remaining slices
+## 9. Remaining slices
 
-1. An OpenFGA-backed composition: Resource policy entitlements for estate
-   identities, administered independently of the mapping.
-2. Introspection to authority: an opaque-token estate route resolving `scope`
+1. Introspection to authority: an opaque-token estate route resolving `scope`
    and `cnf` through RFC 7662, with its timeout and cache bounds.
-3. A separated MAS: Mission Status over HTTP as the state source, with the
+2. A separated MAS: Mission Status over HTTP as the state source, with the
    runtime profile's freshness bounds (#1101).
-4. A retained, signed mapping audit record, or the mapping version in
+3. A retained, signed mapping audit record, or the mapping version in
    evidence, if the owner selects one.
-5. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
+4. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
    step 5's second half).
-6. A launcher and an operator walkthrough for the pilot topology.
-7. The component matrix and upgrade-path paragraph in MAS
-   §deployment-adoption (Sketch steps 1 and 2), a draft change outside
-   this slice.
-8. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
+5. A launcher and an operator walkthrough for the pilot topology, attaching
+   to an administered Resource-policy store.
+6. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
    demo's join documents no contract); the `mas.enterprise` rows stay `todo`.
 
-## 9. Run it
+The component matrix in MAS §deployment-adoption (Sketch steps 1 and 2)
+merged as #1352 (D523).
 
-From `src/`:
+## 10. Run it
+
+From `src/`, with a live OpenFGA (`OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`,
+and `OPENFGA_CA_CERT` where it serves TLS):
 
 ```sh
-pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-mapping.test.ts \
-  services/mcp-payments/test/estate-route.test.ts services/pdp/test/evaluate-join-mapping.test.ts
+pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.test.ts \
+  demo/test/mas-pilot-mapping.test.ts services/mcp-payments/test/estate-route.test.ts \
+  services/pdp/test/evaluate-join-mapping.test.ts
 ```
 
-The estate AS binds `127.0.0.1:14818`; the gateway and resource routes bind
-ephemeral ports.
+Each end-to-end file bootstraps its own development store. The estate AS
+binds `127.0.0.1:14818` in `mas-pilot.test.ts` and `127.0.0.1:14824` in
+`mas-pilot-resource-policy.test.ts` (the configuration relocated, so the two
+files run in parallel); the gateway and resource routes bind ephemeral ports.

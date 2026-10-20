@@ -904,7 +904,7 @@ Example:
   "mission_state": "suspended",
   "state_source": "status",
   "orchestration_decision": "human_review",
-  "reason": "external_commitment_dispatched_unknown",
+  "reason": "irreversible_action_dispatched_unknown",
   "outcome_state": "unknown",
   "unwind_plan_hash":
     "sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c",

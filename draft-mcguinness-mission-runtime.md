@@ -516,8 +516,10 @@ A state source is a component, reachable under the deployment's own
 trust rules, from which the PDP establishes the Mission's lifecycle
 state and the freshness of that observation. Examples include a query
 to the Mission issuer, a local Mission database, an authenticated
-status or event feed, or a short-lived derived credential whose
-lifetime is the deployment's accepted state lease. A materialized
+status or event feed (such as the lifecycle events of
+{{I-D.draft-mcguinness-oauth-mission-signals}}), or a short-lived
+derived credential whose lifetime is the deployment's accepted state
+lease. A materialized
 policy view ({{policy-view}}) is not a state source: it commits the
 compiled authority, never the mutable lifecycle state a decision
 consults.

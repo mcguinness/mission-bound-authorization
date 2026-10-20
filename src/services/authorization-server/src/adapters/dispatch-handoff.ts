@@ -17,7 +17,7 @@ import { createLocalJWKSet, type CryptoKey, type JSONWebKeySet, jwtVerify, SignJ
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
-import { refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
+import { malformedMatcherInRequest, refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
 import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
@@ -250,6 +250,15 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
     const refusedMember = refusedMemberInRequest(parsed);
     if (refusedMember) {
       txError(ctx, 400, "invalid_authorization_details", refusedMember);
+      return;
+    }
+    // @spec resource-access#matching-allowed-delegates (#1373): the projection
+    // rebuilds each delegate matcher from `sub` and `sub_profile`, so a
+    // requested matcher carrying another member is refused, never projected
+    // without it.
+    const malformedMatcher = malformedMatcherInRequest(parsed);
+    if (malformedMatcher) {
+      txError(ctx, 400, "invalid_authorization_details", malformedMatcher);
       return;
     }
     requested = parsed as AuthorityEntry[];

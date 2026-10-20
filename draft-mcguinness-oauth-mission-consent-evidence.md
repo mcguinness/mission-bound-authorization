@@ -995,7 +995,10 @@ A Consent Evidence object has these members:
   protected-header requirements and the verification path are defined
   in {{integrity}}.
 
-Example, over the worked disclosure of {{disclosure-vector}}:
+Example, over the worked disclosure of {{disclosure-vector}}. The
+Mission's record carries the same `consent_rendering_hash`, which this
+profile adds to the record the issuance profile's Worked Example
+shows:
 
 ~~~ json
 {
@@ -1010,7 +1013,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
     "proposal_hash":
       "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo",
     "consent_rendering_hash":
-      "sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g"
+      "sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24"
   },
   "approver": {
     "iss": "https://idp.example.com",
@@ -1037,7 +1040,7 @@ Example, over the worked disclosure of {{disclosure-vector}}:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_4pQ9z",
     "consent_rendering_hash":
-      "sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g"
+      "sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -1574,12 +1577,15 @@ The Consent Disclosure object:
       USD 500 per journal entry.",
     "expires_at": "2026-12-31T23:59:59Z",
     "subject_display": "alice (user_3p2q8mN1a0kV7tR)",
-    "approver_display": "alice (user_3p2q8mN1a0kV7tR)"
+    "approver_display": "alice (user_3p2q8mN1a0kV7tR)",
+    "authority_source_display":
+      "Delegated by alice from her own authority."
   },
   "authority_summary": [
     {
       "resource": "https://erp.example.com",
       "actions": ["invoices.read"],
+      "rendered": "The agent can read invoices in the ERP.",
       "constraints": [
         {
           "constraint": "resource_issued_after",
@@ -1609,6 +1615,7 @@ The Consent Disclosure object:
     {
       "resource": "https://erp.example.com",
       "actions": ["journal-entries.write"],
+      "rendered": "The agent can post journal entries in the ERP.",
       "constraints": [
         {
           "constraint": "max_amount",
@@ -1713,9 +1720,14 @@ a delegation notice, and a `delegation` risk dimension. The client
 proposed `invoices.*`, which the authorization server narrowed to
 `invoices.read`, so the read element's `narrowed_from` renders that
 narrowing; the write entry is derived as proposed and carries none.
-This example chooses the `narrowed_from` member to show the
-proposed-versus-granted distinction inside the committed disclosure;
-this document defines no interoperable member by that name.
+Each element states its action in `rendered`, and `mission_summary`
+identifies the user-delegated authority source in
+`authority_source_display`, as the issuance profile's rendering
+requires ({{I-D.draft-mcguinness-oauth-mission}}). This example
+chooses the `narrowed_from`, element-level `rendered`, and
+`authority_source_display` members to show those facts inside the
+committed disclosure; this document defines no interoperable members
+by those names.
 The write entry warrants a material notice and an `irreversibility`
 risk dimension because posted journal entries are not automatically
 reversible; `constraint_provenance` attributes the `max_amount`
@@ -1750,45 +1762,48 @@ ued at or before 2026-09-30T23:59:59Z.","value":"2026-09-30T23:59:59
 Z"}],"delegation":{"allowed_delegates":[{"sub_profile":"ai_agent"}],
 "max_depth":2,"rendered":"AI agents can receive it, at most two dele
 gations deep."},"narrowed_from":{"actions":["invoices.*"],"rendered"
-:"Asked for all invoice actions; only reading is granted."},"resourc
-e":"https://erp.example.com"},{"actions":["journal-entries.write"],"
-constraints":[{"constraint":"max_amount","rendered":"Each journal en
-try is capped at 500.00 US dollars (USD).","value":{"amount":"500.00
-","currency":"USD"}}],"resource":"https://erp.example.com"}],"constr
-aint_provenance":[{"applies_to":{"constraint":"max_amount","resource
-":"https://erp.example.com"},"source":"subject"}],"delegation_summar
-y":{"applies_to":{"action":"invoices.read","resource":"https://erp.e
-xample.com"},"child_missions":false,"delegates":"AI agents","further
-_delegation":true,"max_depth":2},"disclosure_id":"disc_4pQ9z","displ
-ay_context":{"channel":"web","rendered_at":"2026-11-02T07:59:30Z"},"
-locale":"en-US","material_notices":[{"applies_to":{"action":"journal
--entries.write","resource":"https://erp.example.com"},"condition":"i
-rreversible_action","statement":"Posted journal entries are not auto
-matically reversible."},{"applies_to":{"action":"invoices.read","res
-ource":"https://erp.example.com"},"condition":"delegation","statemen
-t":"The agent can pass its invoice read access to AI agents."}],"mis
-sion_summary":{"approver_display":"alice (user_3p2q8mN1a0kV7tR)","ex
-pires_at":"2026-12-31T23:59:59Z","goal":"Reconcile Q3 invoices and p
-ost adjustments of at most USD 500 per journal entry.","subject_disp
-lay":"alice (user_3p2q8mN1a0kV7tR)"},"rendering_template_digest":"sh
-a-256:50S2DpJfcfNGlzi_vzZJNJbJKkknFX65rhWJWLiMyok","requesting_clien
-t":{"client_id":"s6BhdRkqt3","display":"Invoice Reconciler Agent"},"
-risk_summary":[{"dimension":"data_access","statement":"The agent can
- read invoices held in the ERP system."},{"dimension":"spend","state
-ment":"The agent can post journal entries of up to 500 US dollars."}
-,{"dimension":"irreversibility","statement":"Posted journal entries
- alter the ledger of record."},{"dimension":"delegation","statement"
-:"AI agents acting for the agent can read the same invoices."}],"sou
-rce_hashes":{"authority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI
-5c9jiyMbE4KvFM","intent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4M
-y_EsNAf1C1U4r0","proposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8
-yL1PxryNyMwroKGo"},"template_id":"mission-consent-standard","templat
-e_version":"2026-06"}}
+:"Asked for all invoice actions; only reading is granted."},"rendere
+d":"The agent can read invoices in the ERP.","resource":"https://erp
+.example.com"},{"actions":["journal-entries.write"],"constraints":[{
+"constraint":"max_amount","rendered":"Each journal entry is capped a
+t 500.00 US dollars (USD).","value":{"amount":"500.00","currency":"U
+SD"}}],"rendered":"The agent can post journal entries in the ERP.","
+resource":"https://erp.example.com"}],"constraint_provenance":[{"app
+lies_to":{"constraint":"max_amount","resource":"https://erp.example.
+com"},"source":"subject"}],"delegation_summary":{"applies_to":{"acti
+on":"invoices.read","resource":"https://erp.example.com"},"child_mis
+sions":false,"delegates":"AI agents","further_delegation":true,"max_
+depth":2},"disclosure_id":"disc_4pQ9z","display_context":{"channel":
+"web","rendered_at":"2026-11-02T07:59:30Z"},"locale":"en-US","materi
+al_notices":[{"applies_to":{"action":"journal-entries.write","resour
+ce":"https://erp.example.com"},"condition":"irreversible_action","st
+atement":"Posted journal entries are not automatically reversible."}
+,{"applies_to":{"action":"invoices.read","resource":"https://erp.exa
+mple.com"},"condition":"delegation","statement":"The agent can pass
+ its invoice read access to AI agents."}],"mission_summary":{"approv
+er_display":"alice (user_3p2q8mN1a0kV7tR)","authority_source_display
+":"Delegated by alice from her own authority.","expires_at":"2026-12
+-31T23:59:59Z","goal":"Reconcile Q3 invoices and post adjustments of
+ at most USD 500 per journal entry.","subject_display":"alice (user_
+3p2q8mN1a0kV7tR)"},"rendering_template_digest":"sha-256:50S2DpJfcfNG
+lzi_vzZJNJbJKkknFX65rhWJWLiMyok","requesting_client":{"client_id":"s
+6BhdRkqt3","display":"Invoice Reconciler Agent"},"risk_summary":[{"d
+imension":"data_access","statement":"The agent can read invoices hel
+d in the ERP system."},{"dimension":"spend","statement":"The agent c
+an post journal entries of up to 500 US dollars."},{"dimension":"irr
+eversibility","statement":"Posted journal entries alter the ledger o
+f record."},{"dimension":"delegation","statement":"AI agents acting
+ for the agent can read the same invoices."}],"source_hashes":{"auth
+ority_hash":"sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM","i
+ntent_hash":"sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0","p
+roposal_hash":"sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"}
+,"template_id":"mission-consent-standard","template_version":"2026-0
+6"}}
 ~~~
 
 ~~~ text
 consent_rendering_hash =
-  sha-256:M0Fz-1J8JqouHiFG2MtI57i_GjUKCwnH5CQmTTNZT9g
+  sha-256:kHPpUawkce_AwSRymc1Ap78i2F2R4rfLv9-kw8X-l24
 ~~~
 
 An implementation that canonicalizes the same envelope, computes

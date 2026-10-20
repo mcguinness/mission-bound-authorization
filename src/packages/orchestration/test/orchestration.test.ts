@@ -44,7 +44,7 @@ const PUBLISHED_HASH = "sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c";
 const MISSION = {
   id: "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
   issuer: ISS,
-  authority_hash: "sha-256:l3KvZ4mP5x0wQrR6tY2nD9bM7sX1cF8gH2vJ4kE5pNQ",
+  authority_hash: "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
 };
 
 // A deterministic HS256 JWS-Compact signer, so the envelope test is pure and
