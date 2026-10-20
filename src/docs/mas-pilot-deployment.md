@@ -9,7 +9,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `43562b98`
+Every statement here is true of the reference implementation at `26edcc04`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. No test here needs a live
 OpenFGA: the decision point's Resource policy and FGA client are the
@@ -122,7 +122,7 @@ named):
 
 | D284 requirement | Status | Witness |
 |---|---|---|
-| Gateway bypass refused | Covered for this composition | `MAS pilot: the gateway joins … > refuses the same estate credential on the resource's own route before any decision, though the gateway admits it (bypass)`: 401, no decision request, no evidence record; the gateway permits the same credential. |
+| Gateway bypass refused | Covered for this composition | `MAS pilot: the gateway joins … > refuses the same estate credential on the resource's own route before any decision, though the gateway admits it (bypass)`: a whole attempt (the MCP handshake and a tool call) is refused, the handshake answered 401, with no decision request and no evidence record; the gateway permits the same credential. |
 | Different issuer and client registrations | Covered | `MAS pilot: the estate is a separate issuer … > issues an ordinary RFC 9068 token under the estate issuer, with no mission claim and a client the MAS never registered`; `… > refuses to issue for a resource the client's estate registration does not name (invalid_target)`. |
 | Credential-authority adapter | Covered for one format | Scope to authority from an RFC 9068 JWT: `… > bounds a joined credential by its own scope as the contract maps it`. Other formats refused: `services/mcp-payments/test/estate-route.test.ts`, `estate route: ordinary credentials only … > refuses every other credential format`. Introspection to authority is not built. |
 | Mapping provenance and freshness | Covered | `demo/test/mas-pilot-mapping.test.ts`, `mapping contract cache: versions and freshness …` (reassignment, refused rollback, staleness bound, invalidation) and `… > resolves two estate accounts mapped to one Mission subject, and audits which account each decision resolved`. |
@@ -177,6 +177,17 @@ reference does not implement.
 - **No instance-bound join and no Join Assertion.**
 - **Tool listing:** an ordinary credential is listed no tools
   (`McpPaymentsServer.toolsList`, an existing remainder); calls are enforced.
+- **Co-resident decisions only.** `joinMapping` and
+  `missionBoundOnlyClasses` reach the PDP in the PEP's decision options,
+  which only the co-resident decision path carries. A remote decision
+  channel's PDP would have to supply both in its own options: without them
+  the subject join still fails closed on the issuer mismatch, but the class
+  reservation would not apply.
+- **No action-bound approval gate on the pilot PEP.** It configures no
+  `requiresActionApproval`, unlike the AS-native PEP's remittance gate. The
+  remittance class is reserved on the gateway and nothing issues a
+  Mission-bound token for the resource route, so the reservation is the
+  only control on that path (the remittance mutation proof shows it).
 - **No launcher:** the pilot runs in its tests only.
 - The shared demo's MAS-governed channel (`config/mas-join.json`) is
   unchanged and keeps its shared-namespace join.
