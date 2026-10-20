@@ -95,7 +95,7 @@ export function refusedEntryMember(entry: unknown): string | undefined {
  * alike. This is the SINGLE matcher rule every boundary that admits an entry
  * consults: the proposal intakes' schema check, the typed config loaders and
  * the foreign-grant validator (through {@link isAuthorityEntry}), derivation,
- * and the requested-authority exchanges (through
+ * and the requested-authority exchanges and template consent (through
  * {@link entryDelegateMatcherViolation}). A member outside this set cannot be
  * interpreted, and a member-by-member rebuild would drop it and widen the
  * eligibility the entry commits, so it is refused rather than admitted.
@@ -137,7 +137,7 @@ export function delegateMatcherListViolation(value: unknown, path: string): stri
  * `delegation.children.allowed_child_actors`, or undefined. Each list is read
  * where its parent is an object; the parent's own shape is left to the
  * boundary's other checks. For a boundary that holds a whole entry, not a
- * list: the requested-authority exchanges.
+ * list: the requested-authority exchanges and template consent.
  */
 export function entryDelegateMatcherViolation(entry: unknown): string | undefined {
   const delegation = asJsonObject(asJsonObject(entry as JsonValue)?.delegation);
