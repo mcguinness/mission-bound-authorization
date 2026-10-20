@@ -1473,9 +1473,15 @@ them. <code>authorization_details</code> carries exactly one operation-scoped
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>)
 or one compound-action detail whose specification-defined semantics make the
 operation atomic. The Operation Profile a TAS and the resource apply
-resolves deterministically from the challenge's <code>iss</code> and that entry's
-<code>type</code> member (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>): a resource versions its Operation Profile
-by versioning <code>type</code>, and a TAS <span class="bcp14">MUST</span> retain and recognize a superseded
+resolves deterministically from the challenge's <code>iss</code> and that entry.
+A <code>mission_resource_access</code> entry's <code>type</code> member (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>) is
+fixed and does not version the Operation Profile: where the entry
+carries a <code>resource_contract</code> reference, that reference names the
+version, and the runtime profile's resolution of it decides admission
+and completion (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section
+"Resource Contract"); otherwise the version is the resource's current
+one at admission, which the workflow records. A resource therefore versions its Operation Profile
+independently of <code>type</code>, and a TAS <span class="bcp14">MUST</span> retain and recognize a superseded
 Operation Profile version for as long as a pending workflow still
 references it.<a href="#section-4-2" class="pilcrow">¶</a></p>
 <p id="section-4-3">This profile adds the following <span class="bcp14">REQUIRED</span> challenge claims:<a href="#section-4-3" class="pilcrow">¶</a></p>
@@ -2032,7 +2038,11 @@ when a fresh input no longer holds.<a href="#section-9-1" class="pilcrow">¶</a>
         <dd style="margin-left: 1.5em" id="section-9-2.10">
           <p id="section-9-2.10.1">A new admission under a superseded version is refused; a superseded
 version resolves only for workflows admitted under it
-(<a href="#resource-challenge" class="auto internal xref">Section 4</a>).<a href="#section-9-2.10.1" class="pilcrow">¶</a></p>
+(<a href="#resource-challenge" class="auto internal xref">Section 4</a>). For an entry carrying a <code>resource_contract</code>
+reference, the runtime profile's resolution of that reference decides
+instead, and a reference that does not resolve is refused at
+admission and at completion
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-9-2.10.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-9-2.11">Effective Authority Set narrowed since admission:</dt>
@@ -2531,7 +2541,7 @@ vocabulary.<a href="#section-14.2-2.16.1" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Operation identity</td>
-              <td class="text-left" rowspan="1" colspan="1">The <code>authorization_details</code> entry <code>type</code> and Operation Profile rules of <a href="#resource-challenge" class="auto internal xref">Section 4</a>
+              <td class="text-left" rowspan="1" colspan="1">The <code>authorization_details</code> entry, with its <code>resource_contract</code> reference where present, and the Operation Profile rules of <a href="#resource-challenge" class="auto internal xref">Section 4</a>
 </td>
             </tr>
             <tr>
@@ -2665,13 +2675,20 @@ through exactly one execution or terminal refusal.<a href="#section-15-7" class=
 <p id="section-16-1">[[ To be removed from the final specification ]]<a href="#section-16-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16-2.1">
-          <p id="section-16-2.1.1"><code>txn</code> consumption meets the Exact enforcement profile the runtime
-profile defines, rather than the metering companion's, which is no
-longer referenced.<a href="#section-16-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.1.1">Operation Profile resolution: a <code>mission_resource_access</code> entry's
+fixed <code>type</code> does not version the Operation Profile. A
+<code>resource_contract</code> reference names the version where present, under
+the runtime profile's resolution; otherwise the workflow records the
+resource's current version at admission (#249).<a href="#section-16-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.2">
-          <p id="section-16-2.2.1">Linked applicability to the runtime compound-action model: a
-transaction token authorizes one commit-phase operation (#252).<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-16-2.2.1"><code>txn</code> consumption meets the Exact enforcement profile the runtime
+profile defines, rather than the metering companion's, which is no
+longer referenced.<a href="#section-16-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-16-2.3">
+          <p id="section-16-2.3.1">Linked applicability to the runtime compound-action model: a
+transaction token authorizes one commit-phase operation (#252).<a href="#section-16-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

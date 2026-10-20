@@ -1670,7 +1670,7 @@ Mission's feed; a row registers nothing on its own.<a href="#section-5.3-3" clas
                 <code>application/mission-approval-governance+json</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
-                <code>application/mission-approval-governance+jws</code>
+                <code>mission-approval-governance+jws</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">
                 <code>issuer</code>
@@ -1871,7 +1871,9 @@ signature envelope a type's retained form carries, none where the
 type is retained unsigned. Where the defining profile pairs that
 <code>typ</code> with a protected <code>cty</code>, as the runtime evidence types and the
 Approval Governance Record do, the <code>cty</code> is the row's
-<code>payload-preimage-content-type</code>, and a verifier checks the pair. It
+<code>payload-preimage-content-type</code> (for the Approval Governance Record,
+its <code>application/</code> prefix retained or omitted, as that profile
+permits), and a verifier checks the pair. It
 is the per-type mapping named in
 <a href="#evidence-base" class="auto internal xref">Section 5.2</a>, checked when verifying the operational signature,
 never in place of <code>payload-preimage-content-type</code>. Harness and Egress
@@ -3324,14 +3326,20 @@ rather than registering a new identifier.<a href="#section-14-6" class="pilcrow"
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The Lifecycle Transition Object records a terminated Mission as
+          <p id="appendix-A-2.1.1">The evidence-type table shows the Approval Governance Record's
+operational <code>typ</code> with <code>application/</code> omitted, as Mission Approval
+Governance emits it; that record's <code>cty</code> may omit the prefix too
+(#1436).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">The Lifecycle Transition Object records a terminated Mission as
 <code>state</code> <code>terminated</code> with a <code>termination</code> object, and <code>prior_state</code>
 is never <code>terminated</code>; the computed example is regenerated.
 The approval event excludes both mutable record members, <code>state</code> and
-<code>termination</code> (#705).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+<code>termination</code> (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The Discovery Evidence, Containment evidence, Protected event
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The Discovery Evidence, Containment evidence, Protected event
 receipt, and Work Product Binding front-matter references moved
 from normative to informative, meeting the reference
 classification convention's maturity bound (a Standards-Track
@@ -3345,15 +3353,15 @@ records. Containment's Portable Evidence forward-pointer corrected
 to match: Containment registers its own evidence media types.
 Discovery Evidence gained a self-hosted canonical-bytes definition
 and IANA media-type registration in its own profile, closing the
-one gap this document's citation had left undefined (#662).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+one gap this document's citation had left undefined (#662).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Editorial density pass: split several overlong paragraphs in the
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Editorial density pass: split several overlong paragraphs in the
 Mission Evidence Base (the evidence-type naming-layers discussion)
 and in Registration Policy and Authoritative Producers, for
 scannability. No wording changed and no BCP-14 keyword sentence
 moved outside its section; the Evidence Types table and the
-Verification Failures integrity-vs-audit split were left untouched.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+Verification Failures integrity-vs-audit split were left untouched.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

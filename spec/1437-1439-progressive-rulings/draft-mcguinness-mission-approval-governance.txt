@@ -83,8 +83,9 @@ Table of Contents
    5.  The Approval Governance Record
      5.1.  Record Members
      5.2.  Assertion Members
-     5.3.  Approval Policy Reference
-     5.4.  Example
+     5.3.  Assertion Authority
+     5.4.  Approval Policy Reference
+     5.5.  Example
    6.  Assertion Requirements
      6.1.  Assertion Validation
      6.2.  Accountable Assertion
@@ -290,8 +291,9 @@ Table of Contents
    A profile MAY require this record; the Enterprise Mission Authority
    Profile does so under these recording triggers
    ([I-D.draft-mcguinness-mission-authority-server]).  The triggers are
-   defined here so that a profile cites one list.  The record is
-   REQUIRED for an approval event when any of the following holds:
+   defined here so that a profile cites one list.  Under a profile that
+   adopts these recording triggers, the record is REQUIRED for an
+   approval event when any of the following holds:
 
    1.  the Mission Record's approval_basis.consent_principal differs
        from its subject;
@@ -305,8 +307,12 @@ Table of Contents
    5.  validating any assertion requires authority standing outside the
        Mission Record.
 
+   A deployment that adopts no profile requiring the record has no
+   obligation to record one merely because a trigger holds.
    Independently of any profile, every activation under governed_policy
-   records an Approval Governance Record (Section 10).
+   records an Approval Governance Record (Section 10).  Every Approval
+   Governance Record a deployment records, whether required or not, MUST
+   satisfy the requirements of this document.
 
    The Approver is always approval_basis.consent_principal
    ([I-D.draft-mcguinness-oauth-mission]), so a Mission whose Approver
@@ -335,7 +341,7 @@ Table of Contents
      | approve                               | principal contributes |
      +---------------------------------------+-----------------------+
      | A delegation-of-authority policy      | A non-human assertion |
-     | asserts alongside Alice (Section 5.4) | contributes           |
+     | asserts alongside Alice (Section 5.5) | contributes           |
      +---------------------------------------+-----------------------+
      | A two-of-three finance rule decides   | A threshold rule is   |
      | the approval                          | evaluated             |
@@ -352,10 +358,10 @@ Table of Contents
 
 5.  The Approval Governance Record
 
-   An Approval Governance Record is a JSON object.  Section 5.1 and
-   Section 5.2 define its members.  Section 6 and Section 8 define how
-   the issuer builds and commits it, and Section 9 defines its integrity
-   protection.
+   An Approval Governance Record is a JSON object.  Section 5.1,
+   Section 5.2 and Section 5.3 define its members.  Section 6 and
+   Section 8 define how the issuer builds and commits it, and Section 9
+   defines its integrity protection.
 
 5.1.  Record Members
 
@@ -372,7 +378,7 @@ Table of Contents
    approval_policy:  REQUIRED.  An object identifying the governing
       delegation-of-authority policy: id (an identifier), version (a
       string), and digest (an integrity anchor over the retained policy
-      snapshot, in the encoded form Section 2 fixes).  Section 5.3
+      snapshot, in the encoded form Section 2 fixes).  Section 5.4
       defines the digest and the snapshot's retention.
 
    assertions:  REQUIRED.  An array of one or more decision assertions
@@ -408,7 +414,20 @@ Table of Contents
 
    assertion_id:  REQUIRED.  A string, unique within the record.
 
-   principal:  REQUIRED.  An object with iss and sub.
+   principal:  REQUIRED.  An object with iss and sub: the principal in
+      whose name the assertion is made.
+
+      *  For a human assertion, the authenticated human who decided.
+
+      *  For a policy assertion, the human who approved the exact policy
+         version its authority names (where a consented root commits a
+         separate evaluator that decides, the human who approved that
+         root), as the issuer's retained, authenticated governance state
+         records.  The policy is the decision mechanism, never the
+         principal.
+
+      *  For a service assertion, the service that produced the
+         decision.
 
    kind:  REQUIRED.  A string, one of human, service, or policy.
 
@@ -416,33 +435,84 @@ Table of Contents
 
    decided_at:  REQUIRED.  An RFC 3339 [RFC3339] timestamp.
 
-   authority:  REQUIRED.  A reference to the provenance under which this
-      principal was authorized to decide:
-
-      *  For a human assertion, the authentication context of the
-         assertion.
-
-      *  For a policy assertion, the deciding policy's identifier and
-         version, and approved_at: the family's provenance chain for
-         non-human adjudication, in which the policy decides the
-         instance because a human approved the policy.
-
-      *  For a service assertion, the identifier and version of the
-         logic that produced the decision, including the model's
-         identifier and version where a model produced it.
+   authority:  REQUIRED.  An object recording the provenance under which
+      the principal was authorized to decide.  Its members depend on
+      kind (Section 5.3).
 
    reason:  OPTIONAL.  A string.
 
-   A policy assertion's approved_at is an RFC 3339 timestamp: the human
-   approval instant of that exact policy version, not the assertion
-   instant.  The decided_at member records when the policy asserted, and
-   approved_at records when a human approved the version it asserts
-   under.  The issuer MUST verify approved_at from retained,
-   authenticated governance state for the named policy_id and version;
-   it MUST NOT accept approved_at as the assertion's own uncorroborated
-   clock value (Section 7).
+5.3.  Assertion Authority
 
-5.3.  Approval Policy Reference
+   An assertion's authority is an object whose members depend on the
+   assertion's kind.  Each member below states its type, its presence,
+   and the source the issuer takes it from.  A member this section does
+   not define for the assertion's kind carries no semantics under this
+   document.
+
+   A human assertion's authority records the authentication the issuer
+   verified for the decision (Section 6.1):
+
+   auth_time:  REQUIRED.  An RFC 3339 timestamp: when the principal
+      authenticated for this decision.
+
+   acr:  A string: the authentication context class reference of that
+      authentication.  REQUIRED when the issuer possesses it at the
+      approval event.
+
+   amr:  An array of strings: the authentication methods references of
+      that authentication.  REQUIRED when the issuer possesses them at
+      the approval event.
+
+   The issuer takes these members from the authentication it verified,
+   never from the requesting client or agent.
+
+   A policy assertion's authority names the deciding policy version and
+   its human approval:
+
+   policy_id:  REQUIRED.  A string: the identifier of the policy that
+      decided.
+
+   version:  REQUIRED.  A string: the exact version of that policy.
+
+   approved_at:  REQUIRED.  An RFC 3339 timestamp: the human approval
+      instant of that exact policy version, not the assertion instant.
+      The decided_at member records when the policy asserted, and
+      approved_at records when a human approved the version it asserts
+      under.
+
+   approved_by:  OPTIONAL.  An object with iss and sub: the human who
+      approved that version.  When present, it MUST equal principal.
+
+   The issuer takes policy_id and version from the policy it evaluated,
+   or from the authenticated decision it verified.  The approved_at and
+   approved_by members are corroborated provenance, never self-
+   authenticating evidence: the issuer MUST verify approved_at from
+   retained, authenticated governance state for the named policy_id and
+   version, and it MUST NOT accept approved_at as the assertion's own
+   uncorroborated clock value (Section 7).  It takes approved_by from
+   the same state and MUST NOT accept it from the asserting party.
+
+   A service assertion's authority identifies the logic that produced
+   the decision, and the model where a model produced it:
+
+   logic_id:  REQUIRED.  A string: the identifier of the logic (for
+      example, a workflow, a rule engine, or a model) that produced the
+      decision.
+
+   logic_version:  REQUIRED.  A string: the version of that logic.
+
+   model_id:  A string: the identifier of the model that produced the
+      decision.  REQUIRED where a model produced it.
+
+   model_version:  A string: the version of that model.  REQUIRED where
+      model_id is present.
+
+   Where the logic is itself a model, logic_id and logic_version carry
+   the model's identifier and version, as model_id and model_version do.
+   The issuer takes these members from the integrity-protected channel
+   or signature it verified for the assertion (Section 6.1).
+
+5.4.  Approval Policy Reference
 
    The approval_policy.digest preimage is the issuance profile's
    integrity-anchor envelope ([I-D.draft-mcguinness-oauth-mission]),
@@ -467,7 +537,7 @@ Table of Contents
    referenced policy; any human-readable summary of them in deployment
    tooling is advisory and carries no semantics in this record.
 
-5.4.  Example
+5.5.  Example
 
    The following is an example of an Approval Governance Record.  Its
    Mission, msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj, is not the issuance
@@ -499,13 +569,11 @@ Table of Contents
            "amr": ["pwd", "hwk"],
            "auth_time": "2026-11-02T07:59:00Z" } },
        { "assertion_id": "ast_2",
-         "principal": { "iss": "https://as.example.com",
-           "sub": "policy:finance-charter" },
+         "principal": { "iss": "https://idp.example.com",
+           "sub": "user_dC9yqLHPbadQRVw" },
          "kind": "policy", "decision": "approve",
          "decided_at": "2026-11-02T08:00:00Z",
          "authority": { "policy_id": "dlg-matrix", "version": "v7",
-           "approved_by": { "iss": "https://login.example.com",
-             "sub": "cfo@example.com" },
            "approved_at": "2026-09-15T09:00:00Z" } }
      ],
      "evaluation": {
@@ -526,10 +594,11 @@ Table of Contents
       is her own approve assertion, which satisfies the accountable-
       approver rule of Section 6.2 directly.
 
-   *  ast_2 is a policy assertion carrying its own provenance chain,
-      recorded alongside the accountable assertion rather than in place
-      of it.  Because a non-human assertion contributes, the record is
-      required under the third recording trigger (Section 4).
+   *  ast_2 is a policy assertion in the name of the human who approved
+      dlg-matrix version v7 (user_dC9yqLHPbadQRVw).  It is recorded
+      alongside the accountable assertion rather than in place of it.
+      Because a second principal and a non-human assertion contribute,
+      the second and third recording triggers hold (Section 4).
 
    *  The envelope member's value is the JWS whose payload is the JCS
       canonical bytes of this object with envelope itself removed
@@ -567,34 +636,38 @@ Table of Contents
 
 6.2.  Accountable Assertion
 
-   Exactly one assertion MUST match the Mission Record's accountable
-   approval_basis.consent_principal and carry an approve decision; the
-   record supports the approval it claims to govern or it does not
-   commit.  This is the accountable-approver rule.  The matching
-   assertion's kind MUST be human or policy: a service assertion,
-   including one a model produced, is a contributing governance input,
-   never the accountable assertion.
+   The accountable-approver rule ties a record to the Mission's one
+   accountable principal, the Mission Record's
+   approval_basis.consent_principal.  The Mission's approval_basis.type
+   fixes how a record satisfies it:
 
-   The Mission's approval_basis.type fixes the accountable assertion:
+   *  For direct, the record MUST carry exactly one human assertion
+      whose principal is consent_principal and whose decision is
+      approve: the human decision a direct approval event carries
+      ([I-D.draft-mcguinness-oauth-mission]).  Contributing policy and
+      service assertions do not replace it.
 
-   *  For direct, it MUST be the human assertion of consent_principal,
-      the human decision a direct approval event carries
-      ([I-D.draft-mcguinness-oauth-mission]); policy and service
-      assertions can contribute without replacing it.
-
-   *  For governed_policy, it is a policy assertion carrying the
-      deciding policy's provenance chain (Section 10.2): the policy is
-      the decision mechanism and the matched principal stays the human
-      who approved it, subject to the high-risk-class restriction of
-      Section 7.3.
+   *  For governed_policy, the record MUST carry exactly one policy
+      assertion whose principal is consent_principal, whose decision is
+      approve, and whose authority names the deciding policy
+      (Section 10.2).  The policy is the decision mechanism, and the
+      principal stays the human who approved it.
 
    *  For any other named standing-consent approval_basis
-      ([I-D.draft-mcguinness-oauth-mission]), the Mission satisfies this
-      rule through that record instead of a matching assertion:
-      consent_principal, root_commitment, and approved_at, already fixed
-      at the approval event and immutable, stand in place of it, subject
-      to the same high-risk-class restriction.  The record can still
-      carry contributing policy and service assertions.
+      ([I-D.draft-mcguinness-oauth-mission]), the Mission satisfies the
+      rule through its authenticated approval_basis record, not through
+      an assertion: consent_principal, root_commitment, and approved_at,
+      fixed at the approval event and immutable, stand in for an
+      accountable assertion.  The record can still carry contributing
+      policy and service assertions.
+
+   A record that does not satisfy the rule for its basis does not commit
+   (Section 8).  The assertion that satisfies it under direct or
+   governed_policy is the accountable assertion; no other basis has one.
+   The accountable assertion's kind MUST be human or policy: a service
+   assertion, including one a model produced, is a contributing
+   governance input, never the accountable assertion.  Under every
+   basis, the high-risk-class restrictions of Section 7.3 apply.
 
    No assertion is fabricated in the name of the activating policy or
    the requesting actor to stand in for a fresh human decision that did
@@ -622,11 +695,11 @@ Table of Contents
 
    The ceiling, the skew allowance, and any exception MUST be part of
    the retained approval_policy snapshot that approval_policy.digest
-   commits (Section 5.3), or a separately versioned declaration
+   commits (Section 5.4), or a separately versioned declaration
    committed from that snapshot.  A mutable, out-of-band deployment
    statement MUST NOT serve this role: it would make the evaluation
    impossible to reproduce, contrary to the purpose of the retained
-   policy, which lets an auditor re-run the decision (Section 5.3).
+   policy, which lets an auditor re-run the decision (Section 5.4).
 
 7.2.  Evaluating Recency
 
@@ -809,22 +882,34 @@ Table of Contents
 
    *  a kid resolvable in the Mission Issuer's published key material;
 
-   *  a typ of application/mission-approval-governance+jws; and
+   *  a typ of mission-approval-governance+jws; and
 
-   *  a cty of application/mission-approval-governance+json
-      (Section 17).
+   *  a cty of mission-approval-governance+json.
 
-   A verifier MUST reject a JWS whose protected typ and cty are not
-   exactly this pair (Sections 4.1.9 and 4.1.10 of [RFC7515]).
+   These values are the registered media types application/mission-
+   approval-governance+jws and application/mission-approval-
+   governance+json (Section 17) with the application/ prefix omitted, as
+   Sections 4.1.9 and 4.1.10 of [RFC7515] recommend.
+
+   A verifier compares each value as a media type under those sections:
+   it treats a value that contains no / as if application/ were
+   prepended, and it compares type and subtype names case-insensitively.
+   Neither media type defines a parameter, so a value that carries one
+   matches neither.  A verifier MUST accept either form of each value,
+   and MUST reject a JWS whose protected header lacks typ or cty, or
+   whose typ or cty does not match this pair.  Normalization applies
+   only to the comparison: a verifier MUST NOT rewrite the signed
+   header, the payload, or the retained record, so the record digest
+   below covers the record exactly as signed and retained.
 
    The following is the decoded JWS protected header of the envelope
-   value in Section 5.4:
+   value in Section 5.5:
 
    {
      "alg": "ES256",
      "kid": "as-key-2",
-     "typ": "application/mission-approval-governance+jws",
-     "cty": "application/mission-approval-governance+json"
+     "typ": "mission-approval-governance+jws",
+     "cty": "mission-approval-governance+json"
    }
 
    A verifier MUST perform the following steps, in order, and MUST NOT
@@ -877,7 +962,7 @@ Table of Contents
 10.1.  Consented Root
 
    The consented root is the retained approval_policy snapshot that a
-   human approved (Section 5.3).  It commits:
+   human approved (Section 5.4).  It commits:
 
    *  the clients, Subjects, and authority sources that can activate
       under it;
@@ -907,7 +992,7 @@ Table of Contents
 
    The root and a separate evaluator keep distinct digest domains:
    approval_policy.digest commits the root under typ mission-approval-
-   policy (Section 5.3), and the activation policy reference commits the
+   policy (Section 5.4), and the activation policy reference commits the
    evaluator under typ mission-activation-policy.  The issuer MUST NOT
    accept either digest in place of the other.
 
@@ -1150,7 +1235,7 @@ Table of Contents
    The AGR governs on any disagreement.
 
    The following example shows the members of a Consent Evidence object
-   that correspond to the record in Section 5.4, other members omitted:
+   that correspond to the record in Section 5.5, other members omitted:
 
    {
      "approver": { "iss": "https://idp.example.com",
@@ -1381,7 +1466,11 @@ Table of Contents
 
    *  record denials (Section 6.1);
 
-   *  include the accountable assertion (Section 6.2);
+   *  satisfy the accountable-approver rule for the Mission's approval
+      basis: exactly one matching human assertion under direct, exactly
+      one matching policy assertion under governed_policy, and the
+      authenticated approval_basis under any other standing-consent
+      basis (Section 6.2);
 
    *  evaluate under the retained policy version (Section 8);
 
@@ -1390,10 +1479,11 @@ Table of Contents
       Authority Set and Mission Intent carry, from a committed ceiling
       and any committed exception (Section 7);
 
-   *  require kind: human for the accountable assertion where the
-      committed Mission's derived Authority Set or Mission Intent
-      carries a high-risk class, unless a committed class-named
-      exception applies (Section 7);
+   *  where the committed Mission's derived Authority Set or Mission
+      Intent carries a high-risk class, require a human accountable
+      assertion unless a committed class-named exception applies, and
+      require such an exception for a basis without an accountable
+      assertion (Section 7.3);
 
    *  under governed_policy, record the members of Section 10.2 and
       complete the activation checks of Section 10.3;
@@ -1410,7 +1500,7 @@ Table of Contents
    A Relying Auditor MUST verify the envelope by byte equality, MUST
    validate the mission binding, and MUST obtain the retained policy
    version before treating the evaluation as re-checked (Section 9,
-   Section 5.3).
+   Section 5.4).
 
 15.  Security Considerations
 
@@ -1430,7 +1520,7 @@ Table of Contents
 
    Without approval_policy.digest and its retention, a later reading
    cannot prove which policy governed the evaluation.  The digest and
-   the audit-horizon retention of Section 5.3 are the control.
+   the audit-horizon retention of Section 5.4 are the control.
 
 15.3.  Manufactured Accountability
 
@@ -1963,6 +2053,21 @@ Appendix A.  Approval Context Commitment Test Vectors
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Four rulings on the #1436 questions (D568), each a change in
+      requirements.  The recording triggers bind only under a profile
+      that adopts them, and a record kept voluntarily meets every
+      requirement on a record.  The accountable-approver rule is stated
+      per approval basis: one human approval under direct, one policy
+      approval naming the deciding policy under governed_policy, and the
+      authenticated approval_basis under any other standing-consent
+      basis.  Only assertions of the basis's kind (under
+      governed_policy, only those naming the deciding policy) count
+      toward "exactly one"; other assertions in the consent principal's
+      name contribute.  Assertion Authority types authority for each
+      assertion kind, and a policy assertion's principal is the human
+      who approved the policy version.  The JWS typ and cty are emitted
+      with application/ omitted and compared as media types.
 
    *  Editorial restructure, with no change to any requirement:
       Recording Triggers precedes the record; the record, Assertion

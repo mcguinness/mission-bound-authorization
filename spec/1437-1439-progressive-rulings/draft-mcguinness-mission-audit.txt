@@ -421,10 +421,10 @@ Table of Contents
    |           |evidence_envelope|consent-       |evidence+jws  |         |
    |           |included (JCS)   |evidence+json  |              |         |
    +-----------+-----------------+---------------+--------------+---------+
-   |Approval   |complete record  |application/   |application/  |issuer   |
-   |governance |including        |mission-       |mission-      |         |
-   |           |envelope (JCS),  |approval-      |approval-     |         |
-   |           |the record-digest|governance+json|governance+jws|         |
+   |Approval   |complete record  |application/   |mission-      |issuer   |
+   |governance |including        |mission-       |approval-     |         |
+   |           |envelope (JCS),  |approval-      |governance+jws|         |
+   |           |the record-digest|governance+json|              |         |
    |           |preimage         |               |              |         |
    +-----------+-----------------+---------------+--------------+---------+
    |Decision   |complete object, |application/   |application/  |PDP key  |
@@ -558,17 +558,18 @@ Table of Contents
    retained unsigned.  Where the defining profile pairs that typ with a
    protected cty, as the runtime evidence types and the Approval
    Governance Record do, the cty is the row's payload-preimage-content-
-   type, and a verifier checks the pair.  It is the per-type mapping
-   named in Section 5.2, checked when verifying the operational
-   signature, never in place of payload-preimage-content-type.  Harness
-   and Egress Evidence fix none: their defining profile fixes the raw
-   object's JCS bytes under integrity protection by a named mechanism,
-   not a JWS envelope, and a deployment-local signature creates no
-   portable mapping in this catalog.  A harness revision that defines a
-   JWS representation fixes, in that profile, the envelope and retained
-   form, the protected typ, byte-equality verification, and whether
-   transparency commits the JSON payload, the complete nested object, or
-   the compact JWS.
+   type (for the Approval Governance Record, its application/ prefix
+   retained or omitted, as that profile permits), and a verifier checks
+   the pair.  It is the per-type mapping named in Section 5.2, checked
+   when verifying the operational signature, never in place of payload-
+   preimage-content-type.  Harness and Egress Evidence fix none: their
+   defining profile fixes the raw object's JCS bytes under integrity
+   protection by a named mechanism, not a JWS envelope, and a
+   deployment-local signature creates no portable mapping in this
+   catalog.  A harness revision that defines a JWS representation fixes,
+   in that profile, the envelope and retained form, the protected typ,
+   byte-equality verification, and whether transparency commits the JSON
+   payload, the complete nested object, or the compact JWS.
 
    The media types and type identifiers are defined as follows:
 
@@ -1844,6 +1845,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The evidence-type table shows the Approval Governance Record's
+      operational typ with application/ omitted, as Mission Approval
+      Governance emits it; that record's cty may omit the prefix too
+      (#1436).
 
    *  The Lifecycle Transition Object records a terminated Mission as
       state terminated with a termination object, and prior_state is

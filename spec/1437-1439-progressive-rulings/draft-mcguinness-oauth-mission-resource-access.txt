@@ -87,11 +87,12 @@ Table of Contents
        3.4.2.  Value-Space Comparison
      3.5.  Resource Server Enforcement
      3.6.  Protected Resource Metadata
-     3.7.  Delegate Eligibility
-       3.7.1.  Matching allowed_delegates
-     3.8.  Scope Projection
-     3.9.  Transformation Capabilities
-     3.10. Modeling Tools and Function Calls
+     3.7.  Resource Contracts
+     3.8.  Delegate Eligibility
+       3.8.1.  Matching allowed_delegates
+     3.9.  Scope Projection
+     3.10. Transformation Capabilities
+     3.11. Modeling Tools and Function Calls
    4.  Conformance
    5.  Security Considerations
      5.1.  Resource Boundary Canonicalization
@@ -131,11 +132,14 @@ Table of Contents
       (Section 3.4);
 
    *  resource server enforcement (Section 3.5) and delegate eligibility
-      (Section 3.7); and
+      (Section 3.8);
+
+   *  the resource contract reference an entry can commit at approval,
+      and its exact preservation (Section 3.7); and
 
    *  the conditions under which an entry can be projected to scope
-      (Section 3.8), and the type's declaration under the issuance
-      profile's transformation-capability map (Section 3.9).
+      (Section 3.9), and the type's declaration under the issuance
+      profile's transformation-capability map (Section 3.10).
 
    The issuance profile keeps the type-agnostic machinery: the approved-
    set commitment, derivation gating, and its own scope-projection rule
@@ -261,24 +265,24 @@ Table of Contents
          mission_constraints_supported metadata (Section 3.6).
 
    delegation:  OPTIONAL.  An object.  The delegation policy for this
-      entry (Section 3.7).  When absent, this entry's authority is non-
+      entry (Section 3.8).  When absent, this entry's authority is non-
       delegable: it MUST NOT appear in a delegated token.  This applies
       to the entry the authorization server evaluates for a delegated
       token, not to a copy a cross-domain grant conveys without the
-      member (Section 3.7).  When present, it has these members:
+      member (Section 3.8).  When present, it has these members:
 
       max_depth:  REQUIRED.  An integer.  The maximum delegation depth
-         at which this entry's authority may be exercised (Section 3.7).
+         at which this entry's authority may be exercised (Section 3.8).
 
       allowed_delegates:  RECOMMENDED.  An array of objects.  The
          permitted delegates, each a may_act-style delegate matcher
-         (Section 3.7.1): { "sub": "<client_id>" } for a specific
+         (Section 3.8.1): { "sub": "<client_id>" } for a specific
          delegate, or { "sub_profile": "<actor-type>" } for an actor-
          type class.
 
          When absent, eligibility falls to the authorization server's
          delegation-authorization policy, applied at every exchange
-         (Section 3.7): absence defers the decision to policy and never
+         (Section 3.8): absence defers the decision to policy and never
          grants blanket eligibility.  The member is RECOMMENDED so that
          eligibility is committed and rendered with the entry rather
          than left wholly to policy.
@@ -288,6 +292,24 @@ Table of Contents
       entry's value for it MUST NOT be broader than the parent entry's,
       and a member the authorization server does not understand is
       carried unchanged.
+
+   resource_contract:  OPTIONAL.  An object.  A reference to the
+      resource contract under which the resource interprets the entry's
+      actions and constraints (Section 3.7).  The entry's type stays
+      mission_resource_access; the reference carries the version.  When
+      present, it has exactly these members:
+
+      id:  REQUIRED.  A string containing an absolute URI that names the
+         contract across its versions.
+
+      version:  REQUIRED.  A non-empty string naming one version of the
+         contract.
+
+      digest:  REQUIRED.  A string.  The SHA-256 digest of the JCS
+         [RFC8785] serialization of that version's contract document, in
+         the integrity-anchor encoded form
+         ([I-D.draft-mcguinness-oauth-mission]): sha-256: followed by
+         the base64url encoding of the digest, without padding.
 
    The following example shows an Authority Set with two entries for one
    resource:
@@ -356,7 +378,11 @@ Table of Contents
       negative or fractional value is refused;
 
    *  an allowed_delegates matcher carries neither sub nor sub_profile,
-      or carries any other member (Section 3.7.1);
+      or carries any other member (Section 3.8.1);
+
+   *  its resource_contract is not an object with exactly the members
+      id, version, and digest, or one of them does not have the form
+      Section 3 gives it;
 
    *  its time_window Common Constraint has a not_before later than its
       not_after, a window that admits no instant; or
@@ -371,7 +397,7 @@ Table of Contents
    The following values are valid and carry a defined meaning:
 
    *  A max_depth of 0 admits the entry into no delegated token, since a
-      delegated token's delegation depth is 1 or more (Section 3.7): the
+      delegated token's delegation depth is 1 or more (Section 3.8): the
       entry supplies no in-Mission delegated authority.  Any other
       delegation member stays intact; a member a companion profile
       defines there, such as a child-creation grant, keeps the bound
@@ -380,7 +406,7 @@ Table of Contents
    *  An empty allowed_delegates array permits no delegate.  It differs
       from an absent member, which defers eligibility to the
       authorization server's delegation-authorization policy
-      (Section 3.7).
+      (Section 3.8).
 
    *  An action value that a consumer does not recognize for the entry's
       resource grants nothing.  It does not make the entry
@@ -720,6 +746,11 @@ Table of Contents
           the specification-defined rule when K is a Common Constraint
           (Section 3.4), the deployment-defined comparison otherwise.
 
+   4.  *Contract.* A carries resource_contract exactly when B does, and
+       then with id, version, and digest each equal to B's
+       (Section 3.7).  Removing, replacing, or adding a reference is
+       never narrowing.
+
    The equivalence in step 3 holds for comparison only: recorded entries
    and their integrity commitments are unchanged.  A key present only in
    A narrows A only when it has defined semantics and the resource
@@ -740,14 +771,14 @@ Table of Contents
    matches by literal equality and a literal action by array membership.
 
    The delegation member is policy, not authority, and is not part of
-   this comparison (Section 3.7).  A derived entry's delegation, when
+   this comparison (Section 3.8).  A derived entry's delegation, when
    present, MUST NOT be broader than the parent entry's:
 
    *  its max_depth MUST be no greater than the parent entry's;
 
    *  its allowed_delegates MUST be no wider than the parent entry's,
       and where the parent entry's eligibility inherits the
-      authorization server's policy decision (Section 3.7), a derived
+      authorization server's policy decision (Section 3.8), a derived
       list only restricts that decision; and
 
    *  a derived entry MUST NOT introduce delegation where the parent
@@ -811,7 +842,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission]); or
 
    *  an Authority Set entry to a derived or delegated token
-      (Section 3.7).
+      (Section 3.8).
 
    In either case, a constraints key that the authorization server does
    not implement narrowing for, whether a registered Common Constraint
@@ -1116,8 +1147,10 @@ Table of Contents
    *  type, resource, resource_match, actions, and constraints are
       enforced as above;
 
+   *  resource_contract is enforced as Section 3.7 requires;
+
    *  delegation has no resource-server enforcement role: the
-      authorization server applies it at issuance (Section 3.7), so a
+      authorization server applies it at issuance (Section 3.8), so a
       resource server MAY disregard it, together with any member a
       companion profile adds to it;
 
@@ -1148,7 +1181,96 @@ Table of Contents
       closed constraint mismatch before making a request.  When absent,
       that knowledge is established out of band.
 
-3.7.  Delegate Eligibility
+3.7.  Resource Contracts
+
+   An entry's actions and constraints carry meaning only at the resource
+   that defines them (Section 3), and the resource can change that
+   meaning while action names and parameter values stay the same.  The
+   resource_contract member fixes, at approval, the version of that
+   meaning the entry was approved under.
+
+   A *resource contract* is a JSON document, identified by an id and a
+   version, whose bytes never change for that pair.  It fixes the
+   contract material that Mission-Bound Runtime Enforcement lists
+   ([I-D.draft-mcguinness-mission-runtime], Section "Resource
+   Contract"), including the operation contract (Section 3.2) of each
+   operation it covers and the members of each action family it defines.
+   That section also defines the version states and how a reference
+   resolves.  This section depends on those rules normatively; the
+   dependency binds only a deployment that supports resource_contract.
+   The contract assembles those definitions and overrides none of them:
+   a Common Constraint keeps the semantics its definition gives it
+   (Section 3.4).  A resource that changes any of that material
+   publishes a new version with its own digest.  The resource publishes
+   its contracts and their references through its operation contract
+   documentation or other deployment documentation; this document
+   defines no metadata member or endpoint for them.
+
+   The following entry references version 2026-10-01 of a payments
+   contract:
+
+   { "type": "mission_resource_access",
+     "resource": "https://payments.example/mcp",
+     "actions": ["execute_wire_transfer"],
+     "constraints": {
+       "max_amount": { "amount": "500.00", "currency": "USD" } },
+     "resource_contract": {
+       "id": "https://payments.example/contracts/payments",
+       "version": "2026-10-01",
+       "digest":
+         "sha-256:Tvvs9KfBVei4YUbtWRfmCKsquFxzgWvqxhSAsWPiu_o" } }
+
+   *Approval.* The authorization server assembles the reference from
+   trusted resource or deployment configuration, which states whether an
+   entry's resource requires a reference and which contract version is
+   current for it.  A resource_contract a client proposes is a proposal,
+   never an authoritative declaration.  Before approval, the
+   authorization server:
+
+   *  MUST refuse, with the invalid_authorization_details error code, a
+      proposed entry whose resource_contract does not equal, member for
+      member, the reference of a contract its configuration names as
+      current for the entry's resource and that defines every action and
+      action family the entry lists; and
+
+   *  MUST, where its configuration requires a reference for the entry's
+      resource and the proposal carries none, record the current
+      contract's reference in the entry, so that the Approver approves
+      the entry with it.
+
+   A superseded or retired version is never current
+   ([I-D.draft-mcguinness-mission-runtime]), so no new approval
+   references one.  The reference is assembled from configuration, not
+   narrowed: a policy ceiling a proposal is narrowed against need not
+   carry one, and step 4 of Section 3.3 applies to entries derived from
+   an approved entry.  An authorization server that does not implement
+   this section refuses a proposed or carried entry that carries
+   resource_contract, with the invalid_authorization_details error code,
+   and never drops the member.
+
+   *Preservation.* The reference is part of the entry, so authority_hash
+   commits it ([I-D.draft-mcguinness-oauth-mission]).  Every derivation,
+   narrowing, and delegation of the entry preserves it exactly
+   (Section 3.3), and scope projection never drops it (Section 3.9).  An
+   entry approved without a reference gains one only through a new
+   approval of an entry that carries it; a derivation never attaches the
+   current contract to it.
+
+   *Enforcement.* A resource server MUST NOT treat an entry carrying
+   resource_contract as authorizing an operation unless it performs that
+   operation under exactly the referenced contract: the one whose id,
+   version, and digest all equal the reference's.  Where the resource
+   server's operation contract requires a reference for an operation, an
+   applicable entry without one provides no authority for it.  In both
+   cases the entry is one the resource server cannot fully enforce
+   (Section 3.5).  The reference fixes meaning, not state: it supplies
+   no observation of the resource, and it exempts no operation from the
+   resource's other authorization checks.  Which versions a resource
+   still performs, and for which entries, follows the version states of
+   [I-D.draft-mcguinness-mission-runtime]: a reference that does not
+   resolve there authorizes nothing.
+
+3.8.  Delegate Eligibility
 
    [I-D.draft-mcguinness-oauth-mission] gates a delegated token's
    carried entries on the entry type's own delegation policy, evaluated
@@ -1212,7 +1334,7 @@ Table of Contents
    [I-D.draft-mcguinness-oauth-mission-cross-domain] specifies how its
    conveyed copy treats delegation.
 
-3.7.1.  Matching allowed_delegates
+3.8.1.  Matching allowed_delegates
 
    Each allowed_delegates value is a delegate matcher: an object modeled
    on the actor object of the may_act claim (Section 4.4 of [RFC8693]).
@@ -1247,7 +1369,7 @@ Table of Contents
    and narrowing out any sub matcher it cannot resolve, is specified by
    [I-D.draft-mcguinness-oauth-mission-cross-domain].
 
-3.8.  Scope Projection
+3.9.  Scope Projection
 
    [I-D.draft-mcguinness-oauth-mission] states the semantic subset
    condition and issuance algorithm an authorization server applies
@@ -1264,11 +1386,14 @@ Table of Contents
 
    *  the resource and resource_match the mapping covers;
 
-   *  the actions value or values each scope value stands for; and
+   *  the actions value or values each scope value stands for;
 
    *  for every constraints key an entry may carry, whether the target
       independently and identically enforces that key on the scope-
-      authorized path.
+      authorized path; and
+
+   *  where an entry may carry resource_contract, the contract under
+      which the target performs the operations each scope value permits.
 
    Projecting a mission_resource_access entry's authority to scope is
    safe only when all of the following hold:
@@ -1300,6 +1425,14 @@ Table of Contents
        entry, as an unenforced key fails closed at a resource server
        that consumes authorization_details directly.
 
+   4.  *The contract is preserved.* For an entry carrying
+       resource_contract, the mapping states that the target performs
+       every operation the mapped scope value permits under exactly the
+       referenced contract (Section 3.7).  A scope value conveys no
+       contract reference of its own.  An entry without the member
+       satisfies this condition only where the target requires no
+       reference for those operations.
+
    Advertising a key in mission_constraints_supported (Section 3.6) is
    not evidence that a projection preserves the bound: condition 3 needs
    a control that holds on every operation the projected scope value
@@ -1318,7 +1451,7 @@ Table of Contents
    not authorization_details) and no other carried entry supplies a safe
    projection.
 
-3.9.  Transformation Capabilities
+3.10.  Transformation Capabilities
 
    [I-D.draft-mcguinness-oauth-mission] requires an authorization server
    to declare, for every authorization_details type it supports, whether
@@ -1339,12 +1472,12 @@ Table of Contents
       but an authorization server that meets one it does not support
       fails closed (Section 3.4).
 
-   delegation: true  The delegation policy of Section 3.7 is fully
+   delegation: true  The delegation policy of Section 3.8 is fully
       defined; an entry's delegation member states its own depth and
       eligibility bounds.
 
    projection: true  A safe scope projection is defined, and decidable
-      per entry, by Section 3.8; it is not unconditionally available for
+      per entry, by Section 3.9; it is not unconditionally available for
       every entry, and that section's conditions apply to each entry
       before scope is emitted.
 
@@ -1364,7 +1497,7 @@ Table of Contents
    explicitly requested scope it cannot grant as
    [I-D.draft-mcguinness-oauth-mission] specifies.
 
-3.10.  Modeling Tools and Function Calls
+3.11.  Modeling Tools and Function Calls
 
    This section is non-normative.  A tool an agent invokes, such as a
    Model Context Protocol (MCP) tool or a function call, is modeled as a
@@ -1426,7 +1559,7 @@ Table of Contents
    the adjustment tool.
 
    Delegation to a sub-agent uses the same delegation member
-   (Section 3.7).  The following example shows an Authority Set entry,
+   (Section 3.8).  The following example shows an Authority Set entry,
    approved with its delegation member, that a sub-agent of type
    ai_agent may exercise at depth 1 for the read tool only:
 
@@ -1446,7 +1579,7 @@ Table of Contents
    Structured per-argument attenuation
    ([I-D.draft-niyikiza-oauth-attenuating-agent-tokens], with object-
    capability systems such as UCAN as prior art) would extend the
-   delegation and subset model of this document (Section 3.7,
+   delegation and subset model of this document (Section 3.8,
    Section 3.3) rather than introduce a new entry type.
 
 4.  Conformance
@@ -1459,11 +1592,15 @@ Table of Contents
    implements:
 
    *  schema validation of a proposed or carried entry against the type
-      definition (Section 3); and
+      definition (Section 3);
 
-   *  the Transformation Capabilities declaration (Section 3.9), stating
-      which of narrowing, delegation, and projection it claims for this
-      type.
+   *  either the approval-time assembly and validation of a
+      resource_contract reference, or refusal of every entry that
+      carries one (Section 3.7); and
+
+   *  the Transformation Capabilities declaration (Section 3.10),
+      stating which of narrowing, delegation, and projection it claims
+      for this type.
 
    For each capability it declares true, an authorization server also
    implements:
@@ -1471,10 +1608,10 @@ Table of Contents
    *  *narrowing*: the subset rule and the Common Constraint
       intersection rules (Section 3.3, Section 3.4);
 
-   *  *delegation*: the delegate eligibility test (Section 3.7); and
+   *  *delegation*: the delegate eligibility test (Section 3.8); and
 
-   *  *projection*: the three per-entry, per-target safety conditions of
-      Section 3.8 before emitting scope.
+   *  *projection*: the four per-entry, per-target safety conditions of
+      Section 3.9 before emitting scope.
 
    An authorization server that does not claim projection MUST NOT emit
    scope for a mission_resource_access entry under
@@ -1507,13 +1644,13 @@ Table of Contents
    *  *An unenforced constraint widens the grant.* A resource server or
       scope projection that treats an unrecognized constraints key as
       absent, or as disclosure-only, grants more than the entry
-      authorizes; Section 3.5 and Section 3.8 require fail-closed
+      authorizes; Section 3.5 and Section 3.9 require fail-closed
       handling instead.
 
    *  *A safe projection is per entry, not per type.* That
       mission_resource_access defines a projection relation
-      (Section 3.8) does not make every entry of the type safely
-      projectable: Section 3.8's three conditions must hold for the
+      (Section 3.9) does not make every entry of the type safely
+      projectable: Section 3.9's four conditions must hold for the
       specific entry and mapping in force, and the type's general
       capability does not extend to an entry by default.
 
@@ -1771,6 +1908,11 @@ Table of Contents
 
 8.1.  Normative References
 
+   [I-D.draft-mcguinness-mission-runtime]
+              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-runtime.html>.
+
    [I-D.draft-mcguinness-oauth-mission]
               McGuinness, K., "Mission-Bound Authorization for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -1855,11 +1997,6 @@ Table of Contents
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-metering.html>.
-
-   [I-D.draft-mcguinness-mission-runtime]
-              McGuinness, K., "Mission-Bound Runtime Enforcement", 2026,
-              <https://mcguinness.github.io/mission-bound-authorization/
-              draft-mcguinness-mission-runtime.html>.
 
    [I-D.draft-mcguinness-oauth-mission-transaction-authorization]
               McGuinness, K., "Mission Transaction Authorization Profile
