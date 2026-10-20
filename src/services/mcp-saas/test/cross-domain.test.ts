@@ -445,7 +445,7 @@ describe("Resource AS issues no renewal authority on the grant (#1180)", () => {
     issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
       missionId,
       targetAs: RAS_ISS,
-      clientId: "ap-agent",
+      clientId: AGENT_AT_RAS,
       cnfJkt: agentJkt,
       resourceToAs: RESOURCE_TO_AS,
     });
