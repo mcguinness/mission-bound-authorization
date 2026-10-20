@@ -350,6 +350,90 @@ describe("PDP enforces allowed_tools against the dispatched tool (@spec resource
   });
 });
 
+/**
+ * @spec resource-access#initial-common-constraints (#1266): a collection's
+ * members, each with the facts the PEP read from its own record, carried as
+ * `resource.properties.members`. Each member is a resource the action acts
+ * on, so each must satisfy every bound that reads a member fact.
+ */
+describe("PDP evaluates each member of a collection against the member-fact bounds (@spec resource-access#initial-common-constraints)", () => {
+  const BOUND = { ...Q3, tenant: "payments-demo", data_classification: ["internal"] };
+  const member = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    issued_at: "2026-08-15T09:30:00Z",
+    tenant: "payments-demo",
+    data_classification: "internal",
+    ...extra,
+  });
+
+  it("permits when every member satisfies every bound, the window's inclusive edges and offsets included", async () => {
+    const members = [
+      member("inv-a", { issued_at: "2026-07-01T02:00:00+02:00" }),
+      member("inv-b", { issued_at: "2026-09-30T23:59:59Z" }),
+    ];
+    expect((await decide(view(BOUND), { members })).permit).toBe(true);
+  });
+
+  it("refuses when any one member is outside a bound, or lacks the fact it reads", async () => {
+    for (const odd of [
+      member("inv-x", { issued_at: "2026-10-01T00:00:00Z" }),
+      member("inv-x", { tenant: "other-tenant" }),
+      member("inv-x", { data_classification: "restricted" }),
+      { id: "inv-x", tenant: "payments-demo", data_classification: "internal" },
+      { id: "inv-x", issued_at: "2026-08-15T09:30:00Z", data_classification: "internal" },
+      { id: "inv-x", issued_at: "2026-08-15T09:30:00Z", tenant: "payments-demo" },
+    ]) {
+      expect(await decide(view(BOUND), { members: [member("inv-a"), odd] }), JSON.stringify(odd)).toMatchObject({
+        permit: false,
+        reason: "parameter_violation",
+      });
+    }
+  });
+
+  it("data_classification over a collection: every member's label must be among the values, compared as exact strings", async () => {
+    const DC = { data_classification: ["internal", "public"] };
+    const labeled = (...labels: string[]) => labels.map((l, i) => ({ id: `inv-${i}`, data_classification: l }));
+    expect((await decide(view(DC), { members: labeled("internal", "public") })).permit).toBe(true);
+    for (const labels of [["internal", "restricted"], ["public", "Internal"], ["internal", "internal", "secret"]]) {
+      expect(await decide(view(DC), { members: labeled(...labels) }), labels.join(",")).toMatchObject({
+        permit: false,
+        reason: "parameter_violation",
+      });
+    }
+  });
+
+  it("reads each member's facts, never a single-object fact beside them", async () => {
+    const { tenant: _none, ...untenanted } = member("inv-x");
+    for (const members of [[member("inv-x", { tenant: "other-tenant" })], [untenanted]]) {
+      expect(
+        await decide(view({ tenant: "payments-demo" }), { tenant: "payments-demo", members }),
+        JSON.stringify(members),
+      ).toMatchObject({ permit: false, reason: "parameter_violation" });
+    }
+  });
+
+  it("an empty or unreadable member list establishes no member fact (boundary)", async () => {
+    for (const members of [[], "inv-a", [member("inv-a"), { ...member("inv-b"), tenant: 7 }], [{ ...member("inv-a"), owner: "x" }], [{ tenant: "payments-demo" }]]) {
+      expect(await decide(view({ tenant: "payments-demo" }), { members }), JSON.stringify(members)).toMatchObject({
+        permit: false,
+        reason: "parameter_violation",
+      });
+    }
+    // A bound that reads no member fact is not narrowed by an empty collection.
+    expect((await decide(view({ time_window: { not_before: "2020-01-01T00:00:00Z" } }), { members: [] })).permit).toBe(true);
+  });
+
+  it("a credential bound reading a member fact is evaluated for each member under an unbounded Mission", async () => {
+    const credential = [
+      { type: "mission_resource_access", resource: RESOURCE, actions: [ACTION], constraints: { tenant: "payments-demo" } },
+    ];
+    expect((await decide(view(), { members: [member("inv-a"), member("inv-b")] }, credential)).permit).toBe(true);
+    expect(
+      await decide(view(), { members: [member("inv-a"), member("inv-b", { tenant: "other-tenant" })] }, credential),
+    ).toMatchObject({ permit: false, reason: "parameter_violation" });
+  });
+});
+
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({
