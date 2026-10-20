@@ -49368,7 +49368,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49390,7 +49390,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with invalid_grant and authority_restricted_since_approval and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption or a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -49412,7 +49412,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (`predecessor_state_changed` for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
+    "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (a terminal-exit code chosen by Reconciliation's attribution rule for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
     "local": "the error code and the absence of any successor are witnessed; the reference does not attach mission_expansion_status on this request-time check (pre-existing)"
    },
    "level": "endpoint",
@@ -49655,7 +49655,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "Once the successor has activated, a further pushed request for the continuation is refused and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
+    "normative": "Once the successor has activated, a further pushed request for the continuation is refused with invalid_request and redemption of any other authorization code issued for the operation fails with invalid_grant; at most one successor exists."
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50239,8 +50239,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deferred expansion is polled with the deferred token response's deferred grant type and its deferral_code, and the Mission Issuer serves that poll",
-    "local": "the reference AS serves the expansion poll on the token-exchange grant with deferral_code"
+    "normative": "a client polls a deferred expansion with the deferred token response's deferred grant type and its deferral_code",
+    "local": "the reference AS serves, and its clients use, the token-exchange grant with deferral_code for the expansion poll (#1177)"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -50302,7 +50302,7 @@
     "capability": "expansion.adjudication"
    },
    "profiles": [],
-   "surface": "mission-reference",
+   "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission's related_to appears on its Mission record and never on the mission claim of a token derived under it",
