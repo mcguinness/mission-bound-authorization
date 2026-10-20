@@ -70,6 +70,7 @@ export {
   paymentsBoundaryContext,
   TOOL_BASE,
   TOOL_ACTIONS,
+  PAYMENTS_INVOICE_CONTRACT,
   type ActionMapping,
 } from "./pep.js";
 export {

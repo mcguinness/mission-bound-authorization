@@ -50,6 +50,7 @@ normative:
     date: 2026
 
 informative:
+  RFC8792:
   RFC9396:
   I-D.draft-mcguinness-oauth-mission-progressive:
     title: "Mission Progressive Authorization for OAuth 2.0"
@@ -126,247 +127,360 @@ informative:
 
 --- abstract
 
-Mission-Bound Authorization records exactly one accountable Approver
-per Mission and defers approval-authority provenance to a governance
-layer. This document defines that layer's record: the Approval
-Governance Record, an issuer-retained, issuer-signed record of the
-policy, assertions, and evaluation standing behind an approval event.
-It gives an estate first-class, auditable answers to who approved,
-under which authority, and why the decision satisfied governance,
-without adding any wire artifact. The record never appears on
-tokens, protocol messages, or enforcement projections, and the
-Mission record's single accountable Approver is unchanged. The
-document also defines a governed policy approval basis, under which a
-policy version that an accountable human approved activates a Mission
-proposal.
+Mission-Bound Authorization records one accountable Approver for each
+Mission and leaves multi-party approval and approval-authority
+provenance to a governance layer. This document defines that layer's
+record, the Approval Governance Record: an issuer-signed,
+issuer-retained record of the policy, assertions, and evaluation behind
+one approval event. Before the Mission is created, the record is part of
+the approval decision; afterwards, it is immutable evidence of who
+approved, under which authority, and why the decision satisfied
+governance. The record never appears on tokens or protocol messages, and
+the Mission's single accountable Approver is unchanged.
+
+This document also defines the `governed_policy` approval basis, under
+which a policy version that an accountable human approved activates
+Mission proposals, and the Approval Context Commitment, a digest over a
+Mission's immutable creation facts that lets two authenticated artifacts
+be matched to one approval.
 
 --- middle
 
 # Introduction {#introduction}
 
-An authority-bearing binding of the Mission model records one
-accountable Approver and defers multi-party approval and
-approval-authority provenance to a governance layer
-({{I-D.draft-mcguinness-oauth-mission}} states the rule for the
-OAuth binding, whose record members this document's binding rules
-consume). An enterprise review surface is often that governance
-layer: a decision may involve several principals, a threshold or
-separation-of-duty rule, and a delegation-of-authority policy, and an
-auditor later needs to prove not only who approved but under which
+Mission-Bound Authorization records one accountable Approver for each
+Mission and leaves multi-party approval and approval-authority
+provenance to a governance layer. Mission-Bound Authorization for OAuth
+2.0 {{I-D.draft-mcguinness-oauth-mission}} (the "issuance profile")
+states this rule for the OAuth binding, which records the Approver in
+`approval_basis.consent_principal`; this document consumes that
+binding's record members.
+
+An enterprise review process is often that governance layer. One
+approval can involve several principals, a threshold or
+separation-of-duty rule, and a delegation-of-authority policy. An
+auditor later has to prove not only who approved, but under which
 authority the approval was valid.
 
-This document defines the Approval Governance Record (AGR) as
-governance evidence with teeth: where it is recorded, it participates
-in whether the Mission activates, so its assertions carry
-authentication and binding requirements, and its committed form is
-signed and immutable.
+The issuance profile answers who is accountable for a Mission. This
+document answers under which authority that approval was made, and why
+it satisfied governance. It defines:
 
-It also defines the `governed_policy` approval basis
-({{governed-policy}}): an accountable human approves a bounded policy
-version once, and that policy then decides eligible Mission proposals,
-each activation committing a record.
+- the Approval Governance Record (AGR), the record of the policy,
+  assertions, and evaluation behind one approval event ({{record}});
+- the `governed_policy` approval basis ({{governed-policy}}), under
+  which an accountable human approves a bounded policy version once, and
+  that policy then decides eligible Mission proposals, each activation
+  committing a record; and
+- the Approval Context Commitment ({{approval-context-commitment}}), an
+  optional digest over a Mission's immutable creation facts that other
+  authenticated artifacts can disclose.
 
-Before commitment, the record is part of the approval decision
-itself: an assertion that fails authentication, event binding, or
-policy authorization MUST NOT contribute, and a record that cannot be
-evaluated or persisted MUST prevent activation. After commitment, the
-record is evidence: immutable, signed, and consumed by audit, never
-by enforcement.
+The record has two phases:
 
-This document is optional. A deployment that records nothing beyond
-the Mission record's accountable `approval_basis.consent_principal`
-is fully conformant to its Mission binding and unaffected by this
-document. Profiles MAY
-require this record; the Enterprise Mission Authority Profile does
-so under its recording triggers
-({{I-D.draft-mcguinness-mission-authority-server}}).
+- Before commitment, it is part of the approval decision. An assertion
+  that fails authentication, event binding, or policy authorization does
+  not contribute ({{assertion-requirements}}), and a record that cannot
+  be evaluated or persisted prevents activation ({{atomic-commitment}}).
+- After commitment, it is evidence: immutable, signed ({{envelope}}),
+  and consumed by audit, never by enforcement.
 
-This document is ceremony-independent: it applies to synchronous
-approval, deferred approval
-({{I-D.draft-mcguinness-oauth-mission-approval}}), and the standalone
-Mission Authority Server's native asynchronous approval alike, and
-depends on no deferral substrate.
+This document is optional. A deployment that records nothing beyond the
+Mission Record's accountable `approval_basis.consent_principal` is fully
+conformant to its Mission binding and unaffected by this document. A
+profile can require the record; {{triggers}} defines the conditions
+under which one does.
+
+The record is independent of the approval ceremony. It applies alike to
+synchronous approval, to deferred approval
+({{I-D.draft-mcguinness-oauth-mission-approval}}), and to the native
+asynchronous approval of a standalone Mission Authority Server
+({{I-D.draft-mcguinness-mission-authority-server}}), and it depends on
+no deferral substrate.
 
 # Conventions and Definitions {#conventions-and-definitions}
 
 {::boilerplate bcp14-tagged}
 
-This document uses JSON {{RFC8259}} as the data model for the
-Approval Governance Record. JCS canonicalization {{RFC8785}} applies
-wherever this document computes a digest or a signing input, under
-the canonicalization rules of {{I-D.draft-mcguinness-oauth-mission}};
-this document does not define a second canonicalization.
+All JSON shown in this document is non-normative and illustrative; the
+member definitions in the surrounding text are authoritative. An example
+line too long for the page is folded with the single backslash strategy
+of {{RFC8792}}; the canonical-bytes blocks of
+{{approval-context-vectors}} are wrapped as that appendix describes.
+
+This document uses JSON {{RFC8259}} as the data model for the Approval
+Governance Record. JCS canonicalization {{RFC8785}} applies wherever
+this document computes a digest or a signing input, under the
+canonicalization rules of {{I-D.draft-mcguinness-oauth-mission}}; this
+document does not define a second canonicalization.
 
 A digest is encoded in the integrity-anchor encoded form of
-{{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix
-followed by the base64url, no-padding encoding of the digest. This
-document defines no digest algorithm of its own. Its two digests are
-classified under the substrate's default commitment construction,
-which this document imports normatively
-({{I-D.draft-mcguinness-mission-substrate}}):
-`approval_policy.digest` is an envelope anchor, and the record
-digest ({{envelope}}) is a canonical-object digest.
+{{I-D.draft-mcguinness-oauth-mission}}: the `sha-256:` prefix followed
+by the base64url, no-padding encoding of the digest. This document
+defines no digest algorithm of its own. Its two digests are classified
+under the substrate's default commitment construction, which this
+document imports normatively
+({{I-D.draft-mcguinness-mission-substrate}}): `approval_policy.digest`
+is an envelope anchor, and the record digest ({{envelope}}) is a
+canonical-object digest.
 
-The terms Mission, Mission Issuer, Approver, approval event, Mission
-Intent, `approval_event_id`, `intent_hash`, and `authority_hash`
-are used as defined in
-{{I-D.draft-mcguinness-oauth-mission}}.
+The terms Mission, Mission Record, Mission Issuer, Approver, Subject,
+approval event, Mission Intent, Authority Set, audit horizon,
+`approval_event_id`, `intent_hash`, and `authority_hash` are used as
+defined in {{I-D.draft-mcguinness-oauth-mission}}.
+
+This document defines the following terms:
 
 Approval Governance Record (AGR):
-: The record this document defines: the policy, assertions, and
-  evaluation standing behind one approval event ({{record}}).
+: The policy, assertions, and evaluation standing behind one approval
+  event ({{record}}).
 
 Assertion:
 : One principal's authenticated decision statement carried in an AGR
-  ({{record}}).
+  ({{assertion-members}}).
+
+Accountable assertion:
+: The assertion that satisfies the accountable-approver rule
+  ({{accountable-assertion}}).
 
 Evaluation:
-: The issuer's determination of whether the recorded assertions
-  satisfy the referenced approval policy ({{record}}).
+: The issuer's determination of whether the recorded assertions satisfy
+  the referenced approval policy ({{atomic-commitment}}).
+
+Record digest:
+: The digest over a complete record, `envelope` included, that every
+  external binding names ({{envelope}}).
 
 Recording trigger:
-: A condition under which a profile requires this record for an
-  approval event ({{triggers}}).
+: A condition under which a profile requires this record for an approval
+  event ({{triggers}}).
+
+Recording Issuer:
+: A Mission Issuer that records Approval Governance Records
+  ({{conformance}}).
+
+Relying Auditor:
+: A party that verifies a retained record and can re-check its
+  evaluation ({{conformance}}).
 
 # Relationship to the Issuance Profile {#issuance-relationship}
 
-The Mission record carries exactly one accountable principal,
+The Mission Record carries exactly one accountable principal,
 `approval_basis.consent_principal`, and this document does not change
-that: the accountable Approver remains the only principal any
-downstream projection, token, or enforcement point consumes. The
-record captures the standing behind that
-approval, never a second authorization surface visible outside the
-issuer.
+that. The accountable Approver remains the only principal that any
+downstream projection, token, or enforcement point consumes. The record
+captures the standing behind that approval, never a second authorization
+surface visible outside the issuer.
 
-`approval_event_id` joins the record to the approval event and to
-the Mission record it governs
+The `approval_event_id` member joins the record to the approval event
+and to the Mission Record it governs
 ({{I-D.draft-mcguinness-oauth-mission}}). The record never appears on
-tokens or in any protocol message; it is issuer-retained
-control-plane state. Where the governed Mission populates
-`approval_basis.adjudication`
+tokens or in any protocol message; it is issuer-retained control-plane
+state. OAuth standardizes the authorization data that a client requests
+and is granted ({{RFC9396}} for rich authorization requests), not an
+organization's internal approval provenance, so the record also stays
+out of enforcement projections, matching the issuance profile's
+control-plane discipline.
+
+The record governs the Mission approval event. An action-time approval
+under the runtime profile's re-evaluation surfaces
+({{I-D.draft-mcguinness-mission-runtime}}) is a different layer and
+never joins this record.
+
+Where the governed Mission populates `approval_basis.adjudication`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping") and
-this record exists, `adjudication.governance_record` is `true` and
-`kind` names the mechanism the approval basis fixes: `human` for
-`direct`, and `policy` for a standing-consent basis, including
-`governed_policy` ({{governed-policy}}). It is never a value that
-names this record itself, and never a flattening of its assertion set
-into a single principal. Where the record carries an accountable
-assertion ({{assertion-requirements}}), that assertion's own `kind`
-MUST equal `kind`.
+this record exists:
+
+- `adjudication.governance_record` is `true`;
+- `adjudication.kind` names the mechanism the approval basis fixes:
+  `human` for `direct`, and `policy` for a standing-consent basis,
+  including `governed_policy` ({{governed-policy}}). It is never a value
+  that names this record itself, and never a flattening of its assertion
+  set into a single principal; and
+- where the record carries an accountable assertion
+  ({{assertion-requirements}}), that assertion's own `kind` MUST equal
+  `adjudication.kind`.
+
+# Recording Triggers {#triggers}
+
+A profile MAY require this record; the Enterprise Mission Authority
+Profile does so under these recording triggers
+({{I-D.draft-mcguinness-mission-authority-server}}). The triggers are
+defined here so that a profile cites one list. The record is REQUIRED
+for an approval event when any of the following holds:
+
+1. the Mission Record's `approval_basis.consent_principal` differs
+   from its `subject`;
+2. more than one principal contributes to the decision;
+3. a non-human assertion contributes to the decision;
+4. a threshold, veto, or separation-of-duty rule is evaluated; or
+5. validating any assertion requires authority standing outside the
+   Mission Record.
+
+Independently of any profile, every activation under `governed_policy`
+records an Approval Governance Record ({{governed-policy}}).
+
+The Approver is always `approval_basis.consent_principal`
+({{I-D.draft-mcguinness-oauth-mission}}), so a Mission whose Approver
+differs from its Subject holds the first trigger, and the Enterprise
+Mission Authority Profile always records an Approval Governance Record
+for it.
+
+Direct self-approval by one authenticated human is the degenerate case:
+the Mission Record already carries it completely, and no record is
+required. This presumes that the human resolved the approval on the
+approval surface itself. Where an agent resolves it on its own behalf,
+there is no human decision for this list to be degenerate about
+({{I-D.draft-mcguinness-mission-runtime}}).
+
+The following table gives an example approval for each trigger, and for
+the degenerate case. Each row names one trigger that holds; others can
+hold too.
+
+| Approval | Trigger that holds |
+|---|---|
+| A manager approves a Mission whose Subject is Alice | The Approver differs from the Subject |
+| Alice and a finance co-approver both approve | More than one principal contributes |
+| A delegation-of-authority policy asserts alongside Alice ({{record-example}}) | A non-human assertion contributes |
+| A two-of-three finance rule decides the approval | A threshold rule is evaluated |
+| An approver's authority comes from a delegation matrix held outside the Mission Record | Validating an assertion requires outside standing |
+| Alice alone approves her own Mission on the approval surface | None; no record is required |
+{: title="Recording trigger examples"}
 
 # The Approval Governance Record {#record}
 
-An Approval Governance Record is a JSON object with these members,
-plus the integrity `envelope` {{envelope}} defines.
+An Approval Governance Record is a JSON object. {{record-members}} and
+{{assertion-members}} define its members. {{assertion-requirements}} and
+{{atomic-commitment}} define how the issuer builds and commits it, and
+{{envelope}} defines its integrity protection.
+
+## Record Members {#record-members}
 
 `approval_event_id`:
 : REQUIRED. A string. The approval event's identifier, equal to the
-  Mission record's `approval_event_id`
+  Mission Record's `approval_event_id`
   ({{I-D.draft-mcguinness-oauth-mission}}).
 
 `mission`:
 : REQUIRED. An object binding the record to the approved Mission:
   `issuer` (the Mission Issuer), `intent_hash`, and `authority_hash`,
-  each equal to the committed Mission record member of the same
-  name. A record whose binding does not match the Mission record it
-  is retained with is invalid.
-
-`approval_context_commitment`:
-: OPTIONAL. A string. The Approval Context Commitment over the
-  governed Mission's immutable creation facts
-  ({{approval-context-commitment}}), in the encoded form
-  {{conventions-and-definitions}} fixes. It is a member of this
-  record, never of the Mission record: the profile adds no Mission
-  record member ({{approval-context-computation}}). An issuer that
-  records it computes it in the same commit that creates the Mission
-  and persists this record, before the record is signed
-  ({{atomic-commitment}}), so the signed payload commits to it. The
-  `mission` member above carries no Mission `id`, so a verifier
-  recomputes this value from the Mission record this record is
-  retained with, the record the mission binding check already
-  resolves ({{envelope}}, step 5), and rejects the reference on a
-  mismatch ({{approval-context-computation}}). Its presence is what
-  lets this record and another authenticated artifact disclosing the
-  same commitment be matched to one approval transaction without
-  either re-deriving the other's fields.
+  each equal to the committed Mission Record member of the same name. A
+  record whose binding does not match the Mission Record it is retained
+  with is invalid.
 
 `approval_policy`:
-: REQUIRED. An object identifying the governing
-  delegation-of-authority policy: `id` (an identifier), `version` (a
-  string), and `digest` (an integrity anchor over the retained policy
-  snapshot, in the encoded form {{conventions-and-definitions}}
-  fixes). The digest preimage is the issuance profile's
-  integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}})
-  with `typ` `mission-approval-policy`, `iss` the Mission issuer, and
-  `value` an object of `content_type` (the snapshot's media type) and
-  `content` (the base64url, no-padding encoding of the snapshot
-  bytes), canonicalized with JCS {{RFC8785}}: the `typ`
-  domain-separates this anchor from every other anchor in the family,
-  and the issuer binding prevents cross-issuer replay. The snapshot
-  bytes and their media type, or the referenced policy version they
-  represent, MUST be retained for the Mission's audit horizon
-  ({{I-D.draft-mcguinness-oauth-mission}}), so an independent auditor
-  reproduces the digest exactly and re-checks the evaluation against
-  the policy that governed it. Threshold, quorum, veto, and separation-of-duty semantics live
-  in the referenced policy; any human-readable summary of them in
-  deployment tooling is advisory and carries no semantics in this
-  record.
+: REQUIRED. An object identifying the governing delegation-of-authority
+  policy: `id` (an identifier), `version` (a string), and `digest` (an
+  integrity anchor over the retained policy snapshot, in the encoded
+  form {{conventions-and-definitions}} fixes). {{approval-policy}}
+  defines the digest and the snapshot's retention.
 
 `assertions`:
-: REQUIRED. An array of one or more decision assertions. Each
-  carries:
-
-    `assertion_id`:
-    : REQUIRED. A string, unique within the record.
-
-    `principal`:
-    : REQUIRED. An object with `iss` and `sub`.
-
-    `kind`:
-    : REQUIRED. A string, one of `human`, `service`, or `policy`.
-
-    `decision`:
-    : REQUIRED. A string, one of `approve` or `deny`.
-
-    `decided_at`:
-    : REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
-
-    `authority`:
-    : REQUIRED. A reference to the provenance under which this
-      principal was authorized to decide. For a `human` assertion,
-      the authentication context of the assertion. For a `policy`
-      assertion, the deciding policy's identifier and version, and
-      `approved_at`: the family's provenance chain for non-human
-      adjudication, in which the policy decides the instance because a
-      human approved the policy. For a `service` assertion, the
-      identifier and version of the logic that produced the decision,
-      including the model's identifier and version where a model
-      produced it.
-
-      `approved_at` is an RFC 3339 timestamp: the human approval
-      instant of that exact policy version, not the assertion
-      instant. `decided_at` records when the policy asserted;
-      `approved_at` records when a human approved the version it
-      asserts under. The issuer MUST verify `approved_at` from
-      retained, authenticated governance state for the named
-      `policy_id` and `version`; it MUST NOT accept `approved_at` as
-      the assertion's own uncorroborated clock value
-      ({{policy-approval-recency}}).
-
-    `reason`:
-    : OPTIONAL. A string.
+: REQUIRED. An array of one or more decision assertions
+  ({{assertion-members}}).
 
 `evaluation`:
-: REQUIRED. An object recording the outcome: `decision` (a string,
-  `approved`, the only value a committed record carries, since a
-  record exists only for an approval that committed,
-  {{atomic-commitment}}), `evaluated_at` (an RFC 3339 timestamp),
-  and `contributing` (an array of the `assertion_id` values the
-  evaluation relied on).
+: REQUIRED. An object recording the outcome, with these members:
+
+    `decision`:
+    : A string. The only value a committed record carries is `approved`,
+      since a record exists only for an approval that committed
+      ({{atomic-commitment}}).
+
+    `evaluated_at`:
+    : An RFC 3339 timestamp.
+
+    `contributing`:
+    : An array of the `assertion_id` values the evaluation relied on.
+
+`approval_context_commitment`:
+: OPTIONAL. A string. The Approval Context Commitment over the governed
+  Mission's immutable creation facts ({{approval-context-commitment}}),
+  in the encoded form {{conventions-and-definitions}} fixes. It is a
+  member of this record, never of the Mission Record
+  ({{approval-context-computation}}). An issuer that records it computes
+  it in the same commit that creates the Mission and persists this
+  record, before the record is signed ({{atomic-commitment}}), so the
+  signed payload commits to it. A verifier checks it against the Mission
+  Record ({{envelope}}).
 
 `envelope`:
-: REQUIRED. An object. Integrity protection over the members above,
-  in the form {{envelope}} defines.
+: REQUIRED. An object. Integrity protection over the members above, in
+  the form {{envelope}} defines.
+
+## Assertion Members {#assertion-members}
+
+Each element of `assertions` is an object with these members:
+
+`assertion_id`:
+: REQUIRED. A string, unique within the record.
+
+`principal`:
+: REQUIRED. An object with `iss` and `sub`.
+
+`kind`:
+: REQUIRED. A string, one of `human`, `service`, or `policy`.
+
+`decision`:
+: REQUIRED. A string, one of `approve` or `deny`.
+
+`decided_at`:
+: REQUIRED. An RFC 3339 {{RFC3339}} timestamp.
+
+`authority`:
+: REQUIRED. A reference to the provenance under which this principal was
+  authorized to decide:
+
+  - For a `human` assertion, the authentication context of the
+    assertion.
+  - For a `policy` assertion, the deciding policy's identifier and
+    version, and `approved_at`: the family's provenance chain for
+    non-human adjudication, in which the policy decides the instance
+    because a human approved the policy.
+  - For a `service` assertion, the identifier and version of the logic
+    that produced the decision, including the model's identifier and
+    version where a model produced it.
+
+`reason`:
+: OPTIONAL. A string.
+
+A `policy` assertion's `approved_at` is an RFC 3339 timestamp: the human
+approval instant of that exact policy version, not the assertion
+instant. The `decided_at` member records when the policy asserted, and
+`approved_at` records when a human approved the version it asserts
+under. The issuer MUST verify `approved_at` from retained, authenticated
+governance state for the named `policy_id` and `version`; it MUST NOT
+accept `approved_at` as the assertion's own uncorroborated clock value
+({{policy-approval-recency}}).
+
+## Approval Policy Reference {#approval-policy}
+
+The `approval_policy.digest` preimage is the issuance profile's
+integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}}),
+canonicalized with JCS {{RFC8785}}, with these members:
+
+- `typ`: `mission-approval-policy`, which domain-separates this anchor
+  from every other anchor in the family;
+- `iss`: the Mission Issuer, which prevents cross-issuer replay; and
+- `value`: an object of `content_type` (the snapshot's media type) and
+  `content` (the base64url, no-padding encoding of the snapshot bytes).
+
+The snapshot bytes and their media type, or the referenced policy
+version they represent, MUST be retained for the Mission's audit horizon
+({{I-D.draft-mcguinness-oauth-mission}}), so an independent auditor
+reproduces the digest exactly and re-checks the evaluation against the
+policy that governed it.
+
+Threshold, quorum, veto, and separation-of-duty semantics live in the
+referenced policy; any human-readable summary of them in deployment
+tooling is advisory and carries no semantics in this record.
+
+## Example {#record-example}
+
+The following is an example of an Approval Governance Record. Its
+Mission, `msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj`, is not the issuance
+profile's Worked Example Mission, but it shares that Mission's Intent
+and Authority Set, and so its anchors.
 
 ~~~ json
 {
@@ -415,198 +529,329 @@ plus the integrity `envelope` {{envelope}} defines.
 }
 ~~~
 
-The example's Mission, `msn_h8ucQfVYsc9ttvVWaQ2SN6ZKc5KLpUlj`, is not
-the issuance profile's canonical Worked Example Mission, though it
-shares that Mission's Intent and Authority Set and so its anchors.
-Its record's accountable `approval_basis.consent_principal` is Alice
-(`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`); `ast_1` is
-that principal's own `approve` assertion, satisfying the
-accountable-approver rule of {{assertion-requirements}} directly.
-`ast_2` is a `policy` assertion carrying its own provenance chain,
-recorded alongside rather than in place of the accountable
-approver's assertion. The `envelope`
-member's `value` is the JWS whose payload is the JCS canonical bytes
-of this object with `envelope` itself removed ({{envelope}}).
+In this example:
+
+- The Mission Record's accountable `approval_basis.consent_principal` is
+  Alice (`user_3p2q8mN1a0kV7tR` at `https://idp.example.com`). `ast_1`
+  is her own `approve` assertion, which satisfies the
+  accountable-approver rule of {{accountable-assertion}} directly.
+- `ast_2` is a `policy` assertion carrying its own provenance chain,
+  recorded alongside the accountable assertion rather than in place of
+  it. Because a non-human assertion contributes, the record is required
+  under the third recording trigger ({{triggers}}).
+- The `envelope` member's `value` is the JWS whose payload is the JCS
+  canonical bytes of this object with `envelope` itself removed
+  ({{envelope}}).
 
 # Assertion Requirements {#assertion-requirements}
 
-These rules are the record's security core.
+These rules govern the assertions the issuer evaluates
+({{atomic-commitment}}).
+
+## Assertion Validation {#assertion-validation}
+
+The following rules apply to the assertions in a record:
 
 - Every assertion that contributes to the evaluation MUST be
   authenticated: a `human` assertion with the authentication the
   issuance profile requires of an Approver at an approval event, a
-  `service` or `policy` assertion through an integrity-protected
-  channel or signature the issuer verifies.
-- Every assertion MUST be bound to this approval event: an assertion
-  is made against this `approval_event_id` and this `authority_hash`,
-  and an assertion captured for one event MUST NOT be replayed into
-  another.
+  `service` or `policy` assertion through an integrity-protected channel
+  or signature the issuer verifies.
+- Every assertion MUST be bound to this approval event: an assertion is
+  made against this `approval_event_id` and this `authority_hash`, and
+  an assertion captured for one event MUST NOT be replayed into another.
 - Every contributing assertion MUST be policy-authorized: the issuer
   verifies the asserting principal was eligible to assert under the
   referenced `approval_policy` version before counting it.
 - Denials and vetoes MUST be recorded: an assertion set that omits a
   negative assertion misrepresents the decision.
-- Exactly one assertion MUST match the Mission record's accountable
-  `approval_basis.consent_principal` and carry an `approve` decision;
-  the record supports the approval it claims to govern or it does not
-  commit. The matching
-  assertion's `kind` MUST be `human` or `policy`: a `service`
-  assertion, including one a model produced, is a contributing
-  governance input, never the accountable approver's assertion. The
-  Mission's `approval_basis.type` fixes the accountable assertion:
 
-  - For `direct`, it MUST be the `human` assertion of
-    `consent_principal`, the human decision a `direct` approval event
-    carries ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and
-    `service` assertions can contribute without replacing it.
-  - For `governed_policy`, it is a `policy` assertion carrying the
-    deciding policy's provenance chain ({{governed-policy-record}}):
-    the policy is the decision mechanism and the matched principal
-    stays the human who approved it, subject to the high-risk-class
-    restriction of {{policy-approval-recency}}.
-  - For any other named standing-consent `approval_basis`
-    ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies
-    this rule through that record instead of a matching assertion:
-    `consent_principal`, `root_commitment`, and `approved_at`,
-    already fixed at the approval event and immutable, stand in place
-    of it, subject to the same high-risk-class restriction. The
-    record can still carry contributing `policy` and `service`
-    assertions.
+An assertion that fails authentication, event binding, or policy
+authorization MUST NOT contribute to the evaluation and MUST NOT be
+counted toward any policy rule.
 
-  No assertion is fabricated in the name of the activating policy or
-  the requesting actor to stand in for a fresh human decision that
-  did not occur.
-- An assertion that fails authentication, event binding, or policy
-  authorization MUST NOT contribute to the evaluation and MUST NOT
-  be counted toward any policy rule.
+## Accountable Assertion {#accountable-assertion}
 
-# Evaluation and Atomic Commitment {#atomic-commitment}
+Exactly one assertion MUST match the Mission Record's accountable
+`approval_basis.consent_principal` and carry an `approve` decision; the
+record supports the approval it claims to govern or it does not commit.
+This is the accountable-approver rule. The matching assertion's `kind`
+MUST be `human` or `policy`: a `service` assertion, including one a
+model produced, is a contributing governance input, never the
+accountable assertion.
 
-Where a deployment records the Approval Governance Record for an
-approval, the record and the Mission are one commit: the issuer
-evaluates the assertions under the referenced policy, and the
-Mission record MUST NOT be created `active` unless the evaluation's
-`decision` is `approved` and the signed record persists atomically
-with the Mission's creation. Failure to authenticate the
-contributing assertions, to complete the evaluation, or to persist
-the record MUST prevent activation; there is no Mission whose
-governance record was meant to exist and does not. A governance
-evaluation that denies creates no Mission and no committed record:
-negative assertions retained inside a committed record document
-dissent ({{assertion-requirements}}), and a wholly declined
-approval's evidence surface is consent evidence's declined outcome
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which
-exists without a Mission record. The issuer signs
-the evaluated record ({{envelope}}) and persists the signed form in
-the same commit as the Mission's creation; signing follows
-evaluation and precedes persistence, never the reverse.
+The Mission's `approval_basis.type` fixes the accountable assertion:
 
-Where the record carries `approval_context_commitment` ({{record}}),
-the issuer computes it in this same commit, from the Mission record
-being created, and before signing. A value computed after the commit
-is not covered by the record's signature and MUST NOT be added to a
-committed record.
+- For `direct`, it MUST be the `human` assertion of `consent_principal`,
+  the human decision a `direct` approval event carries
+  ({{I-D.draft-mcguinness-oauth-mission}}); `policy` and `service`
+  assertions can contribute without replacing it.
+- For `governed_policy`, it is a `policy` assertion carrying the
+  deciding policy's provenance chain ({{governed-policy-record}}): the
+  policy is the decision mechanism and the matched principal stays the
+  human who approved it, subject to the high-risk-class restriction of
+  {{recency-high-risk}}.
+- For any other named standing-consent `approval_basis`
+  ({{I-D.draft-mcguinness-oauth-mission}}), the Mission satisfies this
+  rule through that record instead of a matching assertion:
+  `consent_principal`, `root_commitment`, and `approved_at`, already
+  fixed at the approval event and immutable, stand in place of it,
+  subject to the same high-risk-class restriction. The record can still
+  carry contributing `policy` and `service` assertions.
 
-A committed record is immutable. A subsequent governance action, a
-re-review or an incident finding, is a new record about a new event,
-never an edit.
+No assertion is fabricated in the name of the activating policy or the
+requesting actor to stand in for a fresh human decision that did not
+occur.
+
+Where the Mission populates `approval_basis.adjudication`, the
+accountable assertion's `kind` also equals `adjudication.kind`
+({{issuance-relationship}}).
 
 # Policy-Approval Recency {#policy-approval-recency}
 
 This section bounds staleness on the AGR `policy` assertion path: it
-governs a `policy` assertion's `authority.approved_at` and the
-`kind` of the accountable-approver's assertion. It does not apply to
-a `human` assertion, whose `decided_at` is the approval instant
+governs a `policy` assertion's `authority.approved_at` and the `kind` of
+the accountable assertion ({{accountable-assertion}}). It does not apply
+to a `human` assertion, whose `decided_at` is the approval instant
 itself.
+
+## Recency Declarations {#recency-declarations}
 
 A Recording Issuer that admits `policy` assertions MUST declare a
 maximum policy-approval age per consequence class (a **recency
 ceiling**) and a bounded clock-skew allowance, and MAY declare, per
 class, an **exception** admitting a `policy` assertion as the
-accountable approver's assertion for that class, each exception
-carrying its own maximum age. The ceiling, the skew allowance, and
-any exception MUST be part of the retained `approval_policy` snapshot
-that `approval_policy.digest` commits ({{record}}), or a separately
-versioned declaration committed from that snapshot. A mutable,
-out-of-band deployment statement MUST NOT serve this role: it would
-make the evaluation impossible to reproduce, contrary to the promise
-of {{record}} that the retained policy lets an auditor re-run the
-decision.
+accountable assertion for that class, each exception carrying its own
+maximum age.
+
+The ceiling, the skew allowance, and any exception MUST be part of the
+retained `approval_policy` snapshot that `approval_policy.digest`
+commits ({{approval-policy}}), or a separately versioned declaration
+committed from that snapshot. A mutable, out-of-band deployment
+statement MUST NOT serve this role: it would make the evaluation
+impossible to reproduce, contrary to the purpose of the retained policy,
+which lets an auditor re-run the decision ({{approval-policy}}).
+
+## Evaluating Recency {#recency-evaluation}
 
 At evaluation, the issuer MUST classify the committed Mission's
 consequence classes from the derived Authority Set and from any
 consumption bound the Mission Intent carries
 ({{I-D.draft-mcguinness-mission-metering}}). The issuer MUST select,
-across every class either source carries, the strictest maximum age
-that applies, accounting for any declared exception. This is a
-property of the whole committed Mission the record's
-`mission.authority_hash` and `mission.intent_hash` bind to
-({{record}}), never of one assertion or entry in isolation.
+across every class either source carries, the strictest maximum age that
+applies, accounting for any declared exception. This is a property of
+the whole committed Mission the record's `mission.authority_hash` and
+`mission.intent_hash` bind to ({{record-members}}), never of one
+assertion or entry in isolation.
 
 For each `policy` assertion the evaluation would count toward the
 applicable maximum, the issuer:
 
 - MUST verify `authority.approved_at` from retained, authenticated
-  governance state for the exact `policy_id` and `version` the
-  assertion names;
+  governance state for the exact `policy_id` and `version` the assertion
+  names;
 - MUST measure the assertion's age as `evaluation.evaluated_at` minus
   `authority.approved_at`, using the atomic-commitment instant
   ({{atomic-commitment}});
 - MUST enforce `authority.approved_at` <= `decided_at` <=
   `evaluation.evaluated_at`, subject to the declared clock-skew
   allowance; and
-- MUST reject the assertion if `authority.approved_at` or
-  `decided_at` is later than the issuer's own clock at evaluation,
-  beyond that allowance.
+- MUST reject the assertion if `authority.approved_at` or `decided_at`
+  is later than the issuer's own clock at evaluation, beyond that
+  allowance.
 
-A `policy` assertion whose age exceeds the applicable maximum, or
-whose ordering the previous paragraph does not admit, fails
-policy-authorization under {{assertion-requirements}}: the issuer
-MUST NOT count it toward the evaluation, and by
-{{atomic-commitment}} the Mission MUST NOT be created `active` on an
-evaluation that depended on it. An `evaluation.evaluated_at` later
-than the issuer's own clock, beyond the declared allowance, is a
-defect of the record rather than of one assertion: the evaluation
-MUST NOT be treated as complete, and by {{atomic-commitment}} the
-Mission MUST NOT be created `active` on it.
+A `policy` assertion whose age exceeds the applicable maximum, or whose
+ordering the checks above do not admit, fails policy-authorization under
+{{assertion-validation}}: the issuer MUST NOT count it toward the
+evaluation, and by {{atomic-commitment}} the Mission MUST NOT be created
+`active` on an evaluation that depended on it.
 
-This is issuance-time eligibility. It determines whether a Mission
-activates and does not reach back into a Mission already `active`:
-that Mission's governing policy approval was measured fresh at its
-own approval event, and a later change to the ceiling, the exception,
-or the policy's freshness does not narrow or terminate it.
+An `evaluation.evaluated_at` later than the issuer's own clock, beyond
+the declared allowance, is a defect of the record rather than of one
+assertion: the evaluation MUST NOT be treated as complete, and by
+{{atomic-commitment}} the Mission MUST NOT be created `active` on it.
 
-Four conditions are the high-risk classes the issuance profile
-defines: irreversible action, external commitment, privileged
-administration, and a consumption bound
-({{I-D.draft-mcguinness-oauth-mission}}). Where the committed
-Mission's derived Authority Set or Mission Intent
-({{I-D.draft-mcguinness-mission-metering}}) carries one, the
-assertion satisfying the accountable-approver rule of
-{{assertion-requirements}} MUST be `kind: human`, unless a committed,
-class-named exception under this section admits `kind: policy` for
-that class. Only `governed_policy` has a `policy` accountable
-assertion ({{assertion-requirements}}), so a governed policy
-activates a Mission carrying one of these classes only under such an
-exception.
+## High-Risk Classes {#recency-high-risk}
+
+Four conditions are the high-risk classes the issuance profile defines:
+irreversible action, external commitment, privileged administration, and
+a consumption bound ({{I-D.draft-mcguinness-oauth-mission}}). Where the
+committed Mission's derived Authority Set or Mission Intent
+({{I-D.draft-mcguinness-mission-metering}}) carries one, the assertion
+satisfying the accountable-approver rule of {{accountable-assertion}}
+MUST be `kind: human`, unless a committed, class-named exception under
+{{recency-declarations}} admits `kind: policy` for that class.
+
+Only `governed_policy` has a `policy` accountable assertion
+({{accountable-assertion}}), so a governed policy activates a Mission
+carrying one of these classes only under such an exception.
 
 The same default binds a Mission whose accountable-approver rule is
 satisfied through its own `approval_basis` record rather than an
-assertion ({{assertion-requirements}}): recording an AGR for such a
+assertion ({{accountable-assertion}}): recording an AGR for such a
 Mission carrying one of the four classes requires a committed,
-class-named exception under this section; absent it, the record MUST
-NOT be created and, by {{atomic-commitment}}, the Mission MUST NOT be
-created `active`.
+class-named exception under {{recency-declarations}}; absent it, the
+record MUST NOT be created and, by {{atomic-commitment}}, the Mission
+MUST NOT be created `active`.
 
-Approval Governance is an optional extension
-({{introduction}}); the rules of this section are a conservative
-default of that profile, not a family-wide guarantee, and a
-deployment that records no Approval Governance Record is unbounded
-by them. `kind: human` is not by itself an assurance property: the
-authentication-strength, rendering, and accountable-principal
+## Scope of the Recency Rules {#recency-scope}
+
+Recency is issuance-time eligibility. It determines whether a Mission
+activates and does not reach back into a Mission already `active`: that
+Mission's governing policy approval was measured fresh at its own
+approval event, and a later change to the ceiling, the exception, or the
+policy's freshness does not narrow or terminate it.
+
+Approval Governance is an optional extension ({{introduction}}). The
+rules of {{policy-approval-recency}} are a conservative default of this
+document, not a family-wide guarantee, and a deployment that records no
+Approval Governance Record is unbounded by them.
+
+The `kind: human` requirement is not by itself an assurance property:
+the authentication-strength, rendering, and accountable-principal
 requirements the issuance profile and {{assertion-requirements}}
-otherwise impose still carry that property; this section only
-decides which assertion kind MUST be present.
+otherwise impose still carry that property; {{policy-approval-recency}}
+only decides which assertion kind MUST be present.
+
+## Relationship to Standing-Consent Recency {#recency-standing-consent}
+
+{{policy-approval-recency}} bounds the AGR `policy` assertion path and,
+by extension, a standing-consent Mission whose `approval_basis` record
+stands in for that assertion ({{accountable-assertion}}).
+
+The issuance profile's standing-consent bases carry their own
+human-approval instant in `approval_basis.approved_at`, traced through
+`consent_principal` and a commitment
+({{I-D.draft-mcguinness-oauth-mission}}). The template profile's
+`template` basis and the progressive profile's `ceiling_drawdown` basis
+both populate it, and each profile declares its own maximum age against
+it: `review_cadence` for template, and the ceiling review cadence for
+progressive ({{I-D.draft-mcguinness-oauth-mission-template}},
+{{I-D.draft-mcguinness-oauth-mission-progressive}}).
+
+Under `governed_policy` the two instants coincide:
+`approval_basis.approved_at` equals the accountable `policy` assertion's
+`authority.approved_at` ({{governed-policy-record}}). This document's
+ceiling therefore bounds that basis, alongside any standing-consent
+recency ceiling the deployment declares
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+Recency").
+
+The two recency paths are analogous, each bounding staleness against a
+retained human-approval instant, but they gate different things:
+
+- this document's ceiling governs whether the issuer may count a
+  `policy` assertion, or activate a Mission whose `approval_basis`
+  stands in for one, at evaluation; and
+- a profile's own maximum age governs whether the dispatch or drawdown
+  may happen at all, independent of whether an AGR is ever recorded.
+
+# Evaluation and Atomic Commitment {#atomic-commitment}
+
+Where a deployment records the Approval Governance Record for an
+approval, the record and the Mission are one commit. Within that commit,
+the issuer:
+
+- validates the assertions ({{assertion-requirements}});
+- evaluates them under the referenced policy version;
+- where the record carries `approval_context_commitment`
+  ({{record-members}}), computes it from the Mission Record being
+  created;
+- signs the evaluated record ({{envelope}}); and
+- persists the signed record in the same commit as the Mission's
+  creation.
+
+Signing follows evaluation and precedes persistence, never the reverse,
+and `approval_context_commitment` is computed before signing. A value of
+`approval_context_commitment` computed after the commit is not covered
+by the record's signature and MUST NOT be added to a committed record.
+
+Where a deployment records the Approval Governance Record for an
+approval, the Mission Record MUST NOT be created `active` unless the
+evaluation's `decision` is `approved` and the signed record persists
+atomically with the Mission's creation. Failure to authenticate the
+contributing assertions, to complete the evaluation, or to persist the
+record MUST prevent activation; there is no Mission whose governance
+record was meant to exist and does not.
+
+A governance evaluation that denies creates no Mission and no committed
+record. Negative assertions retained inside a committed record document
+dissent ({{assertion-validation}}), and a wholly declined approval's
+evidence surface is consent evidence's declined outcome
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}), which exists
+without a Mission Record.
+
+A committed record is immutable. A subsequent governance action, such as
+a re-review or an incident finding, is a new record about a new event,
+never an edit.
+
+# Envelope and Verification {#envelope}
+
+The `envelope` member ({{record-members}}) is an object with `format` (a
+string, required) and `value` (a string, required). The default `format`
+is `jws-compact`: a JWS Compact Serialization {{RFC7515}} over the JCS
+{{RFC8785}} canonical bytes of the record with the `envelope` member
+removed, signed by the Mission Issuer under a key resolvable in its
+published key material. The signed record, `envelope` included, is the
+retained, registrable form.
+
+This document defines only the `jws-compact` format; an implementation
+MUST reject an envelope whose `format` is unsupported rather than
+accepting it unverified.
+
+The JWS protected header MUST carry:
+
+- a `kid` resolvable in the Mission Issuer's published key material;
+- a `typ` of `application/mission-approval-governance+jws`; and
+- a `cty` of `application/mission-approval-governance+json` ({{iana}}).
+
+A verifier MUST reject a JWS whose protected `typ` and `cty` are not
+exactly this pair (Sections 4.1.9 and 4.1.10 of {{RFC7515}}).
+
+The following is the decoded JWS protected header of the `envelope`
+value in {{record-example}}:
+
+~~~ json
+{
+  "alg": "ES256",
+  "kid": "as-key-2",
+  "typ": "application/mission-approval-governance+jws",
+  "cty": "application/mission-approval-governance+json"
+}
+~~~
+
+A verifier MUST perform the following steps, in order, and MUST NOT
+treat a record as verified if any step fails:
+
+1. Resolve the Mission Issuer's signing key from the JWS protected
+   `kid` in its published key material.
+2. Verify the JWS signature and protected header against that key.
+3. Compute the JCS canonical bytes of the outer record with the
+   `envelope` member removed.
+4. Require byte-for-byte equality between the decoded JWS payload
+   and the canonical bytes of step 3, rejecting the record on any
+   difference. The signature authenticates only its own embedded
+   payload; a record that differs from that payload is
+   unauthenticated regardless of whether the signature itself
+   verifies.
+5. Validate the mission binding of {{record-members}} against the
+   Mission Record it is retained with.
+
+Where the record carries `approval_context_commitment`, the `mission`
+member carries no Mission `id`, so a verifier recomputes the commitment
+from the Mission Record this record is retained with, which step 5
+resolves, and rejects the reference on a mismatch
+({{approval-context-computation}}).
+
+The **record digest** is the digest, in the encoded form
+{{conventions-and-definitions}} fixes, over the JCS {{RFC8785}}
+canonical bytes of the complete record, `envelope` included. It is the
+one byte sequence every external reference names:
+
+- audit registration hashes exactly these bytes ({{audit-evidence}});
+  and
+- consent evidence's `approval_governance_digest` equals exactly this
+  value ({{consent-evidence-relationship}}).
 
 # Governed Policy Approval {#governed-policy}
 
@@ -622,7 +867,7 @@ with the Mission ({{atomic-commitment}}).
 ## Consented Root {#governed-policy-root}
 
 The consented root is the retained `approval_policy` snapshot that a
-human approved ({{record}}). It commits:
+human approved ({{approval-policy}}). It commits:
 
 - the clients, Subjects, and authority sources that can activate
   under it;
@@ -633,7 +878,7 @@ human approved ({{record}}). It commits:
   exceptions of {{policy-approval-recency}}; and
 - where a separate policy artifact decides instances, that artifact's
   activation policy reference ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Standing-Consent Bases").
+  Section "Activation Policy Commitment").
 
 The root decides whether an instance activates. It is distinct from
 an `organizational` authority source's `authority_source.policy`,
@@ -647,10 +892,10 @@ submitted proposal cannot supply its own standing consent.
 
 The root and a separate evaluator keep distinct digest domains:
 `approval_policy.digest` commits the root under `typ`
-`mission-approval-policy` ({{record}}), and the activation policy
-reference commits the evaluator under `typ`
-`mission-activation-policy`. The issuer MUST NOT accept either digest
-in place of the other.
+`mission-approval-policy` ({{approval-policy}}), and the activation
+policy reference commits the evaluator under `typ`
+`mission-activation-policy`. The issuer MUST NOT accept either digest in
+place of the other.
 
 ## Instance Record {#governed-policy-record}
 
@@ -691,11 +936,11 @@ is `approval_policy.digest` when the root decides, and the
 evaluator's `mission-activation-policy` digest when the evaluator
 decides.
 
-`approval_event_id` identifies this activation's approval event,
-never the human's approval of the root. The issuer allocates one per
-proposal it activates, so a retried or concurrent activation of the
-same proposal resolves to one Mission and one record, and each
-distinct activation creates its own Mission.
+The instance's `approval_event_id` identifies this activation's approval
+event, never the human's approval of the root. The issuer allocates one
+per proposal it activates, so a retried or concurrent activation of the
+same proposal resolves to one Mission and one record, and each distinct
+activation creates its own Mission.
 
 The record's accountable assertion ({{assertion-requirements}}) MUST
 be a `policy` assertion whose `principal` is `consent_principal` and
@@ -718,7 +963,7 @@ MUST, before it creates the Mission `active`:
 3. Where the root commits a separate evaluator, recompute that
    evaluator's digest over the exact snapshot evaluated
    ({{I-D.draft-mcguinness-oauth-mission}}, Section
-   "Standing-Consent Bases").
+   "Activation Policy Commitment").
 4. Establish the Subject and the authority source as the issuance
    profile requires, and verify that the requesting client, the
    Subject, and the source are ones the root admits.
@@ -734,7 +979,7 @@ MUST, before it creates the Mission `active`:
    only under a committed, class-named exception.
 8. Bind every assertion and the record to this instance's
    `approval_event_id`, `intent_hash`, and `authority_hash`
-   ({{assertion-requirements}}, {{record}}).
+   ({{assertion-validation}}, {{record-members}}).
 9. Sign the record and commit it with the `active` Mission
    ({{atomic-commitment}}).
 
@@ -743,86 +988,120 @@ A failure at any step creates no Mission and issues no credential.
 A model's output enters only as a recorded input at step 6: it can
 refuse an activation or narrow the authority activated, and never
 supplies authority or decides the approval
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
-Bases").
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis").
 
 Withdrawing the standing consent stops every later activation under
 it (step 1). A Mission already activated keeps its ordinary
 lifecycle: withdrawal does not revoke it.
 
-# Envelope and Verification {#envelope}
+## Example {#governed-policy-example}
 
-An Approval Governance Record carries its integrity protection in an
-`envelope` member: REQUIRED, an object with `format` (a string,
-required) and `value` (a string, required). The default `format` is
-`jws-compact`, a JWS Compact Serialization {{RFC7515}} over the JCS
-{{RFC8785}} canonical bytes of the record with the `envelope` member
-removed, signed by the Mission Issuer under a key resolvable in its
-published key material. The signed record, `envelope` included, is
-the retained, registrable form.
+The following example shows an excerpt, other members omitted, of the
+Mission Record of `msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT`, activated
+under `governed_policy`. Alice approved the policy `q3-close-agent`
+version 3 at 2026-10-30T16:00:00Z. The client `s6BhdRkqt3` later
+proposed the issuance profile's Worked Example task, and the policy
+activated it at 2026-11-02T08:00:00Z with no fresh human decision. The
+Mission shares the Worked Example Mission's Intent and Authority Set,
+and so its anchors. The policy digest stands for a policy snapshot this
+example does not display.
 
-A verifier MUST perform the following steps, in order, and MUST NOT
-treat a record as verified if any step fails:
+~~~ json
+{
+  "id": "msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT",
+  "issuer": "https://as.example.com",
+  "subject": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_basis": {
+    "type": "governed_policy",
+    "consent_principal": { "iss": "https://idp.example.com",
+      "sub": "user_3p2q8mN1a0kV7tR" },
+    "approved_at": "2026-10-30T16:00:00Z",
+    "root_commitment":
+      "sha-256:nw0FRGuMWUqNMS9BwKpEpqcvZwwO9DGrrujtlMNTAJU",
+    "activation": {
+      "approval_event_id": "ape_7d2sUfnZmgimG0bc67hu",
+      "policy": { "id": "q3-close-agent", "version": "3",
+        "digest":
+          "sha-256:nw0FRGuMWUqNMS9BwKpEpqcvZwwO9DGrrujtlMNTAJU" } },
+    "activation_actor": { "iss": "https://as.example.com",
+      "sub": "s6BhdRkqt3" },
+    "adjudication": { "kind": "policy",
+      "policy": { "id": "q3-close-agent", "version": "3" },
+      "governance_record": true }
+  },
+  "authority_source": { "type": "user_delegated" },
+  "client_id": "s6BhdRkqt3",
+  "approval_event_id": "ape_7d2sUfnZmgimG0bc67hu",
+  "created_at": "2026-11-02T08:00:00Z"
+}
+~~~
 
-1. Resolve the Mission Issuer's signing key from the JWS protected
-   `kid` in its published key material.
-2. Verify the JWS signature and protected header against that key.
-3. Compute the JCS canonical bytes of the outer record with the
-   `envelope` member removed.
-4. Require byte-for-byte equality between the decoded JWS payload
-   and the canonical bytes of step 3, rejecting the record on any
-   difference. The signature authenticates only its own embedded
-   payload; a record that differs from that payload is
-   unauthenticated regardless of whether the signature itself
-   verifies.
-5. Validate the mission binding of {{record}} against the Mission
-   record it is retained with.
+The following is an example of the Approval Governance Record committed
+with that Mission:
 
-The JWS protected header MUST carry a `kid` resolvable in the Mission
-Issuer's published key material, a `typ` of
-`application/mission-approval-governance+jws`, and a `cty` of
-`application/mission-approval-governance+json` ({{iana}}); a verifier
-MUST reject a JWS whose protected `typ` and `cty` are not exactly
-this pair ({{RFC7515}}, Sections 4.1.9 and 4.1.10). This
-document defines only the `jws-compact` format; an implementation
-MUST reject an envelope whose `format` is unsupported rather than
-accepting it unverified.
+~~~ json
+{
+  "approval_event_id": "ape_7d2sUfnZmgimG0bc67hu",
+  "mission": {
+    "issuer": "https://as.example.com",
+    "intent_hash":
+      "sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0",
+    "authority_hash":
+      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM"
+  },
+  "approval_policy": {
+    "id": "q3-close-agent",
+    "version": "3",
+    "digest":
+      "sha-256:nw0FRGuMWUqNMS9BwKpEpqcvZwwO9DGrrujtlMNTAJU"
+  },
+  "assertions": [
+    { "assertion_id": "ast_1",
+      "principal": { "iss": "https://idp.example.com",
+        "sub": "user_3p2q8mN1a0kV7tR" },
+      "kind": "policy", "decision": "approve",
+      "decided_at": "2026-11-02T08:00:00Z",
+      "authority": { "policy_id": "q3-close-agent", "version": "3",
+        "approved_at": "2026-10-30T16:00:00Z" } }
+  ],
+  "evaluation": {
+    "decision": "approved",
+    "evaluated_at": "2026-11-02T08:00:00Z",
+    "contributing": ["ast_1"]
+  },
+  "envelope": {
+    "format": "jws-compact",
+    "value": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0y..."
+  }
+}
+~~~
 
-The **record digest** is the digest, in the encoded form
-{{conventions-and-definitions}} fixes, over the JCS {{RFC8785}}
-canonical bytes of the complete record, `envelope` included. It is
-the one byte sequence every external binding names: audit
-registration hashes exactly these bytes ({{audit-evidence}}), and
-consent evidence's `approval_governance_digest` equals exactly this
-value ({{consent-evidence-relationship}}).
+In this example:
 
-# Recording Triggers {#triggers}
-
-Defined here so a profile cites one list. The record is REQUIRED for
-an approval event when any of the following holds:
-
-- the Mission record's `approval_basis.consent_principal` differs from
-  its `subject`;
-- more than one principal contributes to the decision;
-- a non-human assertion contributes to the decision;
-- a threshold, veto, or separation-of-duty rule is evaluated; or
-- validating any assertion requires authority standing outside the
-  Mission record.
-
-The Approver is always `approval_basis.consent_principal`
-({{I-D.draft-mcguinness-oauth-mission}}), so a Mission whose Approver
-differs from its Subject holds the first trigger, and the Enterprise
-Mission Authority Profile
-({{I-D.draft-mcguinness-mission-authority-server}}) always records an
-Approval Governance Record for it.
-
-Direct self-approval by one authenticated human is the degenerate
-case: the Mission record already carries it completely, and no
-record is required.
-This presumes the human resolved approval on the approval surface itself;
-where an agent resolves it on its own behalf, there is no human decision
-for this list to be degenerate about
-({{I-D.draft-mcguinness-mission-runtime}}).
+- The root decides activations itself, with no separate evaluator, so
+  `root_commitment`, `activation.policy.digest`, and
+  `approval_policy.digest` carry one value ({{governed-policy-record}}).
+- The client `s6BhdRkqt3` requested the activation. It is the
+  `activation_actor`, distinct from the `consent_principal`, Alice.
+- `ast_1` is the accountable assertion: a `policy` assertion whose
+  `principal` is Alice and whose `approved_at` equals
+  `approval_basis.approved_at` ({{governed-policy-record}}). Because a
+  non-human assertion contributes, the third recording trigger also
+  holds ({{triggers}}).
+- The root declares a 30-day recency ceiling for every consequence
+  class, a 60-second clock-skew allowance, and an exception that admits
+  a `policy` accountable assertion for irreversible actions, with a
+  maximum age of 7 days ({{recency-declarations}}). The issuer
+  classifies `journal-entries.write` as an irreversible action and finds
+  no other high-risk class, so the exception applies and the strictest
+  applicable maximum is 7 days ({{recency-evaluation}}).
+- At `evaluated_at`, `ast_1` is 2 days and 16 hours old, and
+  `approved_at` <= `decided_at` <= `evaluated_at` holds, so the issuer
+  counts it. Without the exception, the accountable assertion would have
+  to be `kind: human`, and the policy could not activate this Mission
+  ({{recency-high-risk}}).
 
 # Consent Evidence Relationship {#consent-evidence-relationship}
 
@@ -835,13 +1114,13 @@ is testable, member by member:
 - Each `co_approvals` entry MUST correspond to exactly one `human`
   assertion in the record with the same `principal`, the entry's
   decision equal to the assertion's `decision`, and the entry's
-  timestamp equal to the assertion's `decided_at`. Omitting an
-  assertion is permitted; an entry with no corresponding assertion,
-  or one that alters a decision or time, is an integrity failure.
-  `service` and `policy` assertions are governance inputs, never
-  consent events, and are never presented as co-approvals.
+  timestamp equal to the assertion's `decided_at`. Omitting an assertion
+  is permitted; an entry with no corresponding assertion, or one that
+  alters a decision or time, is an integrity failure. Assertions of kind
+  `service` or `policy` are governance inputs, never consent events, and
+  are never presented as co-approvals.
 - The consent evidence `approver` MUST equal the `principal` of the
-  record's accountable assertion ({{assertion-requirements}}); for a
+  record's accountable assertion ({{accountable-assertion}}); for a
   standing-consent Mission whose accountable-approver rule is
   satisfied by `approval_basis` rather than an assertion, it MUST
   equal `approval_basis.consent_principal` instead.
@@ -853,16 +1132,56 @@ is testable, member by member:
 
 The AGR governs on any disagreement.
 
+The following example shows the members of a Consent Evidence object
+that correspond to the record in {{record-example}}, other members
+omitted:
+
+~~~ json
+{
+  "approver": { "iss": "https://idp.example.com",
+    "sub": "user_3p2q8mN1a0kV7tR" },
+  "approval_authority": "dlg-matrix",
+  "approval_policy_version": "v7",
+  "approval_governance_digest":
+    "sha-256:j6eaQoHcHpH-fntRE1DkZgCDjBZZLxXrCwpHfTWCWnQ"
+}
+~~~
+
+The `approver` member is the principal of the accountable assertion,
+`ast_1`. There is no `co_approvals` member: the record's only other
+assertion, `ast_2`, is a `policy` assertion, which is never presented as
+a co-approval. The `approval_governance_digest` value stands for the
+record digest of the complete record, whose `envelope` value that
+example abbreviates.
+
 Where a deferred approval revises under Mission Approval Revision
 ({{I-D.draft-mcguinness-oauth-mission-approval-revision}}) and the
 deployment records consent evidence, each `revision_required` outcome
 produces a `narrowed` consent-evidence decision with no corresponding
 record: no Mission yet exists for the atomic commitment rule
-({{atomic-commitment}}) to attach to. Where consent evidence is
-recorded, it owns the narrowing history, through its `narrowed`
-entries and `predecessor_intent_hashes`. Where an AGR is recorded for
-the final approval, it owns the final approval-governance facts. This
-is a deliberate artifact separation, not an authority conflict.
+({{atomic-commitment}}) to attach to. This is a deliberate artifact
+separation, not an authority conflict:
+
+- where consent evidence is recorded, it owns the narrowing history,
+  through its `narrowed` entries and `predecessor_intent_hashes`; and
+- where an AGR is recorded for the final approval, it owns the final
+  approval-governance facts.
+
+# Mission Evidence {#audit-evidence}
+
+The AGR is registrable Mission evidence under the audit transparency
+profile's evidence-type pattern
+({{I-D.draft-mcguinness-mission-audit}}), with:
+
+- canonical bytes: the JCS canonical bytes of the complete record,
+  `envelope` included, which are the record-digest preimage
+  ({{envelope}});
+- `payload-preimage-content-type`:
+  `application/mission-approval-governance+json`; and
+- authoritative producer: the Mission `issuer`.
+
+Registration is optional transparency hardening; retention and
+immutability do not depend on it.
 
 # Approval Context Commitment {#approval-context-commitment}
 
@@ -878,26 +1197,34 @@ Mission.
 
 The **Approval Context Manifest** is a closed, enumerated v1 object
 built from Mission Record members
-({{I-D.draft-mcguinness-oauth-mission}}). Its members:
+({{I-D.draft-mcguinness-oauth-mission}}). Each member copies the Mission
+Record member of the same name, verbatim, except:
 
-| Member | Source | Presence |
-|---|---|---|
-| `issuer` | Mission Record `issuer` | always |
-| `id` | Mission Record `id` | always |
-| `intent_hash` | Mission Record `intent_hash` | always |
-| `proposal_hash` | Mission Record `proposal_hash` | iff the Mission Record carries it |
-| `authority_hash` | Mission Record `authority_hash` | always |
-| `ceiling_hash` | Mission Record `ceiling_hash`, verbatim ({{I-D.draft-mcguinness-oauth-mission-progressive}}) | iff the Mission Record carries it |
-| `subject` | Mission Record `subject` | always |
-| `approver` | Mission Record `approval_basis.consent_principal` | always |
-| `client_id` | Mission Record `client_id` | always |
-| `created_at` | Mission Record `created_at` | always |
-| `expires_at` | Mission Record `expires_at` | always |
-| `approval_basis` | Mission Record `approval_basis`, verbatim | always |
-| `authority_source` | Mission Record `authority_source`, verbatim | always |
-| `policy_version` | Mission Record `policy_version` | always |
-| `approval_event_id` | Mission Record `approval_event_id` | always |
-| `submission_evidence_commitment` | {{approval-context-construction}} | iff the Mission Record carries `submission_evidence` |
+- `approver` copies the Mission Record's
+  `approval_basis.consent_principal`; and
+- `submission_evidence_commitment` is computed from the Mission Record's
+  `submission_evidence` ({{approval-context-construction}}).
+
+A conditional member is present if and only if its condition holds:
+
+| Member | Presence |
+|---|---|
+| `issuer` | always |
+| `id` | always |
+| `intent_hash` | always |
+| `proposal_hash` | when the Mission Record carries `proposal_hash` |
+| `authority_hash` | always |
+| `ceiling_hash` | when the Mission Record carries `ceiling_hash` |
+| `subject` | always |
+| `approver` | always |
+| `client_id` | always |
+| `created_at` | always |
+| `expires_at` | always |
+| `approval_basis` | always |
+| `authority_source` | always |
+| `policy_version` | always |
+| `approval_event_id` | always |
+| `submission_evidence_commitment` | when the Mission Record carries `submission_evidence` |
 {: title="Approval Context Manifest v1 members"}
 
 The presence of every conditional member MUST be a deterministic
@@ -905,13 +1232,13 @@ function of the Mission Record alone, never of which companion
 profiles a deployment runs: two parties holding the same record
 compute the same manifest.
 
-`ceiling_hash` is the manifest's fourth anchor alongside `intent_hash`,
-`proposal_hash`, and `authority_hash`: the manifest MUST include
-`ceiling_hash` when the Mission Record carries one and MUST omit it
-when the Mission Record carries none. The manifest copies the recorded
-value verbatim, as it copies every other member, so computing or
-verifying the manifest never computes `ceiling_hash`. Its construction
-and semantics belong to the Progressive profile
+The `ceiling_hash` member is the manifest's fourth anchor alongside
+`intent_hash`, `proposal_hash`, and `authority_hash`: the manifest MUST
+include `ceiling_hash` when the Mission Record carries one and MUST omit
+it when the Mission Record carries none. The manifest copies the
+recorded value verbatim, as it copies every other member, so computing
+or verifying the manifest never computes `ceiling_hash`. Its
+construction and semantics belong to the Progressive profile
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}), and adopting this
 Approval Context Commitment profile does not require adopting
 Progressive.
@@ -948,7 +1275,7 @@ Mission's immutable creation facts, fixed at the approval event
 Mission Record member for it; an Approval Governance Record MAY carry
 it as a member of its own signed record ({{record}}), which is a
 disclosure of the computed value, not a second place the Mission
-record holds it. A deployment MAY cache the computed
+Record holds it. A deployment MAY cache the computed
 value; a cached value is derived state and MUST NOT be treated as
 authoritative where it disagrees with a fresh computation from the
 record.
@@ -1008,7 +1335,169 @@ example the Mission Authority Server's Join Assertion
 fixes its own minimal member set, and this commitment is correlation
 and evidence metadata, never authority.
 
-## Test Vectors {#approval-context-vectors}
+# Conformance {#conformance}
+
+A Recording Issuer MUST:
+
+- authenticate, event-bind, and policy-authorize every contributing
+  assertion ({{assertion-validation}});
+- record denials ({{assertion-validation}});
+- include the accountable assertion
+  ({{accountable-assertion}});
+- evaluate under the retained policy version ({{atomic-commitment}});
+- enforce the strictest applicable policy-approval maximum age across
+  the consequence classes the committed Mission's derived Authority
+  Set and Mission Intent carry, from a committed ceiling
+  and any committed exception ({{policy-approval-recency}});
+- require `kind: human` for the accountable assertion where
+  the committed Mission's derived Authority Set or Mission Intent
+  carries a high-risk class, unless a committed
+  class-named exception applies ({{policy-approval-recency}});
+- under `governed_policy`, record the members of
+  {{governed-policy-record}} and complete the activation checks of
+  {{governed-policy-activation}};
+- commit the record atomically with Mission creation and let failure
+  prevent activation ({{atomic-commitment}});
+- sign the evaluated record before it is committed, and keep the
+  committed record immutable ({{atomic-commitment}}, {{envelope}}); and
+- retain the record and the referenced policy for the Mission's
+  audit horizon ({{I-D.draft-mcguinness-oauth-mission}}).
+
+A Relying Auditor MUST verify the envelope by byte equality, MUST
+validate the mission binding, and MUST obtain the retained policy
+version before treating the evaluation as re-checked ({{envelope}},
+{{approval-policy}}).
+
+# Security Considerations {#security-considerations}
+
+The security considerations of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) apply. The following
+considerations are specific to the Approval Governance Record.
+
+## Forged or Padded Assertions
+
+A forged or padded assertion is an authorization attack before
+commitment, not an audit defect: the assertion requirements of
+{{assertion-requirements}} are the control, and a deployment that
+records assertions without authenticating them has built an approval
+bypass rather than an evidence trail.
+
+## Policy Substitution
+
+Without `approval_policy.digest` and its retention, a later reading
+cannot prove which policy governed the evaluation. The digest and
+the audit-horizon retention of {{approval-policy}} are the control.
+
+## Manufactured Accountability
+
+The accountable-approver rule of {{accountable-assertion}} prevents a
+set of service and policy assertions from claiming a Mission whose named
+Approver never asserted anything. Because that assertion is never
+`service`, a model-backed service cannot become the accountable
+approver: no human-approved policy stands behind its decision, so it
+contributes only as a governance input.
+
+## Stale Policy Approval
+
+Without {{policy-approval-recency}}, a `policy` assertion could rely
+on a human approval far in the past, or stand in for the accountable
+approver on a high-risk consequence with no human assertion at all.
+The recency ceiling, its ordering checks, and the human-by-default
+consequence-class rule are the control.
+
+## Immutability Witness
+
+The issuer-signed envelope of {{envelope}} makes post-commit
+tampering detectable. Audit registration ({{audit-evidence}})
+additionally bounds issuer-side substitution, since a registered
+record's later alteration diverges from its receipt.
+
+## Issuer Key Compromise
+
+This document inherits the issuance profile's key-material
+considerations. A compromised Mission Issuer signing key can mint a
+plausible record; audit registration
+({{I-D.draft-mcguinness-mission-audit}}) is the existence bound, not
+a substitute for key custody.
+
+# Privacy Considerations {#privacy-considerations}
+
+The privacy considerations of the issuance profile
+({{I-D.draft-mcguinness-oauth-mission}}) apply. Assertion principals and
+decision times are personal data about reviewers. The record is
+control-plane state retained by the issuer, never disclosed on wire
+surfaces, and access to a retained record follows the issuer's audit-log
+discipline for approval-event records
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+# IANA Considerations {#iana}
+
+## Media Type Registration
+
+IANA is requested to register two media types per {{RFC6838}}:
+
+- `application/mission-approval-governance+jws`, the JWS-secured
+  representation that a record's `envelope` carries, using the `+jws`
+  structured syntax suffix; and
+- `application/mission-approval-governance+json`, the Approval
+  Governance Record object.
+
+### application/mission-approval-governance+jws
+
+- Type name: application
+- Subtype name: mission-approval-governance+jws
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; a JWS Compact Serialization:
+  base64url-encoded values separated by period characters. The
+  secured payload's media type travels in the JWS protected `cty`
+  ({{envelope}}).
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document ({{envelope}})
+- Published specification: this document
+- Applications that use this media type: Mission-Bound Authorization
+  approval governance
+- Fragment identifier considerations: N/A
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): none
+  - Macintosh file type code(s): N/A
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+### application/mission-approval-governance+json
+
+- Type name: application
+- Subtype name: mission-approval-governance+json
+- Required parameters: none
+- Optional parameters: none
+- Encoding considerations: binary; JSON encoded in UTF-8
+- Security considerations: see {{security-considerations}}
+- Interoperability considerations: see this document
+- Published specification: this document
+- Applications that use this media type: Mission-Bound Authorization
+  issuers and audit deployments
+- Fragment identifier considerations: same as for `application/json`
+- Additional information:
+  - Deprecated alias names for this type: none
+  - Magic number(s): none
+  - File extension(s): `.json`
+  - Macintosh file type code(s): TEXT
+- Person & email address to contact for further information:
+  Karl McGuinness <public@karlmcguinness.com>
+- Intended usage: COMMON
+- Restrictions on usage: none
+- Author: IETF
+- Change controller: IETF
+
+--- back
+
+# Approval Context Commitment Test Vectors {#approval-context-vectors}
 
 These non-normative vectors let an implementation verify its manifest
 and commitment computation byte for byte, the same discipline as the
@@ -1024,7 +1513,9 @@ members from the issuance profile's own canonical Worked Example
 Mission Record ({{I-D.draft-mcguinness-oauth-mission}}), including
 its `proposal_hash`, per that document's rule that an extending
 example must either reproduce the recorded objects byte-exactly or
-state its divergence. Vectors 1, 3, and 4 are hypothetical variants
+state its divergence.
+
+Vectors 1, 3, and 4 are hypothetical variants
 of that same Mission (same `id`, `intent_hash`, and `authority_hash`)
 that diverge in exactly one respect each, stated at each vector: this
 lets three different `approval_context_commitment` values legitimately
@@ -1095,8 +1586,8 @@ approval_context_commitment = sha-256:dPaMl8eUhPExoiVA2zHbz4wPzmDLVs
 fZnHDxCYHDGos
 ~~~
 
-**Vector 2: conditional `proposal_hash`.** This is the canonical
-Mission unchanged: the always-present members above plus
+**Vector 2: conditional `proposal_hash`.** This is the canonical Mission
+unchanged: the always-present members above plus
 `"proposal_hash": "sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo"`.
 
 ~~~ text
@@ -1125,9 +1616,9 @@ FS9CfHirjwwvU
 ~~~
 
 **Vector 3: conditional `ceiling_hash`.** Diverges from the canonical
-Mission by adding a Progressive ceiling and carrying no
-`proposal_hash` (isolating the `ceiling_hash` case). `ceiling_hash`
-is derived first, per the Progressive profile's own construction
+Mission by adding a Progressive ceiling and carrying no `proposal_hash`
+(isolating the `ceiling_hash` case). The `ceiling_hash` value is derived
+first, per the Progressive profile's own construction
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}): `typ`
 `mission-authority-ceiling`, `value` a two-member object of
 `authority_ceiling` and `drawdown_policy`. The ceiling covers the
@@ -1205,15 +1696,18 @@ YDjBNEO1TTQWA
 **Vector 4: conditional `submission_evidence_commitment`.** Diverges
 from the canonical Mission by recording one verified Intent Submission
 Evidence entry and carrying no `proposal_hash` (isolating the
-`submission_evidence_commitment` case). `artifact_hash` is derived
-first, over the entry exactly as presented
+`submission_evidence_commitment` case). The `artifact_hash` value is
+derived first, over the entry exactly as presented
 ({{I-D.draft-mcguinness-oauth-mission}}): `typ`
 `mission-intent-evidence`.
 
 ~~~ json
+=============== NOTE: '\' line wrapping per RFC 8792 ===============
+
 {
   "type": "mission-intent-admission-assertion",
-  "assertion": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FkbWlzc2lvbi5leGFtcGxlLmNvbSJ9.MEUCIQDx7vector"
+  "assertion": "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FkbWlzc2\
+    lvbi5leGFtcGxlLmNvbSJ9.MEUCIQDx7vector"
 }
 ~~~
 
@@ -1289,9 +1783,9 @@ K0jYMrCwWHvKE
 
 **Vector 5: mutated-member rejection.** Vector 2's manifest with one
 member changed, `approval_event_id` from `ape_8K2nP4qV9rL3tY6sB1z` to
-`ape_9K2nP4qV9rL3tY6sB1z`, illustrating what {{approval-context-computation}}
-requires a verifier to do when a recomputed digest disagrees with a
-disclosed one:
+`ape_9K2nP4qV9rL3tY6sB1z`, illustrating what
+{{approval-context-computation}} requires a verifier to do when a
+recomputed digest disagrees with a disclosed one:
 
 ~~~ text
 recomputed = sha-256:4Ev4vJSv_VYjxB48tuJTsYKTSU81jfQRD48pOjazBf0
@@ -1318,220 +1812,21 @@ as if it were vector 2's `approval_context_commitment`, it recomputes
 vector 2's correct digest, finds a mismatch, and rejects under the
 same rule as vector 5.
 
-# Boundaries {#boundaries}
-
-The record governs the Mission approval event; an action-time
-approval under the runtime profile's re-evaluation surfaces
-({{I-D.draft-mcguinness-mission-runtime}}) is a different layer and
-never joins this record.
-
-OAuth standardizes the requested and granted authorization data, not
-an organization's internal approval provenance ({{RFC9396}} takes the
-same boundary for rich authorization requests); this record therefore
-stays off protocol messages and out of enforcement projections,
-matching the issuance profile's control-plane discipline.
-
-{{policy-approval-recency}} bounds the AGR `policy` assertion path
-and, by extension, a standing-consent Mission whose `approval_basis`
-record stands in for that assertion ({{assertion-requirements}}). The
-issuance profile's standing-consent authority bases carry their own
-human-approval instant, in `approval_basis.approved_at`, traced
-through `consent_principal` and a commitment
-({{I-D.draft-mcguinness-oauth-mission}}); the template profile's
-`template` basis and the progressive profile's `ceiling_drawdown`
-basis both populate it, and each profile declares its own maximum age
-against it: `review_cadence` for template, the ceiling review cadence
-for progressive
-({{I-D.draft-mcguinness-oauth-mission-template}},
-{{I-D.draft-mcguinness-oauth-mission-progressive}}). Under
-`governed_policy` the two instants coincide:
-`approval_basis.approved_at` equals the accountable `policy`
-assertion's `authority.approved_at` ({{governed-policy-record}}), so
-this document's ceiling bounds that basis, alongside any
-standing-consent recency ceiling the deployment declares.
-
-The two recency paths are therefore analogous, each bounding staleness
-against a retained human-approval instant, but distinct in what they
-gate: this section's ceiling governs whether the issuer may count a
-`policy` assertion, or activate a Mission whose `approval_basis`
-stands in for one, at evaluation; a profile's own maximum age governs
-whether the dispatch or drawdown may happen at all, independent of
-whether an AGR is ever recorded.
-
-Outside `governed_policy`, a standing-consent Mission's
-accountable-approver rule is satisfied by `approval_basis` itself
-({{assertion-requirements}}), never by fabricating a `policy`
-assertion in its place; the high-risk-class default of this section
-still binds that record directly.
-
-# Mission Evidence {#audit-evidence}
-
-The AGR is registrable Mission evidence under the audit
-transparency profile's evidence-type pattern
-({{I-D.draft-mcguinness-mission-audit}}): canonical bytes are the
-JCS canonical bytes of the complete record, `envelope` included, the
-record-digest preimage ({{envelope}}); `payload-preimage-content-type` is
-`application/mission-approval-governance+json`; the authoritative
-producer is the Mission `issuer`. Registration is optional
-transparency hardening; retention and immutability do not depend on
-it.
-
-# Security Considerations {#security-considerations}
-
-## Forged or Padded Assertions
-
-A forged or padded assertion is an authorization attack before
-commitment, not an audit defect: the assertion requirements of
-{{assertion-requirements}} are the control, and a deployment that
-records assertions without authenticating them has built an approval
-bypass rather than an evidence trail.
-
-## Policy Substitution
-
-Without `approval_policy.digest` and its retention, a later reading
-cannot prove which policy governed the evaluation. The digest and
-the audit-horizon retention of {{record}} are the control.
-
-## Manufactured Accountability
-
-The accountable-approver assertion rule of
-{{assertion-requirements}} prevents a set of service and policy
-assertions from claiming a Mission whose named Approver never
-asserted anything. Because that assertion is never `service`, a
-model-backed service cannot become the accountable approver: no
-human-approved policy stands behind its decision, so it contributes
-only as a governance input.
-
-## Stale Policy Approval
-
-Without {{policy-approval-recency}}, a `policy` assertion could rely
-on a human approval far in the past, or stand in for the accountable
-approver on a high-risk consequence with no human assertion at all.
-The recency ceiling, its ordering checks, and the human-by-default
-consequence-class rule are the control.
-
-## Immutability Witness
-
-The issuer-signed envelope of {{envelope}} makes post-commit
-tampering detectable. Audit registration ({{audit-evidence}})
-additionally bounds issuer-side substitution, since a registered
-record's later alteration diverges from its receipt.
-
-## Issuer Key Compromise
-
-This document inherits the issuance profile's key-material
-considerations. A compromised Mission Issuer signing key can mint a
-plausible record; audit registration
-({{I-D.draft-mcguinness-mission-audit}}) is the existence bound, not
-a substitute for key custody.
-
-# Privacy Considerations
-
-Assertion principals and decision times are PII about reviewers. The
-record is control-plane state retained by the issuer, never
-disclosed on wire surfaces, and access to a retained record follows
-the issuer's audit-log discipline for approval-event records
-({{I-D.draft-mcguinness-oauth-mission}}).
-
-# IANA Considerations {#iana}
-
-## Media Type Registration
-
-IANA is requested to register two media types per {{RFC6838}}: the
-Approval Governance Record object, and the JWS-secured representation
-its `envelope` carries (using the `+jws` structured syntax suffix
-already registered with IANA).
-
-### application/mission-approval-governance+jws
-
-- Type name: application
-- Subtype name: mission-approval-governance+jws
-- Required parameters: none
-- Optional parameters: none
-- Encoding considerations: binary; a JWS Compact Serialization:
-  base64url-encoded values separated by period characters. The
-  secured payload's media type travels in the JWS protected `cty`
-  ({{envelope}}).
-- Security considerations: see {{security-considerations}}
-- Interoperability considerations: see this document ({{envelope}})
-- Published specification: this document
-- Applications that use this media type: Mission-Bound Authorization
-  approval governance
-- Fragment identifier considerations: N/A
-- Additional information:
-  - Deprecated alias names for this type: none
-  - Magic number(s): none
-  - File extension(s): none
-  - Macintosh file type code(s): N/A
-- Person & email address to contact for further information:
-  Karl McGuinness <public@karlmcguinness.com>
-- Intended usage: COMMON
-- Restrictions on usage: none
-- Author: IETF
-- Change controller: IETF
-
-### application/mission-approval-governance+json
-
-- Type name: application
-- Subtype name: mission-approval-governance+json
-- Required parameters: none
-- Optional parameters: none
-- Encoding considerations: binary; JSON encoded in UTF-8
-- Security considerations: see {{security-considerations}}
-- Interoperability considerations: see this document
-- Published specification: this document
-- Applications that use this media type: Mission-Bound Authorization
-  issuers and audit deployments
-- Fragment identifier considerations: same as for `application/json`
-- Additional information:
-  - Deprecated alias names for this type: none
-  - Magic number(s): none
-  - File extension(s): `.json`
-  - Macintosh file type code(s): TEXT
-- Person & email address to contact for further information:
-  Karl McGuinness <public@karlmcguinness.com>
-- Intended usage: COMMON
-- Restrictions on usage: none
-- Author: IETF
-- Change controller: IETF
-
-# Conformance {#conformance}
-
-A **Recording Issuer** MUST:
-
-- authenticate, event-bind, and policy-authorize every contributing
-  assertion ({{assertion-requirements}});
-- record denials;
-- include the accountable-approver assertion;
-- evaluate under the retained policy version;
-- enforce the strictest applicable policy-approval maximum age across
-  the consequence classes the committed Mission's derived Authority
-  Set and Mission Intent carry, from a committed ceiling
-  and any committed exception ({{policy-approval-recency}});
-- require `kind: human` for the accountable-approver assertion where
-  the committed Mission's derived Authority Set or Mission Intent
-  carries a high-risk class, unless a committed
-  class-named exception applies ({{policy-approval-recency}});
-- under `governed_policy`, record the members of
-  {{governed-policy-record}} and complete the activation checks of
-  {{governed-policy-activation}};
-- commit the record atomically with Mission creation and let failure
-  prevent activation ({{atomic-commitment}});
-- sign the committed record and keep it immutable
-  ({{envelope}}); and
-- retain the record and the referenced policy for the Mission's
-  audit horizon ({{I-D.draft-mcguinness-oauth-mission}}).
-
-A **Relying Auditor** MUST verify the envelope by byte equality, MUST
-validate the mission binding, and MUST obtain the retained policy
-version before treating the evaluation as re-checked
-({{envelope}}).
-
---- back
-
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Editorial restructure, with no change to any requirement: Recording
+  Triggers precedes the record; the record, Assertion Requirements and
+  Policy-Approval Recency are split into subsections; Boundaries is
+  folded into the sections it qualified; Conformance precedes Security
+  Considerations; and the Approval Context Commitment test vectors are
+  an appendix. Security and Privacy Considerations open with a pointer
+  to the issuance profile's. Conventions defines the accountable
+  assertion, the record digest, the Recording Issuer and the Relying
+  Auditor. New examples show one approval per recording trigger, the
+  decoded JWS protected header, a `governed_policy` activation with its
+  recency computation, and the matching Consent Evidence members.
 
 - Recording Triggers states that a Mission whose Approver differs
   from its Subject holds the first trigger, so the Enterprise Mission
@@ -1550,7 +1845,7 @@ version before treating the evaluation as re-checked
   `adjudication.kind`; this document, not the OAuth binding, holds
   both rules (#1185).
 
-- The accountable principal is the Mission record's
+- The accountable principal is the Mission Record's
   `approval_basis.consent_principal`. The Approval Context Manifest
   keeps its `approver` member, sourced from that value, so
   `mission-approval-context-v1` and vectors 1 to 6 are unchanged; the
@@ -1580,10 +1875,7 @@ version before treating the evaluation as re-checked
 # Acknowledgments
 {:numbered="false"}
 
-This document extracts the experimental approval-provenance record
-that Mission Deferred Approval first sketched into a standalone
-companion, and reshapes it so its assertions carry the
-authentication, binding, and policy-authorization requirements that
-governance evidence with teeth requires. The author thanks the
-Mission-Bound Authorization
-implementer community for feedback.
+The Approval Governance Record began as an approval-provenance sketch in
+Mission Deferred Approval
+({{I-D.draft-mcguinness-oauth-mission-approval}}). The author thanks the
+Mission-Bound Authorization implementer community for feedback.
