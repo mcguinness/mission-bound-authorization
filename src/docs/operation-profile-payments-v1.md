@@ -1,13 +1,19 @@
-# payments-runtime-profile-v10
+# payments-runtime-profile-v11
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v10`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v11`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
+- **v11** (#1276): the PDP and the PEP match a `prefix` entry, in the
+  Mission and in the credential, with the Resource Access matcher: after
+  the one URI normalization, at a path-segment boundary, the target's
+  query excluded from the path comparison only. A v10 component refused
+  every `prefix` entry. Decision bytes for `exact` entries are unchanged
+  from v10.
 - **v10** (#817): declares each operation's execution capabilities
   (below), published as the Enforcement Scope Statement's
   `extensions.execution_capabilities`. No operation asserts exactly-once
@@ -136,9 +142,14 @@ within that service. Each `TOOL_ACTIONS` row declares the contract
 - The decision request carries the target as
   `resource.properties.operation_target`. The PDP matches the credential's
   and the Mission's entries against it with the Resource Access matcher:
-  literal `exact` only; a `prefix` entry or an unrecognized
-  `resource_match` provides no authority, and a credential carrying one is
-  refused. `audience` is the boundary identifier, the token-validation
+  `exact` is literal; `prefix` normalizes both URIs (scheme and host case,
+  default port, percent-encoding case, unreserved octets, dot-segments)
+  and admits the base and each target beneath it at a path-segment
+  boundary, so `<canonical resource URI>/invoices` covers
+  `.../invoices/inv-1` but not `.../invoices-archive/inv-1`. An
+  unrecognized `resource_match`, or a `prefix` entry whose `resource`
+  carries a query or names no `//` authority, provides no authority, and a
+  credential carrying one is refused. `audience` is the boundary identifier, the token-validation
   and decision-channel scope input, and an audience alias never rewrites
   an entry or the target; `resource.type` and `resource.id` stay
   Resource-policy object identity.
