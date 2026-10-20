@@ -245,6 +245,38 @@ describe("the credential's discharge and approval conditions are decided at the 
     }
   });
 
+  it("sources a credential entry's discharge condition only from a Mission entry whose resource set contains its own: an exact descendant from a prefix entry, never a prefix entry from an exact one (@spec resource-access#subset, #1276)", async () => {
+    const INV1 = `${RESOURCE}/invoices/inv-1`;
+    const at = (resource: string, resource_match?: "prefix") => ({
+      type: "mission_resource_access",
+      resource,
+      ...(resource_match ? { resource_match } : {}),
+      actions: ["payments:invoice.read"],
+      constraints: { terminal_when: [CLOSE] },
+    });
+    const targeting = (request: EvaluationRequest, target: string) => {
+      request.resource.properties = { ...request.resource.properties, operation_target: target };
+      return request;
+    };
+    // An exact credential entry beneath a Mission prefix entry: that entry is
+    // its source, and its discharge state governs it.
+    const prefixSource = at(RESOURCE, "prefix");
+    const underPrefix = committedView([prefixSource]);
+    const descendant = { authority: [at(INV1)] };
+    expect(reason(await evaluate(targeting(req(descendant, on(underPrefix)), INV1), opts(underPrefix)))).toBe("permit");
+    const dischargedPrefix = committedView([prefixSource], () => ({}), { version: 2, discharged: { entry_digests: [issuerDigest(prefixSource)] } });
+    expect(reason(await evaluate(targeting(req(descendant, on(dischargedPrefix)), INV1), opts(dischargedPrefix)))).toBe(
+      "authority_discharged",
+    );
+    // A prefix credential entry over a Mission exact entry naming its base:
+    // the exact entry does not contain it, so the condition is not established.
+    const exactOnly = committedView([at(RESOURCE)]);
+    const broader = { authority: [at(RESOURCE, "prefix")] };
+    expect(reason(await evaluate(targeting(req(broader, on(exactOnly)), RESOURCE), opts(exactOnly)))).toBe("out_of_authority");
+    // Control: the same exact credential entry over that exact Mission entry is sourced.
+    expect(reason(await evaluate(targeting(req({ authority: [at(RESOURCE)] }, on(exactOnly)), RESOURCE), opts(exactOnly)))).toBe("permit");
+  });
+
   it("requires the action-bound approval a credential entry demands, though neither the Mission nor the deployment does", async () => {
     const approvalOnly = { authority: [entry(["payments:invoice.read"], { requires_action_approval: true })] };
     const digest = { extra: { parameter_digest: "sha-256:op" } };

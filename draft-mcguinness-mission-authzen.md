@@ -592,7 +592,7 @@ as that profile requires.
 | AuthZEN member | Mission-bound binding |
 |---|---|
 | `subject` | The principal the decision is requested for. |
-| `resource` | `type`/`id` carry the fine-grained object identity the action names (for example, a specific journal entry), for Resource-policy evaluation; `properties` carries resource-scoped members, including `operation_target` ({{context-operation-target}}) and `audience` ({{context-audience-freshness}}). Only `operation_target` is matched against an entry's `resource`; see below. |
+| `resource` | `type`/`id` carry the fine-grained object identity the action names (for example, a specific journal entry), for Resource-policy evaluation; `properties` carries resource-scoped members, including `operation_target` ({{context-operation-target}}), `audience` ({{context-audience-freshness}}), and, where a resource contract applies, `resource_contract` ({{context-resource-contract}}). Only `operation_target` is matched against an entry's `resource`; see below. |
 | `action` | `name` is the requested action identifier (for example, `journal-entries.write`), which the PDP evaluates against the approved `actions` per {{I-D.draft-mcguinness-oauth-mission}}; `properties` carries action-scoped members ({{parameter-digest}}). |
 | `context` | Carries the Mission-bound, evaluation-wide context object defined below. |
 
@@ -666,6 +666,29 @@ therefore never reused for another target, even when the audience,
 the action, `resource.type` and `resource.id` are equal, and the PEP
 executes the operation only on the target the permit was evaluated
 for ({{permit-binding-split}}).
+
+## Resource Contract {#context-resource-contract}
+
+`resource_contract`:
+: CONDITIONAL. An object, carried at
+  `resource.properties.resource_contract`: the `id`, `version`, and
+  `digest` of the resource contract under which the PEP will perform the
+  operation. REQUIRED when a resource contract applies to the action
+  ({{I-D.draft-mcguinness-mission-runtime}}, Section "Resource
+  Contract").
+
+The PEP establishes the reference from the applicable entry's
+reference, resolved against its own trusted contract declarations, and
+never from a value the caller asserts. The PDP MUST deny the action
+with `resource_contract_drift` unless the reference resolves under the
+PDP's own trusted declarations and equals, member for member, the
+reference of an applicable entry that authorizes the action. An absent
+member where a contract applies is denied the same way.
+
+The reference is part of the authorization binding and the cache key
+({{projections}}), so a permit is never reused under another contract.
+Because it is a member of the `resource` object, it is also part of
+the approved Resource an ARAP approval binds ({{context-approval}}).
 
 ## Mission Decision Context {#context-mission}
 
@@ -1110,6 +1133,18 @@ resolves by `id` or from verified signed `state`. An approval whose
 completion time cannot be established is treated as unverifiable. An
 approval failing any of these checks does not satisfy the denial.
 
+Where a resource contract applies to the action
+({{context-resource-contract}}), the approval binds its reference
+through the approved Resource, which ARAP requires the approval record
+or its binding material to contain ({{ARAP}}, Section 12.3.1). The
+Mission checks then also establish that the approved Resource's
+`properties.resource_contract` equals the request's, member for member.
+An approval given under one reference does not cover an action under
+another, even when both references resolve: the PDP MUST deny that
+re-evaluation with ARAP's `out_of_scope`, which ARAP defines for a
+valid approval whose scope the current evaluation falls outside
+({{ARAP}}, Section 8.2).
+
 The
 PDP MUST record the presented approval `id` in Decision Evidence. The
 approval is an input attribute, never a bearer grant: the PDP
@@ -1221,7 +1256,8 @@ Operation identity:
 
 Authorization binding:
 : The subject, the actor, the audience
-  ({{context-audience-freshness}}), the operation target,
+  ({{context-audience-freshness}}), the operation target, the resource
+  contract reference ({{context-resource-contract}}),
   credential-derived facts, the Mission reference, the authority and
   view identity, the approval, and
   every policy-relevant context input, including `taint`, the
@@ -1904,6 +1940,19 @@ This profile defines the following AuthZEN response `context` members:
       and retrospective evidence phase never substitute for this
       condition.
 
+    `resource_contract`:
+    : CONDITIONAL. An object; REQUIRED on a permit for an action to
+      which a resource contract applies, and equal to the validated
+      request's `resource.properties.resource_contract`
+      ({{context-resource-contract}}). At every use, the executing PEP
+      MUST resolve this reference against its own current contract
+      declarations and MUST NOT release an effect unless it resolves
+      and equals the reference of the contract the PEP is about to
+      perform the operation under. A missing condition where a
+      contract applies, an unresolvable reference, or an unequal one
+      is Execution Evidence `suppressed` /
+      `resource_contract_unresolvable`, not a PDP denial.
+
   The PEP MUST honor every condition present, at every use of the
   permit. A permit carrying a condition member the PEP does not
   recognize is invalid: the PEP MUST NOT release the action's effect
@@ -2230,6 +2279,16 @@ carried in Decision Evidence:
   enforce it and refuses ({{I-D.draft-mcguinness-mission-runtime}}).
   This is distinct from `parameter_violation`, which is a constraint the
   PDP evaluated and found violated.
+- `resource_contract_drift`: a resource contract applies to the action
+  and the applicable entry's reference is missing or does not resolve
+  under the resource's declared contract states
+  ({{I-D.draft-mcguinness-mission-runtime}}), or the request's
+  `resource.properties.resource_contract` is absent or differs from it
+  ({{context-resource-contract}}). The entry names the
+  action; what no longer holds is the contract it was approved under.
+  It is therefore distinct from `out_of_authority`, and from
+  `capability_drift`, which compares one capability's extracted
+  definition.
 - `history_not_satisfied`: a deployment- or Resource-policy-required
   history predicate ({{context-history}}) is not satisfied: the PDP
   established it false, could not establish it, could not consult
@@ -2454,6 +2513,7 @@ carrier's extensibility rule.
 | Named target object not resolvable at the enforcement surface | Refusal Record | `target_unresolvable` |
 | Operation target not establishable as one unambiguous target at the PEP | Refusal Record | `target_unresolvable` |
 | Capability definition the PEP must present not resolvable before the decision request | Refusal Record | `capability_source_unresolvable` |
+| Resource contract the operation requires not resolvable before the decision request | Refusal Record | `resource_contract_unresolvable` |
 | Decision Evidence for a permit absent or not verifiable, so no relied-upon decision was obtained | Refusal Record | `decision_evidence_unverifiable` |
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
@@ -2479,6 +2539,8 @@ carrier's extensibility rule.
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
 | Unsupported `authorization_details` type | PDP denial | `unsupported_authorization_type` |
 | Unrecognized or unmetered constraint | PDP denial | `constraint_unsupported` |
+| Resource contract reference missing where required, or not resolvable, established by the PDP | PDP denial | `resource_contract_drift` |
+| Presented approval bound to a resource contract reference other than the request's | PDP denial | ARAP's `out_of_scope` ({{ARAP}}) |
 | Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
 | Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
 | Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
@@ -2491,6 +2553,7 @@ carrier's extensibility rule.
 | Permit carries a decision condition the executing PEP does not recognize | Execution Evidence | `condition_unrecognized` |
 | Store the executing PEP takes single use in is unreachable | Execution Evidence | `consumption_unavailable` |
 | Capability definition the permit was decided against not re-resolvable at use | Execution Evidence | `capability_source_unresolvable` |
+| Resource contract the permit was decided under not re-resolvable at use, or unequal to the contract the operation would be performed under | Execution Evidence | `resource_contract_unresolvable` |
 | Obligation attached to a permit could not be fulfilled | Execution Evidence | `obligation_unfulfilled` |
 | Operator or safety control suppressed execution | Execution Evidence | `kill_switch` |
 
@@ -2527,6 +2590,13 @@ on two carriers, and the carrier records whether the resolution
 failure happened before the decision request or at use; a resolution
 failure is never reported as `parameter_violation` or
 `parameter_mismatch`.
+
+`resource_contract_unresolvable` likewise appears on two carriers, the
+carrier recording whether the PEP found the contract unresolvable
+before the decision request or at use; `resource_contract_drift` is
+the PDP's denial between them. A contract failure is never reported as
+a parameter deviation or as `target_drift`, even when the parameters
+and the target are unchanged.
 
 ## Permit binding in split topologies {#permit-binding-split}
 
@@ -2806,7 +2876,8 @@ A PEP conforming to the Decision Base MUST:
   it can perform in `supported_obligations` ({{obligations}});
 - honor every decision condition present (`parameter_digest`,
   `valid_until`, `use_limit`, `action_phase`,
-  `evaluation_context_digest`) at every use of the permit,
+  `evaluation_context_digest`, `resource_contract`) at every use of
+  the permit,
   applying its own deployment classification floor to that duty
   independent of any class the PDP applied internally
   ({{response-context}}), fulfill every obligation attached to a
@@ -3075,9 +3146,10 @@ The `action.properties.parameters`,
 `action.properties.parameter_digest`,
 `action.properties.idempotency_key`, and
 `action.properties.parameter_attributes` members carried inside the
-AuthZEN `action` object, and the `resource.properties.operation_target`
-and `resource.properties.audience` members carried inside the AuthZEN
-`resource` object ({{pdp-request}}), are likewise AuthZEN extension
+AuthZEN `action` object, and the `resource.properties.operation_target`,
+`resource.properties.audience`, and `resource.properties.resource_contract`
+members carried inside the AuthZEN `resource` object ({{pdp-request}}),
+are likewise AuthZEN extension
 data. The
 `action.properties.external_communication` member carried inside that
 same `action` object is likewise AuthZEN extension data, registered
@@ -3095,6 +3167,19 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Runtime Denial Classification and Failure-condition coverage: a
+  resource contract reference missing where required, or not
+  resolvable, is denied `resource_contract_drift`; the PEP records
+  `resource_contract_unresolvable` before the decision request or at
+  use (#249).
+
+- Resource Contract: `resource.properties.resource_contract` carries
+  the reference the PEP will perform under, and the PDP requires it to
+  equal the applicable entry's. The approval binds it through the
+  approved Resource, and an approval under another reference is denied
+  `out_of_scope`. The permit returns it as `conditions.resource_contract`,
+  which the executing PEP compares before release (#249).
 
 - `resource.properties.audience` carries the runtime profile's
   boundary identifier, the boundary the PEP established, byte for

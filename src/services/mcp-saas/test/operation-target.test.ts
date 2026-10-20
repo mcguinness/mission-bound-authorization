@@ -86,7 +86,6 @@ describe("the SaaS resource matches the token's entries against the operation ta
       [entry(`${u.protocol.toUpperCase()}//${u.host.toUpperCase()}${u.pathname}`)],
       [entry(`${SAAS_RESOURCE}/`)],
       [entry(`${SAAS_RESOURCE}?`)],
-      [entry(SAAS_RESOURCE, { resource_match: "prefix" })],
       [entry(SAAS_RESOURCE, { resource_match: "glob" })],
     ]) {
       const [token, proof] = await present(details);
@@ -94,6 +93,42 @@ describe("the SaaS resource matches the token's entries against the operation ta
         ok: false,
         error: "out_of_authority",
       });
+    }
+  });
+
+  it("a prefix entry covers the service-level target at its base and a finer declared target beneath it, never a sibling sharing its characters or a target a decoded dot-segment moves out; a prefix entry whose resource carries a query provides no authority (#1276)", async () => {
+    const declared = serviceLevelContracts(SAAS_RESOURCE);
+    const JOURNAL = `${SAAS_RESOURCE}/journal`;
+    const post = async (contracts: SaasOperationContracts, details: unknown[]) => {
+      const [token, proof] = await present(details);
+      const server = saas(contracts);
+      const res = await server.callTool("post_journal_entry", { vendor_id: "acme", amount: "10.00" }, token, proof);
+      return { res, posted: server.journalEntries().length };
+    };
+    // The base itself, under the shipped service-level contract.
+    const atBase = await post(declared, [entry(SAAS_RESOURCE, { resource_match: "prefix" })]);
+    expect(atBase.res).toMatchObject({ ok: true });
+    expect(atBase.posted).toBe(1);
+    // A finer declared target beneath the base, and the finer base itself.
+    for (const base of [SAAS_RESOURCE, JOURNAL, `${JOURNAL}/`]) {
+      const beneath = await post({ ...declared, post_journal_entry: { service: `${JOURNAL}/entries` } }, [entry(base, { resource_match: "prefix" })]);
+      expect(beneath.res, base).toMatchObject({ ok: true });
+      expect(beneath.posted, base).toBe(1);
+    }
+    // Not covered: a sibling sharing the base's characters, a target a decoded
+    // dot-segment moves out of the base, the bare path under a base ending in
+    // /, and an exact entry naming the base.
+    const refused: Array<[string, string, Record<string, unknown>]> = [
+      ["sibling", `${SAAS_RESOURCE}/journal-archive/entries`, { resource: JOURNAL, resource_match: "prefix" }],
+      ["dot-segment", `${JOURNAL}/%2e%2e/vendors`, { resource: JOURNAL, resource_match: "prefix" }],
+      ["bare path under a / base", JOURNAL, { resource: `${JOURNAL}/`, resource_match: "prefix" }],
+      ["exact base", `${JOURNAL}/entries`, { resource: JOURNAL }],
+      ["prefix with a query", `${JOURNAL}?x=1`, { resource: `${JOURNAL}?x=1`, resource_match: "prefix" }],
+    ];
+    for (const [label, target, over] of refused) {
+      const out = await post({ ...declared, post_journal_entry: { service: target } }, [entry(SAAS_RESOURCE, over)]);
+      expect(out.res, label).toEqual({ ok: false, error: "out_of_authority" });
+      expect(out.posted, label).toBe(0);
     }
   });
 

@@ -19,13 +19,13 @@ import { conditionCanonicalBytes } from "./authority-subset.js";
 import {
   type CommonConstraintKey,
   type ConstraintFacts,
-  commonConstraintGates,
+  commonConstraintGatesOverMembers,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   isImplementedCommonConstraint,
   validCommonConstraint,
 } from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
-import { ENFORCED_RESOURCE_MATCHES, entryMatchesTarget } from "./operation-target.js";
+import { entryMatchesTarget, resourceMatchViolation } from "./operation-target.js";
 
 /** One entry of a verified credential's authority. */
 export interface CredentialAuthorityEntry {
@@ -33,10 +33,10 @@ export interface CredentialAuthorityEntry {
   resource: string;
   /**
    * @spec resource-access#resource-matching (#1276): carried only when the
-   * credential states it, and only as `exact`, the one form this bound
-   * enforces; absent is `exact` too.
+   * credential states it; absent is `exact`. Both forms Resource Access
+   * defines are enforced, through the one matcher.
    */
-  resource_match?: "exact";
+  resource_match?: "exact" | "prefix";
   actions: string[];
   constraints?: {
     max_amount?: { amount: string; currency: string };
@@ -197,17 +197,13 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
       if (!nonEmptyString(raw.resource))
         throw new CredentialAuthorityError(`${at}.resource must be a non-empty string`);
       // @spec resource-access#rs-enforcement (#1276): an entry whose
-      // `resource_match` this enforcement point does not enforce (`prefix`,
-      // or a value it does not recognize) cannot be evaluated in full, so it
-      // refuses the whole credential like any other such member, never read
-      // as `exact`.
-      if (
-        raw.resource_match !== undefined &&
-        !ENFORCED_RESOURCE_MATCHES.includes(raw.resource_match as string)
-      ) {
-        throw new CredentialAuthorityError(
-          `${at}.resource_match ${JSON.stringify(raw.resource_match)} is not enforceable here`,
-        );
+      // `resource_match` this enforcement point does not recognize, or a
+      // `prefix` entry whose `resource` it cannot match (a query, or no `//`
+      // authority), cannot be evaluated in full, so it refuses the whole
+      // credential like any other such member, never read as `exact`.
+      const matchViolation = resourceMatchViolation(raw);
+      if (matchViolation !== undefined) {
+        throw new CredentialAuthorityError(`${at}: ${matchViolation}; not enforceable here`);
       }
       if (
         !Array.isArray(raw.actions) ||
@@ -222,7 +218,9 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
       const entry: CredentialAuthorityEntry = {
         type: "mission_resource_access",
         resource: raw.resource,
-        ...(raw.resource_match === "exact" ? { resource_match: "exact" as const } : {}),
+        ...(raw.resource_match === "exact" || raw.resource_match === "prefix"
+          ? { resource_match: raw.resource_match }
+          : {}),
         actions: [...raw.actions],
         ...(constraints !== undefined ? { constraints } : {}),
       };
@@ -315,6 +313,13 @@ export interface CredentialTarget {
    */
   constraintFacts?: ConstraintFacts;
   /**
+   * @spec resource-access#initial-common-constraints (#1266): for an action
+   * over a collection, each member's own facts, established by the
+   * enforcement point from its own records. Present, every member is
+   * evaluated and one that fails or lacks a fact denies the whole action.
+   */
+  constraintMembers?: readonly ConstraintFacts[];
+  /**
    * Whether this enforcement path independently requires an action-bound
    * approval for the action, so an entry demanding one is honored.
    */
@@ -352,7 +357,7 @@ export interface CredentialConstraintTrace {
  */
 export function credentialConstraintGates(
   entry: CredentialAuthorityEntry,
-  facts: Pick<CredentialFacts, "vendorIds" | "amount" | "constraintFacts">,
+  facts: Pick<CredentialFacts, "vendorIds" | "amount" | "constraintFacts" | "constraintMembers">,
 ): CredentialConstraintTrace {
   const c = entry.constraints;
   const evaluated: CredentialConstraintTrace["evaluated"] = [];
@@ -375,7 +380,11 @@ export function credentialConstraintGates(
       return { satisfied: false, evaluated };
     }
   }
-  const common = commonConstraintGates(c, facts.constraintFacts ?? {});
+  const common = commonConstraintGatesOverMembers(
+    c,
+    facts.constraintFacts ?? {},
+    facts.constraintMembers,
+  );
   evaluated.push(...common.evaluated);
   if (!common.satisfied) return { satisfied: false, evaluated };
   return { satisfied: true, evaluated };
@@ -431,10 +440,13 @@ export function credentialAuthorityPermits(
 export function credentialEntriesFromAuthority(
   entries: readonly AuthorityEntry[],
 ): readonly CredentialAuthorityEntry[] {
+  // @spec resource-access#resource-matching (#1276): `resource_match` is
+  // carried, so a `prefix` entry is read as `prefix`, never as `exact`.
   return parseCredentialAuthority(
-    entries.map(({ type, resource, actions, constraints }) => ({
+    entries.map(({ type, resource, resource_match, actions, constraints }) => ({
       type,
       resource,
+      ...(resource_match !== undefined ? { resource_match } : {}),
       actions,
       ...(constraints ? { constraints } : {}),
     })),
