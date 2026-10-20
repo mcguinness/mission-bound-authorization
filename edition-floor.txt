@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-20T22:22:23Z
-Source repository commit: 6baac9b73bae03924f6a8a4d643cdcd64475d726
+Generated: 2026-10-20T22:50:59Z
+Source repository commit: dcda54a624e0c60feef25f04a6ea4b55f0a5f8fe
 Member count: 7
 
 Reading order:
@@ -8617,10 +8617,17 @@ Table of Contents
    2.  Validate the intent object against the Mission Intent member
        definitions (Section 4).
 
-   3.  Compute the provisional intent_hash over the intent object
+   3.  Validate any authority proposal: refuse an entry of a type the AS
+       does not support, or one that fails its type's definition or a
+       schema advertised for it or established out of band, with
+       invalid_authorization_details, and a proposed entry that carries
+       a resource member whose value is not among the Intent's
+       target_resources, with invalid_request (Section 4.3).
+
+   4.  Compute the provisional intent_hash over the intent object
        (Section 14.1).
 
-   4.  Apply any submission checks that configured admission policy or
+   5.  Apply any submission checks that configured admission policy or
        adopted profiles require before evidence verification, including
        when no evidence member is present.  For example, the Submission
        Evidence companion resolves required evidence here and refuses a
@@ -8628,22 +8635,38 @@ Table of Contents
        ([I-D.draft-mcguinness-oauth-mission-submission-evidence],
        Section "Required Evidence Is Resolved Before Derivation").
 
-   5.  Apply the evidence dispatch and refusal rules, verifying every
+   6.  Apply the evidence dispatch and refusal rules, verifying every
        presented entry under its type's rules (Section 4.4).
 
-   6.  Apply admission policy and derive the Authority Set independently
-       (Section 5).
+   7.  Apply admission policy and derive the Authority Set independently
+       (Section 5), including the target_resources membership of each
+       entry that carries a resource member (Section 5.1) and, where a
+       proposal was submitted, that each derived entry is a same-type
+       subset of a proposed entry (Section 4.3).
 
-   7.  Render the Intent, the Authority Set, and the material verified
+   8.  Render the Intent, the Authority Set, and the material verified
        provenance for approval; a change to any of them before the
        decision is re-rendered and approved over the changed context
        (Section 6).
 
-   8.  At activation, record the approved intent, intent_hash, the
+   9.  At activation, record the approved intent, intent_hash, the
        Authority Set, and the verified evidence facts as
        submission_evidence (Section 13).
 
-   The material verified provenance of step 7 is part of the approval
+   The AS MUST refuse a submission that fails more than one check with
+   the error of the earliest failing step in this order.  For example:
+
+   *  a malformed proposal together with a missing required evidence
+      type is refused at step 3, with invalid_authorization_details;
+
+   *  a proposed entry outside target_resources together with a
+      presented evidence entry that fails verification is refused at
+      step 3, with invalid_request; and
+
+   *  an intent object that fails validation together with a malformed
+      proposal is refused at step 2, with invalid_request.
+
+   The material verified provenance of step 8 is part of the approval
    surface.  Where a deployment commits the rendered approval surface,
    that commitment MUST cover the normalized provenance facts, at least
    as a digest of their canonical submission_evidence representation
@@ -8660,10 +8683,8 @@ Table of Contents
 
 5.1.  Derivation Modes
 
-   Derivation is mechanical.  It happens once, at the approval event,
-   under the derivation policy then in force, as one procedure whose
-   candidate entries depend on whether an authority proposal was
-   submitted:
+   Derivation is mechanical: one procedure whose candidate entries
+   depend on whether an authority proposal was submitted:
 
    *  *Narrowing mode* (preferred where the client can author
       authorization_details): the client submitted an authority proposal
@@ -8694,6 +8715,15 @@ Table of Contents
       standing consent to a pre-approved ceiling is the separate,
       experimental Mission Template profile
       ([I-D.draft-mcguinness-oauth-mission-template]), not this mode.
+
+   Derivation can run provisionally during submission processing, where
+   the inputs it needs are available (Section 4.5).  The candidate
+   Authority Set is complete before the approval rendering
+   (Section 6.2), and a change that Section 6.6 covers is recomputed and
+   approved over the changed context.  The approved Authority Set is
+   fixed when the Mission Record is created, atomically with the
+   approval decision (Section 6.2), under the derivation policy in force
+   at the approval event.
 
    In both modes the AS bounds every Authority Set entry by the Mission
    Intent: each entry that carries a resource member MUST have it among
@@ -10413,211 +10443,257 @@ Table of Contents
 10.  Error and Challenge Mapping
 
    This document reuses standard OAuth errors and challenges, selected
-   by parameter ownership and processing stage.  The following table is
-   the normative statement of the base OAuth error for each failure it
-   lists.  A rule elsewhere in this document that names one of these
-   codes (Section 4.2, Section 4.3, Section 4.4, Section 5, Section 6.9,
-   Section 7.2, Section 9, Section 12.3, Section 12.4) applies this
+   by parameter ownership and processing stage.  The following tables
+   are the normative statement of the base OAuth error for each failure
+   they list.  A rule elsewhere in this document that names one of these
+   codes (Section 4.1, Section 4.2, Section 4.3, Section 4.4, Section 5,
+   Section 6.9, Section 6.10.1, Section 7.2, Section 8.5, Section 9,
+   Section 12, Section 12.1, Section 12.3, Section 12.4) applies this
    mapping.
-
-   +===============================+===================================+
-   | Surface / failing input       | Base OAuth error and optional     |
-   |                               | detail                            |
-   +===============================+===================================+
-   | PAR: malformed Submission     | invalid_request (Section 5.2 of   |
-   | envelope or Intent (schema,   | [RFC6749]).  Detail: safe         |
-   | unknown member, invalid       | error_description                 |
-   | value)                        |                                   |
-   +-------------------------------+-----------------------------------+
-   | PAR, or a companion's token-  | invalid_mission_intent_evidence   |
-   | endpoint submission: a        | (Section 4.4).  Detail: safe      |
-   | presented evidence entry of   | error_description                 |
-   | an unsupported type, or       |                                   |
-   | failing its type's            |                                   |
-   | validation or verification    |                                   |
-   | (Section 4.4), or a required  |                                   |
-   | evidence type absent          |                                   |
-   +-------------------------------+-----------------------------------+
-   | PAR or authorization:         | invalid_authorization_details     |
-   | malformed or unsupported      | (Section 5 of [RFC9396]).         |
-   | actual RAR object (an entry   | Detail: RAR-defined detail        |
-   | of a submitted                |                                   |
-   | authorization_details         |                                   |
-   | proposal)                     |                                   |
-   +-------------------------------+-----------------------------------+
-   | PAR: a proposed entry, valid  | invalid_request (Section 5.2 of   |
-   | for its type, whose resource  | [RFC6749]).  Detail: safe         |
-   | is not among the Intent's     | error_description                 |
-   | target_resources              |                                   |
-   | (Section 4.3)                 |                                   |
-   +-------------------------------+-----------------------------------+
-   | Request from a client         | invalid_request (Section 4.1.2.1  |
-   | registered as Mission-        | of [RFC6749], Section 5.2 of      |
-   | governed:                     | [RFC6749]).  Detail: safe         |
-   | authorization_details         | error_description                 |
-   | without mission_intent        |                                   |
-   | (Section 4.3)                 |                                   |
-   +-------------------------------+-----------------------------------+
-   | Authorization or token        | invalid_target (Section 2 of      |
-   | request: invalid, unknown,    | [RFC8707]).  Detail: safe         |
-   | or malformed actual RFC 8707  | error_description                 |
-   | resource parameter, or a      |                                   |
-   | token-endpoint resource       |                                   |
-   | outside the Mission's         |                                   |
-   | Authority Set                 |                                   |
-   +-------------------------------+-----------------------------------+
-   | Authorization or token        | invalid_target (Section 2 of      |
-   | request: the target's scope-  | [RFC8707]).  Detail: safe         |
-   | projection mapping is         | error_description                 |
-   | unknown, ambiguous, or        |                                   |
-   | stale, whether or not the     |                                   |
-   | request names a scope value,  |                                   |
-   | or the target is scope-only   |                                   |
-   | and no safe projection        |                                   |
-   | exists for the applicable     |                                   |
-   | entries when the request      |                                   |
-   | names no scope value          |                                   |
-   | (Section 8.5); or, where the  |                                   |
-   | AS applies Section 9's        |                                   |
-   | delegated-token routing rule  |                                   |
-   | at issuance, the delegated    |                                   |
-   | token's target is not known   |                                   |
-   | to be Mission-aware           |                                   |
-   +-------------------------------+-----------------------------------+
-   | Authorization or token        | invalid_scope (Section 4.1.2.1 of |
-   | request: an explicitly        | [RFC6749], Section 5.2 of         |
-   | requested scope value the     | [RFC6749]).  Detail: safe         |
-   | issuance cannot grant under   | error_description                 |
-   | a scope-projection mapping    |                                   |
-   | the AS trusts (Section 8.5)   |                                   |
-   +-------------------------------+-----------------------------------+
-   | Authorization request: scope  | invalid_scope (Section 4.1.2.1 of |
-   | includes openid and the       | [RFC6749]).  Detail: safe         |
-   | Approver is not the Subject   | error_description                 |
-   | (Section 6.9)                 |                                   |
-   +-------------------------------+-----------------------------------+
-   | Authorization decision: the   | access_denied (Section 4.1.2.1 of |
-   | Approver declines, approval   | [RFC6749]).  Detail: none unless  |
-   | authentication fails the      | a defined extension applies       |
-   | floor or a requested          |                                   |
-   | acr_values or max_age, or a   |                                   |
-   | well-formed request           |                                   |
-   | (including configured-        |                                   |
-   | mapping mode) is refused by   |                                   |
-   | AS policy                     |                                   |
-   +-------------------------------+-----------------------------------+
-   | Token endpoint: the Mission   | invalid_request on a Token        |
-   | is terminated (revoked,       | Exchange (Section 2.2.2 of        |
-   | expired, superseded, or       | [RFC8693]), invalid_grant         |
-   | another termination reason)   | (Section 5.2 of [RFC6749]) on any |
-   |                               | other grant, or the code a Token  |
-   |                               | Exchange profile assigns          |
-   |                               | (Section 7.2).  Detail:           |
-   |                               | mission_error (Section 22)        |
-   +-------------------------------+-----------------------------------+
-   | Token endpoint: the           | invalid_authorization_details     |
-   | requested RAR subset exceeds  | (Section 6 of [RFC9396]).         |
-   | the Mission's granted         | Detail: safe detail               |
-   | authority                     |                                   |
-   +-------------------------------+-----------------------------------+
-   | Token exchange: a             | invalid_request (Section 2.2.2 of |
-   | subject_token or actor_token  | [RFC8693]), unless a Token        |
-   | that is invalid, whose        | Exchange profile assigns the      |
-   | sender constraint is not      | failure its own code; a required  |
-   | proven, or that is            | DPoP proof that is missing, or a  |
-   | unacceptable for the          | DPoP proof that fails its own     |
-   | exchange                      | validation, is invalid_dpop_proof |
-   |                               | (Section 5 of [RFC9449]), not an  |
-   |                               | unproven sender constraint; an    |
-   |                               | authorization server that         |
-   |                               | requires a DPoP nonce answers a   |
-   |                               | proof lacking its current nonce   |
-   |                               | with use_dpop_nonce and a DPoP-   |
-   |                               | Nonce header (Section 8 of        |
-   |                               | [RFC9449]), not                   |
-   |                               | invalid_dpop_proof.  Detail: safe |
-   |                               | error_description                 |
-   +-------------------------------+-----------------------------------+
-   | Token exchange with no actor  | invalid_request (Section 2.2.2 of |
-   | (Section 12.3): the           | [RFC8693]).  Detail: safe         |
-   | authenticated client is not   | error_description                 |
-   | the Mission's approved agent  |                                   |
-   +-------------------------------+-----------------------------------+
-   | Delegated token exchange      | invalid_request (Section 2.2.2 of |
-   | (Section 12): the             | [RFC8693]).  Detail: safe         |
-   | subject_token is not a        | error_description                 |
-   | designation this AS issued    |                                   |
-   | naming the requesting client  |                                   |
-   +-------------------------------+-----------------------------------+
-   | Designation (Section 12.1):   | invalid_target (Section 2.2.2 of  |
-   | the AS cannot establish that  | [RFC8693]).  Detail: safe         |
-   | no resource server accepts    | error_description                 |
-   | the named client's            |                                   |
-   | identifier as an audience     |                                   |
-   | for its access tokens,        |                                   |
-   | including an alias it never   |                                   |
-   | issues                        |                                   |
-   +-------------------------------+-----------------------------------+
-   | Delegated token exchange      | invalid_target (Section 2.2.2 of  |
-   | (Section 12.4): narrowing     | [RFC8693]).  Detail: safe         |
-   | leaves no entries for the     | error_description                 |
-   | delegate                      |                                   |
-   +-------------------------------+-----------------------------------+
-   | Token exchange using          | invalid_client_attestation.       |
-   | Section 12.2: required        | Detail: no instance-identity      |
-   | Client Attestation fails      | disclosure                        |
-   | validation                    |                                   |
-   +-------------------------------+-----------------------------------+
-   | Token exchange using          | invalid_request (Section 2.2.2 of |
-   | Section 12.2: required        | [RFC8693]).  Detail: no instance- |
-   | instance-to-delegate or       | identity disclosure               |
-   | output-key association        |                                   |
-   | cannot be established         |                                   |
-   +-------------------------------+-----------------------------------+
-   | Protected resource: a token   | invalid_token (Section 3.1 of     |
-   | lacking the mission claim,    | [RFC6750]).  Detail: none         |
-   | where the resource requires   |                                   |
-   | it (Section 9)                |                                   |
-   +-------------------------------+-----------------------------------+
-   | Protected resource: weak or   | insufficient_user_authentication  |
-   | stale authentication of the   | (Section 3 of [RFC9470]).         |
-   | token's Subject, where the    | Detail: acr_values or max_age     |
-   | deployment conveys it         |                                   |
-   | (Section 9)                   |                                   |
-   +-------------------------------+-----------------------------------+
-   | Protected resource: DPoP      | DPoP invalid_token challenge      |
-   | proof missing, invalid, or    | (Section 7.1 of [RFC9449]).       |
-   | mismatched                    | Detail: none                      |
-   +-------------------------------+-----------------------------------+
-   | Protected resource: DPoP      | DPoP use_dpop_nonce challenge     |
-   | nonce required, missing, or   | (Section 9 of [RFC9449]).         |
-   | stale                         | Detail: fresh nonce               |
-   +-------------------------------+-----------------------------------+
-   | Protected resource:           | Bearer invalid_token challenge    |
-   | certificate-bound token's     | (Section 3.1 of [RFC6750], per    |
-   | presented certificate         | Section 3 of [RFC8705]).  Detail: |
-   | mismatch                      | none                              |
-   +-------------------------------+-----------------------------------+
-   | Protected resource:           | insufficient_scope (Section 3.1   |
-   | insufficient carried          | of [RFC6750]) or the RAR-         |
-   | authority, or an              | remediation challenge             |
-   | unenforceable constraint      | (Section 9.6).  Detail:           |
-   |                               | mission_denial (Section 9),       |
-   |                               | minimized                         |
-   +-------------------------------+-----------------------------------+
-
-        Table 5: Endpoint x parameter x failure-stage error mapping
-
-   In the table, which evidence types are required follows
-   [I-D.draft-mcguinness-oauth-mission-submission-evidence], and
-   invalid_client_attestation is the error code that Section 5.2 of
-   [I-D.draft-mcguinness-oauth-client-instance-id] specifies.
 
    An AS that performs an applicable check early, at PAR, responds with
    the same error class the check would yield at the authorization or
    token endpoint.  Section 2.3 of [RFC9126] permits an authorization-
    request error at PAR, and returning it there does not change which
-   row of the table above applies.
+   row applies.
+
+   The tables are grouped by surface.  The first table holds each
+   failure whose rule is not confined to the surface of one of the other
+   three tables (PAR and the authorization endpoint, Token Exchange, or
+   a protected resource); each failure appears once.  Token Exchange is
+   a token-endpoint operation: a row of the first table that names the
+   token endpoint or a token request covers an exchange, alongside the
+   exchange rows of the third table.
+
+   +=================================+=================================+
+   | Surface / failing input         | Base OAuth error and optional   |
+   |                                 | detail                          |
+   +=================================+=================================+
+   | PAR, or a companion's token-    | invalid_mission_intent_evidence |
+   | endpoint submission: a          | (Section 4.4).  Detail: safe    |
+   | presented evidence entry of     | error_description               |
+   | an unsupported type, or         |                                 |
+   | failing its type's validation   |                                 |
+   | or verification                 |                                 |
+   | (Section 4.4), or a required    |                                 |
+   | evidence type absent            |                                 |
+   +---------------------------------+---------------------------------+
+   | Request from a client           | invalid_request                 |
+   | registered as Mission-          | (Section 4.1.2.1 of [RFC6749],  |
+   | governed:                       | Section 5.2 of [RFC6749]).      |
+   | authorization_details without   | Detail: safe error_description  |
+   | mission_intent (Section 4.3)    |                                 |
+   +---------------------------------+---------------------------------+
+   | Authorization or token          | invalid_target (Section 2 of    |
+   | request: invalid, unknown, or   | [RFC8707]).  Detail: safe       |
+   | malformed actual RFC 8707       | error_description               |
+   | resource parameter, or a        |                                 |
+   | token-endpoint resource         |                                 |
+   | outside the Mission's           |                                 |
+   | Authority Set (Section 6.2)     |                                 |
+   +---------------------------------+---------------------------------+
+   | Authorization or token          | invalid_target (Section 2 of    |
+   | request: the target's scope-    | [RFC8707]).  Detail: safe       |
+   | projection mapping is           | error_description               |
+   | unknown, ambiguous, or stale,   |                                 |
+   | whether or not the request      |                                 |
+   | names a scope value, or the     |                                 |
+   | target is scope-only and no     |                                 |
+   | safe projection exists for      |                                 |
+   | the applicable entries when     |                                 |
+   | the request names no scope      |                                 |
+   | value (Section 8.5); or,        |                                 |
+   | where the AS applies            |                                 |
+   | Section 9's delegated-token     |                                 |
+   | routing rule at issuance, the   |                                 |
+   | delegated token's target is     |                                 |
+   | not known to be Mission-aware   |                                 |
+   +---------------------------------+---------------------------------+
+   | Authorization or token          | invalid_scope (Section 4.1.2.1  |
+   | request: an explicitly          | of [RFC6749], Section 5.2 of    |
+   | requested scope value the       | [RFC6749]).  Detail: safe       |
+   | issuance cannot grant under a   | error_description               |
+   | scope-projection mapping the    |                                 |
+   | AS trusts (Section 8.5)         |                                 |
+   +---------------------------------+---------------------------------+
+   | Profile-defined operation       | invalid_grant (Section 5.2 of   |
+   | that lets a client present a    | [RFC6749]).  Detail: safe       |
+   | Mission Identifier alongside    | error_description               |
+   | a credential                    |                                 |
+   | (Section 6.10.1): the           |                                 |
+   | identifier does not match the   |                                 |
+   | Mission the credential          |                                 |
+   | resolves to                     |                                 |
+   +---------------------------------+---------------------------------+
+   | Token endpoint: the Mission     | invalid_request on a Token      |
+   | is terminated (revoked,         | Exchange (Section 2.2.2 of      |
+   | expired, superseded, or         | [RFC8693]), invalid_grant       |
+   | another termination reason)     | (Section 5.2 of [RFC6749]) on   |
+   |                                 | any other grant, or the code a  |
+   |                                 | Token Exchange profile assigns  |
+   |                                 | (Section 7.2).  Detail:         |
+   |                                 | mission_error (Section 22)      |
+   +---------------------------------+---------------------------------+
+   | Token endpoint (Section 5.4):   | invalid_authorization_details   |
+   | the requested RAR subset        | (Section 6 of [RFC9396]).       |
+   | exceeds the Mission's granted   | Detail: safe detail             |
+   | authority                       |                                 |
+   +---------------------------------+---------------------------------+
+
+               Table 5: Failures not confined to one surface
+
+   +===================================+===============================+
+   | Surface / failing input           | Base OAuth error and optional |
+   |                                   | detail                        |
+   +===================================+===============================+
+   | PAR: malformed Submission         | invalid_request (Section 5.2  |
+   | envelope or Intent (schema,       | of [RFC6749]).  Detail: safe  |
+   | unknown member, invalid           | error_description             |
+   | value) (Section 4.2)              |                               |
+   +-----------------------------------+-------------------------------+
+   | PAR or authorization:             | invalid_authorization_details |
+   | malformed or unsupported          | (Section 5 of [RFC9396]).     |
+   | actual RAR object (an entry       | Detail: RAR-defined detail    |
+   | of a submitted                    |                               |
+   | authorization_details             |                               |
+   | proposal) (Section 4.3)           |                               |
+   +-----------------------------------+-------------------------------+
+   | PAR: a proposed entry, valid      | invalid_request (Section 5.2  |
+   | for its type, whose resource      | of [RFC6749]).  Detail: safe  |
+   | is not among the Intent's         | error_description             |
+   | target_resources                  |                               |
+   | (Section 4.3)                     |                               |
+   +-----------------------------------+-------------------------------+
+   | Authorization request: scope      | invalid_scope                 |
+   | includes openid and the           | (Section 4.1.2.1 of           |
+   | Approver is not the Subject       | [RFC6749]).  Detail: safe     |
+   | (Section 6.9)                     | error_description             |
+   +-----------------------------------+-------------------------------+
+   | Authorization decision            | access_denied                 |
+   | (Section 6.2, Section 6.9,        | (Section 4.1.2.1 of           |
+   | Section 5.1): the Approver        | [RFC6749]).  Detail: none     |
+   | declines, approval                | unless a defined extension    |
+   | authentication fails the          | applies                       |
+   | floor or a requested              |                               |
+   | acr_values or max_age, or a       |                               |
+   | well-formed request               |                               |
+   | (including configured-mapping     |                               |
+   | mode) is refused by AS policy     |                               |
+   +-----------------------------------+-------------------------------+
+
+              Table 6: PAR and authorization endpoint failures
+
+    +======================+=========================================+
+    | Surface / failing    | Base OAuth error and optional detail    |
+    | input                |                                         |
+    +======================+=========================================+
+    | Token exchange: a    | invalid_request (Section 2.2.2 of       |
+    | subject_token or     | [RFC8693]), unless a Token Exchange     |
+    | actor_token that is  | profile assigns the failure its own     |
+    | invalid, whose       | code; a required DPoP proof that is     |
+    | sender constraint is | missing, or a DPoP proof that fails its |
+    | not proven, or that  | own validation, is invalid_dpop_proof   |
+    | is unacceptable for  | (Section 5 of [RFC9449]), not an        |
+    | the exchange         | unproven sender constraint; an          |
+    |                      | authorization server that requires a    |
+    |                      | DPoP nonce answers a proof lacking its  |
+    |                      | current nonce with use_dpop_nonce and a |
+    |                      | DPoP-Nonce header (Section 8 of         |
+    |                      | [RFC9449]), not invalid_dpop_proof.     |
+    |                      | Detail: safe error_description          |
+    +----------------------+-----------------------------------------+
+    | Token exchange with  | invalid_request (Section 2.2.2 of       |
+    | no actor             | [RFC8693]).  Detail: safe               |
+    | (Section 12.3): the  | error_description                       |
+    | authenticated client |                                         |
+    | is not the Mission's |                                         |
+    | approved agent       |                                         |
+    +----------------------+-----------------------------------------+
+    | Delegated token      | invalid_request (Section 2.2.2 of       |
+    | exchange             | [RFC8693]).  Detail: safe               |
+    | (Section 12): the    | error_description                       |
+    | subject_token is not |                                         |
+    | a designation this   |                                         |
+    | AS issued naming the |                                         |
+    | requesting client    |                                         |
+    +----------------------+-----------------------------------------+
+    | Designation          | invalid_target (Section 2.2.2 of        |
+    | (Section 12.1): the  | [RFC8693]).  Detail: safe               |
+    | AS cannot establish  | error_description                       |
+    | that no resource     |                                         |
+    | server accepts the   |                                         |
+    | named client's       |                                         |
+    | identifier as an     |                                         |
+    | audience for its     |                                         |
+    | access tokens,       |                                         |
+    | including an alias   |                                         |
+    | it never issues      |                                         |
+    +----------------------+-----------------------------------------+
+    | Delegated token      | invalid_target (Section 2.2.2 of        |
+    | exchange             | [RFC8693]).  Detail: safe               |
+    | (Section 12.4):      | error_description                       |
+    | narrowing leaves no  |                                         |
+    | entries for the      |                                         |
+    | delegate             |                                         |
+    +----------------------+-----------------------------------------+
+    | Token exchange using | invalid_client_attestation.  Detail: no |
+    | Section 12.2:        | instance-identity disclosure            |
+    | required Client      |                                         |
+    | Attestation fails    |                                         |
+    | validation           |                                         |
+    +----------------------+-----------------------------------------+
+    | Token exchange using | invalid_request (Section 2.2.2 of       |
+    | Section 12.2:        | [RFC8693]).  Detail: no instance-       |
+    | required instance-   | identity disclosure                     |
+    | to-delegate or       |                                         |
+    | output-key           |                                         |
+    | association cannot   |                                         |
+    | be established       |                                         |
+    +----------------------+-----------------------------------------+
+
+                     Table 7: Token Exchange failures
+
+    +===========================+====================================+
+    | Surface / failing input   | Base OAuth error and optional      |
+    |                           | detail                             |
+    +===========================+====================================+
+    | Protected resource: a     | invalid_token (Section 3.1 of      |
+    | token lacking the mission | [RFC6750]).  Detail: none          |
+    | claim, where the resource |                                    |
+    | requires it (Section 9)   |                                    |
+    +---------------------------+------------------------------------+
+    | Protected resource: weak  | insufficient_user_authentication   |
+    | or stale authentication   | (Section 3 of [RFC9470]).  Detail: |
+    | of the token's Subject,   | acr_values or max_age              |
+    | where the deployment      |                                    |
+    | conveys it (Section 9)    |                                    |
+    +---------------------------+------------------------------------+
+    | Protected resource: DPoP  | DPoP invalid_token challenge       |
+    | proof missing, invalid,   | (Section 7.1 of [RFC9449]).        |
+    | or mismatched (Section 9) | Detail: none                       |
+    +---------------------------+------------------------------------+
+    | Protected resource: DPoP  | DPoP use_dpop_nonce challenge      |
+    | nonce required, missing,  | (Section 9 of [RFC9449]).  Detail: |
+    | or stale (Section 9.4)    | fresh nonce                        |
+    +---------------------------+------------------------------------+
+    | Protected resource:       | Bearer invalid_token challenge     |
+    | certificate-bound token's | (Section 3.1 of [RFC6750], per     |
+    | presented certificate     | Section 3 of [RFC8705]).  Detail:  |
+    | mismatch (Section 9)      | none                               |
+    +---------------------------+------------------------------------+
+    | Protected resource:       | insufficient_scope (Section 3.1 of |
+    | insufficient carried      | [RFC6750]) or the RAR-remediation  |
+    | authority, or an          | challenge (Section 9.6).  Detail:  |
+    | unenforceable constraint  | mission_denial (Section 9),        |
+    | (Section 9.4)             | minimized                          |
+    +---------------------------+------------------------------------+
+
+                  Table 8: Protected resource challenges
+
+   In these tables, which evidence types are required follows
+   [I-D.draft-mcguinness-oauth-mission-submission-evidence], and
+   invalid_client_attestation is the error code that Section 5.2 of
+   [I-D.draft-mcguinness-oauth-client-instance-id] specifies.
 
 11.  Mission State via Token Introspection
 
@@ -13143,7 +13219,7 @@ Table of Contents
    |            |          | reason.        |            | 7.1        |
    +------------+----------+----------------+------------+------------+
 
-                                 Table 6
+                                 Table 9
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations.  A Designated
@@ -13200,7 +13276,7 @@ Table of Contents
     |         | equals it.         |         |            | 7.1       |
     +---------+--------------------+---------+------------+-----------+
 
-                                  Table 7
+                                  Table 10
 
    Each further document that defines a termination reason requests that
    reason's registration in its own IANA considerations.
@@ -13277,7 +13353,7 @@ Table of Contents
     |                |      |                    |          |Section 4|
     +----------------+------+--------------------+----------+---------+
 
-                Table 8: Core-defined Mission Intent members
+               Table 11: Core-defined Mission Intent members
 
    Each further document that defines a Mission Intent member requests
    that member's registration in its own IANA considerations.
@@ -14576,7 +14652,7 @@ D.5.  Ownership and Operational Signals
     |                     | issuer policy |                          |
     +---------------------+---------------+--------------------------+
 
-                                 Table 9
+                                 Table 12
 
    Templates amortize authoring across Missions and do not bypass the
    ceilings.  The unmapped-resource rate, template-hit rate, and rule-
@@ -14980,6 +15056,25 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Submission processing (#1411, D559): Submission Processing Order
+      validates an authority proposal's type, schema, and
+      target_resources membership after the Intent and before evidence,
+      and refuses a submission that fails several checks with the error
+      of the earliest failing step.  Derivation Modes states when
+      Authority Set derivation runs: provisionally during submission
+      where its inputs allow, complete before the approval rendering,
+      recomputed on a change before the decision, and fixed when the
+      Mission Record is created.
+
+   *  Editorial (#1410): Error and Challenge Mapping is four tables by
+      surface: failures not confined to one surface first, then PAR and
+      the authorization endpoint, Token Exchange, and protected-resource
+      challenges.  The early-PAR rule sits above the tables.  Rows that
+      lacked a defining section cite it, the Mission Identifier mismatch
+      refusal of Establishing and Resolving a Binding has a row, and the
+      list of rules that name these codes gains five sections.  No
+      requirement changes.
 
    *  Editorial (#1409): Terminology defines Authority Set derivation
       and derivation (one issuance operation).  The Implementation Map
