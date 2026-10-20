@@ -187,9 +187,10 @@ reservation apply.
   never past the token's `exp`; a negative result is never cached. A token
   revoked at the estate is therefore refused within 60 seconds of its last
   successful introspection.
-- **The estate's own controls.** Only the registered introspection client may
-  introspect (a token's own client reads `active: false`), and a client may
-  revoke only its own tokens.
+- **The estate's own controls,** as configured (`estate-as.ts`; no pilot test
+  exercises either): introspection is allowed only to the registered
+  introspection client, so any other caller reads `active: false`, and a
+  client may revoke only its own tokens.
 
 ## 6. Routes and consequential-path inventory
 
