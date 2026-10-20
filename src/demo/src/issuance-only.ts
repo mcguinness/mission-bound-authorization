@@ -23,6 +23,7 @@ import {
   type ProviderCapability,
   type ServiceTokenPrincipal,
   type SigningKeySource,
+  startupRemediationNotices,
 } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY } from "@mission/demo-data";
 import { startPlainResourceServer } from "@mission/plain-rs";
@@ -139,6 +140,10 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
     ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
     ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
   });
+  // #1326, #1349: what this boot revoked from a kernel written before #1340.
+  for (const n of startupRemediationNotices(as.startupRemediation)) {
+    (n.level === "warn" ? console.warn : console.log)(`${n.message}: ${JSON.stringify(n.detail)}`);
+  }
   const asServer = as.provider.listen(asPort);
   await new Promise<void>((r) => asServer.once("listening", () => r()));
   const principal = INTROSPECTION_PRINCIPALS.find((p) => p.principal_id === "rs-plain");

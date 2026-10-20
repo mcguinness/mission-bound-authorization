@@ -1889,6 +1889,18 @@ export class MissionKernel {
     return row ? rowToRecord(row) : undefined;
   }
 
+  /**
+   * Every successor recorded for a predecessor under one approval event. The
+   * startup remediation of #1349 requires exactly one, so a duplicate is
+   * reported as contradictory provenance rather than resolved to the first.
+   */
+  successorsByApprovalEvent(predecessorId: string, approvalEventId: string): MissionRecord[] {
+    const rows = this.db
+      .prepare("SELECT * FROM missions WHERE predecessor = ? AND approval_event_id = ?")
+      .all(predecessorId, approvalEventId) as Array<Record<string, unknown>>;
+    return rows.map(rowToRecord);
+  }
+
   get(id: string): MissionRecord | undefined {
     const row = this.db.prepare("SELECT * FROM missions WHERE id = ?").get(id) as
       | Record<string, unknown>

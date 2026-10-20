@@ -11,14 +11,16 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { inheritCapabilitySources } from "./capability-binding.js";
+import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
-import type {
-  ApprovalBasis,
-  AuthorityEntry,
-  IntentSubmissionEvidenceFact,
-  MissionIntent,
-  MissionRecord,
+import {
+  type ApprovalBasis,
+  type AuthorityEntry,
+  type IntentSubmissionEvidenceFact,
+  type MissionIntent,
+  type MissionRecord,
+  TERMINAL_STATES,
 } from "./types.js";
 
 export interface ExpansionInput {
@@ -255,6 +257,96 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     ...(containmentHistory ? { containmentHistory } : {}),
     evidence,
   };
+}
+
+/** A committed expansion deferral whose successor the remediation could not identify. */
+export interface UnresolvedSuccessorProvenance {
+  deferralCode: string;
+  predecessorId: string;
+  /** The client the deferral recorded as opening it. */
+  clientId: string;
+  reason: string;
+}
+
+/** What {@link revokeSuccessorsExpandedByAnotherClient} did. */
+export interface SuccessorRemediation {
+  /** The successors it revoked. */
+  revoked: string[];
+  /** Committed deferrals from another client that it did not act on. */
+  unresolved: UnresolvedSuccessorProvenance[];
+}
+
+/**
+ * @spec expansion#verification-order step 4 (#1349, D516): revoke every
+ * non-terminal successor that a client other than its predecessor's own
+ * created by polling a deferral before the poll check existed (#1326). Such a
+ * successor carries the predecessor's client, so its own record cannot show
+ * the defect; the retained committed deferral is the link. A successor is
+ * identified only when the links agree: exactly one Mission carries the
+ * deferral's predecessor and approval event, the predecessor's supersession
+ * names it, it carries the predecessor's client, and no deferral the
+ * predecessor's own client opened claims the same approval event. Anything
+ * else is reported, never resolved to another Mission.
+ *
+ * Revocation is the ordinary lifecycle transition, after the expiry clock: the
+ * predecessor stays superseded, a terminal successor keeps its recorded
+ * termination, and the cascade reaches the successor's children. A later
+ * successor its own client approved is not a target: only a deferral from
+ * another client names one. Repeatable: a revoked successor is terminal, so a
+ * later run commits nothing. A failed transition throws, so the caller does
+ * not serve with a known live successor.
+ */
+export function revokeSuccessorsExpandedByAnotherClient(
+  kernel: MissionKernel,
+  deferrals: Pick<ExpansionDeferralStore, "retainedCommittedExpansions">,
+): SuccessorRemediation {
+  const committed = deferrals.retainedCommittedExpansions();
+  const revoked: string[] = [];
+  const unresolved: UnresolvedSuccessorProvenance[] = [];
+  for (const op of committed) {
+    const report = (reason: string): void => {
+      unresolved.push({ deferralCode: op.deferralCode, predecessorId: op.predecessorId, clientId: op.clientId, reason });
+    };
+    const predecessor = kernel.get(op.predecessorId);
+    if (!predecessor) {
+      report("the predecessor record is missing");
+      continue;
+    }
+    if (op.clientId === predecessor.client_id) continue;
+    if (!op.approvalEventId) {
+      report("the deferral records no approval event");
+      continue;
+    }
+    const linked = kernel.successorsByApprovalEvent(predecessor.id, op.approvalEventId);
+    const successor = linked[0];
+    if (!successor || linked.length > 1) {
+      report(successor ? "several successors carry the deferral's approval event" : "no successor carries the deferral's approval event");
+      continue;
+    }
+    const termination = predecessor.termination;
+    if (predecessor.state !== "terminated" || termination?.reason !== "superseded" || termination.successor !== successor.id) {
+      report("the predecessor's supersession does not name the successor");
+      continue;
+    }
+    if (successor.client_id !== predecessor.client_id) {
+      report("the successor does not carry the predecessor's client");
+      continue;
+    }
+    const ownClaim = committed.some(
+      (other) =>
+        other.predecessorId === predecessor.id &&
+        other.approvalEventId === op.approvalEventId &&
+        other.clientId === predecessor.client_id,
+    );
+    if (ownClaim) {
+      report("a deferral the predecessor's own client opened claims the same approval event");
+      continue;
+    }
+    if (TERMINAL_STATES.has(kernel.applyExpiry(successor).state)) continue;
+    kernel.transition(successor.id, "revoke");
+    revoked.push(successor.id);
+  }
+  return { revoked, unresolved };
 }
 
 /**

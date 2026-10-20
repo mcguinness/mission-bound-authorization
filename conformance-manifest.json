@@ -47451,7 +47451,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a client not authorized for the predecessor is refused before the creation_request_id lookup, even when it holds the predecessor's token and its key: no deferral or reservation is opened, and no successor is created or predecessor superseded",
-    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
+    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). A successor that another client's poll created before that check existed carries the predecessor's client, and its committed deferral is retained, so building the AS revokes each one the deferral consistently identifies (exactly one Mission carrying the deferral's predecessor and approval event, named by the predecessor's supersession, carrying its client, and no own-client deferral claiming that event), a suspended, committed but unreleased, or late-denied one included (the deferral's completion marker, not its state, selects it). The predecessor stays superseded, a completed or expired successor keeps its termination, a revoked successor's child cascades, a successor its own client approved is untouched, a later boot commits nothing, and the family-grant revocation of a successor the expiry clock terminated is attempted before the AS is returned even when nothing is revoked. The revoked successor's Token Exchange and refresh family are refused and its derivation gate throws, while an access token already issued for it still verifies offline until exp. A committed deferral from another client whose linkage is incomplete or contradicted is reported on the build result, not acted on (#1349). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -47466,6 +47466,24 @@
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
      "name": "expansion acting-agent authorization (@spec expansion#verification-order step 4, #1326) > a retained deferral another client opened is refused invalid_grant at the poll before redeem, creating no successor and leaving the predecessor active; the predecessor's own deferral still completes on a poll that carries no subject_token",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-successor-remediation-restart.test.ts",
+     "name": "successor remediation at build (@spec expansion#verification-order step 4, #1349) > revokes the active, suspended, committed-but-unreleased and late-denied successors another client's deferral created; leaves own-client, terminal, later and unrelated Missions; repeats with no further commit",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/async-delegation.test.ts",
+     "name": "successor remediation (@spec expansion#verification-order step 4, #1349) > revokes a successor whose committed deferral another client opened, refusing its kernel gate, Token Exchange and refresh family while its issued access token still verifies offline until exp; the predecessor stays superseded and an own-client successor keeps refreshing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-successor-remediation-restart.test.ts",
+     "name": "successor remediation at build (@spec expansion#verification-order step 4, #1349) > attempts the family-grant revocation of a successor the expiry clock terminates before the AS is returned, when the sweep revokes nothing",
+     "level": "cross-component",
      "surface": "token-endpoint"
     }
    ]
