@@ -318,10 +318,13 @@ before it serves a request:
   in-ceiling path creates a successor without a deferral. Its
   `approval_basis.activation_actor` records the requesting client, while its
   `client_id` is copied from the predecessor, so the successor's own record is
-  the link and is never purged. The AS acts only when the activation actor is
-  this issuer's and names a client other than the successor's, the successor
-  carries the predecessor's client, and the predecessor's `superseded`
-  termination names it.
+  the link and is never purged. The AS acts only when the activation actor
+  names both an issuer and a client; the actor, the successor and the
+  predecessor all name this AS's issuer; the actor's client differs from the
+  successor's; the successor carries the predecessor's client; and the
+  predecessor's `superseded` termination names it. Two stored issuers that
+  agree with each other but not with this AS do not qualify, and a missing
+  client identifies no one. Each check runs before the expiry clock.
 
 Revocation runs after the expiry clock, so an expired Mission records
 `expired`, and a terminal one keeps its recorded termination. The predecessor

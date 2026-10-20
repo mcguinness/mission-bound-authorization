@@ -173,7 +173,7 @@ describe("drawdown successor remediation at build (@spec expansion#verification-
       expect(second.kernel.get(chainFirst)).toEqual(before.get(chainFirst));
       // The foreign activation actor is reported, not acted on.
       expect(report.unresolved).toEqual([
-        { successorId: foreign, clientId: OTHER, reason: "the activation actor is not this issuer's" },
+        { successorId: foreign, clientId: OTHER, reason: "the successor or its activation actor is not this issuer's" },
       ]);
       expect(startupRemediationNotices(second.startupRemediation).map((n) => n.level)).toEqual(["info", "warn"]);
       afterSecond = { versions: versions(second), events: lifecycleEvents(second) };
@@ -191,6 +191,77 @@ describe("drawdown successor remediation at build (@spec expansion#verification-
       expect(lifecycleEvents(third)).toBe(afterSecond.events);
     } finally {
       third.kernel.close();
+    }
+  });
+
+  it("reports, and neither revokes nor expires, a drawdown whose actor names no client, whose successor and actor share a foreign issuer, whose successor alone is foreign, or whose predecessor is another issuer's", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "drawdown-remediation-provenance-"));
+    dirs.push(dir);
+    const file = join(dir, "kernel.db");
+    const startedAt = Date.now();
+    const first = await build(file);
+    const seed = seeding(first);
+    const other = { iss: ISSUER, sub: OTHER };
+    const FOREIGN = "https://foreign.example";
+    // Inconsistent storage, not what the exchange writes: each record is
+    // created as the exchange creates it, then one provenance field is altered.
+    const setIssuer = (id: string, iss: string) =>
+      first.kernel.db.prepare("UPDATE missions SET issuer = ? WHERE id = ?").run(iss, id);
+    const setActor = (id: string, change: (actor: Record<string, unknown>) => void) => {
+      const basis = structuredClone((first.kernel.get(id) as MissionRecord).approval_basis) as unknown as {
+        activation_actor: Record<string, unknown>;
+      };
+      change(basis.activation_actor);
+      first.kernel.db.prepare("UPDATE missions SET approval_basis_json = ? WHERE id = ?").run(JSON.stringify(basis), id);
+    };
+
+    // A missing subject does not identify another client. Its own expiry has
+    // passed by the next boot, and the sweep does not apply it.
+    const pNoClient = seed.predecessor();
+    const noClient = seed.drawdown(pNoClient.id, other, new Date(startedAt + 10 * 60_000).toISOString());
+    setActor(noClient, (actor) => {
+      delete actor.sub;
+    });
+    // Two stored issuers that agree with each other but not with this kernel.
+    const pForeignPair = seed.predecessor();
+    const foreignPair = seed.drawdown(pForeignPair.id, other);
+    setActor(foreignPair, (actor) => {
+      actor.iss = FOREIGN;
+    });
+    setIssuer(foreignPair, FOREIGN);
+    // The successor is another issuer's, its activation actor this one's.
+    const pForeignSuccessor = seed.predecessor();
+    const foreignSuccessor = seed.drawdown(pForeignSuccessor.id, other);
+    setIssuer(foreignSuccessor, FOREIGN);
+    // The predecessor is another issuer's.
+    const pForeign = seed.predecessor();
+    const foreignPredecessor = seed.drawdown(pForeign.id, other);
+    setIssuer(pForeign.id, FOREIGN);
+    // A consistent target beside them, so the sweep demonstrably ran.
+    const pTarget = seed.predecessor();
+    const target = seed.drawdown(pTarget.id, other);
+
+    const before = new Map(first.kernel.allMissions().map((m) => [m.id, m]));
+    first.kernel.close();
+
+    const second = await build(file, () => new Date(startedAt + 60 * 60_000));
+    try {
+      const report = second.startupRemediation.drawdownSuccessors;
+      expect(report.revoked).toEqual([target]);
+      for (const id of [noClient, foreignPair, foreignSuccessor, foreignPredecessor]) {
+        expect(second.kernel.get(id), id).toEqual(before.get(id));
+      }
+      expect(report.unresolved).toEqual(
+        expect.arrayContaining([
+          { successorId: noClient, clientId: undefined, reason: "the activation actor has no issuer and client" },
+          { successorId: foreignPair, clientId: OTHER, reason: "the successor or its activation actor is not this issuer's" },
+          { successorId: foreignSuccessor, clientId: OTHER, reason: "the successor or its activation actor is not this issuer's" },
+          { successorId: foreignPredecessor, clientId: OTHER, reason: "the predecessor is not this issuer's" },
+        ]),
+      );
+      expect(report.unresolved).toHaveLength(4);
+    } finally {
+      second.kernel.close();
     }
   });
 });

@@ -372,10 +372,14 @@ export interface DrawdownRemediation {
  * drawdown opens no deferral, but its basis records the requesting client as
  * `activation_actor`, while `client_id` is copied from the predecessor, so
  * the successor's own record is the link. A successor is a target only when
- * its provenance agrees: the activation actor is this issuer's and names
- * another client, the successor carries its predecessor's client, and the
- * predecessor's supersession names it. Anything else is reported, never
- * resolved by guessing.
+ * its provenance agrees: the activation actor carries an issuer and a client,
+ * the actor, the successor and the predecessor are all this kernel's issuer
+ * (`issuerId`), the actor names a client other than the successor's, the
+ * successor carries its predecessor's client, and the predecessor's
+ * supersession names it. A missing subject does not identify another client,
+ * and two stored issuer values that agree with each other but not with this
+ * kernel do not make the record this issuer's. Anything else is reported
+ * before the expiry clock or any transition runs, never resolved by guessing.
  *
  * As {@link revokeSuccessorsExpandedByAnotherClient}: the ordinary lifecycle
  * transition after the expiry clock, the predecessor stays superseded, a
@@ -384,22 +388,36 @@ export interface DrawdownRemediation {
  * commits nothing, and a failed transition throws.
  */
 export function revokeDrawdownSuccessorsRequestedByAnotherClient(kernel: MissionKernel): DrawdownRemediation {
+  const issuer = kernel.issuerId();
   const revoked: string[] = [];
   const unresolved: UnresolvedDrawdownProvenance[] = [];
   for (const successor of kernel.missionsByApprovalBasis("ceiling_drawdown")) {
     if (successor.approval_basis.type !== "ceiling_drawdown") continue;
-    const actor = successor.approval_basis.activation_actor;
+    // Read as stored, not as typed: a damaged row may lack either member.
+    const actor = successor.approval_basis.activation_actor as { iss?: unknown; sub?: unknown } | undefined;
+    const actorIss = typeof actor?.iss === "string" && actor.iss ? actor.iss : undefined;
+    const actorSub = typeof actor?.sub === "string" && actor.sub ? actor.sub : undefined;
     const report = (reason: string): void => {
-      unresolved.push({ successorId: successor.id, clientId: actor?.sub, reason });
+      unresolved.push({ successorId: successor.id, clientId: actorSub, reason });
     };
-    if (!actor || actor.iss !== successor.issuer) {
-      report("the activation actor is not this issuer's");
+    // Every check below precedes the expiry clock and the transition, so an
+    // inconsistent record is reported with nothing committed for it.
+    if (!actorIss || !actorSub) {
+      report("the activation actor has no issuer and client");
       continue;
     }
-    if (actor.sub === successor.client_id) continue;
+    if (actorIss !== issuer || successor.issuer !== issuer) {
+      report("the successor or its activation actor is not this issuer's");
+      continue;
+    }
+    if (actorSub === successor.client_id) continue;
     const predecessor = successor.predecessor ? kernel.get(successor.predecessor) : undefined;
     if (!predecessor) {
       report("the predecessor record is missing");
+      continue;
+    }
+    if (predecessor.issuer !== issuer) {
+      report("the predecessor is not this issuer's");
       continue;
     }
     if (successor.client_id !== predecessor.client_id) {
