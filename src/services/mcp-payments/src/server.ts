@@ -657,11 +657,16 @@ export class McpPaymentsServer {
       // accepts tokens with no `mission` claim, so it does not advertise
       // Mission-bound-only acceptance (#818).
       ...(this.deps.ordinaryOnly ? {} : { mission_bound_authorization_required: true }),
-      // @spec resource-access#protected-resource-metadata (#1266): only keys
-      // this resource enforces against its own authoritative facts.
+      // @spec resource-access#protected-resource-metadata (#1266): exactly the
+      // keys this resource enforces: against its own authoritative facts, and
+      // through its PDP the action-bound approval requirement (step 8) and a
+      // Discharge condition (step 5b), so a client predicts no fail-closed
+      // mismatch that would not happen.
       mission_constraints_supported: [
         "max_amount",
         "vendors",
+        "requires_action_approval",
+        "terminal_when",
         "resource_issued_after",
         "resource_issued_before",
         "tenant",

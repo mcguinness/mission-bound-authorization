@@ -109,9 +109,18 @@ The trusted scope-projection mapping (`@spec mission#scope-projection`, step
 2: authenticated out-of-band configuration). For each target audience it
 records a `version`, the target's enforcement `mode` (`authorization_details`
 or `scope_only`), the REQUIRED `mission_aware` classification used by the
-delegated-routing rule (`@spec mission#rs-enforcement`), and, for a
+delegated-routing rule (`@spec mission#rs-enforcement`), for an
+`authorization_details` target the `mission_constraints_supported` keys it
+enforces (`@spec resource-access#resource-access-type`, #1266), and, for a
 `scope_only` target, the rights and independently enforced controls each
 `scope` value stands for.
+
+`mission_constraints_supported` mirrors the target's protected resource
+metadata member of the same name. A Mission-bound token issued for an
+`authorization_details` target carries an entry for that target only when
+every `constraints` key of the entry is listed; otherwise the issuance is
+refused `invalid_target`, never narrowed by dropping the key. An absent list
+names no key, so any constrained entry for that target is refused.
 
 - **Owner.** The deployment operator responsible for each target Resource
   Server owns that audience's entry, because it describes how that server

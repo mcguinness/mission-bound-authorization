@@ -83,9 +83,20 @@ export interface ScopeValueMapping {
  * (@spec mission#rs-enforcement): `true` only for a target that processes
  * the `act` chain and the `mission` claim; a delegated Mission-bound token is
  * never issued to any other.
+ *
+ * `mission_constraints_supported` (@spec resource-access#resource-access-type,
+ * #1266) is, for an `authorization_details` target, the `constraints` keys
+ * that target is known to understand and enforce, mirroring its protected
+ * resource metadata member of the same name. Absent, it is known to enforce
+ * none (see {@link unenforcedConstraintRefusal}).
  */
 export type AudienceScopeMapping =
-  | { version: string; mission_aware: boolean; mode: "authorization_details" }
+  | {
+      version: string;
+      mission_aware: boolean;
+      mode: "authorization_details";
+      mission_constraints_supported?: string[];
+    }
   | {
       version: string;
       mission_aware: boolean;
@@ -207,8 +218,17 @@ function parseAudience(v: unknown, path: string): AudienceScopeMapping {
   const missionAware = o.mission_aware;
   const mode = o.mode;
   if (mode === "authorization_details") {
-    onlyMembers(o, ["version", "mission_aware", "mode"], path);
-    return { version, mission_aware: missionAware, mode };
+    onlyMembers(o, ["version", "mission_aware", "mode", "mission_constraints_supported"], path);
+    const supported = o.mission_constraints_supported;
+    if (supported === undefined) return { version, mission_aware: missionAware, mode };
+    const keysPath = `${path}.mission_constraints_supported`;
+    if (!Array.isArray(supported) || !supported.every((k) => typeof k === "string" && k.length > 0)) {
+      throw new ScopeProjectionMappingError(keysPath, "must be an array of non-empty strings");
+    }
+    if (new Set(supported).size !== supported.length) {
+      throw new ScopeProjectionMappingError(keysPath, "must not repeat a value");
+    }
+    return { version, mission_aware: missionAware, mode, mission_constraints_supported: [...supported] };
   }
   if (mode !== "scope_only") {
     throw new ScopeProjectionMappingError(
@@ -410,12 +430,65 @@ export function delegatedRoutingRefusal(
 }
 
 /**
+ * @spec resource-access#resource-access-type (#1266): "the authorization
+ * server SHOULD emit for a given `resource` only `constraints` keys that the
+ * resource server serving it is known to understand and enforce". A token
+ * is emitted for its audiences, and a resource server receives an entry only
+ * in a token issued for it, so the entries checked are those whose
+ * `resource` is one of the token's audiences. An entry for another resource
+ * is not served to that resource's server by this token; it is checked when
+ * a token is issued for that resource.
+ *
+ * This authorization server's knowledge is the trusted mapping: an entry for
+ * an `authorization_details` audience may carry only the keys that
+ * audience's `mission_constraints_supported` names, and an audience with no
+ * such list is known to enforce none. A key it cannot vouch for refuses the
+ * issuance; it is never dropped from the entry, which would widen it, and
+ * the entry is never omitted to repair it. An entry for a `scope`-only
+ * audience is left to the projection's condition 3
+ * ({@link scopeValueSafeForEntry}): that target reads `scope`, never the
+ * entry's `constraints`. Keyed on presence: an entry with no `constraints`
+ * key needs no knowledge. An audience the mapping does not name is refused
+ * before this check ({@link projectScope}). Returns the refusal reason, or
+ * undefined.
+ */
+export function unenforcedConstraintRefusal(
+  mapping: ScopeProjectionMapping | undefined,
+  audiences: readonly string[],
+  entries: readonly unknown[],
+): string | undefined {
+  for (const entry of entries) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const { resource, constraints } = entry as { resource?: unknown; constraints?: unknown };
+    if (typeof resource !== "string" || !audiences.includes(resource)) continue;
+    if (constraints === undefined) continue;
+    if (constraints === null || typeof constraints !== "object" || Array.isArray(constraints)) {
+      return `an authorization_details entry for ${resource} carries a constraints member that is not an object`;
+    }
+    const keys = Object.keys(constraints);
+    if (keys.length === 0) continue;
+    const known = mapping?.audiences;
+    const m = known && Object.hasOwn(known, resource) ? known[resource] : undefined;
+    if (m?.mode === "scope_only") continue;
+    const enforced = m?.mission_constraints_supported ?? [];
+    const unenforced = keys.find((key) => !enforced.includes(key));
+    if (unenforced !== undefined) {
+      return `resource ${String(resource)} is not known to enforce the constraints key ${unenforced}`;
+    }
+  }
+  return undefined;
+}
+
+/**
  * @spec mission#scope-projection — the issuance algorithm, per audience
  * (step 6), evaluated at every issuance against the mapping current at that
  * issuance (a changed mapping is not by itself stale). Precedence: a missing
  * mapping for any audience and the delegated-routing rule
  * ({@link delegatedRoutingRefusal}) refuse `invalid_target` before any
- * requested value is judged; then, under a trusted mapping, an explicitly
+ * requested value is judged, and so does a `constraints` key on an entry for
+ * an audience that audience is not known to enforce
+ * ({@link unenforcedConstraintRefusal});
+ * then, under a trusted mapping, an explicitly
  * requested value the issuance cannot grant refuses `invalid_scope` (any
  * resource value for an `authorization_details` audience, or a value no
  * carried entry makes safe). An `authorization_details` audience omits
@@ -447,6 +520,11 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
     const reason = delegatedRoutingRefusal(input.mapping, audiences);
     if (reason) return target(reason);
   }
+  // @spec resource-access#resource-access-type (#1266): every carried entry
+  // for an audience carries only keys that audience is known to enforce, or
+  // the issuance is refused.
+  const unenforced = unenforcedConstraintRefusal(input.mapping, audiences, input.entries);
+  if (unenforced) return target(unenforced);
   const requested = input.requested ? [...new Set(input.requested.values)] : undefined;
   const explicit = input.requested?.explicit === true;
   const modes = new Set<ScopeProjectionMode>();

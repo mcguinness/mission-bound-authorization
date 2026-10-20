@@ -98,6 +98,41 @@ describe("scope-projection mapping validation", () => {
   });
 });
 
+describe("the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type)", () => {
+  const withKeys = (keys: unknown, mode = "authorization_details") => ({
+    audiences: { [OTHER]: { version: "1", mission_aware: true, mode, mission_constraints_supported: keys } },
+  });
+
+  it("accepts a key list on an authorization_details audience, an empty one included, and keeps it", () => {
+    const m = parseScopeProjectionMapping(withKeys(["vendors", "tenant"]));
+    expect(m.audiences[OTHER]).toMatchObject({ mission_constraints_supported: ["vendors", "tenant"] });
+    expect(parseScopeProjectionMapping(withKeys([])).audiences[OTHER]).toMatchObject({
+      mission_constraints_supported: [],
+    });
+  });
+
+  it("refuses a malformed list, a repeated key, and the member on a scope-only audience", () => {
+    for (const keys of ["vendors", [""], ["vendors", 7], null]) {
+      expect(() => parseScopeProjectionMapping(withKeys(keys)), JSON.stringify(keys)).toThrow(
+        /mission_constraints_supported must be an array of non-empty strings/,
+      );
+    }
+    expect(() => parseScopeProjectionMapping(withKeys(["vendors", "vendors"]))).toThrow(/must not repeat a value/);
+    const scopeOnly = {
+      audiences: {
+        [RS]: {
+          version: "1",
+          mission_aware: false,
+          mode: "scope_only",
+          scopes: { "r.read": { rights: value(["read"]).rights, mandatory_controls: {} } },
+          mission_constraints_supported: ["vendors"],
+        },
+      },
+    };
+    expect(() => parseScopeProjectionMapping(scopeOnly)).toThrow(/mission_constraints_supported is not a known member/);
+  });
+});
+
 describe("mission_resource_access scope-projection conditions (@spec resource-access#scope-projection)", () => {
   it("a value is safe for a constraints-free entry that carries every action it grants", () => {
     expect(scopeValueSafeForEntry(value(["read"]), entry(["read", "write"]))).toBe(true);

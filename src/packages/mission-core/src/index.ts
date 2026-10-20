@@ -258,6 +258,7 @@ export {
   type ScopeValueRights,
   scopeValueSafeForEntry,
   splitScope,
+  unenforcedConstraintRefusal,
 } from "./scope-projection.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {

@@ -15,7 +15,8 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { IMPLEMENTED_COMMON_CONSTRAINTS } from "@mission/core";
+import { IMPLEMENTED_COMMON_CONSTRAINTS, SUPPORTED_CONSTRAINT_KEYS } from "@mission/core";
+import { AUTHORITY_SOURCES, DERIVATION_POLICY, GOVERNED_POLICIES, SCOPE_PROJECTION } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
@@ -626,15 +627,48 @@ describe("the payments resource fails closed on a constraint it does not enforce
 });
 
 describe("protected resource metadata names only enforced constraint keys (@spec resource-access#protected-resource-metadata)", () => {
-  it("advertises exactly max_amount, vendors and the Common Constraints it enforces, and no other", () => {
+  it("advertises exactly the constraints keys it enforces, the set the Authorization Server admits, and no other", () => {
     const h = harness({});
     const supported = h.server.protectedResourceMetadata().mission_constraints_supported as string[];
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", "resource_issued_after", "resource_issued_before", "tenant", "time_window", "recipient_domain", "data_classification", "allowed_tools"].sort(),
+      [
+        "max_amount",
+        "vendors",
+        "requires_action_approval",
+        "terminal_when",
+        "resource_issued_after",
+        "resource_issued_before",
+        "tenant",
+        "time_window",
+        "recipient_domain",
+        "data_classification",
+        "allowed_tools",
+      ].sort(),
     );
     // The supported set the Authorization Server admits is the one this resource enforces.
+    expect([...supported].sort()).toEqual([...SUPPORTED_CONSTRAINT_KEYS].sort());
     expect([...supported].sort()).toEqual(
-      ["max_amount", "vendors", ...IMPLEMENTED_COMMON_CONSTRAINTS].sort(),
+      ["max_amount", "vendors", "requires_action_approval", "terminal_when", ...IMPLEMENTED_COMMON_CONSTRAINTS].sort(),
     );
+  });
+
+  it("the shipped scope-projection mapping vouches for this resource exactly the keys it advertises, and every shipped ceiling for it carries only those keys (#1266)", () => {
+    const supported = harness({}).server.protectedResourceMetadata().mission_constraints_supported as string[];
+    // The main authorization server's enforcement knowledge for this resource
+    // (@spec resource-access#resource-access-type) invents no support.
+    const m = SCOPE_PROJECTION.audiences[CANONICAL_RESOURCE];
+    expect(m?.mode).toBe("authorization_details");
+    const vouched = m?.mode === "authorization_details" ? (m.mission_constraints_supported ?? []) : [];
+    expect([...vouched].sort()).toEqual([...supported].sort());
+    const ceilings = [
+      ...DERIVATION_POLICY.ceiling,
+      ...AUTHORITY_SOURCES.entries.flatMap((source) => source.ceiling),
+      ...GOVERNED_POLICIES.flatMap((policy) => policy.ceiling),
+    ].filter((entry) => entry.resource === CANONICAL_RESOURCE);
+    expect(ceilings.length).toBeGreaterThan(0);
+    for (const entry of ceilings) {
+      const keys = Object.keys(entry.constraints ?? {});
+      expect(keys.filter((key) => !vouched.includes(key)), JSON.stringify(entry)).toEqual([]);
+    }
   });
 });
