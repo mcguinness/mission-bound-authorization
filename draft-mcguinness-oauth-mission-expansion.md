@@ -1857,9 +1857,8 @@ no successor is created, and the predecessor remains `active` and
 untouched. The denial surfaces according to the completion mode
 ({{completion-modes}}):
 
-- on the token exchange response, as an OAuth error: `invalid_request`
-  for `nothing_to_expand`, and otherwise the codes of the failure
-  classes below;
+- on the token exchange response, as `invalid_request`
+  ({{Section 2.2.2 of RFC8693}});
 - on a deferred poll, as the deferred substrate's `access_denied`
   resolution; or
 - on the interactive path, through the approval's own decline path.
@@ -1954,8 +1953,7 @@ profile's error vocabulary directly:
   with `invalid_request`, and one it can parse but cannot derive a
   valid Authority Set from fails with `invalid_authorization_details`
   ({{RFC9396}}) where the client submitted a proposal alongside it, or
-  `access_denied` where it did not, exactly as for any Mission
-  creation.
+  `invalid_request` ({{Section 2.2.2 of RFC8693}}) where it did not.
 
 # Conformance {#conformance}
 
