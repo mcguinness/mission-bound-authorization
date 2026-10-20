@@ -1948,10 +1948,11 @@ profile's error vocabulary directly:
 
 # Conformance {#conformance}
 
-An implementation claims conformance to this document only in the
-Mission Issuer role, under one of two targets: as an
-expansion-capable Mission Issuer when it adjudicates expansion, or
-under the optional `related_to` correlation target below.
+An implementation claims conformance to this document in the Mission
+Issuer role, under one of two targets (as an expansion-capable Mission
+Issuer when it adjudicates expansion, or under the optional
+`related_to` correlation target below), or in the client role, as an
+expansion client.
 
 A Mission Issuer that records `related_to` without adjudicating
 expansion conforms to the **`related_to` correlation** target when it
@@ -2009,6 +2010,21 @@ new behavior: it enforces a successor's tokens exactly as it enforces
 any Mission-bound token, and treats the `predecessor` member, if it
 reads it at all, as audit context it MUST NOT use to grant authority
 ({{predecessor-member}}).
+
+A conforming **expansion client** MUST:
+
+- prove possession of the predecessor's authority with a
+  sender-constrained proof, never with a reusable bearer refresh
+  credential and never on a front channel ({{expansion-request}},
+  {{submission}});
+- send the REQUIRED parameters of {{submission}}, including
+  `creation_request_id`;
+- not retry an expansion refused with `predecessor_state_changed`
+  against that predecessor, and not retry a creation past the
+  published retry horizon ({{reconciliation}},
+  {{creation-retention}}); and
+- not initiate expansion for an authentication shortfall
+  ({{not-step-up}}).
 
 Every expansion this document defines is adjudicated as a fresh
 approval event ({{adjudication}}). The experimental progressive
