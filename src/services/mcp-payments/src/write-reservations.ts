@@ -131,6 +131,12 @@ export interface WriteReservation {
 export interface WriteReservationRequest {
   scope: IdempotencyScope;
   scopeDigest: string;
+  /**
+   * @spec runtime#boundary-identifier-change (#853 review): the scope digests
+   * of the identifiers the request's boundary replaces. A retained record
+   * under any of them holds the pair (see {@link WriteReservationStore.lookup}).
+   */
+  lineageScopeDigests?: readonly string[];
   idempotencyKey: string;
   action: string;
   operationIdentity: string;
@@ -252,15 +258,30 @@ export class WriteReservationStore {
    * Retrieval's read: the retained record of a pair, read-only. A completed
    * record past its retention is outside the guarantee and reads as absent;
    * a `reserved` record never expires by time.
+   *
+   * @spec runtime#idempotency, runtime#boundary-identifier-change (#853
+   * review): `lineage` names the same scope under the identifiers the
+   * request's boundary replaces. A record kept under one of them is the
+   * pair's record: a declared change of identifier renames the boundary, not
+   * the operations already admitted at it, so a retry after the change
+   * retrieves the original disposition instead of executing again.
    */
-  lookup(scopeDigest: string, idempotencyKey: string): WriteReservation | undefined {
-    const row = this.db
+  lookup(scopeDigest: string, idempotencyKey: string, lineage: readonly string[] = []): WriteReservation | undefined {
+    const nowMs = this.now().getTime();
+    for (const digest of [scopeDigest, ...lineage]) {
+      const row = this.retainedRow(digest, idempotencyKey, nowMs);
+      if (row) return fromRow(row);
+    }
+    return undefined;
+  }
+
+  private retainedRow(scopeDigest: string, idempotencyKey: string, nowMs: number): ReservationRow | undefined {
+    return this.db
       .prepare(
         `SELECT * FROM write_reservations WHERE scope_digest = ? AND idempotency_key = ?
            AND (state = 'reserved' OR retain_until_ms >= ?)`,
       )
-      .get(scopeDigest, idempotencyKey, this.now().getTime()) as ReservationRow | undefined;
-    return row ? fromRow(row) : undefined;
+      .get(scopeDigest, idempotencyKey, nowMs) as ReservationRow | undefined;
   }
 
   /**
@@ -297,6 +318,12 @@ export class WriteReservationStore {
         .prepare("SELECT * FROM write_reservations WHERE scope_digest = ? AND idempotency_key = ?")
         .get(request.scopeDigest, request.idempotencyKey) as ReservationRow | undefined;
       if (prior) return { kind: "existing", reservation: fromRow(prior) };
+      // A record retained under a replaced identifier's scope holds the pair
+      // too (#853 review), read here, inside the transaction, as well.
+      for (const digest of request.lineageScopeDigests ?? []) {
+        const held = this.retainedRow(digest, request.idempotencyKey, nowMs);
+        if (held) return { kind: "existing", reservation: fromRow(held) };
+      }
       if (request.singleUse && this.permitConsumed(request.evaluationId)) return { kind: "consumed" };
       const outcome = effect(nowMs);
       if (!outcome.ok) return { kind: "refused", refusal: outcome.refusal };

@@ -81,7 +81,20 @@ const RETAINED_KIND_FOR_MEDIA_TYPE: Record<string, RetainedEvidenceKind | undefi
  * capability. Derived from the canonical resource so the location tracks the
  * deployment rather than being a second, independently drifting constant.
  */
-export const EVIDENCE_KEY_SET_LOCATION = `${CANONICAL_RESOURCE}/evidence-keys`;
+export const EVIDENCE_KEY_SET_LOCATION = evidenceKeySetLocation(CANONICAL_RESOURCE);
+
+/**
+ * @spec runtime-evidence#evidence-integrity-signing-keys,
+ * runtime#boundary-identifier-change (#853 review): the key-set location of
+ * one enforcement boundary, named by the boundary. A published key binds one
+ * audience at a location and that binding is append-only, so each boundary
+ * publishes its keys at its own location: a declared change adds the new
+ * boundary's set beside the old one, which stays for the evidence produced
+ * under it.
+ */
+export function evidenceKeySetLocation(boundary: string): string {
+  return `${boundary}/evidence-keys`;
+}
 
 /** The record kinds this store retains; the three record types of the retention floor, plus the receipt that projects them. */
 export type RetainedEvidenceKind = "decision" | "execution" | "refusal" | "receipt";

@@ -134,7 +134,9 @@ async function fromLedger(
     execution_id: newRecordId("exe"),
     evaluation_id: evaluationId,
     mission_id: decision.content.mission.id,
-    audience: CANONICAL_RESOURCE,
+    // @spec runtime#permit-binding (#853, D487): a late record keeps its
+    // operation's original boundary, never the one in force when it is made.
+    audience: decision.content.audience,
     ...(digest !== undefined ? { authorized_parameter_digest: digest, effective_parameter_digest: digest } : {}),
     outcome: "completed",
   });
