@@ -4,14 +4,16 @@
  * The strict loader for `config/mas-pilot.json`: the pilot's estate
  * authorization server (issuer, directory accounts, client registrations,
  * resource vocabulary), its mapping-cache freshness bound, the classes the
- * gateway reserves for Mission-bound credentials, the initial mapping contract
- * version, the route table and the consequential-path inventory. The mapping
+ * gateway reserves for Mission-bound credentials, the estate's development
+ * Resource-policy grants, the initial mapping contract version, the route
+ * table and the consequential-path inventory. The mapping
  * contract itself is validated by `parseMappingContract` when the cache
  * installs it. Client secrets and signing keys are generated at each boot and
  * never configured.
  */
 
 import { readFileSync } from "node:fs";
+import type { ResourcePolicyPrincipalSeed, ResourcePolicySeed } from "@mission/demo-data";
 import { CANONICAL_RESOURCE } from "@mission/mcp-payments";
 
 export interface MasPilotClientConfig {
@@ -49,6 +51,13 @@ export interface MasPilotConfig {
   };
   mapping_cache: { max_stale_seconds: number };
   mission_bound_only_classes: string[];
+  /**
+   * @spec runtime#input-resource-policy (#828, #818): the grants a development
+   * bootstrap of the pilot's Resource-policy store writes, every principal
+   * under the estate issuer (the identities the resource authenticates). An
+   * attached store is used as it stands and never seeded.
+   */
+  resource_policy: ResourcePolicySeed;
   /** The initial contract version, validated at install. */
   mapping_contract: unknown;
   routes: MasPilotRoute[];
@@ -80,6 +89,56 @@ function strs(v: unknown, ctx: string): string[] {
   return v.map((x, i) => str(x, `${ctx}[${i}]`));
 }
 
+/** Exactly one of `sub` or `client`, as a non-empty string. */
+function principal(o: Record<string, unknown>, ctx: string): ResourcePolicyPrincipalSeed {
+  if (Object.hasOwn(o, "sub") === Object.hasOwn(o, "client")) throw new MasPilotConfigError(`${ctx} must name exactly one of sub or client`);
+  return Object.hasOwn(o, "sub") ? { sub: str(o.sub, `${ctx}.sub`) } : { client: str(o.client, `${ctx}.client`) };
+}
+
+/**
+ * The estate's development Resource-policy grants, under the rules the shipped
+ * seed's loader applies: closed shapes, one principal kind per entry, and a
+ * relation that kind may hold (a subject `authorized_reader` or
+ * `authorized_payer`, a client `authorized_client`).
+ */
+function resourcePolicySeed(raw: unknown): ResourcePolicySeed {
+  const root = obj(raw, "resource_policy", ["tenants", "entitlements"]);
+  if (!Array.isArray(root.tenants)) throw new MasPilotConfigError("resource_policy.tenants must be an array");
+  if (!Array.isArray(root.entitlements)) throw new MasPilotConfigError("resource_policy.entitlements must be an array");
+  const tenants = root.tenants.map((t, i) => {
+    const ctx = `resource_policy.tenants[${i}]`;
+    const o = obj(t, ctx, ["tenant", "vendors", "members"]);
+    if (!Array.isArray(o.members)) throw new MasPilotConfigError(`${ctx}.members must be an array`);
+    return {
+      tenant: str(o.tenant, `${ctx}.tenant`),
+      vendors: strs(o.vendors, `${ctx}.vendors`),
+      members: o.members.map((m, j) => {
+        const mctx = `${ctx}.members[${j}]`;
+        const mo = m as Record<string, unknown>;
+        obj(m, mctx, Object.hasOwn(mo ?? {}, "sub") ? ["sub"] : ["client"]);
+        return principal(mo, mctx);
+      }),
+    };
+  });
+  const entitlements = root.entitlements.map((e, i) => {
+    const ctx = `resource_policy.entitlements[${i}]`;
+    const eo = e as Record<string, unknown>;
+    const o = obj(e, ctx, [Object.hasOwn(eo ?? {}, "sub") ? "sub" : "client", "relation", "vendor"]);
+    const who = principal(o, ctx);
+    const relation = str(o.relation, `${ctx}.relation`);
+    const vendor = str(o.vendor, `${ctx}.vendor`);
+    if ("client" in who) {
+      if (relation !== "authorized_client") throw new MasPilotConfigError(`${ctx}.relation must be authorized_client for a client`);
+      return { client: who.client, relation, vendor } as const;
+    }
+    if (relation !== "authorized_reader" && relation !== "authorized_payer") {
+      throw new MasPilotConfigError(`${ctx}.relation must be authorized_reader or authorized_payer for a subject`);
+    }
+    return { sub: who.sub, relation, vendor } as const;
+  });
+  return { tenants, entitlements };
+}
+
 /** Validate a parsed pilot configuration. */
 export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
   const root = obj(raw, "root", [
@@ -89,6 +148,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     "estate",
     "mapping_cache",
     "mission_bound_only_classes",
+    "resource_policy",
     "mapping_contract",
     "routes",
     "inventory",
@@ -152,6 +212,7 @@ export function parseMasPilotConfig(raw: unknown): MasPilotConfig {
     estate: { issuer, host: str(estate.host, "estate.host"), port, accounts: strs(estate.accounts, "estate.accounts"), clients, resource_servers },
     mapping_cache: { max_stale_seconds: maxStale },
     mission_bound_only_classes: strs(root.mission_bound_only_classes, "mission_bound_only_classes"),
+    resource_policy: resourcePolicySeed(root.resource_policy),
     mapping_contract: root.mapping_contract,
     routes,
     inventory,

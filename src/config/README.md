@@ -62,23 +62,30 @@ authority-server#mapping-contract`, #818, D284, D508): the estate
 authorization server's issuer, port, directory accounts, client
 registrations and resource vocabulary; the mapping cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the
-initial mapping contract version; the route table; and the
-consequential-path inventory. Read by its own strict loader
+grants a development bootstrap of the pilot's Resource-policy store writes
+(`resource_policy`, #828: tenants with their vendors and members, and
+entitlements, every principal under the estate issuer); the initial mapping
+contract version; the route table; and the consequential-path inventory. Read by its own strict loader
 (`demo/src/mas-pilot/config.ts`), not at boot by `@mission/demo-data`: only
 the pilot composition reads it. [`docs/mas-pilot-deployment.md`](../docs/mas-pilot-deployment.md)
 is the pilot's contract.
 
 - **Owner.** The estate's identity owner for the accounts, clients and
   mapping rows; the payments resource's operator for the inventory and the
-  reserved classes.
+  reserved classes; the estate's OpenFGA administrator for the Resource-policy
+  grants, which seed only a development store (an attached store is
+  administered with `pnpm resource-policy --iss <estate issuer>`).
 - **Integrity.** Repository review and the strict loaders: the configuration
   loader refuses unknown or missing members, a duplicate client, an estate
   issuer equal to the Mission Issuer and a resource other than the payments
   resource; the contract loader refuses an ambiguous mapping (a second row
   for one issuer-qualified estate subject or client), a claimed
   client-instance mapping and any failure semantics but
-  `mission_binding_failed`. Client secrets and signing keys are generated at
-  each boot and never configured.
+  `mission_binding_failed`; the Resource-policy grants are refused unless each
+  entry names exactly one of a subject or a client with a relation that kind
+  may hold (a subject `authorized_reader` or `authorized_payer`, a client
+  `authorized_client`). Client secrets and signing keys are generated at each
+  boot and never configured.
 - **Updating.** A new contract version is installed into the running cache
   (`MappingContractCache.install`), which refuses a version at or below the
   installed one. The file's version is the one installed at composition.

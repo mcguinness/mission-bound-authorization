@@ -8,8 +8,9 @@
  * scope mapping, and the audit record of every mapping decision.
  */
 
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { loadMasPilotConfig } from "../src/mas-pilot/config.js";
+import { loadMasPilotConfig, parseMasPilotConfig } from "../src/mas-pilot/config.js";
 import {
   MappingContractCache,
   type MappingContractDocument,
@@ -223,5 +224,37 @@ describe("mapping contract cache: the scope mapping (@spec authority-server#miss
     expect(current.credentialAuthority({ issuer: "https://other-estate.test", scope: "invoices.read", resource: RESOURCE, now })).toBeUndefined();
     expect(current.credentialAuthority({ issuer: ESTATE, scope: "invoices.read", resource: "https://other.test/mcp", now })).toBeUndefined();
     expect(current.credentialAuthority({ issuer: ESTATE, scope: undefined, resource: RESOURCE, now })).toBeUndefined();
+  });
+});
+
+describe("pilot configuration: the estate's development Resource-policy grants (@spec runtime#input-resource-policy, #818 slice 2)", () => {
+  const raw = () =>
+    JSON.parse(readFileSync(new URL("../../config/mas-pilot.json", import.meta.url), "utf8")) as Record<string, unknown>;
+  const withPolicy = (resourcePolicy: unknown) => ({ ...raw(), resource_policy: resourcePolicy });
+  const tenants = [{ tenant: "t", vendors: ["acme"], members: [{ sub: "u-1001" }] }];
+
+  it("loads the shipped grants: every entitled principal is a tenant member, subjects as readers, clients with authorized_client", () => {
+    const policy = loadMasPilotConfig().resource_policy;
+    const members = new Set(policy.tenants.flatMap((t) => t.members.map((m) => JSON.stringify(m))));
+    expect(policy.entitlements.length).toBeGreaterThan(0);
+    for (const e of policy.entitlements) {
+      const who = "sub" in e ? { sub: e.sub } : { client: e.client };
+      expect(members.has(JSON.stringify(who)), JSON.stringify(e)).toBe(true);
+      expect(e.relation).toBe("sub" in e ? "authorized_reader" : "authorized_client");
+    }
+  });
+
+  it("refuses a client holding a subject relation and a subject holding authorized_client", () => {
+    const clientAsReader = withPolicy({ tenants, entitlements: [{ client: "estate-ap-bot-7f3", relation: "authorized_reader", vendor: "acme" }] });
+    const subjectAsClient = withPolicy({ tenants, entitlements: [{ sub: "u-1001", relation: "authorized_client", vendor: "acme" }] });
+    expect(() => parseMasPilotConfig(clientAsReader)).toThrow(/authorized_client for a client/);
+    expect(() => parseMasPilotConfig(subjectAsClient)).toThrow(/authorized_reader or authorized_payer for a subject/);
+  });
+
+  it("refuses a member or an entitlement naming both a subject and a client", () => {
+    const bothMember = withPolicy({ tenants: [{ tenant: "t", vendors: ["acme"], members: [{ sub: "u-1001", client: "x" }] }], entitlements: [] });
+    const bothEntitlement = withPolicy({ tenants, entitlements: [{ sub: "u-1001", client: "x", relation: "authorized_reader", vendor: "acme" }] });
+    expect(() => parseMasPilotConfig(bothMember)).toThrow(/sub or client|unknown member/);
+    expect(() => parseMasPilotConfig(bothEntitlement)).toThrow(/sub or client|unknown member/);
   });
 });
