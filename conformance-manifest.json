@@ -36632,7 +36632,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "every Mission record of a ceiling-bearing chain carries drawdown_count: zero on the chain's root Mission, one more on each committed ceiling_drawdown successor",
-    "local": "Carried as the record member drawdown_count: 0 on the Mission that consented the ceiling and the predecessor's count plus one on each policy-adjudicated successor."
+    "local": "Carried as the record member drawdown_count: 0 on the chain's root Mission and the predecessor's count plus one on each policy-adjudicated successor."
    },
    "level": "endpoint",
    "coverage": "tested",
