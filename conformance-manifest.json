@@ -35416,14 +35416,169 @@
    "assertion": "refusal",
    "observation": {
     "normative": "no single policy-adjudicated drawdown activates all of the ceiling that remains beyond the predecessor's authority",
-    "local": "Enforced only through the per-drawdown bound: a bound at least as large as the remaining ceiling would let one drawdown activate all of it, and the reference adds no separate check."
+    "local": "A separate check (activatesEntireCeiling) compares the successor's set with the ceiling one action at a time under the subset relation; it applies whatever the per-drawdown bound allows."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1414: the final-increment test proves the separate check (disabling it lets the drawdown complete by policy)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.entire-ceiling-defined",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown activates the entire remaining ceiling when its successor's Authority Set holds all the authority the ceiling grants",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown whose successor holds every ceiling entry, compared one action at a time under the subset rule with constraints and resource narrowing, activates the entire remaining ceiling; one that narrows a ceiling entry's constraint does not",
+    "local": "activatesEntireCeiling splits each ceiling entry into single-action entries and tests each with the subset relation against the successor's set."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a drawdown narrower than a ceiling entry's constraint does not activate the entire remaining ceiling; at the ceiling's own constraint it does",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by disabling the check (both tests fail) and by comparing action names only (the narrowed drawdown falls back)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.undecided-counts-as-entire",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A comparison the subset rule cannot decide counts as activating it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where the subset rule cannot decide whether the successor holds a ceiling entry's authority, the drawdown falls back as if it activated the entire remaining ceiling",
+    "local": "The reference's subset relation is total over ceilings validated at consent (supported constraint keys, well-formed amounts), so no undecidable comparison reaches the check."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.entire-ceiling-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown within the per-drawdown and rate bounds that would activate the entire remaining ceiling is not adjudicated by policy; it falls back to a fresh human approval, and the same request with ceiling authority left over is adjudicated",
+    "local": "Fallback reason entire_remaining_ceiling; the response is the deferred authorization_pending, with no successor created."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "drawdown bounds (@spec progressive#drawdown-bounds) > a final increment that would activate the entire remaining ceiling falls back, though within the per-drawdown and rate bounds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.per-drawdown-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown over the per-drawdown bound falls back to a fresh human approval",
+    "local": "Fallback reason per_drawdown_bound against the policy snapshot's max_added_actions."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.drawdown-bounds.rate-bound-falls-back",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-bounds",
+   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a drawdown over the chain rate bound falls back to a fresh human approval",
+    "local": "Fallback reason chain_rate_bound, counting ceiling_drawdown successors of the chain within the window."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > the chain's rate bound stops policy adjudication once reached",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
