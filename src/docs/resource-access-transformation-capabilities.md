@@ -49,8 +49,9 @@ Why nothing is declared:
 
 - **`narrowing`** claims the subset rule "over every member this document
   specifies" and the Common Constraint intersection rules. The reference
-  refuses `prefix` and compares action families as literal strings (§2.1), so
-  it does not implement the whole relation. D444: "refusing unsupported input
+  refuses `prefix` and compares action families as literal strings (§2.1), and
+  compares delegate matchers structurally (§2.4), so it does not implement the
+  whole relation. D444: "refusing unsupported input
   does not establish the `narrowing` capability". The nine Common Constraint
   comparisons (§2.2) are necessary evidence, not the whole claim.
 - **`delegation`** is inventoried in §3; #1377 audits its declaration
@@ -58,8 +59,8 @@ Why nothing is declared:
   describe the reference: the OAuth binding then permits a delegated entry
   only when it is equal to a presented one, and the reference narrows
   delegated entries (§2.4).
-- **`projection`** is applied conservatively (§4); no ruling covers a
-  declaration.
+- **`projection`** is applied conservatively (§4) and needs its own
+  evidence (§6).
 
 ## 2. `narrowing`
 
@@ -129,9 +130,22 @@ Resource Access § Subset Rule, the closing list on `delegation`.
 | Rule | Status | Code | Witness |
 |---|---|---|---|
 | `max_depth` no greater than the parent's | implemented | `isSubsetEntry`; `narrowDelegation` and `intersectDelegation` take the minimum (`derive.ts`) | `derivation-delegation.test.ts` "(b) a NARROWER max_depth is a subset; a BROADER one is not" and "both present -> max_depth narrows to the min and delegates intersect" |
-| `allowed_delegates` no wider; a list under an inherited policy decision only restricts it | implemented | `matchersSubset` (`authority-subset.ts`); `narrowMatchers`; origin recorded in `deriveAuthoritySetWithProvenance` | `derivation-delegation.test.ts` "allowed_delegates must be no wider; children caps must be no broader"; `eligibility-provenance.test.ts` "a list the proposal adds over a ceiling entry without one is kept as a restriction, and the entry's origin is policy" |
+| `allowed_delegates` no wider; a list under an inherited policy decision only restricts it | implemented structurally: a candidate list is no wider when each of its matchers equals a granted matcher on the `(sub, sub_profile)` pair | `matchersSubset` (`authority-subset.ts`); `narrowMatchers` and `intersectMatchers` (`derive.ts`); origin recorded in `deriveAuthoritySetWithProvenance` | `derivation-delegation.test.ts` "allowed_delegates must be no wider; children caps must be no broader"; `eligibility-provenance.test.ts` "a list the proposal adds over a ceiling entry without one is kept as a restriction, and the entry's origin is policy" |
+| A candidate matcher narrower by containment: it admits only actors a granted matcher admits, as `{"sub": "bob", "sub_profile": "ai_agent"}` does under `{"sub_profile": "ai_agent"}` | not implemented: the comparison is of matcher identities, not of the actors each matcher permits, so the narrower list is refused by `isSubsetEntry` and narrows to `[]` at derivation and projection. The refusal is conservative; it never widens. | `matchersSubset`; `narrowMatchers`; `intersectMatchers` | none; the probe below |
+| `children.allowed_child_actors` (Child Delegation) no wider | implemented structurally, with the same limitation: a matcher narrower by containment is refused and narrows to `[]` | `childrenNoBroader` with `matchersSubset` (`authority-subset.ts`); `narrowChildren` with `narrowMatchers` and `intersectChildren` with `intersectMatchers` (`derive.ts`) | none for the list comparison; the probe below |
 | No `delegation` introduced where the parent has none | implemented | `isSubsetEntry`; `narrowDelegation` | `derivation-delegation.test.ts` "(c) candidate INTRODUCING delegation on a delegation-free grant FAILS" and "ceiling-absent delegation is NOT introduced by the proposal (compromised-shaper flip)" |
 | A companion `delegation` member the server does not understand is carried unchanged | implemented at derivation: carried from the ceiling entry, never from a proposal (`narrowDelegation`). Elsewhere stricter: projection drops the whole `delegation` member (`intersectDelegation`), configuration load refuses the entry (`isAuthorityEntry`). `isSubsetEntry` does not compare such members. | as named | `effective-set-projection.test.ts` "narrows the nested children grant, and drops delegation carrying a member it cannot evaluate"; derivation's carriage: none |
+
+A throwaway probe (not committed) compared a candidate matcher
+`{"sub": "bob", "sub_profile": "ai_agent"}` with a granted
+`{"sub_profile": "ai_agent"}`, in `allowed_delegates` and in
+`children.allowed_child_actors`, and observed for each list:
+
+- `isSubsetEntry`: `false`;
+- `deriveAuthoritySet` (the granted entry as ceiling, the candidate as
+  proposal): the list derives as `[]`;
+- `projectThroughEffective` (the candidate through the granted entry): the
+  list projects as `[]`.
 
 ## 3. `delegation`
 
@@ -173,9 +187,12 @@ per-audience document `parseScopeProjectionMapping` validates.
 
 ## 5. Supported domain
 
-The reference applies the whole `narrowing` relation only over `exact`
-resources, literal action identifiers, the nine initial Common Constraints
-with `vendors` and `terminal_when`, and the `delegation` rules of §2.4.
+The reference narrows within `exact` resources and literal action
+identifiers. There it applies the subset and intersection rules of the nine
+initial Common Constraints, `vendors` and `terminal_when`, and the
+`delegation` rules of §2.4, with one limitation: delegate and child-actor
+matchers are compared by `(sub, sub_profile)` identity, not by the actors
+they permit, so a candidate list narrower by containment is refused (§2.4).
 Outside that domain, `prefix` is refused, action families are admitted and
 compared literally, and an unknown top-level member is dropped.
 
@@ -184,19 +201,21 @@ D414 selects the same shape for #819's first interoperable subset:
 with prefix behavior only under separately enabled vectors. This note does
 not define that profile or its vectors.
 
-## 6. Open question
+## 6. Route to a declaration
 
-From #1377: after the inventory, complete the type, or rule on a qualified
-declaration?
+D538 rules the route: a qualified supported-subset declaration aligned with
+D414, made through a reviewable specification and declaration change. No
+declaration is published yet. Before one is made:
 
-Recommended answer: a qualified declaration matching #819's supported subset
-(`exact` only, no action families, per D414), ruled explicitly, unless the
-inventory finds a gap beyond `prefix` and families.
+- unsupported input, including action families (§2.1) and unknown top-level
+  members (§2.3), is refused consistently before approval or transformation;
+- this inventory is kept correct as that handling changes;
+- each claimed transformation has its own evidence; and
+- the declaration states its domain: `exact` resources, literal actions, the
+  supported members and constraints, the matcher-comparison limitation of
+  §2.4, and each transformation's scope.
 
-The inventory finds two postures beyond the `prefix` refusal: action families
-are admitted and compared literally rather than refused (§2.1), and an unknown
-top-level member is dropped rather than refused (§2.3). Neither changes the
-recommendation, but a qualified declaration describes the reference only once
-both are refused as `prefix` is. The same ruling can settle `projection`,
-which the reference also applies without a declaration (§4). The `delegation`
-declaration is audited separately.
+A declaration is never an unqualified whole-type boolean narrowed by prose.
+A qualified `narrowing` choice establishes no `projection` evidence, and the
+three per-entry, per-target projection conditions of §4 still apply. The
+`delegation` declaration remains a separate audit.
