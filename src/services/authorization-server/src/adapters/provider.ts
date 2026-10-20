@@ -1698,17 +1698,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
               const oidc = (ctx as unknown as {
                 oidc: { params: Record<string, unknown>; route?: string };
               }).oidc;
-              // @spec mission#downgrade-by-omission — the AS-side anti-downgrade
-              // hook: a client registered Mission-governed (mission_governed on
-              // its registration) MUST NOT obtain ungoverned tokens by stripping
-              // the Intent, so its bare authorization_details AUTHORIZATION
-              // request (no mission_intent) is rejected. The spec deliberately
-              // pins no error code for this rejection (mirroring the AAuth
-              // missionless-request rule, #459); this implementation chooses
-              // invalid_request. Scoped to the authorization-request routes:
-              // this same hook also runs at the token endpoint, where
+              // @spec mission#authority-proposal, mission#downgrade-by-omission —
+              // the AS-side anti-downgrade hook: a client registered
+              // Mission-governed (mission_governed on its registration) MUST NOT
+              // obtain ungoverned tokens by stripping the Intent, so its
+              // authorization request carrying authorization_details but no
+              // mission_intent is refused invalid_request, the code Authority
+              // Proposal names. Scoped to the authorization-request routes (PAR,
+              // the authorization endpoint and its resume), as that rule is
+              // (D585): this same hook also runs at the token endpoint, where
               // authorization_details is an RFC 9396 subset request under an
-              // already-Mission-bound grant, not a bare request.
+              // existing Mission-bound grant and needs no mission_intent.
               const governed = (client as unknown as { mission_governed?: unknown })
                 .mission_governed === true;
               const authorizationRoute =
