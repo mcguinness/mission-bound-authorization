@@ -1464,11 +1464,123 @@ export interface MasJoinPolicy {
    * bound 1 from the credential rather than from client policy.
    */
   scope_actions: Record<string, string[]>;
+  /**
+   * @spec authority-server#mapping-contract (#818): the mapping contract this
+   * deployment's join applies, documented. With `scope_actions` (its scope
+   * mapping, the credential-authority adapter) and `delegates` (its delegate
+   * policy), it states every member the section lists. Absent, the file
+   * declares no contract, and a composition that would mount a join route
+   * refuses to start.
+   */
+  mapping_contract?: MasJoinMappingContract;
 }
 
-function loadMasJoin(): MasJoinPolicy {
+/**
+ * @spec authority-server#mapping-contract (#818): the shared demo join's
+ * declared contract. Each mapping member names the one behavior this join
+ * implements, so the declaration cannot claim one it does not:
+ *
+ * - `subject_mapping: "identity"`: the credential's authenticated subject,
+ *   qualified by its issuer, is compared with the Mission's `subject` by
+ *   byte equality on (`iss`, `sub`); the authorization server that issues the
+ *   credential is the Mission Issuer, so the namespaces are one.
+ * - `client_mapping: "identity"`: the credential's client identifier is
+ *   compared with the Mission's `client_id`, or names a delegate in
+ *   `delegates`.
+ * - `delegate_entry_rule: "client_id_matchers"`: only an entry with a
+ *   `delegation` member is delegable; its `allowed_delegates`, where
+ *   present, admits a delegate whose client identifier an exact `sub`
+ *   matcher names (a profile matcher admits none), and its `max_depth` is
+ *   evaluated against the deployment's actor records.
+ * - `instance`: client-instance identity is neither supported nor required.
+ * - `audit: "decision_evidence"`: each join decision is recorded in the
+ *   PDP's signed Decision Evidence (the acting subject and client, the
+ *   joined-view commitment `join_view_id`, or the `mission_binding_failed`
+ *   denial); the identity mapping resolves nothing beyond that comparison.
+ *   A join request refused before any decision is recorded in the PEP's
+ *   signed Refusal Record instead.
+ * - `failure: "mission_binding_failed"`.
+ */
+export interface MasJoinMappingContract {
+  contract_id: string;
+  /** Bumped with any change to this file's mapping, so the change is detectable. */
+  version: number;
+  subject_mapping: "identity";
+  client_mapping: "identity";
+  delegate_entry_rule: "client_id_matchers";
+  instance: { supported: false; required: false };
+  audit: "decision_evidence";
+  failure: "mission_binding_failed";
+}
+
+const MAS_JOIN_MEMBERS = new Set([
+  "governed_resources",
+  "delegates",
+  "scope_actions",
+  "mapping_contract",
+]);
+const MAS_JOIN_CONTRACT_MEMBERS = new Set([
+  "contract_id",
+  "version",
+  "subject_mapping",
+  "client_mapping",
+  "delegate_entry_rule",
+  "instance",
+  "audit",
+  "failure",
+]);
+
+/** One closed-vocabulary member: the value this join implements, or a refusal naming it. */
+function fixedMember<T extends string>(
+  file: string,
+  o: Record<string, unknown>,
+  key: string,
+  value: T,
+  ctx: string,
+): T {
+  if (o[key] !== value)
+    throw new ConfigError(
+      file,
+      `${ctx}.${key} must be "${value}", the only ${key} this join implements`,
+    );
+  return value;
+}
+
+function parseMasJoinContract(file: string, raw: unknown): MasJoinMappingContract {
+  const ctx = "mas_join.mapping_contract";
+  const o = asObject(file, raw, ctx);
+  onlyMembers(file, o, MAS_JOIN_CONTRACT_MEMBERS, ctx);
+  for (const key of MAS_JOIN_CONTRACT_MEMBERS) {
+    if (!Object.hasOwn(o, key)) throw new ConfigError(file, `${ctx} is missing ${key}`);
+  }
+  const version = reqNumber(file, o, "version", ctx);
+  if (!Number.isInteger(version) || version < 1)
+    throw new ConfigError(file, `${ctx}.version must be a positive integer`);
+  const instance = asObject(file, o.instance, `${ctx}.instance`);
+  onlyMembers(file, instance, new Set(["supported", "required"]), `${ctx}.instance`);
+  if (instance.supported !== false || instance.required !== false) {
+    throw new ConfigError(
+      file,
+      `${ctx}.instance must be { "supported": false, "required": false }: this join establishes no client instance`,
+    );
+  }
+  return {
+    contract_id: reqString(file, o, "contract_id", ctx),
+    version,
+    subject_mapping: fixedMember(file, o, "subject_mapping", "identity", ctx),
+    client_mapping: fixedMember(file, o, "client_mapping", "identity", ctx),
+    delegate_entry_rule: fixedMember(file, o, "delegate_entry_rule", "client_id_matchers", ctx),
+    instance: { supported: false, required: false },
+    audit: fixedMember(file, o, "audit", "decision_evidence", ctx),
+    failure: fixedMember(file, o, "failure", "mission_binding_failed", ctx),
+  };
+}
+
+/** Validate a parsed `config/mas-join.json`: closed members, and a strict mapping contract where one is declared. */
+export function parseMasJoinPolicy(raw: unknown): MasJoinPolicy {
   const file = "mas-join.json";
-  const root = asObject(file, readJson(file), "mas_join");
+  const root = asObject(file, raw, "mas_join");
+  onlyMembers(file, root, MAS_JOIN_MEMBERS, "mas_join");
   const delegatesRaw = asObject(file, root.delegates, "mas_join.delegates");
   const delegates: Record<string, { max_depth: number }> = {};
   for (const [clientId, raw] of Object.entries(delegatesRaw)) {
@@ -1493,7 +1605,14 @@ function loadMasJoin(): MasJoinPolicy {
     governed_resources: reqStringArray(file, root, "governed_resources", "mas_join"),
     delegates,
     scope_actions,
+    ...(root.mapping_contract !== undefined
+      ? { mapping_contract: parseMasJoinContract(file, root.mapping_contract) }
+      : {}),
   };
+}
+
+function loadMasJoin(): MasJoinPolicy {
+  return parseMasJoinPolicy(readJson("mas-join.json"));
 }
 
 const MAS_JOIN_RAW = loadMasJoin();

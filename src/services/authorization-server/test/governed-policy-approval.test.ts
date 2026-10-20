@@ -678,6 +678,27 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(outcome(() => activate(excepted, c.consent_id, { proposedAuthority: [readEntry()] }))).toBe("activated");
   });
 
+  it("never lets an exception lengthen its class's recency ceiling: the smaller of the two applies", () => {
+    const ceiling = [readEntry(), executeEntry()];
+    const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
+    const kernel = makeKernel({
+      doc: rootDoc({
+        authority_ceiling: ceiling,
+        recency: {
+          ceilings: { default: 30 * 86400, irreversible_action: 300 },
+          clock_skew_s: 60,
+          exceptions: { irreversible_action: { max_age_s: 600 } },
+        },
+      }),
+    });
+    const c = consent(kernel);
+    clockMs = T0 + 299_000;
+    expect(outcome(() => activate(kernel, c.consent_id, { proposedAuthority: proposal }))).toBe("activated");
+    // Older than the class ceiling but within the exception's looser age: refused.
+    clockMs = T0 + 301_000;
+    expect(outcome(() => activate(kernel, c.consent_id, { proposedAuthority: proposal }))).toBe("recency_exceeded");
+  });
+
   it("re-checks against the capability resolution retained at activation, while a new activation resolves current trusted state", () => {
     const digestA = `sha-256:${createHash("sha256").update("definition A").digest("base64url")}`;
     const digestB = `sha-256:${createHash("sha256").update("definition B").digest("base64url")}`;
@@ -814,6 +835,22 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     // Its own activation counts it.
     const { record } = activate(kernel, c.consent_id, { approvalEventId: "ape-a", modelOutputs: [bindingOnly] });
     expect(record.approval_event_id).toBe("ape-a");
+    expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
+  });
+
+  it("does not count an assertion bound to another Intent under the same approval event and Authority Set", () => {
+    const MODEL = { id: "risk-model", version: "3" };
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-i", intent: intent(), clientId: "svc-agent" });
+    const captured: RecordedModelOutput = { model: MODEL, ...view, verdict: "no_objection" };
+    const { authority: _drop, ...bindingOnly } = captured as RecordedModelOutput & { authority?: unknown };
+    const otherIntent = { ...bindingOnly, intent_hash: "sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU" };
+    expect(outcome(() => activate(kernel, c.consent_id, { approvalEventId: "ape-i", modelOutputs: [otherIntent] }))).toBe(
+      "policy_refused",
+    );
+    nothingCommitted(kernel);
+    const { record } = activate(kernel, c.consent_id, { approvalEventId: "ape-i", modelOutputs: [bindingOnly] });
     expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
   });
 

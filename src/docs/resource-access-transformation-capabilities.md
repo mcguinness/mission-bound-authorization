@@ -49,8 +49,8 @@ Why nothing is declared:
 
 - **`narrowing`** claims the subset rule "over every member this document
   specifies" and the Common Constraint intersection rules. The reference
-  refuses `prefix` and compares action families as literal strings (§2.1), and
-  compares delegate matchers structurally (§2.4), so it does not implement the
+  compares action families as literal strings (§2.1) and delegate matchers
+  structurally (§2.4), so it does not implement the
   whole relation. D444: "refusing unsupported input
   does not establish the `narrowing` capability". The nine Common Constraint
   comparisons (§2.2) are necessary evidence, not the whole claim.
@@ -180,7 +180,7 @@ per-audience document `parseScopeProjectionMapping` validates.
 
 | Rule | Status | Witness |
 |---|---|---|
-| 1. The mapping covers the entry's resource set | implemented for `exact`: the same `resource`, byte for byte, under the same `resource_match`. A `prefix` value is never safe for an `exact` entry. A narrower resource within a `prefix` entry is never treated as safe; `prefix` entries are refused upstream (§2.1). | `packages/mission-core/test/scope-projection.test.ts` "resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry"; `scope-projection.test.ts` "refuses a prefix scope for an exact entry"; cases pj-05, pj-06 skip |
+| 1. The mapping covers the entry's resource set | implemented through the shared matcher (#1434): an `exact` entry needs the same `resource`, byte for byte. A `prefix` value is never safe for an `exact` entry. A `prefix` entry's mapping covers that prefix or a narrower resource within it, never a broader ancestor. | `packages/mission-core/test/scope-projection.test.ts` "resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry"; `scope-projection.test.ts` "refuses a prefix scope for an exact entry"; cases pj-05, pj-06 skip |
 | 2. Actions match without aggregation; a proper subset is allowed | implemented, by literal membership, one entry per value | `packages/mission-core/test/scope-projection.test.ts` "action aggregation: a value granting an action the entry does not carry is not safe" and "union widening: a value only two entries together cover is not emitted"; `scope-projection.test.ts` "a mapped value granting a proper subset of the entry's actions is a safe projection (@spec resource-access#scope-projection)" |
 | 3. Every carried `constraints` key is independently enforced | implemented for `max_amount` and `vendors`, the only controls a mapping can declare (`SCOPE_CONTROL_KEYS`); `requires_action_approval: false` counts as omitted. An entry carrying any other key, including the seven `common-constraints.ts` keys, `terminal_when` and `requires_action_approval: true`, is never projected. | `packages/mission-core/test/scope-projection.test.ts` "constraints: every carried key needs an independently enforced control at least as tight"; `scope-projection.test.ts` "refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight" |
 | An entry member the projection does not understand fails closed | implemented (`KNOWN_ENTRY_MEMBERS`) | `packages/mission-core/test/scope-projection.test.ts` "an entry member the projection does not understand, or a capability-source binding, fails closed" |
@@ -188,13 +188,14 @@ per-audience document `parseScopeProjectionMapping` validates.
 
 ## 5. Supported domain
 
-The reference narrows within `exact` resources and literal action
+The reference narrows within `exact` and `prefix` resources (one shared
+matcher, §2.1) and literal action
 identifiers. There it applies the subset and intersection rules of the nine
 initial Common Constraints, `vendors` and `terminal_when`, and the
 `delegation` rules of §2.4, with one limitation: delegate and child-actor
 matchers are compared by `(sub, sub_profile)` identity, not by the actors
 they permit, so a candidate list narrower by containment is refused (§2.4).
-Outside that domain, `prefix` is refused, action families are admitted and
+Outside that domain, action families are admitted and
 compared literally, and an unknown top-level member is refused.
 
 D414 selects the same shape for #819's first interoperable subset:
