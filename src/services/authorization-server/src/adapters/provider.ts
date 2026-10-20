@@ -5223,14 +5223,16 @@ async function decide(
 
   // @spec progressive#progressive-authorization: the authority ceiling and
   // drawdown policy the Approver consented on this approval surface, read only
-  // where the deployment selects Progressive authorization. Its entries are
-  // validated here, before any write; a malformed ceiling refuses
-  // `invalid_request`.
+  // where the deployment selects Progressive authorization. Its entries and
+  // its drawdown policy are validated here, before any write: a malformed
+  // ceiling, or a drawdown policy this issuer does not hold at that version,
+  // refuses `invalid_request`.
   const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
   let ceilingEntries: AuthorityEntry[] = [];
   if (ceiling) {
     try {
       ceilingEntries = consentedCeilingEntries(ceiling);
+      opts.kernel.assertDrawdownPolicyHeld(ceiling);
     } catch (e) {
       if (e instanceof IntentError) {
         await finish({ error: e.code, error_description: e.message });
@@ -5300,11 +5302,12 @@ async function decide(
   //
   // @spec mission#approval-event (step 7) (#916) — the order of writes. The
   // approval is prepared first, so every refusal (above, and in
-  // `prepareApproval`) happens before anything is written, except that a
-  // consented ceiling's drawdown policy reference, minted at the commit's
-  // creation instant, refuses after the grant save (an inert grant a retry
-  // overwrites); the ceiling's entries and their floor are checked above.
-  // The provider grant
+  // `prepareApproval`) happens before anything is written; a consented
+  // ceiling's entries, its drawdown policy and their floor are checked above.
+  // The commit revalidates the prepared authority source and mints the
+  // drawdown policy reference again at its creation instant, so a source or
+  // policy change after these checks refuses after the grant save (an inert
+  // grant a retry overwrites). The provider grant
   // is saved next, under an identity derived from this interaction, and the
   // record then commits already bound to it. A failure before that commit
   // leaves an inert grant (no code, no Mission, no index entry) that a retry

@@ -35067,7 +35067,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission whose Approver consented a ceiling records authority_ceiling and drawdown_policy, and its ceiling_hash is the integrity anchor with typ mission-authority-ceiling over an object of exactly those two members",
-    "local": "The Approver's decision on the approval surface carries authority_ceiling and drawdown_policy {id, version}; the issuer mints the policy digest from the snapshot it holds and refuses one it does not hold. Read only where the deployment configures the progressive option."
+    "local": "The Approver's decision on the approval surface carries authority_ceiling and drawdown_policy {id, version}; the issuer mints the policy digest from the snapshot it holds and refuses one it does not hold, at an unknown id or another version, invalid_request before any write (no provider grant, Mission or code). Read only where the deployment configures the progressive option."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -35082,6 +35082,12 @@
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "ceiling consent (@spec progressive#progressive-authorization) > refuses a consented drawdown_policy the issuer does not hold, or one that is not an object, as invalid_request",
      "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a consented drawdown_policy the issuer does not hold, at an unknown id or another version, invalid_request before any write: no grant, Mission or code",
+     "level": "endpoint",
      "surface": "commitment"
     }
    ],
