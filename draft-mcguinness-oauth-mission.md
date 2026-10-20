@@ -2848,8 +2848,9 @@ token whose holder its deployment accepts learning the distinction
 
 Every bound this document defines is enforced by a party this document
 names. The following table summarizes which party enforces each bound a
-Mission carries and what holds when that enforcer is absent; the type
-specification it names is that of `mission_resource_access`
+Mission carries and what holds when that enforcer is absent. Where a
+row names a type specification, it is the one for
+`mission_resource_access`
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}):
 
 | Bound | Enforced by | When that enforcer is absent |
@@ -2952,9 +2953,9 @@ codes ({{submission-via-par}}, {{authority-proposal}},
 | Protected resource: insufficient carried authority, or an unenforceable constraint | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Endpoint x parameter x failure-stage error mapping"}
 
-In the table, required evidence types are those
-{{I-D.draft-mcguinness-oauth-mission-submission-evidence}} resolves,
-and `invalid_client_attestation` is the error code
+In the table, which evidence types are required follows
+{{I-D.draft-mcguinness-oauth-mission-submission-evidence}}, and
+`invalid_client_attestation` is the error code that
 {{Section 5.2 of I-D.draft-mcguinness-oauth-client-instance-id}}
 specifies.
 
