@@ -1910,6 +1910,18 @@ same rule as vector 5.
 
 \[\[ To be removed from the final specification ]]
 
+- Four rulings on the #1436 questions (D568), each a change in
+  requirements. The recording triggers bind only under a profile that
+  adopts them, and a record kept voluntarily meets every requirement on
+  a record. The accountable-approver rule is stated per approval basis:
+  one `human` approval under `direct`, one `policy` approval naming the
+  deciding policy under `governed_policy`, and the authenticated
+  `approval_basis` under any other standing-consent basis. Assertion
+  Authority types `authority` for each assertion kind, and a `policy`
+  assertion's principal is the human who approved the policy version.
+  The JWS `typ` and `cty` are emitted with `application/` omitted and
+  compared as media types.
+
 - Editorial restructure, with no change to any requirement: Recording
   Triggers precedes the record; the record, Assertion Requirements and
   Policy-Approval Recency are split into subsections; Boundaries is
