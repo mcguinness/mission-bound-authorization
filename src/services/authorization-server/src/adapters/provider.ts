@@ -937,8 +937,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
     throw new Error("the deferred-approval capability needs token-revocation (the deferred substrate's cancellation)");
   }
   // @spec expansion#completion-modes (#1177): a deferred expansion is polled
-  // on the deferred grant and cancelled at the revocation endpoint.
+  // on the deferred grant and cancelled at the revocation endpoint, which the
+  // substrate requires (DTR -00 Section 7.2), as for Deferred Mission Approval.
   const expansionDeferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
+  if (expansionDeferrals && !enabled("token-revocation")) {
+    throw new Error("the expansion capability's deferred completion needs token-revocation (the deferred substrate's cancellation)");
+  }
   const grantEnabled = new Map<string, boolean>([
     // The deferred grant polls an AROP deferral, a Mission approval deferral
     // and an expansion deferral.
@@ -2249,7 +2253,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     registerDeferredAuthorizationCodeGrant(provider, opts, missionApproval, new DeferredAuthorizationCodes(missionApproval));
     provider.use(cancelOnRevocation(missionApproval));
   }
-  if (expansionDeferrals && enabled("token-revocation")) {
+  if (expansionDeferrals) {
     provider.use(cancelExpansionDeferralOnRevocation(expansionDeferrals));
   }
 
@@ -4641,9 +4645,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // DTR -00 Section 7.4 (Discovery): an AS that supports deferral lists
       // the deferral-code token type its revocation endpoint accepts (the
       // cancellation), so a client can rely on it. The revocation endpoint is
-      // served wherever Deferred Mission Approval is; an expansion deferral is
-      // cancellable wherever the revocation endpoint is.
-      if (deferredCodes || (expansionDeferred && enabled("token-revocation"))) {
+      // served wherever Deferred Mission Approval or a deferred expansion is.
+      if (deferredCodes || expansionDeferred) {
         const listed = Array.isArray(meta.revocation_endpoint_token_type_values_supported)
           ? (meta.revocation_endpoint_token_type_values_supported as unknown[])
           : [];
