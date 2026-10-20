@@ -12,25 +12,37 @@
         "client_id": "estate-ap-bot-7f3",
         "redirect_uri": "https://ap-bot.estate.invalid/cb",
         "scope": "invoices.read vendors.read remit.send",
-        "resources": ["http://localhost:4403/mcp"]
+        "resources": ["http://localhost:4403/mcp"],
+        "token_format": "jwt"
       },
       {
         "client_id": "estate-extractor-2c1",
         "redirect_uri": "https://extractor.estate.invalid/cb",
         "scope": "invoices.read",
-        "resources": ["http://localhost:4403/mcp"]
+        "resources": ["http://localhost:4403/mcp"],
+        "token_format": "jwt"
       },
       {
         "client_id": "ap-agent",
         "redirect_uri": "https://ap-agent.estate.invalid/cb",
         "scope": "invoices.read vendors.read",
-        "resources": ["http://localhost:4403/mcp"]
+        "resources": ["http://localhost:4403/mcp"],
+        "token_format": "jwt"
+      },
+      {
+        "client_id": "estate-opaque-bot-4e2",
+        "redirect_uri": "https://opaque-bot.estate.invalid/cb",
+        "scope": "invoices.read vendors.read remit.send",
+        "resources": ["http://localhost:4403/mcp", "https://ledger.estate.invalid/api"],
+        "token_format": "opaque"
       }
     ],
     "resource_servers": {
-      "http://localhost:4403/mcp": { "scope": "invoices.read vendors.read remit.send" }
+      "http://localhost:4403/mcp": { "scope": "invoices.read vendors.read remit.send" },
+      "https://ledger.estate.invalid/api": { "scope": "invoices.read" }
     }
   },
+  "introspection": { "client_id": "mas-gateway-introspector", "timeout_ms": 2000, "cache_max_seconds": 60 },
   "mapping_cache": { "max_stale_seconds": 300 },
   "mission_bound_only_classes": ["irreversible_action", "external_commitment", "privileged_administration"],
   "resource_policy": {
@@ -43,7 +55,8 @@
           { "sub": "u-1002" },
           { "sub": "alice" },
           { "client": "estate-ap-bot-7f3" },
-          { "client": "estate-extractor-2c1" }
+          { "client": "estate-extractor-2c1" },
+          { "client": "estate-opaque-bot-4e2" }
         ]
       }
     ],
@@ -52,7 +65,8 @@
       { "sub": "u-1002", "relation": "authorized_reader", "vendor": "acme" },
       { "sub": "alice", "relation": "authorized_reader", "vendor": "acme" },
       { "client": "estate-ap-bot-7f3", "relation": "authorized_client", "vendor": "acme" },
-      { "client": "estate-extractor-2c1", "relation": "authorized_client", "vendor": "acme" }
+      { "client": "estate-extractor-2c1", "relation": "authorized_client", "vendor": "acme" },
+      { "client": "estate-opaque-bot-4e2", "relation": "authorized_client", "vendor": "acme" }
     ]
   },
   "mapping_contract": {
@@ -96,6 +110,11 @@
       {
         "from": { "iss": "http://127.0.0.1:14818", "client_id": "estate-extractor-2c1" },
         "to": "subagent-invoice-extractor",
+        "status": "active"
+      },
+      {
+        "from": { "iss": "http://127.0.0.1:14818", "client_id": "estate-opaque-bot-4e2" },
+        "to": "ap-agent",
         "status": "active"
       }
     ],
