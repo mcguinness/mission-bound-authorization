@@ -9,7 +9,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `26edcc04`
+Every statement here is true of the reference implementation at `568fa502`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. No test here needs a live
 OpenFGA: the decision point's Resource policy and FGA client are the
@@ -20,7 +20,7 @@ reference fixtures (§7).
 | Component | What it is | Trust |
 |---|---|---|
 | Estate AS | A stock `oidc-provider` instance (`demo/src/mas-pilot/estate-as.ts`) with no Mission code: its own issuer, a signing key generated at each boot, a directory of accounts and its own client registrations. Authorization code grant with PKCE, `client_secret_basic`, resource indicators, DPoP-bound RFC 9068 JWT access tokens. | Issues ordinary tokens only. |
-| MAS | The reference Mission kernel under its own issuer (`https://mas.pilot.invalid`), which issues no tokens in this mode. | Holds the Missions the joins name. |
+| MAS | The reference Mission kernel under its own issuer (`https://mas.pilot.invalid`), which issues no tokens in this mode. The PEP reads its committed records through the projection the shared demo stack also uses (`demo/src/kernel-mission-view.ts`), containment and discharge deltas included. | Holds the Missions the joins name. |
 | Gateway route | A MAS-governed HTTP MCP route (`createHttpMcpChannel(…, { masGoverned: true })`) whose resource server trusts only the keys the estate publishes at its `jwks_uri`, fetched over HTTP at boot, and sets `ordinaryOnly` (`services/mcp-payments/src/server.ts`). | Admits estate credentials, and only through the join. |
 | Resource route | The payments resource's own Mission-bound route, trusting only the Mission Issuer's keys. Nothing signs with them in MAS mode. | Admits no estate credential. |
 | PEP and PDP | The reference `Pep` and decision point over one payments store. Every crossing on either route goes through the PEP. | Apply the join, the credential bound and Resource policy. |
@@ -86,10 +86,15 @@ resolution (`MappingContractCache`):
 - Versions only move forward: an install at or below the installed version is
   refused, and the installed version stays until it goes stale.
 - `invalidate()` drops the snapshot; every join then fails closed.
+- An unusable snapshot (none installed, invalidated, or stale) is an
+  unresolved mapping, so the join fails with `mission_binding_failed`, the
+  contract's failure semantics. The PEP tells it apart
+  (`JoinMappingContract.usable`), carries an empty credential authority to
+  the PDP, and the PDP's join denies the request. A usable contract whose
+  scope mapping does not cover the action is a credential without that
+  authority: the PEP refuses it `out_of_authority` before any decision.
 - The scope mapping is part of the contract, so the credential-authority
-  mapping has the same freshness. With no usable snapshot the PEP refuses
-  `out_of_authority` before any decision, and the PDP would deny
-  `mission_binding_failed`.
+  mapping has the same freshness.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
   install and invalidation. The record is in memory only (§7).
@@ -125,7 +130,8 @@ named):
 | Gateway bypass refused | Covered for this composition | `MAS pilot: the gateway joins … > refuses the same estate credential on the resource's own route before any decision, though the gateway admits it (bypass)`: a whole attempt (the MCP handshake and a tool call) is refused, the handshake answered 401, with no decision request and no evidence record; the gateway permits the same credential. |
 | Different issuer and client registrations | Covered | `MAS pilot: the estate is a separate issuer … > issues an ordinary RFC 9068 token under the estate issuer, with no mission claim and a client the MAS never registered`; `… > refuses to issue for a resource the client's estate registration does not name (invalid_target)`. |
 | Credential-authority adapter | Covered for one format | Scope to authority from an RFC 9068 JWT: `… > bounds a joined credential by its own scope as the contract maps it`. Other formats refused: `services/mcp-payments/test/estate-route.test.ts`, `estate route: ordinary credentials only … > refuses every other credential format`. Introspection to authority is not built. |
-| Mapping provenance and freshness | Covered | `demo/test/mas-pilot-mapping.test.ts`, `mapping contract cache: versions and freshness …` (reassignment, refused rollback, staleness bound, invalidation) and `… > resolves two estate accounts mapped to one Mission subject, and audits which account each decision resolved`. |
+| Mapping provenance and freshness | Covered | `demo/test/mas-pilot-mapping.test.ts`, `mapping contract cache: versions and freshness …` (reassignment, refused rollback, staleness bound, usability, invalidation) and `… > resolves two estate accounts mapped to one Mission subject, and audits which account each decision resolved`. At the gateway, `MAS pilot: an unavailable mapping fails the join, not the credential bound …`: an invalidated and a stale contract each deny `mission_binding_failed` at the PDP's join and permit again after a new install; a usable contract that does not map the action refuses `out_of_authority` before any decision. |
+| Committed Mission state on the joined path | Covered for containment | `MAS pilot: a committed containment narrows a joined Mission … > denies authority_contained for the action a containment removed, while the uncontained read still permits`. The discharge delta rides the same shared projection; no pilot test discharges an entry. |
 | Same `sub` or `client_id` in another namespace | Covered | `… > never conflates an estate client registered under the Mission's own client_id string`; `… > never conflates estate account "alice" with the Mission subject alice`; PDP: `services/pdp/test/evaluate-join-mapping.test.ts`. |
 | Disabled accounts | Covered | `… > denies a disabled estate account whose row still names the Mission's subject`. |
 | Reassigned accounts | Covered | `MAS pilot: a newer contract version moves a reassigned account … > an outstanding estate token for u-1001 stops joining alice's Mission once version 2 reassigns the account to dana`. |
