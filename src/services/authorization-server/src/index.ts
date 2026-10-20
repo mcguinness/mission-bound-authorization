@@ -1083,6 +1083,14 @@ export async function buildAuthorizationServer(opts: {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
+   * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
+   * enforcement scope, keyed by service principal, each naming the Status
+   * `audience` values it is enrolled for. Deployment configuration the MAS
+   * holds; absent (the default), no caller is enrolled and no Status response
+   * discloses the Mission's `subject` or `client_id`.
+   */
+  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  /**
    * @spec status#lifecycle-authorization: the grants bound to a client that
    * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
    * `client_id`. Absent (the default), no client holds any.
@@ -1590,6 +1598,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
+    ...(opts.enrolledJoinPdps ? { enrolledJoinPdps: opts.enrolledJoinPdps } : {}),
     ...(Object.keys(lifecycleClientGrants).length > 0 ? { lifecycleClientGrants } : {}),
     ...(opts.distinctResumeGrant ? { distinctResumeGrant: true } : {}),
     ...(schedulesAdopted ? { suspensionSchedules: true } : {}),
