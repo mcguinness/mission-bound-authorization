@@ -2004,7 +2004,7 @@
    "id": "capability-binding.approval.commit-consented-bindings",
    "spec": "draft-mcguinness-mission-capability-binding.md",
    "anchor": "capability-approval",
-   "text": "commit exactly the bindings of the candidate the Approver consented to, never a binding resolved afresh at the commit",
+   "text": "commit exactly the bindings of the candidate the Approver consented to; resolving the current source for revalidation does not authorize substituting a different binding without fresh consent",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -2015,7 +2015,7 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the committed capability_sources equal the bindings of the consented candidate, and no binding is resolved afresh at the commit"
+    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent"
    },
    "level": "endpoint",
    "coverage": "todo",

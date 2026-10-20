@@ -332,7 +332,9 @@ human approval ({{I-D.draft-mcguinness-oauth-mission}}, Section
    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Changes Before
    the Decision"); and
 4. commit exactly the bindings of the candidate the Approver
-   consented to, never a binding resolved afresh at the commit.
+   consented to; resolving the current source for revalidation does
+   not authorize substituting a different binding without fresh
+   consent.
 
 A digest or URI alone does not satisfy item 2. The validating server
 retains the exact machine binding, and renders catalog-supplied text,
