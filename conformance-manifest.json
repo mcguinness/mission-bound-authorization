@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "caf2420b9b4551ae4462771b23322fd660cf1116",
-    "content_sha256": "8678e27c2e3a04e75bd7aaf5073b83036ac765a716a516887caa2ba031791f4d"
+    "revision": "defc4a380fae8ba12925f2018d416d62cc2aa0a6",
+    "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -4155,10 +4155,10 @@
    "assertion": "replay",
    "observation": {
     "normative": "an assertion captured for another approval event, another Intent or another Authority Set is not counted toward the evaluation",
-    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. The reference binds a model output to the Authority Set the policy evaluated, before any narrowing; where a model narrows, that set differs from the record's mission.authority_hash, so the authority_hash clause is not witnessed as written (#1436 item 16)."
+    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. A narrowing output's Authority Set binding is the set it evaluated (approval-governance.assertion.narrowing-binds-evaluated-set)."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -4173,7 +4173,42 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness."
+   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness. #1436 item 16 settles the Authority Set binding of a narrowing assertion, so the row is tested again."
+  },
+  {
+   "id": "approval-governance.assertion.narrowing-binds-evaluated-set",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "An assertion that can narrow the authority, such as a model output an activation consults, is made against the `authority_hash` of the set it evaluated rather than of the narrowed result",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a narrowing model output bound to the authority_hash of the set the deciding policy evaluated is counted even though the record's mission.authority_hash covers the narrowed set; the issuer retains that evaluated set with the activation's inputs, the committed set lies within it, and an output bound to any other set is not counted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > binds a narrowing model output to the Authority Set it evaluated, which the issuer records with the activation's inputs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion captured for another activation's approval event",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 16: the binding the reference already applies, stated. Mutations: binding outputs to the narrowed final set; retaining the inputs without the evaluated set."
   },
   {
    "id": "approval-governance.assertion.policy-authorized",
@@ -46716,7 +46751,7 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id and the Mission's intent_hash, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
+    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
     "local": "The reference implementation has no Relying Auditor role, so nothing exercises a re-check."
    },
    "level": "unit",
@@ -49103,8 +49138,14 @@
     "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "a child's derivation limit at the token exchange (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > records at most the entry's committed per-child figure over a higher deployment ceiling, whatever the child requests, each child starting its own count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
      "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
@@ -49130,7 +49171,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327). Partial: every clause is witnessed at the kernel (unit) level, and no endpoint witness exists, since no endpoint suite builds an AS whose policy commits a child_creation_policy. At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
+   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
