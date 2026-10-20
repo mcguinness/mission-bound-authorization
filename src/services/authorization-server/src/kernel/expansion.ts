@@ -11,6 +11,7 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { inheritCapabilitySources } from "./capability-binding.js";
+import { entryDigest } from "./discharge.js";
 import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -488,6 +489,52 @@ export function reconciliationStatusFor(observed: MissionRecord | undefined): Re
       : "predecessor_state_changed";
   }
   return "predecessor_not_active";
+}
+
+/** A restriction: a resource's listed actions, or the whole resource when `actions` is absent. */
+type Restriction = { resource: string; actions?: string[] };
+
+/**
+ * The predecessor's restrictions: the authority its containment events
+ * removed and the entries its discharge latches name. With `counts`, only the
+ * first `containment` events and `discharge` latches, a past snapshot; both
+ * lists are append-only, one event per containment version.
+ */
+function restrictionsOf(
+  predecessor: MissionRecord,
+  counts?: { containment: number; discharge: number },
+): Restriction[] {
+  const events = predecessor.containment?.events ?? [];
+  const latches = predecessor.discharged ?? [];
+  const contained = (counts ? events.slice(0, counts.containment) : events).flatMap((e) => e.removed);
+  const digests = new Set((counts ? latches.slice(0, counts.discharge) : latches).map((l) => l.entry_digest));
+  const discharged = predecessor.authority_set
+    .filter((e) => digests.has(entryDigest(predecessor.issuer, e)))
+    .map((e) => ({ resource: e.resource, actions: e.actions }));
+  return [...contained, ...discharged];
+}
+
+const restricts = (restrictions: Restriction[], resource: string, action: string): boolean =>
+  restrictions.some((r) => r.resource === resource && (r.actions === undefined || r.actions.includes(action)));
+
+/**
+ * @spec expansion#reconciliation check 3 (#1177) — whether the successor's
+ * complete Authority Set carries an action of the predecessor that is
+ * restricted now (contained, or named by a discharged entry) and was not
+ * restricted at adjudication, the snapshot `at`. A restriction at or before
+ * adjudication was disclosed at consent and may be restored; one the
+ * predecessor already carried is not new when an event names it again.
+ */
+export function restrictedSinceAdjudication(
+  predecessor: MissionRecord,
+  successor: AuthorityEntry[],
+  at: { containment: number; discharge: number },
+): boolean {
+  const before = restrictionsOf(predecessor, at);
+  const now = restrictionsOf(predecessor);
+  return successor.some((e) =>
+    e.actions.some((a) => restricts(now, e.resource, a) && !restricts(before, e.resource, a)),
+  );
 }
 
 /**

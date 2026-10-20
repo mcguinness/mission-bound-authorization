@@ -1098,29 +1098,97 @@ describe("expansion wire: DEFERRED widening via the DTR substrate (@spec expansi
     expect(as.kernel.outbox.pendingEventCount()).toBe(0);
   });
 
-  it("check (a): containment that ADVANCED during the window fails completion (version delta), a deferred approval MUST NOT bypass a later containment", async () => {
+  it("check 3: containment during the window that the successor's authority overlaps refuses completion with access_denied and authority_restricted_since_approval on every poll; a new expansion then restores it (@spec expansion#reconciliation, #1177)", async () => {
     const pred = await issuePredecessor(["payments:invoice.read"]);
-    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
-      "payments:invoice.read",
-      "payments:remittance.send",
-    ]);
+    const wide = ["payments:invoice.read", "payments:remittance.send"];
+    const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", wide);
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     expect(opened.status, JSON.stringify(ob)).toBe(400);
     approveDeferral(ob.deferral_code as string);
 
-    // Containment ADVANCES during the window (version 0 -> 1 after the request).
+    // Containment after adjudication removes authority the successor carries.
     as.kernel.contain(pred.missionId, {
-      event: containEvent("taint-exp-window"),
+      event: containEvent(`taint-exp-window-${crypto.randomUUID()}`),
       remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
     });
+    const missionCountBefore = as.kernel.allMissions().length;
 
-    const poll = await pollExpansion(ob.deferral_code as string);
-    const pb = (await poll.json()) as { error?: string };
-    expect(poll.status, JSON.stringify(pb)).toBe(400);
-    expect(pb.error).toBe("access_denied");
+    for (let i = 0; i < 2; i++) {
+      const poll = await pollExpansion(ob.deferral_code as string);
+      const pb = (await poll.json()) as { error?: string; mission_expansion_status?: string; access_token?: string };
+      expect(poll.status, JSON.stringify(pb)).toBe(400);
+      expect(pb.error).toBe("access_denied");
+      expect(pb.mission_expansion_status).toBe("authority_restricted_since_approval");
+      expect(pb.access_token).toBeUndefined();
+    }
+    // The refused completion rolled back: no successor, and the predecessor
+    // stays active under its containment.
+    expect(as.kernel.allMissions().length).toBe(missionCountBefore);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    expect(as.kernel.get(pred.missionId)?.termination).toBeUndefined();
+    expect(as.kernel.get(pred.missionId)?.containment?.containment_version).toBe(1);
+
+    // The contained authority returns only through a new expansion,
+    // adjudicated against the current restriction.
+    const again = await expandViaExchange(pred.accessToken, "Restore invoice reads and add remittance", wide);
+    const ab = (await again.json()) as { error?: string; deferral_code?: string };
+    expect(ab.error, JSON.stringify(ab)).toBe("authorization_pending");
+    approveDeferral(ab.deferral_code as string);
+    const restored = await pollExpansion(ab.deferral_code as string);
+    const rb = (await restored.json()) as { mission_id?: string };
+    expect(restored.status, JSON.stringify(rb)).toBe(200);
+    expect(as.kernel.get(rb.mission_id as string)?.authority_set.some((e) => e.actions.includes("payments:invoice.read"))).toBe(true);
   });
 
-  it("check (a) is a version DELTA, not presence: a predecessor ALREADY contained at request time (version unchanged during the window) still completes (containment#restoration)", async () => {
+  it("check 3: containment during the window of authority the successor does not carry leaves completion untouched (@spec expansion#reconciliation, #1177)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read"]);
+    // The successor carries remittance.send only, not the predecessor's invoice.read.
+    const opened = await expandViaExchange(pred.accessToken, "Switch to remittance", ["payments:remittance.send"]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(ob.error, JSON.stringify(ob)).toBe("authorization_pending");
+    approveDeferral(ob.deferral_code as string);
+    as.kernel.contain(pred.missionId, {
+      event: containEvent(`taint-exp-other-${crypto.randomUUID()}`),
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    });
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { mission_id?: string; mission_expansion_status?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(pb.mission_expansion_status).toBeUndefined();
+    const successor = as.kernel.get(pb.mission_id as string);
+    expect(successor?.authority_set.flatMap((e) => e.actions)).toEqual(["payments:remittance.send"]);
+    expect(as.kernel.get(pred.missionId)?.termination?.reason).toBe("superseded");
+  });
+
+  it("check 3: a containment event during the window that names only authority already contained before the request restricts nothing new, so the restoring completion succeeds (@spec expansion#reconciliation, containment#restoration, #1177)", async () => {
+    const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
+    as.kernel.contain(pred.missionId, {
+      event: containEvent(`taint-exp-before-${crypto.randomUUID()}`),
+      remove: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }],
+    });
+    // The approval restores remittance.send, disclosed at consent, and widens.
+    const opened = await expandViaExchange(pred.accessToken, "Restore remittance and add refunds", [
+      "payments:invoice.read",
+      "payments:remittance.send",
+      "payments:refund.issue",
+    ]);
+    const ob = (await opened.json()) as { error?: string; deferral_code?: string };
+    expect(ob.error, JSON.stringify(ob)).toBe("authorization_pending");
+    approveDeferral(ob.deferral_code as string);
+    // A later event names remittance.send again: the version advances, but no
+    // action of the successor came under restriction after adjudication.
+    as.kernel.contain(pred.missionId, {
+      event: containEvent(`taint-exp-repeat-${crypto.randomUUID()}`),
+      remove: [{ resource: RESOURCE, actions: ["payments:remittance.send"] }],
+    });
+    expect(as.kernel.get(pred.missionId)?.containment?.containment_version).toBe(2);
+    const poll = await pollExpansion(ob.deferral_code as string);
+    const pb = (await poll.json()) as { mission_id?: string };
+    expect(poll.status, JSON.stringify(pb)).toBe(200);
+    expect(as.kernel.get(pb.mission_id as string)?.authority_set.some((e) => e.actions.includes("payments:remittance.send"))).toBe(true);
+  });
+
+  it("check 3 is about restriction since adjudication, not presence: a predecessor ALREADY contained at request time still completes (containment#restoration)", async () => {
     const pred = await issuePredecessor(["payments:invoice.read", "payments:remittance.send"]);
     // Contain remittance.send BEFORE the widening request: effective becomes {invoice.read}.
     as.kernel.contain(pred.missionId, {
