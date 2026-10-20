@@ -149,7 +149,13 @@ import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
 import { newMissionId } from "./mission-id.js";
-import { type CeilingConsent, ceilingMembersOf, consentCeiling, serializeCeiling } from "./progressive.js";
+import {
+  type CeilingConsent,
+  ceilingMembersOf,
+  consentCeiling,
+  consentedDrawdownPolicy,
+  serializeCeiling,
+} from "./progressive.js";
 import {
   IntentError,
   type IntentSubmissionPresenter,
@@ -1041,6 +1047,17 @@ export class MissionKernel {
   }
 
   /**
+   * @spec progressive#progressive-authorization (#1255): refuse a consented
+   * drawdown policy this issuer does not hold at that version
+   * (`invalid_request`). The approval decision calls it before any write. It
+   * reads the issuer and registry the commit reads; the commit mints the
+   * reference again at its creation instant ({@link approve}).
+   */
+  assertDrawdownPolicyHeld(consent: CeilingConsent): void {
+    consentedDrawdownPolicy(this.opts.issuer, this.opts.activationPolicies, consent);
+  }
+
+  /**
    * @spec approval-governance#governed-policy: the governed policy
    * configuration, or undefined when the deployment leaves the basis off.
    */
@@ -1270,8 +1287,10 @@ export class MissionKernel {
    * computes before anything is written: the principal checks, the derived
    * Authority Set with its capability-source bindings, and the established
    * authority source and its ceiling. Every refusal of the approval happens
-   * here, except the progressive ceiling consent, which `approve` establishes
-   * at the commit's creation instant. The approval decision calls it once,
+   * here, except the progressive ceiling consent: the approval decision
+   * checks its entries and drawdown policy before any write
+   * ({@link assertDrawdownPolicyHeld}), and `approve` establishes it at the
+   * commit's creation instant. The approval decision calls it once,
    * saves the provider grant from
    * its result, then commits exactly that result through {@link approve},
    * which recomputes nothing.
