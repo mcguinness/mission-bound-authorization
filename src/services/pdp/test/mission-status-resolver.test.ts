@@ -138,7 +138,7 @@ function respond(
 function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionStatusResolver {
   return new MissionStatusResolver({
     issuer: ISSUER,
-    statusUrl: (id) => `${base}/missions/${encodeURIComponent(id)}/status`,
+    statusUrl: (id) => `${base}/missions/${id}/status`,
     audience: AUDIENCE,
     keys: declaredStatusKeys(published as never, [STATUS_KID]),
     serviceToken: TOKEN,
@@ -216,6 +216,18 @@ describe("MissionStatusResolver: a verified answer (@spec authority-server#missi
     const refused = await resolver().resolve({ id: MISSION, issuer: "https://other-mas.example" });
     expect(refused).toMatchObject({ ok: false, reason: "not_found" });
     expect(requests.length).toBe(0);
+  });
+
+  it("never lets a reference's identifier steer the request to another path at the issuer", async () => {
+    // A slash travels encoded, inside the one Mission segment, and the
+    // answer for that identifier is refused like any other Mission's.
+    expect(await resolver().resolve({ id: "../admin/keys", issuer: ISSUER })).toMatchObject({ ok: false, reason: "unverifiable" });
+    expect(requests.map((q) => q.path)).toEqual(["/missions/..%2Fadmin%2Fkeys/status"]);
+    // A dot segment, which encoding leaves as it is, is never requested.
+    for (const id of ["..", ".", ""]) {
+      expect(await resolver().resolve({ id, issuer: ISSUER }), JSON.stringify(id)).toMatchObject({ ok: false, reason: "not_found" });
+    }
+    expect(requests.length).toBe(1);
   });
 });
 

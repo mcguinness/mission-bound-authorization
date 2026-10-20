@@ -85,7 +85,7 @@ beforeEach(() => {
 function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionStatusResolver {
   return new MissionStatusResolver({
     issuer: ISSUER,
-    statusUrl: (id) => `${ISSUER}/missions/${encodeURIComponent(id)}/status`,
+    statusUrl: (id) => `${ISSUER}/missions/${id}/status`,
     audience: CANONICAL_RESOURCE,
     keys: declaredStatusKeys(published as never, [TOPOLOGY.keys.asStatus.kid]),
     serviceToken: PDP_TOKEN,
@@ -236,12 +236,12 @@ describe("the remote resolver against the reference authorization server (@spec 
     await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
     const via = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
     try {
-      const r = resolver({ statusUrl: (id) => `${via}/missions/${encodeURIComponent(id)}/status`, timeoutMs: 300 });
+      const r = resolver({ statusUrl: (id) => `${via}/missions/${id}/status`, timeoutMs: 300 });
       const started = Date.now();
       expect(await r.resolve({ id: record.id, issuer: ISSUER })).toMatchObject({ ok: false, reason: "unavailable", detail: "timeout" });
       expect(Date.now() - started).toBeLessThan(1200);
       // The same proxy, given the time, delivers an answer that verifies.
-      const patient = resolver({ statusUrl: (id) => `${via}/missions/${encodeURIComponent(id)}/status`, timeoutMs: 5000 });
+      const patient = resolver({ statusUrl: (id) => `${via}/missions/${id}/status`, timeoutMs: 5000 });
       expect(resolved(await patient.resolve({ id: record.id, issuer: ISSUER })).view.state).toBe("active");
     } finally {
       proxy.closeAllConnections();

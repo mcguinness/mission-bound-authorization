@@ -105,8 +105,11 @@ export type MissionStatusResolution = ResolvedMission | UnresolvedMission;
 export interface MissionStatusResolverOptions {
   /** The Mission issuer this resolver reads: the only `issuer` a reference resolves under, and the expected `iss`. */
   issuer: string;
-  /** The Status operation's URL for one Mission. */
-  statusUrl: (missionId: string) => string;
+  /**
+   * The Status operation's URL for one Mission, given the Mission identifier
+   * already percent-encoded as one path segment.
+   */
+  statusUrl: (encodedMissionId: string) => string;
   /** This PDP's enforcement scope: the request's `audience` and the response's expected `aud`. */
   audience: string;
   /** The issuer's published status-response keys, restricted to the declared ones ({@link declaredStatusKeys}). */
@@ -268,6 +271,8 @@ export class MissionStatusResolver {
    */
   async resolve(ref: { id: string; issuer: string }, options: ResolveOptions = {}): Promise<MissionStatusResolution> {
     if (ref.issuer !== this.opts.issuer) return fail("not_found", "reference names another issuer");
+    // Percent-encoding leaves a dot segment as it is, and a URL resolves it.
+    if (ref.id === "" || ref.id === "." || ref.id === "..") return fail("not_found", "reference names no Mission");
     if (options.fresh !== true) {
       const cached = this.cache.get(ref.id);
       if (cached !== undefined && this.reusable(cached, options.maxAgeSeconds)) return { ...cached, source: "cached" };
@@ -299,12 +304,15 @@ export class MissionStatusResolver {
   /** One authenticated, bounded read of the Status operation, verified. */
   private async read(missionId: string): Promise<CachedMission | UnresolvedMission> {
     const nonce = randomUUID();
-    const url = new URL(this.opts.statusUrl(missionId));
-    url.searchParams.set("audience", this.opts.audience);
-    url.searchParams.set("nonce", nonce);
     const signal = AbortSignal.timeout(this.opts.timeoutMs);
     let jws: string | undefined;
     try {
+      // The identifier reaches the URL as one percent-encoded path segment,
+      // so a reference the PEP carried cannot steer this credential to
+      // another path at the issuer.
+      const url = new URL(this.opts.statusUrl(encodeURIComponent(missionId)));
+      url.searchParams.set("audience", this.opts.audience);
+      url.searchParams.set("nonce", nonce);
       const res = await this.http(url, {
         method: "GET",
         headers: { "x-service-token": this.opts.serviceToken, accept: "application/mission-status-response+jwt" },
