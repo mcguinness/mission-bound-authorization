@@ -2862,14 +2862,19 @@ specification it names is that of `mission_resource_access`
 A denial can carry independent remediation grains, each naming a next
 step without granting anything. This document's own grain is
 `mission_denial` ({{rs-enforcement}}): which path a denial leads
-into.
+into. The three remediation grains are:
 
-| Grain | Carriage | Defined by |
-| --- | --- | --- |
-| `mission_denial` | `WWW-Authenticate` attribute | This document ({{rs-enforcement}}) |
-| `insufficient_authorization` with `authorization_remediation` | `WWW-Authenticate` error code and parameter | {{I-D.draft-ietf-oauth-rar-metadata-remediation}} |
-| Requestable denial | AuthZEN denial response: `context.access_request` with `next_action: request` | {{AuthZEN.ARAP}}, profiled by {{I-D.draft-mcguinness-mission-authzen}} |
-{: title="The three remediation grains"}
+`mission_denial`:
+: - Carriage: `WWW-Authenticate` attribute
+  - Defined by: This document ({{rs-enforcement}})
+
+`insufficient_authorization` with `authorization_remediation`:
+: - Carriage: `WWW-Authenticate` error code and parameter
+  - Defined by: {{I-D.draft-ietf-oauth-rar-metadata-remediation}}
+
+Requestable denial:
+: - Carriage: AuthZEN denial response: `context.access_request` with `next_action: request`
+  - Defined by: {{AuthZEN.ARAP}}, profiled by {{I-D.draft-mcguinness-mission-authzen}}
 
 A resource server can also respond with the
 `insufficient_authorization` error code and the
