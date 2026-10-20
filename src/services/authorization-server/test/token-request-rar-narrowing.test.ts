@@ -323,6 +323,21 @@ describe("a refresh request's authorization_details beyond the grant is refused 
     expectIssued(await refresh(m.refreshToken, m.keys), [LIST, READ]);
   });
 
+  // @spec mission#subset (#1399, D538): a requested entry within the grant but
+  // carrying an unsupported member is refused before rotation, never issued
+  // rebuilt without the member.
+  it("an entry carrying an unsupported member is refused invalid_authorization_details saving no refresh token, and the same token still refreshes", async () => {
+    const m = await issue();
+    pastSeventyPercent();
+    const refused = await countingRefreshSaves(() =>
+      refresh(m.refreshToken, m.keys, [{ ...entry([READ]), invoice_ids: ["INV-7"] }]),
+    );
+    expectRefused(refused.result, "invalid_authorization_details");
+    expect(refused.result.body.error_description).toMatch(/invoice_ids is not a supported member/);
+    expect(refused.saved).toBe(0);
+    expectIssued(await refresh(m.refreshToken, m.keys, [entry([READ])]), [READ]);
+  });
+
   it("an async-delegation family, which rotates on every refresh: a schema-invalid or excess request is refused saving nothing, and the same token still refreshes", async () => {
     const m = await issue();
     const familyToken = await family(m.accessToken, m.keys);

@@ -199,18 +199,29 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
       return { privateKey, keys: createLocalJWKSet({ keys: [jwk] }) };
     }
 
-    type Signing = { privateKey: CryptoKey; kid?: string; typ?: string; iss?: string; aud?: string; exp?: number; mission?: Record<string, unknown> };
-    const signStatus = (s: Signing) =>
-      new SignJWT({
+    type Signing = {
+      privateKey: CryptoKey;
+      kid?: string;
+      typ?: string;
+      iss?: string;
+      aud?: string;
+      exp?: number;
+      mission?: Record<string, unknown>;
+      /** Sign with no `iat`, or no `exp`, claim at all. */
+      omit?: "iat" | "exp";
+    };
+    const signStatus = (s: Signing) => {
+      const jwt = new SignJWT({
         sub: "ap-agent",
         mission: { id: "msn_1004", issuer: "https://as.test", state: "active", version: 3, fresh_until: freshUntil, ...s.mission },
       })
         .setProtectedHeader({ alg: "ES256", kid: s.kid ?? "status-1004", typ: s.typ ?? "mission-status-response+jwt" })
         .setIssuer(s.iss ?? "https://as.test")
-        .setAudience(s.aud ?? RESOURCE)
-        .setIssuedAt(issued)
-        .setExpirationTime(s.exp ?? issued + 60)
-        .sign(s.privateKey);
+        .setAudience(s.aud ?? RESOURCE);
+      if (s.omit !== "iat") jwt.setIssuedAt(issued);
+      if (s.omit !== "exp") jwt.setExpirationTime(s.exp ?? issued + 60);
+      return jwt.sign(s.privateKey);
+    };
 
     const withAssertion = (assertion: string, over: Record<string, unknown> = {}) =>
       observed({
@@ -268,6 +279,32 @@ describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-au
           expect(dec.context.denial_reason, `${label} (${actionClass})`).toBe("stale_state");
         }
       }
+    });
+
+    // @spec status#mission-status-response consumer check 9 compares `iat`
+    // and `exp`: a response carrying either not at all has no lifetime to
+    // check, so it does not verify. Fresh mode repeats neither, so nothing in
+    // the observation catches the omission instead.
+    it("an assertion signed without exp, or without iat, denies stale_state", async () => {
+      const { privateKey, keys } = await statusKeys();
+      for (const omit of ["exp", "iat"] as const) {
+        const assertion = await signStatus({ privateKey, omit });
+        for (const actionClass of ["consequential_write", "irreversible_action"]) {
+          const dec = await evaluate(
+            observedRequest({ actionClass, observation: observed({ version: 3, assertion }) }),
+            options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+          );
+          expect(dec.decision, `no ${omit} (${actionClass})`).toBe(false);
+          expect(dec.context.denial_reason, `no ${omit} (${actionClass})`).toBe("stale_state");
+        }
+      }
+      // Control: the same signing with both claims verifies and permits.
+      const both = await signStatus({ privateKey });
+      const permitted = await evaluate(
+        observedRequest({ actionClass: "irreversible_action", observation: observed({ version: 3, assertion: both }) }),
+        options({ stateSourcePlacement: "pep", stateAssertionKeys: keys }),
+      );
+      expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
     });
 
     // #1049 review P2-a: `mission_status_expires_at` is OPTIONAL in `fresh`
