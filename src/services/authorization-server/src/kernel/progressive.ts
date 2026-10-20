@@ -109,18 +109,13 @@ export interface MissionCeiling {
 }
 
 /**
- * @spec progressive#progressive-authorization: validate a consented ceiling
- * and commit it. Each entry has an Authority Set entry's shape; the drawdown
- * policy reference is minted over the snapshot this issuer holds, and a
- * policy it does not hold at that version is refused: the approval cannot
- * commit content the issuer cannot evaluate.
+ * @spec progressive#progressive-authorization: the consented ceiling's
+ * entries, each with an Authority Set entry's shape. A malformed ceiling is
+ * refused `invalid_request`. The approval decision reads them before any
+ * write, to hold the ceiling to the approval-authentication floor
+ * (mission#approval-authentication, #1255).
  */
-export function consentCeiling(
-  iss: string,
-  registry: ActivationPolicyRegistry | undefined,
-  consent: CeilingConsent,
-  consentedAt: string,
-): MissionCeiling {
+export function consentedCeilingEntries(consent: CeilingConsent): AuthorityEntry[] {
   const entries = consent.authority_ceiling as unknown;
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new IntentError("invalid_request", "authority_ceiling must be a non-empty array");
@@ -134,7 +129,23 @@ export function consentCeiling(
     }
     resources.push(resource);
   }
-  const ceiling = validateAuthorityProposal(JSON.stringify(entries), resources);
+  return validateAuthorityProposal(JSON.stringify(entries), resources);
+}
+
+/**
+ * @spec progressive#progressive-authorization: validate a consented ceiling
+ * and commit it. Each entry has an Authority Set entry's shape; the drawdown
+ * policy reference is minted over the snapshot this issuer holds, and a
+ * policy it does not hold at that version is refused: the approval cannot
+ * commit content the issuer cannot evaluate.
+ */
+export function consentCeiling(
+  iss: string,
+  registry: ActivationPolicyRegistry | undefined,
+  consent: CeilingConsent,
+  consentedAt: string,
+): MissionCeiling {
+  const ceiling = consentedCeilingEntries(consent);
   let drawdownPolicy: ActivationPolicyRef | undefined;
   if (consent.drawdown_policy !== undefined) {
     const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };

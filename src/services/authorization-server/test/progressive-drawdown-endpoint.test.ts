@@ -16,9 +16,13 @@
  *    successor's `approval_event_id` is allocated once per reservation;
  *  - otherwise sent to the ordinary fresh-approval (deferred) path.
  * A second assembly without the option shows the capability is default off.
+ *
+ * The consented ceiling admits payment execution and remittance, which the
+ * approval-authentication floor classifies high-risk, so every approval here
+ * is a browser Approver's `mfa` login inside the floor's age bound (#1255).
  */
 
-import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { floorApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
 import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
@@ -31,6 +35,7 @@ import { IntentError } from "../src/kernel/intent.js";
 import { consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, LifecycleCommit, MissionRecord } from "../src/kernel/types.js";
 import {
+  ApprovalSessionStore,
   buildAuthorizationServer,
   type BuiltAs,
   conditionDigest,
@@ -61,6 +66,11 @@ let apOff: Client;
 let second: Client;
 let verifierSeq = 0;
 const commits: LifecycleCommit[] = [];
+/** Each assembly's trusted browser approval login store, by issuer. */
+const approvalSessions = new Map([
+  [ISSUER, new ApprovalSessionStore()],
+  [OFF_ISSUER, new ApprovalSessionStore()],
+]);
 
 /** The deployment's drawdown policies: a JSON snapshot stating the per-drawdown bound and the review cadence. */
 const drawdownPolicy = (cadenceS = 2_592_000, maxAdded = 1): RegisteredActivationPolicy => ({
@@ -243,7 +253,10 @@ async function issueMission(
   res = await fetch(`${issuer}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...trustedApprovalHeaders(), "content-type": "application/json", cookie: cookieHeader(jar) },
+    headers: {
+      ...floorApprovalHeaders(approvalSessions.get(issuer) as ApprovalSessionStore, uid, cookieHeader(jar)),
+      "content-type": "application/json",
+    },
     body: JSON.stringify({ decision: "approve", ...(ceiling ?? {}) }),
   });
   storeCookies(res, jar);
@@ -361,8 +374,7 @@ beforeAll(async () => {
   ];
   as = await buildAuthorizationServer({
     issuer: ISSUER,
-    allowHeadlessAdjudication: true,
-    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: approvalSessions.get(ISSUER) as ApprovalSessionStore,
     activationPolicies: POLICIES,
     actorProfiles: aiAgents("subagent-extractor"),
     dischargeAuthority: DISCHARGE_AUTHORITY,
@@ -372,8 +384,7 @@ beforeAll(async () => {
   });
   asOff = await buildAuthorizationServer({
     issuer: OFF_ISSUER,
-    allowHeadlessAdjudication: true,
-    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    approvalSessions: approvalSessions.get(OFF_ISSUER) as ApprovalSessionStore,
     activationPolicies: POLICIES,
   });
   servers = [as.provider.listen(PORT), asOff.provider.listen(OFF_PORT)];
