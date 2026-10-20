@@ -1254,8 +1254,9 @@ tier ({{I-D.draft-mcguinness-mission-runtime}}).
   `capability_source_unresolvable` (the capability definition the
   permit was decided against could not be re-resolved at execution),
   `resource_contract_unresolvable` (the resource contract the permit
-  was decided under did not resolve to the same contract at
-  execution), `obligation_unfulfilled` (a permit suppressed before release because
+  was decided under did not resolve at execution, or differs from the
+  contract the operation would be performed under),
+  `obligation_unfulfilled` (a permit suppressed before release because
   an attached obligation could not be fulfilled; the failing entry is
   named in `obligation_outcomes`), and `kill_switch` (execution
   suppressed by an operator or safety control). A deployment MAY
@@ -2606,8 +2607,8 @@ evidence representation their shared envelope carries (using the
 
 - Refusal Record and Execution Evidence: `resource_contract_unresolvable`
   records a resource contract the PEP could not resolve before the
-  decision request, or that did not resolve to the same contract at
-  execution (#249).
+  decision request, or that at execution did not resolve or differed
+  from the contract the operation would be performed under (#249).
 - Decision Evidence, Refusal Record, and Execution Evidence: the
   `audience` member carries the runtime profile's boundary identifier,
   byte for byte; a component that cannot establish the boundary emits

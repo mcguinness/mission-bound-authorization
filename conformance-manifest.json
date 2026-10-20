@@ -30320,7 +30320,7 @@
    "id": "evidence.execution.error-resource-contract-unresolvable",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
-   "text": "`resource_contract_unresolvable` (the resource contract the permit was decided under did not resolve to the same contract at execution)",
+   "text": "`resource_contract_unresolvable` (the resource contract the permit was decided under did not resolve at execution, or differs from the contract the operation would be performed under)",
    "role": "PEP",
    "strength": "MUST",
    "applicability": {
@@ -30331,7 +30331,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permit whose contract no longer resolves to the same contract at use is suppressed with error resource_contract_unresolvable, never a parameter comparison"
+    "normative": "a permit whose contract no longer resolves at use, or differs from the contract the PEP is about to perform under, is suppressed with error resource_contract_unresolvable, never a parameter comparison"
    },
    "level": "unit",
    "coverage": "todo",
