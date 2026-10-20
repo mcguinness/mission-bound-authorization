@@ -6631,7 +6631,9 @@ Cross-Domain:
 - Editorial (#1176): the examples of the canonical Mission follow one
   dated history, with the Intent in full and anchors computed over the
   displayed objects; an example line too long for the page is folded
-  per RFC 8792. No requirement changes.
+  per RFC 8792. The end-to-end example continues through the pushed
+  request, code redemption with a refresh token, a resource server
+  refusal, and revocation. No requirement changes.
 
 - Editorial (#910): the approval rules for another principal and for
   an external Subject sit in a Subject Establishment subsection that
