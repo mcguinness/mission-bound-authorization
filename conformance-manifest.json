@@ -38835,7 +38835,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives"
+    "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives",
+    "local": "#1373: the reference AS refuses a matcher, in allowed_delegates or allowed_child_actors, that carries a member other than sub and sub_profile, carries neither, or carries an empty or non-string value, at proposal intake, configuration load and derivation, rather than deriving it without the member; no Resource Access clause states this yet (#1376)"
    },
    "level": "unit",
    "coverage": "partial",
