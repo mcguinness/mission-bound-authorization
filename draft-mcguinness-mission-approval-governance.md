@@ -543,7 +543,7 @@ integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}}),
 canonicalized with JCS {{RFC8785}}, with these members:
 
 - `typ`: `mission-approval-policy`, which domain-separates this anchor
-  from every other anchor in the family;
+  from every other integrity anchor;
 - `iss`: the Mission Issuer, which prevents cross-issuer replay; and
 - `value`: an object of `content_type` (the snapshot's media type) and
   `content` (the base64url, no-padding encoding of the snapshot bytes).
@@ -838,8 +838,9 @@ policy's freshness does not narrow or terminate it.
 
 Approval Governance is an optional extension ({{introduction}}). The
 rules of {{policy-approval-recency}} are a conservative default of this
-document, not a family-wide guarantee, and a deployment that records no
-Approval Governance Record is unbounded by them.
+document, not a guarantee of every Mission-Bound Authorization
+deployment, and a deployment that records no Approval Governance Record
+is unbounded by them.
 
 The `kind: human` requirement is not by itself an assurance property:
 the authentication-strength, rendering, and accountable-principal
