@@ -80,16 +80,20 @@ describe("Approval Context Commitment vectors (approval-governance § approval-c
         {
           type: "mission_resource_access",
           resource: "https://erp.example.com",
-          actions: ["invoices.read", "invoices.write"],
+          actions: ["invoices.read", "invoices.write", "journal-entries.write"],
         },
       ],
-      drawdown_policy: "https://as.example.com/policies/erp-drawdown-v1",
+      drawdown_policy: {
+        id: "erp-drawdown",
+        version: "1",
+        digest: "sha-256:_hLEAl_ir1vxnex2tgbS6eRR99lyL1r6yyeB4RrC184",
+      },
     });
-    expect(ceilingHash).toBe("sha-256:IcftaaatF3MgmbbcDoXB6hEi-kqy-y2IFD2PCeZfB_Q");
+    expect(ceilingHash).toBe("sha-256:JaGArrkON1yHM16a_QRe5QqlIbhaxhXLUV7wtReyvD0");
 
     const manifest = approvalContextManifest({ ...ALWAYS_PRESENT, ceiling_hash: ceilingHash });
     expect(approvalContextCommitment(ISS, manifest)).toBe(
-      "sha-256:JJtL7r3tCIBNt8YwLyFU4_qa4eHAhYqsIdFz_87yXlk",
+      "sha-256:PG7CiXyNLp3QXptmC3cBQolXHDmmeWf_0j17gwY-U5g",
     );
   });
 
