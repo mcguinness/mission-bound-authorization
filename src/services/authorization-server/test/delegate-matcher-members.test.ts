@@ -177,6 +177,13 @@ describe("direct derivation refuses a malformed delegate matcher before deriving
       }
     });
 
+    it(`refuses an ${list} value that is not an array, which the matcher rebuild would read as absent`, () => {
+      const notAList = entry(delegation("ai_agent" as unknown as unknown[]));
+      const e = refusal(() => deriveAuthoritySet(intent, policy([GRANTING_CEILING]), [notAList]));
+      expect(e.code).toBe("invalid_authorization_details");
+      expect(e.message).toContain(`${path} must be an array`);
+    });
+
     it(`refuses a malformed ${list} matcher in a ceiling entry no submitted proposal entry shares a resource with`, () => {
       const ceiling = [GRANTING_CEILING, entry(delegation([ORG_MATCHER]), OTHER_RESOURCE)];
       const e = refusal(() => deriveAuthoritySet(intent, policy(ceiling), [entry()]));
