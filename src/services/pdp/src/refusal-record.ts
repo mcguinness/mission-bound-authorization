@@ -45,9 +45,15 @@ export interface PdpRefusalRecorderConfig {
   /**
    * The enforcement scope this PDP serves and its key is published for: the
    * record's `audience`, whatever audience string the refused request carried
-   * (a request this PDP refuses may name none).
+   * (a request this PDP refuses may name none). @spec runtime#boundary-identifier,
+   * runtime-evidence#pre-decision-refusal (#853, D487): a function receives
+   * the refused request's `resource.properties.audience`, when it carried a
+   * string, and returns the boundary identifier the PDP establishes from the
+   * request of a PEP authorized for that boundary, so this producer follows
+   * the version in force. `undefined` is a boundary the PDP cannot
+   * establish: no record is made rather than one with an invented `audience`.
    */
-  scope: string;
+  scope: string | ((requestAudience: string | undefined) => string | undefined);
   /** The deployment's retention sink for the signed record. */
   retain: (record: PdpRefusalRecord) => unknown;
   now?: () => Date;
@@ -61,9 +67,11 @@ export interface PdpRefusalRecorderConfig {
  */
 export function createPdpRefusalRecorder(config: PdpRefusalRecorderConfig): PdpRefusalRecorder {
   return async (refusal) => {
+    const audience = typeof config.scope === "function" ? config.scope(refusal.audience) : config.scope;
+    if (audience === undefined) return;
     const unsigned = {
       refusal_id: newRecordId("ref"),
-      audience: config.scope,
+      audience,
       action: refusal.action ?? { name: "" },
       ...(refusal.resource !== undefined ? { resource: refusal.resource } : {}),
       decision: "deny" as const,

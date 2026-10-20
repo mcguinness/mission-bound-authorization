@@ -2,7 +2,13 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { initTelemetry } from "@mission/telemetry";
-import { buildAuthorizationServer, kernelStoreFromEnv, type SigningKeySource, signingKeysFromEnv } from "./index.js";
+import {
+  buildAuthorizationServer,
+  kernelStoreFromEnv,
+  type SigningKeySource,
+  signingKeysFromEnv,
+  startupRemediationNotices,
+} from "./index.js";
 
 const port = Number(process.env.AS_PORT ?? 4400);
 const issuer = process.env.AS_ISSUER ?? `http://localhost:${port}`;
@@ -22,12 +28,13 @@ try {
   console.error(`authorization-server: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 }
-const { provider, signingKeyMode, kernel } = await buildAuthorizationServer({
+const { provider, signingKeyMode, kernel, startupRemediation } = await buildAuthorizationServer({
   issuer,
   allowHeadlessAdjudication: process.env.ALLOW_HEADLESS_ADJUDICATION === "true",
   signingKeys,
   ...(kernelStore ? { kernelStore } : {}),
 });
+for (const notice of startupRemediationNotices(startupRemediation)) logger[notice.level](notice.detail, notice.message);
 provider.listen(port, () =>
   logger.info({ issuer, port, signingKeyMode, kernelStore: kernelStore?.file ?? "memory" }, "authorization-server listening"),
 );

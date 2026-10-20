@@ -738,6 +738,12 @@ A Resource AS consuming a Mission-bound cross-domain grant:
     identified by `mission.id` and `mission.issuer`. A resource
     server MAY impose stronger actor-chain requirements but MUST NOT
     reinterpret `client_id`.
+- MUST NOT issue a refresh token, or any equivalent renewal
+  authority, on a Mission-bound grant. This tightens
+  {{Section 4.4.3 of I-D.draft-ietf-oauth-identity-assertion-authz-grant}},
+  which recommends against returning a refresh token for an ID-JAG:
+  renewal returns to the originating AS for a new grant
+  ({{what-crosses}}).
 - MUST bound the issued `authorization_details` by what the
   cross-domain grant conveyed. It MUST apply its own local
   authorization policy in addition: honoring a Mission does not
@@ -762,7 +768,9 @@ A Resource AS consuming a Mission-bound cross-domain grant:
   "Delegation Within a Mission"); that chain identifies delegates
   within this domain only. The Mission's originating approved agent
   is recoverable from the Mission Record, not from `client_id` or
-  this domain's `act` chain.
+  this domain's `act` chain. Each such delegated token, and every
+  token descended from it, MUST NOT expire after the `exp` of the
+  original cross-domain grant.
 - SHOULD record, per minted local token, both sides of the
   derivation: the consumed grant's `jti` and conveyed
   `authorization_details`, and the local token's own identifier or
@@ -1148,6 +1156,8 @@ A **Resource AS**:
 - bounds every local token by the grant that seeded it and issues it
   sender-constrained and short-lived ({{validation-at-resource-as}},
   {{cross-domain-revocation}});
+- issues no refresh token or equivalent renewal authority on the
+  grant ({{validation-at-resource-as}});
 - authenticates the redeeming client at redemption by its own
   mechanism, distinct from the grant's sender-constraint
   ({{validation-at-resource-as}});
@@ -1208,10 +1218,14 @@ cross-domain grants, but it cannot revoke a token a Resource AS has
 already minted in another domain: that token remains valid until its
 own expiry.
 
-Cross-domain revocation latency is therefore the
-downstream token lifetime. The grant lifetime is the state lease the
-partner domain runs on: the longest a Resource AS may treat Mission
-state established at issuance as current
+Exposure measured from revocation is therefore bounded by the
+remaining lifetime of the outstanding grant. A grant redeemed late
+still yields a local token whose `exp` cannot exceed the grant's, and
+the Resource AS issues no renewal authority on the grant
+({{validation-at-resource-as}}), so the exposure can exceed one local
+token lifetime but not the grant's remaining lifetime. The grant
+lifetime is the state lease the partner domain runs on: the longest a
+Resource AS may treat Mission state established at issuance as current
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 The issuance profile's token introspection closes the revocation gap
@@ -1663,6 +1677,15 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
   identity-source rule: destination authentication establishes the
   local identity, and an equal identifier string in both domains is
   not a conflict.
+
+- Adds two requirements at the Resource AS: it issues no refresh
+  token or equivalent renewal authority on a Mission-bound grant,
+  tightening the recommendation of Section 4.4.3 of ID-JAG -04, and
+  a delegated token it issues, with every token descended from it,
+  expires no later than the original grant. Cross-Domain Revocation
+  Latency states the exposure measured from revocation as bounded by
+  the outstanding grant's remaining lifetime, replacing the claim that
+  latency is the downstream token lifetime (#1180).
 
 - Changes a requirement: grant issuance refuses a subject token that
   does not resolve to a Mission with `invalid_request`, where it was

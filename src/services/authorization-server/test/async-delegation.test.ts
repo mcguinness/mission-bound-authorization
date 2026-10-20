@@ -50,6 +50,7 @@ import {
   buildAuthorizationServer,
   type BuiltAs,
   revokeChildrenCreatedByAnotherClient,
+  revokeSuccessorsExpandedByAnotherClient,
   SourceUnavailableError,
 } from "../src/index.js";
 import { GateError } from "../src/kernel/kernel.js";
@@ -3181,5 +3182,118 @@ describe("child creation acting-agent authorization (@spec child-delegation#requ
     const ownRefreshed = await refreshFamily(ownFamily, actingDpop, "exchanger");
     expect(ownRefreshed.status, JSON.stringify(await ownRefreshed.clone().json())).toBe(200);
     expect(revokeChildrenCreatedByAnotherClient(as.kernel, as.creationIdempotency)).toEqual([]);
+  });
+});
+
+describe("successor remediation (@spec expansion#verification-order step 4, #1349)", () => {
+  type Refusal = { error?: string; mission_error?: string; access_token?: string };
+  const readOnlyAuthority = () => [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+
+  /**
+   * A predecessor its own client expanded through a deferral, with the
+   * successor's access token and a refresh family opened from it.
+   */
+  async function expandedWithCredentials(): Promise<{
+    predecessorId: string;
+    successorId: string;
+    deferralCode: string;
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const { missionId: predecessorId, baseAccessToken } = await issueBaseMission(FAR_EXP, readOnlyAuthority());
+    const opened = await codeTokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      subject_token: baseAccessToken,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: { goal: "Widen to add remittance", target_resources: [RESOURCE], expires_at: FAR_EXP },
+      }),
+      authorization_details: JSON.stringify(fullAuthority()),
+      creation_request_id: crypto.randomUUID(),
+    });
+    const { deferral_code: deferralCode } = (await opened.json()) as { deferral_code: string };
+    as.expansionDeferrals.approve(deferralCode, {
+      approver: { iss: ISSUER, sub: "bob" },
+      authentication: FIXTURE_BROWSER_LOGIN,
+      approvalEventId: `apev-1349-${crypto.randomUUID()}`,
+      approvedUntil: FAR_EXP,
+    });
+    const poll = await codeTokenRequest({
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      deferral_code: deferralCode,
+    });
+    const polled = (await poll.json()) as { access_token: string; mission_id: string };
+    expect(poll.status, JSON.stringify(polled)).toBe(200);
+    const family = await asyncDelegate(polled.access_token);
+    const familyBody = (await family.json()) as { refresh_token: string };
+    expect(family.status, JSON.stringify(familyBody)).toBe(200);
+    return {
+      predecessorId,
+      successorId: polled.mission_id,
+      deferralCode,
+      accessToken: polled.access_token,
+      refreshToken: familyBody.refresh_token,
+    };
+  }
+
+  it("revokes a successor whose committed deferral another client opened, refusing its kernel gate, Token Exchange and refresh family while its issued access token still verifies offline until exp; the predecessor stays superseded and an own-client successor keeps refreshing", async () => {
+    const target = await expandedWithCredentials();
+    const own = await expandedWithCredentials();
+    // Seeded as the provenance a deployment before #1340 retains: another
+    // client opened the committed deferral. The credentials stand for any the
+    // successor holds; that client's own poll could mint none (the mint
+    // refuses any client but the Mission's).
+    as.expansionDeferrals.db
+      .prepare("UPDATE expansion_deferrals SET client_id = ? WHERE deferral_code = ?")
+      .run(EXCHANGER_CLIENT_ID, target.deferralCode);
+    const before = as.kernel.get(target.successorId) as NonNullable<ReturnType<typeof as.kernel.get>>;
+    const predecessorBefore = as.kernel.get(target.predecessorId);
+    expect(as.kernel.checkDerivation(target.successorId).state).toBe("active");
+
+    const remediation = revokeSuccessorsExpandedByAnotherClient(as.kernel, as.expansionDeferrals);
+    expect(remediation.revoked).toEqual([target.successorId]);
+    await as.kernel.drainLifecycleOutbox();
+
+    // Issuer and state-aware paths refuse.
+    expect(as.kernel.get(target.successorId)).toMatchObject({
+      state: "terminated",
+      termination: { reason: "revoked" },
+      version: before.version + 1,
+    });
+    expect(() => as.kernel.checkDerivation(target.successorId)).toThrow(GateError);
+    const exchanged = await delegationHandleRequest(target.accessToken);
+    const exchangedBody = (await exchanged.json()) as Refusal;
+    expect(exchanged.status, JSON.stringify(exchangedBody)).toBe(400);
+    expect(exchangedBody.error).toBe("invalid_request");
+    expect(exchangedBody.mission_error).toBe("revoked");
+    expect(exchangedBody.access_token).toBeUndefined();
+    const refreshed = await refreshFamily(target.refreshToken);
+    const refreshedBody = (await refreshed.json()) as Refusal;
+    expect(refreshed.status, JSON.stringify(refreshedBody)).toBe(400);
+    expect(refreshedBody.error).toBe("invalid_grant");
+    expect(refreshedBody.access_token).toBeUndefined();
+
+    // The disclosed residual: a token-only resource verifying offline still
+    // accepts the issued access token, inside its declared lifetime.
+    const { payload } = await jwtVerify(target.accessToken, remoteJwks, { issuer: ISSUER, audience: RESOURCE });
+    expect((payload.exp as number) - (payload.iat as number)).toBeLessThanOrEqual(TOPOLOGY.ttls.accessTokenSeconds);
+
+    // The predecessor is not revived; the own-client successor is untouched.
+    expect(as.kernel.get(target.predecessorId)).toEqual(predecessorBefore);
+    expect(as.kernel.get(target.predecessorId)?.termination).toMatchObject({ reason: "superseded", successor: target.successorId });
+    expect(as.kernel.get(own.successorId)?.state).toBe("active");
+    const ownRefreshed = await refreshFamily(own.refreshToken);
+    expect(ownRefreshed.status, JSON.stringify(await ownRefreshed.clone().json())).toBe(200);
+    expect(revokeSuccessorsExpandedByAnotherClient(as.kernel, as.expansionDeferrals).revoked).toEqual([]);
   });
 });

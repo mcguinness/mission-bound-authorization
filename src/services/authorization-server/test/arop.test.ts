@@ -56,6 +56,8 @@ async function signChallenge(
 }
 
 const ISS = "https://as.test";
+/** The opening request's DPoP key thumbprint, which binds each deferral (#1348). */
+const AGENT_JKT = "jkt-ap-agent";
 const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 
 // A policy whose ceiling allows acme only; expansion widens to include globex.
@@ -133,7 +135,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
     ];
-    const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent" });
+    const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: AGENT_JKT });
     expect(pending.error).toBe("authorization_pending");
     expect(pending.deferral_code).toMatch(/^dfr_/);
 
@@ -141,7 +143,14 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     expect((deferrals.redeem(pending.deferral_code) as { error: string }).error).toBe("authorization_pending");
 
     // Idempotent submission: same request returns the same handle.
-    expect(deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent" }).deferral_code).toBe(pending.deferral_code);
+    expect(
+      deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: AGENT_JKT }).deferral_code,
+    ).toBe(pending.deferral_code);
+    // Under another key it opens a new deferral: a code is bound to the key of
+    // the request it answers (DTR -00 Section 5.4, #1348).
+    expect(
+      deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: "jkt-rotated" }).deferral_code,
+    ).not.toBe(pending.deferral_code);
 
     // Bob approves with an approval expiry that bounds the credential.
     deferrals.approve(pending.deferral_code, "2026-12-31T00:00:00Z");
@@ -177,7 +186,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
       },
     ];
-    const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent" });
+    const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: AGENT_JKT });
     deferrals.deny(pending.deferral_code);
     expect((deferrals.redeem(pending.deferral_code) as { error: string }).error).toBe("access_denied");
   });
@@ -189,7 +198,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     const widen: AuthorityEntry[] = [
       { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.execute"], constraints: { vendors: ["globex"] } },
     ];
-    expect(() => deferrals.open({ missionId: mission.id, requested: widen, clientId: "ap-agent" })).toThrow(
+    expect(() => deferrals.open({ missionId: mission.id, requested: widen, clientId: "ap-agent", jkt: AGENT_JKT })).toThrow(
       /exceeds the active Mission/,
     );
   });

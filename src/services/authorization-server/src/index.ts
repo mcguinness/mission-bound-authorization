@@ -60,6 +60,7 @@ import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
 import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
+import { revokeSuccessorsExpandedByAnotherClient, type SuccessorRemediation } from "./kernel/expansion.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import type { DestinationClientRegistration } from "./kernel/cross-domain.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
@@ -407,12 +408,15 @@ export {
 } from "./kernel/delegation.js";
 export {
   createExpansion,
+  revokeSuccessorsExpandedByAnotherClient,
   successorMissionClaim,
   successorWidensOnly,
   type ContainmentHistoryEntry,
   type ExpansionEvidence,
   type ExpansionInput,
   type ExpansionResult,
+  type SuccessorRemediation,
+  type UnresolvedSuccessorProvenance,
 } from "./kernel/expansion.js";
 export {
   createChildMission,
@@ -823,6 +827,13 @@ export interface BuiltAs {
    * (`suspensionSchedules`) and serves `suspend`.
    */
   suspensionScheduler?: SuspensionScheduler;
+  /**
+   * @spec child-delegation#request-processing step 4, expansion#verification-order
+   * step 4 (#1326, #1349): what building this assembly revoked from before
+   * the acting-client checks existed, and the committed expansions from
+   * another client whose successor it could not identify, for the operator.
+   */
+  startupRemediation: { revokedChildren: string[]; successors: SuccessorRemediation };
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -1647,11 +1658,17 @@ export async function buildAuthorizationServer(opts: {
   await kernel.recoverAtBoot();
   // @spec child-delegation#request-processing step 4 (#1326): revoke any child
   // that a client other than its parent's own created before the step-4 check
-  // existed, while its creation operation is retained, then deliver the
-  // revocations' durable effects (family grants) before serving a request.
-  if (revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency).length > 0) {
-    await kernel.drainLifecycleOutbox();
-  }
+  // existed, while its creation operation is retained.
+  // @spec expansion#verification-order step 4 (#1349, D516): revoke any
+  // successor created through another client's committed deferral, as its
+  // retained deferral identifies it. Then attempt the durable effects (family
+  // grants) of every transition the sweeps committed before serving a
+  // request: unconditionally, since the expiry clock each sweep runs first
+  // can commit an `expired` transition that no revocation count reports. A
+  // failed revocation throws, so the assembly is not served.
+  const revokedChildren = revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency);
+  const successorRemediation = revokeSuccessorsExpandedByAnotherClient(kernel, expansionDeferrals);
+  await kernel.drainLifecycleOutbox();
   // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
   // persisted schedule, delivering any whose deadline passed while the
   // process was down, before this assembly serves a request.
@@ -1680,5 +1697,34 @@ export async function buildAuthorizationServer(opts: {
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
+    startupRemediation: { revokedChildren, successors: successorRemediation },
   };
+}
+
+/**
+ * #1326, #1349: the operator notices a launcher logs for a build's startup
+ * remediation (what it revoked from a kernel written before #1340, and the
+ * committed expansions from another client it could not resolve); none when
+ * it did nothing.
+ */
+export function startupRemediationNotices(
+  remediation: BuiltAs["startupRemediation"],
+): Array<{ level: "info" | "warn"; message: string; detail: Record<string, unknown> }> {
+  const { revokedChildren, successors } = remediation;
+  return [
+    ...(revokedChildren.length + successors.revoked.length > 0
+      ? [{
+          level: "info" as const,
+          message: "revoked Missions another client created before #1340",
+          detail: { revokedChildren, revokedSuccessors: successors.revoked },
+        }]
+      : []),
+    ...(successors.unresolved.length > 0
+      ? [{
+          level: "warn" as const,
+          message: "committed expansions from another client whose successor could not be identified",
+          detail: { unresolved: successors.unresolved },
+        }]
+      : []),
+  ];
 }

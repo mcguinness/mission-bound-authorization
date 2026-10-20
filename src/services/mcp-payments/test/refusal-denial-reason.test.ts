@@ -37,6 +37,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "pdp_unreachable",
   // #1266: the recipients a recipient-addressing operation reaches do not resolve.
   "unresolvable_recipients",
+  // #853: the credential was validated against another boundary or statement version.
+  "credential_boundary_changed",
 ];
 
 const refusalInput = (denial_reason: string) => ({
