@@ -715,6 +715,18 @@ Authority Set:
   Mission Intent and the Approver approves
   ({{authorization-derivation}}).
 
+Authority Set derivation:
+: Computing the Authority Set from a Mission Intent and any authority
+  proposal, in narrowing or configured-mapping mode
+  ({{derivation-modes}}).
+
+Derivation:
+: One issuance operation the issuer AS performs for a single request
+  ({{issuance-gating}}): the initial authorization-code exchange, a
+  refresh, a Token Exchange, or a cross-domain grant issuance.
+  Distinct from Authority Set derivation, which this document also
+  calls derivation.
+
 Mission:
 : The durable authorization object that binds a disclosed task (its
   Mission Intent) to an explicitly approved Authority Set and governs
