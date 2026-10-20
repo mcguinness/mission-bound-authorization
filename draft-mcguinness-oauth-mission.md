@@ -3454,7 +3454,8 @@ Access Profile defines
 
 Because the policy lives in the entry, `authority_hash` commits it
 with the rest of the Authority Set, and it is carried with the entries
-wherever they go, including across a cross-domain projection
+wherever they go, including across a cross-domain projection where
+that profile's provenance rule keeps it
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 **Delegation depth.** The delegation depth of a token is the number
