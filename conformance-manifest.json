@@ -7975,9 +7975,46 @@
     "normative": "an applicable entry the resource server cannot fully enforce contributes no authority"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry whose type it does not implement, though its resource and actions cover the request",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses a journal write whose only entry carries a member it does not recognize, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying the RFC 9396 locations field, whatever its value",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying capability_sources, an extension member this resource does not implement",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses a journal write whose only covering entry carries a time_window, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298) and an unrecognized `resource_match` (#1276) each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, and ignoring `resource_match` each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
   },
   {
    "id": "core.rs-enforcement.whole-request-single-entry",
@@ -7999,9 +8036,28 @@
     "normative": "a request is authorized only by one fully enforceable entry covering all of it; parts of entries never combine"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > authorizes a journal write through a clean covering entry listed after one carrying a member it does not recognize",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > refuses a request that only the entry carrying a member it does not recognize covers, while a clean entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only parts of two enforceable entries together cover",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource: a clean entry that covers the whole request authorizes beside one carrying an unrecognized member, an entry SaaS cannot enforce lends its action to no clean entry, and a write whose action is in one entry and whose vendor is in another is refused (#1298). Proved by mutation: refusing the whole token for one unenforceable entry, and pooling actions across entries, each fail these tests. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; that refuses more often but never combines entries, and is recorded under resource-access.rs-enforcement.type-scoped-matching."
   },
   {
    "id": "core.introspection.composite-active",
@@ -39223,9 +39279,16 @@
     "normative": "an entry carrying delegation is enforced on its other members; delegation does not make it unenforceable"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4. Case fc-06 skipped (rs.member-roles)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards delegation, a member a companion profile adds inside it included, and still enforces the entry's other members",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor."
   },
   {
    "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
@@ -39247,9 +39310,28 @@
     "normative": "an entry carrying a member the resource server does not recognize, or one whose obligations it cannot fulfill, contributes no authority"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4, #1277 review finding 1 (D454). The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json are skipped (rs.alternative-grants, rs.extension-members)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses a journal write whose only entry carries a member it does not recognize, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying capability_sources, an extension member this resource does not implement",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > refuses a request that only the entry carrying a member it does not recognize covers, while a clean entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 4, #1277 review finding 1 (D454). #1362: witnessed at the SaaS resource, which enforces type, resource, resource_match, actions and constraints, disregards delegation, and implements no extension member. An entry carrying a member SaaS does not recognize, whatever its value, or `capability_sources`, an extension member whose obligations SaaS cannot fulfill, provides no authority: a write only that entry covers is refused with no journal entry, and its action is lent to no clean entry beside it. Proved by mutation: dropping the member-role check, treating a null or false member as absent, disregarding `capability_sources`, and pooling actions across entries each fail these tests. The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json stay skipped: the reader's capability set is deployment-wide, so it cannot claim rs.alternative-grants while the payments policy decision point's Mission bound takes the first matching entry, and it has no rs-authorize executor; fc-10 also requires rs.extension-members."
   },
   {
    "id": "resource-access.rs-enforcement.defined-extension-enforceable",
@@ -39273,7 +39355,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members)."
+   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members). #1362: SaaS implements no extension member, so it refuses an entry carrying `capability_sources` (witnessed under resource-access.rs-enforcement.unknown-member-unenforceable); that converse case is not a witness for this row."
   },
   {
    "id": "resource-access.rs-enforcement.locations-unenforceable",
@@ -39295,9 +39377,16 @@
     "normative": "an entry carrying locations contributes no authority at the resource server"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4, kept separate from the member rule (D454). Case fc-07 skipped (rs.alternative-grants)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying the RFC 9396 locations field, whatever its value",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 4, kept separate from the member rule (D454). #1362: witnessed at the SaaS resource: an entry carrying `locations`, populated or empty, provides no authority, and a write only that entry covers is refused with no journal entry. The RAS refuses a grant whose entry carries it (#1283), so the witness mints the RAS-issued token directly. Proved by mutation: dropping the member-role check, disregarding `locations`, and treating an empty `locations` as absent each fail the test. Case fc-07 stays skipped: the reader's capability set is deployment-wide, so it cannot claim rs.alternative-grants while the payments policy decision point's Mission bound takes the first matching entry, and it has no rs-authorize executor."
   },
   {
    "id": "resource-access.entry-validation.locations-refused",
