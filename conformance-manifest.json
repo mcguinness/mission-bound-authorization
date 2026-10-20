@@ -34847,7 +34847,7 @@
    "id": "progressive.drawdown-derivation.recovery-token-gated",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A fresh delivery token minted on recovery is ordinary issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section \"Recovery is delivery\"), counted against and gated by the successor's `derivation_limit`",
+   "text": "A fresh delivery token minted on recovery is ordinary issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section \"Recovery Is Delivery\"), counted against and gated by the successor's `derivation_limit`",
    "role": "AS",
    "strength": "stated",
    "applicability": {

@@ -344,7 +344,7 @@ Authority Set freshly derived and bound by the ceiling, its
 `subject` and `authority_source` are the predecessor's, and the commit
 that activates it checks that source's ceiling
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Successor
-Subject and authority source"). An in-ceiling
+Subject and Authority Source"). An in-ceiling
 successor MUST carry the predecessor's `authority_ceiling` and
 `drawdown_policy` unchanged or narrowed, committed under the same
 or, when narrowed, a recomputed `ceiling_hash`. Any change to either
@@ -456,7 +456,7 @@ replenish the predecessor's allowance of counted derivations:
   repeating its accounting; returning the existing access token adds
   no derivation. A fresh delivery token minted on recovery is ordinary
   issuance ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
-  "Recovery is delivery"), counted against and gated by the
+  "Recovery Is Delivery"), counted against and gated by the
   successor's `derivation_limit`.
 
 The ceiling consent's disclosure ({{progressive-authorization}}) MUST
