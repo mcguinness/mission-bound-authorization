@@ -53,10 +53,10 @@ export interface RasConfig {
    * DPoP-bound client credentials): redemption authenticates the
    * presenting client by looking up its proven `jkt` in this table and
    * refuses `invalid_client` on an unrecognized key, then mints the
-   * matched value as `client_id`. It is never copied or derived from the
-   * ID-JAG grant's own `client_id` claim, which names the acting client at
-   * the ORIGINATING AS, nor from the presenter key alone without a
-   * matching registration. A client whose key is generated after this RAS
+   * matched value as `client_id`. The ID-JAG grant's own `client_id` names
+   * the client's registration HERE (ID-JAG -04 Section 3.1) and is checked
+   * against this lookup, never used in place of it; nor is the presenter key
+   * alone, without a matching registration (#1166, D510). A client whose key is generated after this RAS
    * is constructed is onboarded via {@link ResourceAuthorizationServer.registerClient}.
    */
   registeredClients?: Record<string, string>;
@@ -164,8 +164,9 @@ export class ResourceAuthorizationServer {
    * token without an entitlement check.
    *
    * Mints a local token preserving mission.id/issuer/authority_hash/subject
-   * and identifying the authenticated client as `client_id`, never the
-   * grant's own `client_id`, which names the originating agent.
+   * and identifying the authenticated client as `client_id`, after checking
+   * that the grant's own `client_id` (the client's registration at this RAS,
+   * ID-JAG -04 Section 3.1) identifies that client (#1166, D510).
    */
   async redeem(idJag: string, presenterJkt: string): Promise<{ access_token: string; expires_in: number }> {
     // Peek the issuer to select the trust anchor.
@@ -250,16 +251,24 @@ export class ResourceAuthorizationServer {
 
     // @spec cross-domain#validation-at-resource-as (S-12): authenticate the
     // redeeming client against THIS RAS's own registration, independent of
-    // anything the origin AS asserted (the grant's client_id claim names
-    // the originating agent and is never consulted here). A valid,
-    // sender-constrained grant is not enough on its own: the presenter key
-    // must resolve to a client this RAS recognizes, or redemption fails
-    // invalid_client rather than minting a token for an unauthenticated
-    // party. Checked before jti consumption so an unrecognized presenter
-    // does not burn the grant's one-time use.
+    // anything the origin AS asserted. A valid, sender-constrained grant is
+    // not enough on its own: the presenter key must resolve to a client this
+    // RAS recognizes, or redemption fails invalid_client rather than minting a
+    // token for an unauthenticated party. Checked before jti consumption so an
+    // unrecognized presenter does not burn the grant's one-time use.
     const localClientId = this.registeredClients.get(presenterJkt);
     if (!localClientId) {
       throw new RasError("invalid_client", "unrecognized redeeming client");
+    }
+    // @spec cross-domain#validation-at-resource-as (#1166, D510; ID-JAG -04
+    // Section 4.4.1): the grant's client_id names the client registration at
+    // THIS RAS, and MUST identify the client just authenticated. An absent or
+    // different value is invalid_grant, checked before jti consumption so a
+    // refused redemption never burns the one-time use. The authenticated
+    // registration stays the source of the local token's client_id; an equal
+    // string at the originating AS is not a conflict.
+    if (payload.client_id !== localClientId) {
+      throw new RasError("invalid_grant", "grant client_id does not identify the authenticated client");
     }
 
     const audience = this.cfg.localTokenAudience ?? "http://localhost:4406/mcp";
@@ -379,11 +388,10 @@ export class ResourceAuthorizationServer {
       mission,
       authorization_details: mintedAuthority,
       cnf: { jkt: presenterJkt },
-      // @spec cross-domain#validation-at-resource-as (S-12): client_id names
-      // the client identity the registration lookup above authenticated,
-      // never copied or derived from the grant's own client_id
-      // (payload.client_id), which names the originating agent and MUST
-      // NOT appear in this slot.
+      // @spec cross-domain#validation-at-resource-as (S-12, #1166, D510):
+      // client_id names the client identity the registration lookup above
+      // authenticated; the grant's client_id was checked against it, and the
+      // Mission's approved agent never substitutes for it.
       client_id: localClientId,
     })
       .setProtectedHeader({ alg: "ES256", kid: this.cfg.signKid, typ: "at+jwt" })

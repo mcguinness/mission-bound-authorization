@@ -62,6 +62,7 @@ import type { CarryoverConfig } from "./kernel/carryover.js";
 import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
 import { revokeSuccessorsExpandedByAnotherClient, type SuccessorRemediation } from "./kernel/expansion.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
+import type { DestinationClientRegistration } from "./kernel/cross-domain.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
 import { DelegationFamilyStore } from "./kernel/delegation-family-store.js";
 import { TokenIssuanceStore } from "./kernel/token-issuance-store.js";
@@ -323,6 +324,9 @@ export {
   audienceScopedAuthority,
   RequestedAuthorityExceededError,
   AuthorityNarrowedToEmptyError,
+  DestinationClientUnresolvedError,
+  resolveDestinationClientId,
+  type DestinationClientRegistration,
   ID_JAG_TYP,
   ID_JAG_TOKEN_TYPE,
 } from "./kernel/cross-domain.js";
@@ -917,6 +921,15 @@ export async function buildAuthorizationServer(opts: {
    * a dedicated issuer key.
    */
   continuationAssertionIssuers?: ContinuationIssuer[];
+  /**
+   * @spec cross-domain#pre-established-trust (#1166, D510);
+   * id-continuation-assertion (ICA -02 5.5.5) — the destination-scoped mapping
+   * from each requesting client to its registration at each target Resource
+   * AS, the onward grant's `client_id`. Defaults to the deployment's
+   * `config/topology.json` `crossDomainClients`; a client and target it does
+   * not cover is refused `invalid_target`.
+   */
+  crossDomainClients?: DestinationClientRegistration[];
   /**
    * @spec id-continuation-assertion — the IdP's finite hop-count limit for
    * every continuation chain (ICA -02 6.3), a positive integer. Defaults to
@@ -1604,6 +1617,7 @@ export async function buildAuthorizationServer(opts: {
     // rotation), and ttl.RefreshToken (absolute-lifetime clamp).
     familyStore: delegationFamilyStore,
     continuationAssertionIssuers,
+    crossDomainClients: opts.crossDomainClients ?? TOPOLOGY.crossDomainClients,
     continuationReplay: newReplayCache(),
     continuationHopLimit,
     resourceToAs,
