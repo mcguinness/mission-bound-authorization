@@ -2374,6 +2374,18 @@ approved, not the predecessor's authority plus a delta.
 
 \[\[ To be removed from the final specification ]]
 
+- Editorial restructure, with no change to any requirement: sections
+  reordered and titled in Title Case; Successor Activation and Child
+  Missions of the Predecessor collect the activation and child-cascade
+  rules previously spread across several sections; dense paragraphs
+  become lists; restatements of rules defined elsewhere point to their
+  home instead of repeating the keyword; every message has an example,
+  and Appendix A walks one expansion end to end; the OAuth Parameters
+  registrations use the RFC 6749 template.
+
+- No `predecessor_token` parameter is registered: the predecessor is
+  resolved from `subject_token`.
+
 - A failed expansion exchange uses the code this document assigns to
   the failure; otherwise an invalid, unproven or unacceptable
   `subject_token` or `actor_token` is `invalid_request`, as Section
