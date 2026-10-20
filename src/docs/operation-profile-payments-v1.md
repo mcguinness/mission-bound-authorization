@@ -119,11 +119,18 @@ Matching). Actions and constraints determine the permitted operations
 within that service. Each `TOOL_ACTIONS` row declares the contract
 (`target: { service: <canonical resource URI> }`); it is never assumed.
 
-- The PEP establishes the target from that declaration alone, before any
+- The PEP establishes the target from that declaration, before any
   decision request: never from an entry, the token's audience, or an
-  argument. A tool with no declaration, a finer contract form (one deriving
-  the target from arguments, which this profile does not support), or
-  declarations naming different targets is refused
+  argument the contract does not name. Every shipped tool declares the
+  service-level contract. A deployment's Operation Profile may instead
+  declare the argument-derived invoice contract for an invoice-scoped tool
+  (`PAYMENTS_INVOICE_CONTRACT`,
+  `{ template: "<canonical resource URI>/invoices/{invoice_id}" }`), whose
+  target is the invoice the validated `invoice_id` names, percent-encoded
+  as one path segment; the PEP derives it again from the executing
+  arguments before every release. A tool with no declaration, an
+  unsupported contract form, a missing, list-valued or malformed argument,
+  or declarations naming different targets is refused
   `operation_target_unresolvable` (`target_unresolvable`) before any
   decision request.
 - The decision request carries the target as

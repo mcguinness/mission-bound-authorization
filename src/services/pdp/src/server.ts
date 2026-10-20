@@ -29,6 +29,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
+import { contractCanEstablish, type OperationContract } from "@mission/core";
 import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
 import { requestMacParts } from "./client.js";
 import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
@@ -73,12 +74,38 @@ export interface AuthorizedPep {
    * (#1276, D457): the operation targets within this PEP's declared
    * enforcement scope, as its registered operation contracts establish them,
    * compared exactly. A decision request naming any other target is refused
-   * before evaluation as `operation_target_invalid`. Absent, the PEP may name
-   * only a target equal to one of its `scopes`, the service-level contract
-   * over its own enforcement scope; this is a channel restriction, never an
-   * entry-match fallback, and it narrows rather than widens.
+   * before evaluation as `operation_target_invalid`. Absent, and with no
+   * {@link operationContracts} registered, the PEP may name only a target
+   * equal to one of its `scopes`, the service-level contract over its own
+   * enforcement scope; this is a channel restriction, never an entry-match
+   * fallback, and it narrows rather than widens.
    */
   operationTargets?: readonly string[];
+  /**
+   * @spec authzen#pdp-request consistency check 11, authzen#context-operation-target
+   * (#1276, D457): the operation contracts this PEP is registered for, for
+   * the targets an argument-derived contract establishes, which no finite
+   * list names. A target one of them can establish (`contractCanEstablish`:
+   * a service-level contract's service, or an argument-derived contract's
+   * template expanded with one canonically encoded value) is within the
+   * PEP's scope. Coverage only: it grants no authority, and the entry match
+   * still decides.
+   */
+  operationContracts?: readonly OperationContract[];
+}
+
+/**
+ * @spec authzen#pdp-request consistency check 11 (#1276, D457): whether a
+ * string target is within the requesting PEP's registration: a listed
+ * target, or one a registered operation contract establishes. With neither
+ * registered, only a target equal to one of the PEP's scopes.
+ */
+function targetWithinRegistration(pep: AuthorizedPep, scopes: readonly string[], target: string): boolean {
+  if (pep.operationTargets === undefined && pep.operationContracts === undefined) return scopes.includes(target);
+  return (
+    (pep.operationTargets ?? []).includes(target) ||
+    (pep.operationContracts ?? []).some((contract) => contractCanEstablish(contract, target))
+  );
 }
 
 export interface PdpRemoteServerConfig {
@@ -318,7 +345,7 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     // `operation_target_invalid`, with zero decision work. A missing or
     // non-string target reaches `evaluate`, which refuses it the same way.
     const target = targetOf?.(body as Record<string, unknown>);
-    if (typeof target === "string" && !(pep.operationTargets ?? scopes).includes(target)) {
+    if (typeof target === "string" && !targetWithinRegistration(pep, scopes, target)) {
       await recordPdpRefusal(config.refusals, "operation_target_invalid", (body as Record<string, unknown>).request);
       sendRefusal(res, 403, "operation_target_invalid");
       return undefined;
