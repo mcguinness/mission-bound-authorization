@@ -38,6 +38,7 @@ import {
 import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
 import { accessTokenHash, DpopReplayUnavailableError } from "./dpop.js";
+import { IntrospectionUnavailableError } from "./introspection.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
 import { MISSION_REFERENCE_HEADER, parseMissionReferenceField } from "@mission/core";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
@@ -277,6 +278,13 @@ async function authenticate(
   } catch (e) {
     if (e instanceof DpopReplayUnavailableError) {
       replayStateUnavailable(res, e.retryAfterS);
+      return undefined;
+    }
+    // @spec RFC 7662 (#818 slice 3): an estate that gave no usable
+    // introspection answer is not a refusal of the token, and never a permit.
+    if (e instanceof IntrospectionUnavailableError) {
+      res.writeHead(503, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "temporarily_unavailable", error_description: "token introspection unavailable" }));
       return undefined;
     }
     unauthorized(res, "DPoP proof-of-possession failed");

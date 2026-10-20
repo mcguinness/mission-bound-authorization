@@ -1172,6 +1172,12 @@ export async function buildAuthorizationServer(opts: {
     modelAdvisor?: ModelAdvisor;
   };
 }): Promise<BuiltAs> {
+  // @spec progressive#in-ceiling-expansion, mission#approval-authentication
+  // (#1255): a configuration refusal, before any key, store or recovery is
+  // touched. A drawdown mapping that disagrees with the approval floor does not start.
+  const progressive = opts.progressive
+    ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
+    : undefined;
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
   // txn-bound single-use approval tokens (AROP Transaction Challenge), and
@@ -1655,7 +1661,7 @@ export async function buildAuthorizationServer(opts: {
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
     processBootId,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
-    ...(opts.progressive ? { progressive: validateProgressiveDrawdownOptions(opts.progressive) } : {}),
+    ...(progressive ? { progressive } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).

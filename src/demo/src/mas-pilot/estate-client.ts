@@ -120,3 +120,26 @@ export async function obtainEstateToken(req: EstateTokenRequest): Promise<Estate
     ...(typeof body.scope === "string" ? { scope: body.scope } : {}),
   };
 }
+
+/**
+ * RFC 7009: the estate client revokes one of its own access tokens at the
+ * estate's revocation endpoint. Resolves to the endpoint's HTTP status (200
+ * on success, including for a token the estate no longer knows).
+ */
+export async function revokeEstateToken(req: {
+  endpoint: string;
+  clientId: string;
+  clientSecret: string;
+  token: string;
+}): Promise<number> {
+  const res = await fetch(req.endpoint, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      authorization: `Basic ${Buffer.from(`${encodeURIComponent(req.clientId)}:${encodeURIComponent(req.clientSecret)}`).toString("base64")}`,
+    },
+    body: new URLSearchParams({ token: req.token, token_type_hint: "access_token" }).toString(),
+  });
+  await res.arrayBuffer();
+  return res.status;
+}

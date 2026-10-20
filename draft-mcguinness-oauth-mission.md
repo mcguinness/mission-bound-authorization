@@ -841,6 +841,8 @@ Intent carries only the three required members, as in the Submission
 envelope example ({{submission-via-par}}). The following summary is
 informative; the member definitions after it are authoritative.
 
+## Intent Members {#intent-members}
+
 | Member | Required | What the AS does with it |
 | --- | --- | --- |
 | `goal` | yes | Records it and renders it to the Approver as inert text; never interprets it |
@@ -1250,6 +1252,8 @@ submitted ({{authority-proposal}}), the AS derives the
 **Authority Set**: one or more {{RFC9396}} `authorization_details`
 entries of an AS-supported type ({{other-types}}).
 
+## Derivation Modes {#derivation-modes}
+
 Derivation is mechanical. It happens once, at the approval event, under
 the derivation policy then in force, as one procedure whose candidate
 entries depend on whether an authority proposal was submitted:
@@ -1320,6 +1324,8 @@ granted `authorization_details` in the token response
 granted; a client compares it against its proposal, which
 `proposal_hash` commits as submitted ({{integrity-anchors}}).
 
+## The Consented Authority Set {#consented-authority-set}
+
 The derived Authority Set, not the Mission Intent, is the authority the
 Approver consents to: the AS renders the Authority Set for approval and
 commits it as `authority_hash` ({{approval-event}}). The Intent's
@@ -1354,6 +1360,8 @@ Authority is further bounded by:
 The approval surface renders the prose beside the derived Authority Set
 ({{approval-event}}) as the human check that the structure matches the
 words, not as a machine enforcement mechanism.
+
+## Derivation Policy and Open-Ended Tasks {#derivation-policy-tasks}
 
 Derivation is governed by local policy and is not a portable algorithm:
 different authorization servers can derive different Authority Sets from
@@ -1466,6 +1474,8 @@ apparatus is type-agnostic toward every supported type:
 - evaluating the entry against a concrete request is the runtime
   layer's responsibility ({{runtime-boundary}}), not the AS's.
 
+### Declared Transformation Capabilities {#transformation-capabilities}
+
 The subset rule is fully defined only for a type whose specification
 defines it. For every supported type, the AS declares three
 independent transformation capabilities; understanding one
@@ -1517,6 +1527,8 @@ three OPTIONAL boolean members, `narrowing`, `delegation`, and
 `projection`; an absent member leaves that capability undeclared by
 this carrier, falling through to the next carrier in the order
 above.
+
+### Policy-Language Types {#policy-language-types}
 
 Type-agnosticism lets policy-language profiles compose without this
 document defining them: for example, an entry carrying a Cedar policy
@@ -2316,6 +2328,8 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
+## Token Claims {#token-claims}
+
 {{RFC9068}} fixes the JWT's required claims (including `jti`), the `typ`
 header parameter value `at+jwt`, and resource server validation
 ({{Section 2.1 of RFC9068}}, {{Section 2.2 of RFC9068}},
@@ -2361,6 +2375,8 @@ tokens signed under it remain valid.
 
 Every emitted `authorization_details` entry is a subset of a Mission
 Authority Set entry ({{subset}}).
+
+## Audience and Token Response {#token-response}
 
 The AS audience-restricts the token per {{Section 2 of RFC8707}} and
 {{Section 3 of RFC9068}}; `aud` names resource server(s), APIs, or
@@ -2451,6 +2467,8 @@ intact:
 }
 ~~~
 
+## Refresh Tokens {#refresh-tokens}
+
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
 binding: on refresh, the AS authenticates the client and verifies
@@ -2463,6 +2481,8 @@ be sender-constrained or use refresh token rotation
 The AS can rotate either client type's refresh token; rotation
 detects replay of a consumed refresh token
 ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic binding.
+
+## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
 A derived token's authority comes from the Mission, not from a fresh
 authentication. Authentication claims (`acr`, `amr`, `auth_time`) on
@@ -2693,6 +2713,8 @@ An opaque Mission-bound token is enforced from its active
 introspection response or issuer-local resolution instead, under the
 same rules ({{introspected-consumption}}).
 
+## Enforcement Requirements {#rs-requirements}
+
 A resource server:
 
 1. MUST treat `authorization_details` as the authoritative expression
@@ -2740,6 +2762,8 @@ A resource server can also:
 - where the AS offers it, introspect the token ({{introspection}}) to
   observe Mission state per request.
 
+## Mission-Unaware Resource Servers {#rs-mission-unaware}
+
 A deployment MUST NOT route a delegated Mission-bound token to a
 Mission-unaware resource server, or to logging or audit
 infrastructure, that authorizes or logs the caller on `client_id`
@@ -2765,6 +2789,8 @@ Constrained authority that no safe projection carries is enforced
 only where a resource server, or a runtime layer, evaluates
 `authorization_details`.
 
+## Carried Authority {#rs-carried-authority}
+
 An entry whose type-defined enforcement a resource server cannot
 complete fails closed because a type-defined constraint narrows
 authority: treating an unenforceable key or member as absent, or
@@ -2783,6 +2809,8 @@ the token signature. Mission Approved-Set Verification
 ({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
 defines an independent check for a resource server that needs more
 than that assertion.
+
+## Denial Responses {#rs-denials}
 
 A resource server denial falls into one of four cases, each using the
 OAuth challenge for its own failure class ({{error-mapping}} gives
@@ -2845,6 +2873,8 @@ A value the client does not recognize is treated as
 attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment accepts learning the distinction
 ({{denial-disclosure}}).
+
+## Enforcement Responsibilities {#rs-responsibilities}
 
 Every bound this document defines is enforced by a party this document
 names. The following table summarizes which party enforces each bound a
@@ -3467,7 +3497,8 @@ Access Profile defines
 
 Because the policy lives in the entry, `authority_hash` commits it
 with the rest of the Authority Set, and it is carried with the entries
-wherever they go, including across a cross-domain projection
+wherever they go, including across a cross-domain projection where
+that profile's provenance rule keeps it
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
 **Delegation depth.** The delegation depth of a token is the number
@@ -3622,7 +3653,9 @@ collision-resistant names. A companion profile that registers a
 termination reason defines that reason's `termination` members
 ({{termination}}).
 
-This document defines the following members:
+The following subsections define the record's members.
+
+## Identity and Lifecycle Members {#record-identity-members}
 
 `id`:
 : REQUIRED. A string. The canonical Mission Identifier
@@ -3645,6 +3678,8 @@ This document defines the following members:
 : CONDITIONAL. An object, present exactly when `state` is
   `terminated`: the reason and instant the Mission terminated
   ({{termination}}).
+
+## Approved Content and Commitments {#record-content-members}
 
 `intent`:
 : REQUIRED. An object. The approved Mission Intent.
@@ -3711,6 +3746,8 @@ This document defines the following members:
   profile whose threat model requires that proof commits normalized
   provenance under its own anchor `typ` ({{integrity-anchors}},
   {{extensibility}}).
+
+## Principals and Approval Basis {#record-principal-members}
 
 `subject`:
 : REQUIRED. An object. The Subject, an object with `iss` and `sub`.
@@ -3844,6 +3881,8 @@ This document defines the following members:
 : REQUIRED. A string. The Agent (OAuth client) that submitted the
   Mission Intent.
 
+## Provenance and Expiry {#record-provenance-members}
+
 `policy_version`:
 : REQUIRED. A string. An opaque audit correlator naming the
   derivation policy version in effect at the approval event; the
@@ -3942,7 +3981,9 @@ that adjudicated the instance. A companion profile MUST NOT flatten a
 policy's or an Approval Governance Record's assertion set into a
 single principal member.
 
-**Activation policy commitment.** Where a standing-consent basis lets
+### Activation Policy Commitment {#activation-policy-commitment}
+
+Where a standing-consent basis lets
 a separate policy artifact adjudicate activation (a dispatch,
 drawdown, or child-creation policy, rather than the consented object
 itself), the object the accountable human consented to MUST carry
@@ -3964,7 +4005,9 @@ Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
 does not apply.
 
-**Standing-consent recency.** A deployment can declare a maximum
+### Standing-Consent Recency {#standing-consent-recency}
+
+A deployment can declare a maximum
 standing-consent age (a recency ceiling), overall or per
 consequence class. Where a declared ceiling applies, the activating
 issuer MUST refuse to activate an instance whose `approved_at` is
@@ -4550,6 +4593,8 @@ Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class.
 
+## Conformance Roles {#conformance-roles}
+
 An implementation conforms in one of three roles.
 
 A **Mission Issuer** (the authorization server) implements the core
@@ -4603,6 +4648,8 @@ A **Mission Client** implements the client surfaces:
   or the `mission` claim's `id` ({{mission-response-parameters}}),
   treating it as a reference, not a credential.
 
+## Optional Capabilities {#optional-capabilities}
+
 Beyond these mandatory roles, an implementation can additionally claim
 three OPTIONAL capabilities. Each is independent, and an implementation
 that supports none of them is still conformant:
@@ -4643,6 +4690,8 @@ defines an independent check, by a resource server or policy decision
 point, that a token's carried authority is a subset of the complete
 approved Authority Set; conformance to this document does not
 require it.
+
+## Claiming Conformance {#claiming-conformance}
 
 A conforming implementation names the optional capabilities it supports
 (for example, "Mission Issuer with Delegation and Cross-Domain"); each
@@ -6792,6 +6841,16 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1404): Mission Intent, Conformance, Standing-Consent
+  Bases, and Authorization Details Types have subsections at their
+  existing paragraph boundaries; Standing-Consent Bases' two run-in
+  labels become its subsection headings. No requirement changes.
+
+- Editorial (#1401): Mission Authority, Mission-Bound Access Tokens,
+  Resource Server Enforcement, and the Mission Record have
+  subsections at their existing paragraph boundaries; no text moves.
+  No requirement changes.
 
 - Editorial (#1382): the OAuth Binding Mapping Assessment's
   capability table is a capability list, one entry per capability,

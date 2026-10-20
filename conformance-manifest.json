@@ -19,8 +19,8 @@
     "content_sha256": "4e8cdec5ed8973cda6cc2b36a90b656d31c910750a3d0c71d06a0997bf19a163"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "4a173efb23bb2e1addb05132a71d26f2f8bccac5",
-    "content_sha256": "c68225ffa0b2b85b4a188d25ab3dd8a4a3ff2b67f6050b4e9827e59ea707d4b1"
+    "revision": "f69e5dc0d0047b55578dbc7ac3f9c2bc1b1935df",
+    "content_sha256": "ac8bdce5360f73f3671d169a8b6fa7d7ac088b5c7c67cafb39a96570e5d0611d"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -35,12 +35,12 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "def0268ec2c640bbf5e46f8bb00641bdd8a674f1",
-    "content_sha256": "8fd4b47be29ba74dee859a0b2d1f523c80c7527c76f10d250b82b422379b592d"
+    "revision": "4d03d85b5c1b141d8a0e03750bdd4d3184ca90ad",
+    "content_sha256": "82d43de93491611cc5743a5ff9b17404486f33820f95509eea33c27126ebf729"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
-    "revision": "5a1e06044ef2d0ab5e1e29cdb4ec7efeff29e920",
-    "content_sha256": "545f44f278aeeb2531dff1abef79ce1d11a1822701c3f3f5e77a968b3e974306"
+    "revision": "b447449fc2c0ffaf525b10a8df1a79f113ad538a",
+    "content_sha256": "400730f815ea0afc7516cd0d0f8eca5ca03d30b8c527549e897169c6293f024e"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
     "revision": "213893760b7c447ff475d568bc8a54be8a85176b",
@@ -59,20 +59,20 @@
     "content_sha256": "9b98e096bbc02a37d0649ca04015bd4dec4db762c0f4f5b6b01cb16e317edeb4"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "8965a2cf509a35a8e1a834d1d9ef5804ec6f62c7",
-    "content_sha256": "bca84c61fe28b3a2fd5632b92acb80a24bf646961a896adb42ff9198574cb8b4"
+    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
+    "content_sha256": "944c69c3032fb77891a69e6dc1b92aaa59dbc3f40cf738bbd5ec48165ded7c65"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
-    "revision": "90d19adcb8d18aa70fa7a9d9d3a58413072fcc9f",
-    "content_sha256": "d4c2ca14ef781ef52b212b624cd34bf2e8d572d4a54913494a590bddc4ced5ab"
+    "revision": "7687968173b35c13756a3aa2ec3741380803f387",
+    "content_sha256": "748baa5b01e2e8052eba9d7ba14358140eb6790f2f78990a4b466fcd75d8f5f9"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "8dc118e210f096f491beea7e5899685493b065cb",
-    "content_sha256": "84737e41c516c5108df8339c22f3b601922c5411c05af8f7a4f63b0b488b2adf"
+    "revision": "bae24b0159dc48cacc2152354c2ccc5891f2faa3",
+    "content_sha256": "c763457d16b7d0e56d03e8a0384a980c4185e0124a9f1c1ec7bf5b097283f282"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "5683745b7c29b9b9796221b0bea112d0fbd85cfc",
-    "content_sha256": "6dcba6175293353e6c333e0da785b225a2282f427c56dda84dcba01d1a5c3b13"
+    "revision": "b94e99c7bab38d29753afd5e6ef372ac687dd87a",
+    "content_sha256": "27edd07822a1d48d0d33f71a8708fc36836218a466d924f07d04eefdb85dcc1c"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
@@ -99,12 +99,12 @@
     "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
-    "revision": "3dd273e94ad71c79e8467ff5938a31f8d3a921f1",
-    "content_sha256": "80033cd3624e52c1839820aa62376e61901c1ee961ef9f6e4de41d4d0171e021"
+    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
+    "content_sha256": "720fe3d7033e467c0b7d23fcbcce86247662d3ced385b023b7cd1ead4b4cfac4"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "b6ce6fd224a3a0023bc087c7f9c1452d05b7a277",
-    "content_sha256": "384a802e326a4956c252b7dd4348873d0c5c9e2310b752cdbc4dcf1cd03f6e75"
+    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
+    "content_sha256": "d3b998ee50ff458b459b91a8eded3595cb20733d13db19803bf658b92b1f4dee"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -6515,7 +6515,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
-    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context (on the as-native target, the acr and auth_time of the ID Token the approval surface's upstream OpenID Connect login validated, #1320) or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded). The published floor (config/approval-floor.json, evaluateApprovalFloor) is evaluated after derivation over the complete derived Authority Set and before any Mission, Grant or code: every action is classified through the AS-owned classification (an unclassified one refuses), and payment execution and remittance invoke the high-risk-authority floor, satisfied only by a browser Approver with achieved acr mfa authenticated at most 300 seconds earlier; a headless service registration never satisfies it. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age."
+    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context (on the as-native target, the acr and auth_time of the ID Token the approval surface's upstream OpenID Connect login validated, #1320) or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded). The published floor (config/approval-floor.json, evaluateApprovalFloor) is evaluated after derivation over the complete derived Authority Set and before any Mission, Grant or code: every action is classified through the AS-owned classification (an unclassified one refuses), and payment execution and remittance invoke the high-risk-authority floor, satisfied only by a browser Approver with achieved acr mfa authenticated at most 300 seconds earlier; a headless service registration never satisfies it. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age. Where the deployment selects Progressive authorization, the authority ceiling the approval decision consents is validated and classified with the derived set before any write (#1255): a later drawdown grants the ceiling's authority under this consent's consent_principal and approved_at with no Approver authenticating, so a ceiling that admits high-risk authority needs the same floor-meeting Approver, and a refusal leaves no Mission, Grant or code."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -6669,9 +6669,21 @@
      "name": "the as-native target over HTTP MCP with DPoP against a live OpenFGA (D315) > refuses a high-risk approval when the upstream login is older than the floor's 300 seconds at the decision: access_denied, with no Mission and no code (#1320)",
      "level": "cross-component",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.gerber-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -8063,9 +8075,46 @@
     "normative": "an applicable entry the resource server cannot fully enforce contributes no authority"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry whose type it does not implement, though its resource and actions cover the request",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses a journal write whose only entry carries a member it does not recognize, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying the RFC 9396 locations field, whatever its value",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying capability_sources, an extension member this resource does not implement",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "the SaaS resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses a journal write whose only covering entry carries a time_window, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource for each case the rule names: an entry of a type SaaS does not implement (another type, or none), an unrecognized member, `locations`, an extension member SaaS does not implement (`capability_sources`), a `constraints` key it does not enforce (#1298) and an unrecognized `resource_match` (#1276) each provide no authority. Proved by mutation: dropping the type check, accepting a missing type, dropping the member-role check, ignoring `constraints`, and ignoring `resource_match` each fail the matching test. The reference credential bound refuses the whole token for an unknown member or constraint, which is stricter than this per-entry rule."
   },
   {
    "id": "core.rs-enforcement.whole-request-single-entry",
@@ -8087,9 +8136,28 @@
     "normative": "a request is authorized only by one fully enforceable entry covering all of it; parts of entries never combine"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 2. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > authorizes a journal write through a clean covering entry listed after one carrying a member it does not recognize",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > refuses a request that only the entry carrying a member it does not recognize covers, while a clean entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/constraints-enforcement.test.ts",
+     "name": "applicable SaaS entries are alternatives, never combined (@spec resource-access#rs-enforcement) > refuses a request that only parts of two enforceable entries together cover",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 2. #1362: witnessed at the SaaS resource: a clean entry that covers the whole request authorizes beside one carrying an unrecognized member, an entry SaaS cannot enforce lends its action to no clean entry, and a write whose action is in one entry and whose vendor is in another is refused (#1298). Proved by mutation: refusing the whole token for one unenforceable entry, and pooling actions across entries, each fail these tests. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; that refuses more often but never combines entries, and is recorded under resource-access.rs-enforcement.type-scoped-matching."
   },
   {
    "id": "core.introspection.composite-active",
@@ -8656,6 +8724,41 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: recording a designation one level deeper fails the depth-2 witness."
+  },
+  {
+   "id": "core.delegation-constraints.cross-domain-carriage",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "it is carried with the entries wherever they go, including across a cross-domain projection where that profile's provenance rule keeps it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a list-origin entry's delegation policy crosses a cross-domain projection equal to the approved entry's, and a policy-origin entry crosses without it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > list origin: the conveyed copy keeps `delegation`, equal to the approved entry's and so no wider than its list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with a list the proposal added: the conveyed copy omits `delegation`, while the approved entry keeps its list",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped fails the policy-origin witness."
   },
   {
    "id": "core.designation.holder-proves-possession",
@@ -15219,9 +15322,21 @@
      "name": "MAS pilot Resource policy: estate entitlements, administered and revoked (#818 slice 2) > evaluates the estate subject, not the Mission-side identity it maps to: with alice and ap-agent fully entitled, the revoked estate account is still denied",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-introspection.test.ts",
+     "name": "MAS pilot introspection: opaque estate tokens at the gateway (#818 slice 3) > bounds the opaque token by its introspected scope: an action that scope does not carry is refused out_of_authority, and a scope that carries it permits",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/mas-pilot-introspection.test.ts",
+     "name": "MAS pilot introspection: opaque estate tokens at the gateway (#818 slice 3) > applies the same Resource policy to the introspected client: revoking its authorized_client denies resource_policy",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead. #828: bound 3 is now an independently administered policy bound to the decision point, with its own resource_policy denial; the refusing-Fga-stub case is retitled as bound 2's contextual check, which is what it exercises. #818 slice 2: two [FGA] pilot citations (src/demo/test/mas-pilot-resource-policy.test.ts), skipped without a live OpenFGA; each proved by a defect that makes its assertion fail (the subject check skipped; the policy evaluated on the mapped Mission-side identity)."
+   "notes": "#557. Moved partial -> tested by #557 stage C2, which SUPERSEDES this row's earlier recorded ruling (\"Kept partial per review ... This row stays partial until a genuinely independent resource-policy arm exists; the existing FGA call is not relabeled as satisfying it\"). That ruling is overridden deliberately, not resolved: no Mission-agnostic resource-policy source exists in this deployment yet, and observation.local records that it does not. What changed is the other half. A deployment-side bound-1 evaluator now exists (the demo's scope-to-authority map over config/mas-join.json, with a shipped-config test that the map covers a derived Authority Set entry, so a configuration that could never permit its own demo fails CI), and each bound now has its own denial with the other two satisfied plus an all-three-satisfied permit, so no denial is attributable to the wrong bound. Bound 3's denial is driven by a refusing Fga stub: it proves the call site is reached and its result honored, not that the policy behind it is authored independently of the Mission. #557 step 14 rules that per-bound denials plus a configured evaluator satisfy the quoted clause's \"independently evaluated\" claim, which is about evaluation order, not about where a deployment sources its resource policy. D340: the PEP no longer filters the joined view by the credential (a filter dropped a Mission entry broader than the credential, refusing an action it covers, and broke D335's full-set proof); bound 1 refuses on its own facts instead. #828: bound 3 is now an independently administered policy bound to the decision point, with its own resource_policy denial; the refusing-Fga-stub case is retitled as bound 2's contextual check, which is what it exercises. #818 slice 2: two [FGA] pilot citations (src/demo/test/mas-pilot-resource-policy.test.ts), skipped without a live OpenFGA; each proved by a defect that makes its assertion fail (the subject check skipped; the policy evaluated on the mapped Mission-side identity). #818 slice 3: two [FGA] pilot citations on the opaque-token path (src/demo/test/mas-pilot-introspection.test.ts): bound 1 is the scope the gateway read from the estate's RFC 7662 introspection response, and bound 3 denies resource_policy for the introspected client; each proved by a defect that makes its assertion fail (a fixed broad scope in place of the introspected one; the client check skipped)."
   },
   {
    "id": "mas.baseline-join.join-view-commitment",
@@ -20181,7 +20296,7 @@
    "id": "runtime.parameter-binding.constraint-input-binding",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "parameter-binding",
-   "text": "for each Common Constraint or other registered constraint the operation's authority entries can carry ({{I-D.draft-mcguinness-oauth-mission}}): the authoritative operation input or derived attribute that satisfies it, and the extraction and normalization rule mapping that input into the constraint's own value domain",
+   "text": "for each Common Constraint or other registered constraint the operation's authority entries can carry ({{I-D.draft-mcguinness-oauth-mission-resource-access}}): the authoritative operation input or derived attribute that satisfies it, and the extraction and normalization rule mapping that input into the constraint's own value domain",
    "role": "RS",
    "strength": "MUST",
    "applicability": {
@@ -35331,7 +35446,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a drawdown that grants authority in the irreversible, external-commitment, or privileged-administration class, satisfies the external-communication predicate, or grants cross-domain authority is not adjudicated by policy and falls back to a fresh human approval",
-    "local": "Classes come from the deployment's actionClasses mapping (runtime action classes) and externalCommunicationActions; an unclassified widened action also falls back. The cross-domain arm (a widened resource whose authoritative AS, through resourceToAs, is not this issuer) is implemented but not witnessed."
+    "local": "Classes come from the deployment's actionClasses mapping (runtime action classes) and externalCommunicationActions; an unclassified widened action also falls back. The cross-domain arm (a widened resource whose authoritative AS, through resourceToAs, is not this issuer) is implemented but not witnessed. The mapping cannot contradict the approval-authentication floor (#1255): the AS does not start when actionClasses maps an action the floor's classification (config/approval-floor.json) places, at any resource, in a class some floor applies to, to a class outside the fresh-approval set; an action the mapping leaves out falls back as unclassified. So no drawdown grants by policy alone an action the floor classifies high-risk."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -35341,9 +35456,33 @@
      "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown granting a high-consequence, unclassified, or external-communication action falls back",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "a drawdown of floor-class authority (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255) > a drawdown of each action the approval floor classifies high-risk falls back to a fresh approval, never to policy",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-floor-agreement.test.ts",
+     "name": "the drawdown classification agrees with the approval-authentication floor (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255) > refuses to start when actionClasses maps an action the floor classifies high-risk to a class a drawdown grants by policy",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-floor-agreement.test.ts",
+     "name": "the drawdown classification agrees with the approval-authentication floor (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255) > starts with an agreeing mapping: every action the floor classifies high-risk maps into the fresh-approval classes",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-floor-agreement.test.ts",
+     "name": "the drawdown classification agrees with the approval-authentication floor (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255) > follows what the floor invokes, not the class name: under a floor that also applies to consequential_write, a write mapped to consequential_write refuses",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1255: proved by disabling the startup check (the divergent mapping started), by refusing every mapped floor-class action (the agreeing mapping did not start), by testing the floor's class against the fresh-approval set instead of what the floor invokes (the consequential_write floor passed), and by removing the fresh_approval_class and unclassified_action fallbacks in turn (payment execution, then remittance, completed by policy). The row stays partial for its cross-domain arm."
   },
   {
    "id": "progressive.in-ceiling.live-children-fall-back",
@@ -35592,7 +35731,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference takes the mapping from its typed progressive option (actionClasses); no Mission Deployment Profile publishes it yet (#1017)."
+   "notes": "The reference takes the mapping from its typed progressive option (actionClasses); no Mission Deployment Profile publishes it yet (#1017). #1255: the AS refuses to start when that mapping maps an action the published approval-authentication floor's classification places under a floor to a class a drawdown grants by policy; that check witnesses the mapping's agreement with the floor, not its publication, so it is cited on progressive.in-ceiling.fresh-approval-classes and this row stays todo."
   },
   {
    "id": "progressive.ceiling-review.no-adjudication-past-cadence",
@@ -36211,6 +36350,287 @@
    "notes": "#1180, D378. The delayed-redemption witness redeems five seconds before the grant's exp, where the RAS's 120 s local lifetime would outlive the grant, and fails when the grant bound is dropped from the RAS expiry clamp. The older \"M9 scenario 12 > the local token dies with its lease (exp never exceeds the grant)\" test redeems immediately, inside the 300 s grant, and passes with that bound removed, so it is not cited."
   },
   {
+   "id": "cross-domain.conveyed-delegation.provenance-rule",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "the Mission Issuer MUST omit the `delegation` member from a conveyed entry unless the retained provenance of every approved entry it derives from resolves to a committed `allowed_delegates` list",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a cross-domain grant conveys an entry's delegation member only when every approved entry the entry resolves to has a retained list origin, the conveyed member commits allowed_delegates, and it is no broader than each approved entry's; a policy origin, alone or combined with a list, an unresolved or ambiguous origin, or an entry that resolves to no approved entry is conveyed without delegation, in the depth-0 projection and in the depth > 0 continuation alike",
+    "local": "each carried entry resolves by identity to the audience-scoped candidate it was taken from (kernel/cross-domain.ts conveyedCopy, conveysDelegation); the no-broader test is the whole-entry subset rule against each approved entry"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with a list the proposal added: the conveyed copy omits `delegation`, while the approved entry keeps its list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with no list: the conveyed copy omits `delegation`, and with it the nested `children` grant",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > missing or unreadable provenance: the conveyed copy of a list-origin entry omits `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > list origin: the conveyed copy keeps `delegation`, equal to the approved entry's and so no wider than its list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > overlapping approved entries keep their own origins: the policy-origin entry is conveyed without `delegation`, the list-origin entry with it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > an entry the authority filter rebuilt resolves to no approved entry: its conveyed copy omits `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > a Child Mission entry within a policy-origin and a list-origin parent entry combines to policy: omitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > a Child Mission entry within two list-origin parent entries combines to list: kept, no wider than the child's approved list",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a list-origin entry the list admits at depth 1 keeps `delegation` on the conveyed copy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > several list origins: kept when the conveyed member is no wider than every approved entry, omitted when wider than any one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > a list and policy combination never selects the more permissive origin: omitted",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > an unresolved or ambiguous resolution is omitted: no approved entry, or any origin unresolved",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the keep test over a conveyed entry's resolved approved entries (@spec cross-domain#conveyed-delegation) > a list origin whose conveyed member commits no list is omitted: absence would defer to the receiving AS's policy",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy and list both permit: the delegate is issued the entry, its approved list intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Witnessed at both mint branches (kernel) and at the ICA continuation exchange. Proven by disabling the code it covers: conveying the filtered entries unstripped fails every omission witness, kernel and endpoint; keeping on any list origin fails the combination and unresolved witnesses; keeping an entry that resolves to no candidate fails the rebuilt-entry witness; dropping the no-broader check or the list-presence check fails its own witness. A conveyed entry resolving to several approved entries is reached only through the exported keep test: effectiveDelegationCandidates gives each audience-scoped entry one origin, and Child Missions witness combined origins end to end."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.current-hop-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "The omission never admits an entry that decision excludes and never makes a non-delegable entry delegable.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at delegation depth above 0 a candidate the delegation gate excludes (policy-denied, or unresolved provenance under a permitting policy) is refused before anything is signed, and an approved entry without delegation is never carried whatever the policy; a policy-origin entry the gate admits is carried, its conveyed copy without delegation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > the omission never admits what the gate excluded: a policy-denied candidate, and an unresolved one under a permitting policy, are refused before export",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the exclusion and non-delegable witnesses; applying the omission before the gate fails the admitted witnesses (the gate then sees no delegation and narrows the entry out)."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.record-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "The Mission Record, its Authority Set, and `authority_hash` are unchanged.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after a projection that omits delegation, the Mission Record's Authority Set, retained provenance and authority_hash read back unchanged, the grant's mission.authority_hash equals the record's, and the approved entries the projection read keep their delegation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > the approved record, its `authority_hash` and the projection's audience-scoped set are unchanged",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: deleting the member from the entry in place, instead of conveying a copy, fails the witness on the approved entries the projection read. The store read-backs would detect any write of the record; the mint performs none."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.nested-members-omitted",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "Omitting `delegation` also omits every member nested in it, including a `children` grant",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry conveyed without delegation carries no children grant, although the approved entry it derives from keeps one"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the conveyed copy keeps `delegation` only where every retained origin is a committed list (@spec cross-domain#conveyed-delegation) > policy origin with no list: the conveyed copy omits `delegation`, and with it the nested `children` grant",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entry unstripped carries the children grant and fails the witness."
+  },
+  {
+   "id": "cross-domain.conveyed-delegation.resource-as-non-delegable",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "conveyed-delegation",
+   "text": "An entry conveyed without `delegation` is non-delegable at the Resource AS",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "cross-domain.projection",
+     "core.delegation"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS issuing delegated tokens of its own never carries an entry the cross-domain grant conveyed without delegation into a delegated token"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1374. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens; redeem() mints one local token per grant and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own (core.delegation in the partner domain); hence the all_of gate."
+  },
+  {
+   "id": "cross-domain.resource-as.sub-profile-local-classification",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "A Resource AS evaluates a conveyed `sub_profile` matcher against the classification it asserts for its own delegates.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "cross-domain.projection",
+     "core.delegation"
+    ]
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS issuing delegated tokens of its own admits a delegate under a conveyed sub_profile matcher only by the classification it asserts for that delegate, never by the originating domain's or the delegate's own, and treats the value as naming no equivalent class unless pre-established trust fixes a shared vocabulary"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1374. No witness: the reference Resource AS (src/services/ras) issues no delegated tokens; redeem() mints one local token per grant and the RAS has no token exchange or other delegation path. The clause binds only a Resource AS that issues delegated tokens of its own (core.delegation in the partner domain); hence the all_of gate."
+  },
+  {
    "id": "cross-domain.revocation.late-redemption-bounded-by-grant",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "cross-domain-revocation",
@@ -36479,6 +36899,112 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "continuation.ica-transport.conveyed-delegation",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "The onward ID-JAG conveys each entry's `delegation` member under the cross-domain projection rule",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at the ICA continuation exchange a policy-origin entry the delegation gate admits is issued without delegation, and a list-origin entry keeps its delegation policy"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an approved entry whose ceiling entry defers to policy, with a list the proposal added > policy and list both permit: the delegate is issued the entry, its approved list intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: conveying the entries unstripped fails the policy-origin witnesses."
+  },
+  {
+   "id": "continuation.ica-transport.kept-delegation-request-refused",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "a requested authorization detail that keeps an omitted `delegation` exceeds the grant's authority and is refused",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose authorization_details keeps delegation on an entry the onward ID-JAG conveys without it is refused, issues no grant, records no hop, counts no derivation and leaves the assertion unconsumed; the same assertion presented under a conforming request is issued",
+    "local": "invalid_authorization_details (ICA -02 Section 5.5.6), raised at the rule-7 pre-check, which compares the request with the copy the grant would convey through the same conveyedCopy rule the mint applies after the gate, so the refusal precedes any derivation reservation, like every other requested-authority refusal at this exchange"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a request that keeps the omitted `delegation` is refused invalid_authorization_details before any derivation is reserved: no hop, no derivation, no reservation, the assertion unconsumed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a requested `authorization_details` that keeps an omitted `delegation` exceeds the conveyed copy: refused before beforeSign; a request without it is issued",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: comparing the pre-check with the unstripped grant authority (the mint's order) lets the request reach the gate, which counts one derivation (\"expected { hops: 1, derivations: 1 } to deeply equal { hops: 1, derivations: +0 }\"), and with that assertion removed the reservation witness fails alone (\"expected 1 to be +0\"). The mint applies the same rule after the gate, so a state change between the two cannot widen the grant; the kernel witness refuses such a request before beforeSign, and conveying unstripped there issues it."
+  },
+  {
+   "id": "continuation.ica-transport.conveyed-copy-only",
+   "spec": "draft-mcguinness-oauth-mission-continuation.md",
+   "anchor": "transport-ica",
+   "text": "the delegation constraints at this exchange apply at the depth counted above, `act` attributes the same actors, and that profile's depth reset does not apply",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "continuation.ica-transport"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a continuation grant that conveys no delegation, the next actor is still counted from the approved agent (a second delegate atop the first is depth 2 and refused above max_depth 1; the first delegate atop itself stays at depth 1), and act names the delegate over the approved agent"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: capping the Mission delegation depth at 1 fails the depth-2 witness; replacing the onward act with the current actor alone fails the attribution witness."
   },
   {
    "id": "continuation.async-transport.handle-audience",
@@ -37008,6 +37534,171 @@
    "notes": "#1266. Each of the seven Common Constraints #1266 implements has an endpoint intersection witness (the per-key intersection rows); max_amount and requires_action_approval are witnessed at helper level only (cases der-02, der-08), so the row stays partial."
   },
   {
+   "id": "resource-access.common-constraints.missing-fact-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "common-constraints",
+   "text": "Any fact a predicate needs that is missing or malformed makes the entry provide no authority.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose Common Constraint predicate lacks a needed fact, or receives a malformed one, authorizes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses an invoice whose record carries no issuance instant (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > refuses an operation that addresses no recipient under a recipient bound",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses an invoice labeled outside the bound, one with no label, and targets with no single label",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent amount: an entry bounded by max_amount covers nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent tenant: an entry bounded by tenant covers nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent issuance instant: an entry bounded by resource_issued_after covers nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. The payments resource refuses a lone entry whose fact is missing. That such an entry leaves another applicable entry free to authorize is witnessed at the helper the payments PEP calls (coveringCredentialEntries) and, as a PDP witness, at the PDP credential bound (evaluate-constraint-satisfaction.test.ts). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). The row stays partial."
+  },
+  {
+   "id": "resource-access.common-constraints.unsatisfiable-entry-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "common-constraints",
+   "text": "The resource server MUST treat an applicable entry whose constraint it cannot evaluate or satisfy as providing no authority.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an applicable entry carrying a constraint the resource server cannot evaluate, or whose predicate is not satisfied for the request, contributes no authority to it"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent amount: an entry bounded by max_amount covers nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent tenant: an entry bounded by tenant covers nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "an entry whose constraint cannot be satisfied provides no authority (@spec resource-access#common-constraints) > an absent issuance instant: an entry bounded by resource_issued_after covers nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "another applicable entry authorizes only on its own (@spec resource-access#common-constraints, resource-access#rs-enforcement) > an independently sufficient alternative entry authorizes the request beside one whose fact is absent",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource fails closed on a constraint it does not enforce (@spec resource-access#rs-enforcement) > refuses an operation whose matched Mission entry carries a constraints key the resource does not understand",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. Witnessed at the helper the payments PEP calls (coveringCredentialEntries, credentialAuthorityPermits) and at the payments resource for a key it cannot evaluate; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). The row stays partial."
+  },
+  {
+   "id": "resource-access.common-constraints.refuse-unless-independent-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "common-constraints",
+   "text": "It MUST refuse the request unless another applicable entry independently authorizes the whole request with every constraint satisfied",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request is authorized only through one applicable entry that covers it whole with every constraint satisfied; an independently sufficient alternative entry authorizes, none refuses, and parts of entries never combine"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "another applicable entry authorizes only on its own (@spec resource-access#common-constraints, resource-access#rs-enforcement) > an independently sufficient alternative entry authorizes the request beside one whose fact is absent",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "another applicable entry authorizes only on its own (@spec resource-access#common-constraints, resource-access#rs-enforcement) > without such an alternative the request is refused: two entries each missing a fact authorize nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/constraint-satisfaction.test.ts",
+     "name": "another applicable entry authorizes only on its own (@spec resource-access#common-constraints, resource-access#rs-enforcement) > never combines fragments of entries: an action from one entry and another entry's satisfied constraints authorize nothing",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). The PDP Mission bound relies on the first Authority Set entry that names the target and action and evaluates it whole, so it never looks past that entry to an alternative (#1375 Outstanding). Vector cases cc-satisfaction-* skip: the case reader has no rs-authorize executor. The row stays partial."
+  },
+  {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -37038,6 +37729,93 @@
     }
    ],
    "notes": "#1263 (D446). Proved by restoring the former 'ceiling wins' return in minAmount: the test fails. The projection path (intersectForProjection) drops the fragment instead, since no submitted proposal exists there to refuse."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: the action's amount and its currency, as the operation contract identifies them.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "max_amount is evaluated against the amount and currency the operation contract identifies for the action; a caller-supplied amount or currency does not establish them",
+    "local": "the payments contract identifies the invoice record's amount and currency"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-intake.test.ts",
+     "name": "intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the credential authority bounds the action the PEP resolved (@spec runtime#input-authority, #825) > narrows by amount as an exact decimal, and a cap in another currency is not comparable",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. The payments resource reads the invoice's amount and currency from its store, refuses either one named in the arguments, and bounds the action by the stored amount."
+  },
+  {
+   "id": "resource-access.common-constraints.max-amount-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the input currency equals `currency`, and the input amount is less than or equal to `amount` in decimal value space.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an amount at or below the cap in the cap's currency satisfies max_amount; a larger amount or another currency does not, compared as exact decimals"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > an amount exactly at the cap permits (the comparison is <=, not <)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > permits an amount within the cap and denies one over it (regression: unchanged behavior)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a cap denominated in a different currency than the request refuses as incomparable, never converted",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a value that float-compares wrong compares correctly under exact decimal comparison",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375. The predicate is applied by the PDP on the Mission bound; the payments resource's endpoint witness is resource-access.common-constraints.max-amount-input."
   },
   {
    "id": "resource-access.common-constraints.issued-after-enforced",
@@ -37258,6 +38036,123 @@
    "notes": "#1266 slice 1. Proved by mutation: dropping the derived keys, not refusing an empty intersection, and accepting an empty window each fail these tests."
   },
   {
+   "id": "resource-access.common-constraints.issuance-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: the recorded issuance instant of the resource the operation acts on.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "resource_issued_after and resource_issued_before are evaluated against the issuance instant the resource's own record holds; an argument naming an instant does not establish it, and a record with none satisfies neither"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > never reads the fact from tool arguments: an argument naming an in-window instant is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses an invoice whose record carries no issuance instant (missing fact)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses a write whose invoice's issuance fact changed between decision and execution",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. One row for both issuance bounds, which read the same input."
+  },
+  {
+   "id": "resource-access.common-constraints.issued-after-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the input is at or after the value.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an issuance instant at or after resource_issued_after satisfies it, compared as UTC instants; an earlier one does not"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > treats both bounds as inclusive and compares in value space, across offsets",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses a resource issued before the after-bound or after the before-bound",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.issued-before-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the input is at or before the value.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an issuance instant at or before resource_issued_before satisfies it, compared as UTC instants; a later one does not"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > treats both bounds as inclusive and compares in value space, across offsets",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > refuses a resource issued before the after-bound or after the before-bound",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
    "id": "resource-access.common-constraints.tenant-enforced",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -37389,6 +38284,80 @@
    "notes": "#1266 slice 2. The omission test's ceiling carries the tenant too, so it witnesses inheritance. Proved by mutation: an intersection that keeps one operand fails the refusal test, and derivation dropping the intersected keys fails the omission test."
   },
   {
+   "id": "resource-access.common-constraints.tenant-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: the authoritative tenant of the resource the operation acts on.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "tenant is evaluated against the tenant the resource's own records name; a client-supplied tenant does not establish it, and a record naming none satisfies no bound"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > a client-supplied tenant cannot establish the fact: the argument is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a resource whose record names no tenant (missing fact), and a collection read",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > refuses a write whose vendor's tenant changed between decision and execution",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.tenant-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the input equals the value.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a tenant equal to the bound as an exact string satisfies it; any other spelling does not"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces tenant on the Mission and credential bounds (@spec resource-access#rs-enforcement) > permits the bound's tenant and refuses another, compared as exact strings",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
    "id": "resource-access.common-constraints.time-window-enforced",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -37512,6 +38481,290 @@
     }
    ],
    "notes": "#1266 slice 3. Case der-10 (the supported counterpart of der-06) runs through the reader. Proved by mutation: keeping an empty overlap fails the refusal test."
+  },
+  {
+   "id": "resource-access.common-constraints.time-window-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: the enforcement point's own clock at the time of use.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "time_window is evaluated against the enforcement point's clock when the action is used, so a permit relied on after the window closes, or a commit after it closes, is refused"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > refuses at use a permit relied on after the window closed, though the permit's own lifetime had not ended",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces time_window at the point of use (@spec resource-access#initial-common-constraints) > refuses a long-running commit whose window closed before the commit, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. Evaluation at the time of use is witnessed; no test offers a request-stated time to show the enforcement point's own clock prevails, so the row stays partial."
+  },
+  {
+   "id": "resource-access.common-constraints.time-window-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the input is at or after `not_before` and at or before `not_after`, for each member present.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the clock satisfies time_window at or after not_before and at or before not_after, each bound inclusive and an absent member unbounded"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces time_window at the decision and bounds the permit by it (@spec resource-access#initial-common-constraints) > permits within the window, both bounds inclusive, and refuses before it opens or after it closes",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.approval-false-no-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: none when the value is `false`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry carrying requires_action_approval false needs no approval and permits as one omitting the member does; true with no approval refuses"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-constraint-satisfaction.test.ts",
+     "name": "PDP: requires_action_approval's input and predicate (@spec resource-access#initial-common-constraints) > false needs no approval input: an entry carrying false permits with no approval, as one omitting the member does",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375. Witnessed at the Mission and credential bounds."
+  },
+  {
+   "id": "resource-access.common-constraints.approval-verified",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "verified by a trusted enforcement point",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the deciding component itself checks an approval before relying on it; an action whose entry requires one is refused until a checked approval is present"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-constraint-satisfaction.test.ts",
+     "name": "PDP: requires_action_approval's input and predicate (@spec resource-access#initial-common-constraints) > true is satisfied only by an approval fresh within the maximum age and bound to the request's parameter digest",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "entry-driven action approval (@spec txn-authorization#applicability) > denies an action the matched entry gates even when deployment policy does not",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "entry-driven action approval (@spec txn-authorization#applicability) > permits the same action once an approval bound to the parameters is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375. The PDP checks the approval's digest binding, age and approved_until itself; it accepts the approval object over the authenticated PEP channel and does not verify an approval signature, so the row stays partial."
+  },
+  {
+   "id": "resource-access.common-constraints.approval-fresh",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "fresh within a maximum age the deployment states",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval older than the deployment's maximum age, or past its approved_until, does not satisfy requires_action_approval"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-constraint-satisfaction.test.ts",
+     "name": "PDP: requires_action_approval's input and predicate (@spec resource-access#initial-common-constraints) > true is satisfied only by an approval fresh within the maximum age and bound to the request's parameter digest",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate.test.ts",
+     "name": "PDP decisions against OpenFGA (@spec authzen) > an approval past approved_until -> deny action_approval_required (ARAP)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.approval-bound",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "bound to the action, the resource, and the action's parameters",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approval bound to other parameters than the request's does not satisfy requires_action_approval"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-constraint-satisfaction.test.ts",
+     "name": "PDP: requires_action_approval's input and predicate (@spec resource-access#initial-common-constraints) > true is satisfied only by an approval fresh within the maximum age and bound to the request's parameter digest",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375. The PDP compares the approval's parameter_digest with the request's. The action and the resource are bound only as far as the PEP's digest covers them (the payments digest binds the operation target); no test presents an approval for another action or resource with an equal digest, so the row stays partial. The payments resource's reverification is witnessed under runtime.action-approval.reparameterization-invalidates."
+  },
+  {
+   "id": "resource-access.common-constraints.approval-not-agent-resolvable",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "never resolvable through approval authority the agent supplies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the agent's tool plane and the channels it drives cannot resolve an action-bound approval, and the resolving principal is established by the resolution surface, never by the caller"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > refuses every identity-bearing body member loudly, even with a valid approver credential",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/demo/test/approval-resolution-identity.test.ts",
+     "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1375. The reference's approval resolution surface refuses agent channels and caller-named identities (runtime.action-approval.resolution-not-agent-invocable and resolver-principal-not-caller-supplied hold the full witness set). Reachability from every deployment route is not proved, so the row stays partial."
+  },
+  {
+   "id": "resource-access.common-constraints.approval-decision-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "consumed as a decision input, not as a bearer grant",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a valid approval never expands authority and permits one decision only; the identical action decided fresh without it refuses again"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > an action outside the entry's approved actions is denied out_of_authority identically, whether or not a valid fresh approval is presented",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-decision.test.ts",
+     "name": "a valid action-bound approval does not expand authority (@spec runtime#action-approval, runtime#decision) > a valid approval permits once but is not a standing grant: the identical action, decided fresh without it, denies action_approval_required again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
   },
   {
    "id": "resource-access.common-constraints.data-classification-enforced",
@@ -37639,6 +38892,86 @@
    "notes": "#1266 slice 5. The quoted clause is shared with allowed_tools; this row is witnessed for data_classification. Proved by mutation: an intersection that keeps one side fails these tests."
   },
   {
+   "id": "resource-access.common-constraints.data-classification-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: the authoritative classification labels of all data the operation reads or writes.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "data_classification is evaluated against the labels the resource's own records hold for the data the operation touches; a label named in the arguments does not establish it, and data with no label satisfies no bound"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > a label named in the arguments cannot establish the fact: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses an invoice labeled outside the bound, one with no label, and targets with no single label",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > refuses a write whose invoice was relabeled between decision and execution",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.data-classification-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: every input label is among the values, compared as exact strings.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a label among the bound's values, compared as exact strings, satisfies data_classification; another label, or an empty bound, does not"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces data_classification against the resource's label (@spec resource-access#initial-common-constraints) > permits a label among the bound's and refuses another, compared as exact strings",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces data_classification against the resource's label (@spec resource-access#initial-common-constraints) > refuses when the PEP established no label, and under an empty bound",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375. The PDP receives one label per decision, so the every-label clause is witnessed at the shared gate only (mission-core common-constraints.test.ts, data_classification enforcement); the row stays partial."
+  },
+  {
    "id": "resource-access.common-constraints.allowed-tools-enforced",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -37718,6 +39051,80 @@
     }
    ],
    "notes": "#1266 slice 6. The quoted clause is shared with data_classification; this row is witnessed for allowed_tools. Cases cc-allowed_tools-* run through the reader. Proved by mutation: a subset rule admitting any tools fails the test."
+  },
+  {
+   "id": "resource-access.common-constraints.allowed-tools-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: the identity of the capability the enforcement point dispatches or verifies for the action.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "allowed_tools is evaluated against the tool the enforcement point dispatches; a tool named in the arguments does not establish it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > a tool named in the arguments cannot establish the identity: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > refuses the other crossings of the same action, whose tools the bound does not name, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.allowed-tools-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the input is among the values, compared as exact strings.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a dispatched tool among the bound's values, compared as exact strings, satisfies allowed_tools; another tool, none, or an empty bound does not"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces allowed_tools against the dispatched tool (@spec resource-access#initial-common-constraints) > permits a named tool and refuses another, compared as exact strings",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces allowed_tools against the dispatched tool (@spec resource-access#initial-common-constraints) > refuses when the PEP established no tool identity, and under an empty bound",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
   },
   {
    "id": "resource-access.common-constraints.allowed-tools-intersection",
@@ -37942,6 +39349,30 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "resource-access.scope-projection.metadata-not-evidence",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "is not evidence that a projection preserves the bound",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the authorization server does not treat a key listed in mission_constraints_supported as satisfying the independently-enforced condition; a projection carrying a constrained entry needs a mapping control at least as tight on every operation the scope value permits"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1375. The reference authorization server never reads mission_constraints_supported when it projects; no test sets the metadata and shows the projection still refused."
   },
   {
    "id": "resource-access.scope-projection.actions-subset",
@@ -38203,6 +39634,137 @@
     }
    ],
    "notes": "#1258 item 1 (D447 disposition 1). The payments PEP and the SaaS resource establish each operation's target from an explicit service-level operation contract (payments-runtime-profile-v6; serviceLevelContracts) and refuse a missing, unsupported or ambiguous one; prefix entries provide no authority (#1276, D457)."
+  },
+  {
+   "id": "resource-access.resource-matching.operation-contract-content",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "documented, trusted statement of how it authorizes an operation",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the resource server authorizes each operation under a documented contract that fixes the target derivation rule, the supported resource_match values, the action identifier, and the authoritative input of each supported constraints key; an operation it holds no contract for is refused",
+    "local": "the payments resource declares one service-level contract per tool, matches exact entries only, maps each tool to one action, and reads each constraint's input from its own records"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. The target rule and the refusal of an operation with no contract are witnessed here and by the resource-matching target rows; the supported resource_match values (exact only) by resource-access.rs-enforcement.resource-match-unrecognized-fail-closed; the constraint inputs by resource-access.resource-matching.contract-constraint-inputs. No test isolates the action identifier item, so the row stays partial."
+  },
+  {
+   "id": "resource-access.resource-matching.contract-constraint-inputs",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "for each `constraints` key the operation supports, the authoritative input that key's predicate reads",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "each supported constraint is evaluated against the input the operation contract identifies as authoritative; a value the caller supplies for that input does not establish it",
+    "local": "the payments resource reads the invoice's amount, currency, issuance instant, tenant and label from its store, the recipients from the vendor's routing, and the tool from its dispatch"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-intake.test.ts",
+     "name": "intake refuses a request outside the tool's served schema before any PDP call (@spec operation-profile-payments-v1, D316) > an authoritative member (D34) is refused invalid_request with no PDP call and one Refusal Record",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > never reads the fact from tool arguments: an argument naming an in-window instant is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces tenant against its own ownership records (@spec resource-access#rs-enforcement) > a client-supplied tenant cannot establish the fact: the argument is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a recipient named in the arguments cannot establish the fact: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces data_classification against its own labels (@spec resource-access#initial-common-constraints) > a label named in the arguments cannot establish the fact: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces allowed_tools against the tool it dispatches (@spec resource-access#initial-common-constraints) > a tool named in the arguments cannot establish the identity: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. Witnessed for the amount and currency, issuance instant, tenant, recipients, labels and tool the payments resource reads from its own records and dispatch. No test offers a request-stated time for time_window, and the approval input is witnessed under the requires_action_approval rows, so the row stays partial."
+  },
+  {
+   "id": "resource-access.resource-matching.url-not-contract",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-matching",
+   "text": "A resource URL or a protected resource metadata identifier alone is not an operation contract.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an operation the resource server declares no contract for is refused, though the token's entry, the audience and the metadata identifier name the service"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-target-pep.test.ts",
+     "name": "the payments resource establishes the operation target from its trusted contract (@spec resource-access#resource-matching, #1276) > refuses a tool whose profile declares no contract before any decision request, though the Mission and the credential name the service root; the declared contract permits",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/operation-target.test.ts",
+     "name": "the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276) > refuses a tool with no contract, an unsupported contract or ambiguous contracts as target_unresolvable, though the token's entry names the service root",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375. Witnessed at the payments and SaaS resources: a tool with no declared contract is refused although the entry, the audience and the service identifier all name the service root."
   },
   {
    "id": "resource-access.resource-matching.exact-no-reserialization",
@@ -38478,12 +40040,6 @@
     },
     {
      "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
-     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a list requested at a later exchange restricts the issued grant but admits nobody the policy denies at the next",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
      "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a Child Mission's proposal list over a policy-deferring parent entry only restricts: the policy still decides at the child's exchange",
      "level": "endpoint",
      "surface": "token-endpoint"
@@ -38525,7 +40081,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1258 item 8, #1277 review finding 2 (D454); #1275 (D457). Derivation keeps a candidate list as a restriction and records the entry's origin (policy where the reference entry has no list); narrowMatchers and matchersSubset stay structural, and a Child Mission keeps every origin of the parent entries it falls within. Eligibility is decided at each delegated issuance against the approved entry, its retained origin, every list and the current policy. Endpoint witnesses: the ICA continuation exchange (a proposal-added list, a list requested at a later exchange, a Child Mission's list) and designation. Proven by disabling the code it covers: recording every origin as list, dropping the policy check, dropping the proposal's list, or ignoring the parent's origin each fails its witness. Cases dg-inherit-01 and 04 run through the reader (kernel level)."
+   "notes": "#1258 item 8, #1277 review finding 2 (D454); #1275 (D457). Derivation keeps a candidate list as a restriction and records the entry's origin (policy where the reference entry has no list); narrowMatchers and matchersSubset stay structural, and a Child Mission keeps every origin of the parent entries it falls within. Eligibility is decided at each delegated issuance against the approved entry, its retained origin, every list and the current policy. Endpoint witnesses: the ICA continuation exchange (a proposal-added list, a Child Mission's list) and designation. A list requested at a later ICA exchange is no longer issued: the grant's conveyed copy of a policy-origin entry omits `delegation` (#1374), so that request is refused and witnesses nothing here. Proven by disabling the code it covers: recording every origin as list, dropping the policy check, dropping the proposal's list, or ignoring the parent's origin each fails its witness. Cases dg-inherit-01 and 04 run through the reader (kernel level)."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -38800,7 +40356,7 @@
     },
     {
      "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
-     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a list requested at a later exchange restricts the issued grant but admits nobody the policy denies at the next",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a later exchange is decided against the approved entry, not the grant's conveyed copy: the next hop is admitted only while the policy permits",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -38829,7 +40385,83 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1277 review finding 2 (D454); #1275 (D457). Retained as authorization-server state (MissionRecord.eligibility_provenance, persisted with the record, never on the wire); the endpoint witness approves through PAR and the interaction and reads the origin back from the store. Direct approval and child creation are witnessed; expansion, progressive drawdown, template dispatch, governed-policy activation and carryover replacement record it through the same derivation but have no witness here. Later exchanges evaluate the approved entry and its origin, not the presented token: a list requested at a later exchange admits nobody the policy denies, a policy change between designation and redemption is enforced at redemption, and the policy is asked again at the ICA mint. Proven by disabling the code it covers: not persisting the provenance, caching the policy decision, skipping the gate at the mint or at redemption, or resolving an origin by resource each fails its witness."
+   "notes": "#1277 review finding 2 (D454); #1275 (D457). Retained as authorization-server state (MissionRecord.eligibility_provenance, persisted with the record, never on the wire); the endpoint witness approves through PAR and the interaction and reads the origin back from the store. Direct approval and child creation are witnessed; expansion, progressive drawdown, template dispatch, governed-policy activation and carryover replacement record it through the same derivation but have no witness here. Later exchanges evaluate the approved entry and its origin, not the presented token: a later ICA exchange decides the next hop against the approved entry and the current policy although the grant it continues conveyed no `delegation` (#1374), a policy change between designation and redemption is enforced at redemption, and the policy is asked again at the ICA mint. Proven by disabling the code it covers: not persisting the provenance, caching the policy decision, skipping the gate at the mint or at redemption, or resolving an origin by resource each fails its witness."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.cross-domain-current-hop",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "Eligibility for the grant itself is decided as above, against the approved entry in the Mission Record.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated cross-domain grant's eligibility is decided against the approved entry and its retained provenance, and the grant's conveyed copy restricts only onward delegation: a policy-origin entry the policy admits is issued without delegation, and the next hop is decided against the approved entry and the current policy although the grant it continues conveyed none"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a later exchange is decided against the approved entry, not the grant's conveyed copy: the next hop is admitted only while the policy permits",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: answering the policy question without asking it fails the later-exchange witness (the denied delegate is admitted); applying the omission before the gate fails the admitted witnesses."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.cross-domain-no-new-delegation",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "Neither stage lets an entry without `delegation` in the Mission Record appear in a delegated token.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an approved entry without delegation is never carried in a delegated cross-domain grant, whatever the delegation-authorization policy, while the conveyed copy's omission of delegation does not by itself exclude an entry the gate admits"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 carries the non-delegable entry and fails the witness."
   },
   {
    "id": "resource-access.delegate-eligibility.matcher-conjunction",
@@ -39038,6 +40670,86 @@
    "notes": "#1266 slice 4. Proved by mutation: an intersection that keeps one side, and a comparison ignoring the label boundary, each fail the refusal test."
   },
   {
+   "id": "resource-access.common-constraints.recipient-domain-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Input: every final recipient of the action, after routing and list expansion.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "recipient_domain is evaluated against every recipient the action reaches after the resource routes it and expands lists; a recipient named in the arguments does not establish it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > checks every recipient a distribution list expands to: one outside the domain refuses, with no email",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > a recipient named in the arguments cannot establish the fact: it is refused at intake",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/common-constraints-enforcement.test.ts",
+     "name": "the payments resource enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > refuses a send whose list membership changed between decision and commit, with no email",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
+   "id": "resource-access.common-constraints.recipient-domain-predicate",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "Predicate: the domain of every input recipient is equal to the value or a subdomain of it.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "recipient_domain is satisfied only when every recipient's domain is the bound or a subdomain of it, compared case-insensitively on whole labels"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > permits when every recipient is within the domain, subdomains and case included",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > refuses when any one recipient is outside the domain",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
+  },
+  {
    "id": "resource-access.value-space.time-window-instants",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "value-space-comparison",
@@ -39073,6 +40785,49 @@
     }
    ],
    "notes": "#1266 slice 3. The endpoint witness is the derivation-time subset comparison a Token Exchange runs over a requested window, so the row keeps its derivation surface. Cases cc-time_window-* run through the reader. Proved by mutation: comparing the window end as text fails the endpoint test."
+  },
+  {
+   "id": "resource-access.value-space.predicate-input",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "value-space-comparison",
+   "text": "A predicate compares its input with the constraint value under the same rules.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a predicate compares amounts as exact decimals, instants as UTC instants and domains on whole labels, as the subset rules do"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-amount.test.ts",
+     "name": "PDP per-action max_amount cap compares by exact decimal value (@spec mission#max-amount) > a value that float-compares wrong compares correctly under exact decimal comparison",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces resource_issued_after and resource_issued_before on the Mission bound (@spec resource-access#rs-enforcement) > treats both bounds as inclusive and compares in value space, across offsets",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP enforces recipient_domain over every resolved recipient (@spec resource-access#initial-common-constraints) > permits when every recipient is within the domain, subdomains and case included",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1375."
   },
   {
    "id": "resource-access.value-space.issuance-instants",
@@ -39420,9 +41175,16 @@
     "normative": "an entry carrying delegation is enforced on its other members; delegation does not make it unenforceable"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4. Case fc-06 skipped (rs.member-roles)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards delegation, a member a companion profile adds inside it included, and still enforces the entry's other members",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor."
   },
   {
    "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
@@ -39444,9 +41206,28 @@
     "normative": "an entry carrying a member the resource server does not recognize, or one whose obligations it cannot fulfill, contributes no authority"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4, #1277 review finding 1 (D454). The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json are skipped (rs.alternative-grants, rs.extension-members)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses a journal write whose only entry carries a member it does not recognize, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying capability_sources, an extension member this resource does not implement",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "an entry SaaS cannot fully enforce lends no authority, and a clean entry still authorizes beside it (@spec resource-access#rs-enforcement, #1362) > refuses a request that only the entry carrying a member it does not recognize covers, while a clean entry still authorizes its own action",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 4, #1277 review finding 1 (D454). #1362: witnessed at the SaaS resource, which enforces type, resource, resource_match, actions and constraints, disregards delegation, and implements no extension member. An entry carrying a member SaaS does not recognize, whatever its value, or `capability_sources`, an extension member whose obligations SaaS cannot fulfill, provides no authority: a write only that entry covers is refused with no journal entry, and its action is lent to no clean entry beside it. Proved by mutation: dropping the member-role check, treating a null or false member as absent, disregarding `capability_sources`, and pooling actions across entries each fail these tests. The reference credential bound refuses any unknown member for the whole token (credential-authority tests), which is stricter than this per-entry rule, and sets aside `delegation` and `capability_sources`. Cases fc-05 and fc-10 in vectors/mission-resource-access/fail-closed.json stay skipped: the reader's capability set is deployment-wide, so it cannot claim rs.alternative-grants while the payments policy decision point's Mission bound takes the first matching entry, and it has no rs-authorize executor; fc-10 also requires rs.extension-members."
   },
   {
    "id": "resource-access.rs-enforcement.defined-extension-enforceable",
@@ -39470,7 +41251,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members)."
+   "notes": "#1277 review finding 1 (D454). The reference carries `capability_sources` (Capability Binding's recorded source binding) through derivation and its PDP verifies the binding, but no reference resource server establishes an operation target. Case fc-09 skipped (rs.extension-members). #1362: SaaS implements no extension member, so it refuses an entry carrying `capability_sources` (witnessed under resource-access.rs-enforcement.unknown-member-unenforceable); that converse case is not a witness for this row."
   },
   {
    "id": "resource-access.rs-enforcement.locations-unenforceable",
@@ -39492,9 +41273,16 @@
     "normative": "an entry carrying locations contributes no authority at the resource server"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 4, kept separate from the member rule (D454). Case fc-07 skipped (rs.alternative-grants)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > refuses an entry carrying the RFC 9396 locations field, whatever its value",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1258 item 4, kept separate from the member rule (D454). #1362: witnessed at the SaaS resource: an entry carrying `locations`, populated or empty, provides no authority, and a write only that entry covers is refused with no journal entry. The RAS refuses a grant whose entry carries it (#1283), so the witness mints the RAS-issued token directly. Proved by mutation: dropping the member-role check, disregarding `locations`, and treating an empty `locations` as absent each fail the test. Case fc-07 stays skipped: the reader's capability set is deployment-wide, so it cannot claim rs.alternative-grants while the payments policy decision point's Mission bound takes the first matching entry, and it has no rs-authorize executor."
   },
   {
    "id": "resource-access.entry-validation.locations-refused",
@@ -40269,6 +42057,47 @@
     }
    ],
    "notes": "#1310 (D480). Before it the runtime validator checked only that resource is a string, though the advertised schema says format uri. Proved by mutation, each guard alone: removing the schema validator's check fails the PAR witness and both intake unit tests; removing the loader check fails the four loader witnesses; removing the derivation guard fails both derivation witnesses; a grammar that admits a fragment fails every seam's refusal list."
+  },
+  {
+   "id": "resource-access.type.absent-delegation-judged-on-evaluated-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "This applies to the entry the authorization server evaluates for a delegated token, not to a copy a cross-domain grant conveys without the member",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry without delegation in the Mission Record never appears in a delegated token, while a delegable approved entry the gate admits appears in a delegated cross-domain grant as a copy without delegation"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a policy-origin entry the installed policy admits at depth 1 is carried, its conveyed copy without `delegation`",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374) > a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the non-delegable witness; applying the omission before the gate fails the admitted witnesses."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
@@ -45383,7 +47212,7 @@
   {
    "id": "child-delegation.carryover.expansion-disclosure",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
-   "anchor": "deferred-window",
+   "anchor": "predecessor-children",
    "text": "Where explicitly approved Child Mission Carryover is selected, the Mission Issuer MUST render and commit its complete manifest and exclusion policy, and recheck that snapshot at completion under the child profile's Carryover rules",
    "role": "AS",
    "strength": "MUST",
@@ -47528,7 +49357,7 @@
    "id": "expansion.reconciliation.discharge-between-adjudication-and-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a current containment or discharge restriction of the chain",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -47550,7 +49379,7 @@
    "id": "expansion.reconciliation.containment-between-adjudication-and-activation",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "reconciliation",
-   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps in authority no authority under a current containment or discharge restriction of the chain",
+   "text": "the successor's complete Authority Set, including authority carried forward from the predecessor, overlaps no authority under a current containment or discharge restriction of the chain",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -48324,7 +50153,7 @@
    "id": "expansion.verification-order.dpop-proof-code",
    "spec": "draft-mcguinness-oauth-mission-expansion.md",
    "anchor": "verification-order",
-   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, with `invalid_dpop_proof`",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is refused with `invalid_dpop_proof`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
