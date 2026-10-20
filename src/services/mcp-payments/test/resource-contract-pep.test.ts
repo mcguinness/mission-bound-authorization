@@ -356,6 +356,28 @@ describe("a reference that does not resolve at the PEP refuses before the decisi
   });
 });
 
+describe("each stage records a contract failure on its own carrier (@spec runtime#resource-contract, authzen#failure-condition-coverage, #249)", () => {
+  it("a reference the PEP resolves but the PDP does not is a PDP denial resource_contract_drift, retained as Decision Evidence: no Refusal Record, no Execution Evidence, no effect", async () => {
+    const view = viewOf([entry(V1_LIVE)]);
+    for (const mode of MODES) {
+      const x = await build(mode, view, V1_CURRENT, { pdpContracts: V2_ONLY });
+      try {
+        const res = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+        expect(res, mode).toMatchObject({ ok: false, denial_reason: "resource_contract_drift" });
+        expect(res.result, mode).toBeUndefined();
+        expect(x.decided, mode).toHaveLength(1);
+        const recorded = x.records();
+        expect(recorded.filter((e) => e.kind === "decision").map((e) => e.content), mode).toEqual([
+          expect.objectContaining({ decision: "deny", denial_reason: "resource_contract_drift" }),
+        ]);
+        expect(recorded.filter((e) => e.kind === "refusal" || e.kind === "execution"), mode).toEqual([]);
+      } finally {
+        await x.close();
+      }
+    }
+  });
+});
+
 describe("a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249)", () => {
   it("normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource", async () => {
     const v1View = viewOf([entry(V1, `${CANONICAL_RESOURCE}/invoices`, { resource_match: "prefix" })]);
