@@ -1814,6 +1814,17 @@ same rule as vector 5.
 
 \[\[ To be removed from the final specification ]]
 
+- Editorial restructure, with no change to any requirement: Recording
+  Triggers precedes the record; the record, Assertion Requirements and
+  Policy-Approval Recency are split into subsections; Boundaries is
+  folded into the sections it qualified; Conformance precedes Security
+  Considerations; and the Approval Context Commitment test vectors are
+  an appendix. Conventions defines the accountable assertion, the record
+  digest, the Recording Issuer and the Relying Auditor. New examples
+  show one approval per recording trigger, the decoded JWS protected
+  header, a `governed_policy` activation with its recency computation,
+  and the matching Consent Evidence members.
+
 - Recording Triggers states that a Mission whose Approver differs
   from its Subject holds the first trigger, so the Enterprise Mission
   Authority Profile always records the record for it; the triggers
