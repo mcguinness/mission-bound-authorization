@@ -6491,6 +6491,21 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1379): the Introduction says what a Mission is beside
+  an OAuth grant, drawn from Design Context, and that under a profile
+  the AS can bind a further grant lineage to the same Mission. The
+  creation chain states the properties the document establishes,
+  replacing the Implementation Map's separate list, and glosses
+  "derivation" as an issuance operation. The layering paragraph
+  states the scope-projection condition for a resource server that
+  authorizes only from `scope`, replacing the Implementation Map's
+  copy, and the Implementation Map names the issuance checks. A
+  holder of the complete Authority Set is described as recomputing
+  `authority_hash`. Applicability points to Standing-Consent Bases,
+  which now describes each basis type, and the worked example says
+  why its resource server is a Mission-aware Resource Server. No
+  requirement changes.
+
 - Editorial (#910): the approval rules for another principal and for
   an external Subject sit in a Subject Establishment subsection that
   applies at step 2 of the direct approval steps, which points to it;
