@@ -215,7 +215,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
   }, 180_000);
 
   it("attaches to a MAS already running (MAS_PILOT_MAS_URL), approves at its own console, permits, refuses after a revocation, and leaves the MAS running on shutdown", async () => {
-    const configPath = configFile(14867, 14866);
+    const configPath = configFile(14869, 14868);
     const pdpToken = crypto.randomUUID();
     const masBearer = crypto.randomUUID();
     const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
@@ -243,7 +243,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
             ...fgaEnv(),
             MAS_PILOT_CONFIG: configPath,
             MAS_PILOT_DEVELOPMENT_STORE: "1",
-            MAS_PILOT_MAS_URL: "http://127.0.0.1:14866",
+            MAS_PILOT_MAS_URL: "http://127.0.0.1:14868",
             MAS_PILOT_PDP_TOKEN: pdpToken,
           },
           "separated",
@@ -281,7 +281,7 @@ d("the MAS pilot launcher, separated (#818 slice 5B)", () => {
       }
       // The launcher did not start this MAS, so it leaves it running.
       expect(mas.exitCode).toBeNull();
-      expect((await fetch("http://127.0.0.1:14866/.well-known/openid-configuration")).status).toBe(200);
+      expect((await fetch("http://127.0.0.1:14868/.well-known/openid-configuration")).status).toBe(200);
     } finally {
       const exited = new Promise<void>((resolve) => mas.once("exit", () => resolve()));
       mas.kill("SIGTERM");
