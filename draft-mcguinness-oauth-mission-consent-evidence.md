@@ -1797,6 +1797,10 @@ encoding difference to resolve before interoperating.
 
 \[\[ To be removed from the final specification ]]
 
+- Editorial (#1176): examples of the canonical Mission follow one
+  dated history; an example line too long for the page is folded per
+  RFC 8792. No requirement changes.
+
 - The Consent Evidence `approver` correlates with the Mission record's
   `approval_basis.consent_principal` (#705).
 - Binding to Mission Approval and the conformance floor apply at each
