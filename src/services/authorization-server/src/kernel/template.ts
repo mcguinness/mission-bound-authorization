@@ -32,6 +32,7 @@ import {
   MISSION_TEMPLATE_TYP,
   proposalHash,
   refusedEntryMember,
+  unsupportedEntryMember,
 } from "@mission/core";
 import {
   assertApproverMayActivate,
@@ -239,6 +240,14 @@ export function createTemplate(
     const member = refusedEntryMember(entry);
     if (member !== undefined) {
       throw new TemplateError(`ceiling[${i}] carries ${member}, which the mission_resource_access type does not use`);
+    }
+    // @spec mission#subset (#1399, D538): likewise any member outside the
+    // supported set, which dispatch derivation would otherwise drop.
+    const unsupported = unsupportedEntryMember(entry);
+    if (unsupported !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
+      );
     }
   });
   // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
