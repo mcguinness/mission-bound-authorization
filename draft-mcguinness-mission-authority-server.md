@@ -2050,7 +2050,7 @@ child's own `client_id`, never the parent's.
 ## Expansion Example {#native-example}
 
 The following example shows an expansion submission. Mid-task, the
-agent behind the Q3 reconciliation Mission finds a $1,200 adjustment,
+agent behind a Q3 reconciliation Mission finds a $1,200 adjustment,
 outside its approved $500 cap. It submits a Mission Intent for the
 broadened task whose body names the predecessor:
 
@@ -2067,7 +2067,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
     "target_resources": ["https://erp.example.com"],
     "expires_at": "2026-12-31T23:59:59Z"
   },
-  "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+  "predecessor": "msn_w9zhlsZxoTTlSeSsZOHDG7gr0Z0Ok-lZ"
 }
 ~~~
 
