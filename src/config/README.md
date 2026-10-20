@@ -31,6 +31,11 @@ demo server's `POST /bff/approver/login` records a new one.
   unknown members, duplicate member names, an unknown action class, an empty
   floor and a second classification for one type and resource. An admitted
   action the classification does not name refuses at the approval decision.
+  Where the AS selects Progressive ceiling drawdown, an authority ceiling the
+  Approver consents is classified with the derived set, and the AS does not
+  start when its drawdown mapping (`progressive.actionClasses`) maps an
+  action this classification places under a floor to a class a drawdown
+  grants by policy (#1255).
 - **Updating.** Edit, review, and restart the AS. A change applies to the
   next approval decision; Missions already approved are unaffected.
 
