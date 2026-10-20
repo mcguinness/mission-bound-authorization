@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "e5ebe01246eddcdcdc40fabe5e7bfbf6c0b8c951",
-    "content_sha256": "dcaccb58a3ca6ab40ee295e5e0a67afda8c76ccea82700c23572a91cd953b956"
+    "revision": "7bbf402cf05aefed8d168a52fe525fb9769f3f68",
+    "content_sha256": "83299861b7862c0c09e0c8ed4684e9ccd92abcc6565fdd3ae2ef700e3f9ca5c0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -95,8 +95,8 @@
     "content_sha256": "3174fa1ab1b9b76c260e561a7d036e61f599d50f9543356ffa6f96d92d8ef946"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "bdabde89c4be5536d8cdc7d1ad14c73a3e81dd3d",
-    "content_sha256": "84814185b148be7c01ee30327a2c0bb5ad4f3d48881ba9183280254fd94b84e7"
+    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
+    "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "caf2420b9b4551ae4462771b23322fd660cf1116",
@@ -147,8 +147,8 @@
     "content_sha256": "8ac6904ac2b8f0cab7e3b516c938a2459a64a1bde36c57dc075d63e4e8e1308d"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
-    "revision": "dece8ac10c9a0f0a790dc1637b3a6bf83c6fb5ea",
-    "content_sha256": "9fed26c01952abd13356bc1f0f2e4c886a566b0355fee21148e5f0e67d74f3db"
+    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
+    "content_sha256": "0cf5d28c251f983b6739f42810e79f1e784fc35f029e2de7f5baf14889432579"
    }
   }
  },
@@ -3001,6 +3001,300 @@
    "tests": []
   },
   {
+   "id": "core.submission.proposal-checks-before-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Validate any authority proposal: refuse an entry of a type the AS does not support, or one that fails its type's definition or a schema advertised for it or established out of band, with `invalid_authorization_details`, and a proposed entry that carries a `resource` member whose value is not among the Intent's `target_resources`, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission's authority proposal is validated (type, schema, target_resources membership) after the intent object and before any evidence check"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification."
+  },
+  {
+   "id": "core.submission.earliest-step-precedence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "The AS MUST refuse a submission that fails more than one check with the error of the earliest failing step in this order",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission failing two checks is refused with the error of the earlier step of Submission Processing Order"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed Submission envelope together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before evidence dispatch: a proposal failure precedes an unknown evidence type or an entry failing its type's validation",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls."
+  },
+  {
+   "id": "core.submission.precedence-proposal-over-missing-evidence",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a malformed proposal together with a missing required evidence type is refused at step 3, with `invalid_authorization_details`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with a malformed proposal and a missing required evidence type fails invalid_authorization_details, not invalid_mission_intent_evidence"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a malformed proposal together with a missing required evidence type is refused at step 3, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-target-over-evidence-failure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "a proposed entry outside `target_resources` together with a presented evidence entry that fails verification is refused at step 3, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission with a proposed entry outside target_resources and an evidence entry failing verification fails invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > a proposed entry outside target_resources together with a presented evidence entry that fails verification is refused at step 3, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.submission.precedence-intent-over-proposal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "an `intent` object that fails validation together with a malformed proposal is refused at step 2, with `invalid_request`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a submission whose intent fails validation and whose proposal is malformed fails invalid_request, not invalid_authorization_details"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C."
+  },
+  {
+   "id": "core.derivation.candidate-complete-before-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "The candidate Authority Set is complete before the approval rendering",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Authority Set rendered for approval is the complete candidate set, not a partial one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. The test renders a two-entry derivation and compares the rendered set with the full derivation of the same Intent and proposal."
+  },
+  {
+   "id": "core.derivation.fixed-at-creation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "The approved Authority Set is fixed when the Mission Record is created, atomically with the approval decision",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Authority Set committed on the Mission Record is the one approved, fixed atomically with the approval decision and not recomputed afterwards"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > keeps the approved Authority Set fixed after creation: a later derivation-policy change does not recompute it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > concurrent duplicate decisions on one interaction commit one Mission, one grant identity and one binding",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "D559 (#1411): ruled qualified A + C. Witnessed: the committed entries equal the rendered entries; the record and the grant commit together, once, under concurrent decisions; and a derivation-policy change after creation leaves the record's set unchanged while a fresh derivation differs. Partial because the record also carries the Capability Binding companion's capability_sources, which kernel.approve binds at the commit and the approval rendering does not show, so the committed set equals the approved one only in its derived members. Tracked by #1447 (when a source binding is fixed, and what the approval presents) and #1446 (a change between rendering and decision is committed without re-rendering)."
+  },
+  {
    "id": "core.submission.size-bounds-evidence",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "submission-via-par",
@@ -4772,7 +5066,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision."
+   "notes": "PARTIAL: re-establishment at the decision is proven (the decision resolves the catalog afresh, and a source that narrowed refuses), but this headless adjudication surface renders and decides in separate requests with no retained rendering to re-emit, so the RE-RENDERING half has no observable output to assert. Flips to tested when an approval surface retains its rendering across the decision. The reference AS also derives again at the decision without comparing against what it rendered, so a ceiling or policy change between the two commits an unrendered set: #1446."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -45037,7 +45331,7 @@
    "id": "evidence.intent-admission.intent-hash-equality",
    "spec": "draft-mcguinness-mission-evidence-envelope.md",
    "anchor": "intent-admission-verification",
-   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 3",
+   "text": "Verify `intent_hash` equals the provisional `intent_hash` computed\n   at submission-processing step 4",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -54879,7 +55173,7 @@
    "id": "device-authorization.request.validate-before-device-code",
    "spec": "draft-mcguinness-oauth-mission-device-authorization.md",
    "anchor": "request",
-   "text": "The AS MUST complete steps 1 to 5 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
+   "text": "The AS MUST complete steps 1 to 6 of the OAuth binding's Submission Processing Order, and validate every proposed entry, before it issues a `device_code`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
