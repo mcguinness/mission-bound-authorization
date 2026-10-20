@@ -439,6 +439,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
+import { pushedRequestIntake, takeParIntake } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -936,8 +937,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
     throw new Error("the deferred-approval capability needs token-revocation (the deferred substrate's cancellation)");
   }
   // @spec expansion#completion-modes (#1177): a deferred expansion is polled
-  // on the deferred grant and cancelled at the revocation endpoint.
+  // on the deferred grant and cancelled at the revocation endpoint, which the
+  // substrate requires (DTR -00 Section 7.2), as for Deferred Mission Approval.
   const expansionDeferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
+  if (expansionDeferrals && !enabled("token-revocation")) {
+    throw new Error("the expansion capability's deferred completion needs token-revocation (the deferred substrate's cancellation)");
+  }
   const grantEnabled = new Map<string, boolean>([
     // The deferred grant polls an AROP deferral, a Mission approval deferral
     // and an expansion deferral.
@@ -1586,6 +1591,32 @@ export function buildProvider(opts: AdapterOptions): Provider {
     });
   }
 
+  /**
+   * @spec mission#submission-processing (#1411): checkRar's checks of a
+   * pushed Mission submission's `authorization_details` (lib/shared/
+   * check_rar.js 9.10.0), run as step 3 of the Submission Processing Order,
+   * after the envelope and the Intent. The PAR intake (par-intake.ts) kept
+   * the proposal from the provider's own checkRar, which runs before the
+   * `extraParams` validators. An empty array is no proposal, as there.
+   */
+  function checkPushedRar(ctx: unknown, params: Record<string, unknown>, client: { authorizationDetailsTypes?: string[] } | undefined): void {
+    const responseType = typeof params.response_type === "string" ? params.response_type.split(" ") : undefined;
+    if (responseType?.includes("code") === false || responseType?.includes("token") || params.response_type === "none") {
+      throw new errors.InvalidRequest("authorization_details parameter is not supported for this response_type");
+    }
+    let details: unknown;
+    try {
+      details = JSON.parse(String(params.authorization_details));
+    } catch {
+      throw new errors.InvalidRequest("could not parse the authorization_details parameter JSON");
+    }
+    if (Array.isArray(details) && details.length === 0) {
+      params.authorization_details = undefined;
+      return;
+    }
+    checkRequestedRar(ctx, params.authorization_details, client);
+  }
+
   const configuration: Configuration = {
     clients: clients as never,
     jwks: opts.jwks as never,
@@ -1668,7 +1699,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
             // Mission's derived Authority Set, never this input). An entry of an
             // unadvertised type is already refused by oidc-provider's own
             // checkRar (no `types` config entry -> invalid_authorization_details),
-            // which is the D60 advertised-type rule.
+            // which is the D60 advertised-type rule (for a pushed Mission
+            // submission, checkPushedRar applies the same checks after the
+            // Intent, #1411).
             // @types/oidc-provider (9.5) has no richAuthorizationRequests
             // types; parameters typed to the runtime 9.10 contract
             // (checkRar: validate(ctx, detail, client)).
@@ -1780,10 +1813,29 @@ export function buildProvider(opts: AdapterOptions): Provider {
           if (!intake) throw new errors.InvalidRequest("device authorization request not recognized");
           if (intake.proposal !== undefined) params.authorization_details = intake.proposal;
         }
-        if (value === undefined) return;
+        // @spec mission#submission-processing (#1411): the PAR intake lifted
+        // the proposal, so the envelope and the Intent (steps 1 and 2) are
+        // validated before it (step 3), and the evidence entry rules wait
+        // for the evidence step (step 6). A lifted proposal is always restored and
+        // checked, even where the provider reads no `mission_intent`.
+        const lifted =
+          (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
+            ? takeParIntake((ctx as { req: IncomingMessage }).req)
+            : undefined;
+        if (value === undefined) {
+          if (lifted) {
+            params.authorization_details = lifted.proposal;
+            checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
+          }
+          return;
+        }
         try {
-          const submission = kernel.validateSubmission(String(value));
+          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
+          if (lifted) {
+            params.authorization_details = lifted.proposal;
+            checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
+          }
           // @spec mission#authority-proposal — the intake cross-check that needs
           // the parsed Intent: each proposed entry's resource MUST be among the
           // Intent's resources (invalid_request), the array strict-parses
@@ -2172,6 +2224,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // intake, before the provider parses the request (Provider#use splices it
   // ahead of the route dispatcher).
   if (enabled("device-authorization")) provider.use(deviceAuthorizationIntake);
+  // @spec mission#submission-processing (#1411): the PAR intake, before the
+  // provider's own RAR check (par-intake.ts).
+  provider.use(pushedRequestIntake);
 
   // @spec DTR (draft-gerber-oauth-deferred-token-response-00): the deferred
   // grant on the REAL /token endpoint, for an AROP deferral (capability
@@ -2198,7 +2253,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     registerDeferredAuthorizationCodeGrant(provider, opts, missionApproval, new DeferredAuthorizationCodes(missionApproval));
     provider.use(cancelOnRevocation(missionApproval));
   }
-  if (expansionDeferrals && enabled("token-revocation")) {
+  if (expansionDeferrals) {
     provider.use(cancelExpansionDeferralOnRevocation(expansionDeferrals));
   }
 
@@ -4590,9 +4645,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // DTR -00 Section 7.4 (Discovery): an AS that supports deferral lists
       // the deferral-code token type its revocation endpoint accepts (the
       // cancellation), so a client can rely on it. The revocation endpoint is
-      // served wherever Deferred Mission Approval is; an expansion deferral is
-      // cancellable wherever the revocation endpoint is.
-      if (deferredCodes || (expansionDeferred && enabled("token-revocation"))) {
+      // served wherever Deferred Mission Approval or a deferred expansion is.
+      if (deferredCodes || expansionDeferred) {
         const listed = Array.isArray(meta.revocation_endpoint_token_type_values_supported)
           ? (meta.revocation_endpoint_token_type_values_supported as unknown[])
           : [];
