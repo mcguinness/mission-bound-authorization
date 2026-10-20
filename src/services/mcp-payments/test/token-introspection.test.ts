@@ -100,7 +100,8 @@ describe("token introspection: an active answer (RFC 7662, #818 slice 3)", () =>
 
 describe("token introspection: fail-closed refusals (RFC 7662, #818 slice 3)", () => {
   it("refuses an inactive token, and does not cache the refusal", async () => {
-    answer = { status: 200, body: JSON.stringify({ active: false }) };
+    // Every other member present, so `active` alone decides.
+    answer = { status: 200, body: active({ active: false }) };
     const i = introspector();
     await expect(i.introspect("revoked")).rejects.toBeInstanceOf(TokenInactiveError);
     await expect(i.introspect("revoked")).rejects.toBeInstanceOf(TokenInactiveError);
