@@ -979,7 +979,7 @@ is testable, member by member:
   `service` and `policy` assertions are governance inputs, never
   consent events, and are never presented as co-approvals.
 - The consent evidence `approver` MUST equal the `principal` of the
-  record's accountable assertion ({{assertion-requirements}}); for a
+  record's accountable assertion ({{accountable-assertion}}); for a
   standing-consent Mission whose accountable-approver rule is
   satisfied by `approval_basis` rather than an assertion, it MUST
   equal `approval_basis.consent_principal` instead.
@@ -996,11 +996,13 @@ Where a deferred approval revises under Mission Approval Revision
 deployment records consent evidence, each `revision_required` outcome
 produces a `narrowed` consent-evidence decision with no corresponding
 record: no Mission yet exists for the atomic commitment rule
-({{atomic-commitment}}) to attach to. Where consent evidence is
-recorded, it owns the narrowing history, through its `narrowed`
-entries and `predecessor_intent_hashes`. Where an AGR is recorded for
-the final approval, it owns the final approval-governance facts. This
-is a deliberate artifact separation, not an authority conflict.
+({{atomic-commitment}}) to attach to. The two artifacts hold different
+facts, so they do not conflict:
+
+- where consent evidence is recorded, it owns the narrowing history,
+  through its `narrowed` entries and `predecessor_intent_hashes`; and
+- where an AGR is recorded for the final approval, it owns the final
+  approval-governance facts.
 
 # Mission Evidence {#audit-evidence}
 
