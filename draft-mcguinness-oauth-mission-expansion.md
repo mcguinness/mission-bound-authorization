@@ -1042,7 +1042,7 @@ other token claims omitted):
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
-    "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    "predecessor": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
   }
 }
 ~~~
@@ -1646,9 +1646,9 @@ as for any Mission creation.
 
 # Worked Example {#example}
 
-The Q3 reconciliation Mission
-`msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-` authorizes reading invoices and
-posting journal entries under $500. Mid-task the agent finds an
+A Q3 reconciliation Mission `msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS`,
+not the single-domain walkthrough's, authorizes reading invoices and
+posting journal entries of at most USD 500. Mid-task the agent finds an
 adjustment of $1,200, outside the active Mission's authority. It cannot
 widen in place; it requests an expansion as a token exchange presenting
 the predecessor's Mission-bound access token as the `subject_token`,
@@ -1666,7 +1666,7 @@ subject_token=<predecessor%20Mission-bound%20access%20token>&
 subject_token_type=urn%3Aietf%3Aparams%3Aoauth%3Atoken-type%3Aaccess_token&
 mission_intent=%7B%22intent%22%3A
   %7B...journal-entries%20cap%20%242000...%7D%7D&
-predecessor=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-&
+predecessor=msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS&
 creation_request_id=7c9e6679-7425-40de-944b-e07fc1f90ae7&
 client_id=s6BhdRkqt3
 ~~~
@@ -1688,7 +1688,7 @@ token carries a `predecessor` member:
   "mission": {
     "id": "msn_2Yt7Qv9LqMv4z7sA2bN1k0YpEdHc9RfX",
     "issuer": "https://as.example.com",
-    "predecessor": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-"
+    "predecessor": "msn_QBZj5JSIV6tkkb93ZTvbiz_9dOMMXfJS"
   }
 }
 ~~~
