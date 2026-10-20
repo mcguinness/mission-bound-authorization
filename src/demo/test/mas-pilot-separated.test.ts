@@ -75,7 +75,13 @@ let pilot: SeparatedMasPilot;
 const requests: EvaluationRequest[] = [];
 const pdpToken = `pdp-${crypto.randomUUID()}`;
 
-/** One offset for this process's PEP, PDP and resolver clocks and the MAS's kernel clock. */
+/**
+ * One offset for this process's PEP, PDP and resolver clocks and the MAS's
+ * kernel clock. It only grows across the file (61 s per advance, 183 s by the
+ * last test); estate tokens live 300 s from their real-time issue and the
+ * mapping contract's 300 s bound starts at composition, so a test added after
+ * these must keep the total well under 300 s or compose its own pilot.
+ */
 let offsetMs = 0;
 const now = () => new Date(Date.now() + offsetMs);
 async function advance(ms: number): Promise<void> {
