@@ -2404,7 +2404,7 @@ source. A dispatch-specific parameter affecting derivation, approval,
 output, or side effects extends the fingerprint the same way an
 extension parameter would under the expansion profile's own rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
-operation fingerprint").<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+Operation Fingerprint").<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <p id="section-7.3-3">The reservation, its <code>(client, dispatch_event_id)</code> uniqueness, and
 the fingerprint-comparison outcomes on a repeated presentation are
 the expansion profile's, applied by reference: same fingerprint and
@@ -2412,7 +2412,7 @@ completed, recover it; same fingerprint and reserved or pending,
 return the same in-progress result; different fingerprint, refuse
 with <code>invalid_request</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
-durable reservation"). The reservation and the dispatched Mission's
+Durable Reservation"). The reservation and the dispatched Mission's
 identifier <span class="bcp14">MUST</span> be committed atomically with instance derivation and
 <code>max_active</code>/<code>dispatch_rate</code> accounting. Evidence emission is not
 part of that same atomic commit: the Mission Issuer atomically
@@ -2438,7 +2438,7 @@ the retry exactly as a fresh Dispatch: current <code>allowed_dispatchers</code>
 membership, possession of <code>cnf</code>, and current template applicability
 all apply, since no Mission yet exists for the retry to recover
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section
-"Revalidation and lookup order").<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+"Revalidation and Lookup Order").<a href="#section-7.3-4" class="pilcrow">¶</a></p>
 <p id="section-7.3-5">Recovery is delivery of the already-dispatched Mission, never a
 second instantiation and never a second count against <code>max_active</code> or
 <code>dispatch_rate</code>. A retry recovered while the original access token
@@ -2448,10 +2448,10 @@ still-<code>active</code> instance, an ordinary delivery event that repeats no
 creation accounting, exactly as the expansion profile's recovery
 defines for an expired delivery credential
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Recovery
-is delivery"). Tombstone retention follows the expansion profile's
+Is Delivery"). Tombstone retention follows the expansion profile's
 rule, against the deployment's published retry horizon
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Tombstone
-retention"). This makes retry safe at machine speed and keeps
+Retention"). This makes retry safe at machine speed and keeps
 <code>max_active</code> and <code>dispatch_rate</code> accounting exact.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>
