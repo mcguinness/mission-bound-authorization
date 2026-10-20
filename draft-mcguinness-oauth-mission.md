@@ -3622,7 +3622,9 @@ collision-resistant names. A companion profile that registers a
 termination reason defines that reason's `termination` members
 ({{termination}}).
 
-This document defines the following members:
+The following subsections define the record's members.
+
+## Identity and Lifecycle Members {#record-identity-members}
 
 `id`:
 : REQUIRED. A string. The canonical Mission Identifier
@@ -3645,6 +3647,8 @@ This document defines the following members:
 : CONDITIONAL. An object, present exactly when `state` is
   `terminated`: the reason and instant the Mission terminated
   ({{termination}}).
+
+## Approved Content and Commitments {#record-content-members}
 
 `intent`:
 : REQUIRED. An object. The approved Mission Intent.
@@ -3711,6 +3715,8 @@ This document defines the following members:
   profile whose threat model requires that proof commits normalized
   provenance under its own anchor `typ` ({{integrity-anchors}},
   {{extensibility}}).
+
+## Principals and Approval Basis {#record-principal-members}
 
 `subject`:
 : REQUIRED. An object. The Subject, an object with `iss` and `sub`.
@@ -3843,6 +3849,8 @@ This document defines the following members:
 `client_id`:
 : REQUIRED. A string. The Agent (OAuth client) that submitted the
   Mission Intent.
+
+## Provenance and Expiry {#record-provenance-members}
 
 `policy_version`:
 : REQUIRED. A string. An opaque audit correlator naming the
