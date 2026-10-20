@@ -1268,7 +1268,7 @@ Resource-policy evaluation, not the operation target.
 
 The `policy_view_id` values in this document's examples
 (`sha-256:kP3xR9sQ...`) differ from the runtime profile's worked
-materialized-view value (`sha-256:kFxuopgt...`): the two manifests
+materialized-view value (`sha-256:RBI8j_YN...`): the two manifests
 name different compilers. Both are valid views of the same Mission.
 
 For the ERP reconciliation Mission:
@@ -1333,12 +1333,15 @@ Authorization: ...
     },
     "credential": {
       "issuer": "https://as.example.com",
-      "expires_at": "2026-11-02T09:14:00Z",
+      "expires_at": "2026-11-02T08:19:00Z",
       "authority": [
         {
           "type": "mission_resource_access",
           "resource": "https://erp.example.com",
-          "actions": ["journal-entries.write"]
+          "actions": ["journal-entries.write"],
+          "constraints": {
+            "max_amount": { "amount": "500.00", "currency": "USD" }
+          }
         }
       ]
     }
@@ -1628,12 +1631,15 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z",
+          "expires_at": "2026-11-02T08:19:00Z",
           "authority": [
             {
               "type": "mission_resource_access",
               "resource": "https://erp.example.com",
-              "actions": ["journal-entries.write"]
+              "actions": ["journal-entries.write"],
+              "constraints": {
+                "max_amount": { "amount": "500.00", "currency": "USD" }
+              }
             }
           ]
         }
@@ -1672,12 +1678,15 @@ Authorization: ...
         "actor": { "client_id": "s6BhdRkqt3" },
         "credential": {
           "issuer": "https://as.example.com",
-          "expires_at": "2026-11-02T09:14:00Z",
+          "expires_at": "2026-11-02T08:19:00Z",
           "authority": [
             {
               "type": "mission_resource_access",
               "resource": "https://erp.example.com",
-              "actions": ["journal-entries.write"]
+              "actions": ["journal-entries.write"],
+              "constraints": {
+                "max_amount": { "amount": "500.00", "currency": "USD" }
+              }
             }
           ]
         }
