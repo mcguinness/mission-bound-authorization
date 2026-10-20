@@ -415,9 +415,8 @@ A Mission is created and used in a single chain:
    later issuance operation from that grant lineage, such as a
    refresh, is a derivation ({{issuance-gating}}) and resolves to
    exactly this Mission; the client never selects or reassigns it.
-   Under a profile, the AS can bind a further lineage to the same
-   Mission, such as a refresh-token family a continuation transport
-   establishes; each lineage resolves to exactly one Mission.
+   Under a profile, the AS can bind a further grant lineage to the
+   same Mission; each lineage resolves to exactly one Mission.
 5. **Issue and enforce.** Every derived authority is no broader than
    the approved Authority Set ({{subset}}). Every access token the
    agent obtains under the Mission carries the derived authorization
@@ -470,10 +469,17 @@ times. The following table lists where each implementer reads next.
 
 | Implementer | Responsibility on the starting path | Defining sections |
 | --- | --- | --- |
-| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, and gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{mission-record}} |
+| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}}, {{discovery}} |
+| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection, and terminate the Mission on an authorized revocation | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{revocation}}, {{mission-record}} |
 | Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
 {: title="Who implements the issuance path"}
+
+This document defines no `authorization_details` type
+({{other-types}}). Each Authority Set entry is of a type the AS
+supports, such as `mission_resource_access`
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}), and a
+Mission-aware Resource Server enforces each applicable entry its tokens
+carry under that entry's type ({{rs-requirements}}).
 
 Some duties apply only when their condition holds:
 
@@ -714,6 +720,18 @@ Authority Set:
 : The set of `authorization_details` entries the AS derives from a
   Mission Intent and the Approver approves
   ({{authorization-derivation}}).
+
+Authority Set derivation:
+: Computing the Authority Set from a Mission Intent and any authority
+  proposal, in narrowing or configured-mapping mode
+  ({{derivation-modes}}).
+
+Derivation:
+: One issuance operation the issuer AS performs for a single request
+  ({{issuance-gating}}): the initial authorization-code exchange, a
+  refresh, a Token Exchange, or a cross-domain grant issuance.
+  Distinct from Authority Set derivation, which this document also
+  calls derivation.
 
 Mission:
 : The durable authorization object that binds a disclosed task (its
@@ -1748,7 +1766,7 @@ The consent rendering is hardened against client text:
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
-The enforcement table ({{rs-enforcement}}) summarizes which party
+The enforcement table ({{rs-responsibilities}}) summarizes which party
 enforces each bound and what holds when that enforcer is absent.
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
@@ -1778,7 +1796,7 @@ is unchanged.
 The approval event commits the Mission Intent and Authority Set the
 AS records as approved. Those commitments establish neither that the
 AS rendered them faithfully nor that the Approver understood them
-({{consent-binding}}). Step 5 of {{approval-event}} requires
+({{consent-binding}}). Step 5 of {{direct-approval-steps}} requires
 human-meaningful rendering; comprehension cannot be inferred from an
 approval or its integrity anchors.
 
@@ -1840,8 +1858,9 @@ The subject-representation discipline is the same in every source:
   source. A service-owned or organizational Mission MUST record the
   workload or organizational principal as `subject` and MUST NOT
   record a human principal in its place. The injective mapping of
-  {{approval-event}} applies unchanged: that principal receives its
-  own AS-local `sub`, denotes itself, and impersonates nobody. It
+  {{subject-establishment}} applies unchanged: that principal
+  receives its own AS-local `sub`, denotes itself, and impersonates
+  nobody. It
   MUST be an authorization subject the AS recognizes as a resource
   owner in its own right (the `sub` model of {{RFC9068}}), not only
   the task's beneficiary.
@@ -1887,7 +1906,7 @@ a narrower or absent client request.
 An authorization request whose `scope` includes `openid`
 {{OpenID.Core}} asks for an ID Token about the End-User the approval
 interaction authenticates, who is the Approver. When the Approver is
-not the Subject established at step 2 of {{approval-event}}, the AS
+not the Subject established at step 2 of {{direct-approval-steps}}, the AS
 MUST refuse such a request, without creating the Mission, with the
 `invalid_scope` error code ({{Section 4.1.2.1 of RFC6749}}). When the
 Approver is not the Subject, whether or not `openid` was requested,
@@ -2152,6 +2171,7 @@ The transitions are:
 | (none) | approval event | `active` | |
 | `active` | revoke | `terminated` | `revoked` |
 | `active` | `expires_at` reached | `terminated` | `expired` |
+{: title="Mission lifecycle transitions"}
 
 The Mission Lifecycle States registry ({{iana-lifecycle-states}})
 holds these states, and the Mission Termination Reasons registry
@@ -2248,7 +2268,7 @@ A derivation passes these checks, each stated where cited:
    ({{subset}});
 4. any emitted `scope` meets {{scope-projection}}; and
 5. each token's `exp` does not exceed the Mission's `expires_at`
-   ({{mission-bound-tokens}}).
+   ({{token-authentication-lifetime}}).
 
 Unless the referenced Mission is `active`, the AS MUST refuse a
 request to derive a token at the token endpoint: a Token Exchange
@@ -2887,17 +2907,18 @@ row names a type specification, it is the one for
 |---|---|---|
 | `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
 | per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
+{: title="Enforcement of an entry's resource, actions, and constraints"}
 
 ## Remediation Grains {#remediation-grains}
 
 A denial can carry independent remediation grains, each naming a next
 step without granting anything. This document's own grain is
-`mission_denial` ({{rs-enforcement}}): which path a denial leads
+`mission_denial` ({{rs-denials}}): which path a denial leads
 into. The three remediation grains are:
 
 `mission_denial`:
 : - Carriage: `WWW-Authenticate` attribute
-  - Defined by: This document ({{rs-enforcement}})
+  - Defined by: This document ({{rs-denials}})
 
 `insufficient_authorization` with `authorization_remediation`:
 : - Carriage: `WWW-Authenticate` error code and parameter
@@ -3563,7 +3584,7 @@ the subject grant itself remains valid for other exchanges.
 **The resource server enforces none of this.** The AS applies
 delegation constraints at issuance; a resource server sees only the
 already-narrowed `authorization_details` and enforces those as usual
-({{mission-bound-tokens}}).
+({{rs-enforcement}}).
 
 ## Worked Example: Delegated Token {#worked-example-delegated-token}
 
@@ -3999,7 +4020,7 @@ snapshot it evaluates, and MUST NOT activate the instance under that
 policy when the result differs; the companion profile fixes what
 follows, as it does for an activation the policy does not authorize.
 The issuer MUST retain each snapshot's bytes and media type for the
-audit horizon ({{mission-record}}) of every Mission it activates
+audit horizon ({{record-provenance-members}}) of every Mission it activates
 under that snapshot, so an auditor can reproduce the digest.
 Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
@@ -5045,7 +5066,8 @@ the AS's signing key, whose publication and rotation
 {{mission-bound-tokens}} specifies.
 
 Verification for audit outlives validity: keeping a key resolvable for
-the audit horizon ({{mission-record}}) of every Mission whose tokens it
+the audit horizon ({{record-provenance-members}}) of every Mission
+whose tokens it
 signed lets an auditor verify those tokens later. A companion that
 anchors a longer-lived artifact to the same keys (a status assertion, a
 Mandate, registered evidence) states its own retention bound.
@@ -5246,7 +5268,7 @@ authority, or recorded-evidence member:
 Whatever the member, it:
 
 - persists on the Mission Record for its audit horizon
-  ({{mission-record}});
+  ({{record-provenance-members}});
 - concentrates at the AS with the record ({{record-access}}); and
 - if committed, is confirmable through the unsalted anchors by any
   party holding a candidate value
@@ -5275,7 +5297,7 @@ Access to the record and to Mission evidence is policy-governed and
 auditable: reading a Mission's evidence is a privileged operation, not
 a byproduct of holding a Mission reference. Retention and erasure are
 deployment policy, bounded below by the audit horizon
-({{mission-record}}).
+({{record-provenance-members}}).
 
 Where approval-event evidence was registered under the audit
 transparency profile ({{I-D.draft-mcguinness-mission-audit}}), its
@@ -6841,6 +6863,18 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1409): Terminology defines Authority Set derivation and
+  derivation (one issuance operation). The Implementation Map lists
+  termination on an authorized revocation among the Mission Issuer's
+  duties, points the client to the rules in Authorization Server
+  Metadata, and says that this document defines no
+  `authorization_details` type, that each Authority Set entry is of an
+  AS-supported type such as `mission_resource_access`, and that a
+  Mission-aware Resource Server enforces each entry under its type.
+  The Introduction's chain drops its continuation-transport example;
+  twelve cross-references name the sections that hold their content;
+  two tables gain captions. No requirement changes.
 
 - Editorial (#1404): Mission Intent, Conformance, Standing-Consent
   Bases, and Authorization Details Types have subsections at their
