@@ -42111,8 +42111,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a token issued for a resource carries no entry for that resource with a constraints key the resource server serving it is not known to enforce (by registration, deployment policy or its mission_constraints_supported)",
-    "local": "the main authorization server reads its knowledge from the trusted scope-projection mapping's per-audience mission_constraints_supported (absent: no key), at every Mission-bound access-token mint and at the transaction token, and refuses invalid_target, never dropping the key or omitting the entry; the RAS reads resourceConstraintsSupported (an unlisted resource, or no map: no key) and drops a constrained entry whole, refusing invalid_grant without consuming the grant when no entry survives"
+    "normative": "a token carries no entry with a constraints key that any token audience whose resource tree overlaps the entry is not known to enforce (by registration, deployment policy or its mission_constraints_supported): the audience the entry names, an audience serving the finer resource it names, and an audience within a prefix entry's base",
+    "local": "the main authorization server reads its knowledge from the trusted scope-projection mapping's per-audience mission_constraints_supported (absent: no key), at every Mission-bound access-token mint and at the transaction token; it pairs an entry with every token audience whose resource tree overlaps it, under the Resource Access matcher (prefixAdmits), checks each one's own list, and refuses invalid_target, never dropping the key or omitting the entry; the RAS reads resourceConstraintsSupported and applies the same pairing over its listed resources: an entry must meet every overlapping listed resource's keys, one overlapping none (or no map) is known to be enforced nowhere, and either is dropped whole, refusing invalid_grant without consuming the grant when no entry survives"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -42138,6 +42138,30 @@
     {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
      "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource rides in this token, and a token issued for that resource refuses it (boundary)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > refuses invalid_target an invoice-level exact entry under the audience carrying a key the audience does not list, and emits it once the list names the key",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > checks a prefix entry within the audience against the audience's list",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > checks a prefix entry whose base contains the audience against the audience's list",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/emission-overlap.test.ts",
+     "name": "the token endpoint checks every entry an audience serves against that audience's own keys (@spec resource-access#resource-access-type, #1266) > does not pair the audience with a sibling outside its segment boundary (boundary)",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -42178,6 +42202,30 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > checks a finer exact entry and a prefix entry within a listed resource against that resource's keys",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > checks a prefix entry whose base contains listed resources against each one's keys",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > checks an entry overlapping two listed resources against both lists",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/mapping-entitlement.test.ts",
+     "name": "RAS emits only the constraints keys the destination resource enforces (@spec resource-access#resource-access-type) > an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276) > does not pair a listed resource with a sibling outside its segment boundary (boundary)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/packages/mission-core/test/scope-projection.test.ts",
      "name": "the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type) > accepts a key list on an authorization_details audience, an empty one included, and keeps it",
      "level": "unit",
@@ -42186,6 +42234,18 @@
     {
      "file": "src/packages/mission-core/test/scope-projection.test.ts",
      "name": "the mapping's per-audience enforced constraints keys (@spec resource-access#resource-access-type) > refuses a malformed list, a repeated key, and the member on a scope-only audience",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the emission check pairs an entry with every audience whose resource tree overlaps it (@spec resource-access#resource-access-type, #1266) > a token with two overlapping audiences checks the entry against both lists",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "the emission check pairs an entry with every audience whose resource tree overlaps it (@spec resource-access#resource-access-type, #1266) > an audience that is not a // base is paired by equality only (boundary)",
      "level": "unit",
      "surface": "token-endpoint"
     },
@@ -42202,7 +42262,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#1266 round 2 (D480 departures closed). An entry for another resource rides only in tokens its resource server never receives; it is checked when a token is issued for that resource (the boundary case). The cross-domain ID-JAG goes to the RAS, not to the resource server: the RAS's destination policy governs emission to the destination resource and is now fail-closed. Introspection discloses what was minted and emits nothing new. A scope-only target stays governed by the scope projection's independently enforced controls. The shipped mapping vouches exactly what each resource's metadata advertises (payments, SaaS). Mutations: dropping the AS refusal, checking every carried entry regardless of audience, letting an absent list pass, disabling the transaction-token check, loosening the mapping parser, the RAS passing an unlisted resource, the RAS passing an empty list, and the RAS stripping the key instead of dropping the entry each fail these tests."
+   "notes": "#1266 round 2 (D480 departures closed). An entry for another resource rides only in tokens its resource server never receives; it is checked when a token is issued for that resource (the boundary case). The cross-domain ID-JAG goes to the RAS, not to the resource server: the RAS's destination policy governs emission to the destination resource and is now fail-closed. Introspection discloses what was minted and emits nothing new. A scope-only target stays governed by the scope projection's independently enforced controls. The shipped mapping vouches exactly what each resource's metadata advertises (payments, SaaS). Mutations: dropping the AS refusal, checking every carried entry regardless of audience, letting an absent list pass, disabling the transaction-token check, loosening the mapping parser, the RAS passing an unlisted resource, the RAS passing an empty list, and the RAS stripping the key instead of dropping the entry each fail these tests. Review on PR #1427 (P2): the pairing was by equality, so an invoice-level or prefix entry under an audience skipped its list. Fixed with the overlap pairing over #1434's matcher. Mutations: pairing by equality only, checking only the first overlapping audience, a raw string prefix in place of prefixAdmits, dropping the prefix-contains clause, the RAS accepting any one overlapping list, and the RAS passing an entry that overlaps no listed resource each fail these tests. The transaction token admits only entries naming the Challenge-Issuing Resource exactly, so only the equality pairing is reachable there; the two-audience case is witnessed at the shared check."
   },
   {
    "id": "resource-access.scope-projection.narrower-resource",
