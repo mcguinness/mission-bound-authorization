@@ -455,7 +455,7 @@ export function resourceWithin(
   return prefixAdmits(reference.resource, candidate.resource);
 }
 
-/** @spec mission#subset — entry-wise subset test (resource under {@link resourceWithin}). */
+/** @spec mission#subset: entry-wise subset test (resource under {@link resourceWithin}). */
 export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
   // @spec mission#subset (#1399, D538): a top-level member outside the
   // supported set cannot be compared. An entry byte-identical to its
