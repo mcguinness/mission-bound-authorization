@@ -371,9 +371,11 @@ describe("an unmapped refusal diagnostic is rejected before signing (@spec runti
     const h = await build();
     const token = await h.server.validateCredential(h.jwt);
     // The refusal step receives a diagnostic the PEP has no mapping for.
-    const pep = h.pep as unknown as { refuse: (token: unknown, reason: string, ...rest: unknown[]) => Promise<unknown> };
+    const pep = h.pep as unknown as {
+      refuse: (boundary: string, token: unknown, reason: string, ...rest: unknown[]) => Promise<unknown>;
+    };
     const refuse = pep.refuse.bind(h.pep);
-    pep.refuse = (t, _reason, ...rest) => refuse(t, "invoice_not_found_here", ...rest);
+    pep.refuse = (b, t, _reason, ...rest) => refuse(b, t, "invoice_not_found_here", ...rest);
     const signing = vi.spyOn(h.evidence, "recordRefusal");
     const before = businessState(h);
 

@@ -112,6 +112,8 @@ export interface DecisionPointConfig {
     verificationKey: EvidenceKeyLike;
     emitterId: string;
     audience: string;
+    /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
+    authorizesAudience?: (audience: string) => boolean;
   };
   /**
    * @spec runtime#idempotency (#917): this decision point's Exact
@@ -240,6 +242,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
         signer: config.evidence.signer,
         emitterId: config.evidence.emitterId,
         audience: config.evidence.audience,
+        ...(config.evidence.authorizesAudience ? { authorizesAudience: config.evidence.authorizesAudience } : {}),
       })
     : undefined;
   const bindings: PointBindings = {
@@ -301,10 +304,17 @@ export function createEphemeralDecisionPoint(options: {
   resourcePolicy?: ResourcePolicy;
   /** @spec authzen#pdp-request consistency check 11 (#1276): bound exactly as in {@link createDecisionPoint}. */
   refusals?: PdpRefusalRecorder;
+  /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
+  authorizesAudience?: (audience: string) => boolean;
 }): EphemeralDecisionPoint {
-  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy, refusals } = options;
+  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy, refusals, authorizesAudience } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
-  const emitter = createDecisionEvidenceEmitter({ signer: { kid, key: privateKey }, emitterId, audience });
+  const emitter = createDecisionEvidenceEmitter({
+    signer: { kid, key: privateKey },
+    emitterId,
+    audience,
+    ...(authorizesAudience ? { authorizesAudience } : {}),
+  });
   const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals };
   return {
     decide: bindDecide(bindings, unboundRequester()),

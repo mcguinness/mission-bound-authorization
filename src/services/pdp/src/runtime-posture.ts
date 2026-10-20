@@ -1,4 +1,5 @@
 import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { enforcementBoundaryFindings } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
   evidenceDeclarationFindings,
@@ -103,6 +104,12 @@ export function loadRuntimePosture(
     auditHorizonSeconds: options.auditHorizonSeconds ?? AUDIT_HORIZON_SECONDS,
   });
   if (evidence.length) throw new PostureConfigError(JSON.stringify(evidence));
+  // @spec runtime#runtime-conformance (#853, D487): an ambiguous or
+  // unresolvable boundary declaration (one alias naming two boundaries in an
+  // issuer and token-profile context, an undeclared cutover) is refused at
+  // load, before any request reaches a PEP.
+  const boundaries = enforcementBoundaryFindings(input);
+  if (boundaries.length) throw new PostureConfigError(JSON.stringify(boundaries));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");

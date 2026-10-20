@@ -31,6 +31,26 @@
   },
   "remote_decision_channels": [],
   "record_integrity_mechanism": "emitter-signed append-only runtime evidence; full Evidence capability not claimed",
+  "enforcement_boundaries": {
+    "versions": [
+      {
+        "version": "payments-boundary-v1",
+        "effective_at": "1970-01-01T00:00:00Z",
+        "boundaries": [
+          {
+            "boundary": "http://localhost:4403/mcp",
+            "pep_locations": ["mcp-payments-pep"],
+            "audience_aliases": [],
+            "evidence_keys": [
+              {"kid": "pdp-decision-evidence", "emitter": "http://localhost:4403/mcp", "role": "pdp"},
+              {"kid": "ephemeral-pep", "emitter": "http://localhost:4403/mcp", "role": "pep"},
+              {"kid": "ephemeral-executor", "emitter": "http://localhost:4403/mcp", "role": "executor"}
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "extensions": {
     "transaction_assurance": [
       {

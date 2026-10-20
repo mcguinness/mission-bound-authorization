@@ -31,6 +31,8 @@ export function testAttempt(input: {
     evaluationId,
     mission: input.mission,
     audience: CANONICAL_RESOURCE,
+    // The shipped statement's one boundary version (#853).
+    boundaryVersion: "payments-boundary-v1",
     // The payments service-level operation contract's target (#1276).
     operationTarget: CANONICAL_RESOURCE,
     action: input.action,

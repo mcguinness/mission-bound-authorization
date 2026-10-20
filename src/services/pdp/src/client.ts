@@ -211,10 +211,20 @@ function claimRoute(cfg: RemotePdpClientConfig, path: string): string {
  * reconciliation travel behind the same per-PEP MAC, replay window and
  * scope check as a decision request. A channel failure is a refusal the
  * caller sees as `accepted: false`, never an accepted settlement.
+ *
+ * @spec runtime#boundary-identifier-change (#853 review): `audience` is the
+ * boundary the request is scoped to. A function is read on every request,
+ * so the channel follows the version in force with every other consumer
+ * across a declared change; `undefined` (no boundary established) sends
+ * nothing and refuses locally, with no default.
  */
-export function remoteClaimChannel(cfg: RemotePdpClientConfig & { audience: string }): ClaimChannel {
+export function remoteClaimChannel(
+  cfg: RemotePdpClientConfig & { audience: string | (() => string | undefined) },
+): ClaimChannel {
   const post = async (path: string, payload: Record<string, unknown>): Promise<unknown> => {
-    const exchanged = await signedExchange(claimRoute(cfg, path), JSON.stringify({ audience: cfg.audience, ...payload }), cfg);
+    const audience = typeof cfg.audience === "function" ? cfg.audience() : cfg.audience;
+    if (audience === undefined) return { accepted: false, reason: "boundary_unresolvable" };
+    const exchanged = await signedExchange(claimRoute(cfg, path), JSON.stringify({ audience, ...payload }), cfg);
     if (!exchanged.ok) return { accepted: false, reason: exchanged.reason };
     try {
       return JSON.parse(exchanged.raw) as unknown;

@@ -61,7 +61,13 @@ import { type ResourcePolicy, ResourcePolicyUnavailableError } from "./resource-
  */
 export interface AuthorizedPep {
   secret: string;
-  scopes: readonly string[];
+  /**
+   * @spec runtime#boundary-identifier (#853, D487): the boundary identifiers
+   * this PEP is authorized for. A function is read on every request, so the
+   * registration follows the declared statement version in force and a
+   * cutover moves it with every other consumer.
+   */
+  scopes: readonly string[] | (() => readonly string[]);
   /**
    * @spec authzen#pdp-request consistency check 11, resource-access#resource-matching
    * (#1276, D457): the operation targets within this PEP's declared
@@ -300,7 +306,8 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     // Checked BEFORE getOptions/evaluate touch anything derived from the
     // request: an unauthorized-for-scope PEP gets zero decision work, not a
     // decision made and then discarded.
-    if (!pep.scopes.includes(audience)) {
+    const scopes = typeof pep.scopes === "function" ? pep.scopes() : pep.scopes;
+    if (!scopes.includes(audience)) {
       sendRefusal(res, 403, "pep_not_authorized_for_scope");
       return undefined;
     }
@@ -311,7 +318,7 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     // `operation_target_invalid`, with zero decision work. A missing or
     // non-string target reaches `evaluate`, which refuses it the same way.
     const target = targetOf?.(body as Record<string, unknown>);
-    if (typeof target === "string" && !(pep.operationTargets ?? pep.scopes).includes(target)) {
+    if (typeof target === "string" && !(pep.operationTargets ?? scopes).includes(target)) {
       await recordPdpRefusal(config.refusals, "operation_target_invalid", (body as Record<string, unknown>).request);
       sendRefusal(res, 403, "operation_target_invalid");
       return undefined;

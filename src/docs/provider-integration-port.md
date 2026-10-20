@@ -1023,7 +1023,7 @@ section maps each overlay obligation to its hook, read at origin/main
 `01874fd5`; statements about the as-native target (#1105) or naming a later merged
 issue (such as #1103 or #1104) are true at `583e3806`, those naming #828 at `e3f4e789`, those naming
 D436 or D483 at `897716ef`, those on signing keys and restart (#1299, #1307) at `73a2e86b`, and
-every `file:line` citation is read at `04b11481`.
+every `file:line` citation is read at `60186e9c`.
 
 In this section `pep.ts` and `server.ts` are under `services/mcp-payments/src/`,
 `evaluate.ts`, `fga.ts`, `policy.ts` and `idempotency-claims.ts` are under
@@ -1106,7 +1106,7 @@ drives an AS-issued Mission-bound token through that assembled path.
   but the Mission it names does not survive: the kernel runs in memory on
   `pnpm as-native`, so the PEP's loader finds no Mission and refuses
   `unknown_mission` before any decision (§5.3). The PEP fetches the AS JWKS
-  once at assembly (`stack.ts:545`); refresh is #831's.
+  once at assembly (`stack.ts:638`); refresh is #831's.
 - **Tests:**
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4a: DISCRIMINATING token-without-a-DPoP-proof (valid token, no proof header; and the bearer scheme) is rejected at the gate BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
   - [FGA] `HTTP mediated MCP channel (harness duty 2 + DPoP proof-of-possession over HTTP) > 4b: DISCRIMINATING mismatched-key (DPoP proof signed by a DIFFERENT key than cnf.jkt) is rejected BEFORE the PEP -- zero evidence/ledger; a valid DPoP client on the SAME server then permits` (HTTP transport)
@@ -1181,13 +1181,13 @@ drives an AS-issued Mission-bound token through that assembled path.
   reaches the policy: `lookup_vendor` naming a vendor the store does not
   hold is refused `unknown_vendor` before any decision (D484), as
   `get_invoice` and a named-vendor `list_invoices` are. The payments
-  Operation Profile (`payments-runtime-profile-v8`) declares the policy's
+  Operation Profile (`payments-runtime-profile-v9`) declares the policy's
   owner, principals (subject and client), relations, tenant, freshness and
   failure behavior.
 
 ### 5.3 Protected state and lifecycle
 
-- **Hook.** `loadView` (`stack.ts:918-925`) reads the kernel's committed state
+- **Hook.** `loadView` (`stack.ts:1016-1023`) reads the kernel's committed state
   and version for each decision, with `mode: "fresh"` and `freshness_at` set
   to now. Under PEP placement the PEP forwards that observation at
   `context.mission_state_observation`, and the PDP's own view wins on
@@ -1228,7 +1228,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Hook.** `buildEffectiveParams`
   (`services/mcp-payments/src/effective-params.ts:35-54`) builds the effective
   parameters from the payments store, never from tool arguments, and
-  `parameterDigest` (`:84`) commits them into the decision request. Three
+  `parameterDigest` (`:94`) commits them into the decision request. Three
   separate PEP checks run at use:
   - `verifyPermitAtUse` (`pep.ts:2308`) runs the permit-use table
     (`pep.ts:489-549`): the permit's bound phase against the crossing's phase
@@ -1254,11 +1254,11 @@ drives an AS-issued Mission-bound token through that assembled path.
     transaction, which also redeems a carried `use_limit` (§5.5). Nothing
     else is written before the effect.
   - Transaction tier (`callTransactionTool`, `server.ts:1548`): the
-    permit-use table at admission (`:1607`); single-use redemption (`:1649`),
+    permit-use table at admission (`:1623`); single-use redemption (`:1665`),
     which writes the engine's operation state; then the capability check
-    (`:1680`), the execution lease (`:1698`), `reverify` (`:1704`) and the
-    permit-use table again (`:1716`); then the `txn` consumption, where a
-    transaction token is presented, and the connector commit (`:1728-1779`).
+    (`:1696`), the execution lease (`:1714`), `reverify` (`:1720`) and the
+    permit-use table again (`:1732`); then the `txn` consumption, where a
+    transaction token is presented, and the connector commit (`:1744-1805`).
     A refusal after redemption marks the operation `abandoned` and records
     suppressed Execution Evidence, which settles the PDP claim `failed`
     because the attempt is redeemed (`pep.ts:2237-2239`). The permit is spent;
@@ -1345,7 +1345,7 @@ drives an AS-issued Mission-bound token through that assembled path.
 - **Crash and recovery.** The claim and reservation files survive a restart,
   and with them the consumed identifiers.
   The engine's redemption records do not, and every process reuses the epoch
-  `demo-epoch` (`stack.ts:957`), so single use across a restart rests on the
+  `demo-epoch` (`stack.ts:1055`), so single use across a restart rests on the
   persisted claim and reservations (the contract's §7). Surviving is not
 recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Tests:**
@@ -1395,7 +1395,7 @@ recovery: a restarted PEP cannot reconcile a prior process's claim (§5.7).
 - **Boundary.** Synchronous, inside the request.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `EvidenceRetentionStore` is in memory as shipped
-  (`stack.ts:812-814`). Retained records are lost at restart.
+  (`stack.ts:910-912`). Retained records are lost at restart.
 - **Tests (PEP-level):**
   - `a permit the PDP did not evidence is refused, never executed (#741) > refuses the action when the decision carries no Decision Evidence`
   - `retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart` (on a file-backed store, not the shipped one)
