@@ -14,6 +14,7 @@ import {
   type ResourceContractRef,
   resourceContractDigest,
 } from "@mission/core";
+import { decodeJwt, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
   type ActionApproval,
@@ -244,6 +245,22 @@ describe("an action-bound approval binds the reference (@spec authzen#context-ap
     expect(
       await reason(withApproval(request(null), approval()), gated(ResourceContractDeclarations.NONE, view(null))),
     ).toBe("permit");
+  });
+
+  it("a requestable denial's PDP-signed binding carries the request's contract reference, the material the approved Resource is bound from", async () => {
+    const { privateKey } = await generateKeyPair("ES256");
+    const requestable = { sign: privateKey, kid: "pdp-denial", endpoint: "https://ars.test/requests" };
+    const d = await evaluate(request(V1), options(V1_CURRENT, view(), { requiresActionApproval: () => true, requestable }));
+    expect(d.context.denial_reason).toBe("action_approval_required");
+    const token = (d.context.access_request as { binding_token: string }).binding_token;
+    expect(decodeJwt(token).resource_contract).toEqual(V1);
+    const plain = await evaluate(
+      request(null),
+      options(ResourceContractDeclarations.NONE, view(null), { requiresActionApproval: () => true, requestable }),
+    );
+    expect(decodeJwt((plain.context.access_request as { binding_token: string }).binding_token)).not.toHaveProperty(
+      "resource_contract",
+    );
   });
 
   it("refuses an approved action, parameters unchanged, when the definition changed after the approval and before the decision", async () => {
