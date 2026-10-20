@@ -470,14 +470,14 @@ Table of Contents
    Where a drawdown request is triggered by the agent encountering a
    resource not named at approval, and the resource self-declares its
    operations and consequences in a content-addressed form, the
-   adjudication MUST evaluate the declaration against the ceiling, and a
-   policy-adjudicated drawdown's record carries the declaration's digest
-   (Section 5).  An AAuth deployment adopting Rich Resource Requests
-   composes one such self-declaring substrate
-   ([I-D.draft-mcguinness-mission-aauth]).  The discovery companion
-   ([I-D.draft-mcguinness-mission-discovery]) defines the encounter
-   adjudication contract, the identity pinning, and the floors this
-   drawdown path carries.
+   adjudication MUST evaluate the declaration against the ceiling, and
+   the record of any successor the request creates, by policy or by a
+   fresh human approval, carries the declaration's digest (Section 5).
+   An AAuth deployment adopting Rich Resource Requests composes one such
+   self-declaring substrate ([I-D.draft-mcguinness-mission-aauth]).  The
+   discovery companion ([I-D.draft-mcguinness-mission-discovery])
+   defines the encounter adjudication contract, the identity pinning,
+   and the floors this drawdown path carries.
 
    The Mission Issuer MUST NOT policy-adjudicate a requested authority
    that is not within the consented authority_ceiling.  Such a request
@@ -1135,11 +1135,12 @@ Table of Contents
    was adjudicated within the cadence that applied at the time
    (Section 3.2).
 
-   The record of a policy-adjudicated drawdown whose adjudication
-   evaluated a resource's self-declaration (Section 3.1.1) MUST carry
-   the declaration's digest as resource_declaration_digest, so the
-   encounter is reproducible in audit: what the resource claimed to be
-   when authority bound to it.
+   The record of every successor whose adjudication, by policy or by a
+   fresh human approval, evaluated a resource's self-declaration
+   (Section 3.1.1) MUST carry the declaration's digest as
+   resource_declaration_digest, so the encounter is reproducible in
+   audit: what the resource claimed to be when authority bound to it.  A
+   refused request creates no successor and so no such record.
 
 6.  Conformance
 
@@ -1211,9 +1212,9 @@ Table of Contents
       cumulative drawdown count (Section 3.1.4, Section 5);
 
    *  carry drawdown_count on every Mission record of a chain that
-      carries a ceiling, and record resource_declaration_digest on a
-      policy-adjudicated drawdown whose adjudication evaluated a
-      resource's self-declaration (Section 5);
+      carries a ceiling, and record resource_declaration_digest on every
+      successor whose adjudication, by policy or by a fresh human
+      approval, evaluated a resource's self-declaration (Section 5);
 
    *  as a deployment obligation, retain the consented ceiling members
       with every Mission record of the chain for the audit horizon
@@ -1490,6 +1491,10 @@ Appendix A.  Document History
       retains it; the approval surface establishes the ceiling, with no
       OAuth parameter or token claim defined for it; a refusal points to
       the expansion profile's completion-mode mapping (#1439, D572).
+
+   *  Audit Linkage requires resource_declaration_digest on every
+      successor whose adjudication, by policy or by a fresh human
+      approval, evaluated a resource's self-declaration (D582).
 
    *  Rulings on the editorial restructure's author's calls (D569): the
       discharge and containment prohibitions bind the Mission Issuer,
