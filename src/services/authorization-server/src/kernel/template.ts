@@ -254,6 +254,17 @@ export function createTemplate(
         `ceiling[${i}] carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
       );
     }
+    // @spec resource-access#resource-contract (#249, D553): template consent
+    // does not assemble or validate a contract reference against
+    // configuration, so this surface takes the conformance alternative: "An
+    // authorization server that does not implement this section refuses a
+    // proposed or carried entry that carries `resource_contract` ... and never
+    // drops the member."
+    if (entry.resource_contract !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] carries resource_contract, which template consent does not assemble from configuration; refusing rather than dropping it`,
+      );
+    }
   });
   // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
   // (#1373): a template ceiling entry whose `allowed_delegates` or
