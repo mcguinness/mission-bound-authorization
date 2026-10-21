@@ -30,6 +30,7 @@ author:
 normative:
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-ietf-oauth-rar-metadata-remediation:
+  I-D.draft-mcguinness-oauth-actor-profile:
   RFC3339:
   RFC4648:
   RFC5646:
@@ -74,7 +75,6 @@ informative:
   RFC9635:
   RFC8628:
   RFC8792:
-  I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -6315,9 +6315,9 @@ normative references.
 
 Its reference to the OAuth Actor Profile
 ({{I-D.draft-mcguinness-oauth-actor-profile}}), for the `act` chain
-shape the optional Delegation capability uses, is informative and
-confined to Delegation, so the mandatory single-domain core does not
-depend on it.
+shape the optional Delegation capability uses, is normative and binds
+only a deployment that claims Delegation, so the mandatory
+single-domain core does not depend on it.
 
 The companion Mission Cross-Domain Projection profile
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}} specifies
@@ -7241,9 +7241,9 @@ draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
-6750, RFC 9700, Client Instance ID, OpenID Connect Core and the RAR
-metadata remediation draft are normative, and the OAuth Actor Profile
-informative.
+6750, RFC 9700, Client Instance ID, OpenID Connect Core, the RAR
+metadata remediation draft and, for Delegation, the OAuth Actor
+Profile are normative.
 
 -00
 
