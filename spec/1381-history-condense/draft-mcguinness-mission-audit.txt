@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                        Mission Audit Transparency
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -421,10 +421,10 @@ Table of Contents
    |           |evidence_envelope|consent-       |evidence+jws  |         |
    |           |included (JCS)   |evidence+json  |              |         |
    +-----------+-----------------+---------------+--------------+---------+
-   |Approval   |complete record  |application/   |application/  |issuer   |
-   |governance |including        |mission-       |mission-      |         |
-   |           |envelope (JCS),  |approval-      |approval-     |         |
-   |           |the record-digest|governance+json|governance+jws|         |
+   |Approval   |complete record  |application/   |mission-      |issuer   |
+   |governance |including        |mission-       |approval-     |         |
+   |           |envelope (JCS),  |approval-      |governance+jws|         |
+   |           |the record-digest|governance+json|              |         |
    |           |preimage         |               |              |         |
    +-----------+-----------------+---------------+--------------+---------+
    |Decision   |complete object, |application/   |application/  |PDP key  |
@@ -558,17 +558,18 @@ Table of Contents
    retained unsigned.  Where the defining profile pairs that typ with a
    protected cty, as the runtime evidence types and the Approval
    Governance Record do, the cty is the row's payload-preimage-content-
-   type, and a verifier checks the pair.  It is the per-type mapping
-   named in Section 5.2, checked when verifying the operational
-   signature, never in place of payload-preimage-content-type.  Harness
-   and Egress Evidence fix none: their defining profile fixes the raw
-   object's JCS bytes under integrity protection by a named mechanism,
-   not a JWS envelope, and a deployment-local signature creates no
-   portable mapping in this catalog.  A harness revision that defines a
-   JWS representation fixes, in that profile, the envelope and retained
-   form, the protected typ, byte-equality verification, and whether
-   transparency commits the JSON payload, the complete nested object, or
-   the compact JWS.
+   type (for the Approval Governance Record, its application/ prefix
+   retained or omitted, as that profile permits), and a verifier checks
+   the pair.  It is the per-type mapping named in Section 5.2, checked
+   when verifying the operational signature, never in place of payload-
+   preimage-content-type.  Harness and Egress Evidence fix none: their
+   defining profile fixes the raw object's JCS bytes under integrity
+   protection by a named mechanism, not a JWS envelope, and a
+   deployment-local signature creates no portable mapping in this
+   catalog.  A harness revision that defines a JWS representation fixes,
+   in that profile, the envelope and retained form, the protected typ,
+   byte-equality verification, and whether transparency commits the JSON
+   payload, the complete nested object, or the compact JWS.
 
    The media types and type identifiers are defined as follows:
 
@@ -1362,7 +1363,7 @@ Table of Contents
    The payload is the SHA-256 digest of the JCS canonical bytes of the
    retained Consent Evidence object, evidence_envelope included
    (Section 5.3), carried inline as the raw digest whose base64url form
-   is ABgvgPAXUukhkxer0K6MzkH6XEL8VBc2WRwjXvt5Wa4, not that display
+   is TSzomEHSsEM5B7TDB-3Kl-v2it40P3Wyb7xJiE45iRU, not that display
    string.  The Transparency Service appends the statement and returns a
    Receipt, a COSE_Sign1 with an inclusion proof in its unprotected
    header, which the Mission Issuer keeps with the evidence as a
@@ -1844,6 +1845,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The evidence-type table shows the Approval Governance Record's
+      operational typ with application/ omitted, as Mission Approval
+      Governance emits it; that record's cty may omit the prefix too
+      (#1436).
 
    *  The Lifecycle Transition Object records a terminated Mission as
       state terminated with a termination object, and prior_state is

@@ -1060,7 +1060,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1073,12 +1073,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-approval-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1133,7 +1133,7 @@ approval sequencing.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1254,7 +1254,7 @@ unspecified: a human Approver review is asynchronous. The agent submits
 a Proposed Mission and must wait, sometimes for a long time, for a
 decision.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document supplies that. It profiles OAuth Deferred Token Response
-<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span> (the "deferred
+<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span> (the "deferred
 substrate") so a Mission approval can be deferred and polled.<a href="#section-1-2" class="pilcrow">¶</a></p>
 <p id="section-1-3">A reviewer that will grant only a narrowed subset of the proposed
 Mission resolves the deferral to <code>access_denied</code>, and the client submits
@@ -1277,14 +1277,14 @@ ceremony. Under the standalone Mission Authority Server binding
 natively asynchronous and this re-sequencing is not needed.<a href="#section-1-6" class="pilcrow">¶</a></p>
 <p id="section-1-7">This profile tracks an in-progress substrate. It depends normatively on
 OAuth Deferred Token Response
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>), an early
-Internet-Draft that is not ratified and whose details may change, so
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>), an OAuth working
+group Internet-Draft whose details may change before publication, so
 this profile is not yet a stable interface and will track the substrate
 as it evolves. Synchronous Mission approval, which needs only the
 issuance profile, is the stable path; deploy deferred approval for
-evaluation rather than as a stable interface. This document is
-Standards Track despite that posture because it tracks its substrate
-and stabilizes with it.<a href="#section-1-7" class="pilcrow">¶</a></p>
+evaluation rather than as a stable interface. This document is Standards
+Track despite that posture because it tracks its substrate and
+stabilizes with it.<a href="#section-1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="issuance-relationship">
@@ -1333,7 +1333,7 @@ from it, pending an approval decision. This document uses
 Intent through PAR as the issuance profile requires, and includes
 <code>deferred</code> among the <code>completion_mode</code> values on the resulting token
 request, opting in to the deferred substrate
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). When the Mission
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>). When the Mission
 Issuer cannot decide the approval immediately, for example because it
 routes the Proposed Mission to a human reviewer, it returns the
 substrate's deferred response (<code>authorization_pending</code> with a
@@ -1355,7 +1355,7 @@ to the asynchronous review surface:<a href="#section-4.1-1" class="pilcrow">¶</
 <li id="section-4.1-2.1">
             <p id="section-4.1-2.1.1">The client submits the Proposed Mission via PAR <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span> and the
 authorization request completes into a deferred state per the
-deferred substrate (<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>).<a href="#section-4.1-2.1.1" class="pilcrow">¶</a></p>
+deferred substrate (<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>).<a href="#section-4.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-4.1-2.2">
             <p id="section-4.1-2.2.1">Before approval only the pending request exists. The authorization
@@ -1475,7 +1475,7 @@ effective-expiry recheck moves it to <code>denied</code>, never <code>approved</
 <code>expired</code>
 (<a href="#pending-staleness" class="auto internal xref">Section 4.4</a>), and client cancellation under the deferred
 substrate moves it to <code>cancelled</code>
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>). <code>approved</code>,
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>). <code>approved</code>,
 <code>denied</code>, <code>expired</code>, and <code>cancelled</code> are terminal.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <div class="lang-text sourcecode" id="section-4.3-2">
 <pre>
@@ -1528,9 +1528,10 @@ may stand behind one deferred approval. Mission Approval Governance
 (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) defines the
 Approval Governance Record for exactly that state, and it is
 ceremony-independent: a deployment records it for a deferred approval
-under this profile precisely as for a synchronous one. Where that
-document's recording triggers hold for a deferred approval, the
-issuer records the Approval Governance Record joined by
+under this profile precisely as for a synchronous one. Where a profile
+that adopts that document's recording triggers applies and a trigger
+holds for a deferred approval, the issuer records the Approval
+Governance Record joined by
 <code>approval_event_id</code> and committed atomically with the approval
 decision it governs; the pending window changes when the decision
 happens, never what is recorded about it.<a href="#section-4.5-1" class="pilcrow">¶</a></p>
@@ -1551,10 +1552,10 @@ human decision, so step 3 of <a href="#deferred-sequencing" class="auto internal
 as under any standing-consent basis, the standing consent and the
 policy's adjudication supply the Approver's authentication,
 authorization, and consent (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Mission Approval"). The creation commit of step 4 runs at
-the policy's decision, under that basis's activation checks and with
-its Approval Governance Record, and keeps the effective-expiry
-recheck.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
+Section "Standing-Consent Instances"). The creation commit of
+step 4 runs at the policy's decision, under that basis's activation
+checks and with its Approval Governance Record, and keeps the
+effective-expiry recheck.<a href="#section-4.6-1" class="pilcrow">¶</a></p>
 <p id="section-4.6-2">Nothing else about the deferral changes. Polling, cancellation,
 client binding, and token delivery follow the deferred substrate and
 this profile, and a completed activation moves the pending approval
@@ -1624,10 +1625,10 @@ commits.<a href="#section-5-1.2.1" class="pilcrow">¶</a></p>
 <dt id="section-5-1.3">Shaping:</dt>
         <dd style="margin-left: 1.5em" id="section-5-1.4">
           <p id="section-5-1.4.1">A client-side shaper (<span>[<a href="#I-D.draft-mcguinness-mission-shaping" class="cite xref">I-D.draft-mcguinness-mission-shaping</a>]</span>)
-narrows the Mission Intent before submission, which reduces the
-chance a deferred review is refused. After an <code>access_denied</code> resolution, the
-shaper constructs the fresh, narrower Mission Intent the client
-resubmits.<a href="#section-5-1.4.1" class="pilcrow">¶</a></p>
+  narrows the Mission Intent before submission, which reduces the chance
+  a deferred review is refused. After an <code>access_denied</code> resolution, the
+  shaper constructs the fresh, narrower Mission Intent the client
+  resubmits.<a href="#section-5-1.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-1.5">Integrity anchors:</dt>
@@ -1702,10 +1703,11 @@ Cache-Control: no-store
 </div>
 <p id="section-6-8">The token carries the <code>mission</code> claim as the issuance profile defines
 it; the response also surfaces the optional <code>mission_id</code> parameter
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for correlation. Had <code>alice</code> approved only a subset, the deferral would
-resolve to <code>access_denied</code> and the agent would submit a fresh, narrower
-Mission Intent, unless the deployment runs the experimental revision
-companion (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) for correlation. Had <code>alice</code>
+approved only a subset, the deferral would resolve to <code>access_denied</code>
+and the agent would submit a fresh, narrower Mission Intent, unless the
+deployment runs the experimental revision companion
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-approval-revision" class="cite xref">I-D.draft-mcguinness-oauth-mission-approval-revision</a>]</span>).<a href="#section-6-8" class="pilcrow">¶</a></p>
 <p id="section-6-9">A headless agent can drive the request itself. Agent
 <code>ledger-reconciler</code>, with no user present, submits its Mission Intent
 through PAR and sends the authorization request, which the endpoint
@@ -1798,7 +1800,7 @@ same controls as other approval-event records.<a href="#section-9-1" class="pilc
       </h2>
 <p id="section-10-1">This document has no IANA actions. The <code>deferred</code> completion mode and
 the deferred grant type are registered by the deferred substrate
-(<span>[<a href="#I-D.draft-gerber-oauth-deferred-token-response" class="cite xref">I-D.draft-gerber-oauth-deferred-token-response</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-ietf-oauth-deferred-token-response" class="cite xref">I-D.draft-ietf-oauth-deferred-token-response</a>]</span>).<a href="#section-10-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="sec-combined-references">
@@ -1812,9 +1814,9 @@ the deferred grant type are registered by the deferred substrate
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
-<dt id="I-D.draft-gerber-oauth-deferred-token-response">[I-D.draft-gerber-oauth-deferred-token-response]</dt>
+<dt id="I-D.draft-ietf-oauth-deferred-token-response">[I-D.draft-ietf-oauth-deferred-token-response]</dt>
         <dd>
-<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-gerber-oauth-deferred-token-response-00</span>, <time datetime="2026-06-23" class="refDate">23 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-gerber-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
+<span class="refAuthor">Jacobsen, F. K.</span>, <span class="refAuthor">de Oliveira Niero, G.</span>, and <span class="refAuthor">M. Gerber</span>, <span class="refTitle">"Deferred Token Response"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-oauth-deferred-token-response-00</span>, <time datetime="2026-09-16" class="refDate">16 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00">https://datatracker.ietf.org/doc/html/draft-ietf-oauth-deferred-token-response-00</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-approval-governance">[I-D.draft-mcguinness-mission-approval-governance]</dt>
         <dd>
@@ -1882,13 +1884,19 @@ the deferred grant type are registered by the deferred substrate
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Policy Completion: a pending approval can complete under Mission
+          <p id="appendix-A-2.1.1">The Approval Governance Record is recorded for a deferred approval
+where a profile that adopts Mission Approval Governance's recording
+triggers applies and a trigger holds, matching that document's rule
+that the triggers bind only under an adopting profile (#1436).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Policy Completion: a pending approval can complete under Mission
 Approval Governance's <code>governed_policy</code> basis, with the deferral's
 polling, cancellation, client binding, and token delivery unchanged
 and no client-selected approval basis. A policy evaluation that does
 not authorize activation leaves the request for a full <code>direct</code>
 human approval or <code>denied</code>, never a <code>governed_policy</code> activation
-(#1185).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+(#1185).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1065,7 +1065,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-attenuation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1143,7 +1143,7 @@ alongside, not instead of, Authorization-Server-mediated delegation.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1439,13 +1439,18 @@ entry's <code>actions</code>;<a href="#section-4.1-2.1.1" class="pilcrow">¶</a>
             <p id="section-4.1-2.2.1">every operation a mapped tool can perform at each audience in the
 root's <code>aud</code> <span class="bcp14">MUST</span> have an operation target, as that resource
 server's operation contract establishes it, that matches the
-entry's <code>resource</code>
+entry's <code>resource</code> under the entry's <code>resource_match</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
-"Resource Matching"). The root carries no resource member, so an
-<code>aud</code> value equal to the entry's <code>resource</code> does not establish this
-by itself. Where the entry's <code>resource</code> is finer than the targets a
-tool can reach, the root carries argument constraints that confine
-every target within it, or the issuer <span class="bcp14">MUST NOT</span> map the entry;<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+"Resource Matching"). This target restriction is part of the entry,
+and the mapping preserves all of it for every tool and every
+audience. The root carries no resource member, so an <code>aud</code> value
+equal to the entry's <code>resource</code> does not establish this by itself.
+Where the entry's <code>resource</code> is finer than the targets a tool can
+reach, the root carries argument constraints that confine every
+target within it. An issuer that cannot establish this for a tool
+at every audience <span class="bcp14">MUST NOT</span> map the entry to that tool, and never
+maps it with the restriction removed; a requested root that needs
+such a tool is rejected (<a href="#request-discovery" class="auto internal xref">Section 5</a>);<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.1-2.3">
             <p id="section-4.1-2.3.1">a tool's argument constraints map to the entry's <code>constraints</code>,
@@ -1484,7 +1489,7 @@ also serves the per-subtree disclosure minimization of
 under this mapping and the issuance profile's subset rule. An auditor
 verifies that a root is within the Authority Set by applying this same
 mapping in reverse: each root tool and argument constraint traces to a
-permitted entry action and constraint.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+permitted entry action, target restriction and constraint.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2227,6 +2232,13 @@ tool can perform at each root audience has an operation target
 within the entry's <code>resource</code>; equal <code>resource</code> and <code>aud</code> values do
 not establish this alone, and an entry finer than the reachable
 targets is confined by argument constraints or not mapped (#1276).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Deriving the Root from the Authority Set: the preserved target
+restriction includes the entry's <code>resource_match</code> and holds for every
+tool and every audience; an issuer that cannot establish it for a
+tool does not map the entry to that tool, and the reverse mapping
+traces each tool to the entry's target restriction (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

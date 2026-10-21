@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            20 October 2026
-Expires: 23 April 2027
+Intended status: Experimental                            21 October 2026
+Expires: 24 April 2027
 
 
                Mission Device Authorization for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -236,15 +236,15 @@ Table of Contents
    closed top levels, and size bounds, and its Authority Proposal rules,
    reading "the same pushed request" as this request.
 
-   The AS MUST complete steps 1 to 5 of the OAuth binding's Submission
+   The AS MUST complete steps 1 to 6 of the OAuth binding's Submission
    Processing Order, and validate every proposed entry, before it issues
    a device_code, refusing a failure with the error code the OAuth
    binding's error mapping assigns to it at PAR, in an error response as
    Section 3.2 of [RFC8628] specifies.  After the device authorization
    response, the client learns only the session outcomes of Section 8.1;
    the device grant has no front-channel step at which a later refusal
-   could reach it with its code.  Derivation and rendering (steps 6 and
-   7) run at the approval event (Section 7), where the Subject and
+   could reach it with its code.  Derivation and rendering (steps 7 and
+   8) run at the approval event (Section 7), where the Subject and
    authority source are established.
 
 6.  Session Binding

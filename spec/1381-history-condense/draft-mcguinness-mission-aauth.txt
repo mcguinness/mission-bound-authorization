@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                    Mission Context Binding for AAuth
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -1467,7 +1467,7 @@ Table of Contents
    This section is this binding's Mission Substrate Statement and
    declares conformance to [I-D.draft-mcguinness-mission-substrate].  It
    applies to this revision of the binding in every resource access mode
-   of Section 4.5; mode-specific limits appear in the capability table.
+   of Section 4.5; mode-specific limits appear in the capability list.
 
    The contextual-governance kernel maps as follows:
 
@@ -1545,165 +1545,121 @@ Table of Contents
        local activity distinguished, and with the coverage, ordering,
        integrity, access, and retention requirements of Section 4.3.
 
-   The Statement's capability table follows, one row per capability;
-   every supplied row states its activation conditions, and its temporal
-   and failure elements in its cells or by express inheritance of the
-   Bounded Reliance floor ([I-D.draft-mcguinness-mission-substrate]):
+   The Statement's capability list follows, one entry per capability;
+   every supplied entry states its activation conditions, and its
+   temporal and failure elements in the entry or by express inheritance
+   of the Bounded Reliance floor
+   ([I-D.draft-mcguinness-mission-substrate]):
 
-   +=============+========+=================================================+=================+==============+
-   |Capability   |Claim   |Activation                                       |Scope and        |Limitations   |
-   |             |        |                                                 |defining sections|              |
-   +=============+========+=================================================+=================+==============+
-   |Lifecycle-   |supplied|always                                           |Mission approval |Independently |
-   |Gated        |        |                                                 |and other        |issued        |
-   |Authorization|        |                                                 |positive         |resource      |
-   |             |        |                                                 |governance       |credentials   |
-   |             |        |                                                 |decisions at the |and           |
-   |             |        |                                                 |mission endpoint,|intentionally |
-   |             |        |                                                 |permission       |missionless   |
-   |             |        |                                                 |decisions,       |requests,     |
-   |             |        |                                                 |person-token     |admitted by   |
-   |             |        |                                                 |issuance under a |policy with no|
-   |             |        |                                                 |named or         |required or   |
-   |             |        |                                                 |upstream-        |inherited     |
-   |             |        |                                                 |inherited        |association,  |
-   |             |        |                                                 |mission, and     |are outside   |
-   |             |        |                                                 |auth-token       |the claim; a  |
-   |             |        |                                                 |issuance the PS  |failed        |
-   |             |        |                                                 |performs or      |required      |
-   |             |        |                                                 |brokers for      |association is|
-   |             |        |                                                 |requests carrying|rejected,     |
-   |             |        |                                                 |the person-token-|never treated |
-   |             |        |                                                 |issued           |as missionless|
-   |             |        |                                                 |mission_s256     |(Section 4.7);|
-   |             |        |                                                 |claim; decisions |the post-     |
-   |             |        |                                                 |fail closed when |transition    |
-   |             |        |                                                 |current state    |residual is   |
-   |             |        |                                                 |cannot be        |bounded by    |
-   |             |        |                                                 |established      |person-token  |
-   |             |        |                                                 |(Section 4.8,    |and auth-token|
-   |             |        |                                                 |Section 4.5,     |lifetime and  |
-   |             |        |                                                 |Section 4.3)     |expires_at    |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |State-       |supplied|the AAuth Mission Management status operation    |Authenticated    |The base      |
-   |Observable   |        |active                                           |per-role callers,|binding       |
-   |             |        |([I-D.draft-mcguinness-mission-aauth-management])|the active and   |exposes no    |
-   |             |        |                                                 |terminated       |consumer-     |
-   |             |        |                                                 |vocabulary,      |facing state  |
-   |             |        |                                                 |responses stamped|source; token |
-   |             |        |                                                 |observed_at with |acceptance is |
-   |             |        |                                                 |a declared       |not           |
-   |             |        |                                                 |fresh_until      |observation   |
-   |             |        |                                                 |reliance bound,  |              |
-   |             |        |                                                 |failing closed on|              |
-   |             |        |                                                 |failed,          |              |
-   |             |        |                                                 |unrecognized, or |              |
-   |             |        |                                                 |stale responses, |              |
-   |             |        |                                                 |absent and       |              |
-   |             |        |                                                 |unauthorized     |              |
-   |             |        |                                                 |references       |              |
-   |             |        |                                                 |indistinguishable|              |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Structured   |not     |--                                               |--               |The mission   |
-   |Authority    |supplied|                                                 |                 |description is|
-   |             |        |                                                 |                 |private prose |
-   |             |        |                                                 |                 |and           |
-   |             |        |                                                 |                 |approved_tools|
-   |             |        |                                                 |                 |is PS-        |
-   |             |        |                                                 |                 |governance    |
-   |             |        |                                                 |                 |input; scopes |
-   |             |        |                                                 |                 |or a resource-|
-   |             |        |                                                 |                 |owned policy  |
-   |             |        |                                                 |                 |language can  |
-   |             |        |                                                 |                 |supply        |
-   |             |        |                                                 |                 |structure     |
-   |             |        |                                                 |                 |inside its own|
-   |             |        |                                                 |                 |boundary      |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Monotonic    |not     |--                                               |--               |No cross-     |
-   |Derivation   |supplied|                                                 |                 |boundary      |
-   |             |        |                                                 |                 |subset        |
-   |             |        |                                                 |                 |relation is   |
-   |             |        |                                                 |                 |defined; a    |
-   |             |        |                                                 |                 |resource      |
-   |             |        |                                                 |                 |policy        |
-   |             |        |                                                 |                 |language can  |
-   |             |        |                                                 |                 |define        |
-   |             |        |                                                 |                 |monotonicity  |
-   |             |        |                                                 |                 |within its own|
-   |             |        |                                                 |                 |vocabulary; an|
-   |             |        |                                                 |                 |accepted      |
-   |             |        |                                                 |                 |update can    |
-   |             |        |                                                 |                 |broaden the   |
-   |             |        |                                                 |                 |work under the|
-   |             |        |                                                 |                 |same reference|
-   |             |        |                                                 |                 |with the      |
-   |             |        |                                                 |                 |Supervisor's  |
-   |             |        |                                                 |                 |acceptance    |
-   |             |        |                                                 |                 |(Section 4.8),|
-   |             |        |                                                 |                 |so the binding|
-   |             |        |                                                 |                 |offers no     |
-   |             |        |                                                 |                 |containment   |
-   |             |        |                                                 |                 |guarantee     |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Credential-  |supplied|PS authorization or federated authorization      |PS-issued or PS- |Agent identity|
-   |Bound        |        |access mode, for requests whose resource token   |brokered         |and resource- |
-   |             |        |carries and validates the signed mission_s256    |artifacts carry  |managed modes |
-   |             |        |claim (Section 4.5, Section 4.7)                 |the claim, a     |convey no     |
-   |             |        |                                                 |binding          |mission       |
-   |             |        |                                                 |established at   |binding;      |
-   |             |        |                                                 |issuance rather  |federated     |
-   |             |        |                                                 |than by an       |authorization |
-   |             |        |                                                 |external join;   |artifacts are |
-   |             |        |                                                 |fact semantics:  |AS-issued     |
-   |             |        |                                                 |PS issuance or   |under the PS's|
-   |             |        |                                                 |brokering under  |brokering, and|
-   |             |        |                                                 |the mission      |the PS's      |
-   |             |        |                                                 |                 |delivery check|
-   |             |        |                                                 |                 |rejects one   |
-   |             |        |                                                 |                 |that omits or |
-   |             |        |                                                 |                 |alters the    |
-   |             |        |                                                 |                 |claim         |
-   |             |        |                                                 |                 |(Section 4.7) |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Authorized   |not     |--                                               |--               |The PS co-    |
-   |Context      |supplied|                                                 |                 |establishes   |
-   |Correlation  |        |                                                 |                 |the mission,  |
-   |             |        |                                                 |                 |person, agent,|
-   |             |        |                                                 |                 |and token     |
-   |             |        |                                                 |                 |where it is on|
-   |             |        |                                                 |                 |the path; no  |
-   |             |        |                                                 |                 |authoritative |
-   |             |        |                                                 |                 |join of       |
-   |             |        |                                                 |                 |independently |
-   |             |        |                                                 |                 |established   |
-   |             |        |                                                 |                 |facts is      |
-   |             |        |                                                 |                 |defined       |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Independently|not     |--                                               |--               |s256 proves   |
-   |Verifiable   |supplied|                                                 |                 |byte identity |
-   |             |        |                                                 |                 |to parties    |
-   |             |        |                                                 |                 |holding the   |
-   |             |        |                                                 |                 |blob; it does |
-   |             |        |                                                 |                 |not prove     |
-   |             |        |                                                 |                 |record        |
-   |             |        |                                                 |                 |properties or |
-   |             |        |                                                 |                 |current state |
-   |             |        |                                                 |                 |to third      |
-   |             |        |                                                 |                 |parties       |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
-   |Portable     |not     |--                                               |--               |The mission   |
-   |Evidence     |supplied|                                                 |                 |log is PS-    |
-   |             |        |                                                 |                 |local; signed |
-   |             |        |                                                 |                 |receipts or   |
-   |             |        |                                                 |                 |checkpoints   |
-   |             |        |                                                 |                 |would be an   |
-   |             |        |                                                 |                 |extension     |
-   +-------------+--------+-------------------------------------------------+-----------------+--------------+
+   Lifecycle-Gated Authorization:
+      Claim: supplied
 
-               Table 6: AAuth Mission substrate capabilities
+      Activation: always
 
-   Each supplied row's temporal elements inherit the binding's own
+      Scope and defining sections: Mission approval and other positive
+      governance decisions at the mission endpoint, permission
+      decisions, person-token issuance under a named or upstream-
+      inherited mission, and auth-token issuance the PS performs or
+      brokers for requests carrying the person-token-issued mission_s256
+      claim; decisions fail closed when current state cannot be
+      established (Section 4.8, Section 4.5, Section 4.3)
+
+      Limitations: Independently issued resource credentials and
+      intentionally missionless requests, admitted by policy with no
+      required or inherited association, are outside the claim; a failed
+      required association is rejected, never treated as missionless
+      (Section 4.7); the post-transition residual is bounded by person-
+      token and auth-token lifetime and expires_at
+
+   State-Observable:
+      Claim: supplied
+
+      Activation: the AAuth Mission Management status operation active
+      ([I-D.draft-mcguinness-mission-aauth-management])
+
+      Scope and defining sections: Authenticated per-role callers, the
+      active and terminated vocabulary, responses stamped observed_at
+      with a declared fresh_until reliance bound, failing closed on
+      failed, unrecognized, or stale responses, absent and unauthorized
+      references indistinguishable
+
+      Limitations: The base binding exposes no consumer-facing state
+      source; token acceptance is not observation
+
+   Structured Authority:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: The mission description is private prose and
+      approved_tools is PS-governance input; scopes or a resource-owned
+      policy language can supply structure inside its own boundary
+
+   Monotonic Derivation:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: No cross-boundary subset relation is defined; a
+      resource policy language can define monotonicity within its own
+      vocabulary; an accepted update can broaden the work under the same
+      reference with the Supervisor's acceptance (Section 4.8), so the
+      binding offers no containment guarantee
+
+   Credential-Bound:
+      Claim: supplied
+
+      Activation: PS authorization or federated authorization access
+      mode, for requests whose resource token carries and validates the
+      signed mission_s256 claim (Section 4.5, Section 4.7)
+
+      Scope and defining sections: PS-issued or PS-brokered artifacts
+      carry the claim, a binding established at issuance rather than by
+      an external join; fact semantics: PS issuance or brokering under
+      the mission
+
+      Limitations: Agent identity and resource-managed modes convey no
+      mission binding; federated authorization artifacts are AS-issued
+      under the PS's brokering, and the PS's delivery check rejects one
+      that omits or alters the claim (Section 4.7)
+
+   Authorized Context Correlation:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: The PS co-establishes the mission, person, agent, and
+      token where it is on the path; no authoritative join of
+      independently established facts is defined
+
+   Independently Verifiable:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: s256 proves byte identity to parties holding the
+      blob; it does not prove record properties or current state to
+      third parties
+
+   Portable Evidence:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: The mission log is PS-local; signed receipts or
+      checkpoints would be an extension
+
+   Each supplied entry's temporal elements inherit the binding's own
    bounds unless stated: decisions establish current state at the PS at
    decision time, artifact lifetime is the auth-token lifetime capped by
    expires_at, and the residual after the mission becomes non-active is
@@ -1805,6 +1761,10 @@ Appendix A.  Acknowledgments
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Editorial (#1382): the Mission Substrate Statement's capability
+      table is a capability list, one entry per capability, which fits
+      the text rendering.  No requirement changes.
 
    *  Native Reference defines how a consumer that keys Missions by
       issuer and id, such as the Runtime and the AuthZEN profile,

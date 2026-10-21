@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-aauth-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1137,7 +1137,7 @@ structural and where a mission reference is only advisory context.<a href="#sect
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2718,7 +2718,7 @@ change conformance to this binding.<a href="#section-8-3" class="pilcrow">¶</a>
 declares conformance to <span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>.
 It applies to this revision of the binding in every resource access
 mode of <a href="#access-modes" class="auto internal xref">Section 4.5</a>; mode-specific limits appear in the
-capability table.<a href="#section-9-1" class="pilcrow">¶</a></p>
+capability list.<a href="#section-9-1" class="pilcrow">¶</a></p>
 <p id="section-9-2">The contextual-governance kernel maps as follows:<a href="#section-9-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-9-3">
 <li id="section-9-3.1">
@@ -2805,86 +2805,115 @@ coverage, ordering, integrity, access, and retention requirements
 of <a href="#mission-log" class="auto internal xref">Section 4.3</a>.<a href="#section-9-3.9.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-9-4">The Statement's capability table follows, one row per capability;
-every supplied row states its activation conditions, and its temporal
-and failure elements in its cells or by express inheritance of the
-Bounded Reliance floor (<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-9-4" class="pilcrow">¶</a></p>
-<span id="name-aauth-mission-substrate-cap"></span><table class="center" id="table-6">
-        <caption>
-<a href="#table-6" class="selfRef">Table 6</a>:
-<a href="#name-aauth-mission-substrate-cap" class="selfRef">AAuth Mission substrate capabilities</a>
-        </caption>
-<thead>
-          <tr>
-            <th class="text-left" rowspan="1" colspan="1">Capability</th>
-            <th class="text-left" rowspan="1" colspan="1">Claim</th>
-            <th class="text-left" rowspan="1" colspan="1">Activation</th>
-            <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
-            <th class="text-left" rowspan="1" colspan="1">Limitations</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">always</td>
-            <td class="text-left" rowspan="1" colspan="1">Mission approval and other positive governance decisions at the mission endpoint, permission decisions, person-token issuance under a named or upstream-inherited mission, and auth-token issuance the PS performs or brokers for requests carrying the person-token-issued <code>mission_s256</code> claim; decisions fail closed when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>, <a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Independently issued resource credentials and intentionally missionless requests, admitted by policy with no required or inherited association, are outside the claim; a failed required association is rejected, never treated as missionless (<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>); the post-transition residual is bounded by person-token and auth-token lifetime and <code>expires_at</code>
-</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">the AAuth Mission Management status operation active (<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Authenticated per-role callers, the <code>active</code> and <code>terminated</code> vocabulary, responses stamped <code>observed_at</code> with a declared <code>fresh_until</code> reliance bound, failing closed on failed, unrecognized, or stale responses, absent and unauthorized references indistinguishable</td>
-            <td class="text-left" rowspan="1" colspan="1">The base binding exposes no consumer-facing state source; token acceptance is not observation</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">The mission description is private prose and <code>approved_tools</code> is PS-governance input; scopes or a resource-owned policy language can supply structure inside its own boundary</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
-            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">No cross-boundary subset relation is defined; a resource policy language can define monotonicity within its own vocabulary; an accepted update can broaden the work under the same reference with the Supervisor's acceptance (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>), so the binding offers no containment guarantee</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">PS authorization or federated authorization access mode, for requests whose resource token carries and validates the signed <code>mission_s256</code> claim (<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">PS-issued or PS-brokered artifacts carry the claim, a binding established at issuance rather than by an external join; fact semantics: PS issuance or brokering under the mission</td>
-            <td class="text-left" rowspan="1" colspan="1">Agent identity and resource-managed modes convey no mission binding; federated authorization artifacts are AS-issued under the PS's brokering, and the PS's delivery check rejects one that omits or alters the claim (<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
-            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">The PS co-establishes the mission, person, agent, and token where it is on the path; no authoritative join of independently established facts is defined</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
-            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <code>s256</code> proves byte identity to parties holding the blob; it does not prove record properties or current state to third parties</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
-            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">The mission log is PS-local; signed receipts or checkpoints would be an extension</td>
-          </tr>
-        </tbody>
-      </table>
-<p id="section-9-6">Each supplied row's temporal elements inherit the binding's own
+<p id="section-9-4">The Statement's capability list follows, one entry per capability;
+every supplied entry states its activation conditions, and its
+temporal and failure elements in the entry or by express inheritance
+of the Bounded Reliance floor
+(<span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>):<a href="#section-9-4" class="pilcrow">¶</a></p>
+<span class="break"></span><div id="aauth-mission-substrate-capabilities">
+<dl class="dlNewline" id="section-9-5">
+        <dt id="section-9-5.1">Lifecycle-Gated Authorization:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.2">
+          <p id="section-9-5.2.1">Claim: supplied<a href="#section-9-5.2.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.2.2">Activation: always<a href="#section-9-5.2.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.2.3">Scope and defining sections: Mission approval and other positive
+governance decisions at the mission endpoint, permission decisions,
+person-token issuance under a named or upstream-inherited mission, and
+auth-token issuance the PS performs or brokers for requests carrying
+the person-token-issued <code>mission_s256</code> claim; decisions fail closed
+when current state cannot be established (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>,
+<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#mission-log" class="auto internal xref">Section 4.3</a>)<a href="#section-9-5.2.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.2.4">Limitations: Independently issued resource credentials and
+intentionally missionless requests, admitted by policy with no
+required or inherited association, are outside the claim; a failed
+required association is rejected, never treated as missionless
+(<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>); the post-transition residual is bounded by
+person-token and auth-token lifetime and <code>expires_at</code><a href="#section-9-5.2.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.3">State-Observable:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.4">
+          <p id="section-9-5.4.1">Claim: supplied<a href="#section-9-5.4.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.4.2">Activation: the AAuth Mission Management status operation active
+(<span>[<a href="#I-D.draft-mcguinness-mission-aauth-management" class="cite xref">I-D.draft-mcguinness-mission-aauth-management</a>]</span>)<a href="#section-9-5.4.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.4.3">Scope and defining sections: Authenticated per-role callers, the
+<code>active</code> and <code>terminated</code> vocabulary, responses stamped <code>observed_at</code>
+with a declared <code>fresh_until</code> reliance bound, failing closed on
+failed, unrecognized, or stale responses, absent and unauthorized
+references indistinguishable<a href="#section-9-5.4.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.4.4">Limitations: The base binding exposes no consumer-facing state source;
+token acceptance is not observation<a href="#section-9-5.4.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.5">Structured Authority:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.6">
+          <p id="section-9-5.6.1">Claim: not supplied<a href="#section-9-5.6.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.6.2">Activation: --<a href="#section-9-5.6.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.6.3">Scope and defining sections: --<a href="#section-9-5.6.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.6.4">Limitations: The mission description is private prose and
+<code>approved_tools</code> is PS-governance input; scopes or a resource-owned
+policy language can supply structure inside its own boundary<a href="#section-9-5.6.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.7">Monotonic Derivation:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.8">
+          <p id="section-9-5.8.1">Claim: not supplied<a href="#section-9-5.8.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.8.2">Activation: --<a href="#section-9-5.8.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.8.3">Scope and defining sections: --<a href="#section-9-5.8.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.8.4">Limitations: No cross-boundary subset relation is defined; a resource
+policy language can define monotonicity within its own vocabulary; an
+accepted update can broaden the work under the same reference with the
+Supervisor's acceptance (<a href="#lifecycle" class="auto internal xref">Section 4.8</a>), so the binding offers no
+containment guarantee<a href="#section-9-5.8.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.9">Credential-Bound:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.10">
+          <p id="section-9-5.10.1">Claim: supplied<a href="#section-9-5.10.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.10.2">Activation: PS authorization or federated authorization access mode,
+for requests whose resource token carries and validates the signed
+<code>mission_s256</code> claim (<a href="#access-modes" class="auto internal xref">Section 4.5</a>, <a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)<a href="#section-9-5.10.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.10.3">Scope and defining sections: PS-issued or PS-brokered artifacts carry
+the claim, a binding established at issuance rather than by an
+external join; fact semantics: PS issuance or brokering under the
+mission<a href="#section-9-5.10.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.10.4">Limitations: Agent identity and resource-managed modes convey no
+mission binding; federated authorization artifacts are AS-issued under
+the PS's brokering, and the PS's delivery check rejects one that omits
+or alters the claim (<a href="#ref-propagation" class="auto internal xref">Section 4.7</a>)<a href="#section-9-5.10.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.11">Authorized Context Correlation:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.12">
+          <p id="section-9-5.12.1">Claim: not supplied<a href="#section-9-5.12.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.12.2">Activation: --<a href="#section-9-5.12.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.12.3">Scope and defining sections: --<a href="#section-9-5.12.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.12.4">Limitations: The PS co-establishes the mission, person, agent, and
+token where it is on the path; no authoritative join of independently
+established facts is defined<a href="#section-9-5.12.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.13">Independently Verifiable:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.14">
+          <p id="section-9-5.14.1">Claim: not supplied<a href="#section-9-5.14.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.14.2">Activation: --<a href="#section-9-5.14.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.14.3">Scope and defining sections: --<a href="#section-9-5.14.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.14.4">Limitations: <code>s256</code> proves byte identity to parties holding the blob;
+it does not prove record properties or current state to third parties<a href="#section-9-5.14.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-5.15">Portable Evidence:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-5.16">
+          <p id="section-9-5.16.1">Claim: not supplied<a href="#section-9-5.16.1" class="pilcrow">¶</a></p>
+<p id="section-9-5.16.2">Activation: --<a href="#section-9-5.16.2" class="pilcrow">¶</a></p>
+<p id="section-9-5.16.3">Scope and defining sections: --<a href="#section-9-5.16.3" class="pilcrow">¶</a></p>
+<p id="section-9-5.16.4">Limitations: The mission log is PS-local; signed receipts or
+checkpoints would be an extension<a href="#section-9-5.16.4" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</div>
+<p id="section-9-6">Each supplied entry's temporal elements inherit the binding's own
 bounds unless stated: decisions establish current state at the PS at
 decision time, artifact lifetime is the auth-token lifetime capped by
 <code>expires_at</code>, and the residual after the mission becomes non-active
@@ -3000,7 +3029,12 @@ incremental deployment remain distinct concerns.<a href="#appendix-A-1" class="p
 <p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Native Reference defines how a consumer that keys Missions by
+          <p id="appendix-B-2.1.1">Editorial (#1382): the Mission Substrate Statement's capability
+table is a capability list, one entry per capability, which fits
+the text rendering. No requirement changes.<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-B-2.2">
+          <p id="appendix-B-2.2.1">Native Reference defines how a consumer that keys Missions by
 <code>issuer</code> and <code>id</code>, such as the Runtime and the AuthZEN profile,
 projects an AAuth Mission Reference: the approving PS's server
 identifier and the unchanged <code>s256</code>, from each validated native
@@ -3008,27 +3042,27 @@ carrier, with <code>ps</code> on an auth token and no fallback to its <code>iss<
 projected reference carries no authority.  A four-party example
 separates the Mission's issuer from the credential's.  Reference
 Propagation states that the projection adds no AAuth wire member
-(#1169).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+(#1169).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">Lifecycle maps AAuth's <code>termination_reason</code> to the family's Mission
+        <li class="normal" id="appendix-B-2.3">
+          <p id="appendix-B-2.3.1">Lifecycle maps AAuth's <code>termination_reason</code> to the family's Mission
 Termination Reasons, including AAuth's <code>administrative</code>, the
 family's <code>parent_terminated</code>, and an unrecognized reason on either
 side, omits a family <code>termination</code> for a reason with no family
 counterpart, and notes that Mission Status's <code>suspended</code> state has
 no AAuth counterpart.  AAuth's states and members are unchanged
-(#705).<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+(#705).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">A chained hop is PS-governed derivation under the same Mission: the
+        <li class="normal" id="appendix-B-2.4">
+          <p id="appendix-B-2.4.1">A chained hop is PS-governed derivation under the same Mission: the
 Mission's <code>agent</code> is the root actor, the holder of a chained person
 token is the intermediary, whose identity the PS establishes from its
 authenticated agent token and its records (<code>cnf</code> binds only the key),
 and the PS copies <code>mission_s256</code> from the upstream token, which the
-intermediary never supplies (#966).<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+intermediary never supplies (#966).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">An accepted update approves a new immutable version of the Approved
+        <li class="normal" id="appendix-B-2.5">
+          <p id="appendix-B-2.5.1">An accepted update approves a new immutable version of the Approved
 Context, identified by the Mission Reference and its position in the
 accepted-update sequence; <code>mission_s256</code> commits to the original
 blob only, and a pending or rejected update is part of no version.
@@ -3036,10 +3070,10 @@ The PS must not accept a broadening update without the Supervisor's
 acceptance; under a deciding supervision server, its <code>allow</code> accepts
 and its <code>ask</code> requires the person, so a configured server can
 authorize broadening without a fresh human decision. The Statement
-names the versions and disclaims any containment guarantee (#965).<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+names the versions and disclaims any containment guarantee (#965).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Maps AAuth's Supervisor role and defines an agent's deciding
+        <li class="normal" id="appendix-B-2.6">
+          <p id="appendix-B-2.6.1">Maps AAuth's Supervisor role and defines an agent's deciding
 supervision server. A PS with one obtains that server's decision for
 supervision decisions and keeps verification, enforcement, issuance,
 and recording; management authorization and revocation are
@@ -3049,7 +3083,7 @@ acceptance. The mission log records the actual decider and, for a
 supervision-server exchange, the <code>sdi</code> and the exchange with any
 signatures; the deciding server is a log reader; a supervision server
 does not see the R3 proposal. AAuth Supervision is cited
-informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+informatively, pinned at dickhardt/AAuth commit 70d67375 (#967).<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

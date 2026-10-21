@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            20 October 2026
-Expires: 23 April 2027
+Intended status: Experimental                            21 October 2026
+Expires: 24 April 2027
 
 
 Mission-Bound Authorization for the Grant Negotiation and Authorization
@@ -66,7 +66,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -1014,119 +1014,102 @@ Table of Contents
 
    The binding declares these capabilities:
 
-   +=============+========+=============+=============+===============+
-   |Capability   |Claim   |Activation   |Scope and    | Limitations   |
-   |             |        |             |defining     |               |
-   |             |        |             |sections     |               |
-   +=============+========+=============+=============+===============+
-   |Lifecycle-   |supplied|always       |Token        | A structured  |
-   |Gated        |        |             |issuance,    | token without |
-   |Authorization|        |             |grant        | a state check |
-   |             |        |             |modification,| remains       |
-   |             |        |             |and token    | usable only   |
-   |             |        |             |rotation at  | for its       |
-   |             |        |             |the AS       | bounded       |
-   |             |        |             |(Section 9.1)| lifetime      |
-   +-------------+--------+-------------+-------------+---------------+
-   |State-       |supplied|[RFC9767]    |Resource     | Token         |
-   |Observable   |        |introspection|servers via  | lifetime      |
-   |             |        |deployed, or |per-use      | alone is not  |
-   |             |        |Mission      |introspection| observation   |
-   |             |        |Status active|with a       |               |
-   |             |        |             |declared     |               |
-   |             |        |             |cache bound; |               |
-   |             |        |             |any          |               |
-   |             |        |             |authorized   |               |
-   |             |        |             |consumer via |               |
-   |             |        |             |Mission      |               |
-   |             |        |             |Status       |               |
-   |             |        |             |(Section 9.2)|               |
-   +-------------+--------+-------------+-------------+---------------+
-   |Structured   |supplied|always       |Access rights| Unsupported   |
-   |Authority    |        |             |admitted     | types refuse  |
-   |             |        |             |through the  | at intake;    |
-   |             |        |             |authority    | exact-carry   |
-   |             |        |             |adapter; the | types compare |
-   |             |        |             |AS owns each | by equality   |
-   |             |        |             |supported    | only;         |
-   |             |        |             |type's       | consumption   |
-   |             |        |             |semantics;   | bounds bind   |
-   |             |        |             |comparison in| at the        |
-   |             |        |             |the type's   | runtime layer |
-   |             |        |             |declared     |               |
-   |             |        |             |value space  |               |
-   |             |        |             |(Section 6,  |               |
-   |             |        |             |Section 10.2)|               |
-   +-------------+--------+-------------+-------------+---------------+
-   |Monotonic    |supplied|always       |The no-      | Exact-carry   |
-   |Derivation   |        |             |broader-than | types         |
-   |             |        |             |relation of  | classify      |
-   |             |        |             |adapter-     | exact matches |
-   |             |        |             |supported    | or refuse;    |
-   |             |        |             |types at     | covers this   |
-   |             |        |             |issuance,    | issuer's      |
-   |             |        |             |modification | boundary      |
-   |             |        |             |adjudication,|               |
-   |             |        |             |and rotation |               |
-   |             |        |             |refusal      |               |
-   |             |        |             |(Section     |               |
-   |             |        |             |10.2,        |               |
-   |             |        |             |Section 10.3,|               |
-   |             |        |             |Section 9.1) |               |
-   +-------------+--------+-------------+-------------+---------------+
-   |Credential-  |supplied|always       |Key-bound    | Introspection |
-   |Bound        |        |             |token with a | carriage is   |
-   |             |        |             |protected    | an online     |
-   |             |        |             |mission      | issuer        |
-   |             |        |             |claim, or the| assertion; a  |
-   |             |        |             |authenticated| bearer-       |
-   |             |        |             |introspection| flagged token |
-   |             |        |             |assertion;   | weakens       |
-   |             |        |             |fact         | holder proof  |
-   |             |        |             |semantics:   |               |
-   |             |        |             |lifecycle-   |               |
-   |             |        |             |gated        |               |
-   |             |        |             |issuance     |               |
-   |             |        |             |(Section     |               |
-   |             |        |             |10.1)        |               |
-   +-------------+--------+-------------+-------------+---------------+
-   |Authorized   |not     |--           |--           | The           |
-   |Context      |supplied|             |             | Controller    |
-   |Correlation  |        |             |             | binds         |
-   |             |        |             |             | Mission,      |
-   |             |        |             |             | Actor,        |
-   |             |        |             |             | Subject, and  |
-   |             |        |             |             | tokens        |
-   |             |        |             |             | natively; no  |
-   |             |        |             |             | cross-        |
-   |             |        |             |             | authority     |
-   |             |        |             |             | join is       |
-   |             |        |             |             | defined       |
-   +-------------+--------+-------------+-------------+---------------+
-   |Independently|supplied|structured   |Offline      | Key           |
-   |Verifiable   |        |token format |verification | distribution  |
-   |             |        |issued, or   |of issuance- | is            |
-   |             |        |signed       |under-Mission| deployment-   |
-   |             |        |Mission      |and of state | configured;   |
-   |             |        |Status active|as of a      | GNAP          |
-   |             |        |             |signed       | publishes no  |
-   |             |        |             |observation  | client-facing |
-   |             |        |             |(Section     | key surface   |
-   |             |        |             |10.1,        |               |
-   |             |        |             |Section 9.2) |               |
-   +-------------+--------+-------------+-------------+---------------+
-   |Portable     |supplied|Consent      |The adopted  | The base      |
-   |Evidence     |        |Evidence,    |profile's    | assessment    |
-   |             |        |Mission      |artifact and | log is        |
-   |             |        |Mandate, or  |verification | Controller-   |
-   |             |        |Audit        |procedure    | local         |
-   |             |        |Transparency |             |               |
-   |             |        |active       |             |               |
-   +-------------+--------+-------------+-------------+---------------+
+   Lifecycle-Gated Authorization:
+      Claim: supplied
 
-               Table 3: GNAP Mission substrate capabilities
+      Activation: always
 
-   Each supplied row's temporal elements inherit the reliance floor of
+      Scope and defining sections: Token issuance, grant modification,
+      and token rotation at the AS (Section 9.1)
+
+      Limitations: A structured token without a state check remains
+      usable only for its bounded lifetime
+
+   State-Observable:
+      Claim: supplied
+
+      Activation: [RFC9767] introspection deployed, or Mission Status
+      active
+
+      Scope and defining sections: Resource servers via per-use
+      introspection with a declared cache bound; any authorized consumer
+      via Mission Status (Section 9.2)
+
+      Limitations: Token lifetime alone is not observation
+
+   Structured Authority:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: Access rights admitted through the
+      authority adapter; the AS owns each supported type's semantics;
+      comparison in the type's declared value space (Section 6,
+      Section 10.2)
+
+      Limitations: Unsupported types refuse at intake; exact-carry types
+      compare by equality only; consumption bounds bind at the runtime
+      layer
+
+   Monotonic Derivation:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: The no-broader-than relation of
+      adapter-supported types at issuance, modification adjudication,
+      and rotation refusal (Section 10.2, Section 10.3, Section 9.1)
+
+      Limitations: Exact-carry types classify exact matches or refuse;
+      covers this issuer's boundary
+
+   Credential-Bound:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: Key-bound token with a protected
+      mission claim, or the authenticated introspection assertion; fact
+      semantics: lifecycle-gated issuance (Section 10.1)
+
+      Limitations: Introspection carriage is an online issuer assertion;
+      a bearer-flagged token weakens holder proof
+
+   Authorized Context Correlation:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: The Controller binds Mission, Actor, Subject, and
+      tokens natively; no cross-authority join is defined
+
+   Independently Verifiable:
+      Claim: supplied
+
+      Activation: structured token format issued, or signed Mission
+      Status active
+
+      Scope and defining sections: Offline verification of issuance-
+      under-Mission and of state as of a signed observation
+      (Section 10.1, Section 9.2)
+
+      Limitations: Key distribution is deployment-configured; GNAP
+      publishes no client-facing key surface
+
+   Portable Evidence:
+      Claim: supplied
+
+      Activation: Consent Evidence, Mission Mandate, or Audit
+      Transparency active
+
+      Scope and defining sections: The adopted profile's artifact and
+      verification procedure
+
+      Limitations: The base assessment log is Controller-local
+
+   Each supplied entry's temporal elements inherit the reliance floor of
    Section 9.1 unless stated: freshness at use is established at the
    gated operation or at introspection, artifact lifetime is the token's
    expiry capped by the Mission's expires_at, and the residual interval
@@ -1134,7 +1117,7 @@ Table of Contents
    structured tokens or the declared introspection cache bound.  Failure
    behavior is uniformly fail-closed: absent, stale, unknown,
    incomparable, invalid, or unavailable input refuses the gated
-   operation.  The Portable Evidence row is supplied only while its
+   operation.  The Portable Evidence entry is supplied only while its
    activation profile
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence],
    [I-D.draft-mcguinness-mission-mandate],

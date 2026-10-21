@@ -1068,7 +1068,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1081,12 +1081,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-capability-binding-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1148,7 +1148,7 @@ deployments.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1190,13 +1190,16 @@ deployments.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-capability-source-binding" class="internal xref">Capability Source Binding</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
-                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-decision-time-verification" class="internal xref">Decision-Time Verification</a></p>
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-approval-and-commitment" class="internal xref">Approval and Commitment</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
-                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-per-capability-extraction" class="internal xref">Per-Capability Extraction</a></p>
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-decision-time-verification" class="internal xref">Decision-Time Verification</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.3">
-                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-capability-drift-denial-rea" class="internal xref">Capability Drift Denial Reason</a></p>
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="auto internal xref">4.3</a>.  <a href="#name-per-capability-extraction" class="internal xref">Per-Capability Extraction</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="auto internal xref">4.4</a>.  <a href="#name-capability-drift-denial-rea" class="internal xref">Capability Drift Denial Reason</a></p>
 </li>
             </ul>
 </li>
@@ -1311,7 +1314,9 @@ raw-octet digest over the exact retrieved representation.<a href="#section-2-3" 
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>. The AuthZEN request and
 response envelope, the <code>context</code> object, and the runtime denial
 classification are used as defined in
-<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>.<a href="#section-2-4" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>. The terms Approver and
+Authority Set are used as defined in
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-2-4" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-2-5">
         <dt id="section-2-5.1">Validating server:</dt>
         <dd style="margin-left: 1.5em" id="section-2-5.2">
@@ -1396,7 +1401,7 @@ resolved from.<a href="#section-4-5.4.1" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="section-4-5.6">
           <p id="section-4-5.6.1">A string. The integrity-anchor encoded form
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) over the capability's
-extracted definition (<a href="#capability-extraction" class="auto internal xref">Section 4.2</a>), recorded at
+extracted definition (<a href="#capability-extraction" class="auto internal xref">Section 4.3</a>), recorded at
 derivation time. At request time it is computed over the current
 extracted definition, so the PDP's comparison detects a mutated
 definition.<a href="#section-4-5.6.1" class="pilcrow">¶</a></p>
@@ -1444,17 +1449,18 @@ than a self-chosen label.<a href="#section-4-5.12.1" class="pilcrow">¶</a></p>
 every consequential action sourced from a discovered catalog.
 These values are part of the approved Mission's derived authority
 and are therefore covered by <code>authority_hash</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4-7.1.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and, where a human
+approves that authority, by the approval (<a href="#capability-approval" class="auto internal xref">Section 4.1</a>).<a href="#section-4-7.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-4-7.2">
           <p id="section-4-7.2.1">The PEP presents <code>tool_id</code> on consequential requests for
 catalog-sourced actions. The runtime profile owns the drift
 semantics (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); the PDP
 applies them through this document's decision-time verification
-(<a href="#capability-verification" class="auto internal xref">Section 4.1</a>), over the per-capability comparison
-scope of <a href="#capability-extraction" class="auto internal xref">Section 4.2</a>. This document adds only the
+(<a href="#capability-verification" class="auto internal xref">Section 4.2</a>), over the per-capability comparison
+scope of <a href="#capability-extraction" class="auto internal xref">Section 4.3</a>. This document adds only the
 wire representation and per-capability verification, carrying such
-a refusal as <code>capability_drift</code> (<a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>) with
+a refusal as <code>capability_drift</code> (<a href="#capability-drift-reason" class="auto internal xref">Section 4.4</a>) with
 its boundary against <code>out_of_authority</code> fixed by the AuthZEN
 profile's runtime denial classification
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>); it defines no drift
@@ -1473,64 +1479,125 @@ a drift refusal.<a href="#section-4-7.3.1" class="pilcrow">¶</a></p>
 identity) do not require this binding.<a href="#section-4-7.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<div id="capability-verification">
+<div id="capability-approval">
 <section id="section-4.1">
-        <h3 id="name-decision-time-verification">
-<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-decision-time-verification" class="section-name selfRef">Decision-Time Verification</a>
+        <h3 id="name-approval-and-commitment">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-approval-and-commitment" class="section-name selfRef">Approval and Commitment</a>
         </h3>
-<p id="section-4.1-1">For a catalog-sourced action whose approved entry recorded a
+<p id="section-4.1-1">Where the issuance profile renders a candidate Authority Set for
+human approval (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Direct Approval Steps"), the validating server <span class="bcp14">MUST</span>:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-4.1-2">
+<li id="section-4.1-2.1">
+            <p id="section-4.1-2.1.1">resolve each catalog-sourced action's binding from a catalog or
+configuration the validating server trusts, together with the
+candidate Authority Set, before the approval rendering, so the
+Approver consents to the concrete bindings;<a href="#section-4.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.2">
+            <p id="section-4.1-2.2.1">present, for each bound action:<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.1-2.2.2.1">
+                <p id="section-4.1-2.2.2.1.1">the tool or operation identity;<a href="#section-4.1-2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-4.1-2.2.2.2">
+                <p id="section-4.1-2.2.2.2.1">what invoking it authorizes, in terms the Approver can act on;<a href="#section-4.1-2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-4.1-2.2.2.3">
+                <p id="section-4.1-2.2.2.3.1">its source, and its publisher where the validating server has
+established one, or otherwise that the publisher is unknown or
+that the named publisher is the source's own claim; and<a href="#section-4.1-2.2.2.3.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-4.1-2.2.2.4">
+                <p id="section-4.1-2.2.2.4.1">that a later change to the capability's definition is refused
+(<a href="#capability-verification" class="auto internal xref">Section 4.2</a>);<a href="#section-4.1-2.2.2.4.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</li>
+          <li id="section-4.1-2.3">
+            <p id="section-4.1-2.3.1">at the approval decision, revalidate each binding against the
+current source before the Mission is created, treating a changed
+binding as a change to the derived Authority Set
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Changes Before
+the Decision"); and<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-4.1-2.4">
+            <p id="section-4.1-2.4.1">commit exactly the bindings of the candidate the Approver
+consented to; resolving the current source for revalidation does
+not authorize substituting a different binding without fresh
+consent.<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-4.1-3">A digest or URI alone does not satisfy item 2. The validating server
+retains the exact machine binding, and renders catalog-supplied text,
+such as a tool's description, as inert content.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">For item 3, a binding changes when a bound capability's identity or
+extracted definition (<a href="#capability-extraction" class="auto internal xref">Section 4.3</a>) changes, or, where a
+<code>catalog_digest</code> was recorded, when the retrieved source changes. A
+catalog edit that changes neither is not a binding change; it still
+requires fresh consent where it changes another input that Changes
+Before the Decision covers. After approval, drift is refused at
+decision time (<a href="#capability-verification" class="auto internal xref">Section 4.2</a>).<a href="#section-4.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="capability-verification">
+<section id="section-4.2">
+        <h3 id="name-decision-time-verification">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-decision-time-verification" class="section-name selfRef">Decision-Time Verification</a>
+        </h3>
+<p id="section-4.2-1">For a catalog-sourced action whose approved entry recorded a
 capability source binding at derivation, the PDP <span class="bcp14">MUST</span> verify, as
 part of its decision, that <code>context.capability_source</code> is present
 and matches the approved binding: the presented <code>source_digest</code>,
 computed over the capability's current extracted definition
-(<a href="#capability-extraction" class="auto internal xref">Section 4.2</a>), <span class="bcp14">MUST</span> equal the recorded value, and,
+(<a href="#capability-extraction" class="auto internal xref">Section 4.3</a>), <span class="bcp14">MUST</span> equal the recorded value, and,
 where a <code>catalog_digest</code> was recorded, the presented <code>catalog_digest</code>
           <span class="bcp14">MUST</span> equal it likewise; otherwise the PDP returns <code>capability_drift</code>
-(<a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>). Whether an action is catalog-sourced,
+(<a href="#capability-drift-reason" class="auto internal xref">Section 4.4</a>). Whether an action is catalog-sourced,
 and which digests were recorded, are determined from the approved
 entry the Mission Issuer recorded at derivation, read through the
 materialized policy view the AuthZEN profile defines where the PDP
 uses one (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), not from the PEP's
 request; where no source binding was recorded, this check does not
-apply.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+apply.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-extraction">
-<section id="section-4.2">
+<section id="section-4.3">
         <h3 id="name-per-capability-extraction">
-<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-per-capability-extraction" class="section-name selfRef">Per-Capability Extraction</a>
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-per-capability-extraction" class="section-name selfRef">Per-Capability Extraction</a>
         </h3>
-<p id="section-4.2-1"><code>source_digest</code> is computed over the extracted per-capability
+<p id="section-4.3-1"><code>source_digest</code> is computed over the extracted per-capability
 definition, not the whole retrieved source, so a revision elsewhere
 in a shared catalog does not invalidate a Mission's approved
 capabilities, while any mutation of an approved capability's own
 definition still refuses. The extraction rule is fixed per source
-format:<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+format:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-4.2-2.1">
-            <p id="section-4.2-2.1.1">For an MCP tool catalog, the extracted definition is the single
+<li class="normal" id="section-4.3-2.1">
+            <p id="section-4.3-2.1.1">For an MCP tool catalog, the extracted definition is the single
 tool's definition object as retrieved (the member of the catalog's
 tool list whose name is the capability's), JCS-canonicalized
-<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-4.2-2.1.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC8785" class="cite xref">RFC8785</a>]</span>.<a href="#section-4.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.2-2.2">
-            <p id="section-4.2-2.2.1">For an OpenAPI document, the extracted definition is an object
+          <li class="normal" id="section-4.3-2.2">
+            <p id="section-4.3-2.2.1">For an OpenAPI document, the extracted definition is an object
 with two members: <code>operation</code>, the operation object
 <code>operation_ref</code> identifies, and <code>components</code>, an object carrying,
 under their component names, the components of the document the
 operation references by name, directly or transitively. The
-assembled object is JCS-canonicalized.<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+assembled object is JCS-canonicalized.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.2-2.3">
-            <p id="section-4.2-2.3.1">For another source format, the binding profile in use defines the
+          <li class="normal" id="section-4.3-2.3">
+            <p id="section-4.3-2.3.1">For another source format, the binding profile in use defines the
 extraction rule. A capability whose format has no defined
 extraction rule cannot carry a <code>source_digest</code>; the whole-source
-<code>catalog_digest</code> remains available for it.<a href="#section-4.2-2.3.1" class="pilcrow">¶</a></p>
+<code>catalog_digest</code> remains available for it.<a href="#section-4.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-4.2-3">For the MCP tool of the minimum binding above, the extracted
-definition is the tool's definition object:<a href="#section-4.2-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-4.2-4">
+<p id="section-4.3-3">For the MCP tool of the minimum binding above, the extracted
+definition is the tool's definition object:<a href="#section-4.3-3" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-4.3-4">
 <pre>
 {
   "name": "write_document",
@@ -1544,68 +1611,68 @@ definition is the tool's definition object:<a href="#section-4.2-3" class="pilcr
     "required": ["path", "content"]
   }
 }
-</pre><a href="#section-4.2-4" class="pilcrow">¶</a>
+</pre><a href="#section-4.3-4" class="pilcrow">¶</a>
 </div>
-<p id="section-4.2-5">The JCS canonical bytes are a single line with sorted member names
+<p id="section-4.3-5">The JCS canonical bytes are a single line with sorted member names
 and no whitespace, shown here wrapped for layout only; remove the
 layout line breaks, adding no characters, to recover the canonical
-form:<a href="#section-4.2-5" class="pilcrow">¶</a></p>
-<div class="lang-text sourcecode" id="section-4.2-6">
+form:<a href="#section-4.3-5" class="pilcrow">¶</a></p>
+<div class="lang-text sourcecode" id="section-4.3-6">
 <pre>
 {"description":"Create or update a document","inputSchema":{"propert
 ies":{"content":{"type":"string"},"path":{"type":"string"}},"require
 d":["path","content"],"type":"object"},"name":"write_document"}
-</pre><a href="#section-4.2-6" class="pilcrow">¶</a>
+</pre><a href="#section-4.3-6" class="pilcrow">¶</a>
 </div>
-<div class="lang-text sourcecode" id="section-4.2-7">
+<div class="lang-text sourcecode" id="section-4.3-7">
 <pre>
 source_digest = sha-256:OAbEIh2DTYUVP7DjRhHct4aapsT8PybZq2ILdut9UP0
-</pre><a href="#section-4.2-7" class="pilcrow">¶</a>
+</pre><a href="#section-4.3-7" class="pilcrow">¶</a>
 </div>
-<p id="section-4.2-8">Adding, removing, or renaming another tool in the same catalog
+<p id="section-4.3-8">Adding, removing, or renaming another tool in the same catalog
 leaves this value unchanged; any byte change to this definition
-changes it.<a href="#section-4.2-8" class="pilcrow">¶</a></p>
-<p id="section-4.2-9">Cross-format canonicalization, signed capability manifests, and
+changes it.<a href="#section-4.3-8" class="pilcrow">¶</a></p>
+<p id="section-4.3-9">Cross-format canonicalization, signed capability manifests, and
 media-type negotiation across catalog formats are out of scope
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>); this document requires
-only the stable identifier plus source evidence above.<a href="#section-4.2-9" class="pilcrow">¶</a></p>
+only the stable identifier plus source evidence above.<a href="#section-4.3-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="capability-drift-reason">
-<section id="section-4.3">
+<section id="section-4.4">
         <h3 id="name-capability-drift-denial-rea">
-<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-capability-drift-denial-rea" class="section-name selfRef">Capability Drift Denial Reason</a>
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-capability-drift-denial-rea" class="section-name selfRef">Capability Drift Denial Reason</a>
         </h3>
-<p id="section-4.3-1">This document registers <code>capability_drift</code> as a coordinated
+<p id="section-4.4-1">This document registers <code>capability_drift</code> as a coordinated
 extension to the runtime denial classification, under the AuthZEN
 profile's extensibility rule
 (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>): an extension value <span class="bcp14">MUST</span>
 be either a collision-resistant name (following the
 Collision-Resistant Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) or a
 name coordinated within the Mission-Bound Authorization document
-family; <code>capability_drift</code> is the name this document reserves.<a href="#section-4.3-1" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-4.3-2">
-          <dt id="section-4.3-2.1">
+family; <code>capability_drift</code> is the name this document reserves.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.4-2">
+          <dt id="section-4.4-2.1">
 <code>capability_drift</code>:</dt>
-          <dd style="margin-left: 1.5em" id="section-4.3-2.2">
-            <p id="section-4.3-2.2.1">for a catalog-sourced action whose approved entry recorded a
+          <dd style="margin-left: 1.5em" id="section-4.4-2.2">
+            <p id="section-4.4-2.2.1">for a catalog-sourced action whose approved entry recorded a
 capability source binding (<a href="#capability-source-binding" class="auto internal xref">Section 4</a>), the
 digest of the action's current extracted capability definition
 differs from the <code>source_digest</code> committed at derivation, a
 recorded <code>catalog_digest</code> no longer matches the retrieved source,
-or the presented <code>tool_id</code> is outside the approved set.<a href="#section-4.3-2.2.1" class="pilcrow">¶</a></p>
+or the presented <code>tool_id</code> is outside the approved set.<a href="#section-4.4-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
-<p id="section-4.3-3"><code>capability_drift</code> applies only when a source binding was recorded
+<p id="section-4.4-3"><code>capability_drift</code> applies only when a source binding was recorded
 and the digest comparison ran; an invoked identity outside the
 approved set for which no source binding was recorded is
 <code>out_of_authority</code> (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>), not
-<code>capability_drift</code>.<a href="#section-4.3-3" class="pilcrow">¶</a></p>
-<p id="section-4.3-4">Capability or catalog drift, and an invoked identity outside the
+<code>capability_drift</code>.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">Capability or catalog drift, and an invoked identity outside the
 approved set when a source binding was recorded, surface as a PDP
 denial carrying <code>capability_drift</code>, under the carrier taxonomy of
-the AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.3-4" class="pilcrow">¶</a></p>
+the AuthZEN profile (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.4-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1623,13 +1690,16 @@ AuthZEN decision-API binding
 <p id="section-5-2">A validating server conforming to this document <span class="bcp14">MUST</span> record
 <code>tool_id</code>, <code>source_uri</code>, <code>source_digest</code>, <code>operation_ref</code>, and any
 <code>catalog_digest</code> for every consequential action sourced from a
-discovered catalog, at derivation (<a href="#capability-source-binding" class="auto internal xref">Section 4</a>).<a href="#section-5-2" class="pilcrow">¶</a></p>
+discovered catalog, at derivation (<a href="#capability-source-binding" class="auto internal xref">Section 4</a>).
+Where it renders a candidate Authority Set for human approval, it
+resolves, presents, revalidates and commits those bindings as
+<a href="#capability-approval" class="auto internal xref">Section 4.1</a> states.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">A PEP conforming to this document <span class="bcp14">MUST</span> present
 <code>context.capability_source</code> on a consequential request for a
 catalog-sourced action (<a href="#context-capability-source" class="auto internal xref">Section 3</a>).<a href="#section-5-3" class="pilcrow">¶</a></p>
 <p id="section-5-4">A PDP conforming to this document <span class="bcp14">MUST</span> verify the presented binding
 against the recorded one and return <code>capability_drift</code> on a
-mismatch (<a href="#capability-verification" class="auto internal xref">Section 4.1</a>, <a href="#capability-drift-reason" class="auto internal xref">Section 4.3</a>).<a href="#section-5-4" class="pilcrow">¶</a></p>
+mismatch (<a href="#capability-verification" class="auto internal xref">Section 4.2</a>, <a href="#capability-drift-reason" class="auto internal xref">Section 4.4</a>).<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">A deployment that does not claim this document is unaffected: the
 AuthZEN profile's decision contract consumes an already established
 action identity (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-5-5" class="pilcrow">¶</a></p>
@@ -1793,11 +1863,21 @@ value.<a href="#section-8-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Decision-Time Verification reads whether an action is
+          <p id="appendix-A-2.1.1">Approval and Commitment (#1447): where the issuance profile
+renders a candidate Authority Set for human approval, the
+validating server resolves the capability bindings before the
+rendering, presents each bound action's operation, what it
+authorizes, its source and publisher, and the drift refusal,
+revalidates the bindings at the approval decision, and commits
+exactly the consented bindings. An unrelated catalog edit is not a
+binding change unless <code>catalog_digest</code> was recorded.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Decision-Time Verification reads whether an action is
 catalog-sourced, and which digests were recorded, from the approved
 entry the Mission Issuer recorded at derivation, through the
 materialized policy view where the PDP uses one, never from the
-PEP's request.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+PEP's request.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

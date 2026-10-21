@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                        Mission Capability Binding
@@ -59,7 +59,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -81,9 +81,10 @@ Table of Contents
    2.  Conventions and Terminology
    3.  Capability Source Context
    4.  Capability Source Binding
-     4.1.  Decision-Time Verification
-     4.2.  Per-Capability Extraction
-     4.3.  Capability Drift Denial Reason
+     4.1.  Approval and Commitment
+     4.2.  Decision-Time Verification
+     4.3.  Per-Capability Extraction
+     4.4.  Capability Drift Denial Reason
    5.  Conformance
    6.  Security Considerations
      6.1.  Catalog compromise and stale digests
@@ -163,7 +164,9 @@ Table of Contents
    [I-D.draft-mcguinness-mission-runtime].  The AuthZEN request and
    response envelope, the context object, and the runtime denial
    classification are used as defined in
-   [I-D.draft-mcguinness-mission-authzen].
+   [I-D.draft-mcguinness-mission-authzen].  The terms Approver and
+   Authority Set are used as defined in
+   [I-D.draft-mcguinness-oauth-mission].
 
    Validating server:  The component that, at derivation, validates the
       Mission's authority and records the derivation-time facts a PDP
@@ -221,7 +224,7 @@ Table of Contents
 
    source_digest:  A string.  The integrity-anchor encoded form
       ([I-D.draft-mcguinness-oauth-mission]) over the capability's
-      extracted definition (Section 4.2), recorded at derivation time.
+      extracted definition (Section 4.3), recorded at derivation time.
       At request time it is computed over the current extracted
       definition, so the PDP's comparison detects a mutated definition.
 
@@ -253,16 +256,18 @@ Table of Contents
       operation_ref, and any catalog_digest for every consequential
       action sourced from a discovered catalog.  These values are part
       of the approved Mission's derived authority and are therefore
-      covered by authority_hash ([I-D.draft-mcguinness-oauth-mission]).
+      covered by authority_hash ([I-D.draft-mcguinness-oauth-mission])
+      and, where a human approves that authority, by the approval
+      (Section 4.1).
 
    *  The PEP presents tool_id on consequential requests for catalog-
       sourced actions.  The runtime profile owns the drift semantics
       ([I-D.draft-mcguinness-mission-runtime]); the PDP applies them
-      through this document's decision-time verification (Section 4.1),
-      over the per-capability comparison scope of Section 4.2.  This
+      through this document's decision-time verification (Section 4.2),
+      over the per-capability comparison scope of Section 4.3.  This
       document adds only the wire representation and per-capability
       verification, carrying such a refusal as capability_drift
-      (Section 4.3) with its boundary against out_of_authority fixed by
+      (Section 4.4) with its boundary against out_of_authority fixed by
       the AuthZEN profile's runtime denial classification
       ([I-D.draft-mcguinness-mission-authzen]); it defines no drift rule
       of its own.
@@ -277,16 +282,63 @@ Table of Contents
       registered authorization_details types, first-party operations
       with stable identity) do not require this binding.
 
-4.1.  Decision-Time Verification
+4.1.  Approval and Commitment
+
+   Where the issuance profile renders a candidate Authority Set for
+   human approval ([I-D.draft-mcguinness-oauth-mission], Section "Direct
+   Approval Steps"), the validating server MUST:
+
+   1.  resolve each catalog-sourced action's binding from a catalog or
+       configuration the validating server trusts, together with the
+       candidate Authority Set, before the approval rendering, so the
+       Approver consents to the concrete bindings;
+
+   2.  present, for each bound action:
+
+       *  the tool or operation identity;
+
+       *  what invoking it authorizes, in terms the Approver can act on;
+
+       *  its source, and its publisher where the validating server has
+          established one, or otherwise that the publisher is unknown or
+          that the named publisher is the source's own claim; and
+
+       *  that a later change to the capability's definition is refused
+          (Section 4.2);
+
+   3.  at the approval decision, revalidate each binding against the
+       current source before the Mission is created, treating a changed
+       binding as a change to the derived Authority Set
+       ([I-D.draft-mcguinness-oauth-mission], Section "Changes Before
+       the Decision"); and
+
+   4.  commit exactly the bindings of the candidate the Approver
+       consented to; resolving the current source for revalidation does
+       not authorize substituting a different binding without fresh
+       consent.
+
+   A digest or URI alone does not satisfy item 2.  The validating server
+   retains the exact machine binding, and renders catalog-supplied text,
+   such as a tool's description, as inert content.
+
+   For item 3, a binding changes when a bound capability's identity or
+   extracted definition (Section 4.3) changes, or, where a
+   catalog_digest was recorded, when the retrieved source changes.  A
+   catalog edit that changes neither is not a binding change; it still
+   requires fresh consent where it changes another input that Changes
+   Before the Decision covers.  After approval, drift is refused at
+   decision time (Section 4.2).
+
+4.2.  Decision-Time Verification
 
    For a catalog-sourced action whose approved entry recorded a
    capability source binding at derivation, the PDP MUST verify, as part
    of its decision, that context.capability_source is present and
    matches the approved binding: the presented source_digest, computed
-   over the capability's current extracted definition (Section 4.2),
+   over the capability's current extracted definition (Section 4.3),
    MUST equal the recorded value, and, where a catalog_digest was
    recorded, the presented catalog_digest MUST equal it likewise;
-   otherwise the PDP returns capability_drift (Section 4.3).  Whether an
+   otherwise the PDP returns capability_drift (Section 4.4).  Whether an
    action is catalog-sourced, and which digests were recorded, are
    determined from the approved entry the Mission Issuer recorded at
    derivation, read through the materialized policy view the AuthZEN
@@ -294,7 +346,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-authzen]), not from the PEP's request;
    where no source binding was recorded, this check does not apply.
 
-4.2.  Per-Capability Extraction
+4.3.  Per-Capability Extraction
 
    source_digest is computed over the extracted per-capability
    definition, not the whole retrieved source, so a revision elsewhere
@@ -355,7 +407,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-runtime]); this document requires only
    the stable identifier plus source evidence above.
 
-4.3.  Capability Drift Denial Reason
+4.4.  Capability Drift Denial Reason
 
    This document registers capability_drift as a coordinated extension
    to the runtime denial classification, under the AuthZEN profile's
@@ -392,7 +444,9 @@ Table of Contents
    A validating server conforming to this document MUST record tool_id,
    source_uri, source_digest, operation_ref, and any catalog_digest for
    every consequential action sourced from a discovered catalog, at
-   derivation (Section 4).
+   derivation (Section 4).  Where it renders a candidate Authority Set
+   for human approval, it resolves, presents, revalidates and commits
+   those bindings as Section 4.1 states.
 
    A PEP conforming to this document MUST present
    context.capability_source on a consequential request for a catalog-
@@ -400,7 +454,7 @@ Table of Contents
 
    A PDP conforming to this document MUST verify the presented binding
    against the recorded one and return capability_drift on a mismatch
-   (Section 4.1, Section 4.3).
+   (Section 4.2, Section 4.4).
 
    A deployment that does not claim this document is unaffected: the
    AuthZEN profile's decision contract consumes an already established
@@ -534,6 +588,15 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Approval and Commitment (#1447): where the issuance profile
+      renders a candidate Authority Set for human approval, the
+      validating server resolves the capability bindings before the
+      rendering, presents each bound action's operation, what it
+      authorizes, its source and publisher, and the drift refusal,
+      revalidates the bindings at the approval decision, and commits
+      exactly the consented bindings.  An unrelated catalog edit is not
+      a binding change unless catalog_digest was recorded.
 
    *  Decision-Time Verification reads whether an action is catalog-
       sourced, and which digests were recorded, from the approved entry

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            20 October 2026
-Expires: 23 April 2027
+Intended status: Experimental                            21 October 2026
+Expires: 24 April 2027
 
 
                        Mission Evidence Envelope
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -692,7 +692,7 @@ Table of Contents
         window this AS retains submission records.
 
    8.   Verify intent_hash equals the provisional intent_hash computed
-        at submission-processing step 3
+        at submission-processing step 4
         ([I-D.draft-mcguinness-oauth-mission]).
 
    9.   Verify presenter.client_id, and cnf where present, equal the

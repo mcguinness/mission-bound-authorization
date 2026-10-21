@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -241,9 +241,9 @@ Table of Contents
 
    This section is OPTIONAL.  The issuance profile's stateless baseline
    needs no dedicated status surface
-   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Lifecycle and
-   Gating"); a deployment that does not stand up this operation, and a
-   consumer that does not use it, are unaffected.
+   ([I-D.draft-mcguinness-oauth-mission], Section "Revocation"); a
+   deployment that does not stand up this operation, and a consumer that
+   does not use it, are unaffected.
 
    The dedicated Mission Status operation is the canonical status
    surface the issuance profile defers.  Unlike token introspection
@@ -460,13 +460,13 @@ Table of Contents
    Cache-Control: no-store
    Pragma: no-cache
 
-   eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+   eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 
    Decoded JWS header:
 
    {
      "alg": "ES256",
-     "kid": "sa-key-2026-q3",
+     "kid": "as-key-2026-q3",
      "typ": "mission-status-response+jwt"
    }
 
@@ -541,10 +541,10 @@ Table of Contents
       -  state: REQUIRED.  The current Mission lifecycle state.  The
          authoritative state space is the issuance profile's
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-         Lifecycle and Gating"): active and terminated, this profile's
-         suspended when the Mission Lifecycle endpoint (Section 5) is
-         deployed, and any further state a companion profile defines and
-         the deployment runs.  A consumer applies the issuance profile's
+         Lifecycle"): active and terminated, this profile's suspended
+         when the Mission Lifecycle endpoint (Section 5) is deployed,
+         and any further state a companion profile defines and the
+         deployment runs.  A consumer applies the issuance profile's
          forward-compatibility rule: only active permits reliance, and
          every other value, recognized or not, is non-active.  This
          profile's reliance behavior does not depend on recognizing a
@@ -797,7 +797,7 @@ Table of Contents
      "error": "not_found",
      "error_description":
        "Mission reference is not found or not visible.",
-     "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+     "nonce": "nonce_zsPy4APqVNO96xAT"
    }
 
    The body MUST contain error and error_description, and MUST
@@ -930,11 +930,11 @@ Table of Contents
 
    Adopting this endpoint extends the issuance profile's lifecycle state
    space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-   Lifecycle and Gating") with one additional state, suspended (a paused
-   Mission that derives no tokens until resumed), and one termination
-   reason, completed (the Mission completed successfully).  Issuance
-   gating treats any state other than active as non-deriving, exactly as
-   the issuance profile gates on active.
+   Lifecycle") with one additional state, suspended (a paused Mission
+   that derives no tokens until resumed), and one termination reason,
+   completed (the Mission completed successfully).  Issuance gating
+   treats any state other than active as non-deriving, exactly as the
+   issuance profile gates on active.
 
    A transition to suspended, or to terminated with reason completed,
    gates new derivation only.  Tokens already derived under the Mission
@@ -1114,9 +1114,9 @@ Table of Contents
 
    This profile owns the extension of the issuance profile's lifecycle
    state space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-   Lifecycle and Gating").  The table below is the authoritative view of
-   that space: every state, every transition, the source of the event
-   that drives it, and the termination reason a transition to terminated
+   Lifecycle").  The table below is the authoritative view of that
+   space: every state, every transition, the source of the event that
+   drives it, and the termination reason a transition to terminated
    records.
 
    Event sources are the lifecycle endpoint (an operation of Section 5),
@@ -1329,7 +1329,7 @@ Table of Contents
    Content-Type: application/mission-status-response+jwt
    Cache-Control: no-store
 
-   eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+   eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 
    Decoded JWS payload:
 

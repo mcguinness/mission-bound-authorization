@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            20 October 2026
-Expires: 23 April 2027
+Intended status: Experimental                            21 October 2026
+Expires: 24 April 2027
 
 
                      Mission Template for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -561,8 +561,8 @@ Table of Contents
 
    A Mission Template has its own lifecycle, distinct from the Mission
    lifecycle of the Missions it dispatches
-   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Lifecycle and
-   Gating").  A template is in one of three states:
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Lifecycle").
+   A template is in one of three states:
 
    *  active: the template dispatches, subject to its bounds and review
       cadence;
@@ -1005,7 +1005,7 @@ Table of Contents
    extends the fingerprint the same way an extension parameter would
    under the expansion profile's own rule
    ([I-D.draft-mcguinness-oauth-mission-expansion], Section "The
-   operation fingerprint").
+   Operation Fingerprint").
 
    The reservation, its (client, dispatch_event_id) uniqueness, and the
    fingerprint-comparison outcomes on a repeated presentation are the
@@ -1013,7 +1013,7 @@ Table of Contents
    completed, recover it; same fingerprint and reserved or pending,
    return the same in-progress result; different fingerprint, refuse
    with invalid_request ([I-D.draft-mcguinness-oauth-mission-expansion],
-   Section "The durable reservation").  The reservation and the
+   Section "The Durable Reservation").  The reservation and the
    dispatched Mission's identifier MUST be committed atomically with
    instance derivation and max_active/dispatch_rate accounting.
    Evidence emission is not part of that same atomic commit: the Mission
@@ -1040,7 +1040,7 @@ Table of Contents
    possession of cnf, and current template applicability all apply,
    since no Mission yet exists for the retry to recover
    ([I-D.draft-mcguinness-oauth-mission-expansion],
-   Section "Revalidation and lookup order").
+   Section "Revalidation and Lookup Order").
 
    Recovery is delivery of the already-dispatched Mission, never a
    second instantiation and never a second count against max_active or
@@ -1050,11 +1050,11 @@ Table of Contents
    still-active instance, an ordinary delivery event that repeats no
    creation accounting, exactly as the expansion profile's recovery
    defines for an expired delivery credential
-   ([I-D.draft-mcguinness-oauth-mission-expansion], Section "Recovery is
-   delivery").  Tombstone retention follows the expansion profile's
+   ([I-D.draft-mcguinness-oauth-mission-expansion], Section "Recovery Is
+   Delivery").  Tombstone retention follows the expansion profile's
    rule, against the deployment's published retry horizon
    ([I-D.draft-mcguinness-oauth-mission-expansion], Section "Tombstone
-   retention").  This makes retry safe at machine speed and keeps
+   Retention").  This makes retry safe at machine speed and keeps
    max_active and dispatch_rate accounting exact.
 
 7.4.  The template lineage member

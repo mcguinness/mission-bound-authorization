@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            20 October 2026
-Expires: 23 April 2027
+Intended status: Experimental                            21 October 2026
+Expires: 24 April 2027
 
 
                   Mission Orchestration and Unwinding
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -963,7 +963,7 @@ Table of Contents
      "mission_state": "suspended",
      "state_source": "status",
      "orchestration_decision": "human_review",
-     "reason": "external_commitment_dispatched_unknown",
+     "reason": "irreversible_action_dispatched_unknown",
      "outcome_state": "unknown",
      "unwind_plan_hash":
        "sha-256:jKxM47ygRiTXYVfKjrVE34VZx8nsxg1I9OPPeHnO-_c",

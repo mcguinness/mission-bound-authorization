@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-template-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ draws within it deterministically.<a href="#section-abstract-1" class="pilcrow">
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1862,8 +1862,8 @@ template's anchor are never merged.<a href="#section-5.1-4" class="pilcrow">¶</
         </h3>
 <p id="section-5.2-1">A Mission Template has its own lifecycle, distinct from the Mission
 lifecycle of the Missions it dispatches
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle
-and Gating"). A template is in one of three states:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle"). A
+template is in one of three states:<a href="#section-5.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-5.2-2.1">
             <p id="section-5.2-2.1.1"><code>active</code>: the template dispatches, subject to its bounds and review
@@ -2404,7 +2404,7 @@ source. A dispatch-specific parameter affecting derivation, approval,
 output, or side effects extends the fingerprint the same way an
 extension parameter would under the expansion profile's own rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
-operation fingerprint").<a href="#section-7.3-2" class="pilcrow">¶</a></p>
+Operation Fingerprint").<a href="#section-7.3-2" class="pilcrow">¶</a></p>
 <p id="section-7.3-3">The reservation, its <code>(client, dispatch_event_id)</code> uniqueness, and
 the fingerprint-comparison outcomes on a repeated presentation are
 the expansion profile's, applied by reference: same fingerprint and
@@ -2412,7 +2412,7 @@ completed, recover it; same fingerprint and reserved or pending,
 return the same in-progress result; different fingerprint, refuse
 with <code>invalid_request</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "The
-durable reservation"). The reservation and the dispatched Mission's
+Durable Reservation"). The reservation and the dispatched Mission's
 identifier <span class="bcp14">MUST</span> be committed atomically with instance derivation and
 <code>max_active</code>/<code>dispatch_rate</code> accounting. Evidence emission is not
 part of that same atomic commit: the Mission Issuer atomically
@@ -2438,7 +2438,7 @@ the retry exactly as a fresh Dispatch: current <code>allowed_dispatchers</code>
 membership, possession of <code>cnf</code>, and current template applicability
 all apply, since no Mission yet exists for the retry to recover
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section
-"Revalidation and lookup order").<a href="#section-7.3-4" class="pilcrow">¶</a></p>
+"Revalidation and Lookup Order").<a href="#section-7.3-4" class="pilcrow">¶</a></p>
 <p id="section-7.3-5">Recovery is delivery of the already-dispatched Mission, never a
 second instantiation and never a second count against <code>max_active</code> or
 <code>dispatch_rate</code>. A retry recovered while the original access token
@@ -2448,10 +2448,10 @@ still-<code>active</code> instance, an ordinary delivery event that repeats no
 creation accounting, exactly as the expansion profile's recovery
 defines for an expired delivery credential
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Recovery
-is delivery"). Tombstone retention follows the expansion profile's
+Is Delivery"). Tombstone retention follows the expansion profile's
 rule, against the deployment's published retry horizon
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>, Section "Tombstone
-retention"). This makes retry safe at machine speed and keeps
+Retention"). This makes retry safe at machine speed and keeps
 <code>max_active</code> and <code>dispatch_rate</code> accounting exact.<a href="#section-7.3-5" class="pilcrow">¶</a></p>
 </section>
 </div>

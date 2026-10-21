@@ -1073,7 +1073,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1086,12 +1086,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-gnap-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1159,7 +1159,7 @@ wire-level completeness is deferred.<a href="#section-abstract-1" class="pilcrow
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2353,81 +2353,97 @@ deployment-declared audit horizon.<a href="#section-11-3.9.1" class="pilcrow">¶
 </li>
       </ol>
 <p id="section-11-4">The binding declares these capabilities:<a href="#section-11-4" class="pilcrow">¶</a></p>
-<span id="name-gnap-mission-substrate-capa"></span><table class="center" id="table-3">
-        <caption>
-<a href="#table-3" class="selfRef">Table 3</a>:
-<a href="#name-gnap-mission-substrate-capa" class="selfRef">GNAP Mission substrate capabilities</a>
-        </caption>
-<thead>
-          <tr>
-            <th class="text-left" rowspan="1" colspan="1">Capability</th>
-            <th class="text-left" rowspan="1" colspan="1">Claim</th>
-            <th class="text-left" rowspan="1" colspan="1">Activation</th>
-            <th class="text-left" rowspan="1" colspan="1">Scope and defining sections</th>
-            <th class="text-left" rowspan="1" colspan="1">Limitations</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">always</td>
-            <td class="text-left" rowspan="1" colspan="1">Token issuance, grant modification, and token rotation at the AS (<a href="#gating" class="auto internal xref">Section 9.1</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">A structured token without a state check remains usable only for its bounded lifetime</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">State-Observable</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">
-              <span>[<a href="#RFC9767" class="cite xref">RFC9767</a>]</span> introspection deployed, or Mission Status active</td>
-            <td class="text-left" rowspan="1" colspan="1">Resource servers via per-use introspection with a declared cache bound; any authorized consumer via Mission Status (<a href="#state-surfaces" class="auto internal xref">Section 9.2</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Token lifetime alone is not observation</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">always</td>
-            <td class="text-left" rowspan="1" colspan="1">Access rights admitted through the authority adapter; the AS owns each supported type's semantics; comparison in the type's declared value space (<a href="#authority-adapter" class="auto internal xref">Section 6</a>, <a href="#subset" class="auto internal xref">Section 10.2</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Unsupported types refuse at intake; exact-carry types compare by equality only; consumption bounds bind at the runtime layer</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">always</td>
-            <td class="text-left" rowspan="1" colspan="1">The no-broader-than relation of adapter-supported types at issuance, modification adjudication, and rotation refusal (<a href="#subset" class="auto internal xref">Section 10.2</a>, <a href="#drawdown" class="auto internal xref">Section 10.3</a>, <a href="#gating" class="auto internal xref">Section 9.1</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Exact-carry types classify exact matches or refuse; covers this issuer's boundary</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Credential-Bound</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">always</td>
-            <td class="text-left" rowspan="1" colspan="1">Key-bound token with a protected <code>mission</code> claim, or the authenticated introspection assertion; fact semantics: lifecycle-gated issuance (<a href="#mission-claim" class="auto internal xref">Section 10.1</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Introspection carriage is an online issuer assertion; a <code>bearer</code>-flagged token weakens holder proof</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Authorized Context Correlation</td>
-            <td class="text-left" rowspan="1" colspan="1">not supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">--</td>
-            <td class="text-left" rowspan="1" colspan="1">The Controller binds Mission, Actor, Subject, and tokens natively; no cross-authority join is defined</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Independently Verifiable</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">structured token format issued, or signed Mission Status active</td>
-            <td class="text-left" rowspan="1" colspan="1">Offline verification of issuance-under-Mission and of state as of a signed observation (<a href="#mission-claim" class="auto internal xref">Section 10.1</a>, <a href="#state-surfaces" class="auto internal xref">Section 9.2</a>)</td>
-            <td class="text-left" rowspan="1" colspan="1">Key distribution is deployment-configured; GNAP publishes no client-facing key surface</td>
-          </tr>
-          <tr>
-            <td class="text-left" rowspan="1" colspan="1">Portable Evidence</td>
-            <td class="text-left" rowspan="1" colspan="1">supplied</td>
-            <td class="text-left" rowspan="1" colspan="1">Consent Evidence, Mission Mandate, or Audit Transparency active</td>
-            <td class="text-left" rowspan="1" colspan="1">The adopted profile's artifact and verification procedure</td>
-            <td class="text-left" rowspan="1" colspan="1">The base assessment log is Controller-local</td>
-          </tr>
-        </tbody>
-      </table>
-<p id="section-11-6">Each supplied row's temporal elements inherit the reliance floor of
+<span class="break"></span><div id="gnap-mission-substrate-capabilities">
+<dl class="dlNewline" id="section-11-5">
+        <dt id="section-11-5.1">Lifecycle-Gated Authorization:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.2">
+          <p id="section-11-5.2.1">Claim: supplied<a href="#section-11-5.2.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.2.2">Activation: always<a href="#section-11-5.2.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.2.3">Scope and defining sections: Token issuance, grant modification, and
+token rotation at the AS (<a href="#gating" class="auto internal xref">Section 9.1</a>)<a href="#section-11-5.2.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.2.4">Limitations: A structured token without a state check remains usable
+only for its bounded lifetime<a href="#section-11-5.2.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.3">State-Observable:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.4">
+          <p id="section-11-5.4.1">Claim: supplied<a href="#section-11-5.4.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.4.2">Activation: <span>[<a href="#RFC9767" class="cite xref">RFC9767</a>]</span> introspection deployed, or Mission Status
+active<a href="#section-11-5.4.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.4.3">Scope and defining sections: Resource servers via per-use
+introspection with a declared cache bound; any authorized consumer via
+Mission Status (<a href="#state-surfaces" class="auto internal xref">Section 9.2</a>)<a href="#section-11-5.4.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.4.4">Limitations: Token lifetime alone is not observation<a href="#section-11-5.4.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.5">Structured Authority:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.6">
+          <p id="section-11-5.6.1">Claim: supplied<a href="#section-11-5.6.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.6.2">Activation: always<a href="#section-11-5.6.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.6.3">Scope and defining sections: Access rights admitted through the
+authority adapter; the AS owns each supported type's semantics;
+comparison in the type's declared value space (<a href="#authority-adapter" class="auto internal xref">Section 6</a>,
+<a href="#subset" class="auto internal xref">Section 10.2</a>)<a href="#section-11-5.6.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.6.4">Limitations: Unsupported types refuse at intake; exact-carry types
+compare by equality only; consumption bounds bind at the runtime layer<a href="#section-11-5.6.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.7">Monotonic Derivation:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.8">
+          <p id="section-11-5.8.1">Claim: supplied<a href="#section-11-5.8.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.8.2">Activation: always<a href="#section-11-5.8.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.8.3">Scope and defining sections: The no-broader-than relation of
+adapter-supported types at issuance, modification adjudication, and
+rotation refusal (<a href="#subset" class="auto internal xref">Section 10.2</a>, <a href="#drawdown" class="auto internal xref">Section 10.3</a>, <a href="#gating" class="auto internal xref">Section 9.1</a>)<a href="#section-11-5.8.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.8.4">Limitations: Exact-carry types classify exact matches or refuse;
+covers this issuer's boundary<a href="#section-11-5.8.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.9">Credential-Bound:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.10">
+          <p id="section-11-5.10.1">Claim: supplied<a href="#section-11-5.10.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.10.2">Activation: always<a href="#section-11-5.10.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.10.3">Scope and defining sections: Key-bound token with a protected
+<code>mission</code> claim, or the authenticated introspection assertion; fact
+semantics: lifecycle-gated issuance (<a href="#mission-claim" class="auto internal xref">Section 10.1</a>)<a href="#section-11-5.10.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.10.4">Limitations: Introspection carriage is an online issuer assertion; a
+<code>bearer</code>-flagged token weakens holder proof<a href="#section-11-5.10.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.11">Authorized Context Correlation:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.12">
+          <p id="section-11-5.12.1">Claim: not supplied<a href="#section-11-5.12.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.12.2">Activation: --<a href="#section-11-5.12.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.12.3">Scope and defining sections: --<a href="#section-11-5.12.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.12.4">Limitations: The Controller binds Mission, Actor, Subject, and tokens
+natively; no cross-authority join is defined<a href="#section-11-5.12.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.13">Independently Verifiable:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.14">
+          <p id="section-11-5.14.1">Claim: supplied<a href="#section-11-5.14.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.14.2">Activation: structured token format issued, or signed Mission Status
+active<a href="#section-11-5.14.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.14.3">Scope and defining sections: Offline verification of
+issuance-under-Mission and of state as of a signed observation
+(<a href="#mission-claim" class="auto internal xref">Section 10.1</a>, <a href="#state-surfaces" class="auto internal xref">Section 9.2</a>)<a href="#section-11-5.14.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.14.4">Limitations: Key distribution is deployment-configured; GNAP publishes
+no client-facing key surface<a href="#section-11-5.14.4" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-11-5.15">Portable Evidence:</dt>
+        <dd style="margin-left: 1.5em" id="section-11-5.16">
+          <p id="section-11-5.16.1">Claim: supplied<a href="#section-11-5.16.1" class="pilcrow">¶</a></p>
+<p id="section-11-5.16.2">Activation: Consent Evidence, Mission Mandate, or Audit Transparency
+active<a href="#section-11-5.16.2" class="pilcrow">¶</a></p>
+<p id="section-11-5.16.3">Scope and defining sections: The adopted profile's artifact and
+verification procedure<a href="#section-11-5.16.3" class="pilcrow">¶</a></p>
+<p id="section-11-5.16.4">Limitations: The base assessment log is Controller-local<a href="#section-11-5.16.4" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+</div>
+<p id="section-11-6">Each supplied entry's temporal elements inherit the reliance floor of
 <a href="#gating" class="auto internal xref">Section 9.1</a> unless stated: freshness at use is established at the
 gated operation or at introspection, artifact lifetime is the
 token's expiry capped by the Mission's <code>expires_at</code>, and the
@@ -2436,7 +2452,7 @@ remaining lifetime of structured tokens or the declared
 introspection cache bound. Failure behavior is uniformly
 fail-closed: absent, stale, unknown, incomparable, invalid, or
 unavailable input refuses the gated operation. The Portable Evidence
-row is supplied only while its activation profile
+entry is supplied only while its activation profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>,
 <span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) is adopted; the referenced

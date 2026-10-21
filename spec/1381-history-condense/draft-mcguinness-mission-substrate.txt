@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                      Mission Substrate Requirements
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -1070,14 +1070,14 @@ Table of Contents
    9.  governance-record event coverage, ordering, integrity, access,
        and retention.
 
-   The Statement MUST then include a capability table with one row for
-   each capability in Section 5.  Each row MUST say supplied or not
-   supplied: a capability is supplied in a named scope when the row's
+   The Statement MUST then include a capability list with one entry for
+   each capability in Section 5.  Each entry MUST say supplied or not
+   supplied: a capability is supplied in a named scope when the entry's
    stated activation conditions hold, or it is not supplied.  There is
    no third state.  An activation condition states separately what a
    specification defines, what an implementation supports, what a
    deployment enables, and where the resulting property applies.  A
-   supplied row MUST:
+   supplied entry MUST:
 
    *  cite the binding sections that satisfy the capability;
 
@@ -1103,58 +1103,81 @@ Table of Contents
 
    The following is a non-normative skeleton:
 
-   +=============+========+==========+===============+=================+
-   |Capability   |Claim   |Activation| Scope and     | Limitations     |
-   |             |        |          | defining      |                 |
-   |             |        |          | sections      |                 |
-   +=============+========+==========+===============+=================+
-   |Lifecycle-   |supplied|always    | Controller    | Previously      |
-   |Gated        |        |          | permission    | issued          |
-   |Authorization|        |          | decisions     | resource        |
-   |             |        |          |               | credentials     |
-   |             |        |          |               | expire          |
-   |             |        |          |               | independently   |
-   +-------------+--------+----------+---------------+-----------------+
-   |State-       |supplied|Status    | Status        | Maximum         |
-   |Observable   |        |extension | responses     | staleness is    |
-   |             |        |active    |               | deployment-     |
-   |             |        |          |               | configured      |
-   +-------------+--------+----------+---------------+-----------------+
-   |Structured   |not     |--        | --            | Approved        |
-   |Authority    |supplied|          |               | Context is      |
-   |             |        |          |               | descriptive     |
-   +-------------+--------+----------+---------------+-----------------+
-   |Monotonic    |not     |--        | --            | No authority    |
-   |Derivation   |supplied|          |               | comparison      |
-   |             |        |          |               | relation is     |
-   |             |        |          |               | defined         |
-   +-------------+--------+----------+---------------+-----------------+
-   |Credential-  |supplied|always    | Native        | Covers          |
-   |Bound        |        |          | authorization | correlation,    |
-   |             |        |          | artifact      | not context     |
-   |             |        |          |               | disclosure      |
-   +-------------+--------+----------+---------------+-----------------+
-   |Authorized   |supplied|Verified  | Join          | Joining         |
-   |Context      |        |join      | assertions    | authority is    |
-   |Correlation  |        |active    |               | the             |
-   |             |        |          |               | Controller      |
-   +-------------+--------+----------+---------------+-----------------+
-   |Independently|supplied|Signed    | Signed        | Proves          |
-   |Verifiable   |        |receipt   | receipts      | approval as     |
-   |             |        |profile   |               | of issuance,    |
-   |             |        |active    |               | not current     |
-   |             |        |          |               | state           |
-   +-------------+--------+----------+---------------+-----------------+
-   |Portable     |not     |--        | --            | Governance      |
-   |Evidence     |supplied|          |               | record is       |
-   |             |        |          |               | Controller-     |
-   |             |        |          |               | local           |
-   +-------------+--------+----------+---------------+-----------------+
+   Lifecycle-Gated Authorization:
+      Claim: supplied
 
-     Table 3: Illustrative Mission Substrate Statement capability table
+      Activation: always
 
-   A real Statement also carries each supplied row's temporal elements
-   and failure behavior; the skeleton omits those columns for width.
+      Scope and defining sections: Controller permission decisions
+
+      Limitations: Previously issued resource credentials expire
+      independently
+
+   State-Observable:
+      Claim: supplied
+
+      Activation: Status extension active
+
+      Scope and defining sections: Status responses
+
+      Limitations: Maximum staleness is deployment-configured
+
+   Structured Authority:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: Approved Context is descriptive
+
+   Monotonic Derivation:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: No authority comparison relation is defined
+
+   Credential-Bound:
+      Claim: supplied
+
+      Activation: always
+
+      Scope and defining sections: Native authorization artifact
+
+      Limitations: Covers correlation, not context disclosure
+
+   Authorized Context Correlation:
+      Claim: supplied
+
+      Activation: Verified join active
+
+      Scope and defining sections: Join assertions
+
+      Limitations: Joining authority is the Controller
+
+   Independently Verifiable:
+      Claim: supplied
+
+      Activation: Signed receipt profile active
+
+      Scope and defining sections: Signed receipts
+
+      Limitations: Proves approval as of issuance, not current state
+
+   Portable Evidence:
+      Claim: not supplied
+
+      Activation: --
+
+      Scope and defining sections: --
+
+      Limitations: Governance record is Controller-local
+
+   A real Statement also carries each supplied entry's temporal elements
+   and failure behavior; the skeleton omits them for brevity.
 
    Text outside the Statement cannot silently broaden a capability
    claim.  If another specification adds a capability, that
@@ -1489,7 +1512,7 @@ Appendix B.  Mission-Bound Authorization Family Use
         | record     |                                            |
         +------------+--------------------------------------------+
 
-                     Table 4: Family vocabulary mapping
+                     Table 3: Family vocabulary mapping
 
    A family document that maps its own vocabulary to the kernel's uses
    these correspondences.
@@ -1538,6 +1561,11 @@ Appendix B.  Mission-Bound Authorization Family Use
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Mission Substrate Statement's capability table is a capability
+      list with one entry per capability, which fits the text rendering.
+      Each entry states what a row stated, with the same obligations
+      (#1382).
 
    *  Family Use names the accountable human by the OAuth binding's
       record member approval_basis.consent_principal, following that

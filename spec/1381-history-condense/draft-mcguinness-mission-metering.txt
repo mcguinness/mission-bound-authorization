@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            20 October 2026
-Expires: 23 April 2027
+Intended status: Experimental                            21 October 2026
+Expires: 24 April 2027
 
 
                       Mission Consumption Metering
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -1130,12 +1130,13 @@ Table of Contents
    evaluation_id in context.prior_evaluation_id, so the PDP continues
    the same metered activity rather than opening a new reservation.
 
-   The PDP MUST verify that the renewal's Mission, subject, action, and
-   audience match the evaluation named by prior_evaluation_id.  A
-   deployment sizes lease intervals to amortize renewals: an interval
-   materially shorter than the action class's staleness bound adds
-   decision load without tightening the revocation cutoff.  This
-   exchange requires one request member and one evidence member:
+   The PDP MUST verify that the renewal's Mission, subject, action,
+   operation target and audience match the evaluation named by
+   prior_evaluation_id.  A deployment sizes lease intervals to amortize
+   renewals: an interval materially shorter than the action class's
+   staleness bound adds decision load without tightening the revocation
+   cutoff.  This exchange requires one request member and one evidence
+   member:
 
    context.prior_evaluation_id:  OPTIONAL.  A string.  Present on a
       duration-lease renewal request, carrying the evaluation_id of the
@@ -1444,6 +1445,9 @@ Appendix A.  Document History
 
    *  The exclusive selector matches a consequential action whose
       operation target equals the selector's resource (#1276).
+
+   *  Duration-Lease Renewal: the PDP also verifies that the renewal's
+      operation target matches the evaluation it renews (#1276).
 
    *  Settlement by Evidence State and Reservation starvation: the
       reservation lease bounds how long an unsettled reservation waits

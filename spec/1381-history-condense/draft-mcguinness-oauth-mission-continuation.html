@@ -1058,7 +1058,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 23 April 2027</td>
+<td class="center">Expires 24 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1071,12 +1071,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-continuation-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-20" class="published">20 October 2026</time>
+<time datetime="2026-10-21" class="published">21 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-23">23 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-24">24 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1119,7 +1119,7 @@ continuation handle grants nothing.<a href="#section-abstract-1" class="pilcrow"
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 23 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 24 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1525,6 +1525,16 @@ narrowing applies. This transport defines no reset: continuing to
 another Resource Authorization Server, or returning to an earlier
 actor, never restarts the count. Where the IdP cannot read a hop's
 complete ancestry, it issues nothing.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">The onward ID-JAG conveys each entry's <code>delegation</code> member under the
+cross-domain projection rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>, Section
+"Conveyed Delegation Policy"), so a requested authorization detail
+that keeps an omitted <code>delegation</code> exceeds the grant's authority and
+is refused. The rule changes only the conveyed copy: the delegation
+constraints at this exchange apply at the depth counted above, <code>act</code>
+attributes the same actors, and that profile's depth reset does not
+apply. The dependency on that profile binds only a deployment that
+adopts this transport.<a href="#section-6.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transport-async">
@@ -1761,6 +1771,10 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
@@ -1826,10 +1840,6 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Child Delegation for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-cross-domain">[I-D.draft-mcguinness-oauth-mission-cross-domain]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Cross-Domain Projection for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-derivation-limits">[I-D.draft-mcguinness-oauth-mission-derivation-limits]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Derivation Limits for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-derivation-limits.html</a>&gt;</span>. </dd>
@@ -1859,49 +1869,56 @@ constrains their use and introduces none of its own.<a href="#section-11-1" clas
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">The Identity Continuation Transport's codes replace the issuance
-profile's Token Exchange code, now <code>invalid_request</code>; the codes
-themselves are unchanged (#1154).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">The Identity Continuation Transport's onward ID-JAG conveys
+<code>delegation</code> under the cross-domain projection rule, so a requested
+authorization detail that keeps an omitted member exceeds the
+grant's authority; the transport's depth count and <code>act</code> attribution
+are unchanged, with no depth reset (#1374).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Aligned with the published Identity Continuation Assertion (-02): the
+          <p id="appendix-A-2.2.1">The Identity Continuation Transport's codes replace the issuance
+profile's Token Exchange code, now <code>invalid_request</code>; the codes
+themselves are unchanged (#1154).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Aligned with the published Identity Continuation Assertion (-02): the
 transport runs among Resource Authorization Servers that trust a
 common IdP, its assertion issuer is the Continuation Assertion
 Issuer, the Mission binds the chain authorization, lifecycle anchor,
 and chain ending, single use is keyed on <code>(iss, jti)</code>, and Privacy
-Considerations notes that a chain remains correlatable (#906).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+Considerations notes that a chain remains correlatable (#906).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The Identity Continuation Transport states the refusal codes at that
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">The Identity Continuation Transport states the refusal codes at that
 exchange, those of the Identity Continuation Assertion in place of
 the issuance profile's <code>invalid_grant</code>, as the issuance profile
 permits for a Token Exchange profile that assigns its own code. The
-<code>mission_error</code> diagnostic requirements are unchanged (#921).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+<code>mission_error</code> diagnostic requirements are unchanged (#921).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">The Identity Continuation Transport states how Mission delegation
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">The Identity Continuation Transport states how Mission delegation
 depth is counted there: over the hop's IdP-held ancestry plus the
 current actor, merging only consecutive equal actors, from the
 approved client at depth 0, with no reset, and with nothing issued
-when the ancestry is incomplete (#960).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">A dispatched Mission enters the async delegation transport through
-its selected Agent, which redeems the Template profile's Dispatch
-Handoff for a delegation handle of its own (#1158).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+when the ancestry is incomplete (#960).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">The async delegation transport's <code>subject_token</code> is a delegation
+          <p id="appendix-A-2.6.1">A dispatched Mission enters the async delegation transport through
+its selected Agent, which redeems the Template profile's Dispatch
+Handoff for a delegation handle of its own (#1158).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">The async delegation transport's <code>subject_token</code> is a delegation
 handle: its audience is the acting client and possession of its own
 key is proved at the exchange, as Section 4.3 of the async delegation
 draft requires, replacing the re-binding to the acting key. An agent
 obtains its handle with a no-actor self-exchange naming its own
-<code>client_id</code> as <code>audience</code> (#1157).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+<code>client_id</code> as <code>audience</code> (#1157).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">A dispatched Mission's selected Agent that is also its Dispatcher
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">A dispatched Mission's selected Agent that is also its Dispatcher
 obtains its delegation handle through that self-exchange, from the
-instance's access token, instead of the Dispatch Handoff (#1195).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+instance's access token, instead of the Dispatch Handoff (#1195).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
