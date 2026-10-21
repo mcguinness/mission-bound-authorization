@@ -103,16 +103,16 @@ informative:
     date: 2026
   FAPI.GrantManagement:
     title: "Grant Management for OAuth 2.0"
-    target: https://openid.net/specs/fapi-grant-management-01.html
+    target: https://openid.net/specs/oauth-v2-grant-management.html
     author:
       - org: OpenID Foundation
-    date: 2022
+    date: 2023
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
     author:
       - org: OpenID Foundation
-    date: 2025
+    date: 2026
   OpenID.Core:
     title: "OpenID Connect Core 1.0 incorporating errata set 2"
     target: https://openid.net/specs/openid-connect-core-1_0.html
@@ -619,7 +619,8 @@ server enforces the `authorization_details` statelessly and can check
 the `mission` claim ({{rs-enforcement}}), with no callback to the AS
 required.
 
-(5) A management revoke, or `expires_at` passing, moves the Mission
+(5) An authorized revocation ({{revocation}}), or `expires_at`
+passing, moves the Mission
 to `terminated`, with reason `revoked` or `expired`, after which the
 AS refuses further issuance and refresh. A deployment can also treat
 {{RFC7009}} revocation of the refresh token as revoking the Mission
@@ -2451,7 +2452,8 @@ still apply.
 
 The error code alone does not tell a client which gate refused. On a
 refusal under this section the AS SHOULD include, alongside `error`,
-the `mission_error` token-error-response member ({{iana}}) with one
+the `mission_error` token-error-response member
+({{oauth-parameters-registration}}) with one
 of the values `revoked`, `expired`, or `superseded` (where a companion
 defines supersession), the Mission's termination reason
 ({{termination}}).
@@ -2702,7 +2704,7 @@ To emit `scope` for an entry, the AS:
    and
 6. for a multi-audience token, establishes the condition
    independently for each audience; a single-audience token
-   ({{mission-bound-tokens}}) remains preferred.
+   ({{token-response}}) remains preferred.
 
 Unknown `scope` semantics, unknown resource server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
@@ -3024,7 +3026,7 @@ applies by including, alongside `error` ({{RFC6750}}), the
 A value the client does not recognize is treated as
 `insufficient_authority`. A resource server SHOULD include the
 attribute only in a response to a validly signed, audience-correct
-token whose holder its deployment accepts learning the distinction
+token whose holder its deployment permits to learn the distinction
 ({{denial-disclosure}}).
 
 ## Enforcement Responsibilities {#rs-responsibilities}
@@ -3082,7 +3084,8 @@ the Mission does not obtain the Mission's wider authority.
 
 For entries outside the Authority Set, more authority requires a new
 approval, proposed as for a new Mission ({{authority-proposal}}), or
-an expansion where that companion is deployed ({{rs-enforcement}}).
+an expansion where that companion is deployed
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
 
@@ -3124,7 +3127,7 @@ exchange rows of the third table.
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
-| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe detail |
+| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -4426,7 +4429,7 @@ issuer-bound envelope:
      `value` is the Authority Set as a JSON array of entries.
    - For an activation policy reference's `digest`, `typ` is
      `mission-activation-policy` and `value` is the policy snapshot
-     object that {{standing-consent-bases}} defines.
+     object that {{activation-policy-commitment}} defines.
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
@@ -4456,7 +4459,7 @@ separation. To keep that domain separation safe without a registry, a
 new `typ` value MUST be a collision-resistant name (for example, a
 short name prefixed within a namespace the defining profile controls,
 following the Collision-Resistant Name guidance of
-{{Section 4.2 of RFC7519}}). `mission-` prefixed values, used by this
+{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
 document and the profiles that extend it, form a namespace
 coordinated through this document's change controller.
 
@@ -4503,8 +4506,9 @@ to computing an anchor and to comparing committed values:
   element sorting, so array order is significant. The AS MUST present
   each committed array in its recorded order wherever it emits the
   committed object; that order is part of the canonical form.
-- URI-valued members are compared byte-for-byte, consistent with
-  {{Section 12 of RFC9396}}, unless a member's own type definition
+- URI-valued members are compared byte-for-byte, with no
+  normalization ({{Section 12 of RFC9396}}), unless a member's own type
+  definition
   specifies a normalization. Where a type defines one, as
   `mission_resource_access` does for its `prefix`-match resource
   containment test
@@ -4659,8 +4663,9 @@ This document's extension points are:
   issuance.
 - **Approval-event sequencing.** The approval-event steps, their
   order, and the atomicity of record creation with the approval decision
-  are the model's ({{direct-approval-steps}}); the coupling of that
-  decision to authorization-code issuance is this flow's. A companion
+  are fixed by {{direct-approval-steps}}; the coupling of that
+  decision to authorization-code issuance belongs to the direct flow.
+  A companion
   profile MAY relocate the approval event relative to code issuance
   (for example, deferring the decision beyond the authorization
   response), provided the steps and their atomicity hold unchanged
@@ -5203,7 +5208,7 @@ exists.
 Introspection guards the same class of fact behind caller
 authorization ({{caller-authorization-and-minimization}}), and
 {{rs-enforcement}} limits the attribute to a token holder that the
-deployment accepts learning the distinction. Of the two values,
+deployment permits to learn the distinction. Of the two values,
 `insufficient_authority` reveals least, and omitting the attribute
 reveals nothing.
 
@@ -5603,7 +5608,8 @@ This document requests registration of the following in the "OAuth
 Extensions Error" registry {{RFC6749}}:
 
 - Error name: `invalid_mission_intent_evidence`
-- Error usage location: authorization endpoint, token endpoint
+- Error usage location: authorization code grant error response,
+  token error response
 - Related protocol extension: Intent Submission Evidence
   ({{intent-submission-evidence}})
 - Change controller: IETF
@@ -5668,7 +5674,7 @@ A Designated Expert reviews a submission for the discipline
 {{lifecycle}} requires:
 
 - a `Value` matching `^[a-z][a-z0-9_]*$` not already registered;
-- a `Terminal` designation of `no` consistent with the transitions
+- a `Terminal` value of `no`, consistent with the transitions
   the registrant's specification defines (a `no` state admits a
   further transition; `terminated` is the one terminal state, and a
   further way for a Mission to end is a termination reason,
@@ -5703,6 +5709,7 @@ This document seeds the registry with the states it defines:
 |---|---|---|---|---|
 | `active` | no | The only state from which tokens are derived. | IETF | this document, {{lifecycle}} |
 | `terminated` | yes | The Mission has ended; its `termination` gives the reason. | IETF | this document, {{lifecycle}}, {{termination}} |
+{: title="Mission Lifecycle States registry: initial contents"}
 
 Each further document that defines a lifecycle state requests that
 state's registration in its own IANA considerations. A Designated
@@ -5744,6 +5751,7 @@ This document seeds the registry with the reasons it defines:
 |---|---|---|---|---|
 | `revoked` | The Subject, Approver, or policy terminated the Mission. | none | IETF | this document, {{termination}} |
 | `expired` | The Mission's `expires_at` passed; `terminated_at` equals it. | none | IETF | this document, {{termination}} |
+{: title="Mission Termination Reasons registry: initial contents"}
 
 Each further document that defines a termination reason requests
 that reason's registration in its own IANA considerations.
@@ -6301,7 +6309,8 @@ deriving it from a natural-language instruction) is out of scope.
 ## Scope and Future Work {#scope-and-future-work}
 
 This document is self-contained: it binds Missions to OAuth 2.0 and
-depends only on the OAuth and JOSE specifications it cites.
+depends normatively only on the specifications listed as its
+normative references.
 
 Its reference to the OAuth Actor Profile
 ({{I-D.draft-mcguinness-oauth-actor-profile}}), for the `act` chain
@@ -6313,7 +6322,8 @@ The companion Mission Cross-Domain Projection profile
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}} specifies
 cross-domain projection, a single hop that lets an authorization
 server in another trust domain honor a Mission, and carries the
-identity-chaining and ID-JAG dependencies. The Cross-Domain
+identity-chaining and Identity Assertion JWT Authorization Grant
+(ID-JAG) dependencies. The Cross-Domain
 capability's conformance bar is self-contained in this document
 ({{conformance}}), so that companion is not a normative dependency.
 
@@ -6390,7 +6400,8 @@ The following are out of scope for this document:
   ({{introspection}}); this document defines no push-based
   notification of Mission state changes. Mission Lifecycle Signals
   ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared
-  Signals ({{RFC8935}}) / CAEP profile for Mission lifecycle events.
+  Signals and CAEP profile for Mission lifecycle events, delivered as
+  Security Event Tokens ({{RFC8935}}).
 - **Human-in-the-loop suspension.** The base lifecycle is `active` and
   `terminated` ({{lifecycle}}). Mission Status
   ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a
@@ -6414,7 +6425,8 @@ The following are out of scope for this document:
   activity across audiences and resources. `authority_hash` is not
   part of that baseline correlation surface: it stays on the Mission
   Record and the audit and profile surfaces that carry it by
-  disclosure privilege ({{mission-claim}}), not on every token by
+  disclosure privilege ({{mission-claim}},
+  {{caller-authorization-and-minimization}}), not on every token by
   default. Pairwise or unlinkable presentation of Mission-bound
   authority works against the identifier and is therefore future work
   ({{mission-identifier-correlation}}).
@@ -6683,6 +6695,7 @@ client intake keeps those two surfaces from disagreeing.
 | Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time Authority Set derivation |
 | Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
 | Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
+{: title="Ownership and operational signals"}
 
 Templates amortize authoring across Missions and do not bypass the
 ceilings. The unmapped-resource rate, template-hit rate, and
@@ -7214,8 +7227,9 @@ issuer-checked Mission resolution (#725); third-party data subjects
 
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
-#1472, #1479, #1483, #1490), with issuance under Mission-Bound Access
-Tokens, Mission Lifecycle and Gating retitled Mission Lifecycle, and
+#1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
+under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
+retitled "Mission Lifecycle", and
 one Standing-Consent Bases section; subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
@@ -7226,8 +7240,8 @@ draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
-6750 and RFC 9700 are normative, and the OAuth Actor Profile
-informative.
+6750, RFC 9700 and Client Instance ID are normative, and the OAuth
+Actor Profile informative.
 
 -00
 
