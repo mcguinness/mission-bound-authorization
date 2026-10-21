@@ -580,6 +580,8 @@ export {
   parseGovernedPolicyRoot,
   parseGovernedPolicyRules,
   previewGovernedActivation,
+  type ApprovalGovernanceRecheck,
+  recheckApprovalGovernanceRecord,
   recheckGovernedActivation,
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
