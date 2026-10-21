@@ -1079,8 +1079,8 @@ Submission is governed by the following rules:
   - the processing order ({{submission-processing}});
   - Authority Set derivation ({{authorization-derivation}});
   - the approval-event rules for the Mission's approval basis
-    ({{approval-event}}, with a direct approval relocated only as
-    {{extensibility}} permits); and
+    ({{approval-event}}, {{standing-consent-instances}}, with a direct
+    approval relocated only as {{extensibility}} permits); and
   - the grant binding ({{grant-binding}}).
 
   Support for a grant type or endpoint never establishes such a carriage
@@ -1728,7 +1728,7 @@ a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 ## Direct Approval Steps {#direct-approval-steps}
 
-The steps fall into four phases. Steps 1 to 3 establish the Approver,
+Steps 1 to 3 establish the Approver,
 the Subject and the authority source, and check the derived Authority
 Set against that source. Step 4 establishes the effective expiry.
 Step 5 renders the derived Authority Set for consent, and
@@ -2228,8 +2228,9 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
-The subsections follow one issuance: resolving the Mission from the
-presented grant ({{grant-binding}}), the checks every issuance passes
+The first four subsections follow one issuance: resolving the Mission
+from the presented grant ({{grant-binding}}), the checks every issuance
+passes
 ({{issuance-gating}}), and the token ({{token-claims}}) and its
 response ({{token-response}}).
 
@@ -4925,7 +4926,7 @@ that supports none of them is still conformant:
   2. authority that only narrows ({{subset}});
   3. projection performed only by, or under the authorization of, the
      Mission `issuer`, gated on the Mission's `active` state
-     ({{lifecycle}}); and
+     ({{lifecycle}}, {{issuance-gating}}); and
   4. projected credential lifetimes capped by the Mission's
      `expires_at` ({{token-authentication-lifetime}}).
 
@@ -7899,7 +7900,7 @@ Cross-Domain:
   submission trust rule, {{introspection}} for the RFC 7662
   deviation, the (since relocated) Resource Boundary Canonicalization
   section for the
-  single-normalization rule, {{lifecycle}} for short-lifetime
+  single-normalization rule, {{issuance-gating}} for short-lifetime
   guidance). The rejected `client_id`-freezing narrative compressed
   to its design rationale; spec-archaeology sentences removed in
   favor of this history; the Mission Drift consideration folded
