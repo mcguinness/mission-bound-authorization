@@ -1400,7 +1400,8 @@ export function recheckApprovalGovernanceRecord(
   const issuer = mission.issuer;
   // Step 2: the root snapshot reproduces the record's approval_policy.digest.
   const rootSnapshot = kernel.governedPolicyConsents.rootSnapshot(issuer, record.approval_policy);
-  if (!rootSnapshot || approvalPolicyDigest(issuer, rootSnapshot) !== record.approval_policy.digest) {
+  if (!rootSnapshot) return no(2, "the root snapshot the record names is not retained");
+  if (approvalPolicyDigest(issuer, rootSnapshot) !== record.approval_policy.digest) {
     return no(2, "the retained root snapshot does not reproduce approval_policy.digest");
   }
   let root: GovernedPolicyRoot;

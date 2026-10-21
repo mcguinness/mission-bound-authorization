@@ -987,16 +987,31 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
     expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "record differs from its signed payload" });
   });
 
-  it("step 2: refuses when the retained root snapshot does not reproduce approval_policy.digest", () => {
+  it("step 2: refuses when the retained root snapshot is missing or does not reproduce approval_policy.digest", () => {
     const kernel = makeKernel();
     const { mission } = activate(kernel, consent(kernel).consent_id);
     kernel.db
       .prepare("UPDATE governed_policy_roots SET content = ?")
       .run(Buffer.from(JSON.stringify(rootDoc({ rules: { max_entries: 99 } })), "utf8"));
-    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 2 });
+    expect(recheck(kernel, mission.id)).toEqual({
+      rechecked: false,
+      step: 2,
+      reason: "the retained root snapshot does not reproduce approval_policy.digest",
+    });
+    const gone = makeKernel();
+    const g = activate(gone, consent(gone).consent_id).mission;
+    gone.db.prepare("DELETE FROM governed_policy_roots").run();
+    expect(recheck(gone, g.id)).toEqual({ rechecked: false, step: 2, reason: "the root snapshot the record names is not retained" });
   });
 
-  it("step 3: refuses an evaluator snapshot that does not verify, and a recorded deciding policy the root does not name", () => {
+  it("step 3: refuses an evaluator snapshot that is missing or does not verify, and a recorded deciding policy the root does not name", () => {
+    const missing = evaluatorKernel();
+    missing.kernel.db.prepare("DELETE FROM activation_policy_snapshots").run();
+    expect(recheck(missing.kernel, missing.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the retained evaluator snapshot does not verify",
+    });
     const byEval = evaluatorKernel();
     byEval.kernel.db.prepare("UPDATE activation_policy_snapshots SET content = ?").run(Buffer.from(JSON.stringify({ max_entries: 9 }), "utf8"));
     expect(recheck(byEval.kernel, byEval.mission.id)).toEqual({
@@ -1019,7 +1034,10 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
     expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 3, reason: "the recorded deciding policy is not the root" });
   });
 
-  it("step 4: refuses an input not bound to this event, Intent and evaluated set, and a contributing service assertion matching no input", () => {
+  it("step 4: refuses missing inputs, an input not bound to this event, Intent and evaluated set, and a contributing service assertion matching no input", () => {
+    const noInputs = narrowedByModel();
+    noInputs.kernel.db.prepare("DELETE FROM governed_policy_activations").run();
+    expect(recheck(noInputs.kernel, noInputs.mission.id)).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
     const rebound = narrowedByModel();
     rebound.kernel.db
       .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.model_outputs[0].intent_hash', ?)")
