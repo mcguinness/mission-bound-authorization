@@ -407,6 +407,13 @@ integrity-anchor envelope ({{I-D.draft-mcguinness-oauth-mission}}):
 `ceiling_hash` is an envelope anchor under the issuance profile's
 commitment mechanisms, which this document imports normatively.
 
+The Mission Issuer also records `ceiling_consent_hash`, the
+`ceiling_hash` of the ceiling and drawdown policy as the Approver
+consented them. At a consent the two are equal. A policy-adjudicated
+drawdown that narrows the ceiling recomputes `ceiling_hash` and leaves
+`ceiling_consent_hash` unchanged ({{drawdown-successor}}); only an
+explicit re-consent replaces it ({{ceiling-reconsent}}).
+
 Neither member is committed under `authority_hash`: `authority_hash`
 commits only the consented Authority Set
 ({{I-D.draft-mcguinness-oauth-mission}}), and the ceiling is a bound
@@ -466,6 +473,8 @@ records for the scenario's Mission at the initial approval
       "sha-256:HS89ur28PoDZuYR2YEAPKaqYTIawABGKnIyjTWDQNGc"
   },
   "ceiling_hash":
+    "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw",
+  "ceiling_consent_hash":
     "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw"
 }
 ~~~
@@ -712,7 +721,11 @@ A policy-adjudicated successor MUST carry the predecessor's
 `authority_ceiling` and `drawdown_policy` unchanged or narrowed,
 committed under the same or, when narrowed, a recomputed `ceiling_hash`.
 Any change to either beyond narrowing requires an explicit re-consent
-({{ceiling-reconsent}}), never policy adjudication.
+({{ceiling-reconsent}}), never policy adjudication. The successor MUST
+carry `ceiling_consent_hash`, and the instant and Approver of that
+consent, unchanged: a narrowing is not a consent, so it resets neither
+the review cadence ({{ceiling-review}}) nor the cumulative drawdown
+count ({{audit-linkage}}).
 
 A drawdown request that passes every policy-adjudication guard of
 {{in-ceiling-expansion}} completes synchronously in the
@@ -803,18 +816,19 @@ makes two separate decisions: the Approver approves the successor's
 authority and can, separately, re-consent the ceiling.
 
 Without an explicit re-consent, the successor MUST carry the
-predecessor's `authority_ceiling`, `drawdown_policy` and
-`ceiling_hash` unchanged, together with the instant and the Approver
-of the ceiling consent they commit, and the ceiling review cadence
-does not restart. Authority approved beyond the ceiling stays outside
-it: a later expansion whose Authority Set retains that authority is
-outside the ceiling ({{ceiling-test}}).
+predecessor's `authority_ceiling`, `drawdown_policy`, `ceiling_hash` and
+`ceiling_consent_hash` unchanged, together with the instant and the
+Approver of the ceiling consent `ceiling_consent_hash` commits, and the
+ceiling review cadence does not restart. Authority approved beyond the
+ceiling stays outside it: a later expansion whose Authority Set retains
+that authority is outside the ceiling ({{ceiling-test}}).
 
 Where the Approver explicitly re-consents a ceiling and drawdown
 policy at that approval, the successor MUST record the re-consented
 `authority_ceiling` and the selected `drawdown_policy` under a
-recomputed `ceiling_hash`, with the re-consent's instant and Approver
-as those of the ceiling consent. The ceiling review cadence restarts
+recomputed `ceiling_hash`, record that hash as its
+`ceiling_consent_hash`, and record the re-consent's instant and
+Approver as those of the ceiling consent. The ceiling review cadence restarts
 from that instant ({{ceiling-review}}). The consent disclosure MUST
 render the re-consented ceiling and policy as at the initial approval
 ({{progressive-authorization}}). A re-consent is a ceiling review, so
@@ -845,10 +859,12 @@ are:
   Approval Basis"): `kind` `policy`, and a `policy` whose `id` and
   `version` are `activation`'s `policy_id` and `policy_version`, the
   drawdown policy this adjudication evaluated;
-- `root_commitment`: the `ceiling_hash`; and
+- `root_commitment`: the predecessor's `ceiling_consent_hash`, the
+  latest explicitly human-consented ceiling and drawdown policy, never
+  a `ceiling_hash` a policy narrowing recomputed; and
 - `approved_at` (the issuance profile's standing-consent
   requirement): the instant the Approver consented the ceiling that
-  `ceiling_hash` commits, read from the Mission Issuer's retained
+  `root_commitment` commits, read from the Mission Issuer's retained
   record of that consent, never from the drawdown request.
 
 The successor record's `approval_event_id` identifies this
@@ -886,6 +902,8 @@ The following is an example of the scenario's successor record
   "approval_event_id": "ape_1hJEKlr4vhnTLqwrYhpX",
   "ceiling_hash":
     "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw",
+  "ceiling_consent_hash":
+    "sha-256:8PkE9J8vIWBKyPTG21yYer3W3BPP8opLI2moZr3S-kw",
   "drawdown_count": 1,
   "created_at": "2026-11-02T09:15:00Z"
 }
@@ -894,7 +912,8 @@ The following is an example of the scenario's successor record
 `approved_at` is the instant of the ceiling consent, not of the
 policy-adjudicated drawdown. The successor carries the predecessor's
 `authority_ceiling` and `drawdown_policy` unchanged, so its
-`ceiling_hash` is the predecessor's.
+`ceiling_hash` is the predecessor's and equals `ceiling_consent_hash`,
+the `root_commitment`.
 
 The child delegation profile's `policy_drawdown` basis
 ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) is not
@@ -1152,9 +1171,11 @@ more than its predecessor's. A retried or refused request leaves it
 unchanged, and a human-approved successor carries it unchanged, a
 re-consent included; neither a review nor a narrowing resets it.
 
-A deployment MUST retain the consented `authority_ceiling`,
-`drawdown_policy`, and `ceiling_hash` with every Mission record in the
-chain for the audit horizon. An auditor can then verify that every
+A deployment MUST retain, with every Mission record in the chain for
+the audit horizon, its `authority_ceiling`, `drawdown_policy`,
+`ceiling_hash` and `ceiling_consent_hash`, and the consented
+`authority_ceiling` and `drawdown_policy` that each
+`ceiling_consent_hash` commits. An auditor can then verify that every
 policy-adjudicated drawdown was within the consented envelope and, by
 resolving the retained drawdown policy document at the `policy_version`
 each one's `ceiling_drawdown` approval basis already records, that it
@@ -1176,7 +1197,8 @@ Authorization** is a conforming expansion-capable Mission Issuer
 
 - for a Mission whose Approver consented to a ceiling, record the
   consented `authority_ceiling` and `drawdown_policy` on the Mission
-  and commit them with `ceiling_hash` ({{progressive-authorization}});
+  and commit them with `ceiling_hash`, recording that hash as
+  `ceiling_consent_hash` ({{progressive-authorization}});
 - render the ceiling, and the fact that in-ceiling expansion is
   policy-adjudicated, in the initial approval's consent disclosure
   ({{progressive-authorization}});
@@ -1186,19 +1208,22 @@ Authorization** is a conforming expansion-capable Mission Issuer
   self-declaration, evaluate the declaration against the ceiling
   ({{ceiling-test}});
 - for a policy-adjudicated successor, carry the predecessor's ceiling
-  members unchanged or narrowed, and commit its activation, the
+  members unchanged or narrowed and its `ceiling_consent_hash`
+  unchanged, and commit its activation, the
   predecessor's supersession and the creation reservation in one
   atomic step before the token-exchange response
   ({{drawdown-successor}});
 - record a policy-adjudicated successor's `ceiling_drawdown` approval
-  basis, its REQUIRED `adjudication` included, and an
+  basis, its REQUIRED `adjudication` included and its
+  `root_commitment` the `ceiling_consent_hash`, and an
   `approval_event_id` that identifies that drawdown
   ({{ceiling-drawdown-basis}});
 - for a successor that a fresh human approval creates in a chain that
   carries a ceiling, carry the predecessor's ceiling members unchanged
   unless the Approver explicitly re-consents a ceiling and drawdown
-  policy, record a re-consent under a recomputed `ceiling_hash` with
-  its own instant and Approver, render the re-consented ceiling and
+  policy, record a re-consent under a recomputed `ceiling_hash`, as
+  the new `ceiling_consent_hash`, with its own instant and Approver,
+  render the re-consented ceiling and
   policy in that approval's disclosure, and preserve the chain's
   history and restrictions ({{ceiling-reconsent}});
 - bound each policy-adjudicated drawdown incrementally, so a single one
@@ -1345,11 +1370,11 @@ records SHOULD be scoped to parties with a governance need.
 # IANA Considerations {#iana}
 
 This document requests one registration ({{iana-denial-reason}}).
-`authority_ceiling`, `drawdown_policy`, `drawdown_count`, and
-`resource_declaration_digest` are Mission record members defined by
-this profile, and the `mission-authority-ceiling` anchor `typ` follows the
-issuance profile's collision-resistant `typ` convention; none of these
-requires registration.
+`authority_ceiling`, `drawdown_policy`, `ceiling_consent_hash`,
+`drawdown_count`, and `resource_declaration_digest` are Mission record
+members defined by this profile, and the `mission-authority-ceiling`
+anchor `typ` follows the issuance profile's collision-resistant `typ`
+convention; none of these requires registration.
 
 ## Mission Denial Reasons Registration {#iana-denial-reason}
 
@@ -1373,6 +1398,11 @@ Denial Reasons Registry"):
 
 -01
 
+- `ceiling_consent_hash` keeps the latest explicitly human-consented
+  ceiling's hash apart from a policy-narrowed `ceiling_hash`; the
+  `ceiling_drawdown` basis's `root_commitment` and `approved_at` name
+  that consent, and a narrowing resets neither the cadence nor the
+  drawdown count (#1468, D593).
 - The Ceiling Review: a review is a fresh human approval that
   explicitly re-consents the ceiling and policy (a narrowed ceiling
   included); every re-consent discloses the chain's record since the
