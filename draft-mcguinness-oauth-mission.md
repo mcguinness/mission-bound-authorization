@@ -1789,6 +1789,10 @@ Refusals follow {{error-mapping}}.
      authority reflects the goal the Approver read. An approval
      surface that renders only the `goal` or Mission Intent does not
      conform.
+   - The rendering MUST identify the OAuth client that receives the
+     authority, the Agent, from client identity information the AS
+     trusts, such as its own registration of the client; display text
+     the client supplies does not by itself identify it.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
    - The rendering MUST identify the authority source and, for
