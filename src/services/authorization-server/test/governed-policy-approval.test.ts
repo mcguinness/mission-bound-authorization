@@ -1038,6 +1038,18 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
     const noInputs = narrowedByModel();
     noInputs.kernel.db.prepare("DELETE FROM governed_policy_activations").run();
     expect(recheck(noInputs.kernel, noInputs.mission.id)).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
+    // The inputs as a whole carry the event and Intent, with no model output to carry them.
+    const unbound = { rechecked: false, step: 4, reason: "the recorded inputs are not bound to this approval event and Intent" };
+    const otherActivation = makeKernel();
+    const oa = activate(otherActivation, consent(otherActivation).consent_id).mission;
+    otherActivation.db.prepare("UPDATE governed_policy_activations SET approval_event_id = 'ape-other'").run();
+    expect(recheck(otherActivation, oa.id)).toEqual(unbound);
+    const otherIntent = makeKernel();
+    const oi = activate(otherIntent, consent(otherIntent).consent_id).mission;
+    otherIntent.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.intent_hash', ?)")
+      .run("sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
+    expect(recheck(otherIntent, oi.id)).toEqual(unbound);
     const rebound = narrowedByModel();
     rebound.kernel.db
       .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.model_outputs[0].intent_hash', ?)")
@@ -1089,6 +1101,42 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
       step: 5,
       reason: "contributing is not the set the replay counts",
     });
+    // The replay, not the record, sets what is counted: removing a counted
+    // assertion together with its contributing entry is refused.
+    const unrecorded = narrowedByModel();
+    resign(unrecorded.kernel, unrecorded.mission.id, (r) => {
+      r.assertions = r.assertions.filter((a) => a.kind !== "service");
+      r.evaluation.contributing = ["ast_policy"];
+    });
+    expect(recheck(unrecorded.kernel, unrecorded.mission.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "model output risk-model@3 has no single recorded service assertion",
+    });
+    const unaccountable = narrowedByModel();
+    resign(unaccountable.kernel, unaccountable.mission.id, (r) => {
+      r.assertions = r.assertions.filter((a) => a.kind !== "policy");
+      r.evaluation.contributing = ["ast_model_1"];
+    });
+    expect(recheck(unaccountable.kernel, unaccountable.mission.id)).toMatchObject({ rechecked: false, step: 5 });
+    const empty = makeKernel();
+    const e = activate(empty, consent(empty).consent_id).mission;
+    resign(empty, e.id, (r) => {
+      r.assertions = [];
+      r.evaluation.contributing = [];
+    });
+    expect(recheck(empty, e.id)).toMatchObject({ rechecked: false, step: 5 });
+    // The accountable approval is the consent the Mission records, not a fresher one the record claims.
+    const fresher = makeKernel();
+    const f = activate(fresher, consent(fresher).consent_id).mission;
+    resign(fresher, f.id, (r) => {
+      (r.assertions[0] as { authority: { approved_at: string } }).authority.approved_at = iso(T0 + 1000);
+    });
+    expect(recheck(fresher, f.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "governed_policy record: the accountable assertion's approved_at is not approval_basis.approved_at",
+    });
   });
 
   it("step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception", () => {
@@ -1106,6 +1154,13 @@ describe("re-checking an evaluation (@spec approval-governance#re-check)", () =>
       r.evaluation.evaluated_at = iso(T0 - 1000);
     });
     expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
+    // Removing every assertion does not leave the aged approval unchecked.
+    resign(kernel, mission.id, (r) => {
+      r.assertions = [];
+      r.evaluation.contributing = [];
+      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false });
 
     const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
     const excepted = makeKernel({

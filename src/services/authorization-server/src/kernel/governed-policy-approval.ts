@@ -50,6 +50,7 @@ import { type RegisteredActivationPolicy, verifiedActivationPolicy } from "./act
 import {
   type AgrAssertion,
   type ApprovalGovernanceRecord,
+  assertAccountableApprover,
   assertGovernedPolicyRecord,
   signApprovalGovernanceRecord,
   type UnsignedApprovalGovernanceRecord,
@@ -1374,8 +1375,10 @@ export type ApprovalGovernanceRecheck = { rechecked: true } | { rechecked: false
  * approval event, the Mission's Intent and the set recorded as evaluated, with
  * every contributing `service` assertion matching one; (5) re-run the deciding
  * policy over them: it approves the committed Authority Set (after the
- * retained capability resolution) and counts exactly `contributing`; (6)
- * re-apply recency at `evaluation.evaluated_at`. Any missing evidence or
+ * retained capability resolution) and counts exactly `contributing`, which is
+ * the accountable policy assertion plus one service assertion per consulted
+ * model output; (6) re-apply recency at `evaluation.evaluated_at` to the
+ * accountable policy approval. Any missing evidence or
  * mismatch leaves the evaluation not re-checked.
  */
 export function recheckApprovalGovernanceRecord(
@@ -1435,6 +1438,9 @@ export function recheckApprovalGovernanceRecord(
   // Step 4: the recorded inputs are bound to this event, Intent and evaluated
   // set, and every contributing service assertion matches one of them.
   const inputs = activation.inputs;
+  if (activation.approval_event_id !== record.approval_event_id || inputs.intent_hash !== record.mission.intent_hash) {
+    return no(4, "the recorded inputs are not bound to this approval event and Intent");
+  }
   const evaluatedHash = authorityHash(issuer, inputs.authority as never);
   for (const o of inputs.model_outputs) {
     if (
@@ -1466,31 +1472,44 @@ export function recheckApprovalGovernanceRecord(
   if (authorityHash(issuer, replayed as never) !== mission.authority_hash) {
     return no(5, "the replay approves a different Authority Set");
   }
-  const counted = record.assertions.filter(
-    (a) =>
-      a.decision === "approve" &&
-      ((a.kind === "policy" &&
-        a.authority.policy_id === activation.deciding.id &&
-        a.authority.version === activation.deciding.version) ||
-        (a.kind === "service" && matchesInput(a))),
-  );
+  // The replay counts what the rules count: the consent principal's policy
+  // assertion naming the deciding policy, and one service assertion per
+  // consulted model output. The record's own assertion list sets neither.
+  let accountable: AgrAssertion;
+  try {
+    assertGovernedPolicyRecord(record, mission.approval_basis);
+    accountable = assertAccountableApprover(record, mission.approval_basis) as AgrAssertion;
+  } catch (e) {
+    return no(5, (e as Error).message);
+  }
+  const counted: AgrAssertion[] = [accountable];
+  for (const o of inputs.model_outputs) {
+    const matched = record.assertions.filter(
+      (a) =>
+        a.kind === "service" &&
+        a.decision === "approve" &&
+        a.authority.model_id === o.model.id &&
+        a.authority.model_version === o.model.version,
+    );
+    if (matched.length !== 1) return no(5, `model output ${o.model.id}@${o.model.version} has no single recorded service assertion`);
+    counted.push(matched[0] as AgrAssertion);
+  }
   if (counted.length !== contributing.size || !counted.every((a) => contributing.has(a.assertion_id))) {
     return no(5, "contributing is not the set the replay counts");
   }
-  // Step 6: recency at evaluated_at, as the root declares it.
+  // Step 6: recency at evaluated_at, as the root declares it, for the
+  // accountable policy approval the replay counted.
   const applicable = applicableRecencyMaxAge(root, classifyHighRisk(mission.authority_set, root.classification));
   if ("missing" in applicable) return no(6, `the Mission carries ${applicable.missing} and the root commits no exception for it`);
   const evaluatedMs = Date.parse(record.evaluation.evaluated_at);
   const skewMs = root.recency.clock_skew_s * 1000;
-  for (const a of counted.filter((x) => x.kind === "policy")) {
-    const approvedMs = Date.parse(String(a.authority.approved_at));
-    const decidedMs = Date.parse(a.decided_at);
-    if (!(approvedMs <= decidedMs + skewMs && decidedMs <= evaluatedMs + skewMs)) {
-      return no(6, `assertion ${a.assertion_id} is out of order against evaluated_at`);
-    }
-    if (evaluatedMs - approvedMs > applicable.maxAgeS * 1000) {
-      return no(6, `assertion ${a.assertion_id} is older than the applicable ${applicable.maxAgeS}s maximum at evaluated_at`);
-    }
+  const approvedMs = Date.parse(String(accountable.authority.approved_at));
+  const decidedMs = Date.parse(accountable.decided_at);
+  if (!(approvedMs <= decidedMs + skewMs && decidedMs <= evaluatedMs + skewMs)) {
+    return no(6, `assertion ${accountable.assertion_id} is out of order against evaluated_at`);
+  }
+  if (evaluatedMs - approvedMs > applicable.maxAgeS * 1000) {
+    return no(6, `assertion ${accountable.assertion_id} is older than the applicable ${applicable.maxAgeS}s maximum at evaluated_at`);
   }
   return { rechecked: true };
 }
