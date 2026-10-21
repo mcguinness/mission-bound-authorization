@@ -29,6 +29,8 @@ author:
 
 normative:
   I-D.draft-mcguinness-oauth-client-instance-id:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
+  I-D.draft-mcguinness-oauth-actor-profile:
   RFC3339:
   RFC4648:
   RFC5646:
@@ -56,9 +58,14 @@ normative:
   RFC8414:
   RFC7519:
   RFC9728:
+  OpenID.Core:
+    title: "OpenID Connect Core 1.0 incorporating errata set 2"
+    target: https://openid.net/specs/openid-connect-core-1_0.html
+    author:
+      - org: OpenID Foundation
+    date: 2023
 
 informative:
-  I-D.draft-ietf-oauth-rar-metadata-remediation:
   I-D.draft-ietf-wimse-arch:
   I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
@@ -68,7 +75,6 @@ informative:
   RFC9635:
   RFC8628:
   RFC8792:
-  I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
     title: "Mission Child Delegation for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-child-delegation.html
@@ -113,12 +119,6 @@ informative:
     author:
       - org: OpenID Foundation
     date: 2026
-  OpenID.Core:
-    title: "OpenID Connect Core 1.0 incorporating errata set 2"
-    target: https://openid.net/specs/openid-connect-core-1_0.html
-    author:
-      - org: OpenID Foundation
-    date: 2023
   I-D.draft-ietf-wimse-aims:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
@@ -1190,9 +1190,10 @@ AS-side rules keep a governed task from being downgraded to such a
 request ({{discovery}} states the client-side rules and
 {{downgrade-by-omission}} the threat):
 
-- Where a deployment designates a resource Mission-governed, its AS
-  MUST NOT issue a token for that resource outside a Mission, except
-  under documented policy exceptions.
+- Where a deployment classifies a resource as Mission-governed (a
+  Mission-governed resource), its AS MUST NOT issue a token for that
+  resource outside a Mission, except under documented policy
+  exceptions.
 - If a client registered as Mission-governed sends an authorization
   request, through PAR or at the authorization endpoint, that carries
   `authorization_details` but no `mission_intent`, the AS MUST reject
@@ -1201,8 +1202,8 @@ request ({{discovery}} states the client-side rules and
   `authorization_details`. The rule applies to that request until it
   completes, including when the AS resumes it after an interaction. A
   request carrying neither is an ordinary request that this rule does
-  not reach; designation is what keeps a resource's tokens inside a
-  Mission.
+  not reach; the first rule, for a Mission-governed resource, is what
+  keeps that resource's tokens inside a Mission.
 
 A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
@@ -1789,6 +1790,10 @@ Refusals follow {{error-mapping}}.
      authority reflects the goal the Approver read. An approval
      surface that renders only the `goal` or Mission Intent does not
      conform.
+   - The rendering MUST identify the OAuth client that receives the
+     authority, the Agent, from client identity information the AS
+     trusts, such as its own registration of the client; display text
+     the client supplies does not by itself identify it.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
    - The rendering MUST identify the authority source and, for
@@ -2011,8 +2016,9 @@ published floor and, where the client requested one, the
 `acr_values`/`max_age` carriage above; the floor is never relaxed by
 a narrower or absent client request.
 
-An authorization request whose `scope` includes `openid`
-{{OpenID.Core}} asks for an ID Token about the End-User the approval
+This document does not require an AS to support OpenID Connect
+{{OpenID.Core}}. An authorization request whose `scope` includes
+`openid` asks for an ID Token about the End-User the approval
 interaction authenticates, who is the Approver. When the Approver is
 not the Subject established at step 2 of {{direct-approval-steps}}, the AS
 MUST refuse such a request, without creating the Mission, with the
@@ -2633,6 +2639,13 @@ The AS can rotate either client type's refresh token; rotation
 detects replay of a consumed refresh token
 ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic binding.
 
+A refresh request can carry `authorization_details` to narrow the
+issued token ({{Section 6 of RFC9396}}). The AS MUST refuse such a
+request with the `invalid_authorization_details` error code when a
+requested entry exceeds the presented refresh grant or the Mission
+Authority Set ({{subset}}), and MUST NOT instead issue a narrower set
+than the one requested.
+
 ## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
 A derived token's authority comes from the Mission, not from a fresh
@@ -2906,6 +2919,18 @@ A resource server:
    this rejection is stated in {{authority-proposal}}, the downgrade
    it prevents in {{downgrade-by-omission}}, and the metadata that
    advertises the requirement in {{protected-resource-metadata}}.
+6. MUST accept a `mission` claim only from an issuer it explicitly
+   trusts to issue Mission-bound authorization for the resource;
+   trusting the issuer's ordinary access tokens is not enough. It MUST
+   require `mission.issuer` to equal the token's `iss`, unless a
+   cross-domain profile it has adopted
+   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly
+   establishes the permitted relationship between the two. It MUST
+   reject a token that fails either check with the `invalid_token`
+   error code. For an opaque token, the issuer is the AS whose
+   introspection response or issuer-local resolution the resource
+   server relies on, and the same checks apply to that response's
+   `mission` member ({{introspected-consumption}}).
 
 A resource server can also:
 
@@ -3079,8 +3104,9 @@ this document's ordinary rules ({{authorization-derivation}}): of an
 advertised, schema-valid type ({{discovery}}), narrowed same-type
 ({{subset}}, {{other-types}}) like any other request. The AS issues
 only what both the presented refresh grant ({{Section 6 of RFC9396}})
-and the Authority Set contain, so a refresh-token family narrower than
-the Mission does not obtain the Mission's wider authority.
+and the Authority Set contain, and refuses a request beyond either
+({{refresh-tokens}}), so a refresh-token family narrower than the
+Mission does not obtain the Mission's wider authority.
 
 For entries outside the Authority Set, more authority requires a new
 approval, proposed as for a new Mission ({{authority-proposal}}), or
@@ -3127,7 +3153,7 @@ exchange rows of the third table.
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
-| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
+| Token endpoint ({{subset}}, {{refresh-tokens}}): the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -4065,7 +4091,7 @@ The following subsections define the record's members.
 
   `facts`:
   : An object holding the verified output facts the type's
-    specification designates for recording, nested so type-owned
+    specification selects for recording, nested so type-owned
     facts cannot collide with the common members.
 
   `submission_evidence` is provenance, not enforcement input, and is
@@ -4789,8 +4815,8 @@ Intent only through PAR ({{submission-via-par}}).
 An AS that advertises `mission_bound_authorization_supported: true`
 SHOULD also advertise `authorization_details_types_metadata_endpoint`
 {{I-D.draft-ietf-oauth-rar-metadata-remediation}} where it implements
-that endpoint. Conformance to this document does not depend on that
-endpoint. Where the AS advertises it:
+that endpoint. Implementing that endpoint is optional, and the rules
+below bind only an AS that advertises it:
 
 - its response's key set is the source of truth for which types the
   AS supports;
@@ -5057,9 +5083,9 @@ audit but does not close it.
 
 A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
-commitment. A deployment can designate a resource, or register a
-client, as Mission-governed. Rules on three sides address this
-downgrade:
+commitment. A deployment can classify a resource as Mission-governed
+(a Mission-governed resource) or register a client as
+Mission-governed. Rules on three sides address this downgrade:
 
 - **Issuance.** The rules of {{authority-proposal}} keep such a
   resource's tokens inside a Mission and refuse such a client's
@@ -5077,7 +5103,8 @@ A held ordinary credential needs no request to the AS, and neither an
 AS nor a resource server can generally tell that a request made with
 one serves a Mission:
 
-- Designation closes this path at a designated resource.
+- Classifying a resource as Mission-governed closes this path at that
+  resource.
 - Mandatory mediation closes it where the client's requests must pass
   through a runtime layer that holds custody of the client's
   credentials ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -5085,8 +5112,9 @@ one serves a Mission:
   as the Mission Join of
   {{I-D.draft-mcguinness-mission-authority-server}}, is one realization
   of the enforcement path that {{discovery}} permits.
-- An unmediated ordinary workflow at an undesignated resource remains
-  a residual that only the client's own conformance closes.
+- An unmediated ordinary workflow at a resource that is not
+  Mission-governed remains a residual that only the client's own
+  conformance closes.
 
 The integrity of the `mission_bound_authorization_supported`
 ({{discovery}}) and `mission_bound_authorization_required`
@@ -5536,8 +5564,9 @@ Tokens carry references and authority, not the record: this document
 puts no `goal`, `task_bounds`, or other Intent content in a credential.
 An Intent Submission Evidence artifact can carry personal data (an
 originator identity, a consent reference); PAR keeps it off the front
-channel, and the record retains the designated verified facts under the
-same access governance as the rest of the Mission's evidence.
+channel, and the record retains the verified facts selected for
+recording under the same access governance as the rest of the
+Mission's evidence.
 
 Access to the record and to Mission evidence is policy-governed and
 auditable: reading a Mission's evidence is a privileged operation, not
@@ -6335,9 +6364,9 @@ normative references.
 
 Its reference to the OAuth Actor Profile
 ({{I-D.draft-mcguinness-oauth-actor-profile}}), for the `act` chain
-shape the optional Delegation capability uses, is informative and
-confined to Delegation, so the mandatory single-domain core does not
-depend on it.
+shape the optional Delegation capability uses, is normative and binds
+only a deployment that claims Delegation, so the mandatory
+single-domain core does not depend on it.
 
 The companion Mission Cross-Domain Projection profile
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}} specifies
@@ -7261,8 +7290,9 @@ draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
-6750, RFC 9700 and Client Instance ID are normative, and the OAuth
-Actor Profile informative.
+6750, RFC 9700, Client Instance ID, OpenID Connect Core, the RAR
+metadata remediation draft and, for Delegation, the OAuth Actor
+Profile are normative.
 
 -00
 

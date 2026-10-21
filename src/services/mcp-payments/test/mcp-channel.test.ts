@@ -132,8 +132,9 @@ function tokenFacts(missionId: string = VIEW.id): TokenFacts {
 }
 
 /** A fresh composed stack: authoritative store, live-FGA PEP, transaction tier,
- * and a connected mediated MCP client over the real in-memory transport. */
-async function build(): Promise<{
+ * and a connected mediated MCP client over the real in-memory transport.
+ * `view` is the Mission view the loader serves. */
+async function build(view: MissionView = VIEW): Promise<{
   server: McpPaymentsServer;
   client: MediatedClient;
   connectors: Connectors;
@@ -163,8 +164,8 @@ async function build(): Promise<{
   // fixture keys on the full (issuer, id) tuple; this is the one
   // negative-boundary loader that intentionally does not.
   const loadView = (ref: { id: string }) =>
-    ref.id === VIEW.id
-      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+    ref.id === view.id
+      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
   const pep = new Pep({
     decide: EVIDENCE_KEYS.decide,
@@ -359,8 +360,17 @@ d("MCP _meta Mission reference propagation", () => {
     pubJwk = { ...(await exportJWK(kp.publicKey)), kid: "mission-key", alg: "ES256" };
   });
 
-  it("a credential naming a different Mission issuer than the loaded view is refused with mission_reference_conflict", async () => {
-    const { client } = await build();
+  it("a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict", async () => {
+    // The credential names its own issuer; the id-only loader serves a view
+    // under another, so the PEP's own binding source disagrees with it.
+    const { client } = await build({ ...VIEW, issuer: "https://other.example" });
+    const res = await client.callTool("get_invoice", { invoice_id: "inv-1" }, await signMissionToken({}));
+    expect(res.ok).toBe(false);
+    expect(res.refusal_reason).toBe("mission_reference_conflict");
+  });
+
+  it("a credential whose mission.issuer is not its own iss is refused at validation, before the PEP (@spec mission#rs-requirements, #1503)", async () => {
+    const { client, evidence } = await build();
     const jwt = await new SignJWT({
       client_id: "ap-agent",
       client_instance_id: "inst-1",
@@ -376,9 +386,14 @@ d("MCP _meta Mission reference propagation", () => {
       .setJti(crypto.randomUUID())
       .setExpirationTime("5m")
       .sign(signKey);
+    // Least exposure: an unvalidatable credential sees no tools at all.
+    expect(await client.listTools(jwt)).toEqual([]);
     const res = await client.callTool("get_invoice", { invoice_id: "inv-1" }, jwt);
     expect(res.ok).toBe(false);
-    expect(res.refusal_reason).toBe("mission_reference_conflict");
+    expect(res.denial_reason).toBe("invalid_credential");
+    // Never reached the PEP: the id-only loader would have served this
+    // Mission, and the PEP would have recorded its conflict refusal.
+    expect(evidence.all()).toHaveLength(0);
   });
 
   it("a mission claim with a non-string issuer fails closed at validation", async () => {
