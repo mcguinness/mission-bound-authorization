@@ -4309,10 +4309,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where a governed Mission populates approval_basis.adjudication with governance_record true and the Approval Governance Record carries an accountable assertion, that assertion's kind equals adjudication.kind, which the approval basis fixes (human for direct, policy for governed_policy); governance_record never changes kind and kind never names the record itself",
-    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused). No direct Approval Governance Record is implemented, so the direct half has no witness."
+    "local": "Witnessed for governed_policy (adjudication.kind policy, accountable assertion kind policy, a mismatched kind refused) and for direct (a recorded direct approval carries adjudication {kind human, governance_record true}, its accountable assertion is kind human, and the direct commit gate refuses a mismatched kind). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -4325,9 +4325,27 @@
      "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > refuses a record whose accountable assertion is not the consent principal's policy assertion naming the deciding policy and approved_at",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > commits one signed record with the Mission when configured: the Approver's human assertion under the direct approval rule",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > refuses a record whose consent principal approves only through another kind, twice, or not at all; an uncounted accountable assertion; another rule; or a kind that is not adjudication.kind",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it."
+   "notes": "Introduced by #701 and redesigned per #716 review, replacing the earlier kind: agr value, which conflated a decision mechanism with a storage location. #1185 (D387, owner review of #1227): a consistency rule between adjudication.kind and the record's accountable assertion, never a way to change kind; it moved from the OAuth binding into Approval Governance so the binding has no conditional normative dependency on that companion. The row keeps its ID by owner direction. A template, policy_drawdown or ceiling_drawdown record whose approval_basis stands in for the accountable assertion carries none, so the clause does not bind it. Scoped to core.governance-record; no published baseline selects it. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable)."
   },
   {
    "id": "approval-governance.triggers.required-under-adopting-profile",
@@ -4366,12 +4384,80 @@
    "surface": "governance-record",
    "assertion": "refusal",
    "observation": {
-    "normative": "a record kept although no profile or basis requires it meets every requirement on the record (authenticated, event-bound, policy-authorized assertions; the accountable-approver rule for its basis; atomic commitment; the envelope); one that does not, does not commit"
+    "normative": "a record kept although no profile or basis requires it meets every requirement on the record (authenticated, event-bound, policy-authorized assertions; the accountable-approver rule for its basis; atomic commitment; the envelope); one that does not, does not commit",
+    "local": "Witnessed on the reference's voluntary direct records (MissionKernel.approve under the default-off directApprovalRecording, which no profile requires): the committed record verifies (envelope) and is bound to its approval event and Mission; its human assertion carries the approval surface's verified authentication; it is policy-authorized by the direct approval rule (the approval-authentication floor, the Subjects, approve-for and write eligibility the approval surface enforces, and the authority-source activators the kernel enforces; its floor passes the approval-floor policy's strict validation), which the issuer evaluates again at the commit and which refuses the Mission when it denies; it satisfies the accountable-approver rule; and it commits atomically with the Mission (a signing or persistence fault leaves no Mission, record or inputs). Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > commits one signed record with the Mission when configured: the Approver's human assertion under the direct approval rule",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > retains the rule snapshot that reproduces approval_policy.digest, and the inputs the rule evaluated",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > evaluates the rule again at the commit: an Approver it does not admit, write-bearing self-approval, or an authentication the floor refuses creates no Mission and no record",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > leaves no Mission, no record and no retained inputs when signing or persistence fails",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > refuses an approval without the Approver's verified authentication when recording is configured",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > admits exactly one human approve assertion of the consent principal, counted, under the rule this issuer holds",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > refuses a record whose consent principal approves only through another kind, twice, or not at all; an uncounted accountable assertion; another rule; or a kind that is not adjudication.kind",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-approval-deferral.test.ts",
+     "name": "deferred approval policy completion (@spec deferred-approval#policy-completion) > records a reviewer's direct approval where the deployment records direct approvals, and refuses one without the reviewer's authentication (@spec approval-governance#atomic-commitment, #1470)",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct approval rule (@spec approval-governance#approval-policy, approval-governance#assertion-validation) > parses a snapshot strictly and refuses a malformed rule at kernel construction",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct approval rule (@spec approval-governance#approval-policy, approval-governance#assertion-validation) > denies at an evaluation instant that is not an RFC 3339 timestamp, rather than measuring no age",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable). On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750."
   },
   {
    "id": "approval-governance.triggers.approver-differs-from-subject",
@@ -4412,10 +4498,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an Approval Governance Record for a direct approval satisfies the accountable-approver rule only with exactly one human approve assertion of consent_principal; a record whose consent_principal approves only through a policy or service assertion, approves twice, or does not approve fails the rule and does not commit; contributing policy and service assertions beside the human accountable assertion are accepted",
-    "local": "Witnessed at the reference validator (assertAccountableApprover). The reference commits no Approval Governance Record for a direct approval, so the does-not-commit clause has no commit-path witness."
+    "local": "Witnessed on committed direct records (exactly one human approve assertion of consent_principal, counted) and at the reference validator and the direct commit gate on variants of a committed record (another kind, twice, none, a denial, uncounted); contributing service assertions beside the human accountable assertion are admitted. Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
@@ -4428,9 +4514,27 @@
      "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > commits one signed record with the Mission when configured: the Approver's human assertion under the direct approval rule",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > admits exactly one human approve assertion of the consent principal, counted, under the rule this issuer holds",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > refuses a record whose consent principal approves only through another kind, twice, or not at all; an uncounted accountable assertion; another rule; or a kind that is not adjudication.kind",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion). Committed-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
+   "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion). Committed-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable)."
   },
   {
    "id": "approval-governance.assertion.event-binding",
@@ -4519,7 +4623,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a policy assertion counts only when the policy it names may decide under the record's approval_policy and its principal was eligible to approve that policy version; otherwise it does not contribute",
-    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. Human and service eligibility are not exercised by the reference."
+    "local": "Witnessed for the governed_policy accountable assertion: the deciding policy is the root or the evaluator the root commits, and an unauthorized approving human yields no consent and no activation. A human's eligibility under approval_policy is exercised on recorded direct approvals (the direct approval rule's authority-source activators, Subjects, approve-for and write eligibility, #1470 slice 1); service eligibility is not exercised."
    },
    "level": "unit",
    "coverage": "partial",
@@ -47930,10 +48034,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an evaluation whose assertion matching the accountable approver is kind service does not satisfy the accountable-approver rule: no record commits and the Mission is not created active, whether or not the service assertion was produced by a model",
-    "local": "Witnessed at commit for governed_policy (a record whose accountable assertion is kind service or human does not commit) and at the reference validator for direct, where no record is committed."
+    "local": "Witnessed at commit for governed_policy (a record whose accountable assertion is kind service or human does not commit) and for direct: a committed direct record's accountable assertion is kind human, and the direct commit gate refuses one of kind service. Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -47946,9 +48050,21 @@
      "name": "accountable-approver rule by approval basis (@spec approval-governance#accountable-assertion) > direct: refuses a record whose consent_principal approves only through a policy or service assertion, twice, or not at all",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > commits one signed record with the Mission when configured: the Approver's human assertion under the direct approval rule",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > refuses a record whose consent principal approves only through another kind, twice, or not at all; an uncounted accountable assertion; another rule; or a kind that is not adjudication.kind",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable assertion. #1436 ruling 2 (D568): requoted; the governed witness gives the human and service variants an authority valid for their kind that also carries the deciding policy's members, so only the kind check refuses them (mutation: matching without kind). Committed direct-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
+   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable assertion. #1436 ruling 2 (D568): requoted; the governed witness gives the human and service variants an authority valid for their kind that also carries the deciding policy's members, so only the kind check refuses them (mutation: matching without kind). Committed direct-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable)."
   },
   {
    "id": "approval-governance.assertion.governed-accountable-policy",
@@ -48133,10 +48249,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a human assertion's authority carries auth_time (RFC 3339) and, where the issuer possesses them, acr (a string) and amr (an array of strings), taken from the authentication the issuer verified; a record carrying another shape does not commit",
-    "local": "Witnessed at the reference validator (assertAssertionAuthority), which the governed commit gate runs over every assertion. The reference commits no human assertion, so no record carrying one is committed."
+    "local": "Witnessed on committed direct records: the Approver's human assertion carries auth_time and acr from the approval surface's verified login, never the request's acr_values (endpoint). The reference's approval session holds no amr, so none is recorded. A malformed authority is refused at the validator and the direct commit gate. Expansion and carryover successors, which also carry a direct basis, record nothing in slice 1. The gate call at commit has no failing input to refuse (the record builder emits only records the gate admits), so the gate is witnessed as a function on variants of a committed record, as for governed_policy."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-governance-record.test.ts",
@@ -48149,9 +48265,33 @@
      "name": "assertion authority by kind (@spec approval-governance#assertion-authority) > refuses a missing or mistyped member of each kind",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment) > commits one signed record with the Mission when configured: the Approver's human assertion under the direct approval rule",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > takes acr from the achieved authentication, never from the request's acr_values",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "the direct record commit gate (@spec approval-governance#accountable-assertion, approval-governance#issuance-relationship) > refuses a record whose consent principal approves only through another kind, twice, or not at all; an uncounted accountable assertion; another rule; or a kind that is not adjudication.kind",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 3 (D568). auth_time is REQUIRED (the issuer that verified the authentication knows when it happened); acr and amr follow Consent Evidence's authentication_context, recording each value the issuer possesses. Mutations: auth_time or amr unchecked. Committed-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
+   "notes": "#1436 ruling 3 (D568). auth_time is REQUIRED (the issuer that verified the authentication knows when it happened); acr and amr follow Consent Evidence's authentication_context, recording each value the issuer possesses. Mutations: auth_time or amr unchecked. Committed-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. #1470 slice 1 (D597): witnessed on default-off voluntary direct records; 43 mutations, 42 caught (the commit's own gate call is unreachable)."
   },
   {
    "id": "approval-governance.authority.policy-members",
@@ -48432,7 +48572,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
-    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. A record under another basis is not re-checked, because the reference commits none; direct records and their re-check are ruled next (#1470 Q1, D597)."
+    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. Recorded direct approvals re-check too (#1470 slice 1): the retained rule snapshot reproduces approval_policy.digest; no separate evaluator decides; the retained inputs are bound to the event and Intent, name the Mission's Approver and Subject, the authority source its retained binding names and the ceiling it consented, and record a well-formed authentication; evaluated_at is an RFC 3339 timestamp; the rule replays at evaluated_at over them with the human assertion equal to the recorded authentication, the committed Authority Set and exactly the human assertion contributing; policy-approval recency does not apply to it. Standing-consent bases other than governed_policy commit no record, so are not re-checked."
    },
    "level": "unit",
    "coverage": "tested",
@@ -48478,9 +48618,57 @@
      "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception",
      "level": "unit",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > re-checks a committed direct record by replaying the rule over the retained inputs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 1: refuses a record altered after signing",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 2: refuses when the rule snapshot is missing or does not reproduce approval_policy.digest",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 4: refuses missing inputs, inputs not bound to this event and Intent, and inputs naming another Approver or Subject",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 5: refuses a record failing the commit gate, a human assertion that is not the recorded authentication, a replay that denies or approves another set, and other contributing",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470) > records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 4: refuses inputs naming another authority source than the Mission's retained binding, even one the rule lets the Approver activate",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 4: refuses inputs that drop the Mission's consented ceiling, whose irreversible action the floor holds to mfa",
+     "level": "unit",
+     "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness."
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness. #1470 slice 1: the direct replay; each of its checks disabled alone fails a witness. On owner review of #1484 at 41a1f750 (three P2s): the direct replay bound neither the consented ceiling nor the source root to the Mission; a malformed evaluated_at made the floor's age comparisons false; and the rule parser accepted an unknown action class, disabling a floor. Fixed: step 4 binds the inputs to the Mission's retained source binding and consented ceiling and refuses a malformed recorded authentication, step 5 refuses an evaluated_at that is not an RFC 3339 timestamp (as does the evaluator), and the rule's floor passes the approval-floor policy's strict validation. Each regression case fails on 41a1f750."
   },
   {
    "id": "approval-governance.conformance.auditor-obtains-retained-policy",
@@ -48498,7 +48686,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a Relying Auditor that cannot obtain the retained snapshot of the approval_policy version the record names, or of the evaluator that snapshot commits, does not treat the evaluation as re-checked",
-    "local": "Witnessed by the reference re-check auditor (recheckApprovalGovernanceRecord) on governed_policy records: a missing root snapshot stops the re-check at step 2 and a missing evaluator snapshot at step 3, each refused alone."
+    "local": "Witnessed by the reference re-check auditor (recheckApprovalGovernanceRecord) on governed_policy records: a missing root snapshot stops the re-check at step 2 and a missing evaluator snapshot at step 3, each refused alone. A recorded direct approval stops at step 2 when its rule snapshot is missing (#1470 slice 1)."
    },
    "level": "unit",
    "coverage": "tested",
@@ -48512,6 +48700,12 @@
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 3: refuses an evaluator snapshot that is missing or does not verify, and a recorded deciding policy the root does not name",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-approval-record.test.ts",
+     "name": "re-checking a direct record (@spec approval-governance#re-check) > step 2: refuses when the rule snapshot is missing or does not reproduce approval_policy.digest",
      "level": "unit",
      "surface": "governance-record"
     }
