@@ -5097,9 +5097,10 @@ The record's immutability protects it, and only the AS enforces that.
 A deployment that needs the approval basis checkable outside the AS
 can register the approval event under Mission Audit Transparency
 {{I-D.draft-mcguinness-mission-audit}}, whose registration covers the
-whole record at creation, or carry the Approval Context Commitment of
-{{I-D.draft-mcguinness-mission-approval-governance}} in a signed
-artifact.
+record at creation except its `state` and `termination`, or carry the
+Approval Context Commitment of
+{{I-D.draft-mcguinness-mission-approval-governance}}, whose closed
+manifest includes the approval basis, in a signed artifact.
 
 ### Downgrade by Omission {#downgrade-by-omission}
 
