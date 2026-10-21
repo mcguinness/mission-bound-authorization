@@ -7156,7 +7156,8 @@ Cross-Domain:
   6 and 7), which says what approval leaves behind. The Implementation
   Map gains an applicability table in place of its conditional-duty
   list; Scope Projection opens with when it applies; the introductory
-  walk says the later examples follow a separate Mission.
+  walk says the later examples follow a separate Mission. The
+  token-endpoint `resource` rule moves to Audience and Token Response.
 
 - Editorial (#1479): Conformance says that neither starting point
   removes a Mission Issuer surface, the evidence dispatch and refusal
