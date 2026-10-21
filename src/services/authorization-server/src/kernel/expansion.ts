@@ -9,7 +9,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { authorityHash, intentHash, proposalHash } from "@mission/core";
+import { authorityHash, type ContainmentSelector, intentHash, proposalHash, resourceWithin, selectorOverlapsEntry } from "@mission/core";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entriesMayOverlap } from "./derive.js";
 import { entryDigest } from "./discharge.js";
@@ -84,7 +84,7 @@ export interface ExpansionInput {
  */
 export interface ContainmentHistoryEntry {
   event_type: string;
-  removed: Array<{ resource: string; actions?: string[] }>;
+  removed: ContainmentSelector[];
 }
 
 /**
@@ -492,11 +492,8 @@ export function reconciliationStatusFor(observed: MissionRecord | undefined): Re
   return "predecessor_not_active";
 }
 
-/** A containment removal: a resource's listed actions, or the whole resource when `actions` is absent. */
-type Removal = { resource: string; actions?: string[] };
-
-const removes = (removals: Removal[], resource: string, action: string): boolean =>
-  removals.some((r) => r.resource === resource && (r.actions === undefined || r.actions.includes(action)));
+/** Whether a containment selector removes `action`: one with no `actions` removes every action. */
+const selects = (r: ContainmentSelector, action: string): boolean => r.actions === undefined || r.actions.includes(action);
 
 /**
  * @spec expansion#reconciliation check 3 (#1177) — whether the successor's
@@ -521,8 +518,20 @@ export function restrictedSinceAdjudication(
 ): boolean {
   const events = predecessor.containment?.events ?? [];
   const before = events.slice(0, at.containment).flatMap((e) => e.removed);
-  const now = events.flatMap((e) => e.removed);
-  if (successor.some((e) => e.actions.some((a) => removes(now, e.resource, a) && !removes(before, e.resource, a)))) {
+  const since = events.slice(at.containment).flatMap((e) => e.removed);
+  // @spec containment#selector-matching (#1463): a removal after the snapshot
+  // restricts a successor entry whose resource set it overlaps, for an action
+  // it selects. It restricts nothing new where the authority was already
+  // contained at the snapshot: the removal, or the successor entry itself,
+  // lies within a snapshot removal selecting the same action. Anything less
+  // certain counts as restricted, so the completion refuses.
+  const alreadyContained = (r: ContainmentSelector, e: AuthorityEntry, a: string) =>
+    before.some((b) => selects(b, a) && (resourceWithin(r, b) || resourceWithin(e, b)));
+  if (
+    successor.some((e) =>
+      e.actions.some((a) => since.some((r) => selects(r, a) && selectorOverlapsEntry(r, e) && !alreadyContained(r, e, a))),
+    )
+  ) {
     return true;
   }
   const latchedSince = new Set((predecessor.discharged ?? []).slice(at.discharge).map((l) => l.entry_digest));

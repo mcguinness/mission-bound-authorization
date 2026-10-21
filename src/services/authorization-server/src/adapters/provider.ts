@@ -347,7 +347,12 @@ import {
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
 import { withTransaction } from "@mission/store";
-import { UnknownProtectedEventError } from "../kernel/containment.js";
+import {
+  assertContainmentSelectors,
+  ContainmentSelectorError,
+  type ContainmentSelector,
+  UnknownProtectedEventError,
+} from "../kernel/containment.js";
 import {
   DIGEST_PREFIX,
   DISCHARGE_EVENT_ID_RE,
@@ -3958,6 +3963,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             );
             return;
           }
+          // @spec containment#selector-matching (#1463): each removal is a
+          // selector the matcher can decide (`exact` by default, `prefix` by
+          // declaration); one it cannot would contain nothing, so the request
+          // is refused before anything commits.
+          try {
+            assertContainmentSelectors(remove);
+          } catch (e) {
+            if (!(e instanceof ContainmentSelectorError)) throw e;
+            sendInvalidRequest(`contain ${e.message}`);
+            return;
+          }
           // @spec control-plane#serialization — the containment commit, the
           // nonce claim and the committed outcome are ONE transaction, so a
           // committed narrowing always leaves a replayable record behind.
@@ -3980,7 +3996,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             // transaction, before the narrowing commits (kernel.contain).
             const { record, evidence } = kernel.contain(missionId, {
               event: containEvent,
-              remove: remove as Array<{ resource: string; actions?: string[] }>,
+              remove: remove as ContainmentSelector[],
               ...(expectedVersion !== undefined ? { expectedVersion } : {}),
             });
             const outcome = {

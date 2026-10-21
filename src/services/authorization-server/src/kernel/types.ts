@@ -1,4 +1,4 @@
-import type { ActivationPolicyRef, AuthorityEntry, JsonValue } from "@mission/core";
+import type { ActivationPolicyRef, AuthorityEntry, ContainmentSelector, JsonValue } from "@mission/core";
 import type { RetainedOrigin } from "./eligibility-provenance.js";
 export type { AuthorityEntry, DelegateMatcher, ChildFanoutControls, TerminalWhenCondition } from "@mission/core";
 
@@ -297,11 +297,14 @@ export interface MissionContainment {
   /** Increments once per applied contain transition (1-based). */
   containment_version: number;
   /**
-   * The contained capabilities, merged by resource. An entry with no `actions`
-   * member contains the whole resource (its Authority Set entry is dropped from
-   * the effective set); with `actions`, only those actions are contained.
+   * The contained capabilities, each a selector merged by its `resource` and
+   * mode (@spec containment#selector-matching, #1463). A selector applies to
+   * every approved entry whose resource set overlaps its own; one with no
+   * `actions` member drops each such entry from the effective set, and one
+   * with `actions` removes only those actions. `resource_match` is stored only
+   * when `prefix`.
    */
-  contained: Array<{ resource: string; actions?: string[] }>;
+  contained: ContainmentSelector[];
   /** The applied containment events, in order. `event_id` is the idempotency key. */
   events: ContainmentEventRecord[];
 }
@@ -337,7 +340,7 @@ export interface ContainmentEventRecord {
   source: string;
   observed_at: string;
   event_id: string;
-  removed: Array<{ resource: string; actions?: string[] }>;
+  removed: ContainmentSelector[];
 }
 
 /**

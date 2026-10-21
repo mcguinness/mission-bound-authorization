@@ -32,11 +32,13 @@ import {
   authorityHash,
   compareAmounts,
   computeAnchor,
+  type ContainmentSelector,
   intentHash,
   isSubsetSetIgnoringCapabilitySources,
   isValidAmount,
   type JsonValue,
   proposalHash,
+  selectorOverlapsEntry,
 } from "@mission/core";
 import {
   type ActivationPolicyRegistry,
@@ -628,8 +630,8 @@ function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
  * restriction of the chain. The reference has no explicit restoration
  * disclosure, so no restriction clears.
  */
-function chainRestrictions(chain: readonly MissionRecord[]): Array<{ resource: string; actions?: string[] }> {
-  const out: Array<{ resource: string; actions?: string[] }> = [];
+function chainRestrictions(chain: readonly MissionRecord[]): ContainmentSelector[] {
+  const out: ContainmentSelector[] = [];
   for (const m of chain) {
     for (const c of m.containment?.contained ?? []) out.push(c);
     for (const d of m.discharged ?? []) {
@@ -640,9 +642,15 @@ function chainRestrictions(chain: readonly MissionRecord[]): Array<{ resource: s
   return out;
 }
 
-/** Overlap in authority: the same resource and at least one shared action (a whole-resource restriction overlaps every action). */
-function overlaps(entry: AuthorityEntry, restricted: { resource: string; actions?: string[] }): boolean {
-  if (entry.resource !== restricted.resource) return false;
+/**
+ * Overlap in authority: overlapping resource sets and at least one shared
+ * action (a restriction with no `actions` overlaps every action). A
+ * containment restriction is a selector, so its resource set is compared by
+ * Resource Access matching, never by string (@spec
+ * containment#selector-matching, #1463).
+ */
+function overlaps(entry: AuthorityEntry, restricted: ContainmentSelector): boolean {
+  if (!selectorOverlapsEntry(restricted, entry)) return false;
   if (!restricted.actions) return true;
   return entry.actions.some((a) => (restricted.actions as string[]).includes(a));
 }
