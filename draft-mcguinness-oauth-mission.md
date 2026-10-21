@@ -341,8 +341,8 @@ on a user's behalf, to the authority approved for it and governs the
 tokens later issued under that authority. This document defines that
 object for OAuth 2.0: a Mission.
 
-A client submits a Mission Intent describing the task it will perform
-through Pushed Authorization Requests. The authorization server
+A client submits, through Pushed Authorization Requests, a Mission
+Intent describing the task it will perform. The authorization server
 derives Rich Authorization Requests authorization details from it,
 binds the approved task and that authority to the Approver's consent
 through integrity anchors, and records a durable Mission. Every
@@ -3165,8 +3165,8 @@ one of three cases, with different obligations:
   what the JWT would ({{introspected-consumption}}).
 - **Issuer-local resolution.** In place of introspection for an opaque
   Mission-bound token, an AS can serve a qualifying resource server by
-  a direct read of its authoritative committed token and grant state
-  ({{introspected-consumption}}).
+  a direct read of the AS's authoritative committed token and grant
+  state ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a token
