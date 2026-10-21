@@ -431,7 +431,7 @@ decimal string, paired with an ISO 4217 `currency` code, and any other
 Common Constraint for a monetary value SHOULD reuse this shape rather
 than a JSON number.
 
-## Resource Matching {#resource-matching}
+# Resource Matching {#resource-matching}
 
 An entry's `resource` is compared with the target of an operation when
 the resource server enforces the entry ({{rs-enforcement}}), and with
@@ -590,7 +590,7 @@ whose `resource` is `https://api.example/orders`:
 
 {{resource-boundary-canonicalization}} explains why each rule matters.
 
-## Subset Rule {#subset}
+# Subset Rule {#subset}
 
 {{I-D.draft-mcguinness-oauth-mission}} derives, narrows, and delegates a
 `mission_resource_access` entry only as a subset of a reference entry,
@@ -659,7 +659,7 @@ this comparison ({{delegate-eligibility}}). A derived entry's
 - a derived entry MUST NOT introduce `delegation` where the parent entry
   has none.
 
-## Common Constraints {#common-constraints}
+# Common Constraints {#common-constraints}
 
 A `constraints` member name ({{resource-access-type}}) is either a
 **Common Constraint**, defined by specification and registered
@@ -732,7 +732,7 @@ that adopts Mission Metering ({{I-D.draft-mcguinness-mission-metering}})
 applies its accounting and settlement rules, and can embed the metering
 policy decision point in the resource server.
 
-### Initial Common Constraints {#initial-common-constraints}
+## Initial Common Constraints {#initial-common-constraints}
 
 This document defines the following Common Constraints.
 
@@ -884,7 +884,7 @@ This document defines the following Common Constraints.
   profile {{I-D.draft-mcguinness-mission-authzen}} carries one as
   decision input.
 
-### Value-Space Comparison {#value-space-comparison}
+## Value-Space Comparison {#value-space-comparison}
 
 Common Constraint comparisons are in value space, not lexical:
 
@@ -908,7 +908,7 @@ rule, and predicate in value-space terms, so that independent
 deployments compute the same result for the same values and inputs, and
 the subset rule of {{subset}} is reproducible.
 
-## Resource Server Enforcement {#rs-enforcement}
+# Resource Server Enforcement {#rs-enforcement}
 
 {{I-D.draft-mcguinness-oauth-mission}} requires a resource server to
 enforce each applicable `authorization_details` entry under its type's
@@ -992,7 +992,7 @@ resource metadata ({{RFC9728}}):
   constraint mismatch before a request. When absent, that knowledge is
   established out of band.
 
-## Resource Contracts {#resource-contract}
+# Resource Contracts {#resource-contract}
 
 An entry's `actions` and `constraints` carry meaning only at the
 resource that defines them ({{resource-access-type}}), and the resource
@@ -1080,7 +1080,7 @@ still performs, and for which entries, follows the version states of
 {{I-D.draft-mcguinness-mission-runtime}}: a reference that does not
 resolve there authorizes nothing.
 
-## Delegate Eligibility {#delegate-eligibility}
+# Delegate Eligibility {#delegate-eligibility}
 
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
@@ -1134,7 +1134,7 @@ against a presented token alone. Where it cannot resolve either, the
 entry narrows out of the delegated token. A cross-domain grant conveys
 no such provenance.
 
-### Matching `allowed_delegates` {#matching-allowed-delegates}
+## Matching `allowed_delegates` {#matching-allowed-delegates}
 
 Each `allowed_delegates` value is a delegate matcher: an object modeled
 on the actor object of the `may_act` claim ({{Section 4.4 of RFC8693}}),
@@ -1166,7 +1166,7 @@ how an authorization server in another trust domain evaluates conveyed
 delegate matchers, failing closed and narrowing out any `sub` matcher
 it cannot resolve.
 
-## Scope Projection {#scope-projection}
+# Scope Projection {#scope-projection}
 
 {{I-D.draft-mcguinness-oauth-mission}} states the semantic subset
 condition and issuance algorithm an authorization server applies before
@@ -1239,7 +1239,7 @@ issuance to that target when it is `scope`-only (it consumes `scope` and
 not `authorization_details`) and no other carried entry supplies a safe
 projection.
 
-## Transformation Capabilities {#transformation-capabilities}
+# Transformation Capabilities {#transformation-capabilities}
 
 {{I-D.draft-mcguinness-oauth-mission}} requires an authorization server
 to declare, for every `authorization_details` type it supports, whether
@@ -1285,7 +1285,7 @@ carried entry supplies a safe projection, and answers an explicitly
 requested `scope` it cannot grant as
 {{I-D.draft-mcguinness-oauth-mission}} specifies.
 
-## Modeling Tools and Function Calls {#tools}
+# Modeling Tools and Function Calls {#tools}
 
 This section is non-normative. A tool an agent invokes, such as a Model
 Context Protocol (MCP) tool or a function call, is modeled as a
