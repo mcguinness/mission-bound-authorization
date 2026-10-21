@@ -4210,8 +4210,14 @@ The following subsections define the record's members.
 
   `type`:
   : REQUIRED. A string: `user_delegated`, `service_owned`, or
-    `organizational`, subject to the forward-compatibility rule of
-    {{lifecycle}}.
+    `organizational`. An unrecognized value is handled under the same
+    rule as an unrecognized `approval_basis.type`
+    ({{record-principal-members}}): it is preserved unchanged as opaque
+    provenance and does not by itself invalidate or deactivate the
+    Mission, and only an operation that itself requires recognized
+    source semantics refuses (for example, applying the source's
+    authority ceiling or its governed policy). An AS MUST NOT approve a
+    Mission whose authority source it does not recognize.
 
   `policy`:
   : REQUIRED for `organizational`, absent otherwise. An object with
