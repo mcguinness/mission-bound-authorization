@@ -107,9 +107,10 @@ registrations (each with the access token format the estate issues it,
 `jwt` or `opaque`) and resource vocabulary; the gateway's RFC 7662
 introspection of opaque tokens (`introspection`: its registered
 introspection client, call timeout and positive-cache bound); the separated
-MAS (`separated_mas`, #818 slice 4b: its host and port, the PDP principal
-that reads its Mission Status, the PDPs it enrolls for Join Disclosure by
-enforcement scope, and the state source's placement, which must be `pdp`,
+MAS (`separated_mas`, #818 slice 4b: its host and port, the PDP's client
+identifier at its Mission Status endpoint (`pdp_client_id`, #1407), the
+clients it enrolls for Join Disclosure by enforcement scope
+(`enrolled_pdps[].client_id`), and the state source's placement, which must be `pdp`,
 read timeout and response-size cap); the mapping
 cache's staleness bound;
 the action classes the gateway reserves for Mission-bound credentials; the

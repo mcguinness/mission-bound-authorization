@@ -5,8 +5,10 @@
  * The separated MAS pilot end to end: the MAS is the reference authorization
  * server in its own OS process (`mas-process.ts`), holding the Missions; the
  * pilot holds no kernel and reads them through the MAS's signed Mission
- * Status. The test approves Missions through the MAS's operator channel and
- * changes their state through its HTTP Lifecycle surface only. Every refusal
+ * Status, as the client `separated_mas.pdp_client_id` of its advertised Mission
+ * Status endpoint (#1407). The test approves Missions through the MAS's
+ * operator channel and changes their state through its HTTP Lifecycle surface
+ * only. Every refusal
  * asserts that no effect was committed and names its evidence carrier: the
  * PDP's signed Decision Evidence, or the PEP's signed Refusal Record when no
  * decision was reached.
@@ -20,10 +22,11 @@ import { join } from "node:path";
 import { initSigningKeyRing } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, type DecisionEvidence, type RefusalRecord } from "@mission/mcp-payments";
-import { type EvaluationRequest, type MissionView, policyViewId } from "@mission/pdp";
-import { decodeJwt, generateKeyPair, SignJWT } from "jose";
+import { type EvaluationRequest, type MissionView, policyViewId, privateKeyJwtClient } from "@mission/pdp";
+import { decodeJwt, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
+import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { composeSeparatedMasPilot, type SeparatedMasPilot } from "../src/mas-pilot/separated.js";
 import { admin, call, estateToken, OPENFGA, openfgaReachable, READ_ACTIONS, relocateEstate } from "./mas-pilot-support.js";
@@ -73,7 +76,57 @@ let mas: MasProcess;
 let masOptions: Parameters<typeof startMasProcess>[0];
 let pilot: SeparatedMasPilot;
 const requests: EvaluationRequest[] = [];
-const pdpToken = `pdp-${crypto.randomUUID()}`;
+/** The PDP's Status client key (`separated_mas.pdp_client_id`), and a second Status client the MAS does not enroll. */
+let pdpKey: JWK;
+let readerKey: JWK;
+const READER_CLIENT = "mas-pilot-status-reader";
+
+/** A Status read at the MAS's advertised endpoint, as the PDP's client, for the payments scope. */
+async function statusAsPdp(missionId: string): Promise<string> {
+  const client = privateKeyJwtClient({
+    clientId: loadMasPilotConfig().separated_mas.pdp_client_id,
+    issuer: MAS_URL,
+    privateKey: (await importJWK(pdpKey, "ES256")) as CryptoKey,
+    kid: pdpKey.kid as string,
+    now,
+  });
+  const res = await fetch(`${MAS_URL}/mission/status`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      mission_id: missionId,
+      audience: CANONICAL_RESOURCE,
+      nonce: crypto.randomUUID(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      client_assertion: await client.assertion(),
+    }).toString(),
+  });
+  expect(res.status).toBe(200);
+  return res.text();
+}
+
+/** Forward a request, its method and body included, to `target`. */
+function forwardTo(target: string, delayMs = 0) {
+  return (req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      setTimeout(async () => {
+        try {
+          const upstream = await fetch(target, {
+            method: req.method ?? "GET",
+            headers: { "content-type": String(req.headers["content-type"] ?? "application/x-www-form-urlencoded") },
+            ...(req.method === "POST" ? { body: Buffer.concat(chunks) } : {}),
+          });
+          res.writeHead(upstream.status, { "content-type": upstream.headers.get("content-type") ?? "text/plain" });
+          res.end(Buffer.from(await upstream.arrayBuffer()));
+        } catch {
+          res.destroy();
+        }
+      }, delayMs);
+    });
+  };
+}
 
 /**
  * One offset for this process's PEP, PDP and resolver clocks and the MAS's
@@ -133,7 +186,11 @@ beforeAll(async () => {
   const configPath = join(dir, "mas-pilot.json");
   const config = separatedConfig(ESTATE_PORT);
   writeFileSync(configPath, JSON.stringify(config));
-  masOptions = { configPath, pdpToken, keyRing, kernelStore: join(dir, "state", "kernel.db") };
+  const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
+  const reader = await newStatusClientKey(READER_CLIENT);
+  pdpKey = pdp.privateJwk;
+  readerKey = reader.privateJwk;
+  masOptions = { configPath, statusClients: [pdp.registration, reader.registration], keyRing, kernelStore: join(dir, "state", "kernel.db") };
   mas = await startMasProcess(masOptions);
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,
@@ -141,7 +198,7 @@ beforeAll(async () => {
     observeDecisionRequest: (r) => requests.push(r),
     config,
     now,
-    mas: { url: MAS_URL, pdpToken },
+    mas: { url: MAS_URL, pdpKey },
   });
 }, 120_000);
 
@@ -167,10 +224,7 @@ d("the separated MAS pilot: the PDP reads Missions through the MAS's signed Miss
     const read = pilot.resolver.peek({ id: missionId, issuer: MAS_URL });
     expect(read?.view).toMatchObject({ state: "active", subject: { iss: MAS_URL, sub: "alice" }, client_id: "ap-agent" });
     // The decision is the MAS's state: its version, read back directly.
-    const direct = await fetch(`${MAS_URL}/missions/${missionId}/status?audience=${encodeURIComponent(CANONICAL_RESOURCE)}`, {
-      headers: { "x-service-token": pdpToken },
-    });
-    const status = decodeJwt(await direct.text()) as { mission: { version: number; authority_hash: string } };
+    const status = decodeJwt(await statusAsPdp(missionId)) as { mission: { version: number; authority_hash: string } };
     const decision = decisions(pilot, missionId).at(-1)?.content;
     expect(decision?.decision).toBe("permit");
     // `policy_view_id` commits the Mission's state version and authority_hash.
@@ -269,10 +323,10 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     const other = await composeSeparatedMasPilot({
       openfga: OPENFGA,
       resourcePolicyStore: { bootstrap: "development" },
-      config: separatedConfig(UNENROLLED_ESTATE_PORT),
+      // Another Status client: it holds mission_status, and no enrollment.
+      config: { ...separatedConfig(UNENROLLED_ESTATE_PORT), separated_mas: { ...separatedConfig(UNENROLLED_ESTATE_PORT).separated_mas, pdp_client_id: READER_CLIENT } },
       now,
-      // The console's credential: it holds mission_status, and no enrollment.
-      mas: { url: MAS_URL, pdpToken: DEV_SERVICE_TOKEN },
+      mas: { url: MAS_URL, pdpKey: readerKey },
     });
     try {
       const missionId = await approveAtMas("alice", "unenrolled");
@@ -290,17 +344,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
   });
 
   it("a source slower than the deadline establishes no state: the PEP refuses state_unavailable before any decision", async () => {
-    const proxy = createServer((req, res) => {
-      setTimeout(async () => {
-        try {
-          const upstream = await fetch(`${MAS_URL}${req.url}`, { headers: { "x-service-token": String(req.headers["x-service-token"]) } });
-          res.writeHead(upstream.status, { "content-type": upstream.headers.get("content-type") ?? "text/plain" });
-          res.end(Buffer.from(await upstream.arrayBuffer()));
-        } catch {
-          res.destroy();
-        }
-      }, 1500);
-    });
+    const proxy = createServer(forwardTo(`${MAS_URL}/mission/status`, 1500));
     servers.push(proxy);
     await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
     const via = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
@@ -309,8 +353,8 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
       resourcePolicyStore: { bootstrap: "development" },
       config: separatedConfig(TIMEOUT_ESTATE_PORT, 300),
       now,
-      mas: { url: MAS_URL, pdpToken },
-      statusUrl: (id) => `${via}/missions/${id}/status`,
+      mas: { url: MAS_URL, pdpKey },
+      statusEndpoint: `${via}/mission/status`,
     });
     try {
       const missionId = await approveAtMas("alice", "slow");
@@ -330,11 +374,16 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     // A double that answers for the MAS, signing with a key the MAS never published.
     const stranger = await generateKeyPair("ES256");
     const double = createServer((req, res) => {
-      const url = new URL(req.url ?? "/", "http://double");
-      const missionId = url.pathname.split("/")[2] as string;
+      const chunks: Buffer[] = [];
+      req.on("data", (c: Buffer) => chunks.push(c));
+      req.on("end", () => answer(new URLSearchParams(Buffer.concat(chunks).toString("utf8")), res));
+    });
+    const answer = (form: URLSearchParams, res: import("node:http").ServerResponse) => {
+      const missionId = form.get("mission_id") as string;
       const iat = Math.floor(Date.now() / 1000);
       void new SignJWT({
-        nonce: url.searchParams.get("nonce"),
+        sub: loadMasPilotConfig().separated_mas.pdp_client_id,
+        nonce: form.get("nonce"),
         mission: { id: missionId, issuer: MAS_URL, state: "active", version: 1, authority_hash: "sha-256:x", fresh_until: new Date((iat + 60) * 1000).toISOString() },
         authorization_details: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: READ_ACTIONS }],
       })
@@ -348,7 +397,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
           res.writeHead(200, { "content-type": "application/mission-status-response+jwt" });
           res.end(jws);
         });
-    });
+    };
     servers.push(double);
     await new Promise<void>((resolve) => double.listen(0, "127.0.0.1", resolve));
     const at = `http://127.0.0.1:${(double.address() as AddressInfo).port}`;
@@ -357,8 +406,8 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
       resourcePolicyStore: { bootstrap: "development" },
       config: separatedConfig(DOUBLE_ESTATE_PORT),
       now,
-      mas: { url: MAS_URL, pdpToken },
-      statusUrl: (id) => `${at}/missions/${id}/status`,
+      mas: { url: MAS_URL, pdpKey },
+      statusEndpoint: `${at}/mission/status`,
     });
     try {
       const missionId = await approveAtMas("alice", "forged");

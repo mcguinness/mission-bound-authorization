@@ -7,6 +7,7 @@
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
+import type { StatusClientRegistration } from "./mas-as.js";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -16,8 +17,8 @@ const TSX_LOADER = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).
 export interface MasProcessOptions {
   /** The pilot configuration file the process reads. */
   configPath: string;
-  /** The PDP's Status credential, registered at the MAS for its principal. */
-  pdpToken: string;
+  /** The Mission Status endpoint's clients the MAS registers (public keys), the PDP's among them (#1407). */
+  statusClients: StatusClientRegistration[];
   /** The signing keys: a key ring path (with `kernelStore`, Missions survive a restart), or ephemeral keys. */
   keyRing?: string;
   kernelStore?: string;
@@ -39,7 +40,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
   for (const name of ["NODE_OPTIONS", "MISSION_KEY_RING", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE"]) delete env[name];
   Object.assign(env, {
     MAS_PILOT_CONFIG: opts.configPath,
-    MAS_PILOT_PDP_TOKEN: opts.pdpToken,
+    MAS_PILOT_STATUS_CLIENTS: JSON.stringify(opts.statusClients),
     ...(opts.keyRing ? { MISSION_KEY_RING: opts.keyRing } : { MISSION_EPHEMERAL_KEYS: "1" }),
     ...(opts.kernelStore ? { MISSION_KERNEL_STORE: opts.kernelStore } : {}),
   });
