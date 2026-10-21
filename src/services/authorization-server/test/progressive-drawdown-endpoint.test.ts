@@ -286,6 +286,9 @@ async function issueMission(
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
+  // The Approver sees the approval page, which retains the ceiling it offers (#1017).
+  const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+  expect(page.status).toBe(200);
   res = await fetch(`${issuer}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
@@ -1677,55 +1680,77 @@ describe("the ceiling consent disclosure (@spec progressive#progressive-authoriz
     expect(await approvalPage(ISSUER, ap)).not.toContain('class="authority-ceiling"');
   });
 
+  /** PAR, /auth, render the page under `shown`, then decide `decided` under whatever the offer has become: the final redirect. */
+  async function renderThenDecide(shown: CeilingDecision, decided: CeilingDecision, offerAtDecision?: CeilingDecision): Promise<URL> {
+    currentOffer = shown;
+    const jar = new Map<string, string>();
+    const par = await fetch(`${ISSUER}/request`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: ap.id,
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        resource: RESOURCE,
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        code_challenge_method: "S256",
+        login_hint: "alice",
+        mission_intent: intentJson("Pay Acme invoices"),
+        authorization_details: JSON.stringify(authority(READ)),
+        client_assertion: await clientAssertion(ap, ISSUER),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+    const parBody = (await par.json()) as { request_uri: string };
+    expect(par.status, JSON.stringify(parBody)).toBe(201);
+    let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: ap.id, request_uri: parBody.request_uri })}`, {
+      redirect: "manual",
+    });
+    storeCookies(res, jar);
+    const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+    expect(page.status).toBe(200);
+    if (offerAtDecision) currentOffer = offerAtDecision;
+    res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        ...floorApprovalHeaders(approvalSessions.get(ISSUER) as ApprovalSessionStore, uid, cookieHeader(jar)),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ decision: "approve", ...decided }),
+    });
+    storeCookies(res, jar);
+    let location = res.headers.get("location") as string;
+    while (location?.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
+      storeCookies(res, jar);
+      location = res.headers.get("location") as string;
+    }
+    return new URL(location);
+  }
+
   it("a decision consenting a ceiling or drawdown policy the approval page did not render is refused invalid_request: no Mission", async () => {
     for (const decided of [ceilingOf("drawdown-std", FULL_CEILING), ceilingOf("drawdown-wide", READ_CEILING)]) {
       const before = as.kernel.allMissions().length;
-      currentOffer = ceilingOf("drawdown-std", READ_CEILING);
-      const jar = new Map<string, string>();
-      const par = await fetch(`${ISSUER}/request`, {
-        method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          client_id: ap.id,
-          response_type: "code",
-          redirect_uri: REDIRECT_URI,
-          resource: RESOURCE,
-          code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-          code_challenge_method: "S256",
-          login_hint: "alice",
-          mission_intent: intentJson("Pay Acme invoices"),
-          authorization_details: JSON.stringify(authority(READ)),
-          client_assertion: await clientAssertion(ap, ISSUER),
-          client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        }).toString(),
-      });
-      const parBody = (await par.json()) as { request_uri: string };
-      expect(par.status, JSON.stringify(parBody)).toBe(201);
-      let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: ap.id, request_uri: parBody.request_uri })}`, {
-        redirect: "manual",
-      });
-      storeCookies(res, jar);
-      const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-      res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
-        method: "POST",
-        redirect: "manual",
-        headers: {
-          ...floorApprovalHeaders(approvalSessions.get(ISSUER) as ApprovalSessionStore, uid, cookieHeader(jar)),
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ decision: "approve", ...decided }),
-      });
-      storeCookies(res, jar);
-      let location = res.headers.get("location") as string;
-      while (location?.startsWith(ISSUER)) {
-        res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
-        storeCookies(res, jar);
-        location = res.headers.get("location") as string;
-      }
-      const outcome = new URL(location).searchParams;
-      expect(outcome.get("error"), location).toBe("invalid_request");
+      const outcome = (await renderThenDecide(ceilingOf("drawdown-std", READ_CEILING), decided)).searchParams;
+      expect(outcome.get("error")).toBe("invalid_request");
       expect(outcome.get("code")).toBeNull();
       expect(as.kernel.allMissions().length).toBe(before);
     }
+  });
+
+  it("the decision is bound to the offer the page rendered, not to an offer computed at the decision", async () => {
+    const narrow = ceilingOf("drawdown-std", READ_CEILING);
+    const wide = ceilingOf("drawdown-std", FULL_CEILING);
+    // The offer widens after the page rendered the narrow one: consenting the wide ceiling is refused.
+    const before = as.kernel.allMissions().length;
+    const refused = (await renderThenDecide(narrow, wide, wide)).searchParams;
+    expect(refused.get("error")).toBe("invalid_request");
+    expect(as.kernel.allMissions().length).toBe(before);
+    // Consenting what the page rendered succeeds, whatever the offer has become.
+    const granted = (await renderThenDecide(narrow, narrow, wide)).searchParams;
+    expect(granted.get("error")).toBeNull();
+    expect(granted.get("code")).not.toBeNull();
   });
 });
