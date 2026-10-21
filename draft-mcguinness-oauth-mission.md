@@ -2906,6 +2906,18 @@ A resource server:
    this rejection is stated in {{authority-proposal}}, the downgrade
    it prevents in {{downgrade-by-omission}}, and the metadata that
    advertises the requirement in {{protected-resource-metadata}}.
+6. MUST accept a `mission` claim only from an issuer it explicitly
+   trusts to issue Mission-bound authorization for the resource;
+   trusting the issuer's ordinary access tokens is not enough. It MUST
+   require `mission.issuer` to equal the token's `iss`, unless a
+   cross-domain profile it has adopted
+   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly
+   establishes the permitted relationship between the two. It MUST
+   reject a token that fails either check with the `invalid_token`
+   error code. For an opaque token, the issuer is the AS whose
+   introspection response or issuer-local resolution the resource
+   server relies on, and the same checks apply to that response's
+   `mission` member ({{introspected-consumption}}).
 
 A resource server can also:
 
