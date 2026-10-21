@@ -1837,8 +1837,8 @@ cryptographic digest, exactly the authority the Approver approved.
 
 The Mission Record is what approval leaves behind: the approved
 content and its commitments (the approved Mission Intent, the
-Authority Set, and the integrity anchors over them); the accountable
-principals (the Subject, the approved agent's `client_id`, and the
+Authority Set, and the integrity anchors over them); the principals
+(the Subject, the approved agent's `client_id`, and the
 `approval_basis` naming who consented and how); the authority source;
 the issuer's provenance (the policy version and the approval event's
 identifier); and the Mission's expiry and lifecycle state.
