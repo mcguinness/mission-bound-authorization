@@ -46900,6 +46900,42 @@
    "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. Mutations: each of seventeen checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, contributing, recency order, age and class exception) disabled alone fails a witness."
   },
   {
+   "id": "approval-governance.conformance.auditor-obtains-retained-policy",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "conformance",
+   "text": "MUST obtain the retained policy version before treating the evaluation as re-checked",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.governance-record"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Relying Auditor that cannot obtain the retained snapshot of the approval_policy version the record names, or of the evaluator that snapshot commits, does not treat the evaluation as re-checked",
+    "local": "Witnessed by the reference re-check auditor (recheckApprovalGovernanceRecord) on governed_policy records: a missing root snapshot stops the re-check at step 2 and a missing evaluator snapshot at step 3, each refused alone."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 2: refuses when the retained root snapshot is missing or does not reproduce approval_policy.digest",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "re-checking an evaluation (@spec approval-governance#re-check) > step 3: refuses an evaluator snapshot that is missing or does not verify, and a recorded deciding policy the root does not name",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1313 follow-up: the Conformance section's Relying Auditor sentence had no row. Its envelope and mission-binding clauses are approval-governance.envelope.payload-byte-equality and approval-governance.envelope.verifier-steps; this row carries the retained-policy clause, and approval-governance.re-check.steps the procedure. Mutations: dropping the missing-root-snapshot check, or the evaluator snapshot check, fails the witness."
+  },
+  {
    "id": "approval-governance.envelope.unsupported-format",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "envelope",
