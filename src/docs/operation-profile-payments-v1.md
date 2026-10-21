@@ -8,15 +8,18 @@ The file name is the document's stable name and does not carry the version.
 
 ## Version history
 
-- **v13** (#249, D553): declares the payments resource contract (Resource
-  contract, below) in the Enforcement Scope Statement's
-  `extensions.resource_contracts`. An entry carrying `resource_contract` is
-  enforced under exactly the contract it references: the decision request
-  gains `resource.properties.resource_contract`, a permit gains
+- **v13** (#249, D553): adds optional resource contract enforcement. The
+  payments resource contract (Resource contract, below) is declared in the
+  Enforcement Scope Statement's `extensions.resource_contracts`. An entry
+  that carries `resource_contract` is enforced under exactly the contract it
+  references: the decision request gains
+  `resource.properties.resource_contract`, a permit gains
   `conditions.resource_contract`, and a reference that does not resolve is
   refused before the decision request (`resource_contract_unresolvable`) or
   suppressed at use. The shipped declaration requires a reference for no
   operation, so an entry without one keeps its decision bytes from v12.
+  Making a reference mandatory, and migrating approvals that carry none,
+  are separate work (#249).
 
 - **v12** (#1266): a `list_invoices` read evaluates each invoice it
   returns against the issuance, tenant and classification bounds, with
@@ -213,12 +216,14 @@ version, `2026-10-20`, in state `current`.
   `retained_until`, after which it no longer resolves) or `retired` (it
   resolves for nothing; its digest may be kept). At most one version is
   current.
-- **Requirement.** `requires_reference` is empty: the shipped deployment
-  enforces a carried reference and requires one for no operation, so an
-  approval that committed none keeps working and never gains one. A
-  deployment that requires one lists the operations there; the
-  Authorization Server then records the current reference at approval, and
-  the PEP refuses an entry without one.
+- **Optional enforcement.** `requires_reference` is empty: the shipped
+  deployment enforces a reference an entry carries and requires one for no
+  operation, so an approval that committed none keeps working and never
+  gains one. Mandatory adoption is not shipped: listing operations there
+  makes a reference required for them (the Authorization Server then
+  records the current reference at approval, and the PEP refuses an entry
+  without one), and moving the payments deployment to it, with a migration
+  for unpinned approvals, is separate work (#249).
 - **Approval.** The Authorization Server reads the same declaration. A
   proposed `resource_contract` that is not the current reference for the
   entry's `resource`, or whose version does not define every action the

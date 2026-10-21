@@ -375,6 +375,28 @@ and
 and
 `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold`.
 
+**Upgrading a transaction-workflow store file (#249).** This target keeps
+the Transaction Authorization Server's pending workflows in memory
+(`newTxnWorkflows`). A deployment that passes a file store
+(`TxnAuthorizationOptions.store`, `new TxnWorkflowStore({ file })`) upgrades
+it in place when the file is opened: the store adds the nullable
+`profile_version` column once, in an immediate transaction, and a later open
+changes nothing. Nothing is backfilled. A workflow admitted before the
+upgrade was pinned on the challenge's `iss` and the entry's `type`, and keeps
+no recorded version. To let such a workflow complete, retain the Operation
+Profile that pair resolved to under a version name and declare the binding:
+`registry.retain(iss, profile).bindLegacyType(iss, type, version)`. Without
+the declaration, its completion is refused `access_denied` and the workflow
+becomes `denied`, so the client starts again with a new challenge. It is
+never read under the resource's current version. Witnesses, against a file
+created with the earlier schema:
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopened by this store, the file admits a new workflow, which records the version it was admitted under`,
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow completes under the version declared for its resource and type, never under the current one`,
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow keeps no recorded version, and with no binding declared for its resource and type its completion is refused terminally, never read under the current version`
+and
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopening the upgraded file again changes nothing: one profile_version column, the earlier workflow still unversioned, a later one still versioned`
+(`services/authorization-server/test/txn-endpoint.test.ts`).
+
 Residuals:
 
 - **The declared reconciler runs in the PEP process.** `OutcomeReconciler` (`services/mcp-payments/src/outcome-reconciler.ts`) is built from `outcome_reconciliation` and refuses a declaration naming another component. `composeStack` returns it stopped; `pnpm as-native` and `pnpm demo:serve` start it, once at boot and then every 300 s (a third of PT15M), and every close path stops it first. Each run settles this epoch's unresolved claims over the claim channel (`reconcileClaims`), alerts `completed` Execution Evidence with no committed connector effect and a committed effect still without evidence after the window, runs both reservation sweeps, and escalates a `reserved` row without executing it. A step that throws raises `reconciliation_failed`; the others still run. A claim whose reconciliation throws raises it naming that claim and stays unresolved for the next run, and the claims after it still settle. Evidence alone decides an outcome: a claim nothing establishes closes `indeterminate`, and the claim domain's `onIndeterminate` hook raises the declared alert once that transition commits. Each alert is one JSON line on stderr. Witnesses: `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect, over the remote channel: the wire stands once, and a run inside the window settles the claim completed from the ledger, with exactly one ledger entry`, `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a refusal before any effect: a permit proven unredeemed in this epoch settles failed, and a retry under its key executes nothing`, `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > one claim's failed reconciliation is isolated: a later claim proven unredeemed still settles failed in the same run, the failed claim stays unresolved and is escalated, and a later run settles it with no second effect (#1161 review)`, `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > an outcome nothing establishes stays open, closes indeterminate when its window closes, and raises the declared alert exactly once, never from a run's open list` and `the as-native launcher in process, OpenFGA client stubbed (D332) > starts the declared outcome reconciler at launch, a third of the PT15M window apart, and its first run raises no alert; close stops it before the claim domain closes, in co-resident and remote PDP mode`.
