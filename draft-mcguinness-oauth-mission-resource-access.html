@@ -1649,25 +1649,27 @@ in a dot.<a href="#section-3.1-5.9.1" class="pilcrow">¶</a></p>
 <p id="section-3.1-6">An A-label is as <span><a href="https://rfc-editor.org/rfc/rfc5890#section-2.3.2.1" class="relref">Section 2.3.2.1</a> of [<a href="#RFC5890" class="cite xref">RFC5890</a>]</span> defines it. Letter case
 does not make a <code>recipient_domain</code> invalid; values compare
 case-insensitively (<a href="#value-space-comparison" class="auto internal xref">Section 6.2</a>).<a href="#section-3.1-6" class="pilcrow">¶</a></p>
-<p id="section-3.1-7">The following values are valid and carry a defined meaning:<a href="#section-3.1-7" class="pilcrow">¶</a></p>
+<p id="section-3.1-7">The refusal of a <code>delegation</code> member that no implemented specification
+defines is specified with <code>delegation</code> (<a href="#resource-access-type" class="auto internal xref">Section 3</a>).<a href="#section-3.1-7" class="pilcrow">¶</a></p>
+<p id="section-3.1-8">The following values are valid and carry a defined meaning:<a href="#section-3.1-8" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-3.1-8.1">
-            <p id="section-3.1-8.1.1">A <code>max_depth</code> of 0 admits the entry into no delegated token, since a
+<li class="normal" id="section-3.1-9.1">
+            <p id="section-3.1-9.1.1">A <code>max_depth</code> of 0 admits the entry into no delegated token, since a
 delegated token's delegation depth is 1 or more (the Delegation
 Constraints section of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Any
 other <code>delegation</code> member stays intact; a member a companion profile
 defines there, such as a
-child-creation grant, keeps the bound that profile gives it.<a href="#section-3.1-8.1.1" class="pilcrow">¶</a></p>
+child-creation grant, keeps the bound that profile gives it.<a href="#section-3.1-9.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.1-8.2">
-            <p id="section-3.1-8.2.1">An empty <code>allowed_delegates</code> array permits no delegate. An absent
+          <li class="normal" id="section-3.1-9.2">
+            <p id="section-3.1-9.2.1">An empty <code>allowed_delegates</code> array permits no delegate. An absent
 member instead defers eligibility to the authorization server's
-delegation-authorization policy (<a href="#delegate-eligibility" class="auto internal xref">Section 9</a>).<a href="#section-3.1-8.2.1" class="pilcrow">¶</a></p>
+delegation-authorization policy (<a href="#delegate-eligibility" class="auto internal xref">Section 9</a>).<a href="#section-3.1-9.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-3.1-8.3">
-            <p id="section-3.1-8.3.1">An action value that a consumer does not recognize for the entry's
+          <li class="normal" id="section-3.1-9.3">
+            <p id="section-3.1-9.3.1">An action value that a consumer does not recognize for the entry's
 <code>resource</code> grants nothing. It does not make the entry unenforceable:
-the entry's other actions remain enforceable (<a href="#rs-enforcement" class="auto internal xref">Section 7</a>).<a href="#section-3.1-8.3.1" class="pilcrow">¶</a></p>
+the entry's other actions remain enforceable (<a href="#rs-enforcement" class="auto internal xref">Section 7</a>).<a href="#section-3.1-9.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <div id="decimal-values">
@@ -1686,8 +1688,10 @@ non-numeric token (<code>"NaN"</code>, <code>"Infinity"</code>), is malformed, a
 <span class="bcp14">MUST</span> reject it rather than attempt to parse it:<a href="#section-3.1.1-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3.1.1-3.1">
-              <p id="section-3.1.1-3.1.1">an authority proposal carrying one is refused at submission
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); and<a href="#section-3.1.1-3.1.1" class="pilcrow">¶</a></p>
+              <p id="section-3.1.1-3.1.1">the authorization server <span class="bcp14">MUST</span> refuse an authority proposal carrying
+one at submission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) with the
+<code>invalid_authorization_details</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-5" class="relref">Section 5</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>);
+and<a href="#section-3.1.1-3.1.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-3.1.1-3.2">
               <p id="section-3.1.1-3.2.1">a resource server treats a malformed decimal value the same as a
@@ -2936,7 +2940,7 @@ proposal added a list, so the approved entry's own members do not
 reveal the obligation. The authorization server therefore <span class="bcp14">MUST</span> record,
 when it derives the Authority Set, which approved entries inherit the
 policy decision, and <span class="bcp14">MUST</span> retain that provenance with the Mission. It
-evaluates every later exchange against the approved entry in the
+<span class="bcp14">MUST</span> evaluate every later exchange against the approved entry in the
 Mission Record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and that
 provenance, never against a presented token alone. Where it cannot
 resolve either, the entry narrows out of the delegated token. A

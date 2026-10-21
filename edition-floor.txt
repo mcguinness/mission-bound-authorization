@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T23:12:58Z
-Source repository commit: a2b29e5f341f2633a1d4381f360e008d10026c3c
+Generated: 2026-10-21T23:34:44Z
+Source repository commit: 7cbfad6bf836762188e9803e885510b34d4ebda6
 Member count: 7
 
 Reading order:
@@ -10731,14 +10731,14 @@ Table of Contents
    +-----------------------------------+-------------------------------+
    | Authorization decision            | access_denied                 |
    | (Section 6.2, Section 6.8,        | (Section 4.1.2.1 of           |
-   | Section 5.1): the Approver        | [RFC6749]).  Detail: none     |
-   | declines, approval                | unless a defined extension    |
-   | authentication fails the          | applies                       |
-   | floor or a requested              |                               |
-   | acr_values or max_age, or a       |                               |
-   | well-formed request               |                               |
-   | (including configured-mapping     |                               |
-   | mode) is refused by AS policy     |                               |
+   | Section 5.1): the Approver        | [RFC6749]).  Detail: for a    |
+   | declines, approval                | configured-mapping refusal, a |
+   | authentication fails the          | safe error_description can    |
+   | floor or a requested              | say whether no mapping        |
+   | acr_values or max_age, or a       | matched or policy narrowed    |
+   | well-formed request               | the candidates to nothing;    |
+   | (including configured-mapping     | otherwise none unless a       |
+   | mode) is refused by AS policy     | defined extension applies     |
    +-----------------------------------+-------------------------------+
 
               Table 6: PAR and authorization endpoint failures
@@ -15507,10 +15507,11 @@ Appendix G.  Document History
    gathered under Mission-Bound Access Tokens, "Mission Lifecycle and
    Gating" retitled "Mission Lifecycle", resource classification named
    "Mission-governed resource" (#1503), and one Standing-Consent Bases
-   section; subsections, tables and IANA templates fitted to the text
-   rendering (#1380, #1382, #1401, #1404, #1410, #1418); canonical-
-   Mission examples (#1176); and the Mapping Assessment, moved from the
-   substrate (#708).
+   section; the error-table detail for a configured-mapping refusal
+   aligned with Derivation Modes (#1495); subsections, tables and IANA
+   templates fitted to the text rendering (#1380, #1382, #1401, #1404,
+   #1410, #1418); canonical-Mission examples (#1176); and the Mapping
+   Assessment, moved from the substrate (#708).
 
    *References.* The WIMSE AIMS draft, the RAR metadata remediation
    draft, and Client Instance ID with Client Attesters replace draft-

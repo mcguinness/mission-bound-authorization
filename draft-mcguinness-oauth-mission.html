@@ -5379,7 +5379,7 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Authorization decision (<a href="#direct-approval-steps" class="auto internal xref">Section 6.2</a>, <a href="#approval-authentication" class="auto internal xref">Section 6.8</a>, <a href="#derivation-modes" class="auto internal xref">Section 5.1</a>): the Approver declines, approval authentication fails the floor or a requested <code>acr_values</code> or <code>max_age</code>, or a well-formed request (including configured-mapping mode) is refused by AS policy</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>access_denied</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-4.1.2.1" class="relref">Section 4.1.2.1</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). Detail: none unless a defined extension applies</td>
+              <code>access_denied</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-4.1.2.1" class="relref">Section 4.1.2.1</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). Detail: for a configured-mapping refusal, a safe <code>error_description</code> can say whether no mapping matched or policy narrowed the candidates to nothing; otherwise none unless a defined extension applies</td>
           </tr>
         </tbody>
       </table>
@@ -11181,11 +11181,11 @@ commit it (#1518).<a href="#appendix-G-7" class="pilcrow">¶</a></p>
 <p id="appendix-G-8"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501, #1526), with the issuance rules
-gathered
-under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
-retitled "Mission Lifecycle", resource classification named
-"Mission-governed resource" (#1503), and
-one Standing-Consent Bases section; subsections, tables and IANA
+gathered under Mission-Bound Access Tokens, "Mission Lifecycle and
+Gating" retitled "Mission Lifecycle", resource classification named
+"Mission-governed resource" (#1503), and one Standing-Consent Bases
+section; the error-table detail for a configured-mapping refusal
+aligned with Derivation Modes (#1495); subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
 Assessment, moved from the substrate (#708).<a href="#appendix-G-8" class="pilcrow">¶</a></p>
