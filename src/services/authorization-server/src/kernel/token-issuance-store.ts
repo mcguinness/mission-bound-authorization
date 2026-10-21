@@ -33,8 +33,10 @@
  * never touches those columns. A token with no record has unknown depth: a
  * missing record never reads as depth 0.
  *
- * In-memory, built per boot (D25/D27), mirroring {@link DelegationFamilyStore}:
- * a restart makes every earlier token unknown.
+ * In-memory, built per boot (D25/D27), also when the kernel is file-backed: a
+ * restart makes every earlier token unknown, so its depth cannot be
+ * established and an earlier designation is not redeemable (#250's restart
+ * inventory, src/docs/control-plane-deployment.md).
  */
 
 import { type Database, openStore } from "@mission/store";
