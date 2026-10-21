@@ -326,8 +326,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    // The spec deliberately pins no error code for this rejection (mirrors the
-    // AAuth missionless-request rule); this implementation chose invalid_request.
+    // Authority Proposal names invalid_request for this rejection.
     expect(body.error).toBe("invalid_request");
   });
 
