@@ -409,6 +409,57 @@ afterAll(() => {
   for (const s of servers) s.close();
 });
 
+describe("the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119)", () => {
+  /** PAR -> /auth -> GET the approval page at `issuer`, the Intent carrying `intentExtra`. */
+  async function approvalPage(issuer: string, client: Client, intentExtra: Record<string, unknown> = {}): Promise<string> {
+    const jar = new Map<string, string>();
+    const verifier = `progressive-page-verifier-0123456789-0123456789-${verifierSeq++}`;
+    const challenge = Buffer.from(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+    ).toString("base64url");
+    const par = await fetch(`${issuer}/request`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: client.id,
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        resource: RESOURCE,
+        code_challenge: challenge,
+        code_challenge_method: "S256",
+        login_hint: "alice",
+        mission_intent: intentJson("Pay Acme invoices", intentExtra),
+        authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
+        client_assertion: await clientAssertion(client, issuer),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+    const parBody = (await par.json()) as { request_uri: string };
+    expect(par.status, JSON.stringify(parBody)).toBe(201);
+    const res = await fetch(`${issuer}/auth?${new URLSearchParams({ client_id: client.id, request_uri: parBody.request_uri })}`, {
+      redirect: "manual",
+    });
+    storeCookies(res, jar);
+    const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+    const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+    expect(page.status).toBe(200);
+    return page.text();
+  }
+
+  it("states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered", async () => {
+    expect(await approvalPage(ISSUER, ap, { requested_derivation_limit: 4 })).toContain(
+      "If you also consent to an authority ceiling, the successors its drawdown policy creates carry this Mission's derivation count forward and never exceed its derivation limit of 4.",
+    );
+    expect(await approvalPage(ISSUER, ap)).toContain(
+      "If you also consent to an authority ceiling, this Mission has no derivation limit, so no finite limit is guaranteed for the successors its drawdown policy creates.",
+    );
+    // Positive control: a deployment offering no ceiling consent renders no such statement.
+    expect(await approvalPage(OFF_ISSUER, apOff, { requested_derivation_limit: 4 })).not.toContain(
+      "If you also consent to an authority ceiling",
+    );
+  });
+});
+
 describe("ceiling consent (@spec progressive#progressive-authorization)", () => {
   it("records the consented authority_ceiling and drawdown_policy under ceiling_hash, outside authority_hash and the token", async () => {
     const m = await issueMission(READ, ceilingOf());
