@@ -36031,9 +36031,21 @@
      "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the minimum disclosure before any template exists: the Template Ceiling as the maximum authority, machine-speed dispatch with no per-instance approval, and the high-consequence classes policy never dispatches",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > renders the Template Ceiling with its trusted capability bindings, discarding caller-supplied ones, and the approval commits exactly the ceiling rendered (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "the human consent to a Mission Template (@spec mission-template#template-consent, #1119) > refuses the consent while a trusted capability definition of the ceiling has changed since the proposal: the page offers no decision and no template is created; restored, the same proposal is approved (@spec capability-binding#conformance)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1119 (D327). The human template consent page (GET /templates/proposals/{id}) renders the Template Ceiling and the three statements before any template exists. Proved by removing each statement alone (the witness fails). The service-token stand-in (POST /templates) renders nothing and is not a witness."
+   "notes": "#1119 (D327). The human template consent page (GET /templates/proposals/{id}) renders the Template Ceiling and the three statements before any template exists. The ceiling rendered is the one the template commits: the proposal discards caller-supplied capability bindings and resolves the trusted ones, and a trusted definition changed since then refuses the page and the decision. Proved by removing each statement alone, by keeping caller-supplied bindings, and by ignoring a changed binding (each fails a witness). The service-token stand-in (POST /templates) renders nothing and is not a witness."
   },
   {
    "id": "template.consent.derivation-limit-rendering",
