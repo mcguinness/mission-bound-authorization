@@ -172,7 +172,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     const template = as.templateStore.get(body.template_id);
     expect(template?.authority_source).toMatchObject({
       type: "organizational",
-      policy: { id: "acme-accounts-payable-controls", version: "2026-09-01" },
+      policy: { id: "acme-accounts-payable-controls", version: "2026-09-01", digest: expect.any(String) },
     });
     expect(template?.approver).toEqual({ iss: ISSUER, sub: "bob" });
     expect(template?.template_version).toBe("demo-reconciliation-1");
