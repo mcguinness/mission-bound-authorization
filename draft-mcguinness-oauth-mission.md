@@ -6829,18 +6829,18 @@ resolve before interoperating.
 
 <!-- assessed-substrate-digest: 72008afead28043e -->
 
-This appendix is informative. It is this document's Mapping
-Assessment of itself against the kernel and capabilities of the
-Mission Substrate contract (the "Mission Substrate Statement" section
-of {{I-D.draft-mcguinness-mission-substrate}}). It describes, in the
-Statement's form, how the surfaces this document defines realize
-that vocabulary.
+This appendix is this document's Mapping Assessment of itself against
+the kernel and capabilities of the Mission Substrate contract (the
+"Mission Substrate Statement" section of
+{{I-D.draft-mcguinness-mission-substrate}}). It describes, in the
+Statement's form, how the surfaces this document defines realize that
+vocabulary.
 
-The assessment adds no requirement: {{conformance}} alone defines
-conformance to this document. This document publishes no Mission
-Substrate Statement, makes no substrate-conformance claim, and takes
-no requirement from the substrate; each document references the
-other informatively.
+The assessment is informative and adds no requirement: {{conformance}}
+alone defines conformance to this document. This document publishes
+no Mission Substrate Statement, makes no substrate-conformance claim,
+and takes no requirement from the substrate; each document references
+the other informatively.
 
 The assessment applies to the substrate revision published with this
 document, in this document's base single-domain mode, with the
