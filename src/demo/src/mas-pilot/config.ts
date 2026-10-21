@@ -313,13 +313,43 @@ export function loadMasPilotConfig(path: URL | string = new URL("../../../config
 }
 
 /**
- * The configuration with its Mission issuer moved to `url`, everywhere the
- * configuration names it (the mapping contract's `mission_issuer` and Mission
- * subjects, the route table). When the MAS is the reference authorization
- * server, its own URL is the Mission issuer (#818 slice 5B), in either
- * topology. Unchanged when it already names `url`.
+ * The configuration with its Mission issuer moved to `url`, in exactly the
+ * fields that name it: `mission_issuer`, the mapping contract's
+ * `mission_issuer` and each subject row's `to.iss`, and the Mission-bound
+ * route's `issuer`. Each moves only where its value equals the old issuer
+ * exactly; every other string is kept, including an estate issuer, URL or
+ * identity that merely contains the old issuer (#1466 review). When the MAS
+ * is the reference authorization server, its own URL is the Mission issuer
+ * (#818 slice 5B), in either topology. Unchanged when it already names `url`.
  */
 export function relocateMissionIssuer(config: MasPilotConfig, url: string): MasPilotConfig {
-  if (config.mission_issuer === url) return config;
-  return JSON.parse(JSON.stringify(config).split(JSON.stringify(config.mission_issuer).slice(1, -1)).join(url)) as MasPilotConfig;
+  const from = config.mission_issuer;
+  if (from === url) return config;
+  const moved = (value: string): string => (value === from ? url : value);
+  return {
+    ...config,
+    mission_issuer: url,
+    mapping_contract: relocateContractIssuer(config.mapping_contract, moved),
+    routes: config.routes.map((r) => (r.admits === "mission-bound" ? { ...r, issuer: moved(r.issuer) } : r)),
+  };
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
+
+/** The contract's Mission-issuer fields moved; it is validated later, at install, so anything else passes through. */
+function relocateContractIssuer(contract: unknown, moved: (value: string) => string): unknown {
+  if (!isObject(contract)) return contract;
+  return {
+    ...contract,
+    ...(typeof contract.mission_issuer === "string" ? { mission_issuer: moved(contract.mission_issuer) } : {}),
+    ...(Array.isArray(contract.subjects)
+      ? {
+          subjects: contract.subjects.map((row: unknown) =>
+            isObject(row) && isObject(row.to) && typeof row.to.iss === "string"
+              ? { ...row, to: { ...row.to, iss: moved(row.to.iss) } }
+              : row,
+          ),
+        }
+      : {}),
+  };
 }
