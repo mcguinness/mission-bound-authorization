@@ -4089,10 +4089,8 @@ The following subsections define the record's members.
   like `subject`. This document defines the `direct` basis in full; a
   companion profile can define a standing-consent basis
   ({{standing-consent-bases}}). The members below apply to every
-  approval basis, with the presence each one states. Their
-  direct-approval values are described here; standing-consent
-  specializations are defined in {{standing-consent-bases}}. Three of
-  these members answer the questions an approval raises: who consented
+  approval basis, with the presence each one states. Three of these
+  members answer the questions an approval raises: who consented
   (`consent_principal`), who triggered this instance
   (`activation_actor`), and what mechanism decided it
   (`adjudication`).
