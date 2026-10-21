@@ -11,20 +11,20 @@
     "content_sha256": "c05c497da3a6cb57d1b5996704c26e60e930a02f707820a5d892e5ce732adf1d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "dade6c569d18a1e587f68885903447e8f9af5bb3",
-    "content_sha256": "1fbb3409c45047fe17f65b591912c05c3ce6199f59db8160f87e5720381380ac"
+    "revision": "24fc25962caf421d01e5df49f2916f2b7270e2b7",
+    "content_sha256": "45ee6a69279bb2bd7e6eee690ecc5edca3fc9d8fbb6742b18db49fb6b2d3478b"
    },
    "draft-mcguinness-mission-metering.md": {
-    "revision": "6667b68f9afece5e490ea65022196e6c4991dd1b",
-    "content_sha256": "8cd8d68437668e5a6268b3ffa5e158017d5d71ef4129d4250ef70da2f3beb317"
+    "revision": "d57add70451f53586de8f4f38e10df89397ee43c",
+    "content_sha256": "fba47845dbec53cd2c3b032ef9e102268bebc29e0b5f9e4910a241b4f17b5904"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
     "revision": "8d60794eb32a6435d7140512bc30ca2585d8f5b9",
     "content_sha256": "065c797c3074eb766497180cf700fc267ecd227b45a399c1ad47330a226a7fa5"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "67ec44100970a77f99311908804150d00b5affac",
-    "content_sha256": "00e698892a75e62714efab0c6b7d73c5b4417c59f8046a53975acb6ff25b53a9"
+    "revision": "eac0fa535fd2a362521ade78901db8c68dedf15e",
+    "content_sha256": "7b47ed990d821d66c3f27677cb376cffd28bd2e905fe98d44207dc9b9fe30668"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -22769,7 +22769,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Final conjunct witnessed PDP-side (#918): outside the high-consequence classes, the statement this PDP loads (RUNTIME_POSTURE) publishes, per keyed operation (payments:payment.schedule and payments:payment.schedule.cancel), the declared_horizon posture with a P7D retention longer than the 300 s permit, and loadRuntimePosture refuses a declaration that names no posture. Only PDP citations are kept on this PDP row; the resource-metadata publication test is cited on the PEP and AS rows it proves."
+   "notes": "High-consequence conjuncts witnessed (#917): the PDP's claim domain is a durable single-writer SQLite file; a completed or failed key is refused (duplicate_suppressed, next_action none) through terminal_at plus the declared idempotency_horizon_seconds (604800) and is new only after it; a duration-lease renewal's PDP-settled completed key first returns the renewal's own permit to a retransmission while that permit is valid (runtime.idempotency.lease-renewal-completed-claim-retransmits), then is refused the same way; an indeterminate key carries no horizon and stays refused past it; a terminal row compacted after the reconciliation window (its stored decision dropped, its commitments kept) still refuses; restart, crash-before-persist and missing consumption knowledge all suppress rather than treat the key as fresh; and a failed or suppressed record that the redemption owner does not name as the redeeming attempt's never settles a claim, so an unknown outcome cannot become a purgeable failed tombstone (#1016 review round 2). Final conjunct witnessed PDP-side (#918): outside the high-consequence classes, the statement this PDP loads (RUNTIME_POSTURE) publishes, per keyed operation (payments:payment.schedule and payments:payment.schedule.cancel), the declared_horizon posture with a P7D retention longer than the 300 s permit, and loadRuntimePosture refuses a declaration that names no posture. Only PDP citations are kept on this PDP row; the resource-metadata publication test is cited on the PEP and AS rows it proves."
   },
   {
    "id": "runtime.idempotency.claim-exact-enforcement-only",
@@ -24654,7 +24654,7 @@
    "assertion": "replay",
    "observation": {
     "normative": "a re-presentation whose decision cache key equals the prior decision's and whose claim matches (same idempotency scope, key and operation identity), while the prior permit is unexpired and its evaluation_id unconsumed, returns the prior decision rather than a fresh evaluation or an error",
-    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim, a PDP restart, or a statement version that took effect after the claim was made (the reference invalidates every permit at a new statement version, the identifier and cache key unchanged included) suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
+    "local": "the reference PDP establishes unconsumed only from the executing PEP's explicit unconsumed answer for that evaluation_id, read from its D28 redemption store and asked of the PEP and epoch the permit was issued to; consumed, unknown, a failed or timed-out query, another epoch, a settled claim (except a duration-lease renewal's claim, which the PDP settles itself and whose permit is still returned while valid: runtime.idempotency.lease-renewal-completed-claim-retransmits), a PDP restart, or a statement version that took effect after the claim was made (the reference invalidates every permit at a new statement version, the identifier and cache key unchanged included) suppresses with duplicate_suppressed (next_action retry); unexpired is judged on a clock read after that answer arrives, inside the transaction that returns the decision; and the stored decision is returned byte for byte with its stored Decision Evidence, never re-emitted"
    },
    "level": "concurrency",
    "coverage": "tested",
@@ -24733,6 +24733,41 @@
     }
    ],
    "notes": " #1327 re-review: a claim records the statement version it was made under, and its stored permit is returned only while that version is in force, checked at the claim step and again after the PEP's consumption answer; a deliberate departure from the SHOULD across a version change, where the reference invalidates held permits."
+  },
+  {
+   "id": "runtime.idempotency.lease-renewal-completed-claim-retransmits",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "idempotency",
+   "text": "A duration-lease renewal's claim, which the PDP settles `completed` when it commits the lease extension, returns the renewal's permit to a retransmission while that permit is valid, instead of `duplicate_suppressed` (Duration-Lease Renewal in {{I-D.draft-mcguinness-mission-metering}}).",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a keyed duration-lease renewal's claim settles completed when the PDP commits the extension, and a retransmission under the same key and identity still receives the renewal's own permit while it is valid, never duplicate_suppressed; every other completed claim keeps the table's duplicate_suppressed",
+    "local": "the carve-out holds only for a claim the PDP settled under the outcome lease_extended (services/pdp/src/idempotency-claims.ts); every retransmission condition (cache key, statement generation, validity, requester and epoch, the PEP's unconsumed answer) still applies"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > the renewal's claim settles completed with no Execution Evidence, never ages to unresolved or indeterminate, raises no operator alert, and its retransmission returns the same permit without extending the lease again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a retransmitted renewal returns the same permit and concurrent duplicates are suppressed: the lease is extended once",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutation: excluding the PDP-settled renewal from the retransmittable rows turns both witnesses into a denial. Ordinary completed keys remain refused (runtime.idempotency.tombstone-retention-and-refusal)."
   },
   {
    "id": "runtime.execution-reverification.stop-or-renew-before-lease-expires",
@@ -27992,6 +28027,70 @@
    "notes": "#1276 (D457) specification slice. The reference PDP and PEPs do not carry or match operation_target yet; #1276's implementation step owns the witness. Expected outcomes: vectors/mission-authzen/operation-target.json. #1276 implementation (D457, payments-runtime-profile-v6). target_drift at use is witnessed (T7). The parameter_mismatch precedence branch cannot arise under the reference's service-level contracts, which derive no target from arguments."
   },
   {
+   "id": "authzen.failure-condition-coverage.lease-renewal-out-of-authority",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "failure-condition-coverage",
+   "text": "Duration-lease renewal names no lease the PDP issued or an ended activity, or fails continuity with the evaluation it renews | PDP denial | `out_of_authority`",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a duration-lease renewal naming an unknown or malformed prior evaluation or an ended activity, or differing from the evaluation it renews in Mission, subject, action, operation target or audience, is a PDP denial carrying out_of_authority, never a Refusal Record or another identifier"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another Mission does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another subject does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another action does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal at another operation target, though the Mission's prefix entry admits both, does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another audience does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal naming no lease this PDP issued, a malformed identifier, or a lease that has ended continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a renewal never revives an ended activity: the boundary is the activity's current lease (@spec metering#lease-renewal, #1464) > a renewal through an earlier permit whose own valid_until has passed continues the live activity, and at the activity's current boundary a renewal through any of its permits is denied out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606): no new identifier. A renewal failing any other check keeps that check's row (metering.lease-renewal.current-checks-apply). Mutation: denying parameter_violation at the lease step fails all seven witnesses."
+  },
+  {
    "id": "authzen.permit-binding-split.same-identity-no-relay",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "permit-binding-split",
@@ -28211,7 +28310,351 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1440 (D570). The PDP leases each action the deployment declares duration-leased (services/pdp/src/duration-lease.ts): a permit opens one metered activity, and its valid_until is the lease's end. A renewal carrying context.prior_evaluation_id is evaluated in full and, on a permit, continues the renewed evaluation's activity, opening no second reservation, only when its Mission, subject, action, operation target and audience equal that evaluation's; the target is compared as spelled, so a second target the same prefix entry admits does not continue it. A renewal naming no lease this PDP issued, a malformed identifier, an ended lease, or any mismatch is denied out_of_authority (the request-fault classification; the metering draft names no reason). Witnessed through a decision point whose ledger is bound PDP-side. Mutations: dropping each of the five comparisons fails its own mismatch witness; opening a new activity on renewal fails the matching witness. The ledger is in memory, and nothing accumulates max_duration or commits measured_duration; no reference PEP renews a lease yet."
+   "notes": "#1440 (D570). The PDP leases each action the deployment declares duration-leased (services/pdp/src/duration-lease.ts): a permit opens one metered activity, and its valid_until is the lease's end. A renewal carrying context.prior_evaluation_id is evaluated in full and, on a permit, continues the renewed evaluation's activity, opening no second reservation, only when its Mission, subject, action, operation target and audience equal that evaluation's; the target is compared as spelled, so a second target the same prefix entry admits does not continue it. A renewal naming no lease this PDP issued, a malformed identifier, an ended lease, or any mismatch is denied out_of_authority, as Metering and the AuthZEN failure-condition coverage state (#1464). Witnessed through a decision point whose ledger is bound PDP-side. Mutations: dropping each of the five comparisons fails its own mismatch witness; opening a new activity on renewal fails the matching witness. The ledger is in memory. Out of scope (D606): max_duration accumulation, the measured_duration commit and settlement; no reference PEP renews a lease."
+  },
+  {
+   "id": "metering.lease-renewal.refused-at-current-boundary",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The PDP judges whether an activity has ended against the activity's current lease boundary, not the expiry of an earlier permit that leased it. The PDP MUST refuse a renewal at or after that boundary: a renewal never revives an ended activity.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a renewal at or after the activity's current lease boundary is refused whichever of the activity's permits it names, and continues nothing; before that boundary, a renewal naming an earlier permit whose own valid_until has passed still continues the live activity",
+    "local": "the boundary is the latest valid_until among the permits that leased the activity; a renewal never moves it back"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a renewal never revives an ended activity: the boundary is the activity's current lease (@spec metering#lease-renewal, #1464) > a renewal through an earlier permit whose own valid_until has passed continues the live activity, and at the activity's current boundary a renewal through any of its permits is denied out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal naming no lease this PDP issued, a malformed identifier, or a lease that has ended continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutations: comparing the boundary with < instead of <= fails both witnesses at the exact boundary; judging the named permit's own lease end instead of the activity's fails the renewal through the earlier, expired permit. Out of scope (D606): max_duration accumulation, the measured_duration commit and settlement; no reference PEP renews a lease."
+  },
+  {
+   "id": "metering.lease-renewal.continues-nothing-out-of-authority",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The PDP MUST deny `out_of_authority` ({{I-D.draft-mcguinness-mission-authzen}}) a renewal whose `prior_evaluation_id` names no lease the PDP issued or an ended activity, or that fails the match this section requires.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a renewal naming an unknown or malformed prior evaluation or an ended activity, or differing from the evaluation it names in Mission, subject, action, operation target or audience, is denied out_of_authority and continues nothing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another Mission does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another subject does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another action does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal at another operation target, though the Mission's prefix entry admits both, does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another audience does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal naming no lease this PDP issued, a malformed identifier, or a lease that has ended continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a renewal never revives an ended activity: the boundary is the activity's current lease (@spec metering#lease-renewal, #1464) > a renewal through an earlier permit whose own valid_until has passed continues the live activity, and at the activity's current boundary a renewal through any of its permits is denied out_of_authority",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606): the reason #1440 chose is now the draft's. Mutation: denying parameter_violation at the lease step fails all seven witnesses."
+  },
+  {
+   "id": "metering.lease-renewal.current-checks-apply",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The PDP MUST also apply the current authorization, lifecycle and consumption checks to a renewal: `prior_evaluation_id` establishes none of them, and a renewal that fails one keeps that check's denial.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a renewal naming a live activity it matches is still denied by a failed current check, under that check's own denial, and continues nothing"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a renewal passes every current check, and a failed check keeps its own denial (@spec metering#lease-renewal, #1464) > a renewal naming a live, matching activity is denied mission_inactive once the Mission is no longer active, and continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a renewal passes every current check, and a failed check keeps its own denial (@spec metering#lease-renewal, #1464) > a renewal naming a live, matching activity is denied authority_contained once containment removes the action, and continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a keyed renewal carrying no idempotency key is refused parameter_violation, though it names a live, matching activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Witnessed: the lifecycle check (mission_inactive), the authorization check (authority_contained after containment of the action) and the keyed action's idempotency key (parameter_violation). The reference PDP meters no consumption bound (max_budget, max_calls, max_egress_volume, max_duration accumulation), so the consumption clause has no check to apply yet. Mutations: exempting a renewal from the Mission state check, from the containment overlay, or from the claim step each fails its witness."
+  },
+  {
+   "id": "metering.lease-renewal.continues-without-re-execution",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "A renewal's permit continues the same activity and its reservation. It never authorizes executing the action's effect again and never resets the activity's consumption.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a successful renewal continues the original activity, keeping its identifier and opening permit, with no second reservation; the renewed operation's claim is untouched, so the operation's own key still refuses a second execution"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a successful renewal continues the original activity and reservation without executing the effect again: the operation keeps its identity, and its own key still refuses a second execution",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a keyed high-consequence renewal under a fresh key is permitted, single use, and continues the activity, moving its lease's end",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Partial: the PDP half is witnessed. The executing PEP's refusal to release the effect under a renewal permit rests on the unchanged operation identity (operation_already_claimed), and no reference PEP renews a lease, so that half is not built. Mutation: opening a new activity on renewal fails both witnesses. Out of scope (D606): max_duration accumulation, the measured_duration commit and settlement; no reference PEP renews a lease."
+  },
+  {
+   "id": "metering.lease-renewal.fresh-key-per-renewal",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "Where the renewed action is keyed ({{I-D.draft-mcguinness-mission-runtime}}), the PEP MUST send a fresh `idempotency_key` on each logical renewal and MUST reuse it on that renewal's retransmissions.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a PEP renewing a keyed action sends a key it has used for neither the operation nor another renewal, and sends the same key again when it retransmits that renewal"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1464 (D606). No reference PEP renews a duration lease (#1440 built the PDP side only), so the PEP obligation has no witness. The PDP side is metering.lease-renewal.key-claim-binds-renewal."
+  },
+  {
+   "id": "metering.lease-renewal.key-claim-binds-renewal",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The idempotency claim on a renewal's key MUST bind the renewal's operation identity and its `prior_evaluation_id` together, so the key presented for another renewal or for the operation itself is `idempotency_conflict`, never a permit for an unrelated renewal.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a keyed renewal under a fresh key is permitted and continues the activity; a retransmission returns the same permit and concurrent duplicates are suppressed, so the lease extends once; the key presented for another renewal, for the operation itself or with other parameters, and the operation's own key presented on a renewal, are idempotency_conflict and continue nothing",
+    "local": "the PDP claims (idempotency scope, key) in its Exact claim domain with the operation identity digested together with prior_evaluation_id (renewalClaimIdentity, services/pdp/src/duration-lease.ts); Mission, subject, actor, audience and action are idempotency scope members; the lease extension is keyed the same way (renewalLeaseKey), so a retry after a persist failure gets the extension already applied and the lease end moves once"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a keyed high-consequence renewal under a fresh key is permitted, single use, and continues the activity, moving its lease's end",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a retransmitted renewal returns the same permit and concurrent duplicates are suppressed: the lease is extended once",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a renewal's key presented for another renewal or for the operation itself, or the operation's key presented on a renewal, is idempotency_conflict and continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > a persist that fails after the lease commit leaves the extension applied once: the retry under the same key gets a permit ending at that extension, and the lease end moves exactly once",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutations: claiming a renewal with the plain operation identity turns three of the four conflicts into duplicate_suppressed; committing the lease before the claim extends the activity once per concurrent duplicate; skipping the lease commit for a keyed renewal fails the permitted renewal. The PDP settles the renewal's claim itself (metering.lease-renewal.claim-settles-at-lease-commit). Out of scope (D606): max_duration accumulation, the measured_duration commit and settlement; no reference PEP renews a lease. Mutation: ignoring the renewal key at the lease step moves the lease end again on the retry after a failed persist."
+  },
+  {
+   "id": "metering.lease-renewal.claim-settles-at-lease-commit",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "A renewal's idempotency claim settles when the PDP commits the lease extension, and no Execution Evidence is expected for it.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a keyed renewal's idempotency claim is settled by the PDP when it commits the lease extension, with no Execution Evidence: it never ages to unresolved or indeterminate and raises no operator alert, while an unsettled claim beside it does",
+    "local": "the claim settles completed under the outcome lease_extended in the transaction that persists the decision (LEASE_EXTENSION_OUTCOME, services/pdp/src/idempotency-claims.ts); its stored permit still answers a retransmission while valid, and a lease commit that fails releases the claim so a retry under the same key renews once"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > the renewal's claim settles completed with no Execution Evidence, never ages to unresolved or indeterminate, raises no operator alert, and its retransmission returns the same permit without extending the lease again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > a lease commit that fails releases the renewal's claim, so the retry under the same key renews once instead of meeting a held claim",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutations: persisting a renewal's decision without settling it puts the renewal on the unresolved list (and later the operator alert); dropping the settled renewal from the retransmittable rows turns both retransmission witnesses into a denial; not releasing the claim when the lease commit fails leaves the retry duplicate_suppressed."
+  },
+  {
+   "id": "metering.lease-renewal.settled-renewal-retransmission",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "A retransmission of a renewal whose claim has settled receives that renewal's permit while the permit is valid, and a different renewal under the key is `idempotency_conflict`.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "replay",
+   "observation": {
+    "normative": "after a keyed renewal's claim settles, a retransmission of the same renewal under its key receives that renewal's permit while it is valid, extending the lease no further; another renewal, or the operation itself, under the key is idempotency_conflict"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > the renewal's claim settles completed with no Execution Evidence, never ages to unresolved or indeterminate, raises no operator alert, and its retransmission returns the same permit without extending the lease again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a retransmitted renewal returns the same permit and concurrent duplicates are suppressed: the lease is extended once",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a renewal's key presented for another renewal or for the operation itself, or the operation's key presented on a renewal, is idempotency_conflict and continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutation: excluding the PDP-settled renewal from the retransmittable rows turns both retransmission witnesses into a denial; claiming a renewal with the plain operation identity turns the conflicts into duplicate_suppressed."
+  },
+  {
+   "id": "metering.lease-renewal.resource-side-identity-unchanged",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "The underlying operation's resource-side idempotency identity is unchanged by a renewal.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a renewal's operation identity, the projection the executing PEP's operation claim keys on, equals the renewed operation's; only the claim of the renewal's key binds prior_evaluation_id"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal carries its own idempotency key, claimed with the renewal's identity (@spec metering#lease-renewal, runtime#idempotency, #1464) > a successful renewal continues the original activity and reservation without executing the effect again: the operation keeps its identity, and its own key still refuses a second execution",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutation: adding prior_evaluation_id to operationIdentity (services/pdp/src/projections.ts) fails the witness, while every conflict witness still passes."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
