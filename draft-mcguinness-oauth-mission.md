@@ -509,20 +509,28 @@ supports, such as `mission_resource_access`
 Mission-aware Resource Server enforces each applicable entry its tokens
 carry under that entry's type ({{rs-requirements}}).
 
-Some duties apply only when their condition holds:
+The following table summarizes which surfaces apply, to whom, and
+when; the cited sections govern. Ordinary JWT consumption does not
+require retrieving the Mission Record or recomputing the complete
+approved Authority Set.
 
-- a submitted authority proposal;
-- presented or required submission evidence
-  ({{intent-submission-evidence}},
-  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}); or
-- opaque tokens, which require introspection or issuer-local
-  resolution.
-
-The optional capabilities (Delegation, Introspection as a state
-overlay for JWTs, and Cross-Domain projection) are adopted explicitly
-under {{conformance}}. Ordinary JWT consumption does not require
-retrieving the Mission Record or recomputing the complete approved
-Authority Set.
+| Surface (role) | Applies | Defined in |
+| --- | --- | --- |
+| Mission Intent via PAR (client, AS) | Every Mission-creating authorization request | {{submission-via-par}} |
+| Direct approval and the Mission Record (AS) | Every direct approval event | {{direct-approval-steps}} |
+| Evidence dispatch and refusal (AS) | Implemented by every AS, even one that supports no evidence type; applied to each presented entry | {{intent-submission-evidence}} |
+| Authority proposal (client, AS) | Optional for the client; the AS checks one that is submitted | {{authority-proposal}} |
+| Grant binding (AS) | Every authorization code issued at approval, and the refresh-token family that follows it | {{grant-binding}} |
+| Issuance gating (AS) | Every derivation, refresh and Token Exchange included | {{issuance-gating}} |
+| Scope projection (AS) | Every issuance that emits `scope`; a `scope`-only target gets a safe projection or a refusal | {{scope-projection}} |
+| Sender constraint, primary and refresh tokens (AS) | Recommended for the access token, which may be a bearer token; a public client's refresh token is sender-constrained or rotated | {{token-claims}}, {{refresh-tokens}} |
+| Sender constraint, delegation and cross-domain (AS, RS) | The token presented for a designation is sender-constrained, and the designation carries no `cnf`; a delegated token is bound to the delegate's own key; across trust domains, as the cross-domain companion requires | {{designation}}, {{delegated-exchange}} |
+| Revocation means (deployment) | An authenticated revocation by `mission_id`, independent of any token | {{revocation}} |
+| Enforcement (Mission-aware RS) | Every request the resource server serves | {{rs-enforcement}} |
+| Introspection (AS, RS) | Optional; required for opaque tokens served without issuer-local resolution | {{introspection}}, {{introspected-consumption}} |
+| Delegation, Cross-Domain (AS, client, RS) | Optional capabilities | {{delegation}}, {{optional-capabilities}} |
+| Standing consent (AS) | Only under a companion profile's standing-consent basis | {{standing-consent-bases}} |
+{: title="Applicability of this document's surfaces"}
 
 ## Applicability {#applicability}
 
