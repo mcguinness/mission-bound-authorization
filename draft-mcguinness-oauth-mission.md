@@ -3147,12 +3147,22 @@ specifies.
 
 # Mission State via Token Introspection {#introspection}
 
-Token introspection lets a Mission-state-aware resource server observe
-a Mission's current state per request instead of waiting for the
-token to expire. For the JWT carriage it is a state-observable
-overlay on the lifecycle-gated baseline ({{mission-bound-tokens}});
-for opaque Mission-bound tokens it is the claims carriage outside
-issuer-local resolution ({{introspected-consumption}}).
+A resource server consults the issuer about a Mission-bound token in
+one of three cases, with different obligations:
+
+- **JWT state observation.** A Mission-state-aware resource server
+  holding a JWT Mission-bound token introspects it to observe the
+  Mission's current state per request instead of waiting for the
+  token to expire. For the JWT carriage, introspection is a
+  state-observable overlay on the lifecycle-gated baseline
+  ({{mission-bound-tokens}}).
+- **Opaque-token consumption.** For an opaque Mission-bound token,
+  introspection is the claims carriage: its response carries what
+  the JWT would ({{introspected-consumption}}).
+- **Issuer-local resolution.** In place of introspection, an AS can
+  serve a resource server inside its trusted implementation boundary,
+  which it authorizes to read that state, by a direct read of its
+  committed token and grant state ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a token
