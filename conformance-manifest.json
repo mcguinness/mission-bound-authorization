@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7bbf402cf05aefed8d168a52fe525fb9769f3f68",
-    "content_sha256": "83299861b7862c0c09e0c8ed4684e9ccd92abcc6565fdd3ae2ef700e3f9ca5c0"
+    "revision": "ab8ef095146cb5b536722b7cbf06f167146b237a",
+    "content_sha256": "9da8c3a5e0c788c9b7275f1130f0cd53c84fe946d32a3b1d993eed5cc107eac7"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -2999,6 +2999,71 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "core.authority-proposal.governed-client-omission-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "If a client registered as Mission-governed sends an authorization request, through PAR or at the authorization endpoint, that carries `authorization_details` but no `mission_intent`, the AS MUST reject the request with the `invalid_request` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization request from a client registered as Mission-governed that carries authorization_details without mission_intent fails invalid_request, through PAR, at the authorization endpoint and on resuming the request; the same request from an ungoverned client, or with mission_intent, is not refused by this rule"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > rejects bare authorization_details from a Mission-governed client",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > bare authorization_details from an UNgoverned client is the ordinary OAuth path",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > a governed client submitting the proposal WITH mission_intent proceeds",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D585 (#1448). Witnessed at PAR only: the governed rejection with its ungoverned and with-Intent controls. The authorization endpoint and the resumed request have no witness yet (#1448)."
+  },
+  {
+   "id": "core.authority-proposal.governed-client-token-request-not-reached",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange for a delegation designation ({{designation}}), needs no `mission_intent` under the second rule",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-governed client's narrowing refresh (and, where supported, its self-exchange and designation exchange) carrying authorization_details without mission_intent is not refused for the missing Intent and issues the narrowed subset; a widening request is still refused under Issuance Gating and the subset rule"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
