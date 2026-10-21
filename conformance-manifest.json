@@ -9310,12 +9310,20 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server consuming an opaque Mission-bound token takes as its issuer the AS whose introspection response or issuer-local resolution it relies on, applies the issuer-trust and `mission.issuer` checks to that response's `mission` member, and rejects a failure with the `invalid_token` error code"
+    "normative": "a resource server consuming an opaque Mission-bound token takes as its issuer the AS whose introspection response or issuer-local resolution it relies on, applies the issuer-trust and `mission.issuer` checks to that response's `mission` member, and rejects a failure with the `invalid_token` error code",
+    "local": "mcp-payments accepts tokens through introspection only on an `ordinaryOnly` estate route, whose issuer is not trusted to issue Mission-bound authorization: an active response carrying a `mission` member is answered 401 `invalid_token` before any PEP or PDP call, never read as an ordinary token. No reference resource server accepts a Mission-bound opaque token, so the acceptance half (the trusted introspecting AS as issuer, `mission.issuer` equal to it outside an adopted cross-domain profile) has no implementation"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Scoped to core.introspected-consumption (#904, D415): no reference resource server accepts an opaque Mission-bound token. mcp-payments introspects only on an `ordinaryOnly` estate route, which refuses any `mission` claim and whose introspection adapter reads no `mission` member, so it is not opaque Mission-bound consumption and does not witness this row."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route-introspection.test.ts",
+     "name": "estate route with introspection: a mission member is refused, never read as ordinary (@spec mission#rs-requirements, #1503) > answers an active introspection response carrying mission 401 invalid_token on the holder's open MCP session, before the PEP, while the same response without it opens the session",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Partial, not twinned: both halves quote this one sentence, and a twin for the refusal half would need an applicability for an introspecting route whose issuer is not trusted for Mission-bound authorization, which the model does not define. Witnessed: the trust check on introspection, where an estate route refuses an active response carrying `mission` with 401 `invalid_token` and no PEP entry or evidence, while the same response without it opens a session. Proved by mutation: removing the adapter's `mission` refusal fails the test on the status, and with the status and body assertions removed, the PEP-entry spy assertion and the no-evidence assertion each fail alone. Not witnessed: acceptance of a Mission-bound opaque token with the issuer and `mission.issuer` checks, since no reference resource server accepts one (core.introspected-consumption is unclaimed)."
   },
   {
    "id": "core.introspection.composite-active",
