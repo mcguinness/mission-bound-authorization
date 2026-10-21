@@ -545,6 +545,48 @@ describe("a cascade under a legacy parent invents no effective time (#705 review
   });
 });
 
+// Numbered by the issue's current Acceptance list. The witness numbers in the
+// other titles follow the list as it stood when the migration merged.
+describe("parent_terminated names the immediate parent; its provenance is optional (#705 acceptance item 9)", () => {
+  const legacy = (id: string, state: string) =>
+    kernel.db.prepare("UPDATE missions SET state = ?, version = 2 WHERE id = ?").run(state, id);
+
+  it("a grandchild under a legacy cascaded intermediate names that intermediate as parent and invents no origin, observed and materialized", () => {
+    const root = approve();
+    const child = childOf(root.id);
+    const grandchild = childOf(child.id, "grandchild-agent");
+    // Pre-migration rows: the root revoked and the intermediate cascaded, each
+    // retaining no origin and no instant; the grandchild is still stored active.
+    legacy(root.id, "revoked");
+    legacy(child.id, "cascaded");
+    expect(kernel.get(child.id)?.termination).toEqual({ reason: "parent_terminated", parent: root.id, version: 2 });
+    const expected = { reason: "parent_terminated", parent: child.id };
+    commits.length = 0;
+
+    // Observed before materialization: the immediate parent is named, and no
+    // `origin` or `origin_reason` is filled in from the lineage.
+    expect(kernel.get(grandchild.id)?.state).toBe("active");
+    expect(kernel.observe(kernel.get(grandchild.id) as MissionRecord).termination).toEqual(expected);
+
+    // Every gate and surface reports it, and the first observer materializes
+    // it: the same reference, plus its committing version.
+    const status = statusMission(grandchild.id);
+    expect(status).toMatchObject({ state: "terminated", termination: expected });
+    expect(status.termination).not.toHaveProperty("origin");
+    expect(status.termination).not.toHaveProperty("origin_reason");
+    expect(gateReason(() => kernel.gateActive(grandchild.id))).toBe("mission_not_active");
+    expect(gateErrorToMissionError("mission_not_active", kernel.observedRecord(grandchild.id))).toBe(
+      "parent_terminated",
+    );
+    const stored = kernel.get(grandchild.id) as MissionRecord;
+    expect(stored.state).toBe("terminated");
+    expect(stored.termination).toEqual({ ...expected, version: stored.version });
+    expect(stored.termination?.parent).toBe(stored.parent?.id);
+    const commit = commits.find((c) => c.id === grandchild.id && c.state === "terminated");
+    expect(commit?.termination).toEqual(stored.termination);
+  });
+});
+
 describe("idempotency compares the termination reason (#705 witness 8)", () => {
   it("same state and reason is idempotent success; revoke on a completed termination and complete on a revoked one are conflicts", () => {
     const a = approve();
