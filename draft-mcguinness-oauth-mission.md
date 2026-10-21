@@ -1672,17 +1672,19 @@ mapping is specified in
 
 # Mission Approval {#approval-event}
 
-The approval event is the atomic, adjudicated transition that creates
-a Mission under its approval basis (`approval_basis`,
-{{mission-record}}). Every Mission is created at its own approval
-event, which the record's `approval_event_id` identifies.
+An approval event is the atomic decision that creates a Mission.
+Every Mission is created at its own approval event, which the record's
+`approval_event_id` identifies.
 
-The approval basis and its adjudication semantics, not the event
-alone, establish whether a human decided at that instant. A `direct`
-approval event includes the Approver's contemporaneous consent: it is
-a human approval event. Under a standing-consent basis
-({{standing-consent-bases}}), the instance is decided under an
-accountable human's earlier approval, with no fresh human approval.
+The approval basis (`approval_basis`, {{mission-record}}) and its
+adjudication, not the event alone, determine whether a human decides
+at that event or an earlier standing consent authorizes the instance:
+
+- A `direct` approval event includes the Approver's contemporaneous
+  consent: it is a human approval event.
+- Under a standing-consent basis ({{standing-consent-bases}}), the
+  instance is decided under an accountable human's earlier approval,
+  with no fresh human approval.
 
 ## Authorization Code Protection {#approval-code-protection}
 
