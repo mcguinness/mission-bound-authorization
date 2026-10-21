@@ -1407,10 +1407,19 @@ omits `scope` or refuses issuance to a scope-only target, as that
 document requires for any type without a declared projection.
 
 A **resource server** conforms by implementing the enforcement duties of
-{{rs-enforcement}}: exact or prefix resource matching, action and
-action-family matching, and every carried `constraints` key, failing
-closed on a member, matching mode, or key it does not implement. A
-resource server does not implement narrowing, delegate eligibility, or
+{{rs-enforcement}}, failing closed on a member, matching mode, or key it
+does not implement:
+
+- the operation-target duties of {{resource-matching}}: establishing
+  the target from its operation contract, refusing an operation without
+  one unambiguous target, and executing the operation on the target it
+  matched;
+- exact or prefix resource matching, and action and action-family
+  matching;
+- enforcement of every carried `constraints` key it implements; and
+- `resource_contract` enforcement ({{resource-contract}}).
+
+A resource server does not implement narrowing, delegate eligibility, or
 the Transformation Capabilities declaration; those are the authorization
 server's and do not bear on a resource server's conformance.
 
