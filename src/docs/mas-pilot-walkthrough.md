@@ -308,8 +308,9 @@ reach the resource.
 
 The MAS process's IPC messages `approve` and `clock` are test harness
 (`demo/test/mas-process.ts`), registered only when the process has an IPC
-channel. The launcher spawns it with `stdio: ["ignore", "pipe", "pipe"]`
-and no `ipc`, so neither exists there.
+channel. The launcher spawns it with `stdio: ["pipe", "pipe", "pipe"]`
+and no `ipc`, so neither exists there; the stdin pipe only tells the MAS
+that the launcher has gone (§3.8).
 
 ## 5. Keys, clients and rotation
 
