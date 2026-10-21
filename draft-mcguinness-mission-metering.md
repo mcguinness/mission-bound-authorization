@@ -1167,7 +1167,9 @@ MUST bind the renewal's operation identity and its
 `prior_evaluation_id` together, so the key presented for another
 renewal or for the operation itself is `idempotency_conflict`, never a
 permit for an unrelated renewal. The underlying operation's
-resource-side idempotency identity is unchanged by a renewal.
+resource-side idempotency identity is unchanged by a renewal. A
+renewal's idempotency claim settles when the PDP commits the lease
+extension, and no Execution Evidence is expected for it.
 
 In the ERP examples in this document, the operation contract identifies
 `https://erp.example.com` as the operation target
@@ -1350,7 +1352,8 @@ this registry.
   renewal that continues nothing; a renewal passes every current check,
   and its permit never re-executes the effect or resets consumption. A
   keyed renewal carries a fresh `idempotency_key`, claimed with the
-  renewal's operation identity and `prior_evaluation_id` (#1464).
+  renewal's operation identity and `prior_evaluation_id`, and its claim
+  settles when the PDP commits the lease extension (#1464).
 
 - Editorial (#1176): examples of the canonical Mission follow one
   dated history; an example line too long for the page is folded per
