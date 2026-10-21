@@ -7187,7 +7187,13 @@ their own approval events (#1078). Derivation is mechanical; `purpose`
 and model output only refuse or narrow (#1102). Each grant lineage
 binds to one Mission, never through consent reuse (#700, #1259).
 Authority is type-agnostic, with scope projection; opaque tokens use
-introspection or issuer-local resolution (#1203).
+introspection or issuer-local resolution (#1203). Submission
+processing checks a proposal before evidence, refuses with the earliest
+failing step's error, and completes Authority Set derivation before
+the rendering (#1411); the Mission-governed client rule reaches only
+authorization requests (#1448); delegation policy crosses a
+cross-domain projection where that profile's provenance rule keeps it
+(#1374).
 
 **Moved to companions.** Resource Access (the `mission_resource_access`
 type, Common Constraints, tool modeling, and
@@ -7204,9 +7210,14 @@ task (#1205); refresh tokens bound per client type (#1204);
 issuer-checked Mission resolution (#725); third-party data subjects
 (#344); key retention to the audit horizon.
 
-**Editorial and structure.** The reading path (#910, #1379),
-conventions and readability passes (#876), canonical-Mission examples
-(#1176), and the Mapping Assessment, moved from the substrate (#708).
+**Editorial and structure.** The reading path (#910, #1379);
+readability, placement and consolidation passes (#876, #1409, #1447,
+#1472, #1479, #1483, #1490), with issuance under Mission-Bound Access
+Tokens, Mission Lifecycle and Gating retitled Mission Lifecycle, and
+one Standing-Consent Bases section; subsections, tables and IANA
+templates fitted to the text rendering (#1380, #1382, #1401, #1404,
+#1410, #1418); canonical-Mission examples (#1176); and the Mapping
+Assessment, moved from the substrate (#708).
 
 **References.** The WIMSE AIMS draft, the RAR metadata remediation
 draft, and Client Instance ID with Client Attesters replace
