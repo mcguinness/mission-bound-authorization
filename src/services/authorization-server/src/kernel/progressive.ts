@@ -696,6 +696,9 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     consent_principal: ceilingConsentPrincipal(predecessor),
     activation: { policy_id: input.policy.ref.id, policy_version: input.policy.ref.version },
     activation_actor: input.activationActor,
+    // @spec progressive#ceiling-drawdown-basis (#1438): the decision mechanism,
+    // the drawdown policy this adjudication evaluated.
+    adjudication: { kind: "policy", policy: { id: input.policy.ref.id, version: input.policy.ref.version } },
     root_commitment: predecessor.ceiling_hash,
     approved_at: predecessor.ceiling_consented_at,
   };

@@ -64,6 +64,7 @@ import {
   TOKEN_EXCHANGE_GRANT_TYPE,
 } from "../src/adapters/continuation-grant.js";
 import {
+  ALL_PROVIDER_CAPABILITIES,
   buildAuthorizationServer,
   type BuiltAs,
   createChildMission,
@@ -2124,6 +2125,15 @@ describe("the deferred token response substrate for expansion (@spec expansion#c
     expect(as.kernel.get(pred.missionId)?.state).toBe("active");
     const polled = await read(await pollExpansion(code));
     expect(polled.status, JSON.stringify(polled)).toBe(200);
+  });
+
+  it("refuses to assemble a deferred expansion without the revocation endpoint its cancellation needs", async () => {
+    await expect(
+      buildAuthorizationServer({
+        issuer: "http://localhost:14489",
+        capabilities: new Set(ALL_PROVIDER_CAPABILITIES.filter((c) => c !== "token-revocation")),
+      }),
+    ).rejects.toThrow(/token-revocation/);
   });
 
   it("advertises the deferred token response and the deferral-code revocation token type", async () => {

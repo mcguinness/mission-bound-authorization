@@ -98,6 +98,7 @@ import {
   type StateSourcePlacement,
 } from "./runtime-posture.js";
 import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyStateAssertion } from "./state-observation.js";
+import { ownReadCeiling } from "./own-read-ceiling.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -588,6 +589,15 @@ export interface EvaluateOptions {
    * under `pep` placement.
    */
   stateObservedAt?: string;
+  /**
+   * @spec runtime#state-freshness, authority-server#mission-join rule 2
+   * (#818): under `pdp` placement, the signed valid-through of that same own
+   * read (RFC 3339), a Mission Status Response's `mission.fresh_until`. The
+   * permit never outlives it (the `signed_state_fresh_until` ceiling), and
+   * one already passed establishes no state. Absent, the read reported only
+   * its observation time. Unused under `pep` placement.
+   */
+  stateFreshUntil?: string;
   /**
    * @spec authzen#context-audience-freshness `assertion`: the declared state
    * source's published Mission Status Response keys (the Mission issuer's
@@ -1206,6 +1216,11 @@ async function evaluateInner(
   const pdpPlaced = opts.stateSourcePlacement === "pdp";
   if (opts.stateSourcePlacement === "pep" && observation === undefined) return deny("stale_state");
   if (pdpPlaced && rfc3339Ms(opts.stateObservedAt) === undefined) return deny("stale_state");
+  // #818: the own read's signed valid-through caps the permit like a
+  // verified assertion's (own-read-ceiling.ts).
+  const ownCeiling = pdpPlaced ? ownReadCeiling(opts.stateFreshUntil, now().getTime()) : undefined;
+  if (ownCeiling === "passed") return deny("stale_state");
+  if (ownCeiling !== undefined) signedFreshUntilMs = Math.min(signedFreshUntilMs ?? ownCeiling, ownCeiling);
   if (enforceableWindowMs !== undefined) {
     // @spec authzen#context-audience-freshness, runtime#state-freshness: the
     // trusted source is the enforcement scope's declared one. Under `pep`

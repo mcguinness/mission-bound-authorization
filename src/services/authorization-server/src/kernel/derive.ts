@@ -9,6 +9,7 @@
  */
 
 import {
+  canonicalize,
   capabilitySourceIdentity,
   compareAmounts,
   delegateMatcherListViolation,
@@ -816,9 +817,20 @@ function intersectMatchers(
  */
 function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
   if (!a || !b) return undefined;
-  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors"]);
+  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"]);
   if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
   const out: JsonObject = {};
+  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // `child_creation_policy` reference is compared for identity, never
+  // intersected. It is carried where both sides commit the same reference, so
+  // a token projected from an entry that commits one still carries the
+  // children grant a child entry is a subset of; where only one side commits
+  // it, or they differ, no fragment is a subset of both, and the grant drops.
+  if (a.child_creation_policy !== undefined || b.child_creation_policy !== undefined) {
+    if (a.child_creation_policy === undefined || b.child_creation_policy === undefined) return undefined;
+    if (canonicalize(a.child_creation_policy) !== canonicalize(b.child_creation_policy)) return undefined;
+    out.child_creation_policy = a.child_creation_policy;
+  }
   const maxChildren = minNum(asNum(a.max_children), asNum(b.max_children));
   if (maxChildren !== undefined) out.max_children = maxChildren;
   const maxChildDepth = minNum(asNum(a.max_child_depth), asNum(b.max_child_depth));
@@ -854,6 +866,31 @@ function intersectDelegation(
   const children = intersectChildren(asJsonObject(a.children), asJsonObject(b.children));
   if (children) out.children = children;
   return out;
+}
+
+/**
+ * @spec expansion#reconciliation check 3 (#1177) — whether some operation
+ * could be authorized by both entries. `false` only where the two are
+ * provably disjoint: no shared action, resources neither of which lies within
+ * the other, `vendors` lists with no common member, `max_amount` caps in
+ * different currencies, or Common Constraints with an empty intersection. A
+ * member or constraint key this cannot evaluate only narrows its entry, so it
+ * never makes two entries overlap; but nothing else proves them disjoint, and
+ * the caller refuses rather than restore authority it cannot show is
+ * untouched.
+ */
+export function entriesMayOverlap(a: AuthorityEntry, b: AuthorityEntry): boolean {
+  if (!a.actions.some((action) => b.actions.includes(action))) return false;
+  if (!resourceWithin(a, b) && !resourceWithin(b, a)) return false;
+  const aVendors = a.constraints?.vendors;
+  const bVendors = b.constraints?.vendors;
+  if (aVendors && bVendors && !aVendors.some((v) => bVendors.includes(v))) return false;
+  const aCap = a.constraints?.max_amount;
+  const bCap = b.constraints?.max_amount;
+  if (aCap && bCap && aCap.currency !== bCap.currency) return false;
+  const common = intersectCommonConstraints(a.constraints, b.constraints);
+  if (!common.ok && !common.reason.startsWith("malformed")) return false;
+  return true;
 }
 
 /**
