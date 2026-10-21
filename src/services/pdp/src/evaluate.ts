@@ -44,9 +44,14 @@ import {
   type OriginPrincipal,
   type PrincipalMappingObservation,
   type PrincipalMappingResolver,
+  type ResourceContractDeclarations,
+  type ResourceContractRef,
+  resourceContractOf,
+  sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
   timeWindowEndMs,
 } from "@mission/core";
+import { RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
@@ -131,6 +136,14 @@ export interface ActionApproval {
   approved_until?: string;
   parameter_digest: string;
   state?: string;
+  /**
+   * @spec authzen#context-approval (#249, D553): the approved Resource the
+   * approval record or its binding material contains (ARAP Section 12.3.1),
+   * read for its `properties.resource_contract`: "the Mission checks then
+   * also establish that the approved Resource's
+   * `properties.resource_contract` equals the request's, member for member."
+   */
+  resource?: { properties?: { resource_contract?: unknown } };
 }
 
 export interface EvaluationRequest {
@@ -220,6 +233,17 @@ export interface EvaluationRequest {
        * read establishes no member fact.
        */
       members?: CollectionMemberFacts[];
+      /**
+       * @spec authzen#context-resource-contract (#249, D553): CONDITIONAL,
+       * "the `id`, `version`, and `digest` of the resource contract under
+       * which the PEP will perform the operation. REQUIRED when a resource
+       * contract applies to the action". The PEP establishes it "from the
+       * applicable entry's reference, resolved against its own trusted
+       * contract declarations, and never from a value the caller asserts".
+       * Part of the authorization binding and the cache key with the rest of
+       * `resource` (./projections.ts).
+       */
+      resource_contract?: ResourceContractRef;
     };
   };
   action: {
@@ -434,7 +458,24 @@ export type DenialReason =
    * the `idempotency_key` was claimed under a different operation identity:
    * a conflict, never a new execution, terminal in every claim state.
    */
-  | "idempotency_conflict";
+  | "idempotency_conflict"
+  /**
+   * @spec authzen#runtime-denial-classification (#249, D553):
+   * "`resource_contract_drift`: a resource contract applies to the action and
+   * the applicable entry's reference is missing or does not resolve under the
+   * resource's declared contract states ..., or the request's
+   * `resource.properties.resource_contract` is absent or differs from it."
+   * Distinct from `out_of_authority` and from `capability_drift`.
+   */
+  | "resource_contract_drift"
+  /**
+   * @spec authzen#context-approval (#249, D553): ARAP's `out_of_scope` for a
+   * presented approval bound to a resource contract reference other than the
+   * request's: "An approval given under one reference does not cover an
+   * action under another, even when both references resolve: the PDP MUST
+   * deny that re-evaluation with ARAP's `out_of_scope`".
+   */
+  | "out_of_scope";
 
 export interface Decision {
   decision: boolean;
@@ -720,6 +761,14 @@ export interface EvaluateOptions {
    */
   refusals?: PdpRefusalRecorder;
   /**
+   * @spec authzen#context-resource-contract, runtime#resource-contract (#249,
+   * D553): the PDP's own trusted contract declarations, which a presented
+   * reference must resolve under. A PDP-side binding, like `resourcePolicy`:
+   * an enforcement component that could supply it could declare any contract
+   * current. Defaults to the deployment's statement (`RESOURCE_CONTRACTS`).
+   */
+  resourceContracts?: ResourceContractDeclarations;
+  /**
    * @spec metering#lease-renewal (#1440): this PDP's duration leases, bound at
    * decision-point construction exactly as `claims` is, and for the same
    * reason: a caller that could supply the ledger could answer for the
@@ -757,7 +806,7 @@ export interface EvaluateOptions {
  */
 export type DecisionOptions = Omit<
   EvaluateOptions,
-  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals" | "durationLeases"
+  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals" | "resourceContracts" | "durationLeases"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -1480,7 +1529,7 @@ async function evaluateInner(
   // fail-closed by construction, never by an explicit blocklist entry
   // that could omit a case.
   const candidateAuthoritySet = joinedAuthority?.authoritySet ?? view.authority_set;
-  const entry: AuthorityEntry | undefined = candidateAuthoritySet.find(
+  const matched: AuthorityEntry | undefined = candidateAuthoritySet.find(
     (e) => {
       contributions.add(e.type);
       return e.type === MISSION_RESOURCE_ACCESS_TYPE &&
@@ -1488,7 +1537,7 @@ async function evaluateInner(
       e.actions.includes(req.action.name);
     },
   );
-  if (!entry) {
+  if (!matched) {
     // @spec authzen#failure-condition-coverage: the mapping table keeps
     // `out_of_authority` ("Action outside the Authority Set") and
     // `unsupported_authorization_type` ("Unsupported authorization_details
@@ -1510,6 +1559,39 @@ async function evaluateInner(
     if (unrecognizedTypeMatch) return deny("unsupported_authorization_type");
     return deny("out_of_authority", "mission");
   }
+
+  // 5'. Resource contract (@spec runtime#resource-contract,
+  //     authzen#context-resource-contract; #249, D553). "Where the applicable
+  //     authority entry references a contract, or the resource requires a
+  //     reference for the operation: 1. The PDP MUST refuse the action unless
+  //     the entry carries a reference that resolves." The PDP "MUST deny the
+  //     action with `resource_contract_drift` unless the reference resolves
+  //     under the PDP's own trusted declarations and equals, member for
+  //     member, the reference of an applicable entry that authorizes the
+  //     action. An absent member where a contract applies is denied the same
+  //     way." The entry relied on from here on is that applicable entry; an
+  //     approval that committed no reference never gains one here ("A missing
+  //     reference refuses: it is never replaced by the current contract").
+  const requestContract = req.resource.properties?.resource_contract as unknown;
+  const contracts = opts.resourceContracts ?? RESOURCE_CONTRACTS;
+  const applicableEntries = candidateAuthoritySet.filter(
+    (e) => e.type === MISSION_RESOURCE_ACCESS_TYPE && entryMatchesTarget(e, operationTarget) && e.actions.includes(req.action.name),
+  );
+  const contractApplies =
+    requestContract !== undefined ||
+    applicableEntries.some((e) => e.resource_contract !== undefined) ||
+    contracts.requiresReference(operationTarget, req.action.name);
+  let entry: AuthorityEntry = matched;
+  if (contractApplies) {
+    if (requestContract === undefined) return deny("resource_contract_drift");
+    const resolved = contracts.resolve(requestContract, { target: operationTarget, action: req.action.name, now: now() });
+    if (!resolved.ok) return deny("resource_contract_drift");
+    const contracted = applicableEntries.find((e) => sameResourceContract(e.resource_contract, requestContract));
+    if (!contracted) return deny("resource_contract_drift");
+    entry = contracted;
+  }
+  /** The reference the permit binds: present exactly where a contract applies. */
+  const permitContract = contractApplies ? resourceContractOf(requestContract) : undefined;
 
   // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
   //     containment delta covers this (resource, action) pair, so the issuer
@@ -1652,11 +1734,14 @@ async function evaluateInner(
     // @spec resource-access#subset step 1 (#1276): each side keeps its
     // `resource_match`, so a credential entry is sourced only from a Mission
     // entry whose resource set contains its own.
+    // #249: each side keeps its `resource_contract`, so subset step 4 sources
+    // a credential entry only from a Mission entry under the same contract.
     const asEntry: CoreAuthorityEntry = {
       type: c.type,
       resource: c.resource,
       ...(c.resource_match !== undefined ? { resource_match: c.resource_match } : {}),
       actions: c.actions,
+      ...(c.resource_contract !== undefined ? { resource_contract: c.resource_contract } : {}),
       ...(c.constraints ? { constraints: c.constraints } : {}),
     };
     let sources = 0;
@@ -1668,6 +1753,7 @@ async function evaluateInner(
         resource: m.resource,
         ...(match !== undefined ? { resource_match: match } : {}),
         actions: m.actions,
+        ...(m.resource_contract !== undefined ? { resource_contract: m.resource_contract } : {}),
         ...(m.constraints ? { constraints: m.constraints } : {}),
       } as CoreAuthorityEntry;
       if (!isSubsetEntry(asEntry, source)) continue;
@@ -1689,8 +1775,19 @@ async function evaluateInner(
     constraintFacts,
     ...(constraintMembers !== undefined ? { constraintMembers } : {}),
   };
-  const credentialMatches = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
-  if (credentialMatches.length === 0) return deny("out_of_authority", "credential");
+  const credentialNaming = credentialAuthority.filter((c) => entryMatchesAction(c, credentialFacts));
+  if (credentialNaming.length === 0) return deny("out_of_authority", "credential");
+  // @spec resource-access#resource-contract (#249, D553): a credential entry
+  // authorizes the action only under exactly the contract it references, and
+  // one without a reference only where no contract applies: "A resource
+  // server MUST NOT treat an entry carrying `resource_contract` as
+  // authorizing an operation unless it performs that operation under exactly
+  // the referenced contract", and "an applicable entry without one provides
+  // no authority" where one is required.
+  const credentialMatches = credentialNaming.filter((c) =>
+    sameResourceContract(c.resource_contract, permitContract),
+  );
+  if (credentialMatches.length === 0) return deny("resource_contract_drift");
   const credentialSatisfying: CredentialAuthorityEntry[] = [];
   for (const c of credentialMatches) {
     contributions.add(c.type);
@@ -1926,6 +2023,16 @@ async function evaluateInner(
     credentialRequiresApproval
   ) {
     const appr = req.context.action_approval;
+    // @spec authzen#context-approval, runtime#resource-contract rule 4 (#249,
+    // D553): "An approval given under one reference MUST NOT satisfy the
+    // approval requirement for an action under another"; the approved
+    // Resource's `properties.resource_contract` must equal the request's,
+    // member for member, absent only against absent. A presented approval that
+    // does not is denied ARAP's `out_of_scope`, even when both references
+    // resolve and the parameters are unchanged.
+    if (appr !== undefined && !sameResourceContract(appr.resource?.properties?.resource_contract, permitContract)) {
+      return deny("out_of_scope");
+    }
     const maxAge = (opts.maxApprovalAgeSeconds ?? 300) * 1000;
     const valid =
       appr !== undefined &&
@@ -1947,6 +2054,10 @@ async function evaluateInner(
           mission_id: view.id,
           action: req.action.name,
           parameter_digest: req.context.parameter_digest,
+          // @spec authzen#context-approval (#249): the approved Resource's
+          // contract reference rides the PDP-signed binding material the
+          // Access Request Service binds its approval to (ARAP 12.3.1).
+          ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
         })
           .setProtectedHeader({ alg: "ES256", kid: opts.requestable.kid, typ: "pdp-denial-binding+jwt" })
           .setIssuedAt()
@@ -2153,6 +2264,12 @@ async function evaluateInner(
         // exactly when the operation is a phase of a compound action; the
         // request mirror and the evidence member never substitute for it.
         ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
+        // @spec authzen#response-context `resource_contract`,
+        // runtime#permit-binding (#249, D553): "REQUIRED on a permit for an
+        // action to which a resource contract applies, and equal to the
+        // validated request's `resource.properties.resource_contract`". The
+        // executing PEP compares it at every use.
+        ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
       },
     }),
   };

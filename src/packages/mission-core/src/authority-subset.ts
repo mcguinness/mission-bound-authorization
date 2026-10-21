@@ -12,6 +12,7 @@ import {
 } from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
+import { resourceContractViolation, sameResourceContract } from "./resource-contract.js";
 
 /**
  * Provenance is compared between issuer-derived lineage sets, not config
@@ -31,12 +32,30 @@ export function isSubsetSetIgnoringCapabilitySources(
   return isSubsetSet(withoutCapabilitySources(candidate), withoutCapabilitySources(granted));
 }
 
-/** Assertion, never a narrowing operation: every action must fit one config entry. */
+/**
+ * @spec resource-access#resource-contract (#249, D553): "The reference is
+ * assembled from configuration, not narrowed: a policy ceiling a proposal is
+ * narrowed against need not carry one, and step 4 of {{subset}} applies to
+ * entries derived from an approved entry." A ceiling comparison sets the
+ * member aside on both sides; the caller keeps the entry's own reference.
+ */
+function withoutResourceContract(entries: readonly AuthorityEntry[]): AuthorityEntry[] {
+  return entries.map(({ resource_contract: _assembled, ...authority }) => authority);
+}
+
+/**
+ * Assertion, never a narrowing operation: every action must fit one config
+ * entry. A configured ceiling carries no contract reference to compare
+ * ({@link withoutResourceContract}).
+ */
 export function entryWithinCeiling(
   entry: AuthorityEntry,
   ceiling: readonly AuthorityEntry[],
 ): boolean {
-  return isSubsetSet(withoutCapabilitySources([entry]), [...ceiling]);
+  return isSubsetSet(
+    withoutResourceContract(withoutCapabilitySources([entry])),
+    withoutResourceContract(ceiling),
+  );
 }
 
 /**
@@ -93,8 +112,9 @@ export function refusedEntryMember(entry: unknown): string | undefined {
  * @spec mission#subset, resource-access#entry-validation (#1399, D538): the
  * top-level members a `mission_resource_access` entry may carry: the members
  * the type defines (`type`, `resource`, `resource_match`, `actions`,
- * `constraints`, `delegation`) and `capability_sources`, which Capability
- * Binding defines for the type. This is the SINGLE declaration of that set.
+ * `constraints`, `delegation`, and `resource_contract`, #249) and
+ * `capability_sources`, which Capability Binding defines for the type. This
+ * is the SINGLE declaration of that set.
  * Every boundary that consults {@link refusedEntryMember} also consults
  * {@link unsupportedEntryMember}, so none admits another member and then drops
  * it in a member-by-member rebuild, erasing a restriction it may express:
@@ -110,6 +130,10 @@ export const SUPPORTED_ENTRY_MEMBERS: readonly string[] = Object.freeze([
   "constraints",
   "delegation",
   "capability_sources",
+  // @spec resource-access#resource-contract (#249, D553): admitted with its
+  // shape ({@link isAuthorityEntry}) and compared by subset step 4
+  // ({@link isSubsetEntry}), so no boundary drops it.
+  "resource_contract",
 ]);
 
 /**
@@ -225,6 +249,15 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   )
     return false;
   if (e.resource_match === "prefix" && !isEnforceablePrefixBase(e.resource)) return false;
+  // @spec resource-access#entry-validation (#249): "its `resource_contract`
+  // is not an object with exactly the members `id`, `version`, and `digest`,
+  // or one of them does not have the form {{resource-access-type}} gives it".
+  if (
+    e.resource_contract !== undefined &&
+    resourceContractViolation(e.resource_contract) !== undefined
+  ) {
+    return false;
+  }
   if (e.constraints !== undefined) {
     if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints))
       return false;
@@ -478,6 +511,12 @@ export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry
   }
   if (candidate.type !== granted.type) return false;
   if (!resourceWithin(candidate, granted)) return false;
+  // @spec resource-access#subset step 4 (#249, D553): "A carries
+  // `resource_contract` exactly when B does, and then with `id`, `version`,
+  // and `digest` each equal to B's. Removing, replacing, or adding a
+  // reference is never narrowing." Exact equality, absent only against
+  // absent; a malformed value on either side equals nothing.
+  if (!sameResourceContract(candidate.resource_contract, granted.resource_contract)) return false;
   if (!candidate.actions.every((a) => granted.actions.includes(a))) return false;
   const gCap = granted.constraints?.max_amount;
   const cCap = candidate.constraints?.max_amount;

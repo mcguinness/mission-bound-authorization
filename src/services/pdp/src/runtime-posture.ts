@@ -5,6 +5,7 @@ import {
   type ExecutionCapabilityDeclaration,
   evidenceDeclarationFindings,
   executionCapabilityFindings,
+  resourceContractFindings,
   reversibleWriteDeclarationFor,
   validateEnforcementScopeStatement,
 } from "./enforcement-scope.js";
@@ -119,6 +120,9 @@ export function loadRuntimePosture(
   // here, at load, as an undeclared action class is below.
   const capabilities = executionCapabilityFindings(input);
   if (capabilities.length) throw new PostureConfigError(JSON.stringify(capabilities));
+  // @spec runtime#resource-contract (#249): the declared contract versions.
+  const contracts = resourceContractFindings(input);
+  if (contracts.length) throw new PostureConfigError(JSON.stringify(contracts));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");

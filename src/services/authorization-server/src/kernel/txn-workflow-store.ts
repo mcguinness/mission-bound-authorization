@@ -18,10 +18,24 @@
  *    across workflows, not merely unlikely.
  *
  * The workflow also PINS the challenge snapshot it was admitted on, including
- * the operation's `type`. A resource versions its Operation Profile by
- * versioning that `type`, and a TAS MUST retain and recognize a superseded
- * version for as long as a pending workflow still references it: pinning is
- * how that holds without a second registry.
+ * the operation's `type`, and the Operation Profile version it was admitted
+ * under (`profile_version`, #249). A TAS MUST retain and recognize a
+ * superseded version for as long as a pending workflow still references it:
+ * pinning is how that holds without a second registry.
+ *
+ * UPGRADING A STORE FILE (#249). A file created before `profile_version`
+ * existed opens unchanged by `CREATE TABLE IF NOT EXISTS`, so opening it
+ * migrates it in place ({@link migrateProfileVersion}): one `ALTER TABLE ...
+ * ADD COLUMN profile_version TEXT`, in an immediate transaction, skipped when
+ * the column is already there, so a second open, or two processes opening at
+ * once, changes nothing. Nothing is backfilled. A row admitted before the
+ * migration keeps `profile_version` NULL and reads back with no
+ * `profileVersion`: it was pinned under the earlier rule, the challenge's
+ * `iss` and the entry's `type`, and completes only under the binding the
+ * deployment declares for that pair (`OperationProfileRegistry.bindLegacyType`,
+ * a version the registry retains); with none declared, its completion is
+ * refused, terminally, and it is never read under the resource's current
+ * version. Every workflow admitted after the migration records its version.
  */
 
 import { type Database, openStore, type StoreOptions, withTransaction } from "@mission/store";
@@ -54,7 +68,8 @@ CREATE TABLE IF NOT EXISTS txn_workflows (
   issued_token TEXT,
   issued_jti TEXT,
   issued_exp INTEGER,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  profile_version TEXT
 ) STRICT;
 CREATE UNIQUE INDEX IF NOT EXISTS txn_workflows_admission
   ON txn_workflows (challenge_iss, challenge_jti, client_id, cnf_jkt);
@@ -88,8 +103,19 @@ export interface TxnWorkflowRecord {
    * workflow that won admission has opened it; a poll before that is pending.
    */
   taskId: string;
-  /** The `authorization_details` entry's `type` at admission (profile version). */
+  /** The `authorization_details` entry's `type` at admission. */
   operationType: string;
+  /**
+   * @spec txn-authorization#resource-challenge (#249, D553): the Operation
+   * Profile version the workflow was admitted under: the version its
+   * `resource_contract` reference names, or "the resource's current one at
+   * admission, which the workflow records". Completion reads the operation
+   * under it, superseded or not. Every admission records one; it is absent
+   * only on a row admitted before the store recorded versions, which
+   * completes under its declared `(iss, type)` binding or not at all (see the
+   * file comment).
+   */
+  profileVersion?: string;
   subject: string;
   /**
    * @spec txn-authorization#subject-establishment — the issuer-qualified
@@ -132,6 +158,7 @@ interface Row {
   mission_id: string;
   action: string;
   operation_type: string;
+  profile_version: string | null;
   subject: string;
   subject_token_iss: string;
   subject_token_sub: string;
@@ -148,12 +175,30 @@ interface Row {
   issued_exp: number | null;
 }
 
+/**
+ * @spec txn-authorization#resource-challenge (#249): the in-place upgrade of
+ * a store file created before `profile_version` existed. Idempotent: the
+ * column is added only when absent, inside an immediate transaction, so a
+ * concurrent opener waits and then finds it present. No row is backfilled:
+ * a NULL `profile_version` is how a row admitted under the earlier rule is
+ * recognized at completion.
+ */
+export function migrateProfileVersion(db: Database): void {
+  db.transaction(() => {
+    const columns = db.prepare("PRAGMA table_info(txn_workflows)").all() as Array<{ name: string }>;
+    if (!columns.some((c) => c.name === "profile_version")) {
+      db.exec("ALTER TABLE txn_workflows ADD COLUMN profile_version TEXT");
+    }
+  }).immediate();
+}
+
 export class TxnWorkflowStore {
   readonly db: Database;
   constructor(options: StoreOptions & { db?: Database } = {}) {
     const { db, ...storeOptions } = options;
     this.db = db ?? openStore(SCHEMA, storeOptions);
     this.db.exec(SCHEMA);
+    migrateProfileVersion(this.db);
   }
 
   /**
@@ -188,13 +233,18 @@ export class TxnWorkflowStore {
    * workflows for one challenge and only the winner opens an approval.
    */
   admit(record: TxnWorkflowRecord): TxnAdmission {
+    // #249: a workflow admitted now always records the version it was
+    // admitted under; only a pre-migration row lacks one.
+    if (typeof record.profileVersion !== "string" || record.profileVersion.length === 0) {
+      throw new Error("a workflow is admitted only with the Operation Profile version it was admitted under");
+    }
     const info = this.db
       .prepare(
         `INSERT INTO txn_workflows
            (id, challenge_iss, challenge_jti, client_id, cnf_jkt, txn, task_id, mission_id, action,
-            operation_type, subject, subject_token_iss, subject_token_sub, subject_policy, subject_token_jti, act_json, parameter_digest, challenge_json,
+            operation_type, profile_version, subject, subject_token_iss, subject_token_sub, subject_policy, subject_token_jti, act_json, parameter_digest, challenge_json,
             subject_token_exp, mission_exp, expires_at, state, issued_token, issued_jti, issued_exp, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, unixepoch())
          ON CONFLICT DO NOTHING`,
       )
       .run(
@@ -208,6 +258,7 @@ export class TxnWorkflowStore {
         record.missionId,
         record.action,
         record.operationType,
+        record.profileVersion,
         record.subject,
         record.subjectTokenIss,
         record.subjectTokenSub,
@@ -299,6 +350,7 @@ function toRecord(row: Row): TxnWorkflowRecord {
     missionId: row.mission_id,
     action: row.action,
     operationType: row.operation_type,
+    ...(row.profile_version !== null ? { profileVersion: row.profile_version } : {}),
     subject: row.subject,
     subjectTokenIss: row.subject_token_iss,
     subjectTokenSub: row.subject_token_sub,

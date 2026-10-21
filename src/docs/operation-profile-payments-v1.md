@@ -1,12 +1,25 @@
-# payments-runtime-profile-v12
+# payments-runtime-profile-v13
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v12`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v13`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v13** (#249, D553): adds optional resource contract enforcement. The
+  payments resource contract (Resource contract, below) is declared in the
+  Enforcement Scope Statement's `extensions.resource_contracts`. An entry
+  that carries `resource_contract` is enforced under exactly the contract it
+  references: the decision request gains
+  `resource.properties.resource_contract`, a permit gains
+  `conditions.resource_contract`, and a reference that does not resolve is
+  refused before the decision request (`resource_contract_unresolvable`) or
+  suppressed at use. The shipped declaration requires a reference for no
+  operation, so an entry without one keeps its decision bytes from v12.
+  Making a reference mandatory, and migrating approvals that carry none,
+  are separate work (#249).
 
 - **v12** (#1266): a `list_invoices` read evaluates each invoice it
   returns against the issuance, tenant and classification bounds, with
@@ -171,6 +184,82 @@ within that service. Each `TOOL_ACTIONS` row declares the contract
 - Before every release the PEP re-establishes the target from the live
   profile; a target that moved or can no longer be established suppresses
   the permit with `target_drift` and no effect.
+
+## Resource contract
+
+The payments resource adopts resource contracts (Runtime, Resource Contract;
+Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
+Statement's `extensions.resource_contracts`: one contract, `id`
+`https://payments.example/contracts/payments`, served for the canonical
+resource URI under `resource_match: prefix` (so a finer target beneath the
+service, such as an argument-derived invoice target, is covered), with one
+version, `2026-10-20`, in state `current`.
+
+- **Contract material.** The version's document assembles, for each tool:
+  its action identifier and phase, its minimum action class, its
+  operation-target rule (`service`), the parameter form whose fields enter
+  `parameter_digest` (the invoice form, the list form, or none), whether it
+  takes an idempotency key, and its catalog capability (`tool_id` and the
+  extracted-definition `source_digest`). It names, per constraint key, the
+  fact the resource reads, and the Operation Profile version it assembles,
+  `operation_profile: payments-runtime-profile-v13`. It overrides none of
+  those definitions. Resource policy, Mission state, entitlements,
+  revocation and resolved resource facts are not contract material.
+- **Digest and immutability.** The version's `digest` is `sha-256:` and the
+  unpadded base64url SHA-256 of the JCS serialization of the document. The
+  statement's loader recomputes it and refuses a declaration whose document
+  does not hash to it, so a changed document is never served under an
+  unchanged reference. A change to any listed material is published as a new
+  version; a test pins the shipped document against `TOOL_ACTIONS` and the
+  served catalog.
+- **States.** A version is `current`, `superseded` (with a declared
+  `retained_until`, after which it no longer resolves) or `retired` (it
+  resolves for nothing; its digest may be kept). At most one version is
+  current.
+- **Optional enforcement.** `requires_reference` is empty: the shipped
+  deployment enforces a reference an entry carries and requires one for no
+  operation, so an approval that committed none keeps working and never
+  gains one. Mandatory adoption is not shipped: listing operations there
+  makes a reference required for them (the Authorization Server then
+  records the current reference at approval, and the PEP refuses an entry
+  without one), and moving the payments deployment to it, with a migration
+  for unpinned approvals, is separate work (#249).
+- **Approval.** The Authorization Server reads the same declaration. A
+  proposed `resource_contract` that is not the current reference for the
+  entry's `resource`, or whose version does not define every action the
+  entry lists, is refused `invalid_authorization_details` at PAR intake and
+  at approval. `authority_hash` commits the reference, derivation and
+  projection preserve it exactly, and template consent refuses an entry
+  carrying one.
+- **Decision request.** The PEP establishes the reference from the presented
+  credential's entries that name the action, never from an argument, and
+  resolves it against its own declaration for the operation's target. One
+  that does not resolve (unknown, retired, a changed digest, superseded past
+  its retention), and none where a reference is required, is refused before
+  any decision request with a Refusal Record whose `denial_reason` is
+  `resource_contract_unresolvable`. The request carries the reference it will
+  perform under as `resource.properties.resource_contract`, and a credential
+  entry carrying a reference covers the operation only under exactly it.
+- **Retained versions.** A superseded version is performed under the
+  Operation Profile its document names (`PepDeps.retainedOperationProfiles`):
+  the operation target and the effective parameters, so `parameter_digest`,
+  follow that profile, never the current one.
+- **Decision.** The PDP resolves the reference under its own declaration and
+  denies `resource_contract_drift` unless it resolves and equals an applicable
+  Mission entry's and a credential entry's. An action-bound approval binds
+  the reference through its approved Resource (the PDP-signed denial binding,
+  or the challenged operation on the transaction-token path), and one bound
+  to another reference is denied `out_of_scope`. A permit carries
+  `conditions.resource_contract`.
+- **Use.** Before every release the PEP re-resolves the permit's reference
+  against its current declaration and compares it with the contract it
+  performs under. A difference, an unresolvable reference, or a missing
+  condition suppresses the effect with Execution Evidence `suppressed` /
+  `resource_contract_unresolvable`, ahead of the phase and target checks.
+- **Transaction authorization.** The Transaction Authorization Server reads
+  the Operation Profile version from the challenged entry's reference, which
+  must resolve at admission and again at completion, or records the
+  resource's current version at admission; never from the entry's `type`.
 
 ## Money
 
