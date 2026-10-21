@@ -222,6 +222,8 @@ async function issueMission(
     issuer?: string;
     intentExtra?: Record<string, unknown>;
     proposal?: Record<string, unknown>[];
+    /** Further pushed-request parameters the client sends. */
+    parExtra?: Record<string, string>;
   } = {},
 ): Promise<{ missionId: string; accessToken: string }> {
   const client = opts.client ?? ap;
@@ -244,6 +246,7 @@ async function issueMission(
       login_hint: "alice",
       mission_intent: intentJson("Pay Acme invoices", opts.intentExtra),
       authorization_details: JSON.stringify(opts.proposal ?? authority(actions)),
+      ...opts.parExtra,
       client_assertion: await clientAssertion(client, issuer),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -491,6 +494,49 @@ describe("ceiling consent (@spec progressive#progressive-authorization)", () => 
         consentCeiling(ISSUER, POLICIES, { authority_ceiling: FULL_CEILING, drawdown_policy: drawdownPolicy as never }, at),
       ).toThrowError(IntentError);
     }
+  });
+
+  // @spec progressive#progressive-authorization (D572): client input alone
+  // never establishes the consent; only the approval surface does.
+  const CLIENT_CEILING = {
+    authority_ceiling: JSON.stringify(FULL_CEILING),
+    drawdown_policy: JSON.stringify({ id: "drawdown-wide", version: "1" }),
+  };
+
+  it("a ceiling and drawdown policy the client sends on the authorization request are never consented: the Mission carries none", async () => {
+    const m = await issueMission(READ, undefined, { parExtra: CLIENT_CEILING });
+    const record = as.kernel.get(m.missionId) as MissionRecord;
+    expect(record.authority_ceiling).toBeUndefined();
+    expect(record.drawdown_policy).toBeUndefined();
+    expect(record.ceiling_hash).toBeUndefined();
+    // Its widening is an ordinary expansion, never a policy-adjudicated drawdown.
+    await expectFreshApproval(m.missionId, m.accessToken, READ_LIST);
+  });
+
+  it("a ceiling and drawdown policy the client sends on an expansion request are not the successor's: the consented ones govern", async () => {
+    const root = await issueMission(READ, ceilingOf("drawdown-std", READ_CEILING));
+    const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
+    const res = await tokenRequest({
+      ...expansionParams(root.accessToken, crypto.randomUUID(), READ_LIST),
+      ...CLIENT_CEILING,
+    });
+    const body = (await res.json()) as Completed;
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const successor = as.kernel.get(body.mission_id) as MissionRecord;
+    expect(successor.authority_ceiling).toEqual(READ_CEILING);
+    expect(successor.drawdown_policy).toEqual(rootRecord.drawdown_policy);
+    expect(successor.ceiling_hash).toBe(rootRecord.ceiling_hash);
+    expect(successor.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
+    // Authority the client's ceiling would admit lies outside the consented one: a fresh human approval.
+    const before = as.kernel.allMissions().length;
+    const beyond = await tokenRequest({
+      ...expansionParams(body.access_token, crypto.randomUUID(), [...READ_LIST, "payments:payment.schedule"]),
+      ...CLIENT_CEILING,
+    });
+    const pending = (await beyond.json()) as { error?: string; mission_denial_reason?: string };
+    expect(beyond.status, JSON.stringify(pending)).toBe(400);
+    expect(pending.error).toBe("authorization_pending");
+    expect(as.kernel.allMissions().length).toBe(before);
   });
 
   it("omits drawdown_policy from ceiling_hash when the Approver consents a ceiling without one", async () => {

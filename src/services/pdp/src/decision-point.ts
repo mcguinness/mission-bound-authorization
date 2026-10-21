@@ -23,6 +23,7 @@
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
+import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
   type DecisionFn,
   type EvaluateOptions,
@@ -141,6 +142,12 @@ export interface DecisionPointConfig {
    * records it.
    */
   refusals?: PdpRefusalRecorder;
+  /**
+   * @spec metering#lease-renewal (#1440): this decision point's duration
+   * leases, bound here for the reason the claim domain is. Absent, no action
+   * is duration-leased.
+   */
+  durationLeases?: DurationLeaseDomain;
 }
 
 export interface DecisionPoint {
@@ -174,6 +181,7 @@ interface PointBindings {
   claims: IdempotencyClaimDomain | undefined;
   resourcePolicy: ResourcePolicy | undefined;
   refusals: PdpRefusalRecorder | undefined;
+  durationLeases?: DurationLeaseDomain | undefined;
 }
 
 /**
@@ -192,7 +200,7 @@ function bindDecide(
   requester: ClaimRequester,
   consumptionStatus?: ConsumptionStatusFn,
 ): DecisionFn {
-  const { emitter, claims, resourcePolicy, refusals } = bindings;
+  const { emitter, claims, resourcePolicy, refusals, durationLeases } = bindings;
   return async (req, opts) => {
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
@@ -201,7 +209,9 @@ function bindDecide(
     delete forwarded.requester;
     delete forwarded.consumptionStatus;
     delete forwarded.refusals;
+    delete forwarded.durationLeases;
     if (emitter) forwarded.evidence = emitter;
+    if (durationLeases) forwarded.durationLeases = durationLeases;
     if (claims) forwarded.claims = claims;
     if (resourcePolicy) forwarded.resourcePolicy = resourcePolicy;
     if (refusals) forwarded.refusals = refusals;
@@ -250,6 +260,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     claims: config.claims,
     resourcePolicy: config.resourcePolicy,
     refusals: config.refusals,
+    durationLeases: config.durationLeases,
   };
   return {
     decide: bindDecide(bindings, unboundRequester()),
@@ -304,10 +315,12 @@ export function createEphemeralDecisionPoint(options: {
   resourcePolicy?: ResourcePolicy;
   /** @spec authzen#pdp-request consistency check 11 (#1276): bound exactly as in {@link createDecisionPoint}. */
   refusals?: PdpRefusalRecorder;
+  /** @spec metering#lease-renewal (#1440): bound exactly as in {@link createDecisionPoint}. */
+  durationLeases?: DurationLeaseDomain;
   /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
   authorizesAudience?: (audience: string) => boolean;
 }): EphemeralDecisionPoint {
-  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy, refusals, authorizesAudience } = options;
+  const { emitterId, audience, kid = "ephemeral-pdp", claims, resourcePolicy, refusals, authorizesAudience, durationLeases } = options;
   const { privateKey, publicKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const emitter = createDecisionEvidenceEmitter({
     signer: { kid, key: privateKey },
@@ -315,7 +328,7 @@ export function createEphemeralDecisionPoint(options: {
     audience,
     ...(authorizesAudience ? { authorizesAudience } : {}),
   });
-  const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals };
+  const bindings: PointBindings = { emitter, claims, resourcePolicy, refusals, durationLeases };
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),

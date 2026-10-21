@@ -17,6 +17,7 @@ import {
   canonicalize,
   capabilitySourceIdentity,
   normalizeCapabilitySources,
+  resourceWithin,
 } from "@mission/core";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry } from "./types.js";
@@ -109,6 +110,10 @@ export function attachCapabilitySources(
         `capability source binding names action '${r.binding.action}' for resolution of action '${r.action}'`,
       );
     }
+    // A resolution's `resource` is the derived entry's own `resource`, which
+    // the resolver copies from the entry it resolved, so string equality pairs
+    // it with that entry exactly; the shared matcher would also pair it with a
+    // coarser or finer entry it was never resolved for (#1440).
     if (!authoritySet.some((e) => e.resource === r.resource && e.actions.includes(r.action))) {
       throw new IntentError(
         "invalid_authorization_details",
@@ -117,6 +122,7 @@ export function attachCapabilitySources(
     }
   }
   return authoritySet.map((entry) => {
+    // Equality by construction, as above: each resolution names this entry's own `resource`.
     const bindings = resolutions
       .filter((r) => r.resource === entry.resource && entry.actions.includes(r.action))
       .map((r) => r.binding as CapabilitySourceBinding);
@@ -170,14 +176,17 @@ export function inheritCapabilitySources(
   if (!grantor.some((g) => g.capability_sources?.length)) return derived;
   return derived.map((entry) => {
     const retained = new Set(entry.actions);
-    // Every grantor entry with the SAME type and resource contributes, since
-    // isSubsetEntry gates on both. Identical bindings recorded by two such
-    // entries collapse; two entries recording DIFFERENT bindings for one
-    // `(action, tool_id)` are a grantor-side contradiction, refused below
-    // rather than resolved by committing an arbitrary one.
+    // Every grantor entry of the SAME type whose resource set contains the
+    // derived entry's contributes, since isSubsetEntry gates on both: a finer
+    // or `prefix` entry derived beneath a `prefix` grantor entry inherits its
+    // bindings ({@link resourceWithin}, the shared matcher, #1440). Identical
+    // bindings recorded by two such entries collapse; two entries recording
+    // DIFFERENT bindings for one `(action, tool_id)` are a grantor-side
+    // contradiction, refused below rather than resolved by committing an
+    // arbitrary one.
     const byIdentity = new Map<string, CapabilitySourceBinding>();
     for (const g of grantor) {
-      if (g.type !== entry.type || g.resource !== entry.resource) continue;
+      if (g.type !== entry.type || !resourceWithin(entry, g)) continue;
       for (const binding of g.capability_sources ?? []) {
         if (!retained.has(binding.action)) continue;
         byIdentity.set(capabilitySourceIdentity(binding), binding);

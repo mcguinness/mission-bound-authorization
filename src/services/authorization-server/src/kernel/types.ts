@@ -741,7 +741,7 @@ export interface MissionRecord {
   /**
    * @spec progressive#audit-linkage: the chain's cumulative count of
    * policy-adjudicated drawdowns, this record's own included. Present beside
-   * `authority_ceiling`; 0 on the Mission whose approval consented the ceiling.
+   * `authority_ceiling`; 0 on the chain's root Mission, whose approval consented the ceiling.
    */
   drawdown_count?: number;
 }
