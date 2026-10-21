@@ -234,10 +234,24 @@ export type ClaimOutcome =
   /** Conditions 1 to 5 of a retransmission hold, in the generation the claim was made under; condition 6 is asked next. */
   | { kind: "retransmission_candidate"; evaluationId: string; pepEpoch: string };
 
+/**
+ * @spec metering#lease-renewal (#1464): the outcome of a claim the PDP settles
+ * itself. A duration-lease renewal's only effect is the lease extension the
+ * PDP commits, so its claim settles `completed` when the decision is
+ * persisted, under this outcome, and no Execution Evidence is expected for it.
+ */
+export const LEASE_EXTENSION_OUTCOME = "lease_extended";
+
 export interface ClaimTicket {
   readonly evaluationId: string;
-  /** Persist the full decision, signed Decision Evidence included, BEFORE it is returned. */
-  persist(decision: Decision): void;
+  /**
+   * Persist the full decision, signed Decision Evidence included, BEFORE it
+   * is returned. `settled` names an outcome the PDP observed itself (a
+   * committed lease extension): the claim is then settled `completed` in the
+   * same transaction, and its stored permit stays retransmittable while it is
+   * valid.
+   */
+  persist(decision: Decision, settled?: typeof LEASE_EXTENSION_OUTCOME): void;
   /** The evaluation ended without returning its permit: the row is adoptable. */
   release(): void;
 }
@@ -497,18 +511,17 @@ export class IdempotencyClaimDomain {
         }
         return { kind: "suppressed", state: "claimed", transient: true, retryAfterSeconds: 1 };
       case "permit_issued":
-        if (
-          row.execution_id === null &&
-          row.cache_key === input.cacheKey &&
-          row.statement_version === this.generationAt(nowMs) &&
-          nowMs < row.valid_until_ms &&
-          row.pep_id === input.requester.pep_id &&
-          row.pep_epoch === input.requester.pep_epoch &&
-          row.decision_json !== null
-        ) {
+        if (this.retransmittable(row, input, nowMs)) {
           return { kind: "retransmission_candidate", evaluationId: row.evaluation_id, pepEpoch: row.pep_epoch };
         }
         return { kind: "suppressed", state: "permit_issued", transient: true, retryAfterSeconds: 1 };
+      case "completed":
+        // A lease extension the PDP settled itself: its stored permit is
+        // returned to a retransmission while valid, as an issued one is.
+        if (this.retransmittable(row, input, nowMs)) {
+          return { kind: "retransmission_candidate", evaluationId: row.evaluation_id, pepEpoch: row.pep_epoch };
+        }
+        return { kind: "suppressed", state: "completed", transient: false };
       case "unresolved":
         return {
           kind: "suppressed",
@@ -546,16 +559,10 @@ export class IdempotencyClaimDomain {
       const row = found ? this.advance(found, nowMs) : undefined;
       if (
         !row ||
-        row.state !== "permit_issued" ||
         row.evaluation_id !== candidate.evaluationId ||
-        row.execution_id !== null ||
         row.operation_identity !== input.operationIdentity ||
-        row.cache_key !== input.cacheKey ||
-        row.statement_version !== this.generationAt(nowMs) ||
-        nowMs >= row.valid_until_ms ||
-        row.pep_id !== input.requester.pep_id ||
-        row.pep_epoch !== input.requester.pep_epoch ||
-        row.decision_json === null
+        row.decision_json === null ||
+        !this.retransmittable(row, input, nowMs)
       ) {
         return undefined;
       }
@@ -691,6 +698,27 @@ export class IdempotencyClaimDomain {
       .run(next, executionId, outcome, outcomeRef, nowMs, nowMs + horizonMs, evaluationId);
     this.log(row, row.state, next, cause, nowMs);
     return { accepted: true, state: next, duplicate: false };
+  }
+
+  /**
+   * @spec metering#lease-renewal (#1464): settle a just-persisted claim on an
+   * outcome the PDP observed itself, in the persisting transaction. The row
+   * takes the terminal `completed` state and its horizon as Execution
+   * Evidence settlement would, so it never ages to `unresolved` or
+   * `indeterminate`, raises no operator alert, and keeps conflicting with any
+   * other operation identity under its key. Its `execution_id` names the PDP,
+   * never a PEP attempt, so no Execution Evidence settles it again.
+   */
+  private settleObserved(row: ClaimRow, outcome: typeof LEASE_EXTENSION_OUTCOME, nowMs: number): void {
+    const horizonMs = this.classes.get(row.action_class)?.horizonMs;
+    if (horizonMs === undefined) throw new Error(`claim for ${row.evaluation_id} names an undeclared class`);
+    this.db
+      .prepare(
+        `UPDATE claims SET state = 'completed', execution_id = ?, outcome = ?, outcome_ref = ?, terminal_at_ms = ?, retain_until_ms = ?
+         WHERE evaluation_id = ? AND state = 'permit_issued' AND execution_id IS NULL`,
+      )
+      .run(`pdp:${row.evaluation_id}`, outcome, row.evaluation_id, nowMs, nowMs + horizonMs, row.evaluation_id);
+    this.log(row, "permit_issued", "completed", outcome, nowMs);
   }
 
   /**
@@ -891,6 +919,27 @@ export class IdempotencyClaimDomain {
     return versionInForceAt(this.options.statement.enforcement_boundaries, nowMs)?.version ?? "";
   }
 
+  /**
+   * Retransmission conditions 1 to 5 against a row holding a stored permit:
+   * an issued permit no attempt has settled, or a lease extension the PDP
+   * settled itself ({@link LEASE_EXTENSION_OUTCOME}), whose permit no
+   * Execution Evidence ever settles. Condition 6 is asked separately.
+   */
+  private retransmittable(row: ClaimRow, input: ClaimInput, nowMs: number): boolean {
+    const holdsPermit =
+      (row.state === "permit_issued" && row.execution_id === null) ||
+      (row.state === "completed" && row.outcome === LEASE_EXTENSION_OUTCOME);
+    return (
+      holdsPermit &&
+      row.cache_key === input.cacheKey &&
+      row.statement_version === this.generationAt(nowMs) &&
+      nowMs < row.valid_until_ms &&
+      row.pep_id === input.requester.pep_id &&
+      row.pep_epoch === input.requester.pep_epoch &&
+      row.decision_json !== null
+    );
+  }
+
   private select(scopeDigest: string, key: string): ClaimRow | undefined {
     return this.db
       .prepare("SELECT * FROM claims WHERE scope_digest = ? AND idempotency_key = ?")
@@ -949,7 +998,7 @@ export class IdempotencyClaimDomain {
   private ticket(evaluationId: string): ClaimTicket {
     return {
       evaluationId,
-      persist: (decision: Decision) => {
+      persist: (decision: Decision, settled?: typeof LEASE_EXTENSION_OUTCOME) => {
         this.tx(() => {
           const changed = this.db
             .prepare(
@@ -959,7 +1008,9 @@ export class IdempotencyClaimDomain {
             .run(JSON.stringify(decision), evaluationId, this.boot).changes;
           if (changed !== 1) throw new Error(`claim for ${evaluationId} was not held at persist`);
           const row = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow;
-          this.log(row, "claimed", "permit_issued", "persisted", this.now().getTime());
+          const nowMs = this.now().getTime();
+          this.log(row, "claimed", "permit_issued", "persisted", nowMs);
+          if (settled === LEASE_EXTENSION_OUTCOME) this.settleObserved(row, settled, nowMs);
         });
       },
       release: () => {
