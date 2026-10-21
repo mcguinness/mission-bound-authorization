@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ef25d408d21f77a9704a61c791fa1e571c8807c2",
-    "content_sha256": "cd6754426346a73fa99ad1a04fcaf981aafa265c77983591748791ce0e70033c"
+    "revision": "9d05168b87b644885b73a404b139cc6e358d5d2d",
+    "content_sha256": "f2e10186a2f7417287e7acf0681b0e089dc96badef12a2d64d6e454eea3f7aa9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -5422,6 +5422,42 @@
      "surface": "derivation"
     }
    ]
+  },
+  {
+   "id": "core.approval-event.receiving-client-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The rendering MUST identify the OAuth client that receives the authority, the Agent, from client identity information the AS trusts, such as its own registration of the client; display text the client supplies does not by itself identify it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering names the receiving client by the registered `client_id` and registered name of the interaction's client, labeled as the AS's registration, and a different client name the request carries (in the Mission Intent or a request parameter) neither appears in nor changes that identification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "receiving client on the approval surface (@spec mission#approval-event, #1503) > names the receiving client by its registered client_id and name, labeled as the AS's registration",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "receiving client on the approval surface (@spec mission#approval-event, #1503) > keeps the registered identification when the request carries a different client-supplied name",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 5 (D620). The authorization-code approval page renders the client from provider.Client.find over the interaction's client_id, the client the decision commits; clients are the deployment's static registrations (no dynamic registration), so the registered name is the AS's. The device verification page names the client in its own section from the same lookup (device-authorization.approval.render-client). Proved by removing the section (both tests fail) and by adding the Intent's goal inside it (the second test fails on its negative clause)."
   },
   {
    "id": "core.approval-event.authority-source-rendering",
