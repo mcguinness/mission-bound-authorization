@@ -1723,7 +1723,20 @@ Step 5 renders the derived Authority Set for consent, and
 Steps 6 and 7 compute the integrity anchors over the approved context
 and create the Mission atomically with the decision.
 
-At a direct approval event the AS MUST, in order:
+At a direct approval event the AS MUST perform steps 1 to 7, in
+order, as one procedure: steps 1 to 5 prepare the approval
+({{approval-preparation}}), and steps 6 and 7, which continue the same
+procedure, commit the Mission ({{approval-commit}}).
+
+The steps of this section define the `direct` approval basis
+(`approval_basis`, {{mission-record}}); a companion profile that
+relocates a direct approval keeps them unchanged ({{extensibility}}).
+
+Refusals follow {{error-mapping}}. A token-endpoint `resource` value
+outside the Authority Set is an invalid `resource` value in the sense
+of {{RFC8707}}.
+
+### Prepare the Approval {#approval-preparation}
 
 1. **Authenticate the Approver**, subject to the approval-authentication
    floor and any client-requested strength
@@ -1782,6 +1795,11 @@ At a direct approval event the AS MUST, in order:
      ({{I-D.draft-mcguinness-mission-capability-binding}}) states
      what the rendering presents about the source binding of a
      catalog-sourced action.
+
+### Commit the Mission {#approval-commit}
+
+The same procedure continues from step 5:
+
 6. **Compute the integrity anchors** ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
@@ -1799,17 +1817,10 @@ At a direct approval event the AS MUST, in order:
    Mission. A deferred or relocated approval flow ({{extensibility}})
    inherits this check at its own creation commit, with the
    completion error each flow defines.
+{: start="6"}
 
 The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
-
-The steps above define the `direct` approval basis (`approval_basis`,
-{{mission-record}}); a companion profile that relocates a direct
-approval keeps them unchanged ({{extensibility}}).
-
-Refusals follow {{error-mapping}}. A token-endpoint `resource` value
-outside the Authority Set is an invalid `resource` value in the sense
-of {{RFC8707}}.
 
 ## Subject Establishment {#subject-establishment}
 
