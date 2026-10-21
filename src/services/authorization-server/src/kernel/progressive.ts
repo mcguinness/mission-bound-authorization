@@ -559,9 +559,11 @@ export async function pinEncounteredResource(
     return { resource, pinned: false, pin_failure: "metadata_invalid" };
   }
   resource.resource_metadata_digest = catalogDigest(bytes);
-  if (!Array.isArray(servers) || servers.length === 0) return { resource, pinned: false, pin_failure: "issuer_unnamed" };
-  if (servers.length > 1) return { resource, pinned: false, pin_failure: "issuer_ambiguous" };
-  const issuer = servers[0] as string;
+  // The same server listed twice is still one named issuer.
+  const named = [...new Set((servers ?? []) as string[])];
+  if (named.length === 0) return { resource, pinned: false, pin_failure: "issuer_unnamed" };
+  if (named.length > 1) return { resource, pinned: false, pin_failure: "issuer_ambiguous" };
+  const issuer = named[0] as string;
   resource.issuer = issuer;
   let authorized: boolean | undefined;
   try {

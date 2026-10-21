@@ -81,6 +81,10 @@ const declarationOf = (operations: string[]): string => JSON.stringify({ operati
  */
 const connections = new Map<string, ResourceConnection>();
 const authorizedIssuers = new Set<string>();
+/** Issuers the mechanism answers `false` for, as opposed to giving no answer. */
+const deniedIssuers = new Set<string>();
+/** Whether each port fails outright. */
+const failing = { connection: false, issuer: false };
 /** The authorization server the encountered resource's metadata names: not this Mission Issuer. */
 const VENDOR_AS = "https://auth.vendor.example";
 /** Protected Resource Metadata for the encountered origin, pretty-printed so its exact bytes differ from a re-serialization. */
@@ -92,8 +96,15 @@ const PROGRESSIVE: ProgressiveDrawdownOptions = {
   ...PUBLISHED.options,
   ceilingOffer: () => CEILING,
   resourceDeclarations: async (origin) => declarations.get(origin),
-  resourceMetadata: async (origin) => connections.get(origin),
-  issuerAuthorized: async (origin, issuer) => authorizedIssuers.has(`${origin} ${issuer}`) || undefined,
+  resourceMetadata: async (origin) => {
+    if (failing.connection) throw new Error("connection failed");
+    return connections.get(origin);
+  },
+  issuerAuthorized: async (origin, issuer) => {
+    if (failing.issuer) throw new Error("issuer authorization failed");
+    const key = `${origin} ${issuer}`;
+    return authorizedIssuers.has(key) ? true : deniedIssuers.has(key) ? false : undefined;
+  },
 };
 
 type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
@@ -382,7 +393,10 @@ describe("the encountered resource's identity, pinned from the Mission Issuer's 
   beforeEach(() => {
     connections.clear();
     authorizedIssuers.clear();
+    deniedIssuers.clear();
     declarations.clear();
+    failing.connection = false;
+    failing.issuer = false;
   });
 
   /** An encounter at ENCOUNTERED from a fresh Mission: the response and, when one opened, the deferral's encounter facts. */
@@ -420,6 +434,12 @@ describe("the encountered resource's identity, pinned from the Mission Issuer's 
     expect(facts?.resource).toEqual({ origin: ORIGIN, resource_metadata_digest: catalogDigest(METADATA), issuer: VENDOR_AS });
     // The exact bytes retrieved, not a re-serialization of them.
     expect(catalogDigest(METADATA)).not.toBe(catalogDigest(JSON.stringify(JSON.parse(METADATA))));
+    // The same server listed twice still names one issuer.
+    const twice = metadataOf({ resource: ORIGIN, authorization_servers: [VENDOR_AS, VENDOR_AS] });
+    connections.set(ORIGIN, { tls_authenticated: true, metadata: twice });
+    const listedTwice = (await encounter()).facts;
+    expect(listedTwice?.pinned).toBe(true);
+    expect(listedTwice?.resource).toEqual({ origin: ORIGIN, resource_metadata_digest: catalogDigest(twice), issuer: VENDOR_AS });
   });
 
   it("an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used", async () => {
@@ -463,11 +483,27 @@ describe("the encountered resource's identity, pinned from the Mission Issuer's 
   it("a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters", async () => {
     connections.set(ORIGIN, { tls_authenticated: true, metadata: METADATA });
     await underPolicy("refuse", async () => {
-      const { body, facts } = await encounter();
-      expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
-      expect(facts).toMatchObject({ pinned: false, pin_failure: "issuer_unverified" });
-      expect(facts?.resource).toEqual({ origin: ORIGIN, resource_metadata_digest: catalogDigest(METADATA), issuer: VENDOR_AS });
+      // The mechanism gives no answer, answers false, or fails: none verifies the issuer.
+      for (const answer of ["none", "false", "failure"] as const) {
+        deniedIssuers.clear();
+        failing.issuer = answer === "failure";
+        if (answer === "false") deniedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
+        const { body, facts } = await encounter();
+        expect(body.error, answer).toBe("authorization_pending");
+        expect(facts, answer).toMatchObject({ pinned: false, pin_failure: "issuer_unverified" });
+        expect(facts?.resource, answer).toEqual({ origin: ORIGIN, resource_metadata_digest: catalogDigest(METADATA), issuer: VENDOR_AS });
+      }
     });
+  });
+
+  it("a connection port that fails establishes nothing: the origin is not pinned", async () => {
+    connections.set(ORIGIN, { tls_authenticated: true, metadata: METADATA });
+    authorizedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
+    failing.connection = true;
+    const { body, facts } = await encounter();
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    expect(facts).toMatchObject({ pinned: false, pin_failure: "origin_unauthenticated" });
+    expect(facts?.resource).toBeUndefined();
   });
 
   it("where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human", async () => {
