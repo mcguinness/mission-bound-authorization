@@ -210,9 +210,10 @@ class ContinuationRefusal extends Error {
  * is the Mission's own OBSERVED record, read after a gate throw (its expiry
  * and any ancestor's termination apply whether or not persisted);
  * `mission_error` rides as the diagnostic where one is defined, naming the
- * Mission's recorded termination reason.
+ * Mission's recorded termination reason. The release fence (#250) refuses a
+ * continuation ID-JAG through this mapping too.
  */
-function refuseContinuationGate(
+export function refuseContinuationGate(
   ctx: KoaContextWithOIDC,
   reason: GateError["reason"],
   observed: { state: string; termination?: { reason: string } } | undefined,
