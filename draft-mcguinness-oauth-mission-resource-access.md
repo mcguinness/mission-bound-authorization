@@ -1465,10 +1465,8 @@ below concerns a `prefix` entry and turns on such a difference:
   after the comparison, changes which characters count as separators
   and can move the boundary ({{resource-matching}}).
 
-A deployment MAY agree out of band on the canonicalization profile its
-authorization server and resource servers apply; this document defines
-one rule ({{resource-matching}}), so no profile identifier is required
-for interoperation.
+This document defines one rule ({{resource-matching}}), so
+interoperation requires no canonicalization profile identifier.
 
 ## Action Family Growth {#action-family-growth}
 
