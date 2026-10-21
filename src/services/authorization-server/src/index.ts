@@ -1449,6 +1449,7 @@ export async function buildAuthorizationServer(opts: {
               approverApprovesFor,
               approverRoleSubs,
               writeActions: WRITE_ACTIONS,
+              catalog: opts.authoritySources ?? AUTHORITY_SOURCES,
             }),
           },
         }

@@ -1625,7 +1625,7 @@ export class MissionKernel {
     // failure creates no Mission. A repeated event returns its Mission below.
     const governance =
       this.directRule && !this.findByApprovalEvent(input.approvalEventId)
-        ? this.prepareDirectRecord(record, input, ceiling?.authority_ceiling)
+        ? this.prepareDirectRecord(record, input, resolvedSource.rootId, ceiling?.authority_ceiling)
         : undefined;
     try {
       if (governance) {
@@ -1667,7 +1667,7 @@ export class MissionKernel {
    * `human` assertion; pass the commit gate; sign. A denial refuses the
    * approval `access_denied`.
    */
-  private prepareDirectRecord(record: MissionRecord, input: ApproveInput, ceiling: AuthorityEntry[] | undefined) {
+  private prepareDirectRecord(record: MissionRecord, input: ApproveInput, sourceRoot: string, ceiling: AuthorityEntry[] | undefined) {
     const rule = this.directRule as NonNullable<MissionKernel["directRule"]>;
     if (!input.authentication) {
       throw new Error("direct approval recording needs the authentication the approval surface verified");
@@ -1677,6 +1677,7 @@ export class MissionKernel {
       intent_hash: record.intent_hash,
       approver: input.approver,
       subject: record.subject,
+      source_root: sourceRoot,
       authority: record.authority_set,
       ...(ceiling?.length ? { ceiling } : {}),
       authentication: {

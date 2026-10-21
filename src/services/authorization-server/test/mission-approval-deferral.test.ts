@@ -207,6 +207,7 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
       approverApprovesFor: new Map([["dana", new Set(["svc-reconciler"])]]),
       approverRoleSubs: new Set(["dana"]),
       writeActions: WRITE_ACTIONS,
+      catalog: catalog(),
     });
     const { kernel, store } = setup(undefined, {}, { directApprovalRecording: { rule } });
     const code = open(store);

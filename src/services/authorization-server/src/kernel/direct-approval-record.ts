@@ -6,9 +6,10 @@
  *
  * The record's `approval_policy` is the direct approval rule: the
  * approval-authentication floor and the approver eligibility the approval
- * surface enforces, built from the same configuration objects the surface is
- * given (`directApprovalRuleFrom`), so the record names the rule that
- * actually admitted the human. The issuer evaluates that rule again at the
+ * surface enforces, and the authority-source activators the kernel enforces,
+ * built from the same configuration objects each is given
+ * (`directApprovalRuleFrom`), so the record names the rule that actually
+ * admitted the human. The issuer evaluates that rule again at the
  * commit, over inputs it retains, and refuses the Mission when it denies. One
  * `human` assertion, the Approver's, carries the authentication the approval
  * surface verified. The rule snapshot, the inputs and the signed record commit
@@ -47,6 +48,8 @@ export interface DirectApprovalRule {
   approvers: Record<string, { approves_for: string[]; write: boolean }>;
   /** Actions whose approval needs an Approver distinct from the Subject, holding `write`. */
   write_actions: string[];
+  /** Each authority source's Approvers: who may activate it (the catalog's `activators`). */
+  activators: Record<string, string[]>;
 }
 
 /** A registered rule version: its identifier, version and exact bytes. */
@@ -63,6 +66,8 @@ export interface DirectApprovalInputs {
   intent_hash: string;
   approver: { iss: string; sub: string };
   subject: { iss: string; sub: string };
+  /** The authority source the approval resolved: its catalog entry id. */
+  source_root: string;
   /** The committed Authority Set. */
   authority: AuthorityEntry[];
   /** A Progressive ceiling consented at this approval, classified with the set. */
@@ -97,6 +102,8 @@ export function directApprovalRuleFrom(
     approverApprovesFor: ReadonlyMap<string, ReadonlySet<string>>;
     approverRoleSubs: ReadonlySet<string>;
     writeActions: ReadonlySet<string>;
+    /** The authority-source catalog the kernel enforces. */
+    catalog: { entries: ReadonlyArray<{ id: string; activators: readonly string[] }> };
   },
   id: string = DIRECT_APPROVAL_RULE_ID,
 ): RegisteredDirectApprovalRule {
@@ -112,6 +119,7 @@ export function directApprovalRuleFrom(
     subjects: [...config.knownSubjects].sort(),
     approvers,
     write_actions: [...config.writeActions].sort(),
+    activators: Object.fromEntries(config.catalog.entries.map((e) => [e.id, [...e.activators].sort()])),
   };
   const content = canonicalize(rule as unknown as JsonValue);
   const version = createHash("sha256").update(content, "utf8").digest("base64url").slice(0, 16);
@@ -134,9 +142,12 @@ export function parseDirectApprovalRule(content: string | Uint8Array): DirectApp
   } catch {
     return fail("not JSON");
   }
-  if (!isObject(raw) || !exactly(raw, ["floor", "subjects", "approvers", "write_actions"])) fail("members are not floor, subjects, approvers, write_actions");
+  if (!isObject(raw) || !exactly(raw, ["floor", "subjects", "approvers", "write_actions", "activators"])) {
+    fail("members are not floor, subjects, approvers, write_actions, activators");
+  }
   const r = raw as Record<string, unknown>;
   if (!isStringArray(r.subjects) || !isStringArray(r.write_actions)) fail("subjects and write_actions are string arrays");
+  if (!isObject(r.activators) || !Object.values(r.activators).every(isStringArray)) fail("activators maps each source to a string array");
   if (!isObject(r.approvers)) fail("approvers is an object");
   for (const [sub, a] of Object.entries(r.approvers as Record<string, unknown>)) {
     if (!isObject(a) || !exactly(a, ["approves_for", "write"]) || !isStringArray(a.approves_for) || typeof a.write !== "boolean") {
@@ -167,7 +178,8 @@ export function parseDirectApprovalRule(content: string | Uint8Array): DirectApp
 }
 
 /**
- * Evaluate the rule over the inputs at `evaluatedAt`: the Subject is one the
+ * Evaluate the rule over the inputs at `evaluatedAt`: the Approver may
+ * activate the authority source the approval resolved; the Subject is one the
  * rule names; an approval for another principal needs the Approver's
  * approve-for; write-bearing authority needs a distinct Approver holding
  * `write`; and the approval-authentication floor holds over the set and any
@@ -180,6 +192,10 @@ export function evaluateDirectApprovalRule(
 ): DirectApprovalDecision {
   const approver = inputs.approver.sub;
   const subject = inputs.subject.sub;
+  const activators = Object.hasOwn(rule.activators, inputs.source_root) ? rule.activators[inputs.source_root] : undefined;
+  if (!activators?.includes(approver)) {
+    return { decision: "deny", reason: `${approver} may not activate the authority source ${inputs.source_root}` };
+  }
   if (!rule.subjects.includes(subject)) return { decision: "deny", reason: `${subject} is not a principal this rule approves for` };
   const grants = Object.hasOwn(rule.approvers, approver) ? rule.approvers[approver] : undefined;
   if (subject !== approver && !grants?.approves_for.includes(subject)) {

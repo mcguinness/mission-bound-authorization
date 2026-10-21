@@ -44,17 +44,23 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0].resource;
 const BOB = { iss: ISS, sub: "bob" };
 const ALICE = { iss: ISS, sub: "alice" };
 
-/** The rule, built the way the assembly builds it from the approval surface's configuration. */
-const RULE = directApprovalRuleFrom({
-  floor: APPROVAL_FLOOR,
-  knownSubjects: new Set(["alice", "bob", "carol"]),
-  approverApprovesFor: new Map([
-    ["bob", new Set(["alice"])],
-    ["carol", new Set(["alice"])],
-  ]),
-  approverRoleSubs: new Set(["bob"]),
-  writeActions: WRITE_ACTIONS,
-});
+const CATALOG = testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob", "carol"]);
+const SOURCE_ROOT = "test-user-delegated";
+
+/** The rule, built the way the assembly builds it from the approval surface's configuration and the kernel's catalog. */
+const ruleFrom = (catalog = CATALOG) =>
+  directApprovalRuleFrom({
+    floor: APPROVAL_FLOOR,
+    knownSubjects: new Set(["alice", "bob", "carol"]),
+    approverApprovesFor: new Map([
+      ["bob", new Set(["alice"])],
+      ["carol", new Set(["alice"])],
+    ]),
+    approverRoleSubs: new Set(["bob"]),
+    writeActions: WRITE_ACTIONS,
+    catalog,
+  });
+const RULE = ruleFrom();
 const RULE_REF = directApprovalRuleRef(ISS, RULE);
 
 /** An irreversible payment: it invokes the floor and needs a distinct Approver holding write. */
@@ -78,15 +84,15 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-const makeKernel = (recording = true) =>
+const makeKernel = (recording = true, rule = RULE) =>
   new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
-    authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob", "carol"]),
+    authoritySourceCatalog: CATALOG,
     statusKey: key,
     statusKid: "as-status",
     now,
-    ...(recording ? { directApprovalRecording: { rule: RULE } } : {}),
+    ...(recording ? { directApprovalRecording: { rule } } : {}),
   });
 
 const approve = (kernel: MissionKernel, over: Partial<Parameters<MissionKernel["approve"]>[0]> = {}): MissionRecord =>
@@ -176,6 +182,7 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
     expect(rule.floor).toEqual(APPROVAL_FLOOR);
     expect(rule.approvers).toEqual({ bob: { approves_for: ["alice"], write: true }, carol: { approves_for: ["alice"], write: false } });
     expect(rule.write_actions).toEqual([...WRITE_ACTIONS].sort());
+    expect(rule.activators).toEqual({ [SOURCE_ROOT]: ["bob", "carol"] });
     expect(kernel.directApprovalRecords.inputs(mission.id)).toEqual({
       approval_event_id: mission.approval_event_id,
       inputs: {
@@ -183,6 +190,7 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
         intent_hash: mission.intent_hash,
         approver: BOB,
         subject: ALICE,
+        source_root: SOURCE_ROOT,
         authority: mission.authority_set,
         authentication: AUTH,
       },
@@ -215,6 +223,10 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
     denies(() => approve(kernel, { authentication: { ...AUTH, auth_time: Math.floor(T0 / 1000) - 301 } }), /older than/);
     denies(() => approve(kernel, { authentication: { ...AUTH, interactive: false } }), /browser approval surface/);
     nothingCommitted(kernel);
+    // The rule's activators: a rule naming only Bob refuses Carol, whom the kernel's catalog admits.
+    const bobOnly = makeKernel(true, ruleFrom(testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"])));
+    denies(() => approve(bobOnly, { approver: { iss: ISS, sub: "carol" }, proposedAuthority: READ_ONLY }), /carol may not activate the authority source test-user-delegated/);
+    nothingCommitted(bobOnly);
     // Each is the rule's own refusal: the same approvals commit with recording off.
     const off = makeKernel(false);
     expect(outcome(() => approve(off, { approver: { iss: ISS, sub: "carol" } }))).toBe("approved");
@@ -272,7 +284,7 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
 
   it("retains its evidence only inside the Mission's creation transaction", () => {
     const kernel = makeKernel();
-    const inputs = { approval_event_id: "apev-x", intent_hash: "h", approver: BOB, subject: ALICE, authority: EXECUTE, authentication: AUTH };
+    const inputs = { approval_event_id: "apev-x", intent_hash: "h", approver: BOB, subject: ALICE, source_root: SOURCE_ROOT, authority: EXECUTE, authentication: AUTH };
     expect(() => kernel.directApprovalRecords.retainInCallerTx("mis_x", ISS, RULE_REF, RULE, inputs)).toThrow(/creation transaction/);
   });
 });
@@ -284,11 +296,25 @@ describe("the direct approval rule (@spec approval-governance#approval-policy, a
     intent_hash: "h",
     approver: BOB,
     subject: ALICE,
+    source_root: SOURCE_ROOT,
     authority: EXECUTE,
     authentication: AUTH,
     ...over,
   });
   const at = iso(T0);
+
+  it("denies an Approver who may not activate the authority source the approval resolved", () => {
+    expect(evaluateDirectApprovalRule(rule, inputs({ source_root: "another-source" }), at)).toEqual({
+      decision: "deny",
+      reason: "bob may not activate the authority source another-source",
+    });
+    const bobOnly = parseDirectApprovalRule(ruleFrom(testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"])).content);
+    const read = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
+    expect(evaluateDirectApprovalRule(bobOnly, inputs({ approver: { iss: ISS, sub: "carol" }, authority: read }), at)).toEqual({
+      decision: "deny",
+      reason: `carol may not activate the authority source ${SOURCE_ROOT}`,
+    });
+  });
 
   it("admits the Approver for a Subject it names, and a self-approval of read-only authority", () => {
     expect(evaluateDirectApprovalRule(rule, inputs(), at)).toEqual({ decision: "approve" });
@@ -301,8 +327,8 @@ describe("the direct approval rule (@spec approval-governance#approval-policy, a
   it("denies a Subject the rule does not name, and write-bearing authority in a consented ceiling", () => {
     const read = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
     const DAVE = { iss: ISS, sub: "dave" };
-    // Even a read-only self-approval: Dave is no principal this rule approves for.
-    expect(evaluateDirectApprovalRule(rule, inputs({ subject: DAVE, approver: DAVE, authority: read }), at)).toEqual({
+    // Dave is no principal this rule approves for, whoever approves.
+    expect(evaluateDirectApprovalRule(rule, inputs({ subject: DAVE, authority: read }), at)).toEqual({
       decision: "deny",
       reason: "dave is not a principal this rule approves for",
     });
@@ -320,6 +346,8 @@ describe("the direct approval rule (@spec approval-governance#approval-policy, a
     expect(() => parseDirectApprovalRule(extra)).toThrow(/members are not/);
     const badApprover = JSON.stringify({ ...JSON.parse(RULE.content), approvers: { bob: { approves_for: ["alice"] } } });
     expect(() => parseDirectApprovalRule(badApprover)).toThrow(/approver bob/);
+    const badActivators = JSON.stringify({ ...JSON.parse(RULE.content), activators: { [SOURCE_ROOT]: "bob" } });
+    expect(() => parseDirectApprovalRule(badActivators)).toThrow(/activators maps each source/);
     expect(
       () =>
         new MissionKernel({
@@ -477,6 +505,13 @@ describe("re-checking a direct record (@spec approval-governance#re-check)", () 
       .prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.interactive', json('false'))")
       .run();
     expect(recheck(headless.kernel, headless.mission.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/^the replay does not approve/) });
+    const source = committed();
+    source.kernel.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.source_root', 'another-source')").run();
+    expect(recheck(source.kernel, source.mission.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "the replay does not approve: bob may not activate the authority source another-source",
+    });
     const late = committed();
     resign(late.kernel, late.mission.id, (r) => {
       r.evaluation.evaluated_at = iso((AUTH.auth_time + 301) * 1000);
