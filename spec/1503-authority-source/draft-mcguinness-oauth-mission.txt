@@ -4597,6 +4597,15 @@ Table of Contents
    servers.  The sha-256: prefix is the algorithm-agility mechanism
    (Section 15.3).
 
+   The anchors this section lists, and the Authority Set entry
+   commitment below, bind the AS issuer.  The digest of an
+   authority_source.policy reference (Section 14.3) is not one of them:
+   it uses the issuer the policy's format defines, for a governed
+   organizational policy its governing authority.  That binding keeps
+   the policy's commitment from being transplanted across policy
+   authorities, and the same policy commits identically at every AS that
+   records it.
+
    intent_hash and authority_hash are independent commitments to
    independent objects.  That the approved task bounds the derived
    authority is a governance assertion, made by derivation policy and

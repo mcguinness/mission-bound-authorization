@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T20:02:35Z
-Source repository commit: 7d799a9a0bc0316ad138a521d3c94f98ed92cc03
+Generated: 2026-10-21T20:34:06Z
+Source repository commit: 20961b50495011d1434d57c28c31316b6f702835
 Member count: 9
 
 Reading order:
@@ -12059,6 +12059,15 @@ Table of Contents
    servers.  The sha-256: prefix is the algorithm-agility mechanism
    (Section 15.3).
 
+   The anchors this section lists, and the Authority Set entry
+   commitment below, bind the AS issuer.  The digest of an
+   authority_source.policy reference (Section 14.3) is not one of them:
+   it uses the issuer the policy's format defines, for a governed
+   organizational policy its governing authority.  That binding keeps
+   the policy's commitment from being transplanted across policy
+   authorities, and the same policy commits identically at every AS that
+   records it.
+
    intent_hash and authority_hash are independent commitments to
    independent objects.  That the approved task bounds the derived
    authority is a governance assertion, made by derivation policy and
@@ -20904,6 +20913,12 @@ Table of Contents
 
                 Table 6: Idempotency claim state resolution
 
+   A duration-lease renewal's claim, which the PDP settles completed
+   when it commits the lease extension, returns the renewal's permit to
+   a retransmission while that permit is valid, instead of
+   duplicate_suppressed (Duration-Lease Renewal in
+   [I-D.draft-mcguinness-mission-metering]).
+
    A different operation identity under the same key is always a
    conflict, never a new execution: an idempotency key identifies one
    intended execution of one normalized request, the same discipline
@@ -22553,6 +22568,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Idempotency: a duration-lease renewal's completed claim returns
+      the renewal's permit to a retransmission while that permit is
+      valid (#1464).
 
    *  Resource Contract: an authority entry can reference, at approval,
       an immutable and versioned resource contract that assembles the
@@ -28136,6 +28155,14 @@ Table of Contents
    |request would broaden|           |                                 |
    |it                   |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Duration-lease       |PDP denial |out_of_authority                 |
+   |renewal names no     |           |                                 |
+   |lease the PDP issued |           |                                 |
+   |or an ended activity,|           |                                 |
+   |or fails continuity  |           |                                 |
+   |with the evaluation  |           |                                 |
+   |it renews            |           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Resource policy      |Obligation |step-up obligation               |
    |requires a stronger  |on permit  |([AUTHZEN-OBL])                  |
    |authentication       |           |                                 |
@@ -28228,7 +28255,13 @@ Table of Contents
    |operation identity   |           |                                 |
    |match a prior        |           |                                 |
    |unresolved or        |           |                                 |
-   |completed claim      |           |                                 |
+   |completed claim,     |           |                                 |
+   |except a             |           |                                 |
+   |retransmitted settled|           |                                 |
+   |duration-lease       |           |                                 |
+   |renewal, which       |           |                                 |
+   |receives its permit  |           |                                 |
+   |while valid          |           |                                 |
    +---------------------+-----------+---------------------------------+
    |Idempotency key      |PDP denial |idempotency_conflict             |
    |reused with a        |           |                                 |
@@ -29150,6 +29183,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure-condition coverage: a duration-lease renewal that names no
+      lease the PDP issued or an ended activity, or fails continuity
+      with the evaluation it renews, is denied out_of_authority; a
+      retransmission of a settled renewal receives that renewal's permit
+      while it is valid, not duplicate_suppressed (#1464).
 
    *  Runtime Denial Classification and Failure-condition coverage: a
       resource contract reference missing where required, or not
