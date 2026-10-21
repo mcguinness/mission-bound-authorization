@@ -3851,7 +3851,8 @@ standing-consent basis. Under it, a template or policy activates
 Mission instances against an accountable human's earlier approval,
 with no fresh human approval per instance; each instance is still
 created at its own approval event ({{approval-event}}). The following
-`type` values are such bases:
+`approval_basis.type` values ({{record-principal-members}}) are such
+bases:
 
 - `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
   bounded instances of a recurring task;
@@ -3895,8 +3896,8 @@ Mission.
   that exact version; it MUST NOT accept the value as the activating
   request's own uncorroborated assertion.
 
-The `adjudication` member ({{mission-record}}), where present,
-follows the basis. Where a companion profile defining a
+The `adjudication` member ({{record-principal-members}}), where
+present, follows the basis. Where a companion profile defining a
 standing-consent `type` populates `adjudication`, `kind` MUST be
 `policy`, naming the identity and version of the policy or workflow
 that adjudicated the instance. A companion profile MUST NOT flatten a
