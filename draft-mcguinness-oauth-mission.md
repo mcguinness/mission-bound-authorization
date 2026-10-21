@@ -737,8 +737,8 @@ Intent Submission Evidence:
 
 Authority Proposal:
 : The `authorization_details` array a client submits alongside a
-  Mission Intent, a proposal for derivation and not authority
-  ({{authority-proposal}}).
+  Mission Intent, a proposal for Authority Set derivation and not
+  authority ({{authority-proposal}}).
 
 Authority Set:
 : The set of `authorization_details` entries the AS derives from a
@@ -754,8 +754,8 @@ Derivation:
 : One issuance operation the issuer AS performs for a single request
   ({{issuance-gating}}): the initial authorization-code exchange, a
   refresh, a Token Exchange, or a cross-domain grant issuance.
-  Distinct from Authority Set derivation, which this document also
-  calls derivation.
+  Distinct from Authority Set derivation, which section titles and
+  the phrase "derivation policy" also call derivation.
 
 Mission:
 : The durable authorization object that binds a disclosed task (its
@@ -942,7 +942,7 @@ The Mission Intent members are:
 
   `purpose` is an opaque lookup key: a configured mapping can key on it
   to select candidate entries, which the Intent, policy, and the
-  approval event bound like any derivation
+  approval event bound as in any Authority Set derivation
   ({{authorization-derivation}}); the key alone grants no authority. In
   any other decision, `purpose` MAY contribute only to a refusal or to
   stricter treatment: its value, its absence, or a substituted value
@@ -1059,7 +1059,7 @@ Submission is governed by the following rules:
 
   - this section's envelope and proposal rules;
   - the processing order ({{submission-processing}});
-  - derivation ({{authorization-derivation}});
+  - Authority Set derivation ({{authorization-derivation}});
   - the approval-event rules for the Mission's approval basis
     ({{approval-event}}, with a direct approval relocated only as
     {{extensibility}} permits); and
@@ -1141,11 +1141,11 @@ validate against that schema, and the AS MUST refuse a request
 carrying an entry that fails it with the
 `invalid_authorization_details` error code.
 
-Policy narrowing is distinct. During derivation the AS MAY narrow or
-omit a syntactically valid entry that policy cannot accept
-({{authorization-derivation}}). The granted `authorization_details`
-in the token response reflects every narrowing and omission
-({{mission-bound-tokens}}).
+Policy narrowing is distinct. During Authority Set derivation the AS
+MAY narrow or omit a syntactically valid entry that policy cannot
+accept ({{authorization-derivation}}). The granted
+`authorization_details` in the token response reflects every
+narrowing and omission ({{mission-bound-tokens}}).
 
 When a proposal is present, the AS MUST derive each Authority Set
 entry as a subset ({{subset}}) of some proposed entry of the *same
@@ -1196,11 +1196,11 @@ the request: Issuance Gating ({{issuance-gating}}), the subset rule
 Mission, client and sender.
 
 The following is an example of an authority proposal submitted alongside
-the example Intent of {{mission-intent}}. Derivation narrows
-`invoices.*` to `invoices.read`, keeps the proposed Q3 issuance window
-and write ceiling, which the Intent's task bounds support, and carries
-the proposed `delegation` policy through unchanged (the example
-Authority Set of {{authorization-derivation}}):
+the example Intent of {{mission-intent}}. Authority Set derivation
+narrows `invoices.*` to `invoices.read`, keeps the proposed Q3
+issuance window and write ceiling, which the Intent's task bounds
+support, and carries the proposed `delegation` policy through
+unchanged (the example Authority Set of {{authorization-derivation}}):
 
 ~~~ json
 [
@@ -1330,8 +1330,8 @@ entries of an AS-supported type ({{other-types}}).
 
 ## Derivation Modes {#derivation-modes}
 
-Derivation is mechanical: one procedure whose candidate entries depend
-on whether an authority proposal was submitted:
+Authority Set derivation is mechanical: one procedure whose candidate
+entries depend on whether an authority proposal was submitted:
 
 - **Narrowing mode** (preferred where the client can author
   `authorization_details`): the client submitted an authority
@@ -1362,8 +1362,9 @@ on whether an authority proposal was submitted:
   Mission Template profile
   ({{I-D.draft-mcguinness-oauth-mission-template}}), not this mode.
 
-Derivation can run provisionally during submission processing, where
-the inputs it needs are available ({{submission-processing}}). The
+Authority Set derivation can run provisionally during submission
+processing, where the inputs it needs are available
+({{submission-processing}}). The
 candidate Authority Set is complete before the approval rendering
 ({{direct-approval-steps}}), and a change that
 {{approval-context-changes}} covers is recomputed and approved over the
@@ -1389,8 +1390,9 @@ The Mission records the policy version in force as `policy_version`
 ({{mission-record}}), an opaque audit correlator; the policy itself
 is not conveyed.
 
-Generative derivation is not one of this document's modes. As a
-local-policy extension, a model's output can be a recorded input to
+Generative Authority Set derivation is not one of this document's
+modes. As a local-policy extension, a model's output can be a
+recorded input to
 the AS's deterministic derivation policy, together with the model's
 identifier and version. That input can cause refusal or further
 narrow the candidate authority the selected mode and policy otherwise
@@ -1403,8 +1405,8 @@ deployment policy, either omitted from the Authority Set or refused with
 the `access_denied` error code ({{error-mapping}}).
 
 When an omission or a narrowing leaves the Authority Set short of what
-was proposed ({{authority-proposal}}), derivation is partial. The
-granted `authorization_details` in the token response
+was proposed ({{authority-proposal}}), Authority Set derivation is
+partial. The granted `authorization_details` in the token response
 ({{mission-bound-tokens}}) is the authoritative statement of what was
 granted; a client compares it against its proposal, which
 `proposal_hash` commits as submitted ({{integrity-anchors}}).
@@ -1423,9 +1425,9 @@ The `goal` and `task_bounds` members are human-readable disclosure and
 audit context. The AS MUST derive the same Authority Set, under the same
 policy, for two submissions that differ only in `goal`, `goal_lang`, or
 `task_bounds`, and MUST NOT gate issuance on those members, whether in
-derivation, in an adjudicating policy, or through a model input to
-either; translating a user's words into structure is the shaper's job,
-before admission and outside the trust boundary
+Authority Set derivation, in an adjudicating policy, or through a
+model input to either; translating a user's words into structure is
+the shaper's job, before admission and outside the trust boundary
 ({{I-D.draft-mcguinness-mission-shaping}}).
 
 A client-proposed constraint on an individual Authority Set entry enters
@@ -1448,7 +1450,8 @@ words, not as a machine enforcement mechanism.
 
 ## Derivation Policy and Open-Ended Tasks {#derivation-policy-tasks}
 
-Derivation is governed by local policy and is not a portable algorithm:
+Authority Set derivation is governed by local policy and is not a
+portable algorithm:
 different authorization servers can derive different Authority Sets from
 the same Mission Intent, as they can grant different authority for the
 same {{RFC9396}} request or the same scope. Interoperability begins at
@@ -1458,8 +1461,9 @@ type defines ({{other-types}}), and at its integrity anchors
 
 A consumer enforces the derived Authority Set, not the Intent. Audit
 establishes what was derived, against `intent_hash` and
-`policy_version`, not whether the derivation was the right reading of
-the task. A deployment whose partners reason about its derivations can
+`policy_version`, not whether the Authority Set derivation was the
+right reading of the task. A deployment whose partners reason about
+its Authority Set derivations can
 publish a derivation policy identifier and test fixtures that pin
 Intent-to-Authority-Set outcomes.
 
@@ -1739,10 +1743,11 @@ At a direct approval event the AS MUST, in order:
    `intent.expires_at`, so the Approver sees the narrowing) as
    context:
    - The consent object is the **derived Authority Set**, what the
-     agent may do, not the `goal` or Mission Intent: derivation is
-     local policy, and nothing commits that the derived authority
-     reflects the goal the Approver read. An approval surface that
-     renders only the `goal` or Mission Intent does not conform.
+     agent may do, not the `goal` or Mission Intent: Authority Set
+     derivation is local policy, and nothing commits that the derived
+     authority reflects the goal the Approver read. An approval
+     surface that renders only the `goal` or Mission Intent does not
+     conform.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
    - The rendering MUST identify the authority source and, for
@@ -4616,8 +4621,9 @@ parameter {{RFC8414}}:
 : OPTIONAL boolean. When `true`, the AS supports the core Mission
   Issuer surfaces of this document ({{conformance}}): the
   `mission_intent` authorization request parameter through PAR
-  ({{mission-intent}}), derivation of `authorization_details` entries
-  of its supported types ({{authorization-derivation}},
+  ({{mission-intent}}), Authority Set derivation yielding
+  `authorization_details` entries of its supported types
+  ({{authorization-derivation}},
   {{other-types}}), Mission-bound access tokens
   ({{mission-bound-tokens}}), and the `mission` JWT claim
   ({{mission-claim}}). It asserts Mission Issuer support only; it
@@ -4731,8 +4737,9 @@ issuance surfaces:
 - submission of a Mission Intent, in the Submission envelope, via
   PAR ({{submission-via-par}}), with the Intent Submission Evidence
   dispatch and refusal rules ({{intent-submission-evidence}});
-- derivation of `authorization_details` entries of its supported
-  types ({{authorization-derivation}}, {{other-types}});
+- Authority Set derivation yielding `authorization_details` entries
+  of its supported types ({{authorization-derivation}},
+  {{other-types}});
 - the approval event with its integrity anchors and its recorded
   `approval_basis` and `authority_source` ({{approval-event}},
   {{mission-record}});
@@ -4982,10 +4989,10 @@ resources the approved task needs, and per-task Missions
 Against the untrusted-content leg, authority is fixed at the approval
 event, so injected text cannot expand an approved Mission. `purpose`
 supplies candidate authority only as a lookup key of the pre-approval
-derivation whose result the Approver reads and consents to, and
-otherwise can only refuse or tighten; `goal` and `task_bounds` bound
-it only through that disclosure ({{mission-intent}},
-{{authorization-derivation}}).
+Authority Set derivation whose result the Approver reads and
+consents to, and otherwise can only refuse or tighten; `goal` and
+`task_bounds` bound it only through that disclosure
+({{mission-intent}}, {{authorization-derivation}}).
 
 This document does not constrain the external-communication leg. It
 models authority over resources and actions, not how an agent uses
@@ -5032,10 +5039,10 @@ dependency on it.
 
 ### Issuance Scope, Not Runtime Enforcement {#runtime-boundary}
 
-This document governs the issuance and derivation of authority: it
-bounds what authority a Mission yields, binds it to the Approver's
-consent, and gates derivation on Mission state. It does not evaluate
-individual runtime actions. In particular, it does not:
+This document governs Authority Set derivation and the issuance of
+authority: it bounds what authority a Mission yields, binds it to the
+Approver's consent, and gates derivation on Mission state. It does not
+evaluate individual runtime actions. In particular, it does not:
 
 - evaluate a request's parameters against the Mission at the point of
   use;
@@ -5200,10 +5207,11 @@ no wire change.
 ### Compromised or Over-Broad Derivation {#compromised-or-over-broad-derivation}
 
 The AS is trusted to derive authority no broader than the Mission
-Intent. Both derivation modes ({{authorization-derivation}}), a
-proposal narrowed to policy and a configured mapping, are mechanical
-rather than free-form inference. The recorded `policy_version` names
-the policy a derivation ran under, so the derivation can be audited.
+Intent. Both Authority Set derivation modes
+({{authorization-derivation}}), a proposal narrowed to policy and a
+configured mapping, are mechanical rather than free-form inference.
+The recorded `policy_version` makes each Authority Set derivation
+auditable by naming the policy it ran under.
 
 ### Authority Hash Is Not a Mission Identifier {#authority-hash-is-not-a-mission-identifier}
 
@@ -6185,12 +6193,12 @@ Future work includes:
 - the normative carriage of Mission context in Transaction Tokens
   ({{I-D.draft-ietf-oauth-transaction-tokens}}), shown only
   illustratively in the companion's end-to-end example; and
-- an optional derivation profile for a vertical that wants
-  cross-vendor agreement on what a task authorizes: a registry of
-  standard task types mapped to authority templates, so that two
+- an optional Authority Set derivation profile for a vertical that
+  wants cross-vendor agreement on what a task authorizes: a registry
+  of standard task types mapped to authority templates, so that two
   vendors in that profile derive comparable Authority Sets. This
-  document does not standardize the derivation algorithm
-  ({{authorization-derivation}}).
+  document does not standardize the Authority Set derivation
+  algorithm ({{authorization-derivation}}).
 
 This document defines no mechanism that pins a Mission to an
 approved agent deployment class or version, and reserves no Intent
@@ -6403,12 +6411,13 @@ The output is the Authority Set committed by `authority_hash`, and
 transmitted; its identifier and published Intent-to-Authority-Set
 fixtures let a partner review outcomes.
 
-Reproducing a derivation requires the same inputs and the retained
-policy and catalog versions, not just the identifier of a mutable
-configuration. Replay uses a model's retained output and never reruns
-the model. Derivation is mechanical: a model may suggest an Intent or
-a proposal, or contribute a recorded input that refuses or narrows,
-but does not make the approval-time narrowing decision.
+Reproducing an Authority Set derivation requires the same inputs and
+the retained policy and catalog versions, not just the identifier of
+a mutable configuration. Replay uses a model's retained output and
+never reruns the model. Authority Set derivation is mechanical: a
+model may suggest an Intent or a proposal, or contribute a recorded
+input that refuses or narrows, but does not make the approval-time
+narrowing decision.
 
 ## Properties a Derivation Policy Holds
 
@@ -6435,8 +6444,8 @@ The five properties below restate, for a policy author, what
   entry that fails its schema, and an entry carrying a constraint the
   engine cannot compare, whether registered or deployment-defined,
   are refused ({{authority-proposal}}, {{subset}}, {{error-mapping}}).
-  Derivation does not repair them by omitting the entry or dropping
-  the constraint. An entry the
+  Authority Set derivation does not repair them by omitting the entry
+  or dropping the constraint. An entry the
   engine compares but policy cannot accept differs: it is narrowed or
   omitted, and the granted echo reflects that
   ({{authority-proposal}}).
@@ -6502,8 +6511,8 @@ case that relaxes the type's relation:
 
 - A single mixed read and write proposal carrying the amount cap is
   refused at intake: the read supplies no amount for the cap to
-  compare against, and derivation does not drop the cap from the
-  read fragment.
+  compare against, and Authority Set derivation does not drop the cap
+  from the read fragment.
 - A write proposal naming a different currency cannot produce the USD
   intersection shown.
 - A proposal carrying a Common Constraint this deployment does not
@@ -6523,16 +6532,16 @@ attempts to introduce delegation. They check each subset against
 both the proposal and the ceiling.
 
 A further check runs the shipped configuration through intake,
-derivation, and a real decision path, since a configuration that
-loads does not thereby authorize its intended workload. Applying the
-same entry checks at configuration load and at client intake keeps
-those two surfaces from disagreeing.
+Authority Set derivation, and a real decision path, since a
+configuration that loads does not thereby authorize its intended
+workload. Applying the same entry checks at configuration load and at
+client intake keeps those two surfaces from disagreeing.
 
 ## Ownership and Operational Signals
 
 | Artifact | Owner | Responsibility |
 |---|---|---|
-| Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time derivation |
+| Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time Authority Set derivation |
 | Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
 | Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
 
