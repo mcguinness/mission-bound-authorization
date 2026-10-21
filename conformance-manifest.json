@@ -36925,9 +36925,10 @@
     "local": "The reference AS has no resource self-declaration intake (AAuth Rich Resource Requests, the discovery companion)."
    },
    "level": "endpoint",
-   "coverage": "todo",
+   "coverage": "blocked",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row."
+   "blocked_by": "#1469",
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row. D593: blocked on #1469, the reference's discovery encounter intake (roadmap)."
   },
   {
    "id": "progressive.ceiling-test.retained-outside-authority-needs-human",
@@ -37400,7 +37401,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
   },
   {
    "id": "progressive.in-ceiling.policy-mismatch-falls-back",
@@ -37867,12 +37868,12 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a deployment of progressive authorization bounds successor lifetimes, constrains its ceilings, and runs runtime enforcement",
-    "local": "Deployment guidance. No reference deployment selects Progressive authorization (the AS option is default off and the demo stack does not set it), so this SHOULD binds no reference deployment; recorded as a departure, not a failure (CONTRIBUTING, Conformance Traceability Convention)."
+    "local": "Deployment guidance, not applicable to the current reference deployments: none selects Progressive authorization (the AS option is default off and the demo stack does not set it)."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row. D593."
   },
   {
    "id": "progressive.sec.drawdown-policy-reviewed-versioned",
@@ -37890,19 +37891,12 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
-    "local": "Versioning is enforced: a drawdown policy edited under an unchanged version no longer reproduces the committed digest, so it authorizes nothing and the request falls back, and the commit refuses a snapshot whose bytes do not hash to that digest. Review is a deployment process the reference cannot witness."
+    "local": "Not witnessed. The digest check protects an existing consent's content commitment: a snapshot edited under an unchanged version authorizes nothing for a Mission that committed the old digest. It does not show that every policy change is versioned, since edited content can still be consented by a new Mission under the same version with a different digest. Review is a deployment process outside the reference."
    },
    "level": "endpoint",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
-     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown policy edited after consent, here its review cadence under an unchanged version, authorizes nothing: the request falls back",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    }
-   ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row. Proved by skipping the digest comparison at adjudication and at snapshot retention."
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row. D593: stays todo; the digest test witnesses the commitment and cadence rows, not deployment versioning."
   },
   {
    "id": "progressive.audit.cumulative-drawdown-count",
@@ -37992,7 +37986,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor. D593: the policy narrowing path and its tests are #1468."
   },
   {
    "id": "progressive.audit.ceiling-retained-in-chain",
@@ -38048,9 +38042,10 @@
     "normative": "a successor created by policy adjudication or by a fresh human approval, whose adjudication evaluated a resource's content-addressed self-declaration, records that declaration's digest as resource_declaration_digest; a refused request creates no successor and no such record"
    },
    "level": "endpoint",
-   "coverage": "todo",
+   "coverage": "blocked",
    "tests": [],
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved."
+   "blocked_by": "#1469",
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved. D593: blocked on #1469, the reference's discovery encounter intake (roadmap)."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
@@ -38273,7 +38268,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
