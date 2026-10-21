@@ -370,7 +370,64 @@ export interface ProgressiveDrawdownOptions {
    * nothing, no declaration is evaluated and no digest is recorded.
    */
   resourceDeclarations?: (origin: string) => Promise<Uint8Array | string | undefined>;
+  /**
+   * @spec discovery#resource-identity (#1469 stage 2): the Mission Issuer's own
+   * connection to an encountered origin, through the deployment. It reports
+   * whether TLS authenticated the origin on that connection, and returns the
+   * exact bytes of the RFC 9728 Protected Resource Metadata it retrieved over
+   * it for the origin, if any. The reference performs no network retrieval
+   * itself: TLS authentication is this port's report, never the agent's.
+   * Absent, or resolving to nothing, no identity is pinned.
+   */
+  resourceMetadata?: (origin: string) => Promise<ResourceConnection | undefined>;
+  /**
+   * @spec discovery#resource-identity (#1469 stage 2): whether the issuer an
+   * encountered resource's metadata names is authorized for the resource's
+   * domain, through a deployment mechanism such as domain-authorized-issuer.
+   * Only `true` verifies it; anything else, a failure included, leaves it
+   * unverified.
+   */
+  issuerAuthorized?: (origin: string, issuer: string) => Promise<boolean | undefined>;
+  /**
+   * @spec discovery#resource-identity, discovery#adjudication (#1469 stage 2):
+   * the deployment's policy for an encounter whose identity cannot be
+   * established: an origin not TLS-authenticated, or metadata missing,
+   * unusable, or naming no single authorization server. `fresh_approval` (the
+   * default) routes it to a human; `refuse` refuses it. An encounter whose
+   * named issuer is not verified as authorized always routes to a human.
+   */
+  unpinnedEncounter?: "fresh_approval" | "refuse";
 }
+
+/** @spec discovery#resource-identity (#1469 stage 2): what the deployment's connection to an origin established. */
+export interface ResourceConnection {
+  /** Whether TLS authenticated the origin on the Mission Issuer's own connection. */
+  tls_authenticated: boolean;
+  /** The exact bytes of the origin's Protected Resource Metadata retrieved over that connection, if any. */
+  metadata?: Uint8Array | string;
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 2): the Encountered Resource
+ * object, holding only the Mission Issuer's own verified values. It exists once
+ * the origin is TLS-authenticated; `resource_metadata_digest` once usable
+ * metadata was retrieved over that connection; `issuer` once that metadata
+ * names exactly one authorization server.
+ */
+export interface EncounteredResource {
+  origin: string;
+  resource_metadata_digest?: string;
+  issuer?: string;
+}
+
+/** @spec discovery#resource-identity (#1469 stage 2): why an encountered resource's identity is not pinned. */
+export type PinFailure =
+  | "origin_unauthenticated"
+  | "metadata_unavailable"
+  | "metadata_invalid"
+  | "issuer_unnamed"
+  | "issuer_ambiguous"
+  | "issuer_unverified";
 
 /**
  * @spec discovery#adjudication, progressive#ceiling-test (#1469 stage 1): the
@@ -382,12 +439,30 @@ export interface ProgressiveDrawdownOptions {
 export interface EncounterFacts {
   origin: string;
   resources: string[];
+  /** @spec discovery#resource-identity (#1469 stage 2): the pinned identity, as far as it was established. */
+  resource?: EncounteredResource;
+  /** Whether the identity is fully pinned: TLS-authenticated origin, usable metadata, one verified issuer. */
+  pinned: boolean;
+  /** Why it is not, when it is not. */
+  pin_failure?: PinFailure;
   /** The raw-octet digest of the declaration bytes the Mission Issuer retrieved; absent when it retrieved none. */
   declaration_digest?: string;
   /** Whether the declaration lists every action sought at the resource; absent without a usable declaration. */
   declared?: boolean;
-  /** The agent's hint, recorded as its claim, and whether its digest matched the retrieved one. */
-  hint?: { origin: string; resource_declaration_digest?: string; digest_matched?: boolean };
+  /** The agent's hint, recorded as its claim, and whether each value matched the Mission Issuer's own. */
+  hint?: EncounterHint & {
+    digest_matched?: boolean;
+    resource_metadata_digest_matched?: boolean;
+    issuer_matched?: boolean;
+  };
+}
+
+/** @spec discovery#resource-identity: the agent's Encountered Resource object and declaration digest, as claims. */
+export interface EncounterHint {
+  origin: string;
+  resource_metadata_digest?: string;
+  issuer?: string;
+  resource_declaration_digest?: string;
 }
 
 /** The `scheme://host[:port]` origin of a URI, or undefined when it has none. */
@@ -412,7 +487,7 @@ export function encounterHint(
   raw: unknown,
   digest: unknown,
   requested: readonly AuthorityEntry[],
-): { origin: string; resource_declaration_digest?: string } | undefined | string {
+): EncounterHint | undefined | string {
   if (raw === undefined && digest === undefined) return undefined;
   if (typeof raw !== "string") return "resource_declaration_digest rides only with encountered_resource";
   let parsed: unknown;
@@ -425,11 +500,87 @@ export function encounterHint(
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || typeof origin !== "string" || originOf(origin) !== origin) {
     return "encountered_resource needs an origin";
   }
+  // @spec discovery#resource-identity (#1469 stage 2): the object's other members, claims too.
+  const { resource_metadata_digest: metadataDigest, issuer } = parsed as { resource_metadata_digest?: unknown; issuer?: unknown };
+  if ((metadataDigest !== undefined && typeof metadataDigest !== "string") || (issuer !== undefined && typeof issuer !== "string")) {
+    return "encountered_resource members are strings";
+  }
   if (digest !== undefined && typeof digest !== "string") return "resource_declaration_digest is a string";
   if (!requested.some((e) => originOf(e.resource) === origin)) {
     return "the encountered resource names no resource the request seeks";
   }
-  return { origin, ...(typeof digest === "string" ? { resource_declaration_digest: digest } : {}) };
+  return {
+    origin,
+    ...(typeof metadataDigest === "string" ? { resource_metadata_digest: metadataDigest } : {}),
+    ...(typeof issuer === "string" ? { issuer } : {}),
+    ...(typeof digest === "string" ? { resource_declaration_digest: digest } : {}),
+  };
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 2): pin the encountered
+ * resource's identity from the Mission Issuer's own connection, never from the
+ * agent. The origin is the one that connection TLS-authenticated. Metadata
+ * retrieved over it is used only when its `resource` is exactly the origin it
+ * was retrieved for (RFC 9728 Section 3.3); it is digested from its exact
+ * bytes, and the one authorization server it names must be verified as
+ * authorized for the resource's domain. The reference requires the metadata
+ * and a named issuer: on the drawdown path, the resource's authorization
+ * server association is what pinning establishes.
+ */
+export async function pinEncounteredResource(
+  options: ProgressiveDrawdownOptions,
+  origin: string,
+): Promise<{ resource?: EncounteredResource; pinned: boolean; pin_failure?: PinFailure }> {
+  let connection: ResourceConnection | undefined;
+  try {
+    connection = await options.resourceMetadata?.(origin);
+  } catch {
+    connection = undefined;
+  }
+  if (connection?.tls_authenticated !== true) return { pinned: false, pin_failure: "origin_unauthenticated" };
+  const resource: EncounteredResource = { origin };
+  const bytes = connection.metadata;
+  if (bytes === undefined) return { resource, pinned: false, pin_failure: "metadata_unavailable" };
+  let doc: unknown;
+  try {
+    doc = JSON.parse(typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("utf8"));
+  } catch {
+    doc = undefined;
+  }
+  const servers = (doc as { authorization_servers?: unknown } | undefined)?.authorization_servers;
+  if (
+    !doc ||
+    typeof doc !== "object" ||
+    Array.isArray(doc) ||
+    (doc as { resource?: unknown }).resource !== origin ||
+    (servers !== undefined && (!Array.isArray(servers) || !servers.every((s) => typeof s === "string" && s.length > 0)))
+  ) {
+    return { resource, pinned: false, pin_failure: "metadata_invalid" };
+  }
+  resource.resource_metadata_digest = catalogDigest(bytes);
+  if (!Array.isArray(servers) || servers.length === 0) return { resource, pinned: false, pin_failure: "issuer_unnamed" };
+  if (servers.length > 1) return { resource, pinned: false, pin_failure: "issuer_ambiguous" };
+  const issuer = servers[0] as string;
+  resource.issuer = issuer;
+  let authorized: boolean | undefined;
+  try {
+    authorized = await options.issuerAuthorized?.(origin, issuer);
+  } catch {
+    authorized = undefined;
+  }
+  if (authorized !== true) return { resource, pinned: false, pin_failure: "issuer_unverified" };
+  return { resource, pinned: true };
+}
+
+/**
+ * @spec discovery#adjudication (#1469 stage 2): whether the deployment refuses
+ * this encounter outright: its identity cannot be established and the
+ * deployment does not escalate such encounters. An issuer that is named but
+ * not verified always routes to a human.
+ */
+export function refusesEncounter(options: ProgressiveDrawdownOptions, facts: EncounterFacts): boolean {
+  return options.unpinnedEncounter === "refuse" && !facts.pinned && facts.pin_failure !== "issuer_unverified";
 }
 
 /**
@@ -446,12 +597,14 @@ export async function encounterFacts(
   options: ProgressiveDrawdownOptions,
   encountered: readonly string[],
   requested: readonly AuthorityEntry[],
-  hint: { origin: string; resource_declaration_digest?: string } | undefined,
+  hint: EncounterHint | undefined,
 ): Promise<EncounterFacts | string> {
   const origins = [...new Set(encountered.map(originOf))];
   const origin = origins[0];
   if (origins.length !== 1 || origin === undefined) return "one encountered resource origin per request";
   if (hint && hint.origin !== origin) return "encountered_resource names an origin other than the encounter's";
+  const pin = await pinEncounteredResource(options, origin);
+  const identity = pin.resource;
   let bytes: Uint8Array | string | undefined;
   try {
     bytes = await options.resourceDeclarations?.(origin);
@@ -464,14 +617,20 @@ export async function encounterFacts(
   return {
     origin,
     resources: [...encountered],
+    ...(identity ? { resource: identity } : {}),
+    pinned: pin.pinned,
+    ...(pin.pin_failure ? { pin_failure: pin.pin_failure } : {}),
     ...(digest ? { declaration_digest: digest } : {}),
     ...(declared === undefined ? {} : { declared }),
     ...(hint
       ? {
           hint: {
-            origin: hint.origin,
-            ...(hint.resource_declaration_digest ? { resource_declaration_digest: hint.resource_declaration_digest } : {}),
+            ...hint,
             ...(hint.resource_declaration_digest && digest ? { digest_matched: hint.resource_declaration_digest === digest } : {}),
+            ...(hint.resource_metadata_digest && identity?.resource_metadata_digest
+              ? { resource_metadata_digest_matched: hint.resource_metadata_digest === identity.resource_metadata_digest }
+              : {}),
+            ...(hint.issuer && identity?.issuer ? { issuer_matched: hint.issuer === identity.issuer } : {}),
           },
         }
       : {}),
@@ -567,6 +726,21 @@ export function validateProgressiveDrawdownOptions(
   }
   if (o.resourceDeclarations !== undefined && typeof o.resourceDeclarations !== "function") {
     throw new Error("progressive resourceDeclarations must be a function of the origin");
+  }
+  if (o.resourceMetadata !== undefined && typeof o.resourceMetadata !== "function") {
+    throw new Error("progressive resourceMetadata must be a function of the origin");
+  }
+  if (o.issuerAuthorized !== undefined && typeof o.issuerAuthorized !== "function") {
+    throw new Error("progressive issuerAuthorized must be a function of the origin and issuer");
+  }
+  if (o.unpinnedEncounter !== undefined && o.unpinnedEncounter !== "fresh_approval" && o.unpinnedEncounter !== "refuse") {
+    throw new Error("progressive unpinnedEncounter must be fresh_approval or refuse");
+  }
+  // @spec discovery#resource-identity (#1469 stage 2): without a connection port
+  // no identity is ever pinned, so refusing unpinned encounters would refuse
+  // every encounter.
+  if (o.unpinnedEncounter === "refuse" && o.resourceMetadata === undefined) {
+    throw new Error("progressive unpinnedEncounter refuse needs a resourceMetadata port");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
