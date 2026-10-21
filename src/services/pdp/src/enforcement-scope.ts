@@ -17,7 +17,13 @@
  * reach.
  */
 
-import { IDEMPOTENCY_SCOPE_DIMENSIONS, isScopeDimension, isVolatileScopeMember } from "@mission/core";
+import {
+  IDEMPOTENCY_SCOPE_DIMENSIONS,
+  isScopeDimension,
+  isVolatileScopeMember,
+  type ResourceContractDeclaration,
+  ResourceContractDeclarations,
+} from "@mission/core";
 import type { EnforcementBoundaries } from "./enforcement-boundary.js";
 
 /**
@@ -261,6 +267,14 @@ export interface EnforcementExtensionDeclarations {
   };
   high_assurance_agent?: ReadonlyArray<{ row: string; eat_selection: string }>;
   outcome_reconciliation?: OutcomeReconciliationDeclaration;
+  /**
+   * @spec runtime#resource-contract (#249, D553): each contract version the
+   * resource serves, the operations it covers, the operations that require a
+   * reference, and each version's state ({@link resourceContractFindings}).
+   * A reference-statement representation of the runtime profile items, not a
+   * Runtime wire member.
+   */
+  resource_contracts?: ReadonlyArray<ResourceContractDeclaration>;
 }
 
 /**
@@ -582,6 +596,32 @@ export function validateEnforcementScopeStatement(
   findings.push(...reversibleWriteFindings(stmt, scopeOk && object(scope) ? scope : undefined));
 
   return findings;
+}
+
+/**
+ * @spec runtime#resource-contract (#249, D553): "A resource that adopts
+ * resource contracts declares, in its Resource Server runtime profile
+ * ({{rs-runtime-profile}}), each contract version it serves, the operations
+ * each covers, the operations that require a reference, and each version's
+ * state". The `resource_contracts` declarations, checked wherever they
+ * appear, through the one parser every consumer reads them with
+ * ({@link ResourceContractDeclarations}): a version without a state, a
+ * superseded version without a declared retention, a second current version,
+ * and a document that does not hash to its declared `digest` ("Published
+ * contract bytes MUST remain immutable for a reference") are each refused at
+ * load.
+ */
+export function resourceContractFindings(input: unknown): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const extensions = object(stmt.extensions) ? stmt.extensions : {};
+  const declared = extensions.resource_contracts;
+  if (declared === undefined) return [];
+  try {
+    new ResourceContractDeclarations(declared);
+    return [];
+  } catch (e) {
+    return [{ member: "extensions.resource_contracts", problem: (e as Error).message }];
+  }
 }
 
 /**

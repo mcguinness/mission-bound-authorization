@@ -41,6 +41,14 @@ export interface ApprovalObject {
   approved_at: string;
   approved_until: string;
   parameter_digest: string;
+  /**
+   * @spec authzen#context-approval (#249, D553): the approved Resource,
+   * present where a resource contract applied to the denied request: "the
+   * approval binds its reference through the approved Resource, which ARAP
+   * requires the approval record or its binding material to contain". Taken
+   * from the PDP-signed denial binding, never from the submission.
+   */
+  resource?: { properties: { resource_contract: unknown } };
 }
 
 export interface DenialBinding {
@@ -48,6 +56,8 @@ export interface DenialBinding {
   mission_id: string;
   action: string;
   parameter_digest: string;
+  /** @spec authzen#context-approval (#249): the denied request's contract reference, where one applied. */
+  resource_contract?: unknown;
 }
 
 const SCHEMA = `
@@ -60,6 +70,7 @@ CREATE TABLE tasks (
   subject TEXT NOT NULL,
   approval_json TEXT,
   binding_digest TEXT,
+  resource_json TEXT,
   created_at INTEGER NOT NULL
 ) STRICT;
 `;
@@ -113,11 +124,17 @@ export class AccessRequestService {
     }
     this.taskСounterSeed += 1;
     const taskId = `arq_${binding.decision_id}_${this.taskСounterSeed}`;
+    // @spec authzen#context-approval (#249): the approved Resource the
+    // approval will bind, from the PDP-signed binding material.
+    const resourceJson =
+      binding.resource_contract !== undefined
+        ? JSON.stringify({ properties: { resource_contract: binding.resource_contract } })
+        : null;
     this.db
       .prepare(
-        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, binding_digest, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, NULL, ?)",
+        "INSERT INTO tasks (id, state, mission_id, action, parameter_digest, subject, approval_json, binding_digest, resource_json, created_at) VALUES (?, 'pending', ?, ?, ?, ?, NULL, NULL, ?, ?)",
       )
-      .run(taskId, binding.mission_id, binding.action, binding.parameter_digest, sub.requested.subject, this.now().getTime());
+      .run(taskId, binding.mission_id, binding.action, binding.parameter_digest, sub.requested.subject, resourceJson, this.now().getTime());
     return { taskId, state: "pending" };
   }
 
@@ -202,6 +219,9 @@ export class AccessRequestService {
       approved_at: nowIso,
       approved_until: new Date(this.now().getTime() + ttl * 1000).toISOString(),
       parameter_digest: task.parameter_digest as string,
+      ...(typeof task.resource_json === "string"
+        ? { resource: JSON.parse(task.resource_json) as NonNullable<ApprovalObject["resource"]> }
+        : {}),
     };
     // Signed approval state (ARAP approval.state), carried by value if needed.
     // ARAP: the state JWS MUST carry iss (this ARS) and aud (the re-evaluator).
@@ -250,6 +270,7 @@ export class AccessRequestService {
       mission_id: payload.mission_id as string,
       action: payload.action as string,
       parameter_digest: payload.parameter_digest as string,
+      ...(payload.resource_contract !== undefined ? { resource_contract: payload.resource_contract } : {}),
     };
   }
 }

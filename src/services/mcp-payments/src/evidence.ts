@@ -769,6 +769,10 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     "request_invalid",
     "target_unresolvable",
     "capability_source_unresolvable",
+    // @spec runtime-evidence#pre-decision-refusal (#249, D553):
+    // "`resource_contract_unresolvable` (the resource contract the operation
+    // requires could not be resolved".
+    "resource_contract_unresolvable",
     "decision_evidence_unverifiable",
     "channel_failure",
     "pdp_unreachable",

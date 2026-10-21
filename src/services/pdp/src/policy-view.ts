@@ -14,6 +14,7 @@ import {
   type CapabilitySourceBinding,
   computeAnchor,
   type JsonValue,
+  type ResourceContractRef,
   type TerminalWhenCondition,
 } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
@@ -47,6 +48,14 @@ export interface AuthorityEntry {
    * `capability_drift` denial reason are a separate change.
    */
   capability_sources?: CapabilitySourceBinding[];
+  /**
+   * @spec resource-access#resource-contract (#249, D553): the contract the
+   * entry was approved under, materialized exactly as the kernel committed
+   * it (it rides inside `authority_hash`, so the shared `@mission/core`
+   * type). The decision requires it to resolve and to equal the request's
+   * `resource.properties.resource_contract` (evaluate.ts step 5').
+   */
+  resource_contract?: ResourceContractRef;
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];

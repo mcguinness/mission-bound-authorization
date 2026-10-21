@@ -279,7 +279,7 @@ the stack's issuer ([fga-hygiene.md](fga-hygiene.md)). Its owner is the
 deployment's OpenFGA administrator, who changes it with `pnpm resource-policy`
 (`FgaDomainAdmin`, attached to the configured store, never creating one):
 `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting`.
-The Operation Profile (`payments-runtime-profile-v12`, #1266) declares its owner,
+The Operation Profile (`payments-runtime-profile-v13`, #249) declares its owner,
 principals (subject and client), relations, tenant, freshness (current as of the decision, separate from
 Mission-state freshness) and failure behavior; the Enforcement Scope
 Statement's baseline has no Resource-policy member, and the runtime profile
@@ -374,6 +374,28 @@ and
 `the PEP's reservation and retention for keyed reversible writes (@spec runtime#idempotency, #918) > the persisted store reopens with the record > a key scheduled before the store closed resolves against its record from a new server on the same file`,
 and
 `single-use permits on the unkeyed write path (@spec runtime#single-use-identifiers, #1080) > the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold`.
+
+**Upgrading a transaction-workflow store file (#249).** This target keeps
+the Transaction Authorization Server's pending workflows in memory
+(`newTxnWorkflows`). A deployment that passes a file store
+(`TxnAuthorizationOptions.store`, `new TxnWorkflowStore({ file })`) upgrades
+it in place when the file is opened: the store adds the nullable
+`profile_version` column once, in an immediate transaction, and a later open
+changes nothing. Nothing is backfilled. A workflow admitted before the
+upgrade was pinned on the challenge's `iss` and the entry's `type`, and keeps
+no recorded version. To let such a workflow complete, retain the Operation
+Profile that pair resolved to under a version name and declare the binding:
+`registry.retain(iss, profile).bindLegacyType(iss, type, version)`. Without
+the declaration, its completion is refused `access_denied` and the workflow
+becomes `denied`, so the client starts again with a new challenge. It is
+never read under the resource's current version. Witnesses, against a file
+created with the earlier schema:
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopened by this store, the file admits a new workflow, which records the version it was admitted under`,
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow completes under the version declared for its resource and type, never under the current one`,
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow keeps no recorded version, and with no binding declared for its resource and type its completion is refused terminally, never read under the current version`
+and
+`a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopening the upgraded file again changes nothing: one profile_version column, the earlier workflow still unversioned, a later one still versioned`
+(`services/authorization-server/test/txn-endpoint.test.ts`).
 
 Residuals:
 

@@ -174,6 +174,167 @@
       "responsible_component": "mcp-payments-pep",
       "alerting": "an operator alert for every idempotency claim that closes indeterminate",
       "prior_process_outcomes": "indeterminate_at_window_close"
-    }
+    },
+    "resource_contracts": [
+      {
+        "resource": "http://localhost:4403/mcp",
+        "resource_match": "prefix",
+        "id": "https://payments.example/contracts/payments",
+        "requires_reference": [],
+        "versions": [
+          {
+            "version": "2026-10-20",
+            "state": "current",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ",
+            "document": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-20",
+              "operation_profile": "payments-runtime-profile-v13",
+              "resource_match": [
+                "exact",
+                "prefix"
+              ],
+              "operation_targets": {
+                "service": "the protected resource's canonical resource URI"
+              },
+              "parameter_forms": {
+                "invoice": [
+                  "action",
+                  "invoice_id",
+                  "invoice_version",
+                  "vendor_id",
+                  "vendor_version",
+                  "amount",
+                  "payee_account",
+                  "resource",
+                  "recipients"
+                ],
+                "list": [
+                  "action",
+                  "resource",
+                  "vendor_scope",
+                  "vendor_scope_source",
+                  "members"
+                ],
+                "none": []
+              },
+              "constraints": {
+                "max_amount": "the invoice record's amount and currency",
+                "vendors": "the vendor the store resolves for the target",
+                "requires_action_approval": "an action-bound approval bound to parameter_digest",
+                "terminal_when": "the Mission Issuer's discharge state",
+                "resource_issued_after": "the invoice record's issued_at; for list_invoices, each member's",
+                "resource_issued_before": "the invoice record's issued_at; for list_invoices, each member's",
+                "tenant": "the vendor record's tenant; for list_invoices, each member's",
+                "time_window": "the evaluating component's own clock",
+                "recipient_domain": "every final recipient of the vendor's remittance routing",
+                "data_classification": "the invoice record's classification; for list_invoices, each member's",
+                "allowed_tools": "the tool the PEP dispatches to"
+              },
+              "operations": {
+                "list_invoices": {
+                  "action": "payments:invoice.list",
+                  "action_class": "consequential_read",
+                  "operation_target": "service",
+                  "parameters": "list",
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/list_invoices",
+                    "source_digest": "sha-256:eGXHnEw8uimqGcNy5NRzTnSiEvdLEshpcZoGmBk-llA"
+                  }
+                },
+                "get_invoice": {
+                  "action": "payments:invoice.read",
+                  "action_class": "consequential_read",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/get_invoice",
+                    "source_digest": "sha-256:ftWlgCR8ftgIfladSFUxiklpJSgxnWMxU8bPav7Emf0"
+                  }
+                },
+                "lookup_vendor": {
+                  "action": "payments:vendor.read",
+                  "action_class": "consequential_read",
+                  "operation_target": "service",
+                  "parameters": "none",
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/lookup_vendor",
+                    "source_digest": "sha-256:xVsS564M7CHXkix2eOaK9woY9HyYrFgsQFN2WO-oRwI"
+                  }
+                },
+                "schedule_payment": {
+                  "action": "payments:payment.schedule",
+                  "action_class": "consequential_write",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "idempotency_key": true,
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/schedule_payment",
+                    "source_digest": "sha-256:YF65Za7RVmF0xrfMnkMQv89THKILjHees5F0XnGChf8"
+                  }
+                },
+                "cancel_scheduled_payment": {
+                  "action": "payments:payment.schedule.cancel",
+                  "action_class": "consequential_write",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "idempotency_key": true,
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/cancel_scheduled_payment",
+                    "source_digest": "sha-256:S9da1kWdzKA-8VQPUOvpIFez_IBOzkJSAdODd52diPE"
+                  }
+                },
+                "check_transfer": {
+                  "action": "payments:payment.execute",
+                  "phase": "preflight",
+                  "action_class": "consequential_read",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/check_transfer",
+                    "source_digest": "sha-256:soG5pVm9U3rWMGjV9zX79D4IbYNH7YcJumXviHUwAz0"
+                  }
+                },
+                "hold_transfer": {
+                  "action": "payments:payment.execute",
+                  "phase": "prepare",
+                  "action_class": "consequential_write",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/hold_transfer",
+                    "source_digest": "sha-256:imcdt8MJ-idNwxINiwNYKJl_NYnM_uZYSIhC0o-gNq8"
+                  }
+                },
+                "execute_wire_transfer": {
+                  "action": "payments:payment.execute",
+                  "phase": "commit",
+                  "action_class": "irreversible_action",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "idempotency_key": true,
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/execute_wire_transfer",
+                    "source_digest": "sha-256:X5SUsKaEbbq7ZpYcUgJNjjSejboZhNiiEbHhfPI5cEQ"
+                  }
+                },
+                "send_remittance_email": {
+                  "action": "payments:remittance.send",
+                  "action_class": "external_commitment",
+                  "operation_target": "service",
+                  "parameters": "invoice",
+                  "idempotency_key": true,
+                  "recipients": true,
+                  "capability": {
+                    "tool_id": "mcp://payments.demo/tools/send_remittance_email",
+                    "source_digest": "sha-256:LTFRWA8bqU1VUVxnq5q22E6keRl5fvLRy6WtdS4zrCk"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
   }
 }

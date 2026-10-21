@@ -16513,8 +16513,21 @@
      "name": "Operation Profile resolution and drift (@spec txn-authorization#resource-challenge) > completes a workflow admitted under a superseded version, and refuses new challenges naming it",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow completes under the version declared for its resource and type, never under the current one",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow keeps no recorded version, and with no binding declared for its resource and type its completion is refused terminally, never read under the current version",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
-   ]
+   ],
+   "notes": "#249 store upgrade: a workflow store file created before Operation Profile versions were recorded is migrated in place (the nullable profile_version column, added once, never backfilled). A workflow admitted before the upgrade keeps no recorded version and completes only under the retained version the deployment declares for its (iss, type) (OperationProfileRegistry.bindLegacyType), never under the current one; with none declared its completion is refused terminally. Proved by reading such a workflow under the current version, and by not marking the refusal terminal. Coverage stays partial as before: the retention bound across a deployment's retirement of a version is not witnessed."
   },
   {
    "id": "txn-authorization.challenge.contract-reference-names-version",
@@ -16534,9 +16547,16 @@
     "normative": "a challenge whose entry references a contract that does not resolve is refused at admission, and a workflow whose reference stops resolving is refused at completion; a resolving reference selects that version's Operation Profile"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the Transaction Authorization Server resolves the Operation Profile version from the reference, never from type (@spec txn-authorization#resource-challenge, #249) > admits an entry carrying a reference under the version its contract names, refuses one that does not resolve at admission, and refuses completion once it stops resolving",
+     "level": "unit",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Operation Profile registry (kernel/operation-profile.ts) reads the version a carried reference names from its contract document, resolves the reference under the declared contract versions at admission and again at completion, and returns a refusal the transaction endpoint answers invalid_grant. Partial: witnessed at the registry only (unit); no transaction-endpoint test carries a challenge whose entry has a reference. Proved by admitting under the current version while ignoring the reference."
   },
   {
    "id": "txn-authorization.challenge.version-recorded-at-admission",
@@ -16555,9 +16575,34 @@
     "normative": "for an entry without a resource_contract reference, the workflow records the Operation Profile version current at admission and completes under it; the version is not read from the entry's fixed type"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. The reference TAS keys its Operation Profile registry on the entry type (kernel/operation-profile.ts), which this clause replaces."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "Operation Profile resolution and drift (@spec txn-authorization#resource-challenge) > completes a workflow admitted under a superseded version, and refuses new challenges naming it",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the Transaction Authorization Server resolves the Operation Profile version from the reference, never from type (@spec txn-authorization#resource-challenge, #249) > admits an entry without a reference under the resource's current version, records it, and completes under it after a later version supersedes it",
+     "level": "unit",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopened by this store, the file admits a new workflow, which records the version it was admitted under",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopening the upgraded file again changes nothing: one profile_version column, the earlier workflow still unversioned, a later one still versioned",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The registry is keyed on the Operation Profile version, never on the entry's type: a workflow records the version it was admitted under (txn_workflows.profile_version) and completes under it after a later version of the same type supersedes it. Proved by completing under the current version instead of the recorded one. A store file created before versions were recorded is migrated in place on open, idempotently, so a new admission records its version there too; rows admitted before the migration stay unversioned. Proved by skipping the migration and by a migration that redoes itself on every open."
   },
   {
    "id": "txn-authorization.redemption.subject-token-audience-pop",
@@ -19225,7 +19270,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The payments profile (payments-runtime-profile-v12, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), declares each operation's execution capabilities (#817), and matches `prefix` entries with the Resource Access matcher (#1276); no test reads the profile, so coverage stays todo."
+   "notes": "The payments profile (payments-runtime-profile-v13, src/docs/operation-profile-payments-v1.md) declares how Resource policy is evaluated and composed (#828, D426, D429), names the wire's settlement identity (#1270), declares the operation contract (#1276), enforces the Common Constraints (#1266), refuses a lookup of a vendor the store does not hold before any decision (#1251, D484), declares its enforcement boundary identifier (#853, D487), declares each operation's execution capabilities (#817), matches `prefix` entries with the Resource Access matcher (#1276), and declares its resource contract (#249); no test reads the profile, so coverage stays todo."
   },
   {
    "id": "runtime.rs-profile.no-claim-without-pep",
@@ -20597,9 +20642,22 @@
     "normative": "the contract document a resource publishes for an (id, version) has one digest for as long as the version is declared"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > refuses at load a statement whose declared document no longer hashes to its digest: published bytes are immutable for a reference",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > refuses a declaration whose document does not hash to its declared digest: bytes are immutable for a reference",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The statement's loader recomputes each declared version's digest over its document and refuses a declaration whose document does not hash to it, so a changed document is never served under the reference it changed. Proved by skipping the recomputation."
   },
   {
    "id": "runtime.resource-contract.new-version-on-change",
@@ -20619,9 +20677,22 @@
     "normative": "a change to any listed contract material (operation contract, Operation Profile binding items, constraint extraction, class or phase, capability digest, evaluation-context descriptor reference) yields a new version with a different digest"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > the declared contract material is what the resource performs: each operation's action, phase, class and target, and each catalog-sourced capability's digest, so a change to any of it without a new version fails here",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > refuses at load a statement whose declared document no longer hashes to its digest: published bytes are immutable for a reference",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version."
   },
   {
    "id": "runtime.resource-contract.declared-states",
@@ -20641,9 +20712,28 @@
     "normative": "the Resource Server runtime profile lists every served contract version with its covered operations, the operations requiring a reference, and its state (current, superseded with a declared retention, or retired)"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > declares one current version of the payments contract over the canonical resource, covering every operation, with its state",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > refuses at load a version without a state, and a superseded version without a declared retention",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > states each version's state: a superseded version declares its retention, and one version at most is current",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -20663,9 +20753,34 @@
     "normative": "an action under an entry whose reference is unknown, unavailable, has a changed digest, names a retired version, or names a superseded version outside its retention is denied resource_contract_drift, with identical parameters; a v1 reference at a resource serving only v2 is denied"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the PDP refuses a reference that does not resolve (@spec runtime#resource-contract, #249) > denies resource_contract_drift, with identical parameters, when %s",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the PDP refuses a reference that does not resolve (@spec runtime#resource-contract, #249) > resolves a superseded version within its declared retention, and the permit binds it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > a reference the PEP resolves and the PDP's declarations no longer do is denied resource_contract_drift, parameters identical: a v1 entry at a PDP serving only v2",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > a superseded version permits within the retention the PDP declares and is denied past it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Each case keeps the entry, the request and parameter_digest identical and changes only the PDP's declarations: a retired version, a changed digest, a v2-only resource, a superseded version past its retention, and no declaration; across the decision channel (co-resident and remote), a v1 reference the PEP resolves is denied by a PDP serving only v2. Proved by skipping the resolution refusal."
   },
   {
    "id": "runtime.resource-contract.missing-reference-refused",
@@ -20685,9 +20800,22 @@
     "normative": "where the resource requires a reference for the operation, an action under an entry without one is denied, and no evaluated or recorded authority acquires the current contract's reference"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "a missing reference refuses where the resource requires one (@spec runtime#resource-contract, #249) > denies an action under an entry without a reference, and never supplies the current contract's",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > where the PDP's declarations require a reference, an unpinned entry is denied resource_contract_drift and gains none",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where the declarations require a reference for the action, an unpinned entry is denied resource_contract_drift, a request presenting today's current reference is denied too (no applicable entry carries it), and the view entry stays without one. Proved by ignoring the requirement."
   },
   {
    "id": "runtime.resource-contract.superseded-within-retention",
@@ -20707,9 +20835,22 @@
     "normative": "an action under an entry referencing a superseded version is decided normally within the declared retention (and permits where every other input permits), and is refused outside it"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the PDP refuses a reference that does not resolve (@spec runtime#resource-contract, #249) > resolves a superseded version within its declared retention, and the permit binds it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > a superseded version permits within the retention the PDP declares and is denied past it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference, superseded with retained_until 2026-11-01, permits within the retention with conditions.resource_contract v1 and is denied after it. Proved by refusing every superseded version."
   },
   {
    "id": "runtime.resource-contract.retained-relaxes-nothing",
@@ -20729,9 +20870,28 @@
     "normative": "under a retained superseded contract, an inactive Mission, narrowed or revoked authority, a lapsed entitlement, or a Resource-policy denial still refuses the action"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "a retained contract relaxes no other decision input (@spec runtime#resource-contract rule 2, #249) > under a retained superseded v1, an inactive Mission, contained authority and a Resource-policy refusal each still refuse",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "a retained contract relaxes no other decision input (@spec runtime#resource-contract rule 2, #249) > under a retained superseded v1, a lapsed entitlement of the mapped principal still refuses",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > under a retained v1, an inactive Mission and contained authority still refuse",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Under a retained superseded v1 the same request permits, and an inactive Mission (mission_inactive), contained authority (authority_contained), removed authority (out_of_authority), a Resource-policy refusal (resource_policy) and a lapsed entitlement of the mapped principal (principal_mapping_failed) each still refuse. Proved by a contract step that permits a superseded version early, and, for the entitlement case, by disabling the entitlement gate."
   },
   {
    "id": "runtime.resource-contract.pep-normalizes-under-resolved",
@@ -20751,9 +20911,16 @@
     "normative": "for an entry referencing a retained version, the decision request's normalized parameters and parameter_digest, and the performed operation, follow that version's Operation Profile, not the current one"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile."
   },
   {
    "id": "runtime.resource-contract.approval-bound-to-reference",
@@ -20773,9 +20940,28 @@
     "normative": "an action-bound approval recorded under one contract reference, presented for an action whose applicable entry references another, does not satisfy the approval gate even when both references resolve; under the AuthZEN profile the re-evaluation is denied out_of_scope"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249) > denies out_of_scope, with no permit, an approval given under v1 presented for the same action under v2, both resolving and the parameters identical",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249) > an approval whose approved Resource names no contract does not satisfy an action under one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > an approval bound to v1 does not cover the same action under v2, both resolving and the parameters identical: out_of_scope; one bound to v2 permits",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). An approval whose approved Resource carries v1, presented for the same action under v2 with both resolving and parameter_digest unchanged, is denied out_of_scope; an approval naming no contract does not cover an action under one. Proved by skipping the approved-Resource comparison."
   },
   {
    "id": "runtime.resource-contract.approval-time-pin-insufficient",
@@ -20795,9 +20981,22 @@
     "normative": "a contract definition change after the action-bound approval and before the decision, with identical parameters, refuses the action with no effect"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249) > refuses an approved action, parameters unchanged, when the definition changed after the approval and before the decision",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > an approval bound to v1, parameters unchanged, is refused once the PDP's v1 definition changed after the approval and before the decision",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). An approval bound to v1 with an unchanged parameter_digest permits; after the v1 definition changes (the same version, another digest) the decision is resource_contract_drift, so no permit and no effect. Proved by skipping the resolution refusal."
   },
   {
    "id": "runtime.resource-contract.executing-pep-reresolves",
@@ -20817,9 +21016,16 @@
     "normative": "a contract definition change after the decision and before dispatch, with identical parameters, suppresses the effect: no effect is released and Execution Evidence records resource_contract_unresolvable"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Between the decision and the release the PEP's declarations change (the v1 definition changes, or v1 is retired) with identical parameters: the read and write paths suppress the effect with Execution Evidence resource_contract_unresolvable, one decision request, no Refusal Record and no result. Proved by removing the PERMIT_USE_CHECKS resource_contract row."
   },
   {
    "id": "runtime.resource-contract.stage-carriers",
@@ -20839,9 +21045,40 @@
     "normative": "a pre-decision contract failure yields a Refusal Record, a PDP failure a denial, and a failure at use Execution Evidence with outcome suppressed, each chosen by call site"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > a reference that does not resolve signs a Refusal Record resource_contract_unresolvable, asks no PDP and has no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > at use, a permit whose contract no longer resolves, or whose condition is missing or names another contract, is suppressed with Execution Evidence resource_contract_unresolvable, never a parameter or target error",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > a v1-referencing entry is refused resource_contract_unresolvable with no decision and no effect when %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "each stage records a contract failure on its own carrier (@spec runtime#resource-contract, authzen#failure-condition-coverage, #249) > a reference the PEP resolves but the PDP does not is a PDP denial resource_contract_drift, retained as Decision Evidence: no Refusal Record, no Execution Evidence, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Before the decision request: a Refusal Record resource_contract_unresolvable and no decision. At the PDP: a denial resource_contract_drift retained as Decision Evidence, with no Refusal Record or Execution Evidence. At use: Execution Evidence suppressed / resource_contract_unresolvable. Proved by suppressing the PEP's pre-decision refusal (the request then reaches the PDP) and by skipping the PDP's resolution refusal."
   },
   {
    "id": "runtime.decision-inputs.resource-policy-fail-closed",
@@ -21750,9 +21987,28 @@
     "normative": "a permit for an action under a resource contract binds its reference, so a permit decided under one reference is not usable for an operation under another"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the permit binds the reference (@spec runtime#permit-binding, authzen#response-context, #249) > returns conditions.resource_contract equal to the validated request's, and none where no contract applies",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the permit binds the reference (@spec runtime#permit-binding, authzen#response-context, #249) > binds the reference into the authorization binding and the cache key: two requests differing only in it are never one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP presents the contract it will perform under (@spec authzen#context-resource-contract, #249) > carries the applicable entry's reference, resolved against its own declarations, and never one an argument asserts",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The permit carries conditions.resource_contract equal to the request's reference, and the reference is part of the authorization binding and the cache key. Proved by dropping the condition and by stripping the reference from the binding."
   },
   {
    "id": "runtime.permit-binding.high-consequence-single-use-required",
@@ -24665,9 +24921,22 @@
     "normative": "a decision request for an action under a resource contract carries resource.properties.resource_contract with the id, version and digest of the contract the PEP will perform under"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP presents the contract it will perform under (@spec authzen#context-resource-contract, #249) > carries the applicable entry's reference, resolved against its own declarations, and never one an argument asserts",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The payments PEP carries the reference it performs under at resource.properties.resource_contract. Proved by presenting an argument's value instead."
   },
   {
    "id": "authzen.context-resource-contract.pep-trusted-derivation",
@@ -24687,9 +24956,16 @@
     "normative": "a caller-asserted contract reference never reaches the decision request; the presented reference is the applicable entry's, resolved against the PEP's own declarations"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP presents the contract it will perform under (@spec authzen#context-resource-contract, #249) > carries the applicable entry's reference, resolved against its own declarations, and never one an argument asserts",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The PEP establishes the reference from the presented credential's entries naming the action, resolved against its own declarations; an agent-supplied resource_contract argument is never read. Proved by preferring the argument's value."
   },
   {
    "id": "authzen.context-resource-contract.pdp-denies-unequal",
@@ -24709,9 +24985,34 @@
     "normative": "a presented reference that is absent where a contract applies, does not resolve, or differs from every authorizing entry's reference is denied resource_contract_drift with no permit"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the request's reference must equal an authorizing entry's (@spec authzen#context-resource-contract, #249) > denies resource_contract_drift with no permit when the presented reference is %s",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the PDP refuses a reference that does not resolve (@spec runtime#resource-contract, #249) > denies resource_contract_drift, with identical parameters, when %s",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > a presented reference that resolves but differs from the Mission entry's is denied resource_contract_drift",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > a reference the PEP resolves and the PDP's declarations no longer do is denied resource_contract_drift, parameters identical: a v1 entry at a PDP serving only v2",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Absent while the entry references a contract, unequal to the entry's though it resolves, unequal to the credential's, and not resolving: each is denied resource_contract_drift with no permit. Proved by relying on the first matched entry whatever its reference, and by keeping credential entries under another reference."
   },
   {
    "id": "authzen.context-resource-contract.binding-and-cache-key",
@@ -24731,9 +25032,16 @@
     "normative": "two requests that differ only in resource.properties.resource_contract have different cache keys, and a permit cached under one is not reused for the other"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the permit binds the reference (@spec runtime#permit-binding, authzen#response-context, #249) > binds the reference into the authorization binding and the cache key: two requests differing only in it are never one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: two requests differing only in resource.properties.resource_contract have different authorization bindings and decision cache keys (the PDP's projections). The reference PEP keeps no permit cache, so no PEP-side reuse exists to witness. Proved by stripping the reference from the binding."
   },
   {
    "id": "authzen.pdp-request.no-downgrade-to-non-mission-policy",
@@ -26310,9 +26618,28 @@
     "normative": "an approval whose approved Resource carries a resource_contract reference other than the re-evaluated request's does not satisfy approval_required"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249) > denies out_of_scope, with no permit, an approval given under v1 presented for the same action under v2, both resolving and the parameters identical",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249) > an approval whose approved Resource names no contract does not satisfy an action under one",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > an approval bound to v1 does not cover the same action under v2, both resolving and the parameters identical: out_of_scope; one bound to v2 permits",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The PDP compares the approved Resource's properties.resource_contract with the request's, member for member, absent only against absent; the Access Request Service binds it from the PDP-signed denial binding and the transaction-token path from the challenged operation. Proved by skipping the comparison."
   },
   {
    "id": "authzen.context-approval.contract-mismatch-out-of-scope",
@@ -26332,9 +26659,22 @@
     "normative": "an approval given for an action under v1 (superseded, within retention) presented for the same action under v2 (current), with identical parameters, is denied out_of_scope with no permit and no effect"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "an action-bound approval binds the reference (@spec authzen#context-approval, runtime#resource-contract rule 4, #249) > denies out_of_scope, with no permit, an approval given under v1 presented for the same action under v2, both resolving and the parameters identical",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > an approval bound to v1 does not cover the same action under v2, both resolving and the parameters identical: out_of_scope; one bound to v2 permits",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). An approval given under v1 (superseded, within retention) presented for the same action under v2 (current), parameters identical, is denied out_of_scope with no permit; each approval under the request's own reference permits. Proved by skipping the comparison."
   },
   {
    "id": "authzen.context-history.no-caller-asserted-outcome",
@@ -26536,9 +26876,28 @@
     "normative": "a PDP denial for a missing required or unresolvable contract reference, or for a request reference absent or unequal to the entry's, carries resource_contract_drift, not out_of_authority, capability_drift or parameter_violation"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the request's reference must equal an authorizing entry's (@spec authzen#context-resource-contract, #249) > classifies a contract failure as resource_contract_drift, never out_of_authority, capability_drift or parameter_violation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the PDP refuses a reference that does not resolve (@spec runtime#resource-contract, #249) > denies resource_contract_drift, with identical parameters, when %s",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "a missing reference refuses where the resource requires one (@spec runtime#resource-contract, #249) > denies an action under an entry without a reference, and never supplies the current contract's",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Each contract denial carries resource_contract_drift, never out_of_authority, capability_drift or parameter_violation. Proved by skipping the resolution refusal."
   },
   {
    "id": "authzen.requestable-denials.auto-approval-bounded",
@@ -26673,9 +27032,22 @@
     "normative": "a permit for an action under a resource contract carries conditions.resource_contract equal to the validated request's reference"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the permit binds the reference (@spec runtime#permit-binding, authzen#response-context, #249) > returns conditions.resource_contract equal to the validated request's, and none where no contract applies",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "the PDP refuses a reference that does not resolve (@spec runtime#resource-contract, #249) > resolves a superseded version within its declared retention, and the permit binds it",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Present exactly where a contract applies and equal to the request's reference. Proved by dropping the condition."
   },
   {
    "id": "authzen.response-context.conditions-resource-contract-pep-compares",
@@ -26695,9 +27067,22 @@
     "normative": "a contract definition change after the decision and before dispatch, with identical parameters, and a permit whose condition names a contract other than the one the PEP would perform under, both release no effect"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a permit whose condition is missing, malformed or names another contract than the one the PEP performs under releases no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The PEP resolves the permit's condition at every use against its current declarations and compares it with the contract it performs under: a definition change after the decision, and a missing, malformed or unequal condition, release no effect. Proved by removing the PERMIT_USE_CHECKS resource_contract row."
   },
   {
    "id": "authzen.response-context.conditions-resource-contract-carrier",
@@ -26717,9 +27102,22 @@
     "normative": "each use-time contract failure is recorded as Execution Evidence with outcome suppressed and error resource_contract_unresolvable, never as a PDP denial"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > at use, a permit whose contract no longer resolves, or whose condition is missing or names another contract, is suppressed with Execution Evidence resource_contract_unresolvable, never a parameter or target error",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Each use-time failure is Execution Evidence outcome suppressed, error resource_contract_unresolvable, with no Refusal Record. Proved by removing the PERMIT_USE_CHECKS resource_contract row."
   },
   {
    "id": "authzen.response-context.valid-until-required-and-bounded",
@@ -27214,9 +27612,34 @@
     "normative": "a contract the PEP cannot resolve before the decision request is a Refusal Record and one that stops resolving at use is Execution Evidence, both carrying resource_contract_unresolvable"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > a reference that does not resolve signs a Refusal Record resource_contract_unresolvable, asks no PDP and has no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > at use, a permit whose contract no longer resolves, or whose condition is missing or names another contract, is suppressed with Execution Evidence resource_contract_unresolvable, never a parameter or target error",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > a v1-referencing entry is refused resource_contract_unresolvable with no decision and no effect when %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Before the decision request: a Refusal Record; at use: Execution Evidence; both resource_contract_unresolvable. Proved by suppressing the PEP's pre-decision refusal and by removing the use-time row."
   },
   {
    "id": "authzen.failure-condition-coverage.resource-contract-not-parameter-or-target",
@@ -27236,9 +27659,28 @@
     "normative": "a contract failure with unchanged parameters and target is never recorded as parameter_violation, parameter_mismatch or target_drift"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > at use, a permit whose contract no longer resolves, or whose condition is missing or names another contract, is suppressed with Execution Evidence resource_contract_unresolvable, never a parameter or target error",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "each stage records a contract failure on its own carrier (@spec runtime#resource-contract, authzen#failure-condition-coverage, #249) > a reference the PEP resolves but the PDP does not is a PDP denial resource_contract_drift, retained as Decision Evidence: no Refusal Record, no Execution Evidence, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). With parameters and target unchanged, the at-use failure is never parameter_mismatch or target_drift (the contract row runs ahead of the phase and target rows), and the PDP's is resource_contract_drift, never parameter_violation. Proved by removing the PERMIT_USE_CHECKS resource_contract row."
   },
   {
    "id": "authzen.failure-condition-coverage.target-drift-versus-parameter-mismatch",
@@ -30872,9 +31314,28 @@
     "normative": "a PEP that cannot resolve the resource contract the operation requires before the decision request signs a Refusal Record with denial_reason resource_contract_unresolvable, with no decision request and no effect"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > a reference that does not resolve signs a Refusal Record resource_contract_unresolvable, asks no PDP and has no effect",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > a v1-referencing entry is refused resource_contract_unresolvable with no decision and no effect when %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > where the resource requires a reference, an entry without one provides no authority, unless another fully enforceable entry covers the operation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -31898,9 +32359,28 @@
     "normative": "a permit whose contract no longer resolves at use, or differs from the contract the PEP is about to perform under, is suppressed with error resource_contract_unresolvable, never a parameter comparison"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the PEP's contract carriers, with no PDP behind it (@spec runtime-evidence#pre-decision-refusal, runtime-evidence#execution-evidence-object, #249) > at use, a permit whose contract no longer resolves, or whose condition is missing or names another contract, is suppressed with Execution Evidence resource_contract_unresolvable, never a parameter or target error",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a permit whose condition is missing, malformed or names another contract than the one the PEP performs under releases no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A permit whose contract no longer resolves at use, or differs from the contract the PEP performs under, is suppressed with error resource_contract_unresolvable. Proved by removing the PERMIT_USE_CHECKS resource_contract row."
   },
   {
    "id": "evidence.execution.duplicate-identifiers-are-distinct",
@@ -42511,9 +42991,16 @@
     "normative": "an entry carrying resource_contract, or one without it for a target that requires a reference, is projected to scope only where the mapping states the target performs the scope's operations under exactly that contract; otherwise no scope is emitted for it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the reference is preserved exactly by derivation and projection (@spec resource-access#subset step 4, #249) > scope projection never drops it: an entry carrying a reference projects only to a value the mapping states is performed under exactly that contract",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A scope_only value may declare resource_contract and requires_resource_contract; an entry carrying a reference projects only where the value states exactly that contract, and an entry without one only where the value requires none. Partial: witnessed through projectScope (unit); no token-endpoint test projects an entry carrying a reference. Proved by removing projection condition 4."
   },
   {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
@@ -43535,9 +44022,52 @@
     "normative": "a derived, refreshed, exchanged or delegated entry that removes, replaces or adds a resource_contract reference relative to its Mission entry is not a subset and is refused; one that carries it unchanged passes this step"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. Prove through every enabled transformation: derivation, refresh narrowing, Token Exchange delegation, async delegation and dispatch handoff."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the reference is preserved exactly by derivation and projection (@spec resource-access#subset step 4, #249) > derivation carries a proposed reference under a policy ceiling that has none, and an approved ceiling's reference to an entry derived from it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the reference is preserved exactly by derivation and projection (@spec resource-access#subset step 4, #249) > derivation refuses a proposal replacing an approved entry's reference: replacing is never narrowing",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the reference is preserved exactly by derivation and projection (@spec resource-access#subset step 4, #249) > the effective-set projection (refresh, code and introspection re-projection) keeps the reference, and yields nothing for a candidate that removes, replaces or adds one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a refreshed access token and introspection carry it unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > an async-delegation Token Exchange carries it, whether it requests nothing narrower or restates it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that removes or replaces the reference is refused invalid_authorization_details: neither is narrowing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > a Token Exchange that adds a reference to an entry approved without one is refused: an unpinned approval never gains one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: derivation, the code exchange, refresh, introspection and the async-delegation Token Exchange are witnessed; dispatch handoff and child creation are not (they reach the same derivation and subset step 4, unwitnessed end to end). The Token Exchange refusal is held by two layers, subset step 4 and the projection's equality: disabling both fails the refusal tests, either alone does not."
   },
   {
    "id": "resource-access.resource-contract.unconfigured-reference-refused",
@@ -43557,9 +44087,28 @@
     "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, or a contract not defining an action the entry lists) is refused invalid_authorization_details and no Mission is created"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the authorization server assembles the reference from configuration before approval (@spec resource-access#resource-contract, #249) > refuses invalid_authorization_details at intake and at approval for a proposed %s, creating no Mission",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > refuses an unconfigured or malformed reference with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > admits a proposal carrying the configured current reference",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -43579,9 +44128,22 @@
     "normative": "for a resource whose configuration requires a reference, the approved Authority Set entry carries the configured current contract's id, version and digest even when the proposal carried none"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract-assembly-endpoint.test.ts",
+     "name": "where configuration requires a reference, the authorization server records the current one before approval (@spec resource-access#resource-contract, #249) > an entry proposed without a reference is approved and issued carrying the configured current reference",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the authorization server assembles the reference from configuration before approval (@spec resource-access#resource-contract, #249) > records the current contract's reference in an entry whose resource requires one when the proposal carries none, so the Approver approves it with it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -43601,9 +44163,22 @@
     "normative": "two Authority Sets that differ only in an entry's resource_contract member have different authority_hash values"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the authorization server assembles the reference from configuration before approval (@spec resource-access#resource-contract, #249) > authority_hash commits the reference: the record's anchor is computed over the set carrying it",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "the resource contract reference survives every issuance path exactly (@spec resource-access#resource-contract, #249) > the approval records the proposed current reference, authority_hash commits it, and the code-exchanged token carries it",
+     "level": "endpoint",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference is assembled before authority_hash is computed, so the record's anchor is the anchor over the set carrying it and differs from the set without it. Proved by not recording the reference."
   },
   {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
@@ -43625,9 +44200,28 @@
     "normative": "an authorization server without resource contract support refuses an entry carrying resource_contract with invalid_authorization_details and never issues the entry with the member removed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet. The reference AS refuses every member outside its supported set (#1399, PR #1421), which covers this member until the implementation admits it; a witness must name resource_contract."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract-assembly-endpoint.test.ts",
+     "name": "an authorization server with no contract configured refuses the member and never drops it (@spec resource-access#resource-contract, #249) > refuses a pushed entry carrying resource_contract with invalid_authorization_details, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a surface that does not implement the reference refuses it and never drops it (@spec resource-access#resource-contract, #249) > template consent refuses a ceiling entry carrying resource_contract, naming it",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the authorization server assembles the reference from configuration before approval (@spec resource-access#resource-contract, #249) > refuses invalid_authorization_details at intake and at approval for a proposed %s, creating no Mission",
+     "level": "unit",
+     "surface": "par"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference AS implements the section at proposal intake, approval and derivation. Template consent does not assemble a reference, so it refuses a ceiling entry carrying one; and an authorization server with no contract configured refuses a pushed entry carrying one invalid_authorization_details at PAR and at approval, never issuing it without the member. Proved by removing the template refusal, by removing the intake check (PAR then admitted the entry), and by dropping the member in derivation (approval then issued the entry without it)."
   },
   {
    "id": "resource-access.resource-contract.rs-performs-only-referenced",
@@ -43647,9 +44241,22 @@
     "normative": "an operation the resource would perform under a contract other than the entry's referenced one (another version, or the same version with a different digest) is refused with no effect, including a v1-referencing entry at a resource that serves only v2"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > a v1-referencing entry is refused resource_contract_unresolvable with no decision and no effect when %s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the executing PEP re-resolves the permit's contract before release (@spec runtime#resource-contract rule 5, authzen#response-context, #249) > a definition change after the decision and before dispatch, with identical parameters, suppresses the effect: Execution Evidence resource_contract_unresolvable, no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1-referencing entry at a resource serving only v2, under a changed v1 digest or a retired v1, is refused before any decision with no effect, and a change after the decision suppresses the effect. Proved by suppressing the PEP's pre-decision refusal and by removing the use-time row."
   },
   {
    "id": "resource-access.resource-contract.rs-missing-required-no-authority",
@@ -43669,9 +44276,16 @@
     "normative": "at a resource that requires a reference for the operation, an applicable entry without resource_contract authorizes nothing, and the request is refused unless another fully enforceable entry covers it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > where the resource requires a reference, an entry without one provides no authority, unless another fully enforceable entry covers the operation",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where the declaration requires a reference, an unpinned entry authorizes nothing (refused before any decision), and a second entry carrying the current reference covers the operation. Proved by ignoring the requirement at the PEP."
   },
   {
    "id": "resource-access.resource-contract.rs-follows-runtime-version-states",
@@ -43691,9 +44305,22 @@
     "normative": "a resource server performs an entry's operation under a superseded version only within its declared retention and never under a retired one; outside those states the entry authorizes nothing"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553), owner review of #1428; the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > performs a superseded version only within its declared retention, and a retired one never",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -45341,9 +45968,22 @@
     "normative": "a proposed entry whose resource_contract is not an object with exactly id (an absolute URI), version (a non-empty string) and digest (the sha-256: integrity-anchor encoded form) is refused invalid_authorization_details"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#249 specification pass (D553); the implementation follows in a separate PR, so no test witnesses this row yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "the reference's shape is validated at intake (@spec resource-access#entry-validation, #249) > refuses %s",
+     "level": "unit",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > refuses an unconfigured or malformed reference with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The published schema and validateMissionResourceAccessSchema admit exactly id (an absolute URI), version (non-empty) and digest (sha-256: base64url); PAR refuses an extra member invalid_authorization_details. Proved by removing the shape check."
   },
   {
    "id": "resource-access.entry-validation.time-window-ordering",
@@ -48347,7 +48987,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy-completed pending approval is polled, cancelled, client-bound and delivered exactly as a human-completed one",
-    "local": "Over the wire, for a policy-completed approval: every poll is bound to the client and the DPoP key of the redeeming request and paced (slow_down), the pending lifetime ends in expired_token, cancellation is a revocation at the RFC 7009 endpoint, and the Mission-bound token is delivered once, a delivery that fails before its response leaving the approval deliverable. This assembly serves no human review surface, so the comparison with a human-completed deferred approval has no wire surface to run on, and the row stays partial."
+    "local": "Over the wire, for a policy-completed approval: every poll is bound to the client and the DPoP key of the redeeming request and paced (slow_down): another client's poll is answered as an unknown code whatever its key, and the opening client under another key gets invalid_dpop_proof (#1357), the pending lifetime ends in expired_token, cancellation is a revocation at the RFC 7009 endpoint, and the Mission-bound token is delivered once, a delivery that fails before its response leaving the approval deliverable. This assembly serves no human review surface, so the comparison with a human-completed deferred approval has no wire surface to run on, and the row stays partial."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -54629,7 +55269,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a client not authorized for the predecessor is refused before the creation_request_id lookup, even when it holds the predecessor's token and its key: no deferral or reservation is opened, and no successor is created or predecessor superseded",
-    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses, invalid_grant and before redeem, a deferral whose recorded client is not the predecessor's client, decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). A successor that another client's poll created before that check existed carries the predecessor's client, and its committed deferral is retained, so building the AS revokes each one the deferral consistently identifies (exactly one Mission carrying the deferral's predecessor and approval event, named by the predecessor's supersession, carrying its client, and no own-client deferral claiming that event), a suspended, committed but unreleased, or late-denied one included (the deferral's completion marker, not its state, selects it). The predecessor stays superseded, a completed or expired successor keeps its termination, a revoked successor's child cascades, a successor its own client approved is untouched, a later boot commits nothing, and the family-grant revocation of a successor the expiry clock terminated is attempted before the AS is returned even when nothing is revoked. The revoked successor's Token Exchange and refresh family are refused and its derivation gate throws, while an access token already issued for it still verifies offline until exp. A committed deferral from another client whose linkage is incomplete or contradicted is reported on the build result, not acted on (#1349): its predecessor or successor names another issuer than this kernel's, its predecessor is missing, it records no approval event, no successor carries that event, the predecessor's supersession names another Mission, the successor lacks the predecessor's client, or an own-client deferral claims the same event; each is reported before the expiry clock runs, neither revoked nor expired (#1392). A Progressive ceiling-drawdown successor opens no deferral, but its basis records the requesting client as activation_actor while its client_id is the predecessor's, so building the AS also revokes each non-terminal drawdown successor whose activation actor names an issuer and a client, whose actor, successor and predecessor all name this kernel's issuer, whose actor names a client other than its own, which carries its predecessor's client, and which the predecessor's supersession names, a suspended one included; own-client, terminal and later own-client successors are left alone and a repeated boot commits nothing. A drawdown whose actor names no client, whose actor or successor names another issuer (including two foreign issuers that agree), whose predecessor is another issuer's or missing, which lacks its predecessor's client, or which the predecessor's supersession does not name is reported before the expiry clock runs, neither revoked nor expired (#1372). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
+    "local": "the reference AS authorizes only the predecessor's own client_id (an actor_token is carried, never used to authorize another client, #433) and answers invalid_request with no Mission state. Deferrals persist and the deferred poll runs no initiation check, so the poll also refuses a deferral whose recorded client is not the predecessor's client, answered as an unknown code (invalid_grant) before the key check and before redeem (#1357), decided from the recorded predecessor and not the subject_token; the predecessor's own poll still completes without one (#1326). A successor that another client's poll created before that check existed carries the predecessor's client, and its committed deferral is retained, so building the AS revokes each one the deferral consistently identifies (exactly one Mission carrying the deferral's predecessor and approval event, named by the predecessor's supersession, carrying its client, and no own-client deferral claiming that event), a suspended, committed but unreleased, or late-denied one included (the deferral's completion marker, not its state, selects it). The predecessor stays superseded, a completed or expired successor keeps its termination, a revoked successor's child cascades, a successor its own client approved is untouched, a later boot commits nothing, and the family-grant revocation of a successor the expiry clock terminated is attempted before the AS is returned even when nothing is revoked. The revoked successor's Token Exchange and refresh family are refused and its derivation gate throws, while an access token already issued for it still verifies offline until exp. A committed deferral from another client whose linkage is incomplete or contradicted is reported on the build result, not acted on (#1349): its predecessor or successor names another issuer than this kernel's, its predecessor is missing, it records no approval event, no successor carries that event, the predecessor's supersession names another Mission, the successor lacks the predecessor's client, or an own-client deferral claims the same event; each is reported before the expiry clock runs, neither revoked nor expired (#1392). A Progressive ceiling-drawdown successor opens no deferral, but its basis records the requesting client as activation_actor while its client_id is the predecessor's, so building the AS also revokes each non-terminal drawdown successor whose activation actor names an issuer and a client, whose actor, successor and predecessor all name this kernel's issuer, whose actor names a client other than its own, which carries its predecessor's client, and which the predecessor's supersession names, a suspended one included; own-client, terminal and later own-client successors are left alone and a repeated boot commits nothing. A drawdown whose actor names no client, whose actor or successor names another issuer (including two foreign issuers that agree), whose predecessor is another issuer's or missing, which lacks its predecessor's client, or which the predecessor's supersession does not name is reported before the expiry clock runs, neither revoked nor expired (#1372). Partial: the actor_token arm, authorizing a delegated acting agent through actor_token, is not implemented, so it is not exercised."
    },
    "level": "endpoint",
    "coverage": "partial",
