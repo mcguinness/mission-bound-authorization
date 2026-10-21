@@ -23,8 +23,29 @@ import {
   jwtVerify,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
+
+/**
+ * @spec mission#issuance-gating (#250): a hook that runs once, right after the
+ * transaction token is signed and before the handler continues. The real
+ * mint runs unchanged; a test arms the hook to place a lifecycle commit
+ * inside the mint's own `await`.
+ */
+const mintHooks = vi.hoisted(() => ({ afterMint: undefined as (() => void) | undefined }));
+vi.mock("../src/kernel/transaction-token.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/kernel/transaction-token.js")>();
+  return {
+    ...actual,
+    mintTransactionToken: async (...args: Parameters<typeof actual.mintTransactionToken>) => {
+      const token = await actual.mintTransactionToken(...args);
+      const hook = mintHooks.afterMint;
+      mintHooks.afterMint = undefined;
+      hook?.();
+      return token;
+    },
+  };
+});
 import {
   TXN_TOKEN_PROHIBITED_CLAIMS,
   txnApprovalBindingDigest,
@@ -1824,6 +1845,109 @@ describe("subject credential liveness and the post-decision fence (@spec txn-aut
     freshDecisionHooks.delete(txn);
   });
 
+});
+
+describe("the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250)", () => {
+  /** A dedicated Mission + base token, so ending it disturbs nothing else. */
+  async function ownMission(): Promise<{ token: string; missionId: string; claim: Record<string, unknown> }> {
+    const issued = await issueBaseMissionToken(dpopKeys, new Map<string, string>());
+    return {
+      token: issued.token,
+      missionId: issued.missionId,
+      claim: decodeJwt(issued.token).mission as Record<string, unknown>,
+    };
+  }
+
+  /** Admit and approve a remittance challenge for `mission`; the next poll completes it. */
+  async function approvedWorkflow(
+    txn: string,
+    mission: { token: string; missionId: string; claim: Record<string, unknown> },
+  ): Promise<string> {
+    const requested = (as.kernel.get(mission.missionId) as { authority_set: AuthorityEntry[] }).authority_set
+      .filter((e) => e.actions.includes("payments:remittance.send"))
+      .map(({ capability_sources: _issuerProvenance, ...e }) => ({ ...e, actions: ["payments:remittance.send"] }));
+    const challenge = await signChallenge(
+      {
+        txn,
+        authorization_details: requested,
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: mission.claim,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+    const res = await submit(challenge, { token: mission.token });
+    const body = (await res.json()) as { transaction_authorization_id?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    return body.transaction_authorization_id as string;
+  }
+
+  async function poll(id: string): Promise<{ status: number; body: Record<string, unknown> }> {
+    const res = await postTransaction({ transaction_authorization_id: id });
+    return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+  }
+
+  it("a Mission revoked during the transaction token's mint is refused access_denied with no token member, and a later poll is refused too, never served the stored token; the same poll without it delivers", async () => {
+    const control = await ownMission();
+    const delivered = await poll(await approvedWorkflow("txn_release_fence_control", control));
+    expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
+    expect(typeof delivered.body.access_token).toBe("string");
+
+    const mission = await ownMission();
+    const id = await approvedWorkflow("txn_release_fence_revoked", mission);
+    let committed = false;
+    mintHooks.afterMint = () => {
+      committed = true;
+      as.kernel.transition(mission.missionId, "revoke"); // commits inside the mint's await, after signing
+    };
+    const res = await poll(id);
+    expect(committed).toBe(true);
+    expect(as.kernel.get(mission.missionId)?.termination?.reason).toBe("revoked");
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("access_denied");
+    expect(Object.keys(res.body).sort()).toEqual(["error", "error_description"]);
+
+    const again = await poll(id);
+    expect(again.status, JSON.stringify(again.body)).toBe(400);
+    expect(again.body.error).toBe("access_denied");
+    expect(again.body.access_token).toBeUndefined();
+  });
+
+  it("a Mission revoked while the request-path drain runs, after the mint and the issuance record, is refused access_denied with no token member", async () => {
+    const mission = await ownMission();
+    const id = await approvedWorkflow("txn_release_fence_drain", mission);
+    const drain = as.kernel.drainLifecycleOutbox.bind(as.kernel);
+    let committed = false;
+    vi.spyOn(as.kernel, "drainLifecycleOutbox").mockImplementation(async () => {
+      if (!committed) {
+        committed = true;
+        as.kernel.transition(mission.missionId, "revoke");
+      }
+      return drain();
+    });
+    const res = await poll(id);
+    vi.restoreAllMocks();
+    expect(committed).toBe(true);
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("access_denied");
+    expect(Object.keys(res.body).sort()).toEqual(["error", "error_description"]);
+  });
+
+  it("a suspension committed during the mint still delivers the transaction token", async () => {
+    const mission = await ownMission();
+    const id = await approvedWorkflow("txn_release_fence_suspended", mission);
+    mintHooks.afterMint = () => {
+      as.kernel.transition(mission.missionId, "suspend");
+    };
+    const res = await poll(id);
+    expect(as.kernel.get(mission.missionId)?.state).toBe("suspended");
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(typeof res.body.access_token).toBe("string");
+  });
 });
 
 describe("fresh decision at completion (@spec txn-authorization#challenge-redemption)", () => {
