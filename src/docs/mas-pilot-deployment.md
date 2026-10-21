@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `e6a7d172`
+Every statement here is true of the reference implementation at `356deb64`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -598,7 +598,7 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   services/pdp/test/evaluate-authzen-members.test.ts \
   demo/test/mas-pilot-separated.test.ts demo/test/mas-pilot-separated-wiring.test.ts \
   services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts \
-  demo/test/mas-pilot-launcher.test.ts
+  demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts
 ```
 
 §10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
@@ -617,3 +617,6 @@ pilots it composes run their estates on `127.0.0.1:14843`, `14847`, `14850`
 and `14852`; the slow proxy and the Status double bind ephemeral ports.
 `mas-pilot-launcher.test.ts` binds `127.0.0.1:14858` to `14869`, except
 `14866` (walkthrough §7); its startup refusals need no OpenFGA.
+`mas-pilot-launcher-shutdown.test.ts` binds `127.0.0.1:14876` to `14889` and
+needs no OpenFGA: a stop at any point of startup stops the MAS process and
+frees its ports, and the MAS exits with its launcher.
