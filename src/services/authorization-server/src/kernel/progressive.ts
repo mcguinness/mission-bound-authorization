@@ -438,7 +438,9 @@ export function encounterHint(
  * Mission Issuer retrieves the declaration itself, through the deployment's
  * port, from the origin of the request's own entry, and digests the exact
  * bytes; the hint is recorded beside them as the agent's claim. One origin per
- * request in this reference; the returned string refuses any other.
+ * request in this reference, and a hint naming another origin is refused, so
+ * its digest is never compared with a different resource's declaration; the
+ * returned string is the reason.
  */
 export async function encounterFacts(
   options: ProgressiveDrawdownOptions,
@@ -449,6 +451,7 @@ export async function encounterFacts(
   const origins = [...new Set(encountered.map(originOf))];
   const origin = origins[0];
   if (origins.length !== 1 || origin === undefined) return "one encountered resource origin per request";
+  if (hint && hint.origin !== origin) return "encountered_resource names an origin other than the encounter's";
   let bytes: Uint8Array | string | undefined;
   try {
     bytes = await options.resourceDeclarations?.(origin);

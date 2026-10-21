@@ -44,7 +44,7 @@ import { type CryptoKey, decodeJwt, exportJWK, importJWK, SignJWT, generateKeyPa
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
-import { type ProgressiveDrawdownOptions, progressiveFromProfile } from "../src/kernel/progressive.js";
+import { encounterFacts, type ProgressiveDrawdownOptions, progressiveFromProfile } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders } from "./approval-fixture.js";
@@ -327,5 +327,25 @@ describe("a discovery encounter on the drawdown path, stage 1 (@spec discovery#a
       expect(body.error, JSON.stringify(hints)).toBe("invalid_request");
     }
     expect(as.kernel.allMissions().length).toBe(before);
+  });
+});
+
+describe("the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469)", () => {
+  // The endpoint config has one origin; a request whose entries span two
+  // reaches this through any deployment with more than one resource origin.
+  const OTHER = "https://other.example/api";
+  const requested = [entry(ENCOUNTERED, ["payments:invoice.read"]), entry(OTHER, ["read"])] as unknown as AuthorityEntry[];
+
+  it("a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration", async () => {
+    declarations.set(ORIGIN, declarationOf(["payments:invoice.read"]));
+    const digest = catalogDigest(declarationOf(["payments:invoice.read"]));
+    const facts = await encounterFacts(PROGRESSIVE, [ENCOUNTERED], requested, {
+      origin: new URL(OTHER).origin,
+      resource_declaration_digest: digest,
+    });
+    expect(facts).toBe("encountered_resource names an origin other than the encounter's");
+    // Control: the same hint naming the encounter's origin is recorded, its digest compared.
+    const control = await encounterFacts(PROGRESSIVE, [ENCOUNTERED], requested, { origin: ORIGIN, resource_declaration_digest: digest });
+    expect(control).toMatchObject({ origin: ORIGIN, hint: { origin: ORIGIN, digest_matched: true } });
   });
 });
