@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4fc11f852e7ec56874c6c5aeeb5737b21efa329b",
-    "content_sha256": "cd608fb39876483fda61620496c29d9dbd3909a50e5f675dc4cfc5dcd6ae159d"
+    "revision": "daea4e587e5b6eaa11f517c17f5535e1ac8587db",
+    "content_sha256": "d9170713084d8ca32eeefe0886475b3b1b0a0dbbffd2049c5a701a241709970d"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -9182,6 +9182,192 @@
    "notes": "#1258 item 2. #1362: witnessed at the SaaS resource: a clean entry that covers the whole request authorizes beside one carrying an unrecognized member, an entry SaaS cannot enforce lends its action to no clean entry, and a write whose action is in one entry and whose vendor is in another is refused (#1298). Proved by mutation: refusing the whole token for one unenforceable entry, and pooling actions across entries, each fail these tests. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; that refuses more often but never combines entries, and is recorded under resource-access.rs-enforcement.type-scoped-matching."
   },
   {
+   "id": "core.rs-enforcement.mission-issuer-trusted",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server refuses a JWT Mission-bound credential whose `mission` claim comes from an issuer it trusts only for ordinary access tokens, and accepts the claim from an issuer it trusts to issue Mission-bound authorization for the resource",
+    "local": "mcp-payments trusts its configured issuer for Mission-bound authorization unless the route is `ordinaryOnly` (an estate authorization server that is not a Mission Issuer); an estate route refuses a `mission` claim on the at+jwt path and on an attenuation root, and still admits the same issuer's ordinary tokens"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > refuses an estate token carrying a mission claim, which a Mission Issuer's route admits as Mission-bound",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503) > refuses a valid chain on an estate route, whose issuer is not trusted to issue Mission-bound authorization",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed at an estate route: a Mission-bound at+jwt is answered 401 while an ordinary token from the same issuer opens a session, the same at+jwt verifies on a Mission Issuer's route, and a valid attenuation chain is refused on the estate route but verifies on the Mission Issuer's. Proved by mutation: removing the `ordinaryOnly` refusal on the at+jwt path fails the two estate-route tests, and removing it on the attenuation path fails the attenuation test."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-equals-iss",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a cross-domain profile it has adopted ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly establishes the permitted relationship between the two",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server that has adopted no cross-domain profile refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted a cross-domain profile accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
+    "local": "mcp-payments adopts no cross-domain profile: it compares the verified `iss` with `mission.issuer` as exact strings on the at+jwt path (HTTP, mediated and gateway validators) and on an attenuation root, before any Mission lookup or decision. mcp-saas is the Cross-Domain destination: `iss` is the Resource AS and `mission.issuer` must be one of its configured `trustedMissionIssuers`, the originating issuers that Resource AS trusts"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > refuses an at+jwt from the trusted issuer whose mission.issuer names %s, on both transports and a gateway route, yielding no facts",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503) > refuses a root signed by the trusted issuer whose mission.issuer names another issuer, and admits the same root naming its own",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > issue ID-JAG -> redeem at RAS -> post journal entry from the token alone",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a credential whose mission.issuer is not its own iss is refused at validation, before the PEP (@spec mission#rs-requirements, #1503)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-invalid-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST reject a token that fails either check with the `invalid_token` error code",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a JWT Mission-bound token whose issuer is not trusted for Mission-bound authorization, or whose `mission.issuer` fails the required relationship to `iss`, is rejected with the `invalid_token` error code",
+    "local": "mcp-payments answers HTTP 401 with `error` `invalid_token` from its credential middleware, before any MCP dispatch, PEP or PDP call. mcp-saas has no HTTP transport: its in-process tool call reports a token validation failure as `error` `invalid_token`, with the reason as `error_description`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed for both checks: an estate route answers a Mission-bound at+jwt 401 `invalid_token` (the trust check), mcp-payments answers a `mission.issuer` that differs from `iss` 401 `invalid_token` (the equality check), and mcp-saas reports `invalid_token` for an originating issuer it does not trust through the Resource AS (the cross-domain relationship). Proved by mutation: removing each check fails its test on the status or `error` assertion, and reporting the raw validation message instead of `invalid_token` fails the SaaS test."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-introspected",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server consuming an opaque Mission-bound token takes as its issuer the AS whose introspection response or issuer-local resolution it relies on, applies the issuer-trust and `mission.issuer` checks to that response's `mission` member, and rejects a failure with the `invalid_token` error code",
+    "local": "mcp-payments accepts tokens through introspection only on an `ordinaryOnly` estate route, whose issuer is not trusted to issue Mission-bound authorization: an active response carrying a `mission` member is answered 401 `invalid_token` before any PEP or PDP call, never read as an ordinary token. No reference resource server accepts a Mission-bound opaque token, so the acceptance half (the trusted introspecting AS as issuer, `mission.issuer` equal to it outside an adopted cross-domain profile) has no implementation"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route-introspection.test.ts",
+     "name": "estate route with introspection: a mission member is refused, never read as ordinary (@spec mission#rs-requirements, #1503) > answers an active introspection response carrying mission 401 invalid_token on the holder's open MCP session, before the PEP, while the same response without it opens the session",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Partial, not twinned: both halves quote this one sentence, and a twin for the refusal half would need an applicability for an introspecting route whose issuer is not trusted for Mission-bound authorization, which the model does not define. Witnessed: the trust check on introspection, where an estate route refuses an active response carrying `mission` with 401 `invalid_token` and no PEP entry or evidence, while the same response without it opens a session. Proved by mutation: removing the adapter's `mission` refusal fails the test on the status, and with the status and body assertions removed, the PEP-entry spy assertion and the no-evidence assertion each fail alone. Not witnessed: acceptance of a Mission-bound opaque token with the issuer and `mission.issuer` checks, since no reference resource server accepts one (core.introspected-consumption is unclaimed)."
+  },
+  {
    "id": "core.introspection.composite-active",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "composite-active",
@@ -15648,12 +15834,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
-     "name": "MCP _meta Mission reference propagation > a credential naming a different Mission issuer than the loaded view is refused with mission_reference_conflict",
+     "name": "MCP _meta Mission reference propagation > a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
     }
    ],
-   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test."
   },
   {
    "id": "mas.reference.mcp-duplicate-keys",

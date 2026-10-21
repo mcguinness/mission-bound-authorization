@@ -18,7 +18,7 @@
 
 import { createHash } from "node:crypto";
 import { aatToolId, type AATTools, credentialEntriesFromAatTools } from "@mission/core";
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { calculateJwkThumbprint, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   deriveAttenuationRoot,
@@ -360,6 +360,39 @@ describe("attenuation chain: keyed verification (negatives)", () => {
         "POST",
       ),
     ).rejects.toThrow(/cnf/);
+  });
+});
+
+describe("attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503)", () => {
+  /** The kernel-minted root's claims with `mission.issuer` replaced, re-signed under the root key. */
+  async function rootNaming(issuer: string): Promise<string> {
+    const claims = JSON.parse(Buffer.from(root.split(".")[1] as string, "base64url").toString());
+    return new SignJWT({ ...claims, mission: { ...claims.mission, issuer } })
+      .setProtectedHeader(decodeProtectedHeader(root) as never)
+      .sign(asKeys.privateKey);
+  }
+  const present = async (s: McpPaymentsServer, links: string[], keys = holderKeys) =>
+    s.validateAttenuationChain(links, await dpopProof(CANONICAL_RESOURCE, links[links.length - 1] as string, keys), CANONICAL_RESOURCE, "POST");
+
+  it("refuses a root signed by the trusted issuer whose mission.issuer names another issuer, and admits the same root naming its own", async () => {
+    await expect(present(server, [await rootNaming(AS_ISS)])).resolves.toMatchObject({ mission: { id: view.id, issuer: AS_ISS } });
+    await expect(present(server, [await rootNaming("https://other-as.test")])).rejects.toThrow(/iss != mission\.issuer/);
+  });
+
+  it("refuses a valid chain on an estate route, whose issuer is not trusted to issue Mission-bound authorization", async () => {
+    const estate = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep: undefined as never, // token validation alone never reaches the PEP
+      payments: new PaymentsStore(),
+      loadView,
+      jwks: { keys: [asPub] },
+      keyRoles: { accessToken: [], attenuationRoot: ["as-attenuation"], transactionToken: [] },
+      issuer: AS_ISS,
+      ordinaryOnly: true,
+    });
+    await expect(present(estate, chain, delegateKeys)).rejects.toThrow(/not a Mission Issuer/);
+    // The same chain verifies on the Mission Issuer's route.
+    await expect(present(server, chain, delegateKeys)).resolves.toMatchObject({ cnfJkt: delegateJkt });
   });
 });
 
