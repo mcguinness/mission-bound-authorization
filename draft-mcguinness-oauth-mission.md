@@ -335,30 +335,27 @@ informative:
 
 --- abstract
 
-An AI agent is typically given a mission: a task to pursue on a
-user's behalf. OAuth 2.0 issues access tokens for individual
-resource requests but has no durable, approved artifact that ties
-those tokens to the one task a user authorized. An agent's authority
-is therefore a collection of independently obtained tokens with no
-shared, auditable boundary, and a user's approval is disconnected
-from what the agent later does.
+OAuth 2.0 issues grants and access tokens but defines no standard
+object that binds an approved task, such as one an AI agent performs
+on a user's behalf, to the authority approved for it and governs the
+tokens later issued under that authority. This document defines that
+object for OAuth 2.0: a Mission.
 
-This document defines a Mission: a structured, explicitly approved,
-integrity-bound authorization artifact for OAuth 2.0. A client
-submits a Mission Intent through Pushed Authorization Requests. The
-authorization server derives Rich Authorization Requests
-authorization details from it, binds the approved task and its
-derived authority to the Approver's consent through integrity
-anchors, and records a durable Mission. Every access token derived
-under the Mission carries that authority and a "mission" claim, and
-issuance is gated on the Mission's lifecycle state.
+A client submits a Mission Intent, the task it will perform, through
+Pushed Authorization Requests. The authorization server derives Rich
+Authorization Requests authorization details from it, binds the
+approved task and that authority to the Approver's consent through
+integrity anchors, and records a durable Mission. Every access token
+issued under the Mission carries a subset of the approved authority
+and a "mission" claim, and every issuance is gated on the Mission's
+lifecycle state. Revoking a Mission stops further issuance; it does
+not recall tokens already issued, which a resource server that
+validates them locally honors until they expire.
 
 Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
-Mission be honored across trust domains. This document specifies the
-issuance and governance "mission layer" left unspecified by
-agent-identity work for OAuth; runtime enforcement of each action is
-a separate, optional layer.
+Mission be honored across trust domains. Runtime enforcement of each
+action is a separate, optional layer.
 
 --- middle
 
