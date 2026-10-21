@@ -659,18 +659,17 @@ this comparison ({{delegate-eligibility}}). A derived entry's
 ## Common Constraints {#common-constraints}
 
 A `constraints` member name ({{resource-access-type}}) is either a
-specification-defined **Common Constraint** or a deployment-defined key.
-Common Constraints give independently developed deployments one
-vocabulary they interpret, narrow, and compare identically. Further
-Common Constraints are defined by specification and registered
-({{iana-common-constraints}}).
+**Common Constraint**, defined by specification and registered
+({{iana-common-constraints}}), or a deployment-defined key. Common
+Constraints give independently developed deployments one vocabulary
+they interpret, narrow, and compare identically.
 
 A Common Constraint definition fixes:
 
 - **Value syntax**: the JSON value type ({{RFC8259}}) and any additional
   rules.
-- **Subset rule**: how a candidate value is judged no broader than a
-  reference value, used by the subset comparison of {{subset}}.
+- **Subset rule**: how {{subset}} judges a candidate value no broader
+  than a reference value.
 - **Intersection rule**: how two values for the same key combine; the
   result MUST be no broader than either operand.
 - **Input**: what the constraint reads at the point of use, which an
@@ -679,13 +678,13 @@ A Common Constraint definition fixes:
 - **Predicate**: the condition the input meets when the operation is
   within the bound.
 
-{{subset}} applies a constraint's subset rule. Its intersection rule
-applies where a derivation combines two bounds for the same key, as in
-the proposal and policy-ceiling example of the Derivation Policy
-appendix of {{I-D.draft-mcguinness-oauth-mission}}. This document does
-not require a derivation to run a particular intersection algorithm, and
-a ceiling whose specification defines a refusal rule is enforced by that
-rule, not silently intersected.
+A constraint's intersection rule applies where a derivation combines
+two bounds for the same key, as in the proposal and policy-ceiling
+example of the Derivation Policy appendix of
+{{I-D.draft-mcguinness-oauth-mission}}. A derivation need not run a
+particular intersection algorithm, and a ceiling whose specification
+defines a refusal rule is enforced by that rule, not silently
+intersected.
 
 At the point of use ({{rs-enforcement}}), the resource server applies
 the predicate of each Common Constraint an applicable entry carries to
@@ -697,15 +696,12 @@ evaluate or satisfy as providing no authority. It MUST refuse the
 request unless another applicable entry independently authorizes the
 whole request with every constraint satisfied.
 
-A `constraints` member whose name is a specification-defined Common
-Constraint is interpreted per its definition. Any other member name
-remains deployment-defined and is interpreted only within the issuing
+A deployment-defined key is interpreted only within the issuing
 deployment; a consumer that does not recognize it MUST fail closed
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
-The same duty binds the authorization server when it narrows. The
-authorization server derives a candidate entry from a ceiling entry when
-it narrows:
+The same duty binds the authorization server when it derives a
+candidate entry from a ceiling entry by narrowing:
 
 - a client's authority proposal to the Authority Set
   ({{I-D.draft-mcguinness-oauth-mission}}); or
@@ -718,13 +714,14 @@ deployment-defined key, and whether it appears in the ceiling entry or
 in the candidate, MUST NOT be dropped while the entry survives. The
 authorization server MUST instead refuse the derivation: an unsupported
 constraint is unsupported input, so the entry is never omitted to repair
-it ({{I-D.draft-mcguinness-oauth-mission}}). An entry whose constraints
-the authorization server can compare but that policy declines to grant
-is different: it is narrowed or omitted, and the granted
-`authorization_details` echo reflects that
-({{I-D.draft-mcguinness-oauth-mission}}). Carrying the entry forward
-with the key dropped would widen effective authority past the ceiling,
-as an unenforced key would at the resource server
+it ({{I-D.draft-mcguinness-oauth-mission}}). Carrying the entry forward
+without the key would widen effective authority past the ceiling, as an
+unenforced key would at the resource server
+({{I-D.draft-mcguinness-oauth-mission}}).
+
+An entry whose constraints the authorization server can compare but
+that policy declines to grant is instead narrowed or omitted, and the
+granted `authorization_details` echo reflects that
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 This type defines no interoperable cumulative use counter. A deployment
@@ -766,8 +763,8 @@ This document defines the following Common Constraints.
 
 `resource_issued_before`:
 : The action applies only to resources issued at or before this instant.
-  The `resource_` qualifier in both names marks that the window bounds
-  resource issuance, not token issuance.
+  The `resource_` prefix of both names marks a bound on resource
+  issuance, not token issuance.
 
   - Value: a date-time string as defined in {{RFC3339}}.
   - Subset: no broader when less than or equal to the reference.
@@ -895,8 +892,7 @@ Common Constraint comparisons are in value space, not lexical:
   two RFC 3339 representations of the same instant that differ only in
   timezone offset or trailing subsecond zeros are equal;
 - `time_window` `not_before` and `not_after` values are compared as the
-  instants they denote after normalization to UTC, as
-  `resource_issued_after` and `resource_issued_before` values are; and
+  instants they denote after normalization to UTC; and
 - `recipient_domain` values are compared as DNS names,
   case-insensitively and on whole labels, so `mail.example.com` is
   within `example.com` and `example.net` is not.
