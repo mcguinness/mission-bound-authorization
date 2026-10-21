@@ -11,9 +11,9 @@
  * `mission_constraints_supported`, at the token endpoint, and a key the
  * audience is not known to enforce refuses the issuance.
  *
- * The shipped configuration admits `exact` ceiling entries only, so this
- * deployment's ceiling is programmatic: one `prefix` entry over the whole
- * payments origin, which admits each proposal below.
+ * The shipped ceilings are `exact`, so this deployment's ceiling is
+ * programmatic: one `prefix` entry over the whole payments origin, which
+ * admits each proposal below.
  */
 
 import type { Server } from "node:http";
@@ -246,7 +246,11 @@ describe("the token endpoint checks every entry an audience serves against that 
     const issued = await issueUnder(["tenant"], invoice);
     expect(issued.status, JSON.stringify(issued.body)).toBe(200);
     const details = decodeJwt(issued.body.access_token as string).authorization_details as Json[];
-    expect(details).toEqual([invoice]);
+    // The trusted payments catalog also resolves the invoice-level entry's
+    // catalog-sourced action, as for the service's own entry (#1440).
+    const { capability_sources: sources, ...emitted } = details[0] as Json;
+    expect([emitted]).toEqual([invoice]);
+    expect((sources as Json[]).map((b) => b.action)).toEqual([READ]);
   });
 
   it("checks a prefix entry within the audience against the audience's list", async () => {
