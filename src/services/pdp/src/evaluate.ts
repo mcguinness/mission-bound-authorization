@@ -87,7 +87,7 @@ import {
   vendorConstraintSatisfied,
   viewHoldsCommittedSet,
 } from "./policy-view.js";
-import { type DurationLeaseDomain, durationLeaseStep } from "./duration-lease.js";
+import { type DurationLeaseDomain, durationLeaseStep, renewalClaimIdentity } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
   checkResourcePolicy,
@@ -2074,13 +2074,14 @@ async function evaluateInner(
     }
   }
 
-  // 8a. Duration lease (@spec metering#lease-renewal, #1440): a renewal that
-  // continues no activity is denied. The metering draft names no reason for
-  // it; it takes the request-fault classification ("or the request would
-  // broaden it", @spec authzen#failure-condition-coverage), since continuing
-  // another evaluation's activity would draw on a reservation this request
-  // was never issued. Run after the authority and constraint checks, like the
-  // claim step, so a caller without authority learns nothing about leases.
+  // 8a. Duration lease (@spec metering#lease-renewal,
+  // authzen#failure-condition-coverage, #1440, #1464): a renewal that names
+  // an unknown evaluation or an ended activity, or fails continuity, is
+  // denied `out_of_authority`, since continuing another evaluation's activity
+  // would draw on a reservation this request was never issued. Run after the
+  // authority, lifecycle and constraint checks, like the claim step, so a
+  // renewal passes every current check (a failure there keeps its own
+  // denial) and a caller without authority learns nothing about leases.
   const lease = durationLeaseStep(req, opts.durationLeases, now().getTime());
   if (lease.kind === "refused") return deny("out_of_authority");
 
@@ -2209,12 +2210,18 @@ async function evaluateInner(
     // the volatile instance would let another instance claim the same key.
     const scope = idempotencyScopeOf(req);
     if (!scope) return deny("actor_invalid");
+    // @spec metering#lease-renewal (#1464, D606): a renewal's key is claimed
+    // with the renewal's identity, the operation identity bound to the
+    // evaluation it renews, so the key never stands for the operation
+    // itself or for another renewal. The operation identity is unchanged.
+    const opIdentity = operationIdentity(req);
     const input: ClaimInput = {
       actionClass: actionClass as string,
       scope,
       scopeDigest: idempotencyScopeDigest(scope),
       key,
-      operationIdentity: operationIdentity(req),
+      operationIdentity:
+        lease.kind === "leased" && lease.renews !== undefined ? renewalClaimIdentity(opIdentity, lease.renews) : opIdentity,
       cacheKey: decisionCacheKey(req, view, modelId),
       evaluationId: decisionId,
       validUntilMs: deadline.validUntilMs,

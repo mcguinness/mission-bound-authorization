@@ -14,11 +14,19 @@
  * continues the same metered activity rather than opening a new
  * reservation." and "The PDP MUST verify that the renewal's Mission, subject,
  * action, operation target and audience match the evaluation named by
- * `prior_evaluation_id`." A renewal that names no lease this PDP issued, a
- * lease that has ended, or an evaluation any of the five differs from,
- * continues nothing and is denied. A matching renewal is evaluated in full
- * like any request; its permit continues the renewed activity and moves the
- * lease's end, and no second reservation is opened.
+ * `prior_evaluation_id`." A renewal that names no lease this PDP issued, an
+ * activity that has ended, or an evaluation any of the five differs from,
+ * continues nothing and is denied `out_of_authority` (#1464, D606). An
+ * activity has ended at its current lease boundary, the latest end any of its
+ * permits was leased to, whichever permit the renewal names. A matching
+ * renewal is evaluated in full like any request; its permit continues the
+ * renewed activity and moves the lease's end, and no second reservation is
+ * opened.
+ *
+ * A renewal of a keyed action carries its own idempotency key, and the PDP
+ * claims that key with the renewal's identity ({@link renewalClaimIdentity}),
+ * never the renewed operation's identity alone. The operation identity
+ * itself is unchanged by a renewal.
  *
  * This is the smallest realization the renewal rule needs. The ledger holds
  * leases in memory, and nothing here accumulates `max_duration`, commits a
@@ -30,6 +38,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { canonicalDigest } from "@mission/core";
 import type { EvaluationRequest } from "./evaluate.js";
 
 /** The five members a renewal must share with the evaluation it renews. */
@@ -46,7 +55,10 @@ export interface DurationActivity {
   activityId: string;
   /** The permits that leased this activity, the opening permit first. */
   evaluations: string[];
-  /** The current lease's end: the latest leasing permit's `valid_until`. */
+  /**
+   * The current lease boundary: the latest `valid_until` among the permits
+   * that leased this activity. A renewal moves it forward and never back.
+   */
   leaseEndMs: number;
 }
 
@@ -144,20 +156,50 @@ export type LeaseStep =
   | { kind: "refused" }
   /**
    * A permit for this request is leased: `ceiling` caps its `valid_until` at
-   * the lease interval, and `commit` records it once it is issued.
+   * the lease interval, and `commit` records it once it is issued. `renews`
+   * is the validated `prior_evaluation_id` of a renewal, absent on a request
+   * that opens an activity.
    */
   | {
       kind: "leased";
       ceiling: { name: string; atMs: number };
+      renews?: string;
       commit(evaluationId: string, validUntilMs: number): void;
     };
+
+/**
+ * @spec metering#lease-renewal, runtime#idempotency (#1464, D606): the
+ * identity the PDP claims a renewal's idempotency key with. "The renewal
+ * identity binds its prior evaluation and continuation inputs": the renewed
+ * operation's identity (action, resource, operation target, parameter
+ * digest) together with the `prior_evaluation_id` the renewal names. The
+ * other continuation inputs (Mission, subject, audience, action) are members
+ * of the idempotency scope the key is claimed in. So a key reused for another
+ * renewal, for the operation itself, or the operation's own key reused for a
+ * renewal, is `idempotency_conflict`, and never returns an unrelated permit.
+ *
+ * Only the claim binds this identity. The operation identity
+ * (`operationIdentity` in ./projections.ts), the one the executing PEP's
+ * operation claim and the resource key the underlying effect on, is the
+ * renewed operation's, unchanged, so a renewal's permit never presents the
+ * effect as a new operation.
+ */
+export function renewalClaimIdentity(operationIdentity: string, priorEvaluationId: string): string {
+  return canonicalDigest({ operation_identity: operationIdentity, prior_evaluation_id: priorEvaluationId });
+}
 
 /**
  * The lease step for one request that has passed every authority and
  * constraint check, at the decision instant `nowMs`. A request carrying
  * `context.prior_evaluation_id` is a renewal: refused unless `domain` holds
- * that permit's activity, the activity's lease has not ended, the action is
- * still one the deployment leases, and the five continuity members match.
+ * that permit's activity, the activity has not ended, the action is still
+ * one the deployment leases, and the five continuity members match.
+ *
+ * @spec metering#lease-renewal (#1464, D606): "ended" is judged against the
+ * activity's current lease boundary, never the expiry of the permit the
+ * renewal names: renewing through an earlier permit whose own `valid_until`
+ * has passed continues a live activity, and no permit revives an activity
+ * at or after its boundary.
  */
 export function durationLeaseStep(
   req: EvaluationRequest,
@@ -173,10 +215,16 @@ export function durationLeaseStep(
   if (prior === undefined) {
     return { kind: "leased", ceiling, commit: (id, end) => void domain.open(id, continuity, end) };
   }
-  const renewed = typeof prior === "string" && prior.length > 0 ? domain.lookup(prior) : undefined;
+  if (typeof prior !== "string" || prior.length === 0) return { kind: "refused" };
+  const renewed = domain.lookup(prior);
   if (!renewed || renewed.activity.leaseEndMs <= nowMs || !sameContinuity(renewed.continuity, continuity)) {
     return { kind: "refused" };
   }
   const { activityId } = renewed.activity;
-  return { kind: "leased", ceiling, commit: (id, end) => void domain.extend(activityId, id, continuity, end) };
+  return {
+    kind: "leased",
+    ceiling,
+    renews: prior,
+    commit: (id, end) => void domain.extend(activityId, id, continuity, end),
+  };
 }
