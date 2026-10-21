@@ -1591,14 +1591,22 @@ which holds the full text the tables summarize.
 
 -00
 
-- Initial version. Defines `mission_resource_access`, split from
-  {{I-D.draft-mcguinness-oauth-mission}}: resource and action matching;
-  constraints and the Mission Common Constraints registry; the
-  delegation policy and delegate matching; the subset and intersection
-  rules; resource server enforcement and the
-  `mission_constraints_supported` metadata member; the Resource Boundary
-  Canonicalization analysis; the type's scope-projection safety
-  conditions; and its Transformation Capabilities declaration.
+- Initial version, split from {{I-D.draft-mcguinness-oauth-mission}}.
+  Defines the `mission_resource_access` entry (`resource` and
+  `resource_match`, `actions` with action families, `constraints`,
+  `delegation`, and `resource_contract`) and its Entry Validation,
+  including Decimal Values; Resource Matching, with the operation
+  target, the operation contract, literal `exact` matching, and
+  normalized `prefix` matching; the Subset Rule; Common Constraints,
+  with nine initial constraints, Value-Space Comparison, and the
+  Mission Common Constraints registry; Resource Server Enforcement and
+  the `mission_constraints_supported` metadata member; Resource
+  Contracts; Delegate Eligibility and `allowed_delegates` matching; the
+  type's scope-projection safety conditions and Transformation
+  Capabilities declaration; the authorization server and resource
+  server conformance roles; guidance for modeling tools and function
+  calls; and the Resource Boundary Canonicalization and Action Family
+  Growth considerations.
 
 # Acknowledgments
 {:numbered="false"}
