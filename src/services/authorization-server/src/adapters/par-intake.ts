@@ -24,11 +24,24 @@
  * provider reads the already-read form from `ctx.request.body`
  * (lib/shared/selective_body.js) and warns once that it did, and a body over
  * the provider's own bound is refused here as the provider would refuse it.
+ *
+ * @spec mission#submission-via-par (#1503): the Request Object carriage. The
+ * provider drops every parameter outside a pushed Request Object
+ * (lib/actions/authorization/strip_outside_jar_params.js) before any hook
+ * runs, so the intake records a present `mission_intent` beside a present
+ * `request`, and the Request Object hook ({@link requestObjectIntake}) refuses
+ * it after client authentication. The provider also reads a Request Object's
+ * claims with JSON.parse and turns an object claim into `String(value)`
+ * (lib/actions/authorization/process_request_object.js), so the hook
+ * re-parses the signed payload strictly, refusing duplicate member names, and
+ * keeps it for the `mission_intent` validator, which reads the claim's own
+ * JSON value from it.
  */
 
 import type { IncomingMessage } from "node:http";
 import { parse as parseForm } from "node:querystring";
-import { type KoaContextWithOIDC } from "oidc-provider";
+import { DuplicateMemberError, type JsonValue, parseStrictJson } from "@mission/core";
+import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import { readForm } from "./device-authorization.js";
 
 /** oidc-provider 9.10.0's default pushed authorization request route. */
@@ -49,6 +62,12 @@ export interface ParIntake {
 }
 
 const intakes = new WeakMap<IncomingMessage, ParIntake>();
+
+/** Pushed requests that carried a `mission_intent` beside a Request Object. */
+const outsideRequestObject = new WeakSet<IncomingMessage>();
+
+/** The strictly parsed payload of this request's client-signed Request Object. */
+const requestObjects = new WeakMap<IncomingMessage, Record<string, JsonValue>>();
 
 /** One value of the parameter, present as the provider reads it; undefined otherwise. */
 function single(v: string | string[] | undefined): string | undefined {
@@ -77,6 +96,9 @@ export async function pushedRequestIntake(ctx: KoaContextWithOIDC, next: () => P
     delete form.authorization_details;
     intakes.set(ctx.req, { proposal });
   }
+  if (present(form.request) && present(form.mission_intent)) {
+    outsideRequestObject.add(ctx.req);
+  }
   (ctx.request as unknown as { body?: unknown }).body = form;
   await next();
 }
@@ -86,4 +108,62 @@ export function takeParIntake(req: IncomingMessage): ParIntake | undefined {
   const intake = intakes.get(req);
   intakes.delete(req);
   return intake;
+}
+
+/**
+ * @spec mission#submission-via-par (#1503): the provider's
+ * `features.requestObjects.assertJwtClaimsAndHeader` hook (9.10.0), run
+ * inside its Request Object processing after client authentication, after the
+ * algorithm and `iss`, `aud`, `exp` and `client_id` checks, and before the
+ * signature is verified. It replaces the provider's default hook, whose
+ * required-claim checks serve FAPI profiles and CIBA, neither enabled here.
+ *
+ * - A Request Object is accepted only at PAR, and read again from the pushed
+ *   request at the authorization endpoint; any other route, such as the
+ *   device authorization endpoint, refuses it `request_not_supported`, as it
+ *   did before Request Objects were enabled.
+ * - A `mission_intent` the push carried outside the Request Object is refused
+ *   `invalid_request` (the Request Object is authoritative).
+ * - A client-signed payload is re-parsed strictly: a duplicate member name
+ *   anywhere in it is refused `invalid_request`, as a duplicate in a form
+ *   value of `mission_intent` is. The provider's own pushed request object
+ *   for a form push (`alg` none, built after the form passed this intake)
+ *   carries the form's values and is not kept.
+ */
+export function requestObjectIntake(ctx: KoaContextWithOIDC, _claims: unknown, header: Record<string, unknown>): void {
+  const route = ctx.oidc.route;
+  if (route !== "pushed_authorization_request" && route !== "authorization") {
+    throw new errors.RequestNotSupported();
+  }
+  if (route === "pushed_authorization_request" && outsideRequestObject.has(ctx.req)) {
+    outsideRequestObject.delete(ctx.req);
+    throw new errors.InvalidRequest("mission_intent must not be submitted outside the Request Object");
+  }
+  if (header.alg === "none") return;
+  const jws = (ctx.oidc.params as { request?: unknown } | undefined)?.request;
+  const segment = typeof jws === "string" ? jws.split(".")[1] : undefined;
+  let payload: JsonValue;
+  try {
+    payload = parseStrictJson(Buffer.from(segment ?? "", "base64url").toString("utf8"));
+  } catch (e) {
+    if (e instanceof DuplicateMemberError) {
+      throw new errors.InvalidRequest(`Request Object payload: ${e.message}`);
+    }
+    throw new errors.InvalidRequestObject("could not parse Request Object");
+  }
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new errors.InvalidRequestObject("could not parse Request Object");
+  }
+  requestObjects.set(ctx.req, payload);
+}
+
+/**
+ * The strictly parsed payload of this request's client-signed Request Object,
+ * removed once read; undefined for a request that carried none, including a
+ * form push redeemed at the authorization endpoint.
+ */
+export function takeRequestObjectPayload(req: IncomingMessage): Record<string, JsonValue> | undefined {
+  const payload = requestObjects.get(req);
+  requestObjects.delete(req);
+  return payload;
 }

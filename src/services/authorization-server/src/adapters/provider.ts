@@ -460,7 +460,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
-import { pushedRequestIntake, takeParIntake } from "./par-intake.js";
+import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectPayload } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -1680,6 +1680,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         ? false
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
+    // @spec mission#submission-via-par (#1503): the one Request Object
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -1702,6 +1706,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
+      // @spec mission#submission-via-par (#1503): the second carriage of the
+      // Submission envelope, a `mission_intent` claim in a signed Request
+      // Object (RFC 9101) pushed through PAR. Signed only: `enabledJWA` above
+      // accepts the ES256 every registered client already signs its client
+      // assertion with, verified against the client's registered JWKS, so an
+      // unsigned (`alg` none) object fails the provider's algorithm check
+      // with invalid_request_object. requireSignedRequestObject stays off, so
+      // the form-encoded carriage stays available. The hook (par-intake.ts)
+      // keeps the device authorization endpoint refusing a Request Object.
+      requestObjects: { enabled: true, requireSignedRequestObject: false, assertJwtClaimsAndHeader: requestObjectIntake },
       richAuthorizationRequests: {
         enabled: true,
         ack: "experimental-01",
@@ -1848,7 +1862,29 @@ export function buildProvider(opts: AdapterOptions): Provider {
           (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
             ? takeParIntake((ctx as { req: IncomingMessage }).req)
             : undefined;
-        if (value === undefined) {
+        // @spec mission#submission-via-par (#1503): inside a client-signed
+        // Request Object the claim's value is the Submission envelope itself,
+        // a JSON object, read from the strictly parsed payload (the provider
+        // keeps only `String(value)`); a string or any other value is refused
+        // invalid_request. The envelope's serialization replaces the
+        // parameter, at PAR and again where the authorization endpoint reads
+        // the pushed object, so the envelope is validated, and its
+        // intent_hash computed, exactly as a form value's, and the approval
+        // reads it from the interaction as it reads a form value. A form
+        // value is that serialization already.
+        const requestObject = takeRequestObjectPayload((ctx as { req: IncomingMessage }).req);
+        let submitted = value;
+        if (requestObject !== undefined) {
+          const claim = Object.hasOwn(requestObject, "mission_intent") ? requestObject.mission_intent : undefined;
+          if (claim !== undefined && (claim === null || typeof claim !== "object" || Array.isArray(claim))) {
+            throw new errors.InvalidRequest(
+              "mission_intent in a Request Object must be a JSON object, the Submission envelope itself, not its serialization",
+            );
+          }
+          submitted = claim === undefined ? undefined : JSON.stringify(claim);
+          params.mission_intent = submitted;
+        }
+        if (submitted === undefined) {
           if (lifted) {
             params.authorization_details = lifted.proposal;
             checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
@@ -1856,7 +1892,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           return;
         }
         try {
-          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
+          const submission = kernel.validateSubmission(String(submitted), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
           if (lifted) {
             params.authorization_details = lifted.proposal;
