@@ -7294,7 +7294,7 @@
    "id": "core.derivation.prose-gates-no-adjudicator",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authorization-derivation",
-   "text": "MUST NOT gate issuance on those members, whether in derivation, in an adjudicating policy, or through a model input to either",
+   "text": "MUST NOT gate issuance on those members, whether in Authority Set derivation, in an adjudicating policy, or through a model input to either",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
