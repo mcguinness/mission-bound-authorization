@@ -1631,6 +1631,14 @@ tampering detectable. Audit registration ({{audit-evidence}})
 additionally bounds issuer-side substitution, since a registered
 record's later alteration diverges from its receipt.
 
+The Approval Context Commitment extends this to the Mission Record's
+creation facts, approval basis included. A verifier that recomputes it
+and gets a value different from the one an artifact discloses rejects
+that artifact's reference ({{approval-context-computation}}). Where the
+artifact's own signature or audit receipt shows that it predates any
+change to the record, the mismatch is also evidence that the record
+was altered after the artifact disclosed it.
+
 ## Issuer Key Compromise
 
 This document inherits the issuance profile's key-material
