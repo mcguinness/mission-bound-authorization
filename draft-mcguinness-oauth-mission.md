@@ -6013,11 +6013,12 @@ The following is an example of the decoded access token payload:
 }
 ~~~
 
-The token carries everything enforcement needs: the audience, the
-sender constraint (the `cnf` claim), the authority with its
-constraints, and the `mission` claim naming the Mission it was
-derived under. Its 300-second lifetime ends well before the
-Mission's `expires_at`. Revoking the Mission stops further
+The token's `authorization_details` are the same two entries as the
+token response's echo. The token carries everything enforcement
+needs: the audience, the sender constraint (the `cnf` claim), the
+authority with its constraints, and the `mission` claim naming the
+Mission it was derived under. Its 300-second lifetime ends well
+before the Mission's `expires_at`. Revoking the Mission stops further
 derivation, but this token remains valid until its own `exp`
 ({{revocation}}).
 
