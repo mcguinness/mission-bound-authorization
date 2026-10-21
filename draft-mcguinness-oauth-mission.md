@@ -2635,6 +2635,13 @@ The AS can rotate either client type's refresh token; rotation
 detects replay of a consumed refresh token
 ({{Section 4.14.2 of RFC9700}}) and is not a cryptographic binding.
 
+A refresh request can carry `authorization_details` to narrow the
+issued token ({{Section 6 of RFC9396}}). The AS MUST refuse such a
+request with the `invalid_authorization_details` error code when a
+requested entry exceeds the presented refresh grant or the Mission
+Authority Set ({{subset}}), and MUST NOT instead issue a narrower set
+than the one requested.
+
 ## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
 A derived token's authority comes from the Mission, not from a fresh
@@ -3081,8 +3088,9 @@ this document's ordinary rules ({{authorization-derivation}}): of an
 advertised, schema-valid type ({{discovery}}), narrowed same-type
 ({{subset}}, {{other-types}}) like any other request. The AS issues
 only what both the presented refresh grant ({{Section 6 of RFC9396}})
-and the Authority Set contain, so a refresh-token family narrower than
-the Mission does not obtain the Mission's wider authority.
+and the Authority Set contain, and refuses a request beyond either
+({{refresh-tokens}}), so a refresh-token family narrower than the
+Mission does not obtain the Mission's wider authority.
 
 For entries outside the Authority Set, more authority requires a new
 approval, proposed as for a new Mission ({{authority-proposal}}), or
@@ -3129,7 +3137,7 @@ exchange rows of the third table.
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
-| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
+| Token endpoint ({{subset}}, {{refresh-tokens}}): the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
