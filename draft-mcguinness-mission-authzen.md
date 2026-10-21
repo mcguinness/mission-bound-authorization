@@ -2534,7 +2534,7 @@ carrier's extensibility rule.
 | No entry of the presented credential's own authority names the action's resource and action, established by the PDP | PDP denial | `out_of_authority` |
 | Entries of the presented credential's own authority name the action, but its parameters violate a constraint on each | PDP denial | `parameter_violation` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
-| Idempotency key and operation identity match a prior unresolved or completed claim | PDP denial | `duplicate_suppressed` |
+| Idempotency key and operation identity match a prior unresolved or completed claim, except a retransmitted settled duration-lease renewal, which receives its permit while valid | PDP denial | `duplicate_suppressed` |
 | Idempotency key reused with a different operation identity | PDP denial | `idempotency_conflict` |
 | Resource policy refuses the action | PDP denial | `resource_policy` |
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
@@ -3171,7 +3171,9 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 
 - Failure-condition coverage: a duration-lease renewal that names no
   lease the PDP issued or an ended activity, or fails continuity with
-  the evaluation it renews, is denied `out_of_authority` (#1464).
+  the evaluation it renews, is denied `out_of_authority`; a
+  retransmission of a settled renewal receives that renewal's permit
+  while it is valid, not `duplicate_suppressed` (#1464).
 
 - Runtime Denial Classification and Failure-condition coverage: a
   resource contract reference missing where required, or not
