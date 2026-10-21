@@ -1199,8 +1199,9 @@ Mission bypass through source authority held outside any Mission:
   {{I-D.draft-mcguinness-mission-runtime}}). Residual: a workload's
   provisioned authority exists beside any Mission that draws on it,
   and Mission state does not revoke a grant held outside any Mission;
-  at an undesignated resource with no mandatory mediation, such a
-  grant acts with no Mission state, revocation, or consent commitment,
+  at a resource that is not Mission-governed, absent mandatory
+  mediation, such a grant acts with no Mission state, revocation, or
+  consent commitment,
   and only the client's own conformance closes that path.
 
 Standing-authority creep through the source ceiling:

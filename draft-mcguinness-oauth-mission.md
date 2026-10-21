@@ -1190,9 +1190,10 @@ AS-side rules keep a governed task from being downgraded to such a
 request ({{discovery}} states the client-side rules and
 {{downgrade-by-omission}} the threat):
 
-- Where a deployment designates a resource Mission-governed, its AS
-  MUST NOT issue a token for that resource outside a Mission, except
-  under documented policy exceptions.
+- Where a deployment classifies a resource as Mission-governed (a
+  Mission-governed resource), its AS MUST NOT issue a token for that
+  resource outside a Mission, except under documented policy
+  exceptions.
 - If a client registered as Mission-governed sends an authorization
   request, through PAR or at the authorization endpoint, that carries
   `authorization_details` but no `mission_intent`, the AS MUST reject
@@ -1201,8 +1202,8 @@ request ({{discovery}} states the client-side rules and
   `authorization_details`. The rule applies to that request until it
   completes, including when the AS resumes it after an interaction. A
   request carrying neither is an ordinary request that this rule does
-  not reach; designation is what keeps a resource's tokens inside a
-  Mission.
+  not reach; the first rule, for a Mission-governed resource, is what
+  keeps that resource's tokens inside a Mission.
 
 A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
@@ -4065,7 +4066,7 @@ The following subsections define the record's members.
 
   `facts`:
   : An object holding the verified output facts the type's
-    specification designates for recording, nested so type-owned
+    specification selects for recording, nested so type-owned
     facts cannot collide with the common members.
 
   `submission_evidence` is provenance, not enforcement input, and is
@@ -5036,9 +5037,9 @@ audit but does not close it.
 
 A token bearing equivalent `authorization_details` but no `mission`
 claim is governed by no Mission state, revocation, or consent
-commitment. A deployment can designate a resource, or register a
-client, as Mission-governed. Rules on three sides address this
-downgrade:
+commitment. A deployment can classify a resource as Mission-governed
+(a Mission-governed resource) or register a client as
+Mission-governed. Rules on three sides address this downgrade:
 
 - **Issuance.** The rules of {{authority-proposal}} keep such a
   resource's tokens inside a Mission and refuse such a client's
@@ -5056,7 +5057,8 @@ A held ordinary credential needs no request to the AS, and neither an
 AS nor a resource server can generally tell that a request made with
 one serves a Mission:
 
-- Designation closes this path at a designated resource.
+- Classifying a resource as Mission-governed closes this path at that
+  resource.
 - Mandatory mediation closes it where the client's requests must pass
   through a runtime layer that holds custody of the client's
   credentials ({{I-D.draft-mcguinness-mission-runtime}}).
@@ -5064,8 +5066,9 @@ one serves a Mission:
   as the Mission Join of
   {{I-D.draft-mcguinness-mission-authority-server}}, is one realization
   of the enforcement path that {{discovery}} permits.
-- An unmediated ordinary workflow at an undesignated resource remains
-  a residual that only the client's own conformance closes.
+- An unmediated ordinary workflow at a resource that is not
+  Mission-governed remains a residual that only the client's own
+  conformance closes.
 
 The integrity of the `mission_bound_authorization_supported`
 ({{discovery}}) and `mission_bound_authorization_required`
@@ -5515,8 +5518,9 @@ Tokens carry references and authority, not the record: this document
 puts no `goal`, `task_bounds`, or other Intent content in a credential.
 An Intent Submission Evidence artifact can carry personal data (an
 originator identity, a consent reference); PAR keeps it off the front
-channel, and the record retains the designated verified facts under the
-same access governance as the rest of the Mission's evidence.
+channel, and the record retains the verified facts selected for
+recording under the same access governance as the rest of the
+Mission's evidence.
 
 Access to the record and to Mission evidence is policy-governed and
 auditable: reading a Mission's evidence is a privileged operation, not
