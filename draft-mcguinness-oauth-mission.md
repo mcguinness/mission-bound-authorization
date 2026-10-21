@@ -4223,7 +4223,13 @@ The following subsections define the record's members.
   : REQUIRED for `organizational`, absent otherwise. An object with
     `id`, `version`, and `digest`: the stable reference to, and
     commitment over, the governed organizational policy the Mission
-    draws on.
+    draws on. `digest` is a prefixed commitment
+    ({{commitment-mechanisms}}) whose exact committed input and
+    construction the policy's format specifies: its species and, for
+    an envelope anchor, its `typ`, `iss`, and `value`. The party that
+    produces the reference computes `digest`; a consumer holding the
+    policy can reproduce it, and one that does not compares it as an
+    opaque value.
 
   `authority_source` is provenance like `approval_basis`: recorded
   alongside it, folded into neither `intent_hash` nor
