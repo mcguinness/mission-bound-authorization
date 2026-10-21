@@ -138,7 +138,7 @@ beforeAll(async () => {
     entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
     entitlementStalenessBoundSeconds: 86_400,
   });
-  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
+  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] }, trustedMissionIssuers: [AS_ISS] });
 });
 
 describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
@@ -167,6 +167,49 @@ describe("M9 scenario 12: cross-domain via EMA/ID-JAG", () => {
     expect(res.ok, JSON.stringify(res)).toBe(true);
     expect(saas.journalEntries()).toHaveLength(1);
     expect(saas.journalEntries()[0]?.mission_id).toBe(mission.id);
+  });
+
+  it("@spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect", async () => {
+    const mission = approve(13);
+    const { grant } = await issueCrossDomainGrant(kernel, asKeys.privateKey, "as-token", {
+      missionId: mission.id,
+      targetAs: RAS_ISS,
+      clientId: AGENT_AT_RAS,
+      cnfJkt: agentJkt,
+      resourceToAs: RESOURCE_TO_AS,
+    });
+    const { access_token } = await ras.redeem(grant, agentJkt);
+    const local = JSON.parse(Buffer.from(access_token.split(".")[1] as string, "base64url").toString());
+    expect(local).toMatchObject({ iss: RAS_ISS, mission: { issuer: AS_ISS } });
+
+    // The same Resource AS keys and issuer, but configured to accept another
+    // originating Mission Issuer only: the Resource AS signature alone admits
+    // no `mission.issuer`.
+    const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: "ras-token", alg: "ES256" };
+    const untrusting = new SaasMcpServer({
+      rasIssuer: RAS_ISS,
+      rasJwks: { keys: [rasPub as never] },
+      trustedMissionIssuers: ["https://other-origin.test"],
+    });
+    const refused = await untrusting.callTool(
+      "post_journal_entry",
+      { vendor_id: "acme", amount: "125.00" },
+      access_token,
+      await dpopProof(SAAS_RESOURCE),
+    );
+    expect(refused).toMatchObject({ ok: false, error: "invalid_token" });
+    expect(untrusting.journalEntries()).toHaveLength(0);
+
+    // The resource that trusts the originating issuer posts the same token.
+    const before = saas.journalEntries().length;
+    const posted = await saas.callTool(
+      "post_journal_entry",
+      { vendor_id: "acme", amount: "125.00" },
+      access_token,
+      await dpopProof(SAAS_RESOURCE),
+    );
+    expect(posted.ok, JSON.stringify(posted)).toBe(true);
+    expect(saas.journalEntries()).toHaveLength(before + 1);
   });
 
   it("@spec cross-domain#validation-at-resource-as (S-12): the local token's client_id identifies the redeeming destination client, never the origin agent", async () => {

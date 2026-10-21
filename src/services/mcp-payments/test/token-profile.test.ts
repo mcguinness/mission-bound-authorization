@@ -146,15 +146,21 @@ function pepRecording(
 
 const allowingFga = { checkWithContext: async () => true } as unknown as Fga;
 
-/** A PEP deciding through the embedded signing PDP under an allowing policy, recording each request it sends. */
-function pepDeciding() {
+/**
+ * A PEP deciding through the embedded signing PDP under an allowing policy,
+ * recording each request it sends. `views` are the Missions its loader holds,
+ * each under its own (issuer, id).
+ */
+function pepDeciding(views: readonly MissionView[] = [VIEW]) {
   const decided: unknown[] = [];
   const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
   const store = payments();
-  const loadView = (ref: { id: string; issuer: string }) =>
-    ref.id === VIEW.id && ref.issuer === VIEW.issuer
-      ? { view: VIEW, observation: { state: VIEW.state, version: VIEW.version, mode: "fresh", freshness_at: new Date().toISOString() } }
+  const loadView = (ref: { id: string; issuer: string }) => {
+    const view = views.find((v) => v.id === ref.id && v.issuer === ref.issuer);
+    return view
+      ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
       : undefined;
+  };
   const pep = new Pep({
     decide: (req, opts) => {
       decided.push(req);
@@ -281,6 +287,69 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     const token = await mint({}, { typ: undefined });
     const pop = { proof: await dpopProofFor(holder, HTU, HTM, token), htu: HTU, htm: HTM };
     await expect(server.validateGatewayCredential(token, pop, true)).rejects.toThrow(/typ must be at\+jwt/);
+  });
+});
+
+describe("a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503)", () => {
+  const FOREIGN = "https://other-as.test";
+
+  it.each([
+    ["another issuer", FOREIGN],
+    ["the trusted issuer spelled with a trailing slash", `${ISSUER}/`],
+  ])("refuses an at+jwt from the trusted issuer whose mission.issuer names %s, on both transports and a gateway route, yielding no facts", async (_label, missionIssuer) => {
+    const token = await mint({ mission: { id: MISSION.id, issuer: missionIssuer } });
+    await expect(overHttp(token)).rejects.toThrow(/iss != mission\.issuer/);
+    await expect(server.validateMissionToken(token)).rejects.toThrow(/iss != mission\.issuer/);
+    const pop = { proof: await dpopProofFor(holder, HTU, HTM, token), htu: HTU, htm: HTM };
+    await expect(server.validateGatewayCredential(token, pop, true)).rejects.toThrow(/iss != mission\.issuer/);
+  });
+
+  it("answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision", async () => {
+    // The loader also holds a Mission under the foreign issuer, so a token
+    // that passed validation would reach the PDP: only the issuer check keeps
+    // the mismatched token from a decision.
+    const x = pepDeciding([VIEW, { ...VIEW, issuer: FOREIGN }]);
+    const routed = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep: x.pep,
+      payments: x.store,
+      loadView: x.loadView,
+      jwks: { keys: [asJwk as never] },
+      keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: [] },
+      issuer: ISSUER,
+    });
+    const channel = await createHttpMcpChannel(routed);
+    try {
+      const { client, sessionId, close } = await createHttpMediatedClient(channel.url, await mint(), holder);
+      try {
+        expect(sessionId).toBeTruthy();
+        const token = await mint({ mission: { id: MISSION.id, issuer: FOREIGN } });
+        const res = await fetch(channel.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            authorization: `DPoP ${token}`,
+            dpop: await dpopProofFor(holder, canonicalHtu(channel.url), "POST", token),
+            "mcp-session-id": sessionId as string,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_invoice", arguments: { invoice_id: "inv-1" } } }),
+        });
+        const body = await res.text();
+        expect(res.status).toBe(401);
+        expect(JSON.parse(body)).toMatchObject({ error: "invalid_token" });
+        expect(x.decided).toHaveLength(0);
+        expect(x.evidence.all()).toHaveLength(0);
+        // The session's own token, naming its issuer, reaches the PDP.
+        const read = await client.callTool("get_invoice", { invoice_id: "inv-1" });
+        expect(read.ok, JSON.stringify(read)).toBe(true);
+        expect(x.decided).toHaveLength(1);
+      } finally {
+        await close();
+      }
+    } finally {
+      await channel.close();
+    }
   });
 });
 

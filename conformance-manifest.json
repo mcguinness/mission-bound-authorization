@@ -5575,6 +5575,42 @@
    ]
   },
   {
+   "id": "core.approval-event.receiving-client-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The rendering MUST identify the OAuth client that receives the authority, the Agent, from client identity information the AS trusts, such as its own registration of the client; display text the client supplies does not by itself identify it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering names the receiving client by the registered `client_id` and registered name of the interaction's client, labeled as the AS's registration, and a different client name the request carries (in the Mission Intent or a request parameter) neither appears in nor changes that identification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "receiving client on the approval surface (@spec mission#approval-event, #1503) > names the receiving client by its registered client_id and name, labeled as the AS's registration",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "receiving client on the approval surface (@spec mission#approval-event, #1503) > keeps the registered identification when the request carries a different client-supplied name",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 5 (D620). The authorization-code approval page renders the client from provider.Client.find over the interaction's client_id, the client the decision commits; clients are the deployment's static registrations (no dynamic registration), so the registered name is the AS's. The device verification page names the client in its own section from the same lookup (device-authorization.approval.render-client). Proved by removing the section (both tests fail) and by adding the Intent's goal inside it (the second test fails on its negative clause)."
+  },
+  {
    "id": "core.approval-event.authority-source-rendering",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
@@ -9295,6 +9331,192 @@
     }
    ],
    "notes": "#1258 item 2. #1362: witnessed at the SaaS resource: a clean entry that covers the whole request authorizes beside one carrying an unrecognized member, an entry SaaS cannot enforce lends its action to no clean entry, and a write whose action is in one entry and whose vendor is in another is refused (#1298). Proved by mutation: refusing the whole token for one unenforceable entry, and pooling actions across entries, each fail these tests. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; that refuses more often but never combines entries, and is recorded under resource-access.rs-enforcement.type-scoped-matching."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-trusted",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server refuses a JWT Mission-bound credential whose `mission` claim comes from an issuer it trusts only for ordinary access tokens, and accepts the claim from an issuer it trusts to issue Mission-bound authorization for the resource",
+    "local": "mcp-payments trusts its configured issuer for Mission-bound authorization unless the route is `ordinaryOnly` (an estate authorization server that is not a Mission Issuer); an estate route refuses a `mission` claim on the at+jwt path and on an attenuation root, and still admits the same issuer's ordinary tokens"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > refuses an estate token carrying a mission claim, which a Mission Issuer's route admits as Mission-bound",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503) > refuses a valid chain on an estate route, whose issuer is not trusted to issue Mission-bound authorization",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed at an estate route: a Mission-bound at+jwt is answered 401 while an ordinary token from the same issuer opens a session, the same at+jwt verifies on a Mission Issuer's route, and a valid attenuation chain is refused on the estate route but verifies on the Mission Issuer's. Proved by mutation: removing the `ordinaryOnly` refusal on the at+jwt path fails the two estate-route tests, and removing it on the attenuation path fails the attenuation test."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-equals-iss",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a cross-domain profile it has adopted ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly establishes the permitted relationship between the two",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server that has adopted no cross-domain profile refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted a cross-domain profile accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
+    "local": "mcp-payments adopts no cross-domain profile: it compares the verified `iss` with `mission.issuer` as exact strings on the at+jwt path (HTTP, mediated and gateway validators) and on an attenuation root, before any Mission lookup or decision. mcp-saas is the Cross-Domain destination: `iss` is the Resource AS and `mission.issuer` must be one of its configured `trustedMissionIssuers`, the originating issuers that Resource AS trusts"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > refuses an at+jwt from the trusted issuer whose mission.issuer names %s, on both transports and a gateway route, yielding no facts",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503) > refuses a root signed by the trusted issuer whose mission.issuer names another issuer, and admits the same root naming its own",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > issue ID-JAG -> redeem at RAS -> post journal entry from the token alone",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a credential whose mission.issuer is not its own iss is refused at validation, before the PEP (@spec mission#rs-requirements, #1503)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-invalid-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST reject a token that fails either check with the `invalid_token` error code",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a JWT Mission-bound token whose issuer is not trusted for Mission-bound authorization, or whose `mission.issuer` fails the required relationship to `iss`, is rejected with the `invalid_token` error code",
+    "local": "mcp-payments answers HTTP 401 with `error` `invalid_token` from its credential middleware, before any MCP dispatch, PEP or PDP call. mcp-saas has no HTTP transport: its in-process tool call reports a token validation failure as `error` `invalid_token`, with the reason as `error_description`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed for both checks: an estate route answers a Mission-bound at+jwt 401 `invalid_token` (the trust check), mcp-payments answers a `mission.issuer` that differs from `iss` 401 `invalid_token` (the equality check), and mcp-saas reports `invalid_token` for an originating issuer it does not trust through the Resource AS (the cross-domain relationship). Proved by mutation: removing each check fails its test on the status or `error` assertion, and reporting the raw validation message instead of `invalid_token` fails the SaaS test."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-introspected",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server consuming an opaque Mission-bound token takes as its issuer the AS whose introspection response or issuer-local resolution it relies on, applies the issuer-trust and `mission.issuer` checks to that response's `mission` member, and rejects a failure with the `invalid_token` error code",
+    "local": "mcp-payments accepts tokens through introspection only on an `ordinaryOnly` estate route, whose issuer is not trusted to issue Mission-bound authorization: an active response carrying a `mission` member is answered 401 `invalid_token` before any PEP or PDP call, never read as an ordinary token. No reference resource server accepts a Mission-bound opaque token, so the acceptance half (the trusted introspecting AS as issuer, `mission.issuer` equal to it outside an adopted cross-domain profile) has no implementation"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route-introspection.test.ts",
+     "name": "estate route with introspection: a mission member is refused, never read as ordinary (@spec mission#rs-requirements, #1503) > answers an active introspection response carrying mission 401 invalid_token on the holder's open MCP session, before the PEP, while the same response without it opens the session",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Partial, not twinned: both halves quote this one sentence, and a twin for the refusal half would need an applicability for an introspecting route whose issuer is not trusted for Mission-bound authorization, which the model does not define. Witnessed: the trust check on introspection, where an estate route refuses an active response carrying `mission` with 401 `invalid_token` and no PEP entry or evidence, while the same response without it opens a session. Proved by mutation: removing the adapter's `mission` refusal fails the test on the status, and with the status and body assertions removed, the PEP-entry spy assertion and the no-evidence assertion each fail alone. Not witnessed: acceptance of a Mission-bound opaque token with the issuer and `mission.issuer` checks, since no reference resource server accepts one (core.introspected-consumption is unclaimed)."
   },
   {
    "id": "core.introspection.composite-active",
@@ -15763,12 +15985,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
-     "name": "MCP _meta Mission reference propagation > a credential naming a different Mission issuer than the loaded view is refused with mission_reference_conflict",
+     "name": "MCP _meta Mission reference propagation > a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
     }
    ],
-   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test."
   },
   {
    "id": "mas.reference.mcp-duplicate-keys",
@@ -53980,7 +54202,7 @@
    "id": "core.error-mapping.token-rar-exceeds-granted",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
+   "text": "the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -53993,7 +54215,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
+    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token; on refresh this includes an entry inside the Mission but outside a refresh-token family whose grant is narrower than the Mission",
     "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
    },
    "level": "endpoint",
@@ -54025,6 +54247,12 @@
     },
     {
      "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
      "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
      "level": "endpoint",
      "surface": "token-endpoint"
@@ -54036,13 +54264,13 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "remediation-grains",
-   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain",
+   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain, and refuses a request beyond either ({{refresh-tokens}})",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -54055,7 +54283,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority"
+    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority; a refresh naming more than the refresh grant or the Mission carries is refused, so a refresh-token family narrower than the Mission does not obtain the Mission's wider authority"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -54079,13 +54307,119 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
      "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh narrowing authorization_details projects the narrowed set: a scope only the dropped entry grants refuses invalid_scope before rotation, and the same token then refreshes (#1303)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness."
+   "notes": "#1303, #1503. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails the narrower-family witness. The refusal itself is rowed at core.refresh-tokens.rar-beyond-grant-or-authority-refused."
+  },
+  {
+   "id": "core.refresh-tokens.rar-beyond-grant-or-authority-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "refresh-tokens",
+   "text": "The AS MUST refuse such a request with the `invalid_authorization_details` error code when a requested entry exceeds the presented refresh grant or the Mission Authority Set ({{subset}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh whose authorization_details names an entry beyond the presented refresh grant (an entry inside the Mission but outside a refresh-token family confined narrower than the Mission) or beyond the Mission's authority as its current effective set narrows it (a contained entry the grant still carries, an action outside both, a relaxed constraint) is refused invalid_authorization_details and issues no token",
+    "local": "the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal and the same token still refreshes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry the effective set removed (contained) is refused; the remainder is still issued on request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 (D620 finding 6). The refresh-grant clause is witnessed by the narrower-family test: the family is an async-delegation Token Exchange confined to read under a Mission that also grants list, and the Mission's own refresh grant is issued list in the same test. The Mission clause is witnessed by the contained test, whose request the grant still carries. Proved by mutation: the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; the raw grant rar as the ceiling fails the contained witness; projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses."
+  },
+  {
+   "id": "core.refresh-tokens.rar-never-issued-narrower",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "refresh-tokens",
+   "text": "and MUST NOT instead issue a narrower set than the one requested",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh whose requested authorization_details cannot be issued whole issues no token rather than a token carrying fewer or narrower entries than requested: an entry beyond the grant is not intersected down to what the grant carries, and an entry the issuer's projection cannot carry whole does not leave the remaining entries issued",
+    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of the issued set; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > an entry within the grant that the projection cannot issue whole is refused invalid_authorization_details saving no refresh token, never issued as the remaining entries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited."
   },
   {
    "id": "core.subset.widening-request-refused",
