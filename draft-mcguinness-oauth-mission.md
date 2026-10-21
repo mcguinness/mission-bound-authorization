@@ -1679,7 +1679,7 @@ mapping is specified in
 
 # Mission Approval {#approval-event}
 
-An approval event is the atomic decision that creates a Mission.
+An approval event is the atomic transition that creates a Mission.
 Every Mission is created at its own approval event, which the record's
 `approval_event_id` identifies.
 
@@ -1714,12 +1714,14 @@ a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 ## Direct Approval Steps {#direct-approval-steps}
 
 The steps fall into four phases. Steps 1 to 3 establish the Approver,
-the Subject and the authority source. Step 4 establishes the
-effective expiry; the candidate Authority Set is complete by then
-({{derivation-modes}}). Step 5 renders it for consent, and
-{{approval-context-changes}} covers a change before the decision.
-Steps 6 and 7 compute the integrity anchors over the consented values
-and create the Mission atomically with the decision.
+the Subject and the authority source, and check the derived Authority
+Set against that source; the candidate Authority Set is complete
+before the approval rendering ({{derivation-modes}}). Step 4
+establishes the effective expiry. Step 5 renders the derived Authority
+Set for consent, and {{approval-context-changes}} covers a change
+before the decision. Steps 6 and 7 compute the integrity anchors over
+the approved context and create the Mission atomically with the
+decision.
 
 At a direct approval event the AS MUST, in order:
 
@@ -2323,11 +2325,14 @@ to `terminated`, and never changes it: an expiry, or any later event,
 does not replace the reason or references of a Mission already
 terminated.
 
+A termination carries every member its reason requires, except as
+{{termination-compatibility}} describes.
+
 ### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
 
-A termination carries every member its reason requires, except one
-recorded before the reason defined that member, or derived from such
-a termination: such a termination exposes only the facts its record
+The exception is a termination recorded before its reason defined a
+required member, or derived from such a termination: such a
+termination exposes only the facts its record
 retained and omits a member it has no retained value for,
 `terminated_at` included, rather than inventing one. For `expired`,
 the retained `terminated_at` is the Mission's `expires_at`; for
@@ -3160,12 +3165,13 @@ one of three cases, with different obligations:
   state-observable overlay on the lifecycle-gated baseline
   ({{mission-bound-tokens}}).
 - **Opaque-token consumption.** For an opaque Mission-bound token,
-  introspection is the claims carriage: its response carries what
-  the JWT would ({{introspected-consumption}}).
-- **Issuer-local resolution.** In place of introspection, an AS can
-  serve a resource server inside its trusted implementation boundary,
-  which it authorizes to read that state, by a direct read of its
-  committed token and grant state ({{introspected-consumption}}).
+  introspection is the claims carriage: an active response carries
+  what the JWT would ({{introspected-consumption}}).
+- **Issuer-local resolution.** In place of introspection for an opaque
+  Mission-bound token, an AS can serve a resource server inside its
+  trusted implementation boundary that it authorizes to read the AS's
+  authoritative committed token and grant state, by a direct read of
+  that state ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a token
@@ -3446,16 +3452,17 @@ as the agent, it can also narrow by self-exchange ({{self-exchange}}),
 which does not delegate. An intermediary authenticated as a distinct
 actor that obtains a delegated token by Token Exchange is a delegate.
 
-Delegation takes two Token Exchanges, in this order:
+Delegation takes two kinds of Token Exchange, in this order:
 
 1. The delegating party obtains a designation that names the delegate
    ({{designation}}).
 2. The delegate redeems that designation for a delegated token
    ({{delegated-exchange}}).
 
-~~~ ascii-art
+~~~
 Delegating party            AS                        Delegate
   | Token Exchange:          |                            |
+  | subject_token =          |                            |
   | Mission-bound token,     |                            |
   | audience = delegate ---->|                            |
   |<------ designation ------|                            |
@@ -3465,7 +3472,6 @@ Delegating party            AS                        Delegate
   |                          |        designation         |
   |                          |------- delegated token --->|
 ~~~
-{: title="Delegation: a designation, then its redemption"}
 
 ## Designation {#designation}
 
