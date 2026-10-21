@@ -5395,7 +5395,7 @@ configured mapping, are mechanical rather than free-form inference.
 The recorded `policy_version` makes each Authority Set derivation
 auditable by naming the policy it ran under.
 
-### Authority Hash as an Identifier {#authority-hash-is-not-a-mission-identifier}
+### Authority Hash and Mission Identity {#authority-hash-is-not-a-mission-identifier}
 
 `authority_hash` commits the approved Authority Set, not the Mission.
 Two Missions that approve byte-identical authority (a successor that
