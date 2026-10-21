@@ -760,6 +760,15 @@ Anchors, and Canonicalization Rules sections). The record is immutable
 except for its state and, written once when the Mission terminates,
 its `termination` (the Mission Record section).
 
+The anchors do not cover the approval basis, which records who
+consented, who activated the Mission, and under which basis. Only the
+Mission Issuer enforces the record's immutability. Where a deployment
+needs the approval basis checkable outside the Mission Issuer, Mission
+Audit Transparency's approval-event registration
+({{I-D.draft-mcguinness-mission-audit}}) and Approval Governance's
+Approval Context Commitment
+({{I-D.draft-mcguinness-mission-approval-governance}}) commit it.
+
 In the OAuth binding the lifecycle states are `active` and
 `terminated`, and only `active` permits issuance or a new positive
 governance decision. A terminated Mission's `termination` gives the
