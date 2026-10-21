@@ -1055,7 +1055,11 @@ Submission is governed by the following rules:
   1. the form-encoded `mission_intent` parameter of the PAR request
      body; or
   2. a `mission_intent` claim inside a signed Request Object
-     ({{RFC9101}}) that is itself pushed through PAR.
+     ({{RFC9101}}) that is itself pushed through PAR. The claim's
+     value is the Submission envelope itself, a JSON object, not its
+     serialization; the AS MUST reject with `invalid_request` a claim
+     whose value is a string or any other value that is not a JSON
+     object.
 
   The AS MUST reject with `invalid_request` a `mission_intent` presented
   on a front-channel authorization request that does not use a
@@ -2919,6 +2923,18 @@ A resource server:
    this rejection is stated in {{authority-proposal}}, the downgrade
    it prevents in {{downgrade-by-omission}}, and the metadata that
    advertises the requirement in {{protected-resource-metadata}}.
+6. MUST accept a `mission` claim only from an issuer it explicitly
+   trusts to issue Mission-bound authorization for the resource;
+   trusting the issuer's ordinary access tokens is not enough. It MUST
+   require `mission.issuer` to equal the token's `iss`, unless a
+   cross-domain profile it has adopted
+   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly
+   establishes the permitted relationship between the two. It MUST
+   reject a token that fails either check with the `invalid_token`
+   error code. For an opaque token, the issuer is the AS whose
+   introspection response or issuer-local resolution the resource
+   server relies on, and the same checks apply to that response's
+   `mission` member ({{introspected-consumption}}).
 
 A resource server can also:
 
@@ -4229,14 +4245,26 @@ The following subsections define the record's members.
 
   `type`:
   : REQUIRED. A string: `user_delegated`, `service_owned`, or
-    `organizational`, subject to the forward-compatibility rule of
-    {{lifecycle}}.
+    `organizational`. An unrecognized value is handled under the same
+    rule as an unrecognized `approval_basis.type`
+    ({{record-principal-members}}): it is preserved unchanged as opaque
+    provenance and does not by itself invalidate or deactivate the
+    Mission, and only an operation that itself requires recognized
+    source semantics refuses (for example, applying the source's
+    authority ceiling or its governed policy). An AS MUST NOT approve a
+    Mission whose authority source it does not recognize.
 
   `policy`:
   : REQUIRED for `organizational`, absent otherwise. An object with
     `id`, `version`, and `digest`: the stable reference to, and
     commitment over, the governed organizational policy the Mission
-    draws on.
+    draws on. `digest` is a prefixed commitment
+    ({{commitment-mechanisms}}) whose exact committed input and
+    construction the policy's format specifies: its species and, for
+    an envelope anchor, its `typ`, `iss`, and `value`. The party that
+    produces the reference computes `digest`; a consumer holding the
+    policy can reproduce it, and one that does not compares it as an
+    opaque value.
 
   `authority_source` is provenance like `approval_basis`: recorded
   alongside it, folded into neither `intent_hash` nor
@@ -4460,6 +4488,15 @@ object cannot be mistaken for another's. The `iss` binding prevents
 a committed object from being transplanted across authorization
 servers. The `sha-256:` prefix is the algorithm-agility mechanism
 ({{commitment-mechanisms}}).
+
+The anchors this section lists, and the Authority Set entry
+commitment below, bind the AS issuer. The `digest` of an
+`authority_source.policy` reference ({{record-principal-members}}) is
+not one of them: it uses the issuer the policy's format defines, for a
+governed organizational policy its governing authority. That binding
+keeps the policy's commitment from being transplanted across policy
+authorities, and the same policy commits identically at every AS that
+records it.
 
 `intent_hash` and `authority_hash` are independent commitments to
 independent objects. That the approved task bounds the derived

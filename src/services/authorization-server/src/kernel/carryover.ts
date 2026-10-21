@@ -59,12 +59,12 @@ import { newMissionId } from "./mission-id.js";
 import {
   type ApprovalBasis,
   type AuthorityEntry,
-  type AuthoritySource,
   type ChildEvidence,
   type MissionIntent,
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type RecordedAuthoritySource,
   TERMINAL_STATES,
   type Termination,
 } from "./types.js";
@@ -158,7 +158,9 @@ export interface CarryoverReplacementProposal {
   authority_hash: string;
   actor: { sub: string; iss?: string; sub_profile?: string };
   parent: CarryoverRef;
-  authority_source: AuthoritySource;
+  /** As the origin record carries it; an unrecognized `type` (#1503) refuses
+   *  at completion, where the source is re-asserted. */
+  authority_source: RecordedAuthoritySource;
   /**
    * Whether the rendered source is the OLD CHILD's or the SUCCESSOR's. A
    * replacement inheriting the successor's source rather than the old child's is

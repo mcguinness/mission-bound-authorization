@@ -720,6 +720,9 @@ export async function composeStack(opts: {
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,
       rasJwks: { keys: [rasPub as never] },
+      // @spec mission#rs-requirements item 6 (#1503): the originating Mission
+      // Issuer the RAS below trusts, and the only `mission.issuer` SaaS accepts.
+      trustedMissionIssuers: [asUrl],
       resource: saasResource,
     });
     // @spec resource-access#resource-access-type (#1266): the RAS emits for

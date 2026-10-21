@@ -342,15 +342,6 @@ describe("authority source intake (@spec mission#submission-via-par, mission#aut
 });
 
 describe("authority source discriminator (@spec mission#mission-record, mission#lifecycle)", () => {
-  it("refuses an unrecognized type at hydration rather than widening the union", () => {
-    const kernel = makeKernel();
-    const record = approve(kernel);
-    kernel.db
-      .prepare("UPDATE missions SET authority_source_json = ? WHERE id = ?")
-      .run(JSON.stringify({ type: "delegated_by_vibes" }), record.id);
-    expect(() => kernel.get(record.id)).toThrow(/unrecognized authority_source.type/);
-  });
-
   it("refuses a stored organizational source with no policy reference", () => {
     const kernel = makeKernel();
     const record = approve(kernel);
@@ -449,6 +440,183 @@ describe("authority source discriminator (@spec mission#mission-record, mission#
       subjects: ["bob"],
     });
     expect(() => validateAuthoritySourceCatalog(disjoint)).not.toThrow();
+  });
+});
+
+describe("unrecognized authority source type (@spec mission#mission-record, #1503)", () => {
+  // A source type this issuer does not define, as a later issuer version
+  // could record it: a `policy` member shaped like an organizational one,
+  // and a member this issuer cannot read at all.
+  const UNRECOGNIZED = {
+    type: "delegated_by_vibes",
+    policy: { id: "vibes", version: "1" },
+    basis: { ref: "vibes-1" },
+  };
+  const OPAQUE = /unrecognized type 'delegated_by_vibes', so its source semantics cannot be established/;
+  const childIntent = () =>
+    intent({ goal: "Read one invoice", expires_at: "2026-11-01T00:00:00Z" });
+
+  /** Rewrite a Mission's stored source in its record and in its committed root. */
+  const storeUnrecognized = (kernel: MissionKernel, id: string): void => {
+    kernel.db
+      .prepare("UPDATE missions SET authority_source_json = ? WHERE id = ?")
+      .run(JSON.stringify(UNRECOGNIZED), id);
+    kernel.db
+      .prepare("UPDATE authority_source_bindings SET provenance_json = ? WHERE mission_id = ?")
+      .run(JSON.stringify(UNRECOGNIZED), id);
+  };
+
+  const refusedAccessDenied = (run: () => unknown, pattern: RegExp): void => {
+    try {
+      run();
+      expect.unreachable("an operation needing recognized source semantics must refuse");
+    } catch (e) {
+      expect(e).toBeInstanceOf(IntentError);
+      expect((e as IntentError).code).toBe("access_denied");
+      expect((e as Error).message).toMatch(pattern);
+    }
+  };
+
+  it("hydrates a stored record of unrecognized type with the member unchanged and the Mission still active", () => {
+    const file = storeFile();
+    const kernel = makeKernel({ store: { file } });
+    const record = approve(kernel);
+    storeUnrecognized(kernel, record.id);
+    const hydrated = kernel.get(record.id);
+    expect(hydrated?.authority_source).toEqual(UNRECOGNIZED);
+    expect(hydrated?.state).toBe("active");
+    expect(kernel.committedSourceBinding(record.id).provenance).toEqual(UNRECOGNIZED);
+    // Ordinary derivation reads no source semantics, so it is not refused.
+    expect(kernel.checkDerivation(record.id).state).toBe("active");
+    // A restart reconciles the row once it has no committed root: the row is
+    // read, not refused, so the AS still starts, and no evidence binds it.
+    kernel.db.prepare("DELETE FROM authority_source_bindings WHERE mission_id = ?").run(record.id);
+    kernel.db.close();
+    const after = makeKernel({ store: { file } });
+    try {
+      expect(after.get(record.id)?.authority_source).toEqual(UNRECOGNIZED);
+      expect(after.get(record.id)?.state).toBe("active");
+      expect(after.sourceBindings.get(record.id)).toBeUndefined();
+    } finally {
+      after.db.close();
+    }
+  });
+
+  it("reports the Mission active through introspection and echoes the unrecognized type alone", () => {
+    const kernel = makeKernel();
+    const record = approve(kernel);
+    storeUnrecognized(kernel, record.id);
+    const hydrated = kernel.get(record.id) as MissionRecord;
+    const issuerView = kernel.introspectionMission(hydrated);
+    expect(issuerView.state).toBe("active");
+    expect(issuerView.authority_source).toEqual(UNRECOGNIZED);
+    // The disclosed projection carries `type` only: the other members are
+    // opaque, so none is projected.
+    const disclosed = kernel.introspectionProjection(hydrated, { disclose: new Set(["provenance"]) });
+    expect(disclosed.state).toBe("active");
+    expect(disclosed.authority_source).toEqual({ type: "delegated_by_vibes" });
+  });
+
+  it("refuses a Child Mission drawn from it with access_denied, creating nothing and leaving the parent active", () => {
+    const kernel = makeKernel({ actorProfiles: { "child-agent": "ai_agent" } });
+    const parent = approve(kernel);
+    storeUnrecognized(kernel, parent.id);
+    refusedAccessDenied(
+      () =>
+        createChildMission(kernel, {
+          parentId: parent.id,
+          intent: childIntent(),
+          proposedAuthority: [entry(["payments:invoice.read"])],
+          childActor: { sub: "child-agent", sub_profile: "ai_agent" },
+        } as never),
+      OPAQUE,
+    );
+    expect(kernel.allMissions()).toHaveLength(1);
+    expect(kernel.get(parent.id)?.state).toBe("active");
+  });
+
+  it("reads a stored template of unrecognized source type, and refuses a dispatch from it with access_denied", () => {
+    const kernel = makeKernel();
+    const store = new TemplateStore();
+    const template = createTemplate(
+      store,
+      {
+        template_version: "t1503",
+        issuer: ISS,
+        approver: { iss: ISS, sub: "bob" },
+        ceiling: [entry(READ_ACTIONS)],
+        dispatch_policy: { id: "read-only", version: "1" },
+        dispatchers: ["ap-agent"],
+        recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["ap-agent"] },
+        per_instance_lifetime_s: 900,
+        max_active: 5,
+        rate_per_min: 30,
+        review_cadence_s: 86400,
+        approval_event_id: `tmpl-${seq++}`,
+        expires_at: "2099-01-01T00:00:00Z",
+      } as never,
+      { ...kernel.authoritySourceOptions(), dispatchPolicies: READ_ONLY_POLICIES },
+    );
+    store.db
+      .prepare("UPDATE templates SET authority_source_json = ? WHERE id = ?")
+      .run(JSON.stringify(UNRECOGNIZED), template.id);
+    const rows = store.db
+      .prepare("SELECT rowid, binding_json FROM template_source_bindings WHERE template_id = ?")
+      .all(template.id) as Array<{ rowid: number; binding_json: string }>;
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const binding = { ...JSON.parse(row.binding_json), provenance: UNRECOGNIZED };
+      store.db
+        .prepare("UPDATE template_source_bindings SET binding_json = ? WHERE rowid = ?")
+        .run(JSON.stringify(binding), row.rowid);
+    }
+    expect(store.get(template.id)?.authority_source).toEqual(UNRECOGNIZED);
+    refusedAccessDenied(
+      () =>
+        dispatchFromTemplate(kernel, store, {
+          dispatchPolicies: READ_ONLY_POLICIES,
+          templateId: template.id,
+          dispatchEventId: `dsp-${seq++}`,
+          dispatcher: "ap-agent",
+          intent: intent({ expires_at: "2026-11-01T00:00:00Z" }),
+          subject: { iss: ISS, sub: "alice" },
+          policyVersion: DERIVATION_POLICY.policy_version,
+        } as never),
+      OPAQUE,
+    );
+    expect(kernel.allMissions()).toHaveLength(0);
+  });
+
+  it("refuses an approval whose resolver answers an unrecognized type, creating no Mission", () => {
+    // A workload Subject, so every other source gate would pass: only the
+    // recognition check stands between this answer and a created record.
+    const base = catalogAuthoritySourceResolver(bindAuthoritySourceCatalog(catalog(), ISS, ISS));
+    const unrecognized: AuthoritySourceResolver = {
+      ...base,
+      resolveForApproval: (input) => {
+        const r = base.resolveForApproval(input);
+        return {
+          ...r,
+          entry: { ...r.entry, type: "delegated_by_vibes" } as never,
+          provenance: { type: "delegated_by_vibes" } as never,
+        };
+      },
+    };
+    const kernel = makeKernel({ authoritySourceResolver: unrecognized });
+    const approvalEventId = `apev-1503-${seq++}`;
+    refusedAccessDenied(
+      () =>
+        kernel.approve({
+          intent: intent(),
+          subject: { iss: ISS, sub: "svc-reconciler" },
+          approver: { iss: ISS, sub: "bob" },
+          clientId: "svc-agent",
+          approvalEventId,
+        }),
+      /resolver answered a source of unrecognized type 'delegated_by_vibes'/,
+    );
+    expect(kernel.findByApprovalEvent(approvalEventId)).toBeUndefined();
+    expect(kernel.allMissions()).toHaveLength(0);
   });
 });
 

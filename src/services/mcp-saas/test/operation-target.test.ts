@@ -70,7 +70,7 @@ async function presentJsonText(detailsJson: string): Promise<[string, string]> {
 }
 
 const saas = (operationContracts?: SaasOperationContracts) =>
-  new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasJwk] }, ...(operationContracts ? { operationContracts } : {}) });
+  new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasJwk] }, trustedMissionIssuers: ["https://as.test"], ...(operationContracts ? { operationContracts } : {}) });
 
 describe("the SaaS resource matches the token's entries against the operation target (@spec resource-access#resource-matching, #1276)", () => {
   it("under its service-level contract, only an exact entry spelled as the target authorizes; another spelling, a prefix entry or an unrecognized resource_match does not", async () => {
