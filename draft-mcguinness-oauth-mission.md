@@ -7318,11 +7318,11 @@ commit it (#1518).
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501, #1526), with the issuance rules
-gathered
-under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
-retitled "Mission Lifecycle", resource classification named
-"Mission-governed resource" (#1503), and
-one Standing-Consent Bases section; subsections, tables and IANA
+gathered under Mission-Bound Access Tokens, "Mission Lifecycle and
+Gating" retitled "Mission Lifecycle", resource classification named
+"Mission-governed resource" (#1503), and one Standing-Consent Bases
+section; the error-table detail for a configured-mapping refusal
+aligned with Derivation Modes (#1495); subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
 Assessment, moved from the substrate (#708).
