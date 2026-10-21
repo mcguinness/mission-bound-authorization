@@ -315,16 +315,21 @@ describe("a discovery encounter on the drawdown path, stage 1 (@spec discovery#a
     declarations.set(ORIGIN, declarationOf(["payments:invoice.read"]));
     const root = await issueMission();
     const before = as.kernel.allMissions().length;
-    for (const hints of [
-      { encountered_resource: "not json" },
-      { encountered_resource: JSON.stringify({ origin: `${ORIGIN}/path` }) },
-      { encountered_resource: JSON.stringify({ origin: "https://elsewhere.example" }) },
-      { resource_declaration_digest: catalogDigest("x") },
-    ]) {
+    for (const [hints, reason] of [
+      [{ encountered_resource: "not json" }, "encountered_resource is not a JSON object"],
+      [{ encountered_resource: JSON.stringify({ origin: `${ORIGIN}/path` }) }, "encountered_resource needs an origin"],
+      [
+        { encountered_resource: JSON.stringify({ origin: "https://elsewhere.example" }) },
+        "the encountered resource names no resource the request seeks",
+      ],
+      [{ resource_declaration_digest: catalogDigest("x") }, "resource_declaration_digest rides only with encountered_resource"],
+    ] as const) {
       const res = await tokenRequest(expansion(root.accessToken, [entry(ENCOUNTERED, ["payments:invoice.read"])], hints));
-      const body = (await res.json()) as { error?: string };
+      const body = (await res.json()) as { error?: string; error_description?: string };
       expect(res.status, JSON.stringify(hints)).toBe(400);
       expect(body.error, JSON.stringify(hints)).toBe("invalid_request");
+      // Each refusal is its own check's, so each is proved alone.
+      expect(body.error_description, JSON.stringify(hints)).toBe(reason);
     }
     expect(as.kernel.allMissions().length).toBe(before);
   });
