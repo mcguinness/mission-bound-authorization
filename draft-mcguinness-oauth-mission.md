@@ -2036,10 +2036,7 @@ Mission Intent member.
 Where a deployment records Consent Evidence, the achieved values
 belong in its `authentication_context` member
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); this
-document defines no Mission Record member for them. A derived access
-token carries authentication claims only as authentication information
-about its own Subject ({{token-authentication-lifetime}}), never
-as evidence of approval.
+document defines no Mission Record member for them.
 
 ## Single Accountable Approver {#multi-party-approval}
 
