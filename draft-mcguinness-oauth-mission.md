@@ -2320,6 +2320,8 @@ to `terminated`, and never changes it: an expiry, or any later event,
 does not replace the reason or references of a Mission already
 terminated.
 
+### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
+
 A termination carries every member its reason requires, except one
 recorded before the reason defined that member, or derived from such
 a termination: such a termination exposes only the facts its record
