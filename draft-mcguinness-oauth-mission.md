@@ -4226,12 +4226,15 @@ The following subsections define the record's members.
   anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
   covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
-  itself covers it under that profile's own anchor, as Mission Audit
+  itself covers it under that profile's own anchor. Two optional
+  profiles commit it ({{consent-binding}}). Mission Audit
   Transparency's approval-event registration
-  ({{I-D.draft-mcguinness-mission-audit}}) and Approval Governance's
+  ({{I-D.draft-mcguinness-mission-audit}}) covers the record at
+  creation except its `state` and `termination`. Approval Governance's
   Approval Context Commitment
-  ({{I-D.draft-mcguinness-mission-approval-governance}}) do
-  ({{consent-binding}}). Its disclosure
+  ({{I-D.draft-mcguinness-mission-approval-governance}}) covers a
+  closed manifest of creation facts that includes `approval_basis`.
+  Its disclosure
   through introspection follows
   {{caller-authorization-and-minimization}}. It is not carried on the
   baseline `mission` claim ({{mission-claim}}), and it MUST NOT be
