@@ -1488,8 +1488,8 @@ JWS Compact Serialization <span>[<a href="#RFC7515" class="cite xref">RFC7515</a
       </h2>
 <p id="section-3-1">This section is <span class="bcp14">OPTIONAL</span>. The issuance profile's stateless baseline
 needs no dedicated status surface
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle and
-Gating"); a deployment that does not stand up this operation, and a
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Revocation"); a
+deployment that does not stand up this operation, and a
 consumer that does not use it, are unaffected.<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">The dedicated Mission Status operation is the canonical status surface
 the issuance profile defers. Unlike token introspection
@@ -1841,8 +1841,8 @@ the issuance profile's baseline <code>mission</code> claim.<a href="#section-3.4
                 <p id="section-3.4-11.2.2.3.1"><code>state</code>: <span class="bcp14">REQUIRED</span>. The current Mission lifecycle state. The
 authoritative
 state space is the issuance profile's
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Lifecycle
-and Gating"): <code>active</code> and <code>terminated</code>, this profile's <code>suspended</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Lifecycle"): <code>active</code> and <code>terminated</code>, this profile's <code>suspended</code>
 when the Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>)
 is deployed, and any further state a companion profile defines and
 the deployment runs. A consumer applies the issuance profile's
@@ -2324,7 +2324,7 @@ served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), f
 recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
 <p id="section-5-3">Adopting this endpoint extends the issuance profile's lifecycle state
 space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Lifecycle and Gating") with one additional state, <code>suspended</code> (a
+Lifecycle") with one additional state, <code>suspended</code> (a
 paused Mission that derives no tokens until resumed), and one
 termination reason, <code>completed</code> (the Mission completed
 successfully).
@@ -2593,7 +2593,7 @@ expiry governs: the Mission is <code>terminated</code> with reason <code>expired
         </h3>
 <p id="section-5.3-1">This profile owns the extension of the issuance profile's lifecycle
 state space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Lifecycle and Gating"). The table below is the authoritative view of
+Lifecycle"). The table below is the authoritative view of
 that space: every state, every transition, the source of the event
 that drives it, and the termination reason a transition to
 <code>terminated</code> records.<a href="#section-5.3-1" class="pilcrow">¶</a></p>

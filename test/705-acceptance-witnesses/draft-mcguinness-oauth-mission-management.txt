@@ -391,10 +391,10 @@ Table of Contents
       deployment runs.  A Mission at or past its expires_at is
       terminated with reason expired for this match and in its summary,
       whether or not that transition was persisted
-      ([I-D.draft-mcguinness-oauth-mission], Section "Mission Lifecycle
-      and Gating").  The AS MUST NOT refuse a filter for carrying a
-      state value it does not produce; such a value matches no Mission,
-      except that, for a transition period, revoked, expired, completed,
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission
+      Lifecycle").  The AS MUST NOT refuse a filter for carrying a state
+      value it does not produce; such a value matches no Mission, except
+      that, for a transition period, revoked, expired, completed,
       superseded, or cascaded matches a Mission terminated with that
       termination reason (cascaded matching parent_terminated), the
       issuance profile's transition-period reading
