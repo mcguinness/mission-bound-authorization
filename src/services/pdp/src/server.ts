@@ -34,6 +34,7 @@ import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex
 import { requestMacParts } from "./client.js";
 import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
 import { type ClaimChannel, claimChannelFor } from "./decision-point.js";
+import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
   type Decision,
   type DecisionOptions,
@@ -161,6 +162,12 @@ export interface PdpRemoteServerConfig {
    * target refusal and is handed to the decision function.
    */
   refusals?: PdpRefusalRecorder;
+  /**
+   * @spec metering#lease-renewal (#1440): this PDP's duration leases, bound on
+   * this side of the network hop exactly as `claims` is: a request option
+   * naming another is stripped.
+   */
+  durationLeases?: DurationLeaseDomain;
   /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
@@ -406,7 +413,13 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete opts.requester;
     delete opts.consumptionStatus;
     delete opts.refusals;
+    // @spec authzen#context-resource-contract (#249): the PDP's own contract
+    // declarations are never a request option; the default is the
+    // deployment's statement.
+    delete opts.resourceContracts;
+    delete opts.durationLeases;
     if (config.evidence) opts.evidence = config.evidence;
+    if (config.durationLeases) opts.durationLeases = config.durationLeases;
     if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;
     if (config.resourcePolicy) opts.resourcePolicy = config.resourcePolicy;

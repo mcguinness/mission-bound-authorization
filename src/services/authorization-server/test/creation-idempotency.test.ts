@@ -1,5 +1,5 @@
 /**
- * @spec expansion#creation-request-id (owner), child-delegation#creation-request-id,
+ * @spec expansion#creation-idempotency (owner), child-delegation#creation-request-id,
  * mission-template#dispatch, RFC 9449 §11.1 — issue #467.
  *
  * `creation_request_id` is the REQUIRED idempotency handle of every
@@ -47,6 +47,7 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 
 const PORT = 14520;
@@ -220,6 +221,7 @@ function expansionParams(subjectToken: string, creationRequestId: string, action
     subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
     creation_request_id: creationRequestId,
+    completion_mode: "deferred",
     login_hint: "alice",
     mission_intent: intentJson("Widen to remittance"),
     authorization_details: JSON.stringify(authority(actions)),
@@ -475,7 +477,7 @@ describe("evidence vs recovery ordering (@spec mission#intent-submission-evidenc
   });
 });
 
-describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
+describe("expansion idempotency (@spec expansion#creation-idempotency)", () => {
   it("missing creation_request_id -> invalid_request (expansion initiation)", async () => {
     const pred = await issueMission(["payments:invoice.read"]);
     const params = expansionParams(pred.accessToken, "unused", [
@@ -518,8 +520,7 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
       approvedUntil: FAR_EXP,
     });
     const poll = await tokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: ob.deferral_code as string,
     });
     const polled = (await poll.json()) as {
@@ -574,8 +575,7 @@ describe("expansion idempotency (@spec expansion#creation-request-id)", () => {
       approvedUntil: FAR_EXP,
     });
     const poll = await tokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: ob.deferral_code as string,
     });
     const polled = (await poll.json()) as { mission_id?: string };

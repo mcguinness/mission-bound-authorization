@@ -9,6 +9,7 @@
  */
 
 import {
+  canonicalize,
   capabilitySourceIdentity,
   compareAmounts,
   delegateMatcherListViolation,
@@ -21,6 +22,7 @@ import {
   refusedEntryMember,
   resourceMatchViolation,
   resourceWithin,
+  sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
   unsupportedEntryMember,
 } from "@mission/core";
@@ -582,6 +584,24 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
   if (delegation) entry.delegation = delegation;
+  // @spec resource-access#resource-contract, resource-access#subset step 4
+  // (#249, D553): the reference is carried, never narrowed or intersected. A
+  // policy ceiling "need not carry one", so the proposal's (validated against
+  // configuration by the kernel) is kept; an approved ceiling's (a template's
+  // or governed root's) is preserved exactly, and a proposal naming another
+  // replaces it, which is never narrowing.
+  if (
+    proposal.resource_contract !== undefined &&
+    ceiling.resource_contract !== undefined &&
+    !sameResourceContract(proposal.resource_contract, ceiling.resource_contract)
+  ) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      "resource_contract differs from the approved entry's; replacing a reference is never narrowing",
+    );
+  }
+  const contract = proposal.resource_contract ?? ceiling.resource_contract;
+  if (contract !== undefined) entry.resource_contract = contract;
   return entry;
 }
 
@@ -816,9 +836,20 @@ function intersectMatchers(
  */
 function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
   if (!a || !b) return undefined;
-  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors"]);
+  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"]);
   if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
   const out: JsonObject = {};
+  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // `child_creation_policy` reference is compared for identity, never
+  // intersected. It is carried where both sides commit the same reference, so
+  // a token projected from an entry that commits one still carries the
+  // children grant a child entry is a subset of; where only one side commits
+  // it, or they differ, no fragment is a subset of both, and the grant drops.
+  if (a.child_creation_policy !== undefined || b.child_creation_policy !== undefined) {
+    if (a.child_creation_policy === undefined || b.child_creation_policy === undefined) return undefined;
+    if (canonicalize(a.child_creation_policy) !== canonicalize(b.child_creation_policy)) return undefined;
+    out.child_creation_policy = a.child_creation_policy;
+  }
   const maxChildren = minNum(asNum(a.max_children), asNum(b.max_children));
   if (maxChildren !== undefined) out.max_children = maxChildren;
   const maxChildDepth = minNum(asNum(a.max_child_depth), asNum(b.max_child_depth));
@@ -857,6 +888,31 @@ function intersectDelegation(
 }
 
 /**
+ * @spec expansion#reconciliation check 3 (#1177) — whether some operation
+ * could be authorized by both entries. `false` only where the two are
+ * provably disjoint: no shared action, resources neither of which lies within
+ * the other, `vendors` lists with no common member, `max_amount` caps in
+ * different currencies, or Common Constraints with an empty intersection. A
+ * member or constraint key this cannot evaluate only narrows its entry, so it
+ * never makes two entries overlap; but nothing else proves them disjoint, and
+ * the caller refuses rather than restore authority it cannot show is
+ * untouched.
+ */
+export function entriesMayOverlap(a: AuthorityEntry, b: AuthorityEntry): boolean {
+  if (!a.actions.some((action) => b.actions.includes(action))) return false;
+  if (!resourceWithin(a, b) && !resourceWithin(b, a)) return false;
+  const aVendors = a.constraints?.vendors;
+  const bVendors = b.constraints?.vendors;
+  if (aVendors && bVendors && !aVendors.some((v) => bVendors.includes(v))) return false;
+  const aCap = a.constraints?.max_amount;
+  const bCap = b.constraints?.max_amount;
+  if (aCap && bCap && aCap.currency !== bCap.currency) return false;
+  const common = intersectCommonConstraints(a.constraints, b.constraints);
+  if (!common.ok && !common.reason.startsWith("malformed")) return false;
+  return true;
+}
+
+/**
  * One candidate x effective pairing: the non-empty intersection FRAGMENT, or
  * null where no fragment can be a subset of both. Fail-closed-by-DROPPING and
  * total (never throws), unlike {@link intersect}, which is the derivation-time
@@ -884,6 +940,11 @@ function intersectForProjection(
   // may express. Drop the fragment, as for an unprojectable constraint key.
   if (unsupportedEntryMember(candidate) !== undefined) return null;
   if (unsupportedEntryMember(effective) !== undefined) return null;
+  // @spec resource-access#subset step 4 (#249, D553): "A carries
+  // `resource_contract` exactly when B does": a pairing whose sides differ in
+  // the reference, or where one side has none, yields no fragment, since no
+  // fragment is a subset of both. The common reference is carried below.
+  if (!sameResourceContract(candidate.resource_contract, effective.resource_contract)) return null;
   const actions = candidate.actions.filter((a) => effective.actions.includes(a));
   if (actions.length === 0) return null;
   // A constraint key this projection cannot intersect makes the pairing
@@ -961,6 +1022,7 @@ function intersectForProjection(
   };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   if (sources) entry.capability_sources = sources;
+  if (effective.resource_contract !== undefined) entry.resource_contract = effective.resource_contract;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);
   if (delegation) entry.delegation = delegation;
   return entry;

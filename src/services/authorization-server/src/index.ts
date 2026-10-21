@@ -25,7 +25,7 @@ import {
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
-import type { ScopeProjectionMapping } from "@mission/core";
+import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
@@ -61,7 +61,9 @@ import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continu
 import type { CarryoverConfig } from "./kernel/carryover.js";
 import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
 import {
+  DEFAULT_EXPANSION_RATE_LIMIT,
   type DrawdownRemediation,
+  ExpansionRateLimiter,
   revokeDrawdownSuccessorsRequestedByAnotherClient,
   revokeSuccessorsExpandedByAnotherClient,
   type SuccessorRemediation,
@@ -414,6 +416,8 @@ export {
 } from "./kernel/delegation.js";
 export {
   createExpansion,
+  DEFAULT_EXPANSION_RATE_LIMIT,
+  ExpansionRateLimiter,
   revokeDrawdownSuccessorsRequestedByAnotherClient,
   revokeSuccessorsExpandedByAnotherClient,
   successorMissionClaim,
@@ -576,6 +580,8 @@ export {
   parseGovernedPolicyRoot,
   parseGovernedPolicyRules,
   previewGovernedActivation,
+  type ApprovalGovernanceRecheck,
+  recheckApprovalGovernanceRecord,
   recheckGovernedActivation,
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
@@ -752,6 +758,8 @@ export interface BuiltAs {
    * (drive open/approve/deny headlessly, mirroring `deferrals`).
    */
   expansionDeferrals: ExpansionDeferralStore;
+  /** @spec expansion#policy-probing (#1177): the expansion rate limiter this assembly applies. */
+  expansionRateLimiter: ExpansionRateLimiter;
   /**
    * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
    * store, present exactly where the `deferred-approval` capability is on.
@@ -760,7 +768,7 @@ export interface BuiltAs {
    */
   missionApprovalDeferrals?: MissionApprovalDeferralStore;
   /**
-   * @spec expansion#creation-request-id — the creation-idempotency store
+   * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
   creationIdempotency: CreationIdempotencyStore;
@@ -1003,6 +1011,12 @@ export async function buildAuthorizationServer(opts: {
    */
   authoritySources?: typeof AUTHORITY_SOURCES;
   /**
+   * @spec resource-access#resource-contract (#249): override the contract
+   * versions the kernel assembles and validates `resource_contract` against.
+   * Defaults to the Enforcement Scope Statement's (`RESOURCE_CONTRACTS`).
+   */
+  resourceContracts?: ResourceContractDeclarations;
+  /**
    * @spec mission#introspection (issue #541 P1-4) — TEST-ONLY: inject the AT
    * signing key (a private JWK matching {@link TOPOLOGY.keys.asToken}'s alg)
    * instead of generating one per boot. Lets a test craft adversarial at+jwt
@@ -1187,6 +1201,12 @@ export async function buildAuthorizationServer(opts: {
     onPolicyRefusal?: "await_human" | "deny";
     modelAdvisor?: ModelAdvisor;
   };
+  /**
+   * @spec expansion#policy-probing (#1177): the per-predecessor, per-client
+   * bound on expansion requests, `max` per `windowSeconds`. Default
+   * {@link DEFAULT_EXPANSION_RATE_LIMIT}.
+   */
+  expansionRateLimit?: { max: number; windowSeconds: number };
 }): Promise<BuiltAs> {
   // @spec progressive#in-ceiling-expansion, mission#approval-authentication
   // (#1255): a configuration refusal, before any key, store or recovery is
@@ -1391,6 +1411,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.childCreationPolicy ? { childCreationPolicy: opts.childCreationPolicy } : {}),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.governedPolicyApproval ? { governedPolicyApproval: opts.governedPolicyApproval } : {}),
+    ...(opts.resourceContracts ? { resourceContracts: opts.resourceContracts } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
     // governed policies it references). The approval event establishes
@@ -1501,7 +1522,13 @@ export async function buildAuthorizationServer(opts: {
     opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
     opts.approvalFloor ?? APPROVAL_FLOOR,
   );
-  // @spec expansion#creation-request-id — the creation-idempotency store over
+  const expansionRateLimit = opts.expansionRateLimit ?? DEFAULT_EXPANSION_RATE_LIMIT;
+  const expansionRateLimiter = new ExpansionRateLimiter(
+    expansionRateLimit.max,
+    expansionRateLimit.windowSeconds,
+    () => kernel.nowDate().getTime(),
+  );
+  // @spec expansion#creation-idempotency — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).
   const creationIdempotency = new CreationIdempotencyStore(kernel);
@@ -1576,6 +1603,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    expansionRateLimiter,
     ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     statusListPublisher,
@@ -1719,6 +1747,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    expansionRateLimiter,
     ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     issuer: opts.issuer,

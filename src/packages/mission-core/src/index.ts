@@ -241,6 +241,26 @@ export {
   type PrincipalMappingResolver,
 } from "./origin-principal.js";
 export {
+  isResourceContractRef,
+  RESOURCE_CONTRACT_MEMBERS,
+  type ResourceContractRef,
+  resourceContractDigest,
+  resourceContractOf,
+  resourceContractViolation,
+  sameResourceContract,
+} from "./resource-contract.js";
+export {
+  type DeclaredContractVersion,
+  type EntryContractConfiguration,
+  RESOURCE_CONTRACT_STATES,
+  ResourceContractConfigError,
+  type ResourceContractDeclaration,
+  ResourceContractDeclarations,
+  type ResourceContractRefusal,
+  type ResourceContractResolution,
+  type ResourceContractState,
+} from "./resource-contract-declarations.js";
+export {
   compareInstants,
   type Instant,
   instantFloorMs,

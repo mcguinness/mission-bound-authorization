@@ -127,6 +127,12 @@ export type MissionApprovalPoll =
   | { error: "access_denied" }
   | { error: "invalid_grant" }
   /**
+   * DTR -00 Section 10.1 (#1357): the opening client polled under a key other
+   * than the deferral's. The deferral is unchanged and stays redeemable under
+   * its key.
+   */
+  | { error: "invalid_dpop_proof" }
+  /**
    * An approved approval's Mission, claimed for delivery under `delivery`.
    * The caller delivers the credential, then settles the claim with
    * {@link MissionApprovalDeferralStore.confirmDelivery} (the credential is
@@ -563,8 +569,10 @@ export class MissionApprovalDeferralStore {
   /**
    * @spec deferred-approval#policy-completion, deferred-approval#deferred-sequencing
    * (step 5): the poll the token endpoint serves. It first checks that the
-   * presenter is the client and key the approval is bound to (anything else
-   * is `invalid_grant`, with no side effect) and the polling interval. A
+   * presenter is the client and key the approval is bound to, with no side
+   * effect: an unknown code or another client's is `invalid_grant`, whatever
+   * key the poll uses, and only then is another key `invalid_dpop_proof`
+   * (DTR -00 Sections 5.5.1, 5.6 and 10.1, #1357). Then the polling interval. A
    * pending approval that no policy evaluation has resolved then runs
    * {@link completeByPolicy}: the issuer's selection and the policy's
    * decision, never the client's. The poll that follows reports the outcome
@@ -577,7 +585,8 @@ export class MissionApprovalDeferralStore {
    */
   async pollAndComplete(code: string, presenter: { clientId: string; jkt: string }): Promise<MissionApprovalPoll> {
     const row = this.row(code);
-    if (!row || row.client_id !== presenter.clientId || row.jkt !== presenter.jkt) return { error: "invalid_grant" };
+    if (!row || row.client_id !== presenter.clientId) return { error: "invalid_grant" };
+    if (row.jkt !== presenter.jkt) return { error: "invalid_dpop_proof" };
     const nowMs = this.now().getTime();
     if (this.observed(row) === "pending" && row.resolution_reason === null && !this.tooSoon(row, nowMs)) {
       try {
@@ -600,7 +609,8 @@ export class MissionApprovalDeferralStore {
    */
   poll(code: string, presenter: { clientId: string; jkt: string }): MissionApprovalPoll {
     const row = this.row(code);
-    if (!row || row.client_id !== presenter.clientId || row.jkt !== presenter.jkt) return { error: "invalid_grant" };
+    if (!row || row.client_id !== presenter.clientId) return { error: "invalid_grant" };
+    if (row.jkt !== presenter.jkt) return { error: "invalid_dpop_proof" };
     const state = this.observed(row);
     const nowMs = this.now().getTime();
     switch (state) {
