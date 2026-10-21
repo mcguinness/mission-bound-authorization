@@ -4210,7 +4210,12 @@ The following subsections define the record's members.
   anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
   covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
-  itself covers it under that profile's own anchor. Its disclosure
+  itself covers it under that profile's own anchor, as Mission Audit
+  Transparency's approval-event registration
+  ({{I-D.draft-mcguinness-mission-audit}}) and Approval Governance's
+  Approval Context Commitment
+  ({{I-D.draft-mcguinness-mission-approval-governance}}) do
+  ({{consent-binding}}). Its disclosure
   through introspection follows
   {{caller-authorization-and-minimization}}. It is not carried on the
   baseline `mission` claim ({{mission-claim}}), and it MUST NOT be
