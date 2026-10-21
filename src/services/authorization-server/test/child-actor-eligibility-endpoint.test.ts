@@ -47,6 +47,7 @@ import {
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { FIXTURE_BROWSER_LOGIN, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { asTokenSigningKeyPair } from "./subject-possession.helper.js";
 
@@ -339,6 +340,7 @@ async function openExpansion(target: Target, predecessor: MissionRecord, readEnt
     }),
     authorization_details: JSON.stringify(proposal),
     creation_request_id: crypto.randomUUID(),
+    completion_mode: "deferred",
   });
   const body = (await res.json()) as { error?: string; deferral_code?: string };
   expect(res.status, JSON.stringify(body)).toBe(400);
@@ -365,8 +367,7 @@ const rowOf = (manifest: CarryoverManifest, childId: string) => manifest.entries
 /** Complete the deferred expansion (deferral code and DPoP only). */
 function poll(target: Target, code: string): Promise<Response> {
   return tokenRequest(target, target.agent, {
-    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    grant_type: DEFERRED_GRANT_TYPE,
     deferral_code: code,
   });
 }

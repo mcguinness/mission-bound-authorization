@@ -76,7 +76,15 @@ import {
   isValidCreationRequestId,
   normalizedScope,
 } from "../kernel/creation-idempotency.js";
-import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
+import {
+  DEFERRAL_EXPIRES_IN,
+  DEFERRAL_INTERVAL,
+  DEFERRED_GRANT_TYPE,
+  EXPANSION_DEFERRAL_PREFIX,
+  ExpansionDeferralError,
+  type ExpansionDeferralStore,
+} from "../kernel/deferred.js";
+import { requestsDeferral } from "./deferred-mission-approval.js";
 import { reconciliationStatusFor } from "../kernel/expansion.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import {
@@ -991,7 +999,7 @@ export async function handleTokenExchangeGrant(
  *
  * @spec continuation#transport-async — retry safety (#485): the exchange REQUIRES
  * `creation_request_id` (the COMMON idempotency primitives adopted from
- * expansion#creation-request-id; family delivery/recovery defined by the
+ * expansion#creation-idempotency; family delivery/recovery defined by the
  * continuation profile itself). The reservation is acquired BEFORE any side
  * effect, the family-created transition commits atomically with the single
  * gateDerivation, and a revalidated retry recovers the operation
@@ -1154,7 +1162,7 @@ export async function handleAsyncDelegationExchange(
   }
 
   // @spec continuation#transport-async — REQUIRED creation_request_id on the
-  // delegation-family-creating exchange, adopting expansion#creation-request-id
+  // delegation-family-creating exchange, adopting expansion#creation-idempotency
   // by reference (missing -> invalid_request).
   const creationRequestId = readCreationRequestId(params);
 
@@ -1221,7 +1229,7 @@ export async function handleAsyncDelegationExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order (adopted) — the lookup runs AFTER
+  // @spec expansion#creation-revalidation (adopted) — the lookup runs AFTER
   // client authentication and possession (the acting-key re-binding) but BEFORE
   // the Mission lifecycle gate and the derivation gate below: the retry worth
   // recovering is exactly the one whose first attempt consumed the single
@@ -1987,7 +1995,7 @@ async function mintMissionAccessToken(
  * invalid_request), mapped onto the exchange's error surface.
  */
 /**
- * @spec expansion#creation-request-id (child-delegation cites it) — read the
+ * @spec expansion#submission (child-delegation cites it) — read the
  * REQUIRED `creation_request_id`: the client-generated identifier of ONE
  * Mission-creation operation across all completion modes. Missing or malformed
  * -> invalid_request. Syntax: bounded ASCII (max 255 octets); opaque to the AS
@@ -2278,7 +2286,7 @@ export async function handleChildCreationExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // @spec expansion#creation-revalidation — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the parent
   // lifecycle gate (inside createChildMission): the recoverable retry is exactly
   // the one whose source Mission changed state when the first attempt succeeded.
@@ -2564,7 +2572,8 @@ async function recoverChildCreation(
  * predecessor's own effective Authority Set) is REFUSED — nothing to expand;
  * ordinary token derivation already serves it. There is no synchronous exchange
  * completion: an expansion response must never ambiguously be a non-successor (#486).
- * A poll (deferral_code, no subject_token) completes a deferred expansion.
+ * The deferred grant's poll ({@link pollDeferredExpansion}) completes a
+ * deferred expansion.
  */
 export async function handleExpansionExchange(
   opts: AdapterOptions,
@@ -2573,13 +2582,11 @@ export async function handleExpansionExchange(
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
 
-  // Deferred completion (poll): a deferral_code, no subject_token. Possession and
-  // the predecessor binding were RECORDED at request time (@spec deferred-window
-  // check (b): the subject_token's expiry does NOT gate this completion).
-  const deferralCode = params.deferral_code;
-  if (typeof deferralCode === "string" && deferralCode) {
-    await pollDeferredExpansion(opts, provider, ctx, deferralCode);
-    return;
+  // @spec expansion#completion-modes (#1177): the client polls a deferred
+  // expansion with the deferred token response's deferred grant type, so a
+  // token exchange carrying a deferral_code is refused.
+  if (params.deferral_code !== undefined) {
+    throw new errors.InvalidRequest(`a deferred expansion is polled with the ${DEFERRED_GRANT_TYPE} grant type`);
   }
   // @spec mission#scope-projection — the successor's token is issued on the
   // deferral_code poll, which is where a requested `scope` narrows it; on the
@@ -2622,6 +2629,20 @@ export async function handleExpansionExchange(
   // operation is never recovered, and with no Mission state disclosed.
   if (!isMissionClient(ctx, resolved.record)) {
     txError(ctx, 400, "invalid_request", "the acting client is not authorized to request expansion of this predecessor");
+    return;
+  }
+  // @spec expansion#policy-probing (#1177): every request the authorized
+  // client presents for this predecessor counts toward the bound, whatever it
+  // would answer (a recovery and a refusal included). Beyond it the request
+  // is refused like Deferred Mission Approval's queue bound, with HTTP 429 as
+  // the MAS answers its own rate limit.
+  const admitted = opts.expansionRateLimiter?.admit(
+    resolved.record.id,
+    (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
+  );
+  if (admitted && !admitted.ok) {
+    txError(ctx, 429, "temporarily_unavailable", "expansion requests for this predecessor exceed the rate limit");
+    ctx.set("Retry-After", String(admitted.retryAfterS));
     return;
   }
 
@@ -2694,7 +2715,7 @@ export async function handleExpansionExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // @spec expansion#creation-revalidation — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the
   // predecessor lifecycle gate below: the recoverable retry is exactly the one
   // whose predecessor was terminated `superseded` when the first attempt succeeded;
@@ -2742,7 +2763,7 @@ export async function handleExpansionExchange(
     return;
   }
 
-  // Step 5: widening check. @spec expansion#nothing-to-expand — a NON-WIDENING
+  // Step 7: widening check. @spec expansion#verification-order — a NON-WIDENING
   // request (the derived requested authority is a subset of the predecessor's
   // own effective Authority Set) is REFUSED: there is nothing to expand, and
   // ordinary token derivation already serves it (an expansion response must
@@ -2775,6 +2796,15 @@ export async function handleExpansionExchange(
       jkt: resolved.jkt,
     });
     if (handled) return;
+  }
+
+  // @spec expansion#completion-modes (#1177): the deferred response goes only
+  // to an exchange whose completion_mode includes `deferred`. This AS offers
+  // no interactive completion, so any other exchange is refused before a
+  // deferral is opened or an operation is reserved.
+  if (!requestsDeferral(params.completion_mode)) {
+    txError(ctx, 400, "invalid_request", "this expansion needs asynchronous approval: include deferred in completion_mode");
+    return;
   }
 
   // Widening: a FRESH approval is required. Complete via the DTR deferred path.
@@ -2812,7 +2842,7 @@ export async function handleExpansionExchange(
     }
     throw e;
   }
-  // @spec expansion#creation-request-id — reserve the operation at deferred
+  // @spec expansion#creation-idempotency — reserve the operation at deferred
   // INITIATION (state `reserved`; the deferral handle is the recorded delivery
   // continuation). A repetition of the same (client, creation_request_id)
   // returns the SAME deferral, never a second ceremony. A concurrent duplicate
@@ -2850,16 +2880,20 @@ export async function handleExpansionExchange(
 }
 
 /**
- * @spec expansion — poll/complete a deferred expansion. Re-establishes KEY
- * possession at completion (the poller's DPoP key MUST equal the key recorded at
- * request time; @spec deferred-window check (b) re-verifies the KEY, never the
- * expired subject_token) and requires the poller to be the acting client that
- * opened the deferral. redeem() runs deferred-window check (a) (predecessor STATE +
- * containment-version delta) and CREATES the successor on approval; this handler
- * mints the successor's first token and supersedes the predecessor on that first
- * redemption.
+ * @spec expansion#completion-modes — poll/complete a deferred expansion on the
+ * deferred token response's deferred grant (#1177), which routes an
+ * expansion deferral code here. Re-establishes KEY possession at completion
+ * (the poller's DPoP key MUST equal the key recorded at request time; @spec
+ * deferred-window check (b) re-verifies the KEY, never the expired
+ * subject_token) and requires the poller to be the acting client that opened
+ * the deferral. A code issued to another client is answered as an unknown
+ * one, and a proof under another key with invalid_dpop_proof (DTR -00
+ * Sections 5.5.1 and 10.1). redeem() runs deferred-window check (a)
+ * (predecessor STATE + restriction since adjudication) and CREATES the successor on
+ * approval; this handler mints the successor's first token and supersedes the
+ * predecessor on that first redemption.
  */
-async function pollDeferredExpansion(
+export async function pollDeferredExpansion(
   opts: AdapterOptions,
   provider: Provider,
   ctx: KoaContextWithOIDC,
@@ -2872,8 +2906,7 @@ async function pollDeferredExpansion(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const recordedClient = store.recordedClientId(deferralCode);
   if (recordedClient !== undefined && recordedClient !== client.clientId) {
-    txError(ctx, 400, "invalid_grant", "deferral was not opened by the polling client");
-    return;
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
   }
   // KEY possession at completion (only the KEY, never the expired subject_token).
   const proofJws = ctx.get("DPoP");
@@ -2891,7 +2924,7 @@ async function pollDeferredExpansion(
   const { jkt } = verified.proof;
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
-    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
     return;
   }
   // @spec expansion#verification-order step 4 (#1326): the poll runs no
@@ -2976,7 +3009,7 @@ async function pollDeferredExpansion(
     }));
   }
   if (minted) {
-    // @spec expansion#creation-request-id — attach the delivery artifact to the
+    // @spec expansion#creation-idempotency — attach the delivery artifact to the
     // completed operation (redeem() already marked it completed atomically with
     // successor creation): an initiation retry returns this token while it is
     // valid, and re-mints for the SAME successor once it expires.
@@ -2995,7 +3028,7 @@ async function pollDeferredExpansion(
 }
 
 /**
- * @spec progressive#in-ceiling-expansion, expansion#creation-request-id: the
+ * @spec progressive#in-ceiling-expansion, expansion#creation-idempotency: the
  * policy-adjudicated in-ceiling drawdown. Returns false when the request falls
  * back to a fresh human approval; otherwise it has answered the exchange.
  *
@@ -3127,7 +3160,7 @@ async function completeCeilingDrawdown(
 }
 
 /**
- * @spec expansion#creation-request-id — recover a repeated expansion
+ * @spec expansion#creation-idempotency — recover a repeated expansion
  * initiation. Same contract as {@link recoverChildCreation}: fingerprint match
  * + proof of the RECORDED confirmation key are REQUIRED (a matching identifier
  * never bypasses possession); recovery is DELIVERY, never re-creation.
@@ -3160,6 +3193,15 @@ async function recoverExpansion(
   }
   if (presenterJkt !== op.cnfJkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+  // @spec expansion#creation-revalidation (#1177): an operation recorded in
+  // the deferred mode is recovered only for a retry that opts in again.
+  if (
+    op.delivery?.mode === "deferred" &&
+    !requestsDeferral((ctx.oidc.params as Record<string, unknown>).completion_mode)
+  ) {
+    txError(ctx, 400, "invalid_request", "a retry of a deferred expansion must include deferred in completion_mode");
     return;
   }
   if (op.state === "failed") {
@@ -3242,4 +3284,22 @@ async function recoverExpansion(
       });
     }
   }
+}
+
+/**
+ * DTR -00 Section 7.2 (#1177): an expansion deferral code is cancelled at the
+ * RFC 7009 revocation endpoint, as a Mission approval's is. The endpoint
+ * answers 200 whatever the token, so a code that is unknown, another
+ * client's, or already finished is left unchanged.
+ */
+export function cancelExpansionDeferralOnRevocation(store: ExpansionDeferralStore) {
+  return async (ctx: KoaContextWithOIDC, next: () => Promise<void>): Promise<void> => {
+    await next();
+    if (ctx.oidc?.route !== "revocation" || ctx.status !== 200) return;
+    const token = (ctx.oidc.params as Record<string, unknown> | undefined)?.token;
+    const clientId = ctx.oidc.client?.clientId;
+    if (typeof token === "string" && token.startsWith(EXPANSION_DEFERRAL_PREFIX) && clientId) {
+      store.cancel(token, clientId);
+    }
+  };
 }
