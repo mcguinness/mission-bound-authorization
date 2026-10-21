@@ -22,6 +22,7 @@ import {
   refusedEntryMember,
   resourceMatchViolation,
   resourceWithin,
+  sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
   unsupportedEntryMember,
 } from "@mission/core";
@@ -583,6 +584,24 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
   if (delegation) entry.delegation = delegation;
+  // @spec resource-access#resource-contract, resource-access#subset step 4
+  // (#249, D553): the reference is carried, never narrowed or intersected. A
+  // policy ceiling "need not carry one", so the proposal's (validated against
+  // configuration by the kernel) is kept; an approved ceiling's (a template's
+  // or governed root's) is preserved exactly, and a proposal naming another
+  // replaces it, which is never narrowing.
+  if (
+    proposal.resource_contract !== undefined &&
+    ceiling.resource_contract !== undefined &&
+    !sameResourceContract(proposal.resource_contract, ceiling.resource_contract)
+  ) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      "resource_contract differs from the approved entry's; replacing a reference is never narrowing",
+    );
+  }
+  const contract = proposal.resource_contract ?? ceiling.resource_contract;
+  if (contract !== undefined) entry.resource_contract = contract;
   return entry;
 }
 
@@ -921,6 +940,11 @@ function intersectForProjection(
   // may express. Drop the fragment, as for an unprojectable constraint key.
   if (unsupportedEntryMember(candidate) !== undefined) return null;
   if (unsupportedEntryMember(effective) !== undefined) return null;
+  // @spec resource-access#subset step 4 (#249, D553): "A carries
+  // `resource_contract` exactly when B does": a pairing whose sides differ in
+  // the reference, or where one side has none, yields no fragment, since no
+  // fragment is a subset of both. The common reference is carried below.
+  if (!sameResourceContract(candidate.resource_contract, effective.resource_contract)) return null;
   const actions = candidate.actions.filter((a) => effective.actions.includes(a));
   if (actions.length === 0) return null;
   // A constraint key this projection cannot intersect makes the pairing
@@ -998,6 +1022,7 @@ function intersectForProjection(
   };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   if (sources) entry.capability_sources = sources;
+  if (effective.resource_contract !== undefined) entry.resource_contract = effective.resource_contract;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);
   if (delegation) entry.delegation = delegation;
   return entry;

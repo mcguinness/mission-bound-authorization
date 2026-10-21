@@ -497,6 +497,11 @@ export async function pollMissionApprovalDeferral(
         throw new errors.ExpiredToken();
       case "access_denied":
         throw new errors.AccessDenied();
+      case "invalid_dpop_proof":
+        // DTR -00 Section 10.1 (#1357): the opening client under another key;
+        // the deferral stays redeemable under its own.
+        refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
+        return;
       default:
         throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
     }

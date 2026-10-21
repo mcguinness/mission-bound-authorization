@@ -252,13 +252,14 @@ describe("a foreign entry carrying an unsupported member is unsupported (@spec m
   // dropped by a member-by-member rebuild, it would widen the entry.
   const carrying = { ...entry, invoice_ids: ["INV-7"] } as AuthorityEntry;
 
-  it("SUPPORTED_ENTRY_MEMBERS is the type's own members and capability_sources", () => {
+  it("SUPPORTED_ENTRY_MEMBERS is the type's own members, resource_contract included, and capability_sources", () => {
     expect([...SUPPORTED_ENTRY_MEMBERS].sort()).toEqual([
       "actions",
       "capability_sources",
       "constraints",
       "delegation",
       "resource",
+      "resource_contract",
       "resource_match",
       "type",
     ]);

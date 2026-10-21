@@ -123,6 +123,17 @@ rows and, for decimal amounts, by `compareAmounts`'s tests
 `capability_sources`, a member another specification defines for this type,
 is compared by `capabilitySourcesNoBroader` (`authority-subset.ts`).
 
+`resource_contract` (Resource Access § Resource Contracts, § Subset Rule step
+4; #249) is compared by exact equality, absent only against absent:
+
+| Rule | Status | Code | Witness |
+|---|---|---|---|
+| A carries `resource_contract` exactly when B does, member for member; removing, replacing or adding one is never narrowing | implemented | `sameResourceContract` in `isSubsetEntry` (`authority-subset.ts`) | `packages/mission-core/test/resource-contract.test.ts` "removing, replacing or adding a reference is never narrowing" |
+| Derivation preserves it: a proposal's reference (validated against configuration) is carried under a policy ceiling, an approved ceiling's reference is carried to an entry derived from it, and a proposal replacing an approved ceiling's reference is refused | implemented | `intersect` (`derive.ts`); `assertCarriedContractsResolvable` (`kernel/resource-contract.ts`) | `resource-contract.test.ts` "derivation carries a proposed reference under a policy ceiling that has none, and an approved ceiling's reference to an entry derived from it" and "derivation refuses a proposal replacing an approved entry's reference: replacing is never narrowing" |
+| The effective-set projection (refresh, code exchange, introspection) keeps it and drops a pairing whose sides differ in it | implemented | `intersectForProjection` (`derive.ts`) | `resource-contract.test.ts` "the effective-set projection (refresh, code and introspection re-projection) keeps the reference, and yields nothing for a candidate that removes, replaces or adds one" |
+| A configured policy ceiling need not carry one | implemented: a ceiling comparison sets the member aside on both sides and keeps the entry's own | `entryWithinCeiling`, `narrowToCeiling` (`authority-subset.ts`) | `packages/mission-core/test/resource-contract.test.ts` "a configured ceiling need not carry one: the ceiling comparison sets the member aside and keeps the entry's own" |
+| Template consent | refused: a template ceiling entry carrying one is refused at consent, since consent does not assemble it from configuration | `createTemplate` (`kernel/template.ts`) | `resource-contract.test.ts` "template consent refuses a ceiling entry carrying resource_contract, naming it" |
+
 ### 2.4 The `delegation` member under narrowing
 
 Resource Access § Subset Rule, the closing list on `delegation`.
@@ -183,6 +194,7 @@ per-audience document `parseScopeProjectionMapping` validates.
 | 1. The mapping covers the entry's resource set | implemented through the shared matcher (#1434): an `exact` entry needs the same `resource`, byte for byte. A `prefix` value is never safe for an `exact` entry. A `prefix` entry's mapping covers that prefix or a narrower resource within it, never a broader ancestor. | `packages/mission-core/test/scope-projection.test.ts` "resource match: a prefix value is never safe for an exact entry, nor a broader ancestor for a narrower prefix entry"; `scope-projection.test.ts` "refuses a prefix scope for an exact entry"; cases pj-05, pj-06 skip |
 | 2. Actions match without aggregation; a proper subset is allowed | implemented, by literal membership, one entry per value | `packages/mission-core/test/scope-projection.test.ts` "action aggregation: a value granting an action the entry does not carry is not safe" and "union widening: a value only two entries together cover is not emitted"; `scope-projection.test.ts` "a mapped value granting a proper subset of the entry's actions is a safe projection (@spec resource-access#scope-projection)" |
 | 3. Every carried `constraints` key is independently enforced | implemented for `max_amount` and `vendors`, the only controls a mapping can declare (`SCOPE_CONTROL_KEYS`); `requires_action_approval: false` counts as omitted. An entry carrying any other key, including the seven `common-constraints.ts` keys, `terminal_when` and `requires_action_approval: true`, is never projected. | `packages/mission-core/test/scope-projection.test.ts` "constraints: every carried key needs an independently enforced control at least as tight"; `scope-projection.test.ts` "refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight" |
+| 4. The contract is preserved: an entry carrying `resource_contract` projects only to a value whose mapping states the target performs its operations under exactly that contract, and an entry without one only where the target requires none (#249) | implemented: a `scope_only` value may declare `resource_contract` and `requires_resource_contract` | `packages/mission-core/test/resource-contract.test.ts` "projects an entry carrying a reference only where the mapping states the target performs under exactly that contract" and "projects an entry without one only where the target requires no reference"; `resource-contract.test.ts` "scope projection never drops it: an entry carrying a reference projects only to a value the mapping states is performed under exactly that contract" |
 | An entry member the projection does not understand fails closed | implemented (`KNOWN_ENTRY_MEMBERS`) | `packages/mission-core/test/scope-projection.test.ts` "an entry member the projection does not understand, or a capability-source binding, fails closed" |
 | With `projection` undeclared, emit no projected `scope` for the type | not implemented: the reference projects without a declaration | none; cases pj-01 to pj-04 skip (`transformation-capabilities` and `scope-projection` are not in the case reader's implemented set) |
 
@@ -219,5 +231,5 @@ declaration is published yet. Before one is made:
 
 A declaration is never an unqualified whole-type boolean narrowed by prose.
 A qualified `narrowing` choice establishes no `projection` evidence, and the
-three per-entry, per-target projection conditions of §4 still apply. The
+four per-entry, per-target projection conditions of §4 still apply. The
 `delegation` declaration remains a separate audit.

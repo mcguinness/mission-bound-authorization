@@ -14,8 +14,9 @@ import {
   intentHash,
   type JsonValue,
   proposalHash,
+  type ResourceContractDeclarations,
 } from "@mission/core";
-import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
+import { MISSION_MAX_STALE_SECONDS, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import {
   openStore,
   type StoreOptions,
@@ -162,6 +163,11 @@ import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
 import { newMissionId } from "./mission-id.js";
+import {
+  assembleResourceContracts,
+  assertCarriedContractsResolvable,
+  assertProposedContractsCurrent,
+} from "./resource-contract.js";
 import {
   type CeilingConsent,
   ceilingMembersOf,
@@ -656,6 +662,18 @@ export interface KernelOptions {
    */
   directApprovalRecording?: { rule: RegisteredDirectApprovalRule };
   /**
+   * @spec resource-access#resource-contract (#249, D553): the trusted
+   * configuration "which states whether an entry's `resource` requires a
+   * reference and which contract version is current for it": the contract
+   * versions each resource declares. Defaults to the shipped deployment's,
+   * `RESOURCE_CONTRACTS`, the Enforcement Scope Statement's
+   * `extensions.resource_contracts`, the same declarations the PDP and the
+   * PEP resolve against. With no declarations, every proposed or carried
+   * `resource_contract` is refused `invalid_authorization_details`, never
+   * dropped, and none is required.
+   */
+  resourceContracts?: ResourceContractDeclarations;
+  /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
@@ -1027,8 +1045,18 @@ export class MissionKernel {
     );
   }
 
+  /**
+   * The Authority Set a fresh approval of `intent` (and its proposal) renders
+   * and grants, with each entry's `resource_contract` assembled from
+   * configuration ({@link assembleResourceContracts}, #249).
+   */
   derive(intent: MissionIntent, proposal?: readonly AuthorityEntry[]): AuthorityEntry[] {
-    return this.deriveWithProvenance(intent, proposal).entries;
+    return assembleResourceContracts(this.deriveWithProvenance(intent, proposal).entries, this.resourceContracts());
+  }
+
+  /** @spec resource-access#resource-contract (#249): the configured contract declarations. */
+  resourceContracts(): ResourceContractDeclarations {
+    return this.opts.resourceContracts ?? RESOURCE_CONTRACTS;
   }
 
   /**
@@ -1048,6 +1076,12 @@ export class MissionKernel {
     // already map); `insertRecord` re-checks as the single record funnel, which
     // also covers child creation (a requested subset, never a fresh derivation).
     assertDischargeAuthoritiesResolvable(derived.entries, this.opts.dischargeAuthority);
+    // @spec resource-access#resource-contract (#249): a reference a derived
+    // entry carries is preserved, never re-assembled here, and must still
+    // resolve against configuration: every Mission-creating surface (a child,
+    // an expansion, a template or governed instance, a carryover successor)
+    // reaches it through this one derivation.
+    assertCarriedContractsResolvable(derived.entries, this.resourceContracts(), this.now());
     return derived;
   }
 
@@ -1085,7 +1119,12 @@ export class MissionKernel {
 
   /** @spec mission#authority-proposal — intake of the submitted proposal. */
   validateProposal(raw: string, targetResources: string[]): AuthorityEntry[] {
-    return validateAuthorityProposal(raw, targetResources);
+    const proposal = validateAuthorityProposal(raw, targetResources);
+    // @spec resource-access#resource-contract (#249): a proposed reference is
+    // a proposal; one configuration does not name as current refuses here,
+    // at intake, before anything is derived or rendered.
+    assertProposedContractsCurrent(proposal, this.resourceContracts());
+    return proposal;
   }
 
   /**
@@ -1384,8 +1423,12 @@ export class MissionKernel {
     // @spec resource-access#delegate-eligibility: the derivation's origins
     // stay index-aligned through the two per-entry capability transforms.
     const derived = this.deriveWithProvenance(input.intent, proposal);
+    // @spec resource-access#resource-contract (#249): the reference is
+    // assembled from configuration before `authorityHash` below, so
+    // `authority_hash` commits it; the transform is one entry per entry, so
+    // the origins stay index-aligned.
     const authoritySet = this.resolveFreshCapabilities(attachCapabilitySources(
-      derived.entries,
+      assembleResourceContracts(derived.entries, this.resourceContracts()),
       this.opts.capabilityResolver ? undefined : input.capabilityResolution,
     ));
     // @spec mission#approval-event (step 3) — establish the authority source

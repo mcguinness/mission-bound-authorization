@@ -26,7 +26,7 @@ import {
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
-import type { ScopeProjectionMapping } from "@mission/core";
+import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
@@ -1034,6 +1034,12 @@ export async function buildAuthorizationServer(opts: {
    */
   authoritySources?: typeof AUTHORITY_SOURCES;
   /**
+   * @spec resource-access#resource-contract (#249): override the contract
+   * versions the kernel assembles and validates `resource_contract` against.
+   * Defaults to the Enforcement Scope Statement's (`RESOURCE_CONTRACTS`).
+   */
+  resourceContracts?: ResourceContractDeclarations;
+  /**
    * @spec mission#introspection (issue #541 P1-4) — TEST-ONLY: inject the AT
    * signing key (a private JWK matching {@link TOPOLOGY.keys.asToken}'s alg)
    * instead of generating one per boot. Lets a test craft adversarial at+jwt
@@ -1447,6 +1453,7 @@ export async function buildAuthorizationServer(opts: {
           },
         }
       : {}),
+    ...(opts.resourceContracts ? { resourceContracts: opts.resourceContracts } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
     // governed policies it references). The approval event establishes
