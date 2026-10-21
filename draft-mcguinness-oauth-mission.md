@@ -3125,7 +3125,7 @@ exchange rows of the third table.
 |---|---|
 | Token exchange: a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange | `invalid_request` ({{Section 2.2.2 of RFC8693}}), unless a Token Exchange profile assigns the failure its own code; a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint; an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`. Detail: safe `error_description` |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
-| Delegated token exchange ({{delegation}}): the `subject_token` is not a designation this AS issued naming the requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
+| Delegated token exchange ({{delegated-exchange}}): the `subject_token` is not a designation this AS issued naming the requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Designation ({{designation}}): the AS cannot establish that no resource server accepts the named client's identifier as an audience for its access tokens, including an alias it never issues | `invalid_target` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Token exchange using {{delegated-instance-context}}: required Client Attestation fails validation | `invalid_client_attestation`. Detail: no instance-identity disclosure |
@@ -3450,8 +3450,8 @@ Delegation takes two Token Exchanges, in this order:
 
 1. The delegating party obtains a designation that names the delegate
    ({{designation}}).
-2. The delegate redeems that designation for a delegated token, under
-   the conditions below.
+2. The delegate redeems that designation for a delegated token
+   ({{delegated-exchange}}).
 
 ~~~ ascii-art
 Delegating party            AS                        Delegate
@@ -3466,6 +3466,52 @@ Delegating party            AS                        Delegate
   |                          |------- delegated token --->|
 ~~~
 {: title="Delegation: a designation, then its redemption"}
+
+## Designation {#designation}
+
+A designation is the delegating party's authorization for one
+delegate to obtain delegated tokens. The holder of a Mission-bound
+access token obtains it by Token Exchange ({{RFC8693}}): it presents
+that token as the `subject_token`, proves possession of the token's
+confirmation key, and names another client's identifier as
+`audience`, with `requested_token_type`
+`urn:ietf:params:oauth:token-type:access_token`. Only a
+sender-constrained token can therefore be designated. The holder is
+the Mission's approved agent for a token that carries no `act` claim,
+and otherwise the delegate that the AS's accounting records as the
+token's outermost actor ({{delegation-constraints}}).
+
+A designation the AS issues:
+
+- carries a subset ({{subset}}) of the presented token's authority,
+  and the same `mission` claim ({{mission-claim}});
+- has `aud` equal to the designated client's identifier, and a
+  `may_act` claim ({{Section 4.4 of RFC8693}}) whose `sub` is that
+  identifier;
+- carries no `cnf` and no `act` claim: like an authorization code, it
+  is bound to the client that redeems it, which proves its own key in
+  the delegated exchange ({{delegated-exchange}}), and the delegated
+  token's `act` renders the AS's accounting
+  ({{delegation-constraints}}); and
+- MUST expire shortly after it is issued, and no later than the
+  presented token or the Mission's `expires_at`.
+
+A designation names a delegate and adds none. Whether one may be
+redeemed more than once within its lifetime is the AS's policy; each
+redemption is a delegated exchange of its own ({{delegated-exchange}}).
+
+A designation authorizes no resource access. A designated client's
+identifier MUST NOT be an audience that any resource server accepts
+for this AS's access tokens, throughout the designation's lifetime.
+That includes an alias a resource server accepts but the AS never
+issues as an audience. The AS MUST refuse, with `invalid_target`
+({{Section 2.2.2 of RFC8693}}), a designation request naming a client
+for which it cannot establish that separation. A resource server that
+validates a JWT access token's audience ({{Section 4 of RFC9068}})
+therefore rejects a designation, and the AS reports one inactive at
+introspection ({{composite-active}}).
+
+## Delegated Exchange {#delegated-exchange}
 
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}), presenting a designation that the delegating party
@@ -3540,49 +3586,6 @@ The chain is attribution, not authority:
 - The `authorization_details` subset relations ({{subset}}), not the
   chain, show that authority narrowed.
 
-## Designation {#designation}
-
-A designation is the delegating party's authorization for one
-delegate to obtain delegated tokens. The holder of a Mission-bound
-access token obtains it by Token Exchange ({{RFC8693}}): it presents
-that token as the `subject_token`, proves possession of the token's
-confirmation key, and names another client's identifier as
-`audience`, with `requested_token_type`
-`urn:ietf:params:oauth:token-type:access_token`. Only a
-sender-constrained token can therefore be designated. The holder is
-the Mission's approved agent for a token that carries no `act` claim,
-and otherwise the delegate that the AS's accounting records as the
-token's outermost actor ({{delegation-constraints}}).
-
-A designation the AS issues:
-
-- carries a subset ({{subset}}) of the presented token's authority,
-  and the same `mission` claim ({{mission-claim}});
-- has `aud` equal to the designated client's identifier, and a
-  `may_act` claim ({{Section 4.4 of RFC8693}}) whose `sub` is that
-  identifier;
-- carries no `cnf` and no `act` claim: like an authorization code, it
-  is bound to the client that redeems it, which proves its own key in
-  the delegated exchange ({{delegation}}), and the delegated token's
-  `act` renders the AS's accounting ({{delegation-constraints}}); and
-- MUST expire shortly after it is issued, and no later than the
-  presented token or the Mission's `expires_at`.
-
-A designation names a delegate and adds none. Whether one may be
-redeemed more than once within its lifetime is the AS's policy; each
-redemption is a delegated exchange of its own ({{delegation}}).
-
-A designation authorizes no resource access. A designated client's
-identifier MUST NOT be an audience that any resource server accepts
-for this AS's access tokens, throughout the designation's lifetime.
-That includes an alias a resource server accepts but the AS never
-issues as an audience. The AS MUST refuse, with `invalid_target`
-({{Section 2.2.2 of RFC8693}}), a designation request naming a client
-for which it cannot establish that separation. A resource server that
-validates a JWT access token's audience ({{Section 4 of RFC9068}})
-therefore rejects a designation, and the AS reports one inactive at
-introspection ({{composite-active}}).
-
 ## Instance Context in Delegated Tokens {#delegated-instance-context}
 
 Where a deployment authenticates client instances
@@ -3596,8 +3599,8 @@ the AS establishes the delegate's actor identity, and that actor's
 trusted association with the instance, separately.
 
 Because a delegated token is sender-constrained to the delegate's own
-key ({{delegation}}), and the Actor Profile makes the top-level `cnf`
-the current presenter's key
+key ({{delegated-exchange}}), and the Actor Profile makes the
+top-level `cnf` the current presenter's key
 ({{I-D.draft-mcguinness-oauth-actor-profile}}), that `cnf` is a key
 the instance possesses.
 
@@ -3699,8 +3702,9 @@ carries no `act` chain and enters the target domain at depth 0
 accounting it maintains for the tokens it issues under the Mission
 and associates with the credential it validates (for example, recorded
 at issuance against the token), not from the nesting of a presented
-`act` claim. The `act` chain is attribution ({{delegation}}): it
-renders the accounted chain and is not the source of the count.
+`act` claim. The `act` chain is attribution
+({{delegated-exchange}}): it renders the accounted chain and is not
+the source of the count.
 
 Over the exchanges this document defines, the accounting is complete:
 
@@ -5185,7 +5189,7 @@ following limit this exposure:
   breadth: only `allowed_delegates` bounds fan-out to many distinct
   depth-1 delegates.
 - Binding each delegated token to the delegate's own key
-  ({{delegation}}) confines a compromised delegate to its own
+  ({{delegated-exchange}}) confines a compromised delegate to its own
   credential.
 - Short derived-token lifetimes ({{issuance-gating}}), and marking
   delegable only the entries that need delegation, keep it small.
