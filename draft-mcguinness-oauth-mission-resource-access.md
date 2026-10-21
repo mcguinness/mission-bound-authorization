@@ -642,7 +642,8 @@ The authorization server MUST make this resource comparison with the
 same matcher, over the same URI forms, that resource servers use to
 enforce the entries ({{resource-matching}}), so that whenever A's
 resource set is contained in B's, every target A admits is also admitted
-by B.
+by B. Resource containment alone never establishes authority
+containment: actions, constraints, and the contract are checked as above.
 
 The `delegation` member is policy, not authority, and is not part of
 this comparison ({{delegate-eligibility}}). A derived entry's
