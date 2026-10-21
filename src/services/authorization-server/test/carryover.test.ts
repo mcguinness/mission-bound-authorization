@@ -1423,4 +1423,76 @@ describe("Child Mission Carryover termination vocabulary (@spec mission#terminat
       verifyCarryoverEvidence(`${header}.${enc({ ...legacy, map: verified.map })}.${signature}`, pubKey),
     ).rejects.toThrow();
   });
+
+  // #705 acceptance item 9 (the issue's current Acceptance numbering): on the
+  // Carryover path, `parent` names the immediate parent and the predecessor
+  // whose supersession started the cascade is only `origin` provenance.
+  it("names a carried grandchild's immediate parent, the old child, never the predecessor, on its record, its commit and its Status (#705 acceptance item 9)", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const grandchild = addChild(child.id, "grandchild-a");
+    const run = openApproved(pred.id);
+    const grandEntry = manifestOf(run).entries.find((e) => e.child_id === grandchild.id);
+    expect(grandEntry?.outcome).toBe("carry");
+    const out = redeem(run);
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    const predecessor = kernel.get(pred.id) as MissionRecord;
+    const oldGrand = kernel.get(grandchild.id) as MissionRecord;
+    // @spec child-delegation#child-state: `parent` is the immediate parent,
+    // equal to the grandchild's own lineage `parent.id`; `origin` and
+    // `origin_reason` name the predecessor and its `superseded` cause.
+    expect(oldGrand.termination).toEqual({
+      reason: "parent_terminated",
+      terminated_at: predecessor.termination?.terminated_at,
+      parent: child.id,
+      origin: pred.id,
+      origin_reason: "superseded",
+      carried_to: grandEntry?.replacement?.replacement_id,
+      version: oldGrand.version,
+    });
+    expect(oldGrand.termination?.parent).toBe(oldGrand.parent?.id);
+    // One generation up, the old child's immediate parent is the predecessor.
+    expect(kernel.get(child.id)?.termination).toMatchObject({ parent: pred.id, origin: pred.id });
+    // The lifecycle commit and the Status response carry the same reference.
+    const commit = commits.find((c) => c.id === grandchild.id && c.state === "terminated");
+    expect(commit?.termination).toEqual(oldGrand.termination);
+    expect(kernel.statusObservation(grandchild.id, { requester: "svc:reader" }).payload.mission).toMatchObject({
+      state: "terminated",
+      termination: oldGrand.termination,
+    });
+  });
+
+  it("names an excluded grandchild's immediate parent in its record and in the authenticated map, never the predecessor (#705 acceptance item 9)", async () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const grandchild = addChild(child.id, "grandchild-a");
+    // Suspended before rendering: the child renders as a cascade and its
+    // descendant as a dependent exclusion, so neither is carried.
+    kernel.transition(child.id, "suspend");
+    const run = openApproved(pred.id);
+    expect(manifestOf(run).entries.find((e) => e.child_id === grandchild.id)?.reason).toBe(
+      "dependent_parent_excluded",
+    );
+    const out = redeem(run);
+    expect("error" in out).toBe(false);
+    if ("error" in out) return;
+    const stored = kernel.get(grandchild.id) as MissionRecord;
+    expect(stored.termination).toMatchObject({
+      reason: "parent_terminated",
+      parent: child.id,
+      origin: pred.id,
+      origin_reason: "superseded",
+    });
+    expect(stored.termination?.parent).toBe(stored.parent?.id);
+    expect(stored.termination).not.toHaveProperty("carried_to");
+    // The authenticated Carryover Evidence row carries the same termination.
+    const result = run.store.carryoverResultFor(run.code);
+    const verified = await verifyCarryoverEvidence(result?.evidence_jws as string, pubKey);
+    expect(verified.map.find((r) => r.old_child.mission_id === grandchild.id)).toMatchObject({
+      outcome: "excluded",
+      terminal_state: "terminated",
+      termination: stored.termination,
+    });
+  });
 });
