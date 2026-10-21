@@ -2518,6 +2518,7 @@ carrier's extensibility rule.
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
+| Duration-lease renewal names no lease the PDP issued or an ended activity, or fails continuity with the evaluation it renews | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial (with obligation) | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context and refuses outright, no step-up path available | PDP denial | `resource_policy` |
@@ -3167,6 +3168,10 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Failure-condition coverage: a duration-lease renewal that names no
+  lease the PDP issued or an ended activity, or fails continuity with
+  the evaluation it renews, is denied `out_of_authority` (#1464).
 
 - Runtime Denial Classification and Failure-condition coverage: a
   resource contract reference missing where required, or not
