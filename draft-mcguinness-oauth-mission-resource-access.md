@@ -419,8 +419,10 @@ sign (a ceiling value is never negative), a thousands separator, or a
 non-numeric token (`"NaN"`, `"Infinity"`), is malformed, and a consumer
 MUST reject it rather than attempt to parse it:
 
-- an authority proposal carrying one is refused at submission
-  ({{I-D.draft-mcguinness-oauth-mission}}); and
+- the authorization server MUST refuse an authority proposal carrying
+  one at submission ({{I-D.draft-mcguinness-oauth-mission}}) with the
+  `invalid_authorization_details` error code ({{Section 5 of RFC9396}});
+  and
 - a resource server treats a malformed decimal value the same as a
   `constraints` key it cannot enforce ({{rs-enforcement}}).
 

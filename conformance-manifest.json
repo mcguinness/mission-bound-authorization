@@ -47930,6 +47930,44 @@
    "notes": "#1376. The SaaS resource evaluates the requested action alone against each entry's actions. Proved by mutation: treating an entry with an undefined action as unenforceable fails both witnesses (expected ok true)."
   },
   {
+   "id": "resource-access.decimal-values.proposal-malformed-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "the authorization server MUST refuse an authority proposal carrying one at submission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose Common Constraint carries a decimal-string value outside the grammar (scientific notation, a sign, a thousands separator, NaN or Infinity, a missing digit on either side of the point, more than 18 fractional digits) is refused invalid_authorization_details at submission, before any interaction, with no request_uri and no Mission; a well-formed value is admitted",
+    "local": "max_amount's amount is the reference's only decimal-valued Common Constraint member; the shared intake validator (validateMissionResourceAccessSchema) applies isValidAmount, and the published schema carries the grammar as the amount's pattern"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "decimal values at PAR (@spec resource-access#decimal-values) > refuses a malformed max_amount amount with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "decimal values at PAR (@spec resource-access#decimal-values) > accepts a decimal string with up to 18 fractional digits (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D634 residue (D639). Before it the reference admitted a malformed amount at PAR (201 with a request_uri) and refused it only at derivation, through intersectAmount, when the ceiling also carried max_amount. Proved red-green: the witness fails against main ('1e300': expected 201 to be 400) and with the new check disabled, and passes with it. The lead sentence ('a consumer MUST reject it rather than attempt to parse it') and the resource server's bullet have no row of their own."
+  },
+  {
    "id": "resource-access.common-constraints.no-drop-any-key",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "common-constraints",
