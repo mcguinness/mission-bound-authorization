@@ -7079,6 +7079,26 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1472): a reader pass that changes no requirement. The
+  abstract leads with the object OAuth lacks, and its agent-identity
+  positioning opens Relationship to Adjacent Work. The Implementation
+  Map lists each implementer's duties as entries, not table cells.
+  Terminology separates a
+  derivation, one issuance operation, from Authority Set derivation,
+  and "grain" and "species" are defined in place. Mission
+  Approval opens with what an approval event is and what its basis
+  decides; Direct Approval Steps and Submission Processing Order name
+  their phases without renumbering; Mission Termination gives
+  compatibility its own subsection. Introspection opens with its three
+  cases, and Delegation defines the designation before a Delegated
+  Exchange subsection, with a sequence diagram. `adjudication` defines
+  its common member before the human and policy variants. The Token
+  Exchange token-refusal row splits into three rows, and Error and
+  Challenge Mapping applies to every rule that names its codes.
+  Citations point at the sections that define what they cite. The
+  End-to-End Example separates this document's flow from labelled
+  companion variations and adds a timeline.
+
 - Direct Approval Steps (#1447, D584): the rendering rules point to
   Mission Capability Binding for what the approval presents about a
   catalog-sourced action's source binding.
