@@ -348,15 +348,15 @@ when it validates a proposed or carried entry ({{conformance}}); a
 resource server applies them where a rule says so.
 
 A `resource` value under `prefix` MUST NOT carry a query or fragment
-component; the authorization server refuses such an entry with the
+component; the authorization server MUST refuse such an entry with the
 `invalid_authorization_details` error code ({{Section 5 of RFC9396}}).
 
 This type does not use the {{RFC9396}} common `locations` field:
 `resource` identifies where an entry applies. The authorization server
-refuses an entry carrying `locations` with the
+MUST refuse an entry carrying `locations` with the
 `invalid_authorization_details` error code.
 
-The authorization server also refuses an entry with the
+The authorization server MUST also refuse an entry with the
 `invalid_authorization_details` error code when:
 
 - its `resource` is not an `absolute-URI` ({{Section 4.3 of RFC3986}}),
@@ -364,6 +364,8 @@ The authorization server also refuses an entry with the
 - its `resource` is an `http` or `https` URI without the `//` authority
   form naming a non-empty host ({{Section 4.2.1 of RFC9110}},
   {{Section 4.2.2 of RFC9110}});
+- its `resource_match` is a value the authorization server does not
+  recognize ({{resource-access-type}});
 - its `actions` array is empty, or one of its values is neither an
   action identifier nor an action family ({{resource-access-type}});
 - its `delegation.max_depth` is not a non-negative integer, so a
@@ -387,9 +389,10 @@ case-insensitively ({{value-space-comparison}}).
 The following values are valid and carry a defined meaning:
 
 - A `max_depth` of 0 admits the entry into no delegated token, since a
-  delegated token's delegation depth is 1 or more
-  ({{delegate-eligibility}}). Any other `delegation` member stays
-  intact; a member a companion profile defines there, such as a
+  delegated token's delegation depth is 1 or more (the Delegation
+  Constraints section of {{I-D.draft-mcguinness-oauth-mission}}). Any
+  other `delegation` member stays intact; a member a companion profile
+  defines there, such as a
   child-creation grant, keeps the bound that profile gives it.
 - An empty `allowed_delegates` array permits no delegate. An absent
   member instead defers eligibility to the authorization server's
@@ -632,13 +635,20 @@ the following hold:
 4. **Contract.** A carries `resource_contract` exactly when B does,
    and then with `id`, `version`, and `digest` each equal to B's
    ({{resource-contract}}). Removing, replacing, or adding a reference
-   is never narrowing.
+   is never narrowing. The one exception is approval: where B is a
+   policy ceiling without a reference, A can carry the reference the
+   authorization server assembles from configuration before approval
+   ({{resource-contract}}), since a policy ceiling need not carry one.
+   Derivation from an approved entry has no exception: it preserves
+   the reference exactly.
 
 The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
 narrows A only when it has defined semantics and the resource server
-serving A.`resource` can enforce it; an unknown key in A is never
-treated as narrowing ({{common-constraints}}).
+serving A.`resource` can enforce it. When A carries a key whose
+narrowing the authorization server does not implement, the
+authorization server refuses the derivation rather than removing the
+key or omitting the entry ({{common-constraints}}).
 
 The authorization server MUST make this resource comparison with the
 same matcher, over the same URI forms, that resource servers use to
@@ -708,7 +718,8 @@ candidate entry from a ceiling entry by narrowing:
 
 - a client's authority proposal to the Authority Set
   ({{I-D.draft-mcguinness-oauth-mission}}); or
-- an Authority Set entry to a derived or delegated token
+- an Authority Set entry to a derived token
+  ({{I-D.draft-mcguinness-oauth-mission}}) or a delegated token
   ({{delegate-eligibility}}).
 
 In either case, a `constraints` key that the authorization server does
@@ -1051,13 +1062,10 @@ authoritative. Before approval, the authorization server:
 
 A superseded or retired version is never current
 ({{I-D.draft-mcguinness-mission-runtime}}), so no new approval
-references one. The reference is assembled from configuration, not
-narrowed: a policy ceiling a proposal is narrowed against need not
-carry one, and step 4 of {{subset}} applies to entries derived from an
-approved entry. An authorization server that does not implement this
-section refuses a proposed or carried entry that carries
+references one. An authorization server that does not implement this
+section MUST refuse a proposed or carried entry that carries
 `resource_contract`, with the `invalid_authorization_details` error
-code, and never drops the member.
+code, and MUST NOT drop the member.
 
 **Preservation.** The reference is part of the entry, so
 `authority_hash` commits it ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -1126,14 +1134,14 @@ a list, the list permits it too.
 An approved entry derived from a ceiling entry without
 `allowed_delegates` inherits the policy decision even when the approved
 proposal added a list, so the approved entry's own members do not
-reveal the obligation. The authorization server therefore records, when
-it derives the Authority Set, which approved entries inherit the policy
-decision, and retains that provenance with the Mission. It evaluates
-every later exchange against the approved entry in the Mission Record
-({{I-D.draft-mcguinness-oauth-mission}}) and that provenance, never
-against a presented token alone. Where it cannot resolve either, the
-entry narrows out of the delegated token. A cross-domain grant conveys
-no such provenance.
+reveal the obligation. The authorization server therefore MUST record,
+when it derives the Authority Set, which approved entries inherit the
+policy decision, and MUST retain that provenance with the Mission. It
+evaluates every later exchange against the approved entry in the
+Mission Record ({{I-D.draft-mcguinness-oauth-mission}}) and that
+provenance, never against a presented token alone. Where it cannot
+resolve either, the entry narrows out of the delegated token. A
+cross-domain grant conveys no such provenance.
 
 ## Matching `allowed_delegates` {#matching-allowed-delegates}
 
@@ -1259,8 +1267,8 @@ this document in full declares:
   NOT declare `narrowing` as `true` unless it implements these rules for
   every Common Constraint of {{initial-common-constraints}}. The
   declaration does not require a Common Constraint registered later; an
-  authorization server fails closed on one it does not support
-  ({{common-constraints}}).
+  authorization server that does not support one refuses any derivation
+  that carries it ({{common-constraints}}).
 
 `delegation`: `true`
 : The delegation policy of {{delegate-eligibility}} is fully defined; an
@@ -1401,10 +1409,19 @@ omits `scope` or refuses issuance to a scope-only target, as that
 document requires for any type without a declared projection.
 
 A **resource server** conforms by implementing the enforcement duties of
-{{rs-enforcement}}: exact or prefix resource matching, action and
-action-family matching, and every carried `constraints` key, failing
-closed on a member, matching mode, or key it does not implement. A
-resource server does not implement narrowing, delegate eligibility, or
+{{rs-enforcement}}, failing closed on a member, matching mode, or key it
+does not implement:
+
+- the operation-target duties of {{resource-matching}}: establishing
+  the target from its operation contract, refusing an operation without
+  one unambiguous target, and executing the operation on the target it
+  matched;
+- exact or prefix resource matching, and action and action-family
+  matching;
+- enforcement of every carried `constraints` key it implements; and
+- `resource_contract` enforcement ({{resource-contract}}).
+
+A resource server does not implement narrowing, delegate eligibility, or
 the Transformation Capabilities declaration; those are the authorization
 server's and do not bear on a resource server's conformance.
 
@@ -1463,10 +1480,8 @@ below concerns a `prefix` entry and turns on such a difference:
   after the comparison, changes which characters count as separators
   and can move the boundary ({{resource-matching}}).
 
-A deployment MAY agree out of band on the canonicalization profile its
-authorization server and resource servers apply; this document defines
-one rule ({{resource-matching}}), so no profile identifier is required
-for interoperation.
+This document defines one rule ({{resource-matching}}), so
+interoperation requires no canonicalization profile identifier.
 
 ## Action Family Growth {#action-family-growth}
 
@@ -1486,11 +1501,28 @@ actions approves or derives literal actions rather than a family.
 
 # Privacy Considerations {#privacy-considerations}
 
-This document defines no data element beyond what
-{{I-D.draft-mcguinness-oauth-mission}} carries in
-`authorization_details`, and that document's Privacy Considerations
-apply unchanged. An entry's `resource`, `actions`, and `constraints`
-values are as privacy-sensitive as the Authority Set that carries them.
+The Privacy Considerations of {{I-D.draft-mcguinness-oauth-mission}}
+apply to every `mission_resource_access` entry as part of the Authority
+Set that carries it. Every party that receives an entry, such as the
+client and the resource server, sees each of its members, including the
+following data elements this type adds:
+
+- **Contract identifiers and versions.** A `resource_contract`
+  reference names a contract and the version an entry was approved
+  under. Both can identify the service a task uses, and the version can
+  date the approval.
+- **Resource and constraint values.** A `resource` value can name an
+  individual record or account (`https://api.example/orders/123`), and
+  `tenant`, `recipient_domain`, and `data_classification` values can
+  identify an organization, the domains a task sends to, and the
+  sensitivity of the data it touches.
+- **Delegate identifiers.** An `allowed_delegates` `sub` matcher names
+  a specific client. A resource server receives it with the entry
+  although it can disregard `delegation` ({{rs-enforcement}}).
+- **Metadata fingerprinting.** A protected resource's
+  `mission_constraints_supported` metadata
+  ({{protected-resource-metadata}}) is published, and the keys it lists
+  can fingerprint the resource's software or policy.
 
 # IANA Considerations {#iana}
 
@@ -1500,9 +1532,7 @@ values are as privacy-sensitive as the Authority Set that carries them.
 ({{Section 2 of RFC9396}}), defined in {{resource-access-type}}.
 {{RFC9396}} establishes no IANA registry of such types (the
 authorization server interprets type identifiers), so this document
-requests no IANA action for it. If a registry of authorization details
-types is established in the future, this type SHOULD be registered in
-it.
+requests no IANA action for it.
 
 ## OAuth Protected Resource Metadata Registration {#oauth-protected-resource-metadata-registration}
 
@@ -1518,9 +1548,10 @@ Protected Resource Metadata" registry ({{RFC9728}}):
 
 ## Common Constraints Registry {#iana-common-constraints}
 
-This document establishes the "Mission Common Constraints" registry. The
-registration policy is Specification Required ({{RFC8126}}). The
-Designated Expert checks that a submission:
+This document establishes the "Mission Common Constraints" registry in
+the "OAuth Parameters" registry group. The registration policy is
+Specification Required ({{RFC8126}}). The Designated Experts check that
+a submission:
 
 - uses a name matching `^[A-Za-z0-9_.:-]+$` that is not already
   registered;
@@ -1528,15 +1559,17 @@ Designated Expert checks that a submission:
   implementations to agree on;
 - states a subset rule and an intersection rule, both in value-space
   terms ({{value-space-comparison}}), with the intersection of any two
-  valid values never broader than either operand; and
+  valid values never broader than either operand;
+- names the value, if any, that is equivalent to omitting the member;
+  and
 - states the input the constraint reads at the point of use and the
-  predicate that input meets, in value-space terms, precisely enough for
-  independent resource servers to agree on which operations are within
-  the bound.
+  predicate that input meets, in value-space terms, precisely enough
+  that independent resource servers, given the same declared policy and
+  authoritative inputs, agree on which operations are within the bound.
 
 A specification-defined name is coordinated through this registry. Any
-other `constraints` member name is either collision-resistant or
-deployment-defined, and stays outside the registry.
+other `constraints` member name is deployment-defined and stays outside
+the registry.
 
 Each registration records:
 
@@ -1549,14 +1582,18 @@ Each registration records:
 - **Input**: what the constraint reads at the point of use.
 - **Predicate**: the condition the input meets when an operation is
   within the bound.
+- **Omission-Equivalent Value**: the value that is equivalent to
+  omitting the member ({{subset}}), or "none".
 - **Change Controller**: IETF, or the registrant for any other
   registration.
 - **Reference**: the specification defining the key.
 
 The registry's initial contents are the Common Constraints of
-{{initial-common-constraints}}. For each, the Change Controller is IETF
-and the Reference is {{initial-common-constraints}} of this document,
-which holds the full text the tables summarize.
+{{initial-common-constraints}}. For each, the Change Controller is IETF,
+the Reference is {{initial-common-constraints}} of this document, which
+holds the full text the tables summarize, and the Omission-Equivalent
+Value is "none", except for `requires_action_approval`, whose
+Omission-Equivalent Value is `false`.
 
 | Key Name | Value Syntax | Subset Rule | Intersection Rule |
 |---|---|---|---|
@@ -1600,7 +1637,8 @@ which holds the full text the tables summarize.
   target, the operation contract, literal `exact` matching, and
   normalized `prefix` matching; the Subset Rule; Common Constraints,
   with nine initial constraints, Value-Space Comparison, and the
-  Mission Common Constraints registry; Resource Server Enforcement and
+  Mission Common Constraints registry, which records each constraint's
+  omission-equivalent value; Resource Server Enforcement and
   the `mission_constraints_supported` metadata member; Resource
   Contracts; Delegate Eligibility and `allowed_delegates` matching; the
   type's scope-projection safety conditions and Transformation

@@ -75,8 +75,8 @@
     "content_sha256": "8da741109331b2ecd0a9b4a076f2148385036d5ea502601ebcb10ff87d212d91"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "6f132fa411b5ce93d9194e87750bac383d7b5a98",
-    "content_sha256": "92ceee3d830dc3b6dfdf6c4ffeb117c6f7571a4b8c9acfb5671c6ee205fc36a6"
+    "revision": "9e2cb1905066a1104a05847b724fdaf8c540132c",
+    "content_sha256": "a01f82f96a9b8b2e8ed9be095fca98964ead3ddaae4ea383f55affcfad9c42ae"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -42295,7 +42295,7 @@
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
-   "text": "the authorization server refuses such an entry with the `invalid_authorization_details` error code",
+   "text": "the authorization server MUST refuse such an entry with the `invalid_authorization_details` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -45806,9 +45806,9 @@
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
-   "text": "An authorization server that does not implement this section refuses a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and never drops the member.",
+   "text": "An authorization server that does not implement this section MUST refuse a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and MUST NOT drop the member.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46179,9 +46179,9 @@
    "id": "resource-access.delegate-eligibility.provenance-retained",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
-   "text": "records, when it derives the Authority Set, which approved entries inherit the policy decision, and retains that provenance with the Mission",
+   "text": "MUST record, when it derives the Authority Set, which approved entries inherit the policy decision, and MUST retain that provenance with the Mission",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47290,9 +47290,9 @@
    "id": "resource-access.entry-validation.locations-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
-   "text": "The authorization server refuses an entry carrying `locations` with the `invalid_authorization_details` error code.",
+   "text": "The authorization server MUST refuse an entry carrying `locations` with the `invalid_authorization_details` error code.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47360,7 +47360,7 @@
    "anchor": "entry-validation",
    "text": "its `resource` is not an `absolute-URI`",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47392,7 +47392,7 @@
    "anchor": "entry-validation",
    "text": "its `resource` is an `http` or `https` URI without the `//` authority form naming a non-empty host",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47418,12 +47418,44 @@
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
   },
   {
+   "id": "resource-access.entry-validation.resource-match-unrecognized-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource_match` is a value the authorization server does not recognize",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_match value the authorization server does not recognize is refused invalid_authorization_details",
+    "local": "the reference AS recognizes exact and prefix; PAR refuses any other value through the shared resourceMatchViolation rule before any interaction, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D634 R3. The authorization server's side of the unrecognized-resource_match rule; the resource server's fail-closed side is resource-access.rs-enforcement.resource-match-unrecognized-fail-closed. The reference already refused the value at PAR (#1276). Proved by mutation: letting the PAR validator admit an unrecognized resource_match fails the witness ('unrecognized: expected 201 to be 400'). The direct-derivation refusal in resource-match-unsupported.test.ts is cited on resource-access.type.prefix-query-fragment-refused, not here."
+  },
+  {
    "id": "resource-access.entry-validation.actions-non-empty-grammar",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
    "text": "its `actions` array is empty, or one of its values is neither an action identifier nor an action family",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47467,7 +47499,7 @@
    "anchor": "entry-validation",
    "text": "its `delegation.max_depth` is not a non-negative integer, so a negative or fractional value is refused",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47504,7 +47536,7 @@
    "anchor": "entry-validation",
    "text": "an `allowed_delegates` matcher carries neither `sub` nor `sub_profile`, or carries any other member",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47578,7 +47610,7 @@
    "anchor": "entry-validation",
    "text": "its `resource_contract` is not an object with exactly the members `id`, `version`, and `digest`, or one of them does not have the form {{resource-access-type}} gives it",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "resource-access.resource-contract"
@@ -47613,7 +47645,7 @@
    "anchor": "entry-validation",
    "text": "its `time_window` Common Constraint has a `not_before` later than its `not_after`",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47645,7 +47677,7 @@
    "anchor": "entry-validation",
    "text": "its `recipient_domain` Common Constraint is not a DNS name in ASCII form, with each internationalized label in its A-label form, or ends in a dot",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
