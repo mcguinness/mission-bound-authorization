@@ -5549,7 +5549,7 @@ Parameters" registry:
 - Parameter name: `mission_error`
 - Parameter usage location: token response
 - Change controller: IETF
-- Specification document(s): this document, {{lifecycle}}
+- Specification document(s): this document, {{issuance-gating}}
 
 - Parameter name: `mission_expires_at`
 - Parameter usage location: token response
