@@ -3946,7 +3946,8 @@ The following subsections define the record's members.
   its accountable assertion
   ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
-  `approval_basis` is provenance: neither anchor covers it
+  `approval_basis` is provenance: no integrity anchor (`intent_hash`,
+  `authority_hash` or `proposal_hash`) covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
   itself covers it under that profile's own anchor. Its disclosure
   through introspection follows
