@@ -53865,7 +53865,7 @@
    "id": "core.error-mapping.token-rar-exceeds-granted",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
+   "text": "the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -53878,7 +53878,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
+    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token; on refresh this includes an entry inside the Mission but outside a refresh-token family whose grant is narrower than the Mission",
     "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
    },
    "level": "endpoint",
@@ -53910,6 +53910,12 @@
     },
     {
      "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
      "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
      "level": "endpoint",
      "surface": "token-endpoint"
@@ -53921,13 +53927,13 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "remediation-grains",
-   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain",
+   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain, and refuses a request beyond either ({{refresh-tokens}})",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -53940,7 +53946,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority"
+    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority; a refresh naming more than the refresh grant or the Mission carries is refused, so a refresh-token family narrower than the Mission does not obtain the Mission's wider authority"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -53964,13 +53970,119 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
      "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh narrowing authorization_details projects the narrowed set: a scope only the dropped entry grants refuses invalid_scope before rotation, and the same token then refreshes (#1303)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness."
+   "notes": "#1303, #1503. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails the narrower-family witness. The refusal itself is rowed at core.refresh-tokens.rar-beyond-grant-or-authority-refused."
+  },
+  {
+   "id": "core.refresh-tokens.rar-beyond-grant-or-authority-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "refresh-tokens",
+   "text": "The AS MUST refuse such a request with the `invalid_authorization_details` error code when a requested entry exceeds the presented refresh grant or the Mission Authority Set ({{subset}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh whose authorization_details names an entry beyond the presented refresh grant (an entry inside the Mission but outside a refresh-token family confined narrower than the Mission) or beyond the Mission's authority as its current effective set narrows it (a contained entry the grant still carries, an action outside both, a relaxed constraint) is refused invalid_authorization_details and issues no token",
+    "local": "the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal and the same token still refreshes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry the effective set removed (contained) is refused; the remainder is still issued on request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 (D620 finding 6). The refresh-grant clause is witnessed by the narrower-family test: the family is an async-delegation Token Exchange confined to read under a Mission that also grants list, and the Mission's own refresh grant is issued list in the same test. The Mission clause is witnessed by the contained test, whose request the grant still carries. Proved by mutation: the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; the raw grant rar as the ceiling fails the contained witness; projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses."
+  },
+  {
+   "id": "core.refresh-tokens.rar-never-issued-narrower",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "refresh-tokens",
+   "text": "and MUST NOT instead issue a narrower set than the one requested",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh whose requested authorization_details cannot be issued whole issues no token rather than a token carrying fewer or narrower entries than requested: an entry beyond the grant is not intersected down to what the grant carries, and an entry the issuer's projection cannot carry whole does not leave the remaining entries issued",
+    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of the issued set; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > an entry within the grant that the projection cannot issue whole is refused invalid_authorization_details saving no refresh token, never issued as the remaining entries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited."
   },
   {
    "id": "core.subset.widening-request-refused",

@@ -1509,17 +1509,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   /**
-   * @spec mission#subset, mission#remediation-grains, mission#error-mapping
-   * (#1303) — a token request's `authorization_details` (Section 6 of
-   * RFC 9396) narrows the issued token. `ceiling` is what the grant carries
-   * as the effective set narrows it ({@link rarThroughEffectiveSet}); with no
-   * request the token carries the ceiling. A requested entry that is not a
-   * subset of the ceiling under its type's relation is refused
-   * `invalid_authorization_details`, never silently re-narrowed. An admitted
-   * request issues the requested entries projected through the ceiling, which
-   * keeps the ceiling's capability-source provenance. The refresh token keeps
-   * the grant, so a later refresh may ask for the whole ceiling again. An
-   * empty array names nothing, as in oidc-provider's checkRar.
+   * @spec mission#subset, mission#remediation-grains, mission#error-mapping,
+   * mission#refresh-tokens (#1303, #1503): a token request's
+   * `authorization_details` (Section 6 of RFC 9396) narrows the issued token.
+   * `ceiling` is what the grant carries as the effective set narrows it
+   * ({@link rarThroughEffectiveSet}); with no request the token carries the
+   * ceiling. A requested entry that is not a subset of the ceiling under its
+   * type's relation is refused `invalid_authorization_details`, never silently
+   * re-narrowed. An admitted request issues the requested entries projected
+   * through the ceiling, which keeps the ceiling's capability-source
+   * provenance. The projection drops a pairing it cannot prove (a
+   * `capability_sources` binding the ceiling does not record, a `max_amount`
+   * that is not a decimal), so an admitted entry can fail to come out whole;
+   * issuing the rest would be a narrower set than the one requested, so that
+   * request is refused too. The refresh token keeps the grant, so a later
+   * refresh may ask for the whole ceiling again. An empty array names nothing,
+   * as in oidc-provider's checkRar.
    */
   function narrowToRequestedRar(ctx: unknown, ceiling: unknown): unknown {
     const raw = (ctx as { oidc: { params: Record<string, unknown> } }).oidc.params.authorization_details;
@@ -1530,7 +1535,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const narrowed = isSubsetSetIgnoringCapabilitySources(requested, granted)
       ? projectThroughEffective(requested, granted)
       : [];
-    if (narrowed.length === 0) {
+    // Every requested entry is issued whole, or the request is refused. The
+    // comparison sets `capability_sources` aside, as the one above does: an
+    // issued entry carries the ceiling's bindings where the request names none.
+    if (!isSubsetSetIgnoringCapabilitySources(requested, narrowed)) {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return narrowed;
