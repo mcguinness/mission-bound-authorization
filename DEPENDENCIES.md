@@ -29,14 +29,16 @@ Bold shorthand below names the family's documents informally;
 Outside the family itself, every normative dependency is a ratified
 RFC, a finalized OpenID specification, or (for the **uma** sketch) a
 final Kantara Initiative Recommendation, with these tracked
-exceptions: **oauth-mission** (the OAuth binding) cites the OAuth 2.0
-RAR Metadata and Error Remediation individual draft informatively
-only: an AS that implements that draft's type-metadata endpoint
-SHOULD advertise it, conformance does not depend on it, and the
-stable baseline is RFC 9396's `authorization_details_types_supported`
-(a MUST for an advertising AS); its reference to the OAuth Actor
-Profile is likewise informative and confined to its optional
-Delegation capability; **status-list** depends on the OAuth Status
+exceptions: **oauth-mission** (the OAuth binding) depends normatively
+on three Internet-Drafts, each confined to an optional surface: the
+OAuth 2.0 RAR Metadata and Error Remediation working-group draft,
+only for an AS that advertises that draft's type-metadata endpoint
+(conformance does not otherwise depend on it, and the stable baseline
+is RFC 9396's `authorization_details_types_supported`, a MUST for an
+advertising AS); the OAuth Actor Profile, an individual draft, for the
+`act` chain of its optional Delegation capability; and Client
+Instance ID, an individual draft, for instance context in delegated
+tokens; **status-list** depends on the OAuth Status
 List (a working-group document); **cross-domain** depends on OAuth
 identity chaining (approved, in the RFC Editor queue) and ID-JAG (a
 working-group document); **audit**'s COSE hash envelope is approved
