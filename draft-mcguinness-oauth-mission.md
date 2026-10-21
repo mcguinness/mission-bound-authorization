@@ -1409,8 +1409,7 @@ token entry that `target_resources` does not name, and a candidate
 outside every Authority Set entry fails that rule.
 
 The Mission records the policy version in force as `policy_version`
-({{mission-record}}), an opaque audit correlator; the policy itself
-is not conveyed.
+({{mission-record}}).
 
 Generative Authority Set derivation is not one of this document's
 modes. As a local-policy extension, a model's output can be a
@@ -1428,10 +1427,8 @@ the `access_denied` error code ({{error-mapping}}).
 
 When an omission or a narrowing leaves the Authority Set short of what
 was proposed ({{authority-proposal}}), Authority Set derivation is
-partial. The granted `authorization_details` in the token response
-({{token-response}}) is the authoritative statement of what was
-granted; a client compares it against its proposal, which
-`proposal_hash` commits as submitted ({{integrity-anchors}}).
+partial. The token response states what was granted
+({{token-response}}).
 
 ## The Consented Authority Set {#consented-authority-set}
 
