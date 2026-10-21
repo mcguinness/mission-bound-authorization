@@ -1069,10 +1069,10 @@ authoritative. Before approval, the authorization server:
   entry with it.
 
 No new approval references a version that is not current. An
-authorization server that does not implement this
-section MUST refuse a proposed or carried entry that carries
-`resource_contract`, with the `invalid_authorization_details` error
-code, and MUST NOT drop the member.
+authorization server that does not implement this section MUST refuse
+a proposed or carried entry that carries `resource_contract`, with the
+`invalid_authorization_details` error code, and MUST NOT drop the
+member.
 
 **Preservation.** The reference is part of the entry, so
 `authority_hash` commits it ({{I-D.draft-mcguinness-oauth-mission}}).
