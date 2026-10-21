@@ -1521,9 +1521,7 @@ following data elements this type adds:
 ({{Section 2 of RFC9396}}), defined in {{resource-access-type}}.
 {{RFC9396}} establishes no IANA registry of such types (the
 authorization server interprets type identifiers), so this document
-requests no IANA action for it. If a registry of authorization details
-types is established in the future, this type SHOULD be registered in
-it.
+requests no IANA action for it.
 
 ## OAuth Protected Resource Metadata Registration {#oauth-protected-resource-metadata-registration}
 
@@ -1539,9 +1537,10 @@ Protected Resource Metadata" registry ({{RFC9728}}):
 
 ## Common Constraints Registry {#iana-common-constraints}
 
-This document establishes the "Mission Common Constraints" registry. The
-registration policy is Specification Required ({{RFC8126}}). The
-Designated Expert checks that a submission:
+This document establishes the "Mission Common Constraints" registry in
+the "OAuth Parameters" registry group. The registration policy is
+Specification Required ({{RFC8126}}). The Designated Experts check that
+a submission:
 
 - uses a name matching `^[A-Za-z0-9_.:-]+$` that is not already
   registered;
@@ -1549,15 +1548,17 @@ Designated Expert checks that a submission:
   implementations to agree on;
 - states a subset rule and an intersection rule, both in value-space
   terms ({{value-space-comparison}}), with the intersection of any two
-  valid values never broader than either operand; and
+  valid values never broader than either operand;
+- names the value, if any, that is equivalent to omitting the member;
+  and
 - states the input the constraint reads at the point of use and the
   predicate that input meets, in value-space terms, precisely enough for
   independent resource servers to agree on which operations are within
   the bound.
 
 A specification-defined name is coordinated through this registry. Any
-other `constraints` member name is either collision-resistant or
-deployment-defined, and stays outside the registry.
+other `constraints` member name is deployment-defined and stays outside
+the registry.
 
 Each registration records:
 
@@ -1570,14 +1571,18 @@ Each registration records:
 - **Input**: what the constraint reads at the point of use.
 - **Predicate**: the condition the input meets when an operation is
   within the bound.
+- **Omission-Equivalent Value**: the value that is equivalent to
+  omitting the member ({{subset}}), or "none".
 - **Change Controller**: IETF, or the registrant for any other
   registration.
 - **Reference**: the specification defining the key.
 
 The registry's initial contents are the Common Constraints of
-{{initial-common-constraints}}. For each, the Change Controller is IETF
-and the Reference is {{initial-common-constraints}} of this document,
-which holds the full text the tables summarize.
+{{initial-common-constraints}}. For each, the Change Controller is IETF,
+the Reference is {{initial-common-constraints}} of this document, which
+holds the full text the tables summarize, and the Omission-Equivalent
+Value is "none", except for `requires_action_approval`, whose
+Omission-Equivalent Value is `false`.
 
 | Key Name | Value Syntax | Subset Rule | Intersection Rule |
 |---|---|---|---|
@@ -1621,7 +1626,8 @@ which holds the full text the tables summarize.
   target, the operation contract, literal `exact` matching, and
   normalized `prefix` matching; the Subset Rule; Common Constraints,
   with nine initial constraints, Value-Space Comparison, and the
-  Mission Common Constraints registry; Resource Server Enforcement and
+  Mission Common Constraints registry, which records each constraint's
+  omission-equivalent value; Resource Server Enforcement and
   the `mission_constraints_supported` metadata member; Resource
   Contracts; Delegate Eligibility and `allowed_delegates` matching; the
   type's scope-projection safety conditions and Transformation
