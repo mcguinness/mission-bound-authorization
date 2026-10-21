@@ -2784,8 +2784,11 @@ export async function handleExpansionExchange(
   // the ceiling adjudicates first. A drawdown its policy authorizes completes
   // here; any other request, out-of-ceiling ones included, falls back to the
   // fresh approval below, unless the deployment refuses beyond-ceiling ones.
+  // @spec progressive#ceiling-review (#1017): why a drawdown request fell
+  // back, recorded on the deferral for the chain's review disclosure.
+  let drawdownFallback: string | undefined;
   if (opts.progressive && active.authority_ceiling) {
-    const handled = await completeCeilingDrawdown(opts, provider, ctx, {
+    const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
       requested,
       intent,
@@ -2795,7 +2798,8 @@ export async function handleExpansionExchange(
       fingerprint,
       jkt: resolved.jkt,
     });
-    if (handled) return;
+    if (outcome === true) return;
+    if (typeof outcome === "string") drawdownFallback = outcome;
   }
 
   // @spec expansion#completion-modes (#1177): the deferred response goes only
@@ -2824,6 +2828,7 @@ export async function handleExpansionExchange(
       clientId: acting.sub,
       jkt: resolved.jkt,
       creationRequestId,
+      ...(drawdownFallback ? { drawdownFallback } : {}),
     });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
@@ -3061,7 +3066,7 @@ async function completeCeilingDrawdown(
     fingerprint: string;
     jkt: string;
   },
-): Promise<boolean> {
+): Promise<boolean | string> {
   const progressive = opts.progressive;
   const idem = opts.creationIdempotency;
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
@@ -3083,16 +3088,18 @@ async function completeCeilingDrawdown(
     // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
     // default it falls back to the fresh approval below, whose response carries
     // no denial reason (#1415).
-    if (progressive.beyondCeiling !== "refuse") return false;
+    if (progressive.beyondCeiling !== "refuse") return "beyond_ceiling";
     // The deployment's policy refuses it instead. `out_of_ceiling` is a MAY on
     // that refusal, which this reference carries. Set on ctx directly: err_out
     // would strip mission_denial_reason.
+    // @spec progressive#ceiling-review (#1017): recorded for the review disclosure.
+    opts.expansionDeferrals?.recordOutOfCeilingRefusal(predecessor.id);
     ctx.status = 400;
     ctx.body = { error: "invalid_request", mission_denial_reason: "out_of_ceiling" };
     ctx.set("cache-control", "no-store");
     return true;
   }
-  if (adjudication.outcome === "fresh_approval") return false;
+  if (adjudication.outcome === "fresh_approval") return adjudication.reason;
   const reservation: CreationReservation = {
     clientId: client.clientId,
     creationRequestId: d.creationRequestId,
@@ -3111,6 +3118,10 @@ async function completeCeilingDrawdown(
         ...(d.submissionEvidence?.length ? { submissionEvidence: d.submissionEvidence } : {}),
         activationActor: { iss: opts.issuer, sub: client.clientId },
         policy: { ref: adjudication.ref, snapshot: adjudication.snapshot },
+        restrictionsAtAdjudication: {
+          containment: predecessor.containment?.containment_version ?? 0,
+          discharge: predecessor.discharged?.length ?? 0,
+        },
       });
       return { missionId: created.id, value: created };
     });
@@ -3126,7 +3137,22 @@ async function completeCeilingDrawdown(
       // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
       // Derivation Limits refuses a derivation; nothing was created.
       if (e.code === "derivations_exhausted") throw new MissionGrantError(e.message, "derivations_exhausted");
+      // @spec expansion#reconciliation: the compare-and-set at activation
+      // failed on the predecessor's state, so the token-exchange completion
+      // answers invalid_request with the reconciliation status, to the
+      // Mission's own client, as the request-time check does.
+      const observed = opts.kernel.get(d.predecessorId);
+      if (e.code === "predecessor_not_active" && observed && isMissionClient(ctx, observed)) {
+        const current = opts.kernel.applyExpiry(observed);
+        refuseInactiveMission(ctx, current, `predecessor mission is ${current.state}`);
+        (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(current);
+        return true;
+      }
       txError(ctx, 400, "invalid_request", e.message);
+      // @spec expansion#reconciliation check 3: authority restricted since adjudication.
+      if (e.code === "authority_restricted_since_approval" && observed && isMissionClient(ctx, observed)) {
+        (ctx.body as Record<string, unknown>).mission_expansion_status = e.code;
+      }
       return true;
     }
     if (e instanceof IntentError) throw intentErrorToOidc(e);

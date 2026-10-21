@@ -39,8 +39,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "4d03d85b5c1b141d8a0e03750bdd4d3184ca90ad",
-    "content_sha256": "82d43de93491611cc5743a5ff9b17404486f33820f95509eea33c27126ebf729"
+    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
+    "content_sha256": "80afb879cbd02bfd953ae555be0a0b8a4914530b9242dc0811ce59d6e6da3718"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "b447449fc2c0ffaf525b10a8df1a79f113ad538a",
@@ -55,24 +55,24 @@
     "content_sha256": "454d12089e67988a3cc7ae14146af092ffcecfb7ce9b2dddf4c92590ac5f7547"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "8b02da4ed021453a5b3adfaf9b3c4e495e1a084f",
-    "content_sha256": "a896f68f624a520df854c63bb5bfbbc2bdc20c66b197638d2aae10e446bdd4e2"
+    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
+    "content_sha256": "960042feaf2b8fa19132eeced9bc0f691107731340601ed840451f26220654b9"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "41c262683159cb44a0564ebfb9b8ca792a139b21",
-    "content_sha256": "9b98e096bbc02a37d0649ca04015bd4dec4db762c0f4f5b6b01cb16e317edeb4"
+    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
+    "content_sha256": "a92688ff501f19932221d8f3c50149a5a0399b60b69c84d88505bc2fd9b930a0"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "a3d63efa9c4c80da5d206d4c00143eaee4b0b0fc",
-    "content_sha256": "944c69c3032fb77891a69e6dc1b92aaa59dbc3f40cf738bbd5ec48165ded7c65"
+    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
+    "content_sha256": "f6ae35abdb5d7cbf5386e2abad26d3df7015be93fd97eb0dae56dbb826a1fcc6"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "057e10e432a706b30b92c7bf676019062582e703",
-    "content_sha256": "3a2f473501349a2550879622346b14c5469984d7c0ac53023851bceef97a034a"
+    "revision": "f1771964c0f591d8ac7261d25343a4aaee02c73d",
+    "content_sha256": "4918a3b0864206885e7f55cf36c3f4721c64b9798ed00120b7dc438df0bbace9"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -87,8 +87,8 @@
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "e46748162ee91f154813cda50f285523b2d91e69",
-    "content_sha256": "6bb47dd4e7819d0b6efd0c0132a730c6cd31358ffcde04fb571433fc5e46d618"
+    "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
+    "content_sha256": "6b1af63354697423fb6b73b8a3ddf1d592106c4835848f99c5a3a03299eda724"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -143,8 +143,8 @@
     "content_sha256": "d05b02b6664c2acfdd532b8bcbebf19af04ccbb55d5146149226bb8932b0be18"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
-    "revision": "9086861763e145f126c249098e2037dbf2cdd9e8",
-    "content_sha256": "8ac6904ac2b8f0cab7e3b516c938a2459a64a1bde36c57dc075d63e4e8e1308d"
+    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
+    "content_sha256": "62a8d5f78cc611ecd5273218b3543dbae583b80c0f4c4af6e2f9bf303f36d0b0"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
     "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
@@ -3869,7 +3869,7 @@
   {
    "id": "core.approval-basis.approved-at-standing-consent",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-bases",
    "text": "The activating issuer MUST verify `approved_at` against its retained, authenticated record of that standing consent for that exact version",
    "role": "AS",
    "strength": "MUST",
@@ -3931,7 +3931,7 @@
   {
    "id": "core.approval-basis.standing-consent-recency",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-recency",
    "text": "the activating issuer MUST refuse to activate an instance whose `approved_at` is older than the ceiling",
    "role": "AS",
    "strength": "MUST",
@@ -3994,7 +3994,7 @@
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-bases",
    "text": "Where a companion profile defining a standing-consent `type` populates `adjudication`, `kind` MUST be `policy`, naming the identity and version of the policy or workflow that adjudicated the instance",
    "role": "AS",
    "strength": "MUST",
@@ -6047,7 +6047,7 @@
   {
    "id": "core.lifecycle.mission-error-diagnostic",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lifecycle",
+   "anchor": "issuance-gating",
    "text": "the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
    "role": "AS",
    "strength": "SHOULD",
@@ -36953,10 +36953,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment's drawdown policy document states, for every policy_version it defines, the ceiling review cadence effective under that version; because ceiling_hash commits the policy's digest, an auditor resolves the cadence in force at a past drawdown from the retained snapshot that digest names",
-    "local": "Each drawdown policy snapshot states ceiling_review_cadence_s, the cadence adjudication applies; a cadence edited under an unchanged version no longer matches the committed digest and falls back, and the successor retains the verified snapshot. Not witnessed: an auditor resolving a past drawdown's cadence after the policy moved on."
+    "local": "Each drawdown policy snapshot states ceiling_review_cadence_s, the cadence adjudication applies; a cadence edited under an unchanged version no longer matches the committed digest and falls back, and the successor retains the verified snapshot. After the policy moves on to a new version under which a newer chain draws, the past successor's activation still names version 1 and its retained snapshot verifies and states that version's cadence."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -36975,9 +36975,15 @@
      "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > verifies the drawdown policy digest before activation and retains the verified snapshot with the successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > an auditor resolves the review cadence in force at a past drawdown from its retained snapshot after the policy moved on to a new version",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). The past-cadence witness is proved by resolving a snapshot by policy id alone (the newer version's, a digest mismatch)."
   },
   {
    "id": "progressive.in-ceiling.contained-overlap-falls-back",
@@ -36995,7 +37001,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown request whose complete successor Authority Set, including authority carried forward from the predecessor, overlaps capability the predecessor contained produces no successor by policy; it falls back to a fresh human approval whose consent disclosure names the contained capability and the event class that caused its containment.",
-    "local": "The overlap test (same resource, a shared action or a whole-resource restriction) over the successor's complete Authority Set falls back to the deferred fresh approval. Not implemented: that approval's disclosure does not name the contained capability or its event class."
+    "local": "The overlap test over the successor's complete Authority Set falls back to the deferred fresh approval, and the disclosure object names the contained capability and its event class. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37005,9 +37011,15 @@
      "name": "containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration) > a successor overlapping contained authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -37061,7 +37073,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A contains capability X and an unrelated policy drawdown creates successor B with an empty overlay, a later drawdown from B whose Authority Set overlaps X is refused policy adjudication and falls back to a fresh human approval disclosing the containment of X and its cause; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one. Witnessed through an intervening policy-adjudicated successor. Not implemented: the fallback approval's disclosure of the containment, and a ceiling review."
+    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one: witnessed through an intervening policy-adjudicated successor and through a re-consent. The disclosure object names the containment through that successor. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37071,9 +37083,21 @@
      "name": "containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration) > a successor overlapping contained authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure."
   },
   {
    "id": "progressive.in-ceiling.discharged-overlap-falls-back",
@@ -37091,7 +37115,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown whose complete successor Authority Set overlaps authority the predecessor discharged produces no successor by policy; it falls back to a fresh human approval naming the discharged entry and the condition that discharged it.",
-    "local": "A committed discharge latch restricts its entry's resource and actions across the chain. Not implemented: the fallback approval's disclosure of the discharged entry and its condition."
+    "local": "A committed discharge latch restricts its entry's resource and actions across the chain, and the disclosure object names the discharged entry and the condition that discharged it. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37101,9 +37125,15 @@
      "name": "discharge restrictions of the chain (@spec progressive#in-ceiling-expansion, discharge#discharge) > a successor overlapping discharged authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no condition. #1480 review: partial until an approval surface renders the disclosure."
   },
   {
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
@@ -37121,7 +37151,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A discharges entry X and an unrelated policy drawdown creates successor B without X, a drawdown from B whose Authority Set overlaps X falls back to a fresh human approval disclosing the discharge; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch. Not implemented: the fallback approval's disclosure, and a ceiling review."
+    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch and through a re-consent. The disclosure object names the discharged entry through that successor. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -37131,9 +37161,21 @@
      "name": "discharge restrictions of the chain (@spec progressive#in-ceiling-expansion, discharge#discharge) > a successor overlapping discharged authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no discharge restriction of the chain",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1480 review: partial until an approval surface renders the disclosure."
   },
   {
    "id": "progressive.in-ceiling.synchronous-completion-commits-before-response",
@@ -37151,10 +37193,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "A drawdown that passes every policy-adjudication guard is answered in the token-exchange response with the successor's access token; by the time the response is delivered the successor is active, the predecessor is superseded, and the creation reservation is committed, and a retry with the same creation_request_id recovers that successor rather than creating another. A drawdown that falls back to a fresh human approval completes deferred or interactively instead.",
-    "local": "The reservation, the successor's insert (source ceiling against the committed root, effective expiry, retained policy snapshot), the carried derivation check and the predecessor's supersession run in one kernel transaction before the token is minted. Witnessed: the successor active, the predecessor superseded and the reservation completed when the response arrives; a failure after the commit recovered by the retry without a second creation; a derivation exhaustion and a narrowed source refused inside the step creating nothing; a fallback completing deferred. Not witnessed: a predecessor terminated or contained between adjudication and the commit (the step re-reads its state, code reading)."
+    "local": "The reservation, the successor's insert (source ceiling against the committed root, effective expiry, retained policy snapshot), the carried derivation check and the predecessor's supersession run in one kernel transaction before the token is minted. Witnessed: the successor active, the predecessor superseded and the reservation completed when the response arrives; a failure after the commit recovered by the retry without a second creation; a derivation exhaustion and a narrowed source refused inside the step creating nothing; a fallback completing deferred. A predecessor terminated between adjudication and the commit is refused at the commit with invalid_request and mission_expansion_status predecessor_state_changed, and a containment committed after adjudication fails the completion with authority_restricted_since_approval (Expansion reconciliation checks 1 and 3); neither creates, supersedes or reserves anything."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -37191,9 +37233,21 @@
      "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a Mission that commits no drawdown policy is never adjudicated by policy",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a predecessor revoked between adjudication and the commit refuses the drawdown at its commit: nothing created, superseded or reserved",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a containment committed after adjudication and before the activating commit fails the completion: the successor restores no contained capability",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#998 option (a), endorsed by owner review 2026-10-02. Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "#998 option (a), endorsed by owner review 2026-10-02. Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). The state check is proved by removing the activating step's re-read (a server error, not the specified refusal) and by dropping the status; check 3 by skipping it (the successor was created)."
   },
   {
    "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
@@ -37694,6 +37748,42 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
+   "id": "progressive.ceiling.consent-hash-recorded",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-authorization",
+   "text": "The Mission Issuer also records `ceiling_consent_hash`, the `ceiling_hash` of the ceiling and drawdown policy as the Approver consented them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at a consent or a re-consent the record's ceiling_consent_hash equals its ceiling_hash",
+    "local": "consentCeiling sets both from one hash; a re-consent's members come from the same function."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by recording no consent commitment at the consent."
+  },
+  {
    "id": "progressive.ceiling.consent-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "progressive-authorization",
@@ -37708,12 +37798,32 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval at which a ceiling is consented renders the ceiling and states that in-ceiling expansion is policy-adjudicated"
+    "normative": "the approval at which a ceiling is consented renders the ceiling and states that in-ceiling expansion is policy-adjudicated",
+    "local": "The deployment's ceilingOffer names the ceiling and drawdown policy its approval surface offers; the approval page renders that ceiling and a line stating that in-ceiling expansion is adjudicated by the named policy without a further approval (or that no policy is offered), and retains the rendered offer against the interaction. A decision consents only exactly that retained offer, so every consented ceiling was rendered, even if the offer changes afterwards. A device approval offers none (#1256)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Not implemented: the reference approval page renders no ceiling, because the Approver's decision posts the consented ceiling with no rendering of it and the page never receives it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > the approval page renders the offered ceiling and that in-ceiling expansion is adjudicated by its drawdown policy",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > a decision consenting a ceiling or drawdown policy the approval page did not render is refused invalid_request: no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > the decision is bound to the offer the page rendered, not to an offer computed at the decision",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Not implemented: the reference approval page renders no ceiling, because the Approver's decision posts the consented ceiling with no rendering of it and the page never receives it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it. Proved by omitting the ceiling section, by not binding the decision to the offer, and by binding the ceiling without the drawdown policy. The binding to the rendered offer is proved by computing the offer afresh at the decision."
   },
   {
    "id": "progressive.ceiling.client-input-not-consent",
@@ -38078,7 +38188,7 @@
    "id": "progressive.ceiling-reconsent.carry-unchanged",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-reconsent",
-   "text": "Without an explicit re-consent, the successor MUST carry the predecessor's `authority_ceiling`, `drawdown_policy` and `ceiling_hash` unchanged, together with the instant and the Approver of the ceiling consent they commit",
+   "text": "Without an explicit re-consent, the successor MUST carry the predecessor's `authority_ceiling`, `drawdown_policy`, `ceiling_hash` and `ceiling_consent_hash` unchanged, together with the instant and the Approver of the ceiling consent `ceiling_consent_hash` commits",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -38100,9 +38210,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by dropping the carry (M2) and by reading the drawdown's consent_principal from the predecessor's basis (M4)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by dropping the carry (M2) and by reading the drawdown's consent_principal from the predecessor's basis (M4). #1468: carries ceiling_consent_hash too, proved by dropping it on a human-approved successor."
   },
   {
    "id": "progressive.ceiling-reconsent.beyond-stays-outside",
@@ -38138,7 +38254,7 @@
    "id": "progressive.ceiling-reconsent.reconsent-recorded",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-reconsent",
-   "text": "the successor MUST record the re-consented `authority_ceiling` and the selected `drawdown_policy` under a recomputed `ceiling_hash`, with the re-consent's instant and Approver as those of the ceiling consent",
+   "text": "the successor MUST record the re-consented `authority_ceiling` and the selected `drawdown_policy` under a recomputed `ceiling_hash`, record that hash as its `ceiling_consent_hash`, and record the re-consent's instant and Approver as those of the ceiling consent",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -38160,9 +38276,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by ignoring the re-consent (M3) and by not storing it at approval (M7)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by ignoring the re-consent (M3) and by not storing it at approval (M7). #1468: the re-consent becomes the consent commitment, proved by keeping the old one."
   },
   {
    "id": "progressive.ceiling-reconsent.cadence-restarts",
@@ -38206,16 +38328,29 @@
     "capability": "progressive.ceiling-drawdown"
    },
    "profiles": [],
-   "surface": "token-endpoint",
+   "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
     "normative": "the approval that re-consents a ceiling renders the re-consented ceiling and drawdown policy to the Approver",
-    "local": "The reference has no rendering surface for the deferral approval; as for progressive.ceiling.consent-disclosure."
+    "local": "A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed. The object carries the re-consent offer with the initial approval page's adjudication line; disclosure() retains the offer it built, and an approval re-consents only exactly that retained offer."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fresh approval's disclosure renders the re-consent offer as at the initial approval, and a re-consent consents only that offer",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a re-consent is bound to the offer the disclosure rendered, not to an offer computed at the approval",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by omitting the offer, by not binding the re-consent, and by binding it to an offer computed at the approval. #1480 review: partial until an approval surface renders it. Surface moved from token-endpoint: the requirement is a disclosure."
   },
   {
    "id": "progressive.ceiling-reconsent.chain-restrictions-carry",
@@ -38236,16 +38371,22 @@
     "local": "Restrictions are read through predecessor links (chainRestrictions), which a human-approved successor keeps."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no discharge restriction of the chain",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Witnessed for containment; the discharge facet has no witness through a re-consent. Proved by stopping the chain walk at a human-approved successor (M6)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Witnessed for containment and for discharge through a re-consent, each proved by stopping the chain walk at a human-approved successor."
   },
   {
    "id": "progressive.ceiling-reconsent.chain-count-and-window-carry",
@@ -38314,6 +38455,90 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by reading the predecessor's approval_basis instead (M4)."
   },
   {
+   "id": "progressive.ceiling-drawdown-basis.root-commitment-is-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "`root_commitment`: the predecessor's `ceiling_consent_hash`, the latest explicitly human-consented ceiling and drawdown policy, never a `ceiling_hash` a policy narrowing recomputed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every policy-adjudicated drawdown's root_commitment names the latest explicitly consented ceiling, after any number of narrowings and after an intervening human approval; after a re-consent it names the re-consented one",
+    "local": "Taken from ceilingConsentHash(predecessor)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by taking the effective ceiling_hash."
+  },
+  {
+   "id": "progressive.ceiling-drawdown-basis.approved-at-is-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "the instant the Approver consented the ceiling that `root_commitment` commits, read from the Mission Issuer's retained record of that consent, never from the drawdown request",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every policy-adjudicated drawdown's approved_at is the instant of the consent its root_commitment names, unchanged by narrowings",
+    "local": "Read from the predecessor's ceiling_consented_at, which only a consent or re-consent sets."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by restarting the consent instant at a narrowing."
+  },
+  {
    "id": "progressive.in-ceiling.successor-carries-ceiling",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
@@ -38329,10 +38554,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy-adjudicated successor records the predecessor's authority_ceiling and drawdown_policy unchanged or narrowed, under the same ceiling_hash or, when narrowed, a recomputed one",
-    "local": "A policy-adjudicated successor carries both unchanged under the same ceiling_hash. A successor created by the fresh-approval fallback carries no ceiling (createExpansion records none), so the chain's progressive authorization ends there until an approval consents a ceiling again; narrowing is not implemented."
+    "local": "A policy-adjudicated successor carries both unchanged under the same ceiling_hash, or, where the drawdown policy's retire_undrawn_actions retires undrawn actions, narrowed under a recomputed one. A successor a fresh human approval creates carries the ceiling members unchanged unless the Approver re-consents (progressive.ceiling-reconsent rows)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -38345,9 +38570,81 @@
      "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468: the narrowed path proved by a policy that never narrows."
+  },
+  {
+   "id": "progressive.drawdown-successor.consent-carried",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-successor",
+   "text": "The successor MUST carry `ceiling_consent_hash`, and the instant and Approver of that consent, unchanged",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy-adjudicated successor, narrowed or not, carries the predecessor's ceiling_consent_hash, ceiling consent instant and consenting Approver",
+    "local": "Carried from the predecessor in createCeilingDrawdownInCallerTx."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by taking the narrowed hash as the consent and by dropping the consenting Approver at a narrowing."
+  },
+  {
+   "id": "progressive.drawdown-successor.narrowing-not-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-successor",
+   "text": "a narrowing is not a consent, so it resets neither the review cadence ({{ceiling-review}}) nor the cumulative drawdown count ({{audit-linkage}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a policy narrowing the review cadence stays keyed on the consent instant and the drawdown count is one more than the predecessor's",
+    "local": "A narrowing changes only authority_ceiling and ceiling_hash."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a narrowing is not a review: the cadence stays keyed on the consent instant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by restarting the cadence and by resetting the count at a narrowing."
   },
   {
    "id": "progressive.in-ceiling.policy-mismatch-falls-back",
@@ -38671,10 +38968,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a drawdown that grants authority in the irreversible, external-commitment, or privileged-administration class, satisfies the external-communication predicate, or grants cross-domain authority is not adjudicated by policy and falls back to a fresh human approval",
-    "local": "Classes come from the deployment's actionClasses mapping (runtime action classes) and externalCommunicationActions; an unclassified widened action also falls back. The cross-domain arm (a widened resource whose authoritative AS, through resourceToAs, is not this issuer) is implemented but not witnessed. The mapping cannot contradict the approval-authentication floor (#1255): the AS does not start when actionClasses maps an action the floor's classification (config/approval-floor.json) places, at any resource, in a class some floor applies to, to a class outside the fresh-approval set; an action the mapping leaves out falls back as unclassified. So no drawdown grants by policy alone an action the floor classifies high-risk."
+    "local": "Classes come from the deployment's actionClasses mapping (runtime action classes) and externalCommunicationActions; an unclassified widened action also falls back. The cross-domain arm (a widened resource whose authoritative AS, through resourceToAs, is not this issuer) falls back: a widening into the SaaS resource the RAS is authoritative for. The mapping cannot contradict the approval-authentication floor (#1255): the AS does not start when actionClasses maps an action the floor's classification (config/approval-floor.json) places, at any resource, in a class some floor applies to, to a class outside the fresh-approval set; an action the mapping leaves out falls back as unclassified. So no drawdown grants by policy alone an action the floor classifies high-risk."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -38705,9 +39002,15 @@
      "name": "the drawdown classification agrees with the approval-authentication floor (@spec progressive#in-ceiling-expansion, mission#approval-authentication, #1255) > follows what the floor invokes, not the class name: under a floor that also applies to consequential_write, a write mapped to consequential_write refuses",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown widening into a resource another authorization server is authoritative for falls back (cross-domain)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1255: proved by disabling the startup check (the divergent mapping started), by refusing every mapped floor-class action (the agreeing mapping did not start), by testing the floor's class against the fresh-approval set instead of what the floor invokes (the consequential_write floor passed), and by removing the fresh_approval_class and unclassified_action fallbacks in turn (payment execution, then remittance, completed by policy). The row stays partial for its cross-domain arm."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1255: proved by disabling the startup check (the divergent mapping started), by refusing every mapped floor-class action (the agreeing mapping did not start), by testing the floor's class against the fresh-approval set instead of what the floor invokes (the consequential_write floor passed), and by removing the fresh_approval_class and unclassified_action fallbacks in turn (payment execution, then remittance, completed by policy). The cross-domain arm is proved by removing the cross_domain fallback (the widening completed by policy)."
   },
   {
    "id": "progressive.in-ceiling.live-children-fall-back",
@@ -38902,10 +39205,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "drawdown_count is unchanged by a recovered retry, by a request that falls back, and by a human-approved successor with or without a re-consent",
-    "local": "successorCeilingMembers carries the count; recovery creates nothing."
+    "local": "successorCeilingMembers carries the count; recovery creates nothing; a narrowing successor counts one more, never resetting."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -38930,15 +39233,21 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent continues the chain's drawdown count and rate window",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor. D593: the policy narrowing path and its tests are #1468."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by not incrementing (M-c) and by resetting on a human-approved successor. #1468: narrowing proved by resetting the count at a narrowing."
   },
   {
    "id": "progressive.audit.ceiling-retained-in-chain",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "A deployment MUST retain the consented `authority_ceiling`, `drawdown_policy`, and `ceiling_hash` with every Mission record in the chain for the audit horizon",
+   "text": "A deployment MUST retain, with every Mission record in the chain for the audit horizon, its `authority_ceiling`, `drawdown_policy`, `ceiling_hash` and `ceiling_consent_hash`, and the consented `authority_ceiling` and `drawdown_policy` that each `ceiling_consent_hash` commits",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -38949,8 +39258,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Mission record in a drawdown chain holds the consented authority_ceiling, drawdown_policy and ceiling_hash for the audit horizon",
-    "local": "Every policy-adjudicated successor carries all three unchanged. A fresh-approval successor carries none, so a chain continued by human approval does not hold them on that record; retention for the audit horizon is the kernel record store's and is not witnessed here."
+    "normative": "every Mission record in a drawdown chain holds its effective ceiling members and the consent commitment, and the consented ceiling that commitment names stays retained for the audit horizon",
+    "local": "Every successor carries authority_ceiling, drawdown_policy, ceiling_hash and ceiling_consent_hash; the consented members are held on the consent-bearing record (the root or a re-consenting successor), itself a Mission record of the chain. Retention for the audit horizon is the kernel record store's and is not witnessed here."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -38966,6 +39275,18 @@
      "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
@@ -39008,12 +39329,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states the concrete per-drawdown bound"
+    "normative": "the deployment's Mission Deployment Profile states the concrete per-drawdown bound",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the per-drawdown bound the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference reads the bound from the drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes each drawdown policy's per-drawdown bound and review cadence, which the snapshot the AS holds states",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference reads the bound from the drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017). Proved by a snapshot stating a cadence other than the published one (the same content path)."
   },
   {
    "id": "progressive.in-ceiling.publish-rate-bound",
@@ -39030,12 +39365,32 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states the concrete per-chain rate bound"
+    "normative": "the deployment's Mission Deployment Profile states the concrete per-chain rate bound",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the chain rate bound the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference takes the bound from its typed progressive option; no Mission Deployment Profile publishes it yet (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes the chain rate bound and the action-class mapping the adjudication enforces",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > the chain's rate bound stops policy adjudication once reached",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > the strict loader refuses an unknown member, an unknown class, a non-positive bound, a duplicate policy and a malformed retirement list",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The reference takes the bound from its typed progressive option; no Mission Deployment Profile publishes it yet (#1017). Proved by enforcing a rate bound other than the published one."
   },
   {
    "id": "progressive.in-ceiling.publish-action-classes",
@@ -39052,12 +39407,32 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states the mapping from its action identifiers to the runtime profile's action classes, or an equivalent declared classification"
+    "normative": "the deployment's Mission Deployment Profile states the mapping from its action identifiers to the runtime profile's action classes, or an equivalent declared classification",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the action-class mapping the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference takes the mapping from its typed progressive option (actionClasses); no Mission Deployment Profile publishes it yet (#1017). #1255: the AS refuses to start when that mapping maps an action the published approval-authentication floor's classification places under a floor to a class a drawdown grants by policy; that check witnesses the mapping's agreement with the floor, not its publication, so it is cited on progressive.in-ceiling.fresh-approval-classes and this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes the chain rate bound and the action-class mapping the adjudication enforces",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown granting a high-consequence, unclassified, or external-communication action falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > the strict loader refuses an unknown member, an unknown class, a non-positive bound, a duplicate policy and a malformed retirement list",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The reference takes the mapping from its typed progressive option (actionClasses); no Mission Deployment Profile publishes it yet (#1017). #1255: the AS refuses to start when that mapping maps an action the published approval-authentication floor's classification places under a floor to a class a drawdown grants by policy; that check witnesses the mapping's agreement with the floor, not its publication, so it is cited on progressive.in-ceiling.fresh-approval-classes and this row stays todo. Proved by taking no action classes from the profile, and the loader by accepting unknown members."
   },
   {
    "id": "progressive.ceiling-review.no-adjudication-past-cadence",
@@ -39104,12 +39479,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states its ceiling review cadence"
+    "normative": "the deployment's Mission Deployment Profile states its ceiling review cadence",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the review cadence the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference states the cadence in each drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes each drawdown policy's per-drawdown bound and review cadence, which the snapshot the AS holds states",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a chain whose ceiling consent is older than the policy's review cadence falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference states the cadence in each drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017). Proved by a snapshot stating a cadence other than the published one."
   },
   {
    "id": "progressive.ceiling-review.review-disclosure",
@@ -39126,12 +39515,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review"
+    "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review",
+    "local": "The object carries the chain's record since the latest ceiling consent: policy-adjudicated drawdowns with an hourly rate, escalations, out_of_ceiling refusals, discharged entries, and the outstanding restrictions. No reference deployment runs the metering profile with Progressive, so consumption is absent. A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a re-consent's disclosure renders the chain's record since the latest ceiling consent: drawdowns, escalations and the consent instant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a review's record lists the deployment's out_of_ceiling refusals since the latest ceiling consent",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons. #1480 review: partial until an approval surface renders the disclosure."
   },
   {
    "id": "progressive.ceiling-review.review-is-reconsent",
@@ -39209,12 +39612,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a ceiling narrowed by a policy-adjudicated drawdown keeps the narrowed consent's instant, so the review cadence does not restart",
-    "local": "The reference carries the ceiling unchanged on every policy-adjudicated successor and never narrows it by policy."
+    "local": "A narrowed successor keeps ceiling_consented_at, the cadence's anchor, so a chain whose consent ages past the cadence after a narrowing falls back."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a narrowing is not a review: the cadence stays keyed on the consent instant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468: proved by restarting the consent instant at a narrowing."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -54497,11 +54913,19 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it."
+    "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it.",
+    "local": "A data-construction witness: the deferral store builds the consent disclosure object (ExpansionDeferralStore.disclosure) from the chain's records, but no production approval surface consumes it yet, so rendering to the Approver is not witnessed. For a deferred expansion the object names each discharged entry of the chain with the condition that discharged it (witnessed through the Progressive fallback). Not witnessed: the explicit authorization of the restored authority at that approval."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
    "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
   },
   {
@@ -54574,7 +54998,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction.",
-    "local": "the reference completes an expansion only on a deferred poll, so the code-redemption and token-exchange-response codes are not witnessed; the restriction is the predecessor's own overlay after the initiation snapshot"
+    "local": "the reference completes an expansion only on a deferred poll, so the code-redemption code is not witnessed; the restriction is the predecessor's own overlay after the initiation snapshot"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -54596,9 +55020,15 @@
      "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > check 3: a containment event during the window that names only authority already contained before the request restricts nothing new, so the restoring completion succeeds (@spec expansion#reconciliation, containment#restoration, #1177)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a containment committed after adjudication and before the activating commit fails the completion: the successor restores no contained capability",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177."
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option)."
   },
   {
    "id": "expansion.predecessor-active.refused-invalid-request",
@@ -54688,7 +55118,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion",
-    "local": "the reference completes an expansion only on a deferred poll, with no code redemption or token-exchange-response completion; the predecessor-state and restriction statuses on the poll are witnessed"
+    "local": "the reference completes an expansion only on a deferred poll, with no code redemption completion; the token-exchange-response completion answers invalid_request with the predecessor-state and restriction statuses; the predecessor-state and restriction statuses on the poll are witnessed"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -54716,9 +55146,21 @@
      "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > check 3: containment during the window that the successor's authority overlaps refuses completion with access_denied and authority_restricted_since_approval on every poll; a new expansion then restores it (@spec expansion#reconciliation, #1177)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a predecessor revoked between adjudication and the commit refuses the drawdown at its commit: nothing created, superseded or reserved",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a containment committed after adjudication and before the activating commit fails the completion: the successor restores no contained capability",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369); poll statuses #1177."
+   "notes": "#1154 (D369); poll statuses #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option)."
   },
   {
    "id": "expansion.interactive.response-shape",

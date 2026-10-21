@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { loadMasPilotConfig, parseMasPilotConfig } from "../src/mas-pilot/config.js";
+import { loadMasPilotConfig, parseMasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import {
   MappingContractCache,
   type MappingContractDocument,
@@ -274,5 +274,53 @@ describe("pilot configuration: the estate's development Resource-policy grants (
     const bothEntitlement = withPolicy({ tenants, entitlements: [{ sub: "u-1001", client: "x", relation: "authorized_reader", vendor: "acme" }] });
     expect(() => parseMasPilotConfig(bothMember)).toThrow(/sub or client|unknown member/);
     expect(() => parseMasPilotConfig(bothEntitlement)).toThrow(/sub or client|unknown member/);
+  });
+});
+
+describe("pilot configuration: relocating the Mission issuer (#818 slice 5B, #1466 review)", () => {
+  const shippedRaw = () => readFileSync(new URL("../../config/mas-pilot.json", import.meta.url), "utf8");
+  const NEW = "http://127.0.0.1:14834";
+
+  /** The configuration with only the Mission-issuer fields set to `url`: what a relocation must produce. */
+  function expectedAt(config: ReturnType<typeof parseMasPilotConfig>, url: string) {
+    const contract = config.mapping_contract as MappingContractDocument;
+    return {
+      ...config,
+      mission_issuer: url,
+      mapping_contract: { ...contract, mission_issuer: url, subjects: contract.subjects.map((r) => ({ ...r, to: { ...r.to, iss: url } })) },
+      routes: config.routes.map((r) => (r.admits === "mission-bound" ? { ...r, issuer: url } : r)),
+    };
+  }
+
+  it("moves only the Mission-issuer fields when the old issuer is a prefix of the estate issuer, leaving estate URLs and identities intact", () => {
+    // The owner's reproduction: a Mission issuer that is a string prefix of the estate issuer.
+    const config = parseMasPilotConfig(JSON.parse(shippedRaw().replaceAll("https://mas.pilot.invalid", "http://127.0.0.1")));
+    expect(config.mission_issuer).toBe("http://127.0.0.1");
+    expect(config.estate.issuer).toBe("http://127.0.0.1:14818");
+    const relocated = relocateMissionIssuer(config, NEW);
+    expect(relocated).toEqual(expectedAt(config, NEW));
+    expect(relocated.estate.issuer).toBe("http://127.0.0.1:14818");
+    const contract = relocated.mapping_contract as MappingContractDocument;
+    expect(contract.subjects.map((r) => r.from.iss)).toEqual(contract.subjects.map(() => "http://127.0.0.1:14818"));
+    expect(contract.clients.map((r) => r.from.iss)).toEqual(contract.clients.map(() => "http://127.0.0.1:14818"));
+    expect(Object.keys(contract.scopes.issuers)).toEqual(["http://127.0.0.1:14818"]);
+    expect(relocated.routes.find((r) => r.route === "gateway")?.issuer).toBe("http://127.0.0.1:14818");
+    expect(JSON.stringify(relocated)).not.toContain(`${NEW}:`);
+    expect(parseMappingContract(relocated.mapping_contract).mission_issuer).toBe(NEW);
+  });
+
+  it("moves the shipped configuration's Mission issuer in its four fields and nowhere else, and the contract still loads", () => {
+    const config = loadMasPilotConfig();
+    const relocated = relocateMissionIssuer(config, NEW);
+    expect(relocated).toEqual(expectedAt(config, NEW));
+    const contract = parseMappingContract(relocated.mapping_contract);
+    expect(contract.mission_issuer).toBe(NEW);
+    expect(contract.subjects.every((r) => r.to.iss === NEW)).toBe(true);
+    expect(relocated.routes.find((r) => r.admits === "mission-bound")?.issuer).toBe(NEW);
+  });
+
+  it("returns the configuration unchanged when it already names the URL", () => {
+    const config = loadMasPilotConfig();
+    expect(relocateMissionIssuer(config, config.mission_issuer)).toBe(config);
   });
 });

@@ -146,6 +146,34 @@ is the pilot's contract.
   `introspection.cache_max_seconds` shortens how long a token revoked at the
   estate can still be accepted.
 
+## `progressive.json`
+
+The Progressive section of the Mission Deployment Profile (`@spec
+progressive#drawdown-bounds`, `progressive#fresh-approval`,
+`progressive#ceiling-review`, #1017): the chain rate bound, the mapping from
+action identifiers to the runtime profile's action classes, the
+external-communication actions, the policy for a request beyond the
+ceiling, and each drawdown policy's per-drawdown bound, ceiling review
+cadence and optional `retire_undrawn_actions`. The AS's typed `progressive`
+option and its drawdown policy snapshots are built from it
+(`progressiveFromProfile`), so what is published is what is enforced.
+`payments:remittance.send` is deliberately unmapped: its drawdown falls back
+as unclassified.
+
+- **Selection.** Like every file here, validated when `@mission/demo-data`
+  loads, so a malformed file stops startup; only a deployment that selects
+  Progressive ceiling drawdown uses it. The demo stack does not, so this
+  declaration claims nothing for it.
+- **Owner.** The deployment's security owner, who also owns the approval
+  floor the mapping must agree with.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, an unknown action class, a non-positive bound or cadence,
+  a duplicate policy identity and a malformed retirement list. The AS does
+  not start when the mapping disagrees with the approval floor (#1255).
+- **Updating.** Edit, review, and restart the AS. A changed drawdown policy
+  needs a new `version`: a Mission commits the consented snapshot's digest,
+  so a snapshot edited under the same version authorizes nothing.
+
 ## `scope-projection.json`
 
 The trusted scope-projection mapping (`@spec mission#scope-projection`, step

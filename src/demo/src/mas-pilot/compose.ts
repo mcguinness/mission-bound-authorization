@@ -75,6 +75,7 @@ import {
 } from "./estate-as.js";
 import { MappingContractCache, parseMappingContract } from "./mapping-contract.js";
 import { pilotMissionPolicy } from "./mas-policy.js";
+import { StartupScope } from "./startup.js";
 
 export interface MasPilotOptions {
   /** The OpenFGA the Resource policy and the Mission-authority check read. */
@@ -103,6 +104,18 @@ export interface MasPilotOptions {
   introspectionEndpoint?: string;
   /** The introspection cache's clock. Defaults to `now`. */
   introspectionNow?: () => Date;
+  /**
+   * The in-process MAS's kernel, owned by its caller (a launcher's reference
+   * authorization server). Absent, the pilot builds a bare kernel and closes
+   * it with itself. Read by `composeMasPilot` only.
+   */
+  kernel?: MissionKernel;
+  /**
+   * A launch's cleanup scope (`startup.ts`): each listener and store this
+   * composition opens is registered there as it opens, and a cancellation
+   * stops the composition at its next step and releases what it opened.
+   */
+  startup?: StartupScope;
 }
 
 /** Everything the pilot assembles around its Mission state source, kernel or not. */
@@ -187,30 +200,31 @@ export async function composeMasPilot(opts: MasPilotOptions): Promise<MasPilot> 
   const config = opts.config ?? loadMasPilotConfig();
   requireDeclaredMappingContract(config);
   const missionIssuer = config.mission_issuer;
+  const scope = new StartupScope(opts.startup);
+  try {
+    // #818 slice 5B: a launcher's MAS is the reference authorization server in
+    // this process, and the pilot reads that server's kernel; the server owns it.
+    const kernel = opts.kernel ?? (await scope.acquire(pilotKernel(config), (k) => k.close()));
+    const parts = await assembleMasPilot({ ...opts, startup: scope }, config, { missionIssuer, loadView: missionLoader(kernel) });
+    return { ...parts, kernel, close: () => scope.release() };
+  } catch (e) {
+    await scope.release().catch(() => {});
+    throw e;
+  }
+}
+
+/** A bare kernel under the pilot's policy, the in-process MAS when no server is given. */
+async function pilotKernel(config: MasPilotConfig): Promise<MissionKernel> {
   const statusKeys = await generateKeyPair(TOPOLOGY.keys.asStatus.alg, { extractable: true });
   const { policy, authoritySources } = pilotMissionPolicy(config);
-  const kernel = new MissionKernel({
-    issuer: missionIssuer,
+  return new MissionKernel({
+    issuer: config.mission_issuer,
     policy: policy as never,
     containmentPolicy: CONTAINMENT_POLICY as never,
     authoritySourceCatalog: authoritySources as never,
     statusKey: statusKeys.privateKey,
     statusKid: TOPOLOGY.keys.asStatus.kid,
   });
-  try {
-    const parts = await assembleMasPilot(opts, config, { missionIssuer, loadView: missionLoader(kernel) });
-    return {
-      ...parts,
-      kernel,
-      close: async () => {
-        await parts.close();
-        kernel.close();
-      },
-    };
-  } catch (e) {
-    kernel.close();
-    throw e;
-  }
 }
 
 /**
@@ -230,25 +244,28 @@ export async function assembleMasPilot(
   );
   // The gateway's introspection client at the estate, its secret generated here.
   const introspectionClient = { client_id: config.introspection.client_id, client_secret: crypto.randomUUID() };
-  const opened: (() => Promise<void> | void)[] = [];
-  const close = async (): Promise<void> => {
-    for (const release of opened.splice(0).reverse()) await release();
-  };
+  // Each listener and store is registered as it opens (#818 slice 5B review).
+  const scope = new StartupScope(opts.startup);
+  const close = () => scope.release();
 
   try {
-    const estate = await startEstateAuthorizationServer({
-      issuer: config.estate.issuer,
-      host: config.estate.host,
-      port: config.estate.port,
-      accounts: config.estate.accounts,
-      clients: [...estateClients.values()],
-      introspectionClients: [introspectionClient],
-      resourceServers: config.estate.resource_servers,
-    });
-    opened.push(estate.close);
+    const estate = await scope.acquire(
+      startEstateAuthorizationServer({
+        issuer: config.estate.issuer,
+        host: config.estate.host,
+        port: config.estate.port,
+        accounts: config.estate.accounts,
+        clients: [...estateClients.values()],
+        introspectionClients: [introspectionClient],
+        resourceServers: config.estate.resource_servers,
+      }),
+      (e) => e.close(),
+    );
     // The gateway trusts what the estate PUBLISHES at its jwks_uri, fetched
     // over HTTP, not a key handed across in process.
-    const published = (await (await fetch(estate.jwksUri)).json()) as { keys: Record<string, unknown>[] };
+    const published = (await scope.step(fetch(estate.jwksUri, { signal: scope.signal }).then((r) => r.json()))) as {
+      keys: Record<string, unknown>[];
+    };
     const estateKids = published.keys.map((k) => k.kid).filter((kid): kid is string => typeof kid === "string");
 
     // The Mission Issuer's own token-verification key: in MAS mode it signs
@@ -282,9 +299,9 @@ export async function assembleMasPilot(
     // administered Resource policy. Attached, the store is used as it stands;
     // bootstrapped for development, it is seeded with the estate's grants and
     // the invoice ownership above, nothing derived from a Mission or a token.
-    const store = await openResourcePolicyStore(opts.openfga, opts.resourcePolicyStore);
+    const store = await scope.step(openResourcePolicyStore(opts.openfga, opts.resourcePolicyStore));
     if (store.development) {
-      await seedDevelopmentResourcePolicy(store.fga, config.estate.issuer, payments.listInvoices(), config.resource_policy);
+      await scope.step(seedDevelopmentResourcePolicy(store.fga, config.estate.issuer, payments.listInvoices(), config.resource_policy));
     }
     // The principals are issuer-local to the ESTATE: the subject and client
     // the gateway authenticated (the request's `subject` and
@@ -328,7 +345,7 @@ export async function assembleMasPilot(
     const writeReservations: WriteReservationStore = openEphemeralWriteReservationStore({
       owner: RUNTIME_POSTURE.mediated_scope.pep_locations[0] as string,
     });
-    opened.push(() => writeReservations.close());
+    scope.register(() => writeReservations.close());
     const connectors = new Connectors();
     const transaction = { engine: new TransactionEngine("mas-pilot-epoch"), connectors, evidence };
 
@@ -353,8 +370,7 @@ export async function assembleMasPilot(
       transaction,
       writeReservations,
     });
-    const gateway = await createHttpMcpChannel(gatewayServer, { masGoverned: true });
-    opened.push(gateway.close);
+    const gateway = await scope.acquire(createHttpMcpChannel(gatewayServer, { masGoverned: true }), (g) => g.close());
 
     // The resource's own route: the Mission Issuer's keys only, Mission-bound
     // credentials only.
@@ -368,8 +384,7 @@ export async function assembleMasPilot(
       transaction,
       writeReservations,
     });
-    const resourceRoute = await createHttpMcpChannel(resourceServer);
-    opened.push(resourceRoute.close);
+    const resourceRoute = await scope.acquire(createHttpMcpChannel(resourceServer), (r) => r.close());
 
     return {
       config,
@@ -388,7 +403,7 @@ export async function assembleMasPilot(
       close,
     };
   } catch (e) {
-    await close();
+    await close().catch(() => {});
     throw e;
   }
 }

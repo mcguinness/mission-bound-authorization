@@ -23,6 +23,8 @@
     "issuance-only": "node scripts/issuance-only.mjs",
     "issuance-only:walkthrough": "node scripts/issuance-only-walkthrough.mjs",
     "as-native": "node scripts/as-native.mjs",
+    "mas-pilot": "node scripts/mas-pilot.mjs in-process",
+    "mas-pilot:separated": "node scripts/mas-pilot.mjs separated",
     "resource-policy": "node scripts/resource-policy.mjs",
     "keys": "node scripts/keys.mjs"
   },

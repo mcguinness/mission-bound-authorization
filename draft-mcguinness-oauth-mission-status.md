@@ -314,8 +314,8 @@ JWS Compact Serialization {{RFC7515}} applies.
 
 This section is OPTIONAL. The issuance profile's stateless baseline
 needs no dedicated status surface
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle and
-Gating"); a deployment that does not stand up this operation, and a
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"); a
+deployment that does not stand up this operation, and a
 consumer that does not use it, are unaffected.
 
 The dedicated Mission Status operation is the canonical status surface
@@ -625,8 +625,8 @@ The members are:
   - `state`: REQUIRED. The current Mission lifecycle state. The
     authoritative
     state space is the issuance profile's
-    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-    and Gating"): `active` and `terminated`, this profile's `suspended`
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+    Lifecycle"): `active` and `terminated`, this profile's `suspended`
     when the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
     is deployed, and any further state a companion profile defines and
     the deployment runs. A consumer applies the issuance profile's
@@ -970,7 +970,7 @@ recommendations of {{RFC9325}}.
 
 Adopting this endpoint extends the issuance profile's lifecycle state
 space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle and Gating") with one additional state, `suspended` (a
+Lifecycle") with one additional state, `suspended` (a
 paused Mission that derives no tokens until resumed), and one
 termination reason, `completed` (the Mission completed
 successfully).
@@ -1151,7 +1151,7 @@ expiry governs: the Mission is `terminated` with reason `expired` at
 
 This profile owns the extension of the issuance profile's lifecycle
 state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle and Gating"). The table below is the authoritative view of
+Lifecycle"). The table below is the authoritative view of
 that space: every state, every transition, the source of the event
 that drives it, and the termination reason a transition to
 `terminated` records.
