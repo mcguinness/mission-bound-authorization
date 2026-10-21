@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T06:39:12Z
-Source repository commit: fabf5273df18bd50f802713f5cf072bf58d0dfe0
+Generated: 2026-10-21T14:51:31Z
+Source repository commit: 427c2fc565ae0a31af774097b0198a92948b37dc
 Member count: 9
 
 Reading order:
@@ -15363,16 +15363,17 @@ Appendix G.  Document History
    activation_actor, and optional adjudication (#701): direct approval
    is human (#1185), approval activates only authority its source holds
    (#316), and standing-consent bases activate instances at their own
-   approval events (#1078).  Derivation is mechanical; purpose and model
-   output only refuse or narrow (#1102).  Each grant lineage binds to
-   one Mission, never through consent reuse (#700, #1259).  Authority is
-   type-agnostic, with scope projection; opaque tokens use introspection
-   or issuer-local resolution (#1203).  Submission processing checks a
-   proposal before evidence, refuses with the earliest failing step's
-   error, and completes Authority Set derivation before the rendering
-   (#1411); the Mission-governed client rule reaches only authorization
-   requests (#1448); delegation policy crosses a cross-domain projection
-   where that profile's provenance rule keeps it (#1374).
+   approval events (#1078).  Derivation is mechanical. purpose selects
+   configured mappings; its other uses, and model output, only refuse or
+   narrow (#1102).  Each grant lineage binds to one Mission, never
+   through consent reuse (#700, #1259).  Authority is type-agnostic,
+   with scope projection; opaque tokens use introspection or issuer-
+   local resolution (#1203).  Submission processing checks a proposal
+   before evidence, refuses with the earliest failing step's error, and
+   completes Authority Set derivation before the rendering (#1411); the
+   Mission-governed client rule reaches only authorization requests
+   (#1448); delegation policy crosses a cross-domain projection where
+   that profile's provenance rule keeps it (#1374).
 
    *Moved to companions.* Resource Access (the mission_resource_access
    type, Common Constraints, tool modeling, and
@@ -15384,10 +15385,11 @@ Appendix G.  Document History
    *Security and privacy.* Delegation hardening and no authority from an
    entry a resource server cannot fully enforce (#1258); Approver
    authentication kept off derived tokens and out of OpenID Connect
-   results for another Subject (#826); no held credential for a
-   Mission's task (#1205); refresh tokens bound per client type (#1204);
-   issuer-checked Mission resolution (#725); third-party data subjects
-   (#344); key retention to the audit horizon.
+   results for another Subject (#826); task credentials that are
+   Mission-bound or covered by a trusted enforcement path (#1205);
+   refresh tokens bound per client type (#1204); issuer-checked Mission
+   resolution (#725); third-party data subjects (#344); key retention to
+   the audit horizon.
 
    *Editorial and structure.* The reading path (#910, #1379);
    readability, placement and consolidation passes (#876, #1409, #1447,
