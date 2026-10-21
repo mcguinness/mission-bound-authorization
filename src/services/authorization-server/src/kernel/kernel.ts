@@ -10,6 +10,7 @@ import {
   authorityHash,
   canonicalize,
   COMMIT_IS_EFFECT_REASONS,
+  entryOverlapsResource,
   intentHash,
   type JsonValue,
   proposalHash,
@@ -3423,6 +3424,9 @@ export class MissionKernel {
         out.push({ origin: entry, entry });
         continue;
       }
+      // A contained capability names an approved Authority Set entry or its
+      // actions (containment#overlay), so the overlay is keyed on the approved
+      // entry's own `resource` by string equality, never the shared matcher.
       const contained = containment.contained.find((c) => c.resource === entry.resource);
       if (!contained) {
         out.push({ origin: entry, entry });
@@ -4157,8 +4161,13 @@ export class MissionKernel {
     );
     // Audience-scoped entries project the EFFECTIVE set (approved minus
     // containment); a contained entry never appears on the Status surface.
-    const scoped = opts.audience
-      ? this.effectiveAuthoritySet(record).filter((e) => e.resource === opts.audience)
+    // @spec resource-access#resource-matching (#1440): an entry is scoped to
+    // the audience when its resource tree overlaps it, through the shared
+    // matcher, as at token emission: a finer or `prefix` entry the audience
+    // serves appears, and a sibling sharing its characters does not.
+    const audience = opts.audience;
+    const scoped = audience
+      ? this.effectiveAuthoritySet(record).filter((e) => entryOverlapsResource(e, audience))
       : undefined;
     const payload: Record<string, unknown> = {
       sub: opts.actingParty ?? record.client_id,

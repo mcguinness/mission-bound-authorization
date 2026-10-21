@@ -32,6 +32,7 @@ import {
   validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
+import { trustedCapabilityResolver } from "../src/adapters/capability-resolver.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -670,5 +671,39 @@ describe("expansion inherits the predecessor's recorded bindings", () => {
     const bare = expand(predecessor.id, [VENDOR_ACTION]).successor;
     expect(hashCovers(bound)).toBe(true);
     expect(bound.authority_hash).not.toBe(bare.authority_hash);
+  });
+});
+
+describe("capability sources pair entries with resources through the shared matcher (@spec capability-binding#capability-source-binding, resource-access#resource-matching, #1440)", () => {
+  const INVOICES = `${RESOURCE}/invoices`;
+  const INV1 = `${INVOICES}/inv-1`;
+  const SIBLING = `${RESOURCE}-archive/invoices`;
+  const at = (resource: string, resource_match?: "prefix", actions = [READ_ACTION]): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource,
+    ...(resource_match ? { resource_match } : {}),
+    actions,
+  });
+
+  it("a finer or prefix entry derived beneath a prefix grantor entry inherits its bindings and stays a subset of it; a sibling outside the boundary inherits none", () => {
+    const grantor: AuthorityEntry = { ...at(RESOURCE, "prefix"), capability_sources: [bindingFor(READ_ACTION, "get_invoice")] };
+    const [finer, nested, sibling] = inheritCapabilitySources([at(INV1), at(INVOICES, "prefix"), at(SIBLING)], [grantor]);
+    expect(finer?.capability_sources).toEqual(grantor.capability_sources);
+    expect(nested?.capability_sources).toEqual(grantor.capability_sources);
+    expect(isSubsetEntry(finer as AuthorityEntry, grantor)).toBe(true);
+    expect(isSubsetEntry(nested as AuthorityEntry, grantor)).toBe(true);
+    expect(sibling?.capability_sources).toBeUndefined();
+  });
+
+  it("the trusted resolver resolves an entry beneath the trusted service, exact or prefix, as it resolves the service's own entry; one outside the service's tree is first-party", () => {
+    const resolver = trustedCapabilityResolver();
+    const bindingsOf = (entry: AuthorityEntry) => resolver.resolve([entry]).map((r) => [r.resource, r.binding?.tool_id]);
+    const root = bindingsOf(at(RESOURCE));
+    expect(root.length).toBeGreaterThan(0);
+    expect(root.every(([, tool]) => typeof tool === "string")).toBe(true);
+    for (const entry of [at(INV1), at(INVOICES, "prefix")]) {
+      expect(bindingsOf(entry), entry.resource).toEqual(root.map(([, tool]) => [entry.resource, tool]));
+    }
+    expect(resolver.resolve([at(SIBLING)])).toEqual([]);
   });
 });
