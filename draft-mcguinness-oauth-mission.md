@@ -7255,7 +7255,9 @@ results for another Subject (#826); task credentials that are
 Mission-bound or covered by a trusted enforcement path (#1205);
 refresh tokens bound per client type (#1204);
 issuer-checked Mission resolution (#725); third-party data subjects
-(#344); key retention to the audit horizon.
+(#344); key retention to the audit horizon; the approval basis named
+as outside the integrity anchors, with the profiles that commit it
+(#1518).
 
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
