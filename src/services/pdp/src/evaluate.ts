@@ -67,12 +67,13 @@ import type {
 } from "./decision-evidence.js";
 import { runtimeCapabilitySourceOf, evaluationRequestDigest } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
-import type {
-  ClaimInput,
-  ClaimRequester,
-  ClaimTicket,
-  ConsumptionStatusFn,
-  IdempotencyClaimDomain,
+import {
+  type ClaimInput,
+  type ClaimRequester,
+  type ClaimTicket,
+  type ConsumptionStatusFn,
+  type IdempotencyClaimDomain,
+  LEASE_EXTENSION_OUTCOME,
 } from "./idempotency-claims.js";
 import { type DelegatePolicy, type JoinMappingContract, resolveBaselineJoin } from "./mas-join.js";
 import { decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
@@ -815,6 +816,12 @@ interface ClaimContext {
   ticket?: ClaimTicket;
   /** The returned decision is a stored one: it already carries its own signed evidence. */
   retransmitted?: boolean;
+  /**
+   * @spec metering#lease-renewal (#1464): the claimed decision is a keyed
+   * renewal whose lease extension the PDP committed, so the claim settles
+   * `completed` when it is persisted; no Execution Evidence is expected.
+   */
+  settled?: typeof LEASE_EXTENSION_OUTCOME;
 }
 
 /**
@@ -912,7 +919,7 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
         }
         // The single writer persists the whole decision before it returns,
         // so a crash after this point yields at most this same permit again.
-        claim.ticket?.persist(decision);
+        claim.ticket?.persist(decision, claim.settled);
       } finally {
         // Persisted or not, this evaluation no longer holds the claim. An
         // unpersisted row is adoptable: no permit left the PDP.
@@ -2256,7 +2263,19 @@ async function evaluateInner(
     claim.ticket = outcome.ticket;
   }
 
-  if (lease.kind === "leased") lease.commit(decisionId, deadline.validUntilMs);
+  if (lease.kind === "leased") {
+    try {
+      lease.commit(decisionId, deadline.validUntilMs);
+    } catch (e) {
+      // @spec metering#lease-renewal (#1464): no permit leaves, so the claim
+      // is released, adoptable by a retry under the same key, never left held.
+      claim.ticket?.release();
+      delete claim.ticket;
+      throw e;
+    }
+    // A keyed renewal's only effect is this extension: its claim settles here.
+    if (claim.ticket && lease.renews !== undefined) claim.settled = LEASE_EXTENSION_OUTCOME;
+  }
   return {
     decision: true,
     context: base({

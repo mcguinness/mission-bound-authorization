@@ -17,17 +17,26 @@
  * accumulation, the measured-duration commit and settlement are not built.
  */
 
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { createEphemeralDecisionPoint } from "../src/decision-point.js";
 import { createDurationLeaseLedger, type DurationLeaseDomain } from "../src/duration-lease.js";
 import type { Decision, DecisionOptions, EvaluationRequest } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
-import type { ClaimRequester, ConsumptionStatusFn } from "../src/idempotency-claims.js";
+import {
+  type ClaimRequester,
+  type ConsumptionStatusFn,
+  type IndeterminateClaim,
+  openIdempotencyClaimDomain,
+} from "../src/idempotency-claims.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { operationIdentity } from "../src/projections.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
-import { freshKey, openTestClaims } from "./claim-fixture.js";
+import { CLAIM_OWNER, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
 
 const AUDIENCE = "http://localhost:4403/mcp";
@@ -288,9 +297,19 @@ const keyedRequest = (at: number, key: string | undefined, over: { prior?: strin
  * on a fresh file, deciding for one authenticated PEP whose redemption store
  * answers `consumption`.
  */
-function keyedHarness(consumption: ConsumptionStatusFn = () => "unconsumed") {
-  const ledger: DurationLeaseDomain = createDurationLeaseLedger({ [PAY]: PAY_LEASE_S });
-  const claims = openTestClaims();
+function keyedHarness(
+  consumption: ConsumptionStatusFn = () => "unconsumed",
+  over: { ledger?: DurationLeaseDomain; domainNow?: () => Date; onIndeterminate?: (c: IndeterminateClaim) => void } = {},
+) {
+  const ledger: DurationLeaseDomain = over.ledger ?? createDurationLeaseLedger({ [PAY]: PAY_LEASE_S });
+  const file = join(mkdtempSync(join(tmpdir(), "lease-1464-")), "claims.sqlite");
+  const claims = openIdempotencyClaimDomain({
+    file,
+    owner: CLAIM_OWNER,
+    statement: statementWithPrivilegedAdministration(),
+    ...(over.domainNow ? { now: over.domainNow } : {}),
+    ...(over.onIndeterminate ? { onIndeterminate: over.onIndeterminate } : {}),
+  });
   const point = createEphemeralDecisionPoint({
     emitterId: "pdp-lease",
     audience: AUDIENCE,
@@ -315,7 +334,21 @@ function keyedHarness(consumption: ConsumptionStatusFn = () => "unconsumed") {
     expect(first.decision, JSON.stringify(first.context)).toBe(true);
     return first.context.evaluation_id as string;
   };
-  return { ledger, claims, decide, opened };
+  return { ledger, claims, file, decide, opened };
+}
+
+/** The claim rows, read from the file after the domain released it, through the same single-writer opener. */
+function claimRowsOf(file: string): Array<{ evaluation_id: string; state: string; outcome: string | null }> {
+  const db = openDurableStore({ file, migrations: ["-- claims schema v1", "-- claims schema v2"], owner: CLAIM_OWNER });
+  try {
+    return db.prepare("SELECT evaluation_id, state, outcome FROM claims ORDER BY claimed_at_ms").all() as Array<{
+      evaluation_id: string;
+      state: string;
+      outcome: string | null;
+    }>;
+  } finally {
+    db.close();
+  }
 }
 
 const validUntilOf = (d: Decision): number => Date.parse((d.context.conditions as { valid_until: string }).valid_until);
@@ -426,6 +459,73 @@ describe("a keyed renewal carries its own idempotency key, claimed with the rene
     expect(renewal.decision, JSON.stringify(renewal.context)).toBe(false);
     expect(renewal.context.denial_reason).toBe("parameter_violation");
     expect(ledger.activities()).toEqual(before);
+    claims.close();
+  });
+});
+
+/** The shipped statement's execution-lease maximum and reconciliation window for the class. */
+const CLASS_LEASE_MS = 30_000;
+const WINDOW_MS = 15 * 60_000;
+
+describe("a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464)", () => {
+  it("the renewal's claim settles completed with no Execution Evidence, never ages to unresolved or indeterminate, raises no operator alert, and its retransmission returns the same permit without extending the lease again", async () => {
+    let domainMs = T0;
+    const alerts: IndeterminateClaim[] = [];
+    const { ledger, claims, file, decide, opened } = keyedHarness(undefined, {
+      domainNow: () => new Date(domainMs),
+      onIndeterminate: (c) => alerts.push(c),
+    });
+    // The opening permit's claim is never settled here: it is the control that does age and alert.
+    const opening = await opened(freshKey());
+    const key = freshKey();
+    const at = T0 + 10_000;
+    domainMs = at;
+    const renewal = await decide(keyedRequest(at, key, { prior: opening }), at);
+    expect(renewal.decision, JSON.stringify(renewal.context)).toBe(true);
+    const renewalId = renewal.context.evaluation_id as string;
+    // After settlement, a retransmission under the same key is the same permit, and the lease moves once.
+    const retry = at + 2_000;
+    const again = await decide(keyedRequest(retry, key, { prior: opening }), retry);
+    expect(again.context.evaluation_id, JSON.stringify(again.context)).toBe(renewalId);
+    expect(ledger.activities()[0]?.evaluations).toEqual([opening, renewalId]);
+    // Past every permit and lease: the unsettled opening claim is unresolved, the renewal's is not.
+    const validUntil = validUntilOf(renewal);
+    domainMs = validUntil + CLASS_LEASE_MS + 1_000;
+    claims.sweep();
+    expect(claims.listUnresolved(REQUESTER).map((c) => c.evaluation_id)).toEqual([opening]);
+    // Past every reconciliation window: only the opening claim closes indeterminate and alerts.
+    domainMs = validUntil + CLASS_LEASE_MS + WINDOW_MS + 1_000;
+    claims.sweep();
+    expect(alerts.map((c) => c.evaluation_id)).toEqual([opening]);
+    claims.close();
+    const rows = claimRowsOf(file);
+    expect(rows.find((r) => r.evaluation_id === renewalId)).toEqual({ evaluation_id: renewalId, state: "completed", outcome: "lease_extended" });
+    expect(rows.find((r) => r.evaluation_id === opening)?.state).toBe("indeterminate");
+  });
+
+  it("a lease commit that fails releases the renewal's claim, so the retry under the same key renews once instead of meeting a held claim", async () => {
+    const real = createDurationLeaseLedger({ [PAY]: PAY_LEASE_S });
+    let failNext = false;
+    const ledger: DurationLeaseDomain = {
+      ...real,
+      extend: (...args) => {
+        if (failNext) {
+          failNext = false;
+          throw new Error("lease ledger unavailable");
+        }
+        return real.extend(...args);
+      },
+    };
+    const { claims, decide, opened } = keyedHarness(undefined, { ledger });
+    const opening = await opened(freshKey());
+    const key = freshKey();
+    const at = T0 + 10_000;
+    failNext = true;
+    await expect(decide(keyedRequest(at, key, { prior: opening }), at)).rejects.toThrow("lease ledger unavailable");
+    expect(real.activities()[0]?.evaluations).toEqual([opening]);
+    const retry = await decide(keyedRequest(at + 1_000, key, { prior: opening }), at + 1_000);
+    expect(retry.decision, JSON.stringify(retry.context)).toBe(true);
+    expect(real.activities()[0]?.evaluations).toEqual([opening, retry.context.evaluation_id]);
     claims.close();
   });
 });
