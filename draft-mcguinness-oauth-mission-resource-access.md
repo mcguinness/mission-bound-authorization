@@ -431,19 +431,19 @@ than a JSON number.
 
 ## Resource Matching {#resource-matching}
 
-This section defines how an entry's `resource` is compared: with the
-target of an operation when the resource server enforces the entry
-({{rs-enforcement}}), and with another entry's `resource` when the
-authorization server tests containment ({{subset}}).
+An entry's `resource` is compared with the target of an operation when
+the resource server enforces the entry ({{rs-enforcement}}), and with
+another entry's `resource` when the authorization server tests
+containment ({{subset}}).
 
-**Operation target.** Before matching authority, the resource server
-establishes the operation's target: an absolute URI identifying the
-resource the operation acts on. The resource server:
+**Operation target.** Before matching, the resource server establishes
+the operation's target: the absolute URI of the resource the operation
+acts on. The resource server:
 
-- establishes the target from its documented, trusted operation
-  contract: for an HTTP resource operation the target can be the
-  effective request URI, and for an RPC or tool call the resource server
-  derives it from the operation and its validated arguments;
+- establishes the target from its operation contract: for an HTTP
+  resource operation the target can be the effective request URI, and
+  for an RPC or tool call the resource server derives it from the
+  operation and its validated arguments;
 - MUST establish the target independently of the entries the request
   presents, and MUST NOT choose a target because an entry would then
   match;
@@ -465,22 +465,20 @@ each operation it covers, it establishes:
 - for each `constraints` key the operation supports, the authoritative
   input that key's predicate reads ({{common-constraints}}).
 
-A resource URL or a protected resource metadata identifier alone is not
-an operation contract. A deployment that adopts Mission-Bound Runtime
-Enforcement {{I-D.draft-mcguinness-mission-runtime}} records an
-operation's action identifier and constraint inputs in that document's
-Operation Profile.
+A deployment that adopts Mission-Bound Runtime Enforcement
+{{I-D.draft-mcguinness-mission-runtime}} records an operation's action
+identifier and constraint inputs in that document's Operation Profile.
 
-An operation contract preserves every resource distinction the
-deployment's authorization constrains; it cannot collapse `/orders/123`
-and `/admin` to the server's root identifier to obtain a match. There is
-no fallback to the protected resource's metadata identifier: an
-operation contract MAY define service-level authority and use that
-identifier as its target, but an absent or ambiguous contract is not
-such a definition. Validating the metadata identifier
-({{Section 3.3 of RFC9728}}) and the token's audience remain separate
-checks, and matching never rewrites a recorded entry or its integrity
-commitments.
+A resource URL or a protected resource metadata identifier alone is not
+an operation contract. An operation contract preserves every resource
+distinction the deployment's authorization constrains: it cannot
+collapse `/orders/123` and `/admin` to the server's root identifier to
+obtain a match. There is no fallback to the protected resource's
+metadata identifier: an operation contract MAY define service-level
+authority and use that identifier as its target, but an absent or
+ambiguous contract is not such a definition. Validating the metadata
+identifier ({{Section 3.3 of RFC9728}}) and the token's audience remain
+separate checks.
 
 The following tables show one RPC operation and how entries match its
 target:
@@ -504,8 +502,7 @@ target:
 | `https://API.EXAMPLE:443/orders` | `prefix` | Yes |
 {: title="Resource matches for the RPC operation"}
 
-These are resource matches only; actions and constraints are checked
-separately.
+Actions and constraints are checked separately.
 
 **Exact matching.** Under `exact`, the entry's `resource`, after JSON
 decoding, and the operation target are compared character for character,
@@ -530,13 +527,13 @@ documented target spelling.
 | `https://api.example` | `https://api.example/` | No match |
 {: title="Exact matching"}
 
-**Prefix matching.** For prefix purposes, a `resource` with an empty
-path and one whose path is `/` denote the same base: `https://a.example`
-and `https://a.example/` authorize the same set.
+**Prefix matching.** Under `prefix`, a `resource` with an empty path
+and one whose path is `/` denote the same base: `https://a.example` and
+`https://a.example/` authorize the same set.
 
-Resource containment under a `prefix` reference is compared after
-normalizing both URIs with these steps from {{Section 6.2.2 of RFC3986}}
-(syntax-based) and {{Section 6.2.3 of RFC3986}} (scheme-based):
+Both URIs in a `prefix` comparison are normalized with these steps from
+{{Section 6.2.2 of RFC3986}} (syntax-based) and
+{{Section 6.2.3 of RFC3986}} (scheme-based):
 
 1. lowercase the scheme and host;
 2. remove a default port;
@@ -557,25 +554,22 @@ enforcement, and a query that selects another resource is resolved to
 that resource before matching.
 
 This normalization applies to comparison only, never to hashing:
+matching never rewrites a recorded entry, and
 {{I-D.draft-mcguinness-oauth-mission}}'s anchor computation remains
-byte-exact over the recorded values and is untouched by this rule.
+byte-exact over the recorded values.
 
 The authorization server's containment test ({{subset}}) and the
 resource server's request matching ({{rs-enforcement}}) MUST apply the
 single URI normalization defined in this section, so issuance and
-enforcement draw the same boundary.
+enforcement draw the same boundary. The normalization MUST run before
+the prefix comparison, and the boundary MUST be evaluated on the same
+normalized form a downstream component will act on.
 
-The normalization MUST run before the prefix comparison, never after,
-and the boundary MUST be evaluated on the same normalized form a
-downstream component will act on.
-
-An empty path and `/` denote the same base; beyond that equivalence, a
-URI matcher MUST NOT coalesce `//` or trailing-slash differences of its
-own, since the normalization does not.
-
-The normalization lowercases the host but does not define Unicode to
-A-label (IDNA) conversion, so a deployment that accepts non-ASCII hosts
-MUST ensure both sides compare the same form.
+Beyond the empty-path equivalence above, a URI matcher MUST NOT
+coalesce `//` or trailing-slash differences of its own, since the
+normalization does not. The normalization lowercases the host but does
+not define Unicode to A-label (IDNA) conversion, so a deployment that
+accepts non-ASCII hosts MUST ensure both sides compare the same form.
 
 The following table shows how operation targets match a `prefix` entry
 whose `resource` is `https://api.example/orders`:
@@ -592,19 +586,17 @@ whose `resource` is `https://api.example/orders`:
 | `https://api.example/orders/%2e%2e/admin` | DENY | `%2e%2e` decodes to `..` and the dot-segment is removed, yielding `https://api.example/admin`, outside the prefix |
 {: title="Prefix matching for https://api.example/orders"}
 
-{{resource-boundary-canonicalization}} analyzes why each of these rules
-matters.
+{{resource-boundary-canonicalization}} explains why each rule matters.
 
 ## Subset Rule {#subset}
 
 {{I-D.draft-mcguinness-oauth-mission}} derives, narrows, and delegates a
 `mission_resource_access` entry only as a subset of a reference entry,
-and refuses an entry that is not one. This section defines that
-relation.
+and refuses an entry that is not one.
 
 When the authorization server narrows the Authority Set for a derived
-token, a derived `mission_resource_access` entry A is a subset of a
-Mission entry B when all of the following hold:
+token, a derived entry A is a subset of a Mission entry B when all of
+the following hold:
 
 1. **Resource.** A's resource set is contained in B's (`resource_match`,
    {{resource-access-type}}), under the matcher of
@@ -628,9 +620,9 @@ Mission entry B when all of the following hold:
 3. **Constraints.** For every key K in **B**.`constraints`:
    - K MUST also be present in A.`constraints`, unless B's value is one
      K's definition makes equivalent to omitting the member
-     (`requires_action_approval: false`). Otherwise a key present in B
-     but absent from A is treated as the broadest possible value and
-     therefore fails this test.
+     (`requires_action_approval: false`). Otherwise a key absent from A
+     is treated as the broadest possible value and therefore fails this
+     test.
    - A's value MUST be no broader than B's under K's subset rule: the
      specification-defined rule when K is a Common Constraint
      ({{common-constraints}}), the deployment-defined comparison
@@ -644,20 +636,13 @@ The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
 narrows A only when it has defined semantics and the resource server
 serving A.`resource` can enforce it; an unknown key in A is never
-treated as narrowing ({{common-constraints}}). A grant-enabling member
-such as `delegation` follows the delegation rules below, not this one.
+treated as narrowing ({{common-constraints}}).
 
 The authorization server MUST make this resource comparison with the
 same matcher, over the same URI forms, that resource servers use to
 enforce the entries ({{resource-matching}}), so that whenever A's
 resource set is contained in B's, every target A admits is also admitted
-by B. Resource containment alone never establishes authority
-containment: actions, constraints, and delegation are checked as above.
-
-Hierarchy is opt-in and closed to two forms: `resource_match: "prefix"`
-for resource containment and `.*` action families for action containment
-({{resource-access-type}}). Without them, comparison is flat: `resource`
-matches by literal equality and a literal action by array membership.
+by B.
 
 The `delegation` member is policy, not authority, and is not part of
 this comparison ({{delegate-eligibility}}). A derived entry's
