@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ef25d408d21f77a9704a61c791fa1e571c8807c2",
-    "content_sha256": "cd6754426346a73fa99ad1a04fcaf981aafa265c77983591748791ce0e70033c"
+    "revision": "b061c0f2683237b71835a269571860967f30d42c",
+    "content_sha256": "7d08c59c6bd6de75ff71a998ddc1b20431b0f434e22fb910620fa5163b395271"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -4756,7 +4756,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type carries the same citation and is covered by core.mission-record.authority-source-type-enum, which enforces it fail-closed at trusted-configuration load and at record hydration; scoped to the two fields the review named."
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type applies the same rule since #1503 (D620), and its preservation is witnessed on core.mission-record.authority-source-type-enum; this row stays scoped to the two fields the review named."
   },
   {
    "id": "core.authority-sources.accountable-principal-not-from-sub",
@@ -5592,7 +5592,7 @@
    "id": "core.mission-record.authority-source-type-enum",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`, subject to the forward-compatibility rule of {{lifecycle}}.",
+   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`. An unrecognized value is handled under the same rule as an unrecognized `approval_basis.type` ({{record-principal-members}}): it is preserved unchanged as opaque provenance and does not by itself invalidate or deactivate the Mission, and only an operation that itself requires recognized source semantics refuses",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -5602,26 +5602,77 @@
     "issuance"
    ],
    "surface": "derivation",
-   "assertion": "refusal",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "an unrecognized `authority_source.type` is refused rather than widened into the union, at trusted-configuration load and at record hydration alike"
+    "normative": "a stored `authority_source` of unrecognized `type` hydrates with every member unchanged, the Mission keeps its lifecycle state (it is still reported `active`, and introspection echoes the `type`), and an operation that needs recognized source semantics (applying the source ceiling at child creation or template dispatch) refuses, creating nothing",
+    "local": "the refusal is `access_denied`, the refusal every source that cannot be established gets; the draft names no error for it. Ordinary derivation reads no source semantics and proceeds"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at hydration rather than widening the union",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > hydrates a stored record of unrecognized type with the member unchanged and the Mission still active",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at catalog load rather than widening the union",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > reports the Mission active through introspection and echoes the unrecognized type alone",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > refuses a Child Mission drawn from it with access_denied, creating nothing and leaving the parent active",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > reads a stored template of unrecognized source type, and refuses a dispatch from it with access_denied",
      "level": "unit",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "#1503 finding 1 (D620) replaced the citation of the {{lifecycle}} rule, under which an unknown source deactivated the Mission, with the approval_basis.type rule. This id keeps the member's value space and preservation half; the issuer-side refusal is core.mission-record.authority-source-unrecognized-not-approved. Preservation is witnessed at every stored reader: the record (kernel get, introspection), the committed root binding and a restart's reconciliation (hydrate), and the template store (template). The refusing operations share one point, resolveCommittedSource: child creation and template dispatch are cited; a progressive successor and a carryover replacement reach the same guard."
+  },
+  {
+   "id": "core.mission-record.authority-source-unrecognized-not-approved",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "An AS MUST NOT approve a Mission whose authority source it does not recognize.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authority source of unrecognized `type` is never established for an approval: a trusted catalog declaring one is refused at load, and a resolver answering one at approval refuses the approval before any Mission is created",
+    "local": "the approval refusal is `access_denied`, like every source gate's"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at catalog load rather than widening the union",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > refuses an approval whose resolver answers an unrecognized type, creating no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1503 finding 1 (D620): split from core.mission-record.authority-source-type-enum. Every fresh establishment (direct approval, Expansion, template consent, governed-policy activation) resolves through resolveApprovalSource, which the resolver test drives with a workload Subject so no other source gate would refuse."
   },
   {
    "id": "core.mission-record.authority-source-policy-organizational",
@@ -5663,6 +5714,138 @@
      "surface": "derivation"
     }
    ]
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-construction",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "`digest` is a prefixed commitment ({{commitment-mechanisms}}) whose exact committed input and construction the policy's format specifies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an organizational source's `policy.digest` is a `sha-256:` prefixed commitment computed by the one construction its governed policy format names, over the exact input that format names",
+    "local": "the reference format (config/governed-policy.json) commits `{id, version, ceiling}` as an envelope anchor with `typ` `mission-governed-policy` and `iss` the policy's governance authority (its `authority` member), not the AS issuer"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, while the draft's envelope anchor names the AS issuer as `iss`; whether the governed policy format may name another `iss` is an owner decision recorded on #1503."
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-producer",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "The party that produces the reference computes `digest`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer that establishes an organizational source computes its `policy.digest` from the governed policy it loads, and never takes it from the wire or a client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > resolves the organizational source's ceiling and digest from the governed policy",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin."
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-reproducible",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "a consumer holding the policy can reproduce it",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a party holding the governed policy recomputes `policy.digest` from the input and construction the policy format names and obtains the committed value"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1503 finding 2 (D620). Reproducibility is shown by independent recomputation in the tests: the vector from a hand-written JCS string, the shipped pin from the policy file alone. No reference component other than the AS's own loader holds a governed policy, so no verifier implementation is witnessed."
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-opaque",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "one that does not compares it as an opaque value",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer without the governed policy treats `policy.digest` as an opaque value: it compares it for equality and never recomputes or parses it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1503 finding 2 (D620). A consumer role: no reference component consumes `policy.digest` without the policy (introspection never discloses it), so there is nothing to witness yet."
   },
   {
    "id": "core.mission-record.authority-source-outside-anchors",
