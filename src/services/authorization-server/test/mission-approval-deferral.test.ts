@@ -230,7 +230,8 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(store.poll(code, presenter)).toMatchObject({ error: "authorization_pending", deferral_code: code });
     expect(store.poll(code, presenter)).toMatchObject({ error: "slow_down" });
     expect(store.poll(code, { ...presenter, clientId: "svc-other" })).toEqual({ error: "invalid_grant" });
-    expect(store.poll(code, { ...presenter, jkt: "another-key" })).toEqual({ error: "invalid_grant" });
+    expect(store.poll(code, { ...presenter, jkt: "another-key" })).toEqual({ error: "invalid_dpop_proof" });
+    expect(store.poll(code, { clientId: "svc-other", jkt: "another-key" })).toEqual({ error: "invalid_grant" });
     const done = await store.completeByPolicy(code);
     if (done.outcome !== "approved") throw new Error(done.outcome);
     // Delivered once, to the bound client and key only.
@@ -395,9 +396,11 @@ describe("deferred approval store bounds and cancellation (@spec deferred-approv
     const advisor = vi.fn(async (_r: ModelAdvisorRequest) => []);
     const refusing = setup({ "urn:root:reconciler": rootDoc({ rules: { max_entries: 3, require_purpose: true } }) }, { modelAdvisor: advisor });
     const code = open(refusing.store);
-    // Another client or key: invalid_grant, and no evaluation runs.
+    // Another client: invalid_grant, whatever key; the opening client under
+    // another key: invalid_dpop_proof (#1357). No evaluation runs for any.
     expect(await refusing.store.pollAndComplete(code, { ...presenter, clientId: "svc-other" })).toEqual({ error: "invalid_grant" });
-    expect(await refusing.store.pollAndComplete(code, { ...presenter, jkt: "another-key" })).toEqual({ error: "invalid_grant" });
+    expect(await refusing.store.pollAndComplete(code, { clientId: "svc-other", jkt: "another-key" })).toEqual({ error: "invalid_grant" });
+    expect(await refusing.store.pollAndComplete(code, { ...presenter, jkt: "another-key" })).toEqual({ error: "invalid_dpop_proof" });
     expect(advisor).not.toHaveBeenCalled();
     expect(refusing.store.resolutionReason(code)).toBeUndefined();
     // The bound presenter's poll evaluates; a refusal is recorded and never re-evaluated.

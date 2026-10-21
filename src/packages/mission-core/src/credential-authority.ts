@@ -26,6 +26,12 @@ import {
 } from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
 import { entryMatchesTarget, resourceMatchViolation } from "./operation-target.js";
+import {
+  type ResourceContractRef,
+  resourceContractOf,
+  resourceContractViolation,
+  sameResourceContract,
+} from "./resource-contract.js";
 
 /** One entry of a verified credential's authority. */
 export interface CredentialAuthorityEntry {
@@ -38,6 +44,14 @@ export interface CredentialAuthorityEntry {
    */
   resource_match?: "exact" | "prefix";
   actions: string[];
+  /**
+   * @spec resource-access#resource-contract (#249, D553): the contract the
+   * entry authorizes operations under. "A resource server MUST NOT treat an
+   * entry carrying `resource_contract` as authorizing an operation unless it
+   * performs that operation under exactly the referenced contract"
+   * ({@link entryCoversFacts}).
+   */
+  resource_contract?: ResourceContractRef;
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
@@ -70,6 +84,10 @@ const EVALUATED_ENTRY_MEMBERS = new Set([
   "resource_match",
   "actions",
   "constraints",
+  // @spec resource-access#rs-enforcement (#249): "`resource_contract` is
+  // enforced as {{resource-contract}} requires", by the contract comparison
+  // of {@link entryCoversFacts}.
+  "resource_contract",
 ]);
 const CONSTRAINT_KEYS = new Set<string>([
   "max_amount",
@@ -215,6 +233,14 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
         );
       }
       const constraints = parseConstraints(raw.constraints, at);
+      // @spec resource-access#entry-validation (#249): a malformed reference
+      // cannot be enforced, so it refuses the whole credential, never reads
+      // as an entry without one.
+      if (raw.resource_contract !== undefined) {
+        const violation = resourceContractViolation(raw.resource_contract);
+        if (violation !== undefined) throw new CredentialAuthorityError(`${at}: ${violation}`);
+      }
+      const resourceContract = resourceContractOf(raw.resource_contract);
       const entry: CredentialAuthorityEntry = {
         type: "mission_resource_access",
         resource: raw.resource,
@@ -222,6 +248,7 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
           ? { resource_match: raw.resource_match }
           : {}),
         actions: [...raw.actions],
+        ...(resourceContract !== undefined ? { resource_contract: resourceContract } : {}),
         ...(constraints !== undefined ? { constraints } : {}),
       };
       return Object.freeze(entry);
@@ -306,6 +333,14 @@ export interface CredentialTarget {
   vendorIds: readonly string[];
   /** The action's amount, resolved by the enforcement point, when it has one. */
   amount?: { amount: string; currency: string };
+  /**
+   * @spec resource-access#resource-contract (#249, D553): the contract the
+   * enforcement point will perform the operation under, resolved against its
+   * own trusted declarations; absent when it performs under none. An entry
+   * covers the action only when its own reference equals this one, absent
+   * against absent ({@link entryCoversFacts}).
+   */
+  resourceContract?: ResourceContractRef;
   /**
    * @spec resource-access#rs-enforcement (#1266): the authoritative facts the
    * implemented Common Constraints read, established by the enforcement point
@@ -399,7 +434,17 @@ export function credentialConstraintGates(
  * rest (@spec runtime#input-authority, D312).
  */
 export function entryCoversFacts(entry: CredentialAuthorityEntry, facts: CredentialFacts): boolean {
-  return entryMatchesAction(entry, facts) && credentialConstraintGates(entry, facts).satisfied;
+  return (
+    entryMatchesAction(entry, facts) &&
+    // @spec resource-access#resource-contract (#249): "A resource server MUST
+    // NOT treat an entry carrying `resource_contract` as authorizing an
+    // operation unless it performs that operation under exactly the
+    // referenced contract". An entry without one covers only an operation
+    // performed under no contract; whether the resource requires one is the
+    // enforcement point's own check.
+    sameResourceContract(entry.resource_contract, facts.resourceContract) &&
+    credentialConstraintGates(entry, facts).satisfied
+  );
 }
 
 /**
@@ -442,12 +487,15 @@ export function credentialEntriesFromAuthority(
 ): readonly CredentialAuthorityEntry[] {
   // @spec resource-access#resource-matching (#1276): `resource_match` is
   // carried, so a `prefix` entry is read as `prefix`, never as `exact`.
+  // @spec resource-access#resource-contract (#249): the reference is carried,
+  // so the entry is read under the contract it was approved under.
   return parseCredentialAuthority(
-    entries.map(({ type, resource, resource_match, actions, constraints }) => ({
+    entries.map(({ type, resource, resource_match, actions, resource_contract, constraints }) => ({
       type,
       resource,
       ...(resource_match !== undefined ? { resource_match } : {}),
       actions,
+      ...(resource_contract !== undefined ? { resource_contract } : {}),
       ...(constraints ? { constraints } : {}),
     })),
   );
