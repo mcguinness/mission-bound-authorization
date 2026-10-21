@@ -3086,6 +3086,17 @@ async function completeCeilingDrawdown(
       // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
       // Derivation Limits refuses a derivation; nothing was created.
       if (e.code === "derivations_exhausted") throw new MissionGrantError(e.message, "derivations_exhausted");
+      // @spec expansion#reconciliation: the compare-and-set at activation
+      // failed on the predecessor's state, so the token-exchange completion
+      // answers invalid_request with the reconciliation status, to the
+      // Mission's own client, as the request-time check does.
+      const observed = opts.kernel.get(d.predecessorId);
+      if (e.code === "predecessor_not_active" && observed && isMissionClient(ctx, observed)) {
+        const current = opts.kernel.applyExpiry(observed);
+        refuseInactiveMission(ctx, current, `predecessor mission is ${current.state}`);
+        (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(current);
+        return true;
+      }
       txError(ctx, 400, "invalid_request", e.message);
       return true;
     }

@@ -92,6 +92,8 @@ const POLICIES: Record<string, RegisteredActivationPolicy> = {
   "drawdown-short": drawdownPolicy(1),
   // Two widened actions per drawdown.
   "drawdown-wide": drawdownPolicy(2_592_000, 2),
+  // Moved on to a new version by the past-cadence case.
+  "drawdown-moved": drawdownPolicy(),
 };
 
 /** The Mission Deployment Profile's published bounds and action-class mapping. */
@@ -105,6 +107,8 @@ const PROGRESSIVE: ProgressiveDrawdownOptions = {
     "payments:payment.schedule.cancel": "consequential_write",
     "payments:payment.execute": "irreversible_action",
     // payments:remittance.send is deliberately unclassified.
+    // On the SaaS resource, whose authoritative AS is the RAS: cross-domain.
+    "ledger:vendor.read": "consequential_read",
   },
   externalCommunicationActions: ["payments:vendor.read"],
 };
@@ -126,6 +130,11 @@ const DISCHARGE_AUTHORITY: DischargeAuthorityPolicy = {
 const FULL_CEILING = DERIVATION_POLICY.ceiling.filter((e) => e.resource === RESOURCE) as unknown as AuthorityEntry[];
 /** Only the read entry of that ceiling. */
 const READ_CEILING = FULL_CEILING.slice(0, 1);
+/** The derivation policy's entry on the SaaS resource, which the RAS is authoritative for. */
+const SAAS_ENTRY = DERIVATION_POLICY.ceiling.find((e) =>
+  e.actions.includes("ledger:vendor.read"),
+) as unknown as AuthorityEntry;
+const SAAS = SAAS_ENTRY.resource;
 
 const READ_ACTIONS = new Set(["payments:invoice.list", "payments:invoice.read", "payments:vendor.read"]);
 
@@ -614,6 +623,33 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
   });
 
+  it("a predecessor revoked between adjudication and the commit refuses the drawdown at its commit: nothing created, superseded or reserved", async () => {
+    const pred = await issueMission(READ, ceilingOf());
+    const crid = crypto.randomUUID();
+    const before = as.kernel.allMissions().length;
+    // The live-children check runs inside adjudication, after the predecessor was read active.
+    const find = as.kernel.findChildren.bind(as.kernel);
+    const racing = vi.spyOn(as.kernel, "findChildren").mockImplementation((id) => {
+      const out = find(id);
+      if (id === pred.missionId && as.kernel.get(id)?.state === "active") as.kernel.transition(id, "revoke");
+      return out;
+    });
+    let res: Response;
+    try {
+      res = await tokenRequest(expansionParams(pred.accessToken, crid, READ_LIST));
+    } finally {
+      racing.mockRestore();
+    }
+    const body = (await res.json()) as { error?: string; mission_expansion_status?: string };
+    // @spec expansion#reconciliation: the compare-and-set at activation fails on the predecessor's state.
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_expansion_status).toBe("predecessor_state_changed");
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("terminated");
+    expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
+  });
+
   it("verifies the drawdown policy digest before activation and retains the verified snapshot with the successor", async () => {
     const pred = await issueMission(READ, ceilingOf());
     const body = await drawdown(pred.accessToken, crypto.randomUUID(), READ_LIST);
@@ -624,6 +660,27 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     expect(
       check.status === "verified" && Buffer.from(check.snapshot.content).toString("utf8"),
     ).toBe(POLICIES["drawdown-std"]?.content);
+  });
+
+  it("an auditor resolves the review cadence in force at a past drawdown from its retained snapshot after the policy moved on to a new version", async () => {
+    const id = "drawdown-moved";
+    const original = POLICIES[id] as RegisteredActivationPolicy;
+    const pred = await issueMission(READ, ceilingOf(id));
+    const past = as.kernel.get((await drawdown(pred.accessToken, crypto.randomUUID(), READ_LIST)).mission_id) as MissionRecord;
+    // The deployment moves the policy on: version 2 states a one-day cadence, and a newer chain draws under it.
+    POLICIES[id] = drawdownPolicy(86_400);
+    (POLICIES[id] as { version: string }).version = "2";
+    try {
+      const newer = await issueMission(READ, { authority_ceiling: FULL_CEILING, drawdown_policy: { id, version: "2" } });
+      await drawdown(newer.accessToken, crypto.randomUUID(), READ_LIST);
+      expect(past.approval_basis.activation).toEqual({ policy_id: id, policy_version: "1" });
+      const check = as.kernel.verifyActivationPolicyCommitment(past);
+      expect(check.status).toBe("verified");
+      const content = check.status === "verified" ? Buffer.from(check.snapshot.content).toString("utf8") : "{}";
+      expect(JSON.parse(content).ceiling_review_cadence_s).toBe(2_592_000);
+    } finally {
+      POLICIES[id] = original;
+    }
   });
 
   it("the successor retains each entry's child-actor origin: a consented ceiling granting children without allowed_child_actors defers the child actor to policy (@spec child-delegation#fanout, #1304)", async () => {
@@ -974,6 +1031,34 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     await drawdown(renewed.access_token, crypto.randomUUID(), [...READ, VENDOR, "payments:payment.schedule"]);
   });
 
+  it("a re-consent clears no discharge restriction of the chain", async () => {
+    const completing = {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.list"],
+      constraints: { vendors: ["acme"], terminal_when: [CLOSE] },
+    };
+    const root = await issueMission(READ_LIST, ceilingOf(), { proposal: [...authority(READ), completing] });
+    const record = as.kernel.get(root.missionId) as MissionRecord;
+    const entry = record.authority_set.find((e) => e.actions.includes("payments:invoice.list")) as AuthorityEntry;
+    as.kernel.discharge(root.missionId, {
+      authority: "svc:console",
+      entry_digest: entryDigest(ISSUER, entry),
+      condition_digest: conditionDigest(CLOSE),
+      event_type: CLOSE.event_type,
+      event_id: `close-${crypto.randomUUID()}`,
+    });
+    const renewed = await approveAndPoll(
+      await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]),
+      ALICE,
+      ceilingOf(),
+    );
+    // Policy-eligible but for the chain's discharge restriction: still a fresh approval.
+    await openFreshApproval(renewed.mission_id, renewed.access_token, [...READ, VENDOR, "payments:invoice.list"]);
+    // An unrestricted widening under the same re-consent is drawn by policy.
+    await drawdown(renewed.access_token, crypto.randomUUID(), [...READ, VENDOR, "payments:payment.schedule"]);
+  });
+
   it("a re-consent continues the chain's drawdown count and rate window", async () => {
     const root = await issueMission(READ, ceilingOf());
     const first = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
@@ -1024,6 +1109,27 @@ describe("fresh-approval fallback (@spec progressive#in-ceiling-expansion, progr
     }
     // The committed snapshot restored, the same request is adjudicated by policy.
     await drawdown(pred.accessToken, crypto.randomUUID(), READ_LIST);
+  });
+
+  it("a drawdown widening into a resource another authorization server is authoritative for falls back (cross-domain)", async () => {
+    const pred = await issueMission(READ, ceilingOf("drawdown-std", [...FULL_CEILING, SAAS_ENTRY]), {
+      intentExtra: { target_resources: [RESOURCE, SAAS] },
+    });
+    const params = expansionParams(pred.accessToken, crypto.randomUUID(), READ, "Read the ledger vendor", {
+      target_resources: [RESOURCE, SAAS],
+    });
+    params.authorization_details = JSON.stringify([
+      ...authority(READ),
+      { type: "mission_resource_access", resource: SAAS, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } },
+    ]);
+    const before = as.kernel.allMissions().length;
+    const res = await tokenRequest(params);
+    const body = (await res.json()) as { error?: string; deferral_code?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("authorization_pending");
+    expect(body.mission_denial_reason).toBeUndefined();
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
   });
 
   it("a Mission that commits no drawdown policy is never adjudicated by policy", async () => {
