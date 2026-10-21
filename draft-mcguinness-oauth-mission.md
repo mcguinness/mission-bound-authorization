@@ -7141,6 +7141,20 @@ Cross-Domain:
 
 -01
 
+- Editorial and structure (#1483), no requirement changed: Binding the
+  Mission to the Grant and Issuance Gating open Mission-Bound Access
+  Tokens, and Mission Lifecycle and Gating becomes Mission Lifecycle.
+  Standing-Consent Bases becomes one section after Delegation, holding
+  Standing-Consent Instances, Activation Policy Commitment and
+  Standing-Consent Recency; the rule for an unrecognized
+  `approval_basis.type` or `adjudication.kind` stays with the record's
+  common members. Direct Approval Steps nests its one ordered procedure
+  in Prepare the Approval (steps 1 to 5) and Commit the Mission (steps
+  6 and 7), which says what approval leaves behind. The Implementation
+  Map gains an applicability table in place of its conditional-duty
+  list; Scope Projection opens with when it applies; the introductory
+  walk says the later examples follow a separate Mission.
+
 - Editorial (#1479): Conformance says that neither starting point
   removes a Mission Issuer surface, the evidence dispatch and refusal
   rules included, or the deployment's revocation means; Intent
