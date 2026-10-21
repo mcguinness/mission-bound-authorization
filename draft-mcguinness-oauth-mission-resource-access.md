@@ -348,15 +348,15 @@ when it validates a proposed or carried entry ({{conformance}}); a
 resource server applies them where a rule says so.
 
 A `resource` value under `prefix` MUST NOT carry a query or fragment
-component; the authorization server refuses such an entry with the
+component; the authorization server MUST refuse such an entry with the
 `invalid_authorization_details` error code ({{Section 5 of RFC9396}}).
 
 This type does not use the {{RFC9396}} common `locations` field:
 `resource` identifies where an entry applies. The authorization server
-refuses an entry carrying `locations` with the
+MUST refuse an entry carrying `locations` with the
 `invalid_authorization_details` error code.
 
-The authorization server also refuses an entry with the
+The authorization server MUST also refuse an entry with the
 `invalid_authorization_details` error code when:
 
 - its `resource` is not an `absolute-URI` ({{Section 4.3 of RFC3986}}),
@@ -1055,9 +1055,9 @@ references one. The reference is assembled from configuration, not
 narrowed: a policy ceiling a proposal is narrowed against need not
 carry one, and step 4 of {{subset}} applies to entries derived from an
 approved entry. An authorization server that does not implement this
-section refuses a proposed or carried entry that carries
+section MUST refuse a proposed or carried entry that carries
 `resource_contract`, with the `invalid_authorization_details` error
-code, and never drops the member.
+code, and MUST NOT drop the member.
 
 **Preservation.** The reference is part of the entry, so
 `authority_hash` commits it ({{I-D.draft-mcguinness-oauth-mission}}).
@@ -1126,14 +1126,14 @@ a list, the list permits it too.
 An approved entry derived from a ceiling entry without
 `allowed_delegates` inherits the policy decision even when the approved
 proposal added a list, so the approved entry's own members do not
-reveal the obligation. The authorization server therefore records, when
-it derives the Authority Set, which approved entries inherit the policy
-decision, and retains that provenance with the Mission. It evaluates
-every later exchange against the approved entry in the Mission Record
-({{I-D.draft-mcguinness-oauth-mission}}) and that provenance, never
-against a presented token alone. Where it cannot resolve either, the
-entry narrows out of the delegated token. A cross-domain grant conveys
-no such provenance.
+reveal the obligation. The authorization server therefore MUST record,
+when it derives the Authority Set, which approved entries inherit the
+policy decision, and MUST retain that provenance with the Mission. It
+evaluates every later exchange against the approved entry in the
+Mission Record ({{I-D.draft-mcguinness-oauth-mission}}) and that
+provenance, never against a presented token alone. Where it cannot
+resolve either, the entry narrows out of the delegated token. A
+cross-domain grant conveys no such provenance.
 
 ## Matching `allowed_delegates` {#matching-allowed-delegates}
 
