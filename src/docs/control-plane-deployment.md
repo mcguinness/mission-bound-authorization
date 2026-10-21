@@ -262,9 +262,9 @@ remain #250's restore and fencing step.
 | Provider Grants, refresh tokens, authorization codes, sessions, interactions | oidc-provider's memory adapter (no adapter is configured) | Lost, and not reconstructible from the kernel: refresh continuity is not established. A recovered family whose grant is gone is refused `invalid_grant` |
 | `missions.grant_id` (the approval binding) | Kernel database | Durable, but names a provider Grant that is gone |
 | Mission-bound grant index | Its own in-memory database, deliberately off the kernel's | Lost with the grants it classifies |
-| Token issuance index | Its own in-memory database | Lost: introspection of an earlier token answers inactive |
-| Dispatch Handoff consumption records | Its own in-memory database | Lost; every earlier handoff grant is deliberately invalidated (per-boot AS keys, or the process-start floor with a key ring, PR #1299) |
-| AS signing keys | Generated per boot | Deliberately invalidated: no earlier token or record verifies. PR #1299 adds a durable key ring |
+| Token issuance index, which is also the delegation accounting (#869): each designation's and delegated token's kind, depth, actor chain, designee and designator key | Its own in-memory database, also when the kernel is file-backed | Deliberately invalidated: introspection of an earlier token answers inactive, an earlier designation is not redeemable (`invalid_request`), and no earlier token can be designated (`invalid_target`) |
+| Dispatch Handoff consumption records | Its own in-memory database | Lost, so every earlier handoff grant is deliberately invalidated: each grant's `jti` names the process that issued it, and redemption refuses a grant another process issued (`invalid_grant`), even within the same second (PR #1299) |
+| AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | A key ring file (`signingKeys: { ring }`; `MISSION_KEY_RING` in the launchers), or generated at boot (the library default; `MISSION_EPHEMERAL_KEYS=1` in the launchers, which refuse neither or both) | Durable with a key ring: each key keeps its `kid`, so an earlier token or signed record still verifies. Generated keys are deliberately invalidated: nothing earlier verifies |
 | Access tokens | Self-contained JWTs | Verify only while their signing key survives |
 | Durable grant revocations still pending | Kernel database | Attempted at boot; a revocation whose grant was lost with the provider is acknowledged with nothing left to revoke |
 | Signals receiver state: the version high-water, the cached observation, the gap and rematerialization markers, the retained SET and the seen `jti` values | The receiver's store (`ReceiverOptions.store`): in memory by default, or a file the consumer gives it. No shipped service constructs a receiver | Durable when the consumer gives the receiver a file |
@@ -273,6 +273,18 @@ oidc-provider's memory adapter is process-global, so an AS rebuilt in the
 same process still holds the previous provider's grants. A restart test that
 rebuilds in-process witnesses the kernel side only, and the provider's loss is
 emulated by destroying the grant.
+
+The delegation accounting's loss is witnessed on the file-backed kernel with a
+key ring, where every earlier token still verifies
+(`delegation-accounting-restart.test.ts`). Each refusal precedes the grant
+check, so it is the accounting's, not the provider's. A refusal counts
+nothing, and nothing counted before the restart is returned. Introspection's
+designation check loses its record too: an earlier designation answers
+inactive through its missing issuance record while its Mission is active, and
+through audience separation alone once it is not. A resource server that
+accepts the designated client's identifier, which audience separation
+forbids, is therefore shown that Mission's state, a residual that stays
+until the accounting is kept with the provider's tokens.
 
 The derivation counter and artifact issuance stay outside one transaction
 (the provider access-token hook has no acceptance boundary), and the kernel's
