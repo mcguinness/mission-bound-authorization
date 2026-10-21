@@ -121,8 +121,14 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
   requireDeclaredMappingContract(config);
   const source = config.separated_mas.state_source;
   const base = opts.mas.url.replace(/\/$/, "");
+  // A launch's cancellation abandons these reads (#818 slice 5B review).
+  const startup = opts.startup;
+  const read = (url: string): Promise<unknown> => {
+    const answer = fetch(url, startup ? { signal: startup.signal } : {}).then((r) => r.json());
+    return startup ? startup.step(answer) : answer;
+  };
   // Configured from what the MAS publishes, over HTTP.
-  const metadata = (await (await fetch(`${base}/.well-known/openid-configuration`)).json()) as {
+  const metadata = (await read(`${base}/.well-known/openid-configuration`)) as {
     issuer: string;
     jwks_uri: string;
     mission_max_stale_seconds: number;
@@ -130,7 +136,7 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
   if (metadata.issuer !== config.mission_issuer) {
     throw new Error(`the MAS at ${base} is issuer ${metadata.issuer}, not the configured Mission issuer ${config.mission_issuer}`);
   }
-  const jwks = (await (await fetch(metadata.jwks_uri)).json()) as { keys: Record<string, unknown>[] };
+  const jwks = (await read(metadata.jwks_uri)) as { keys: Record<string, unknown>[] };
   const resolverNow = opts.resolverNow ?? opts.now;
   const resolver = new MissionStatusResolver({
     issuer: metadata.issuer,
