@@ -82,6 +82,7 @@ import {
   vendorConstraintSatisfied,
   viewHoldsCommittedSet,
 } from "./policy-view.js";
+import { type DurationLeaseDomain, durationLeaseStep } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
   checkResourcePolicy,
@@ -293,6 +294,14 @@ export interface EvaluationRequest {
      * or relayed observation stays honestly stale (Finding 1).
      */
     mission_state_observation?: MissionStateObservation;
+    /**
+     * @spec metering#lease-renewal (#1440): OPTIONAL. On a duration-lease
+     * renewal, the `evaluation_id` of the permit being renewed; absent on an
+     * initial request. Typed `string` deliberately: a malformed value is
+     * refused at the lease step (./duration-lease.ts), never admitted by the
+     * type system.
+     */
+    prior_evaluation_id?: string;
     parameter_digest?: string;
     amount?: { amount: string; currency: string };
     action_class?: string;
@@ -710,6 +719,14 @@ export interface EvaluateOptions {
    * Absent, the request is still refused; nothing records it.
    */
   refusals?: PdpRefusalRecorder;
+  /**
+   * @spec metering#lease-renewal (#1440): this PDP's duration leases, bound at
+   * decision-point construction exactly as `claims` is, and for the same
+   * reason: a caller that could supply the ledger could answer for the
+   * evaluation its renewal names. Absent, no action is duration-leased and a
+   * renewal continues nothing.
+   */
+  durationLeases?: DurationLeaseDomain;
 }
 
 /**
@@ -734,10 +751,13 @@ export interface EvaluateOptions {
  *
  * @spec authzen#pdp-request consistency check 11 (#1276): so is the Refusal
  * Record path, for the reason the emitter is.
+ *
+ * @spec metering#lease-renewal (#1440): so are the duration leases, for the
+ * reason the claim domain is.
  */
 export type DecisionOptions = Omit<
   EvaluateOptions,
-  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals"
+  "evidence" | "claims" | "requester" | "consumptionStatus" | "resourcePolicy" | "refusals" | "durationLeases"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -1943,6 +1963,16 @@ async function evaluateInner(
     }
   }
 
+  // 8a. Duration lease (@spec metering#lease-renewal, #1440): a renewal that
+  // continues no activity is denied. The metering draft names no reason for
+  // it; it takes the request-fault classification ("or the request would
+  // broaden it", @spec authzen#failure-condition-coverage), since continuing
+  // another evaluation's activity would draw on a reservation this request
+  // was never issued. Run after the authority and constraint checks, like the
+  // claim step, so a caller without authority learns nothing about leases.
+  const lease = durationLeaseStep(req, opts.durationLeases, now().getTime());
+  if (lease.kind === "refused") return deny("out_of_authority");
+
   // Permit (@spec authzen#response-context permit shape). Properties
   // declared; PEP redeems. `entry_digest` (the evidence resolved-scope
   // anchor, @spec authzen#decision-evidence-object) is NOT one of the
@@ -2008,6 +2038,8 @@ async function evaluateInner(
       // satisfying candidate, so its ceiling is the latest of their window
       // ends, and none when one of them carries no end.
       ...windowCeilings,
+      // @spec metering#metering (#1440): a duration-leased permit expires with its lease.
+      ...(lease.kind === "leased" ? [lease.ceiling] : []),
     ],
   });
   if (deadline.kind === "elapsed") {
@@ -2106,6 +2138,7 @@ async function evaluateInner(
     claim.ticket = outcome.ticket;
   }
 
+  if (lease.kind === "leased") lease.commit(decisionId, deadline.validUntilMs);
   return {
     decision: true,
     context: base({
