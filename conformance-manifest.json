@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "fee4d758f2b4438117fecbf3cc360ba1cf271f6b",
-    "content_sha256": "a405edcf02d5acfed2fab4471ca151e335f63755b0d52fff10643fce4d7c3221"
+    "revision": "6ed4eaf9e43cde3366e2115d59b2ceec3cd8eed1",
+    "content_sha256": "d5f533705a555ab7f09b665bde594ff057dd7833b279369b004aea6e9187d109"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -7301,7 +7301,7 @@
    "id": "core.derivation.prose-gates-no-adjudicator",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authorization-derivation",
-   "text": "MUST NOT gate issuance on those members, whether in derivation, in an adjudicating policy, or through a model input to either",
+   "text": "MUST NOT gate issuance on those members, whether in Authority Set derivation, in an adjudicating policy, or through a model input to either",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -9446,7 +9446,7 @@
   {
    "id": "core.delegation.designation-only-subject-token",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "delegation",
+   "anchor": "delegated-exchange",
    "text": "The AS MUST refuse any other `subject_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}); an access token issued for resource access is never sufficient",
    "role": "AS",
    "strength": "MUST",
@@ -9481,7 +9481,7 @@
   {
    "id": "core.delegation.redemption-evaluated-afresh",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "delegation",
+   "anchor": "delegated-exchange",
    "text": "The AS MUST evaluate every redemption of a designation afresh, as a derivation of its own",
    "role": "AS",
    "strength": "MUST",
@@ -51661,7 +51661,7 @@
    "id": "core.error-mapping.token-exchange-dpop-nonce",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`",
+   "text": "a DPoP proof lacking the current DPoP nonce, where the authorization server requires one | `use_dpop_nonce` with a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -51683,7 +51683,7 @@
    "id": "core.error-mapping.token-exchange-dpop-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation | `invalid_dpop_proof` ({{Section 5 of RFC9449}}): the failure is not an unproven sender constraint, so the row above does not apply",
    "role": "AS",
    "strength": "stated",
    "applicability": {
