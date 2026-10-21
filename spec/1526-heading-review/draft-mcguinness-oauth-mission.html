@@ -6792,7 +6792,15 @@ its accountable assertion
 anchors, such as <code>intent_hash</code>, <code>authority_hash</code> or <code>proposal_hash</code>,
 covers it
 (<a href="#integrity-anchors" class="auto internal xref">Section 15.1</a>); a profile that commits the Mission Record
-itself covers it under that profile's own anchor. Its disclosure
+itself covers it under that profile's own anchor. Two optional
+profiles commit it (<a href="#consent-binding" class="auto internal xref">Section 20.1.1</a>). Mission Audit
+Transparency's approval-event registration
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) covers the record at
+creation except its <code>state</code> and <code>termination</code>. Approval Governance's
+Approval Context Commitment
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) covers a
+closed manifest of creation facts that includes <code>approval_basis</code>.
+Its disclosure
 through introspection follows
 <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>. It is not carried on the
 baseline <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>), and it <span class="bcp14">MUST NOT</span> be
@@ -7846,6 +7854,16 @@ the wire; an AS that does not implement it can record equivalent
 evidence out of band. Such a commitment binds the structured disclosure
 the AS records, not the presentation itself; it narrows this gap for
 audit but does not close it.<a href="#section-20.1.1-7" class="pilcrow">¶</a></p>
+<p id="section-20.1.1-8">The anchors do not commit the approval basis either: who consented,
+who activated the Mission, and under which basis (<a href="#mission-record" class="auto internal xref">Section 14</a>).
+The record's immutability protects it, and only the AS enforces that.
+A deployment that needs the approval basis checkable outside the AS
+can register the approval event under Mission Audit Transparency
+<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>, whose registration covers the
+record at creation except its <code>state</code> and <code>termination</code>, or carry the
+Approval Context Commitment of
+<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>, whose closed
+manifest includes the approval basis, in a signed artifact.<a href="#section-20.1.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="downgrade-by-omission">
@@ -11156,8 +11174,10 @@ issuer-checked Mission resolution (#725); third-party data subjects
 a <code>mission</code> claim only from an issuer it trusts for Mission-bound
 authorization, with <code>mission.issuer</code> equal to <code>iss</code> outside an
 adopted cross-domain profile; the approval rendering identifies the
-receiving client from information the AS trusts; and a refresh
-request beyond its grant is refused, never trimmed (#1503).<a href="#appendix-G-7" class="pilcrow">¶</a></p>
+receiving client from information the AS trusts; a refresh request
+beyond its grant is refused, never trimmed (#1503); and the approval
+basis named as outside the integrity anchors, with the profiles that
+commit it (#1518).<a href="#appendix-G-7" class="pilcrow">¶</a></p>
 <p id="appendix-G-8"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501, #1526), with the issuance rules

@@ -327,15 +327,16 @@ Table of Contents
    (Section 13); a resource server applies them where a rule says so.
 
    A resource value under prefix MUST NOT carry a query or fragment
-   component; the authorization server refuses such an entry with the
-   invalid_authorization_details error code (Section 5 of [RFC9396]).
+   component; the authorization server MUST refuse such an entry with
+   the invalid_authorization_details error code (Section 5 of
+   [RFC9396]).
 
    This type does not use the [RFC9396] common locations field: resource
-   identifies where an entry applies.  The authorization server refuses
-   an entry carrying locations with the invalid_authorization_details
-   error code.
+   identifies where an entry applies.  The authorization server MUST
+   refuse an entry carrying locations with the
+   invalid_authorization_details error code.
 
-   The authorization server also refuses an entry with the
+   The authorization server MUST also refuse an entry with the
    invalid_authorization_details error code when:
 
    *  its resource is not an absolute-URI (Section 4.3 of [RFC3986]), so
@@ -344,6 +345,9 @@ Table of Contents
    *  its resource is an http or https URI without the // authority form
       naming a non-empty host (Section 4.2.1 of [RFC9110], Section 4.2.2
       of [RFC9110]);
+
+   *  its resource_match is a value the authorization server does not
+      recognize (Section 3);
 
    *  its actions array is empty, or one of its values is neither an
       action identifier nor an action family (Section 3);
@@ -372,7 +376,8 @@ Table of Contents
    The following values are valid and carry a defined meaning:
 
    *  A max_depth of 0 admits the entry into no delegated token, since a
-      delegated token's delegation depth is 1 or more (Section 9).  Any
+      delegated token's delegation depth is 1 or more (the Delegation
+      Constraints section of [I-D.draft-mcguinness-oauth-mission]).  Any
       other delegation member stays intact; a member a companion profile
       defines there, such as a child-creation grant, keeps the bound
       that profile gives it.
@@ -716,12 +721,20 @@ Table of Contents
    4.  *Contract.* A carries resource_contract exactly when B does, and
        then with id, version, and digest each equal to B's (Section 8).
        Removing, replacing, or adding a reference is never narrowing.
+       The one exception is approval: where B is a policy ceiling
+       without a reference, A can carry the reference the authorization
+       server assembles from configuration before approval (Section 8),
+       since a policy ceiling need not carry one.  Derivation from an
+       approved entry has no exception: it preserves the reference
+       exactly.
 
    The equivalence in step 3 holds for comparison only: recorded entries
    and their integrity commitments are unchanged.  A key present only in
    A narrows A only when it has defined semantics and the resource
-   server serving A.resource can enforce it; an unknown key in A is
-   never treated as narrowing (Section 6).
+   server serving A.resource can enforce it.  When A carries a key whose
+   narrowing the authorization server does not implement, the
+   authorization server refuses the derivation rather than removing the
+   key or omitting the entry (Section 6).
 
    The authorization server MUST make this resource comparison with the
    same matcher, over the same URI forms, that resource servers use to
@@ -797,7 +810,8 @@ Table of Contents
    *  a client's authority proposal to the Authority Set
       ([I-D.draft-mcguinness-oauth-mission]); or
 
-   *  an Authority Set entry to a derived or delegated token
+   *  an Authority Set entry to a derived token
+      ([I-D.draft-mcguinness-oauth-mission]) or a delegated token
       (Section 9).
 
    In either case, a constraints key that the authorization server does
@@ -1191,13 +1205,10 @@ Table of Contents
 
    A superseded or retired version is never current
    ([I-D.draft-mcguinness-mission-runtime]), so no new approval
-   references one.  The reference is assembled from configuration, not
-   narrowed: a policy ceiling a proposal is narrowed against need not
-   carry one, and step 4 of Section 5 applies to entries derived from an
-   approved entry.  An authorization server that does not implement this
-   section refuses a proposed or carried entry that carries
+   references one.  An authorization server that does not implement this
+   section MUST refuse a proposed or carried entry that carries
    resource_contract, with the invalid_authorization_details error code,
-   and never drops the member.
+   and MUST NOT drop the member.
 
    *Preservation.* The reference is part of the entry, so authority_hash
    commits it ([I-D.draft-mcguinness-oauth-mission]).  Every derivation,
@@ -1269,14 +1280,14 @@ Table of Contents
    An approved entry derived from a ceiling entry without
    allowed_delegates inherits the policy decision even when the approved
    proposal added a list, so the approved entry's own members do not
-   reveal the obligation.  The authorization server therefore records,
-   when it derives the Authority Set, which approved entries inherit the
-   policy decision, and retains that provenance with the Mission.  It
-   evaluates every later exchange against the approved entry in the
-   Mission Record ([I-D.draft-mcguinness-oauth-mission]) and that
-   provenance, never against a presented token alone.  Where it cannot
-   resolve either, the entry narrows out of the delegated token.  A
-   cross-domain grant conveys no such provenance.
+   reveal the obligation.  The authorization server therefore MUST
+   record, when it derives the Authority Set, which approved entries
+   inherit the policy decision, and MUST retain that provenance with the
+   Mission.  It evaluates every later exchange against the approved
+   entry in the Mission Record ([I-D.draft-mcguinness-oauth-mission])
+   and that provenance, never against a presented token alone.  Where it
+   cannot resolve either, the entry narrows out of the delegated token.
+   A cross-domain grant conveys no such provenance.
 
 9.1.  Matching allowed_delegates
 
@@ -1410,7 +1421,8 @@ Table of Contents
       declare narrowing as true unless it implements these rules for
       every Common Constraint of Section 6.1.  The declaration does not
       require a Common Constraint registered later; an authorization
-      server fails closed on one it does not support (Section 6).
+      server that does not support one refuses any derivation that
+      carries it (Section 6).
 
    delegation: true  The delegation policy of Section 9 is fully
       defined; an entry's delegation member states its own depth and
@@ -1549,12 +1561,25 @@ Table of Contents
    that document requires for any type without a declared projection.
 
    A *resource server* conforms by implementing the enforcement duties
-   of Section 7: exact or prefix resource matching, action and action-
-   family matching, and every carried constraints key, failing closed on
-   a member, matching mode, or key it does not implement.  A resource
-   server does not implement narrowing, delegate eligibility, or the
-   Transformation Capabilities declaration; those are the authorization
-   server's and do not bear on a resource server's conformance.
+   of Section 7, failing closed on a member, matching mode, or key it
+   does not implement:
+
+   *  the operation-target duties of Section 4: establishing the target
+      from its operation contract, refusing an operation without one
+      unambiguous target, and executing the operation on the target it
+      matched;
+
+   *  exact or prefix resource matching, and action and action-family
+      matching;
+
+   *  enforcement of every carried constraints key it implements; and
+
+   *  resource_contract enforcement (Section 8).
+
+   A resource server does not implement narrowing, delegate eligibility,
+   or the Transformation Capabilities declaration; those are the
+   authorization server's and do not bear on a resource server's
+   conformance.
 
 14.  Security Considerations
 
@@ -1617,10 +1642,8 @@ Table of Contents
       after the comparison, changes which characters count as separators
       and can move the boundary (Section 4).
 
-   A deployment MAY agree out of band on the canonicalization profile
-   its authorization server and resource servers apply; this document
-   defines one rule (Section 4), so no profile identifier is required
-   for interoperation.
+   This document defines one rule (Section 4), so interoperation
+   requires no canonicalization profile identifier.
 
 14.2.  Action Family Growth
 
@@ -1640,12 +1663,31 @@ Table of Contents
 
 15.  Privacy Considerations
 
-   This document defines no data element beyond what
-   [I-D.draft-mcguinness-oauth-mission] carries in
-   authorization_details, and that document's Privacy Considerations
-   apply unchanged.  An entry's resource, actions, and constraints
-   values are as privacy-sensitive as the Authority Set that carries
-   them.
+   The Privacy Considerations of [I-D.draft-mcguinness-oauth-mission]
+   apply to every mission_resource_access entry as part of the Authority
+   Set that carries it.  Every party that receives an entry, such as the
+   client and the resource server, sees each of its members, including
+   the following data elements this type adds:
+
+   *  *Contract identifiers and versions.* A resource_contract reference
+      names a contract and the version an entry was approved under.
+      Both can identify the service a task uses, and the version can
+      date the approval.
+
+   *  *Resource and constraint values.* A resource value can name an
+      individual record or account (https://api.example/orders/123), and
+      tenant, recipient_domain, and data_classification values can
+      identify an organization, the domains a task sends to, and the
+      sensitivity of the data it touches.
+
+   *  *Delegate identifiers.* An allowed_delegates sub matcher names a
+      specific client.  A resource server receives it with the entry
+      although it can disregard delegation (Section 7).
+
+   *  *Metadata fingerprinting.* A protected resource's
+      mission_constraints_supported metadata (Section 7.1) is published,
+      and the keys it lists can fingerprint the resource's software or
+      policy.
 
 16.  IANA Considerations
 
@@ -1654,9 +1696,7 @@ Table of Contents
    mission_resource_access is an authorization_details type (Section 2
    of [RFC9396]), defined in Section 3.  [RFC9396] establishes no IANA
    registry of such types (the authorization server interprets type
-   identifiers), so this document requests no IANA action for it.  If a
-   registry of authorization details types is established in the future,
-   this type SHOULD be registered in it.
+   identifiers), so this document requests no IANA action for it.
 
 16.2.  OAuth Protected Resource Metadata Registration
 
@@ -1674,9 +1714,10 @@ Table of Contents
 
 16.3.  Common Constraints Registry
 
-   This document establishes the "Mission Common Constraints" registry.
-   The registration policy is Specification Required ([RFC8126]).  The
-   Designated Expert checks that a submission:
+   This document establishes the "Mission Common Constraints" registry
+   in the "OAuth Parameters" registry group.  The registration policy is
+   Specification Required ([RFC8126]).  The Designated Experts check
+   that a submission:
 
    *  uses a name matching ^[A-Za-z0-9_.:-]+$ that is not already
       registered;
@@ -1686,16 +1727,20 @@ Table of Contents
 
    *  states a subset rule and an intersection rule, both in value-space
       terms (Section 6.2), with the intersection of any two valid values
-      never broader than either operand; and
+      never broader than either operand;
+
+   *  names the value, if any, that is equivalent to omitting the
+      member; and
 
    *  states the input the constraint reads at the point of use and the
       predicate that input meets, in value-space terms, precisely enough
-      for independent resource servers to agree on which operations are
-      within the bound.
+      that independent resource servers, given the same declared policy
+      and authoritative inputs, agree on which operations are within the
+      bound.
 
    A specification-defined name is coordinated through this registry.
-   Any other constraints member name is either collision-resistant or
-   deployment-defined, and stays outside the registry.
+   Any other constraints member name is deployment-defined and stays
+   outside the registry.
 
    Each registration records:
 
@@ -1715,15 +1760,19 @@ Table of Contents
    *  *Predicate*: the condition the input meets when an operation is
       within the bound.
 
+   *  *Omission-Equivalent Value*: the value that is equivalent to
+      omitting the member (Section 5), or "none".
+
    *  *Change Controller*: IETF, or the registrant for any other
       registration.
 
    *  *Reference*: the specification defining the key.
 
    The registry's initial contents are the Common Constraints of
-   Section 6.1.  For each, the Change Controller is IETF and the
-   Reference is Section 6.1 of this document, which holds the full text
-   the tables summarize.
+   Section 6.1.  For each, the Change Controller is IETF, the Reference
+   is Section 6.1 of this document, which holds the full text the tables
+   summarize, and the Omission-Equivalent Value is "none", except for
+   requires_action_approval, whose Omission-Equivalent Value is false.
 
    +==========================+============+===========+==============+
    | Key Name                 | Value      | Subset    | Intersection |
@@ -1957,14 +2006,15 @@ Appendix A.  Document History
       target, the operation contract, literal exact matching, and
       normalized prefix matching; the Subset Rule; Common Constraints,
       with nine initial constraints, Value-Space Comparison, and the
-      Mission Common Constraints registry; Resource Server Enforcement
-      and the mission_constraints_supported metadata member; Resource
-      Contracts; Delegate Eligibility and allowed_delegates matching;
-      the type's scope-projection safety conditions and Transformation
-      Capabilities declaration; the authorization server and resource
-      server conformance roles; guidance for modeling tools and function
-      calls; and the Resource Boundary Canonicalization and Action
-      Family Growth considerations.
+      Mission Common Constraints registry, which records each
+      constraint's omission-equivalent value; Resource Server
+      Enforcement and the mission_constraints_supported metadata member;
+      Resource Contracts; Delegate Eligibility and allowed_delegates
+      matching; the type's scope-projection safety conditions and
+      Transformation Capabilities declaration; the authorization server
+      and resource server conformance roles; guidance for modeling tools
+      and function calls; and the Resource Boundary Canonicalization and
+      Action Family Growth considerations.
 
 Acknowledgments
 
