@@ -4788,7 +4788,11 @@ A scope-only resource server is served only where the AS established
 a safe scope projection for it ({{scope-projection}}). A Mission
 Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
-starting point is a conformance class.
+starting point is a conformance class, and neither removes a surface:
+the Mission Issuer still implements every surface {{conformance-roles}}
+lists, the evidence refusal rules included when it supports no
+evidence type, and the deployment still provides the authenticated
+revocation means of {{revocation}}.
 
 ## Conformance Roles {#conformance-roles}
 
