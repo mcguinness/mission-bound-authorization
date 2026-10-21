@@ -2991,8 +2991,9 @@ row names a type specification, it is the one for
 
 ## Remediation Grains {#remediation-grains}
 
-A denial can carry independent remediation grains, each naming a next
-step without granting anything. This document's own grain is
+A denial can carry independent remediation grains: separate
+remediation mechanisms, each naming a next step without granting
+anything. This document's own grain is
 `mission_denial` ({{rs-denials}}): which path a denial leads
 into. The three remediation grains are:
 
@@ -4415,7 +4416,8 @@ to computing an anchor and to comparing committed values:
 
 This document's default prefixed construction commits to bytes in
 three ways, and a specification defining a prefixed commitment
-classifies it as one of these species:
+classifies it as one of these species, the three forms a commitment
+can take:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
