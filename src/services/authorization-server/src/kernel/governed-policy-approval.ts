@@ -33,7 +33,7 @@
  * decide the approval.
  */
 
-import { randomBytes, verify } from "node:crypto";
+import { type KeyObject, randomBytes, verify } from "node:crypto";
 import {
   type ActivationPolicyRef,
   approvalPolicyDigest,
@@ -51,9 +51,11 @@ import { type RegisteredActivationPolicy, verifiedActivationPolicy } from "./act
 import {
   type AgrAssertion,
   type ApprovalGovernanceRecord,
+  assertAccountableApprover,
   assertGovernedPolicyRecord,
   signApprovalGovernanceRecord,
   type UnsignedApprovalGovernanceRecord,
+  verifyApprovalGovernanceRecord,
 } from "./approval-governance.js";
 import { AUTHORITY_SOURCE_TYPES, isAuthoritySourceType } from "./authority-source.js";
 import {
@@ -433,6 +435,26 @@ export function classifyHighRisk(
     const actions = new Set(classification[c] ?? []);
     return set.some((e) => e.actions.some((a) => actions.has(a)));
   });
+}
+
+/**
+ * @spec approval-governance#recency-evaluation: the strictest maximum
+ * policy-approval age that applies to a Mission carrying these high-risk
+ * classes: the default ceiling, lowered for each class to the smaller of the
+ * class's ceiling and its exception's age (an exception never lengthens the
+ * ceiling). A class with no committed exception admits no policy decision.
+ */
+function applicableRecencyMaxAge(
+  root: GovernedPolicyRoot,
+  classes: readonly HighRiskClass[],
+): { maxAgeS: number } | { missing: HighRiskClass } {
+  let maxAgeS = root.recency.ceilings.default;
+  for (const c of classes) {
+    const exception = root.recency.exceptions?.[c];
+    if (!exception) return { missing: c };
+    maxAgeS = Math.min(maxAgeS, exception.max_age_s, root.recency.ceilings[c] ?? Number.POSITIVE_INFINITY);
+  }
+  return { maxAgeS };
 }
 
 /**
@@ -1168,18 +1190,14 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
   if (approvedMs > nowMs + skewMs) {
     throw new GovernedPolicyError("approval_in_future", "the root approval instant is later than the evaluation instant");
   }
-  const classes = classifyHighRisk(final, root.classification);
-  let maxAgeS = root.recency.ceilings.default;
-  for (const c of classes) {
-    const exception = root.recency.exceptions?.[c];
-    if (!exception) {
-      throw new GovernedPolicyError(
-        "high_risk_without_exception",
-        `the Mission carries ${c} and root ${consent.root.id} commits no exception admitting a policy decision for it`,
-      );
-    }
-    maxAgeS = Math.min(maxAgeS, exception.max_age_s, root.recency.ceilings[c] ?? Number.POSITIVE_INFINITY);
+  const applicable = applicableRecencyMaxAge(root, classifyHighRisk(final, root.classification));
+  if ("missing" in applicable) {
+    throw new GovernedPolicyError(
+      "high_risk_without_exception",
+      `the Mission carries ${applicable.missing} and root ${consent.root.id} commits no exception admitting a policy decision for it`,
+    );
   }
+  const { maxAgeS } = applicable;
   if (nowMs - approvedMs > maxAgeS * 1000) {
     throw new GovernedPolicyError(
       "recency_exceeded",
@@ -1354,6 +1372,158 @@ export function recheckGovernedActivation(
   }
   const reproduced = replayed !== undefined && authorityHash(issuer, replayed as never) === mission.authority_hash;
   return { reproduced, decision };
+}
+
+/** Where a re-check stopped: the step of approval-governance#re-check that failed. */
+export type ApprovalGovernanceRecheck = { rechecked: true } | { rechecked: false; step: 1 | 2 | 3 | 4 | 5 | 6; reason: string };
+
+/**
+ * @spec approval-governance#re-check: a Relying Auditor's re-check of a
+ * committed `governed_policy` record from retained evidence, in the six steps
+ * the section gives: (1) verify the record; (2) recompute
+ * `approval_policy.digest` over the retained root snapshot; (3) where the root
+ * commits a separate evaluator, verify that evaluator's retained snapshot
+ * under its own digest; (4) obtain the recorded inputs, each bound to this
+ * approval event, the Mission's Intent and the set recorded as evaluated, with
+ * every contributing `service` assertion matching one; (5) re-run the deciding
+ * policy over them: it approves the committed Authority Set (after the
+ * retained capability resolution) and counts exactly `contributing`, which is
+ * the accountable policy assertion plus one service assertion per consulted
+ * model output; (6) re-apply recency at `evaluation.evaluated_at` to the
+ * accountable policy approval. Any missing evidence or
+ * mismatch leaves the evaluation not re-checked.
+ */
+export function recheckApprovalGovernanceRecord(
+  kernel: MissionKernel,
+  missionId: string,
+  opts: { resolveKey: (kid: string) => KeyObject | undefined },
+): ApprovalGovernanceRecheck {
+  const no = (step: 1 | 2 | 3 | 4 | 5 | 6, reason: string): ApprovalGovernanceRecheck => ({ rechecked: false, step, reason });
+  const mission = kernel.get(missionId);
+  const record = mission ? kernel.governanceRecords.forMission(missionId) : undefined;
+  if (!mission || !record) return no(1, "no committed record");
+  // Step 1: the record verifies against the Mission it is retained with.
+  try {
+    verifyApprovalGovernanceRecord(record, { resolveKey: opts.resolveKey, mission });
+  } catch (e) {
+    return no(1, (e as Error).message);
+  }
+  const activation = kernel.governedPolicyConsents.activation(missionId);
+  if (mission.approval_basis.type !== "governed_policy" || !activation) {
+    return no(4, "no recorded inputs to replay");
+  }
+  const issuer = mission.issuer;
+  // Step 2: the root snapshot reproduces the record's approval_policy.digest.
+  const rootSnapshot = kernel.governedPolicyConsents.rootSnapshot(issuer, record.approval_policy);
+  if (!rootSnapshot) return no(2, "the root snapshot the record names is not retained");
+  if (approvalPolicyDigest(issuer, rootSnapshot) !== record.approval_policy.digest) {
+    return no(2, "the retained root snapshot does not reproduce approval_policy.digest");
+  }
+  let root: GovernedPolicyRoot;
+  try {
+    root = parseGovernedPolicyRoot(rootSnapshot.content);
+  } catch {
+    return no(2, "the retained root snapshot is not a governed policy root");
+  }
+  // Step 3: the deciding policy is the root, or the evaluator it commits,
+  // verified under the evaluator's own digest.
+  let rules: GovernedPolicyRules;
+  if (root.evaluator) {
+    const ev = root.evaluator;
+    const recorded = activation.deciding;
+    if (recorded.id !== ev.id || recorded.version !== ev.version || recorded.digest !== ev.digest) {
+      return no(3, "the recorded deciding policy is not the evaluator the root commits");
+    }
+    const check = kernel.activationPolicySnapshots.verify(issuer, ev);
+    if (check.status !== "verified") return no(3, "the retained evaluator snapshot does not verify");
+    try {
+      rules = parseGovernedPolicyRules(JSON.parse(Buffer.from(check.snapshot.content).toString("utf8")), "evaluator");
+    } catch {
+      return no(3, "the retained evaluator snapshot is not a rules document");
+    }
+  } else {
+    if (activation.deciding.digest !== record.approval_policy.digest) {
+      return no(3, "the recorded deciding policy is not the root");
+    }
+    rules = root.rules as GovernedPolicyRules;
+  }
+  // Step 4: the recorded inputs are bound to this event, Intent and evaluated
+  // set, and every contributing service assertion matches one of them.
+  const inputs = activation.inputs;
+  if (activation.approval_event_id !== record.approval_event_id || inputs.intent_hash !== record.mission.intent_hash) {
+    return no(4, "the recorded inputs are not bound to this approval event and Intent");
+  }
+  const evaluatedHash = authorityHash(issuer, inputs.authority as never);
+  for (const o of inputs.model_outputs) {
+    if (
+      o.approval_event_id !== record.approval_event_id ||
+      o.intent_hash !== record.mission.intent_hash ||
+      o.authority_hash !== evaluatedHash
+    ) {
+      return no(4, "a recorded input is not bound to this approval event, Intent and evaluated set");
+    }
+  }
+  const matchesInput = (a: AgrAssertion): boolean =>
+    inputs.model_outputs.some((o) => o.model.id === a.authority.model_id && o.model.version === a.authority.model_version);
+  const contributing = new Set(record.evaluation.contributing);
+  for (const a of record.assertions) {
+    if (a.kind === "service" && contributing.has(a.assertion_id) && !matchesInput(a)) {
+      return no(4, `service assertion ${a.assertion_id} matches no recorded input`);
+    }
+  }
+  // Step 5: the replay approves the committed Authority Set and counts exactly
+  // the contributing assertions.
+  const decision = evaluateGovernedPolicyRules(rules, inputs);
+  if (decision.decision !== "approve") return no(5, "the replay does not approve");
+  let replayed: AuthorityEntry[];
+  try {
+    replayed = resolveFreshCapabilitySources(decision.authority, replayResolution(activation.capability_resolutions));
+  } catch {
+    return no(5, "the retained capability resolution does not replay");
+  }
+  if (authorityHash(issuer, replayed as never) !== mission.authority_hash) {
+    return no(5, "the replay approves a different Authority Set");
+  }
+  // The replay counts what the rules count: the consent principal's policy
+  // assertion naming the deciding policy, and one service assertion per
+  // consulted model output. The record's own assertion list sets neither.
+  let accountable: AgrAssertion;
+  try {
+    assertGovernedPolicyRecord(record, mission.approval_basis);
+    accountable = assertAccountableApprover(record, mission.approval_basis) as AgrAssertion;
+  } catch (e) {
+    return no(5, (e as Error).message);
+  }
+  const counted: AgrAssertion[] = [accountable];
+  for (const o of inputs.model_outputs) {
+    const matched = record.assertions.filter(
+      (a) =>
+        a.kind === "service" &&
+        a.decision === "approve" &&
+        a.authority.model_id === o.model.id &&
+        a.authority.model_version === o.model.version,
+    );
+    if (matched.length !== 1) return no(5, `model output ${o.model.id}@${o.model.version} has no single recorded service assertion`);
+    counted.push(matched[0] as AgrAssertion);
+  }
+  if (counted.length !== contributing.size || !counted.every((a) => contributing.has(a.assertion_id))) {
+    return no(5, "contributing is not the set the replay counts");
+  }
+  // Step 6: recency at evaluated_at, as the root declares it, for the
+  // accountable policy approval the replay counted.
+  const applicable = applicableRecencyMaxAge(root, classifyHighRisk(mission.authority_set, root.classification));
+  if ("missing" in applicable) return no(6, `the Mission carries ${applicable.missing} and the root commits no exception for it`);
+  const evaluatedMs = Date.parse(record.evaluation.evaluated_at);
+  const skewMs = root.recency.clock_skew_s * 1000;
+  const approvedMs = Date.parse(String(accountable.authority.approved_at));
+  const decidedMs = Date.parse(accountable.decided_at);
+  if (!(approvedMs <= decidedMs + skewMs && decidedMs <= evaluatedMs + skewMs)) {
+    return no(6, `assertion ${accountable.assertion_id} is out of order against evaluated_at`);
+  }
+  if (evaluatedMs - approvedMs > applicable.maxAgeS * 1000) {
+    return no(6, `assertion ${accountable.assertion_id} is older than the applicable ${applicable.maxAgeS}s maximum at evaluated_at`);
+  }
+  return { rechecked: true };
 }
 
 /**
