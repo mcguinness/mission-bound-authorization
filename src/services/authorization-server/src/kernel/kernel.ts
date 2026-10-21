@@ -146,7 +146,19 @@ import {
   committedActivationPolicy,
   type EvaluatedActivationPolicy,
 } from "./activation-policy-snapshots.js";
-import { ApprovalGovernanceRecordStore } from "./approval-governance.js";
+import { ApprovalGovernanceRecordStore, signApprovalGovernanceRecord } from "./approval-governance.js";
+import {
+  assertDirectApprovalRecord,
+  buildDirectApprovalRecord,
+  type DirectApprovalAuthentication,
+  type DirectApprovalInputs,
+  DirectApprovalRecordStore,
+  type DirectApprovalRule,
+  directApprovalRuleRef,
+  evaluateDirectApprovalRule,
+  parseDirectApprovalRule,
+  type RegisteredDirectApprovalRule,
+} from "./direct-approval-record.js";
 import {
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConsentStore,
@@ -189,6 +201,7 @@ import {
 } from "./status-list.js";
 import {
   type ApprovalBasis,
+  type ApprovalBasisDirect,
   type AuthorityEntry,
   type AuthoritySource,
   type ContainmentEventRecord,
@@ -407,6 +420,13 @@ export interface ApproveInput {
   proposedAuthority?: AuthorityEntry[];
   subject: { iss: string; sub: string };
   approver: { iss: string; sub: string };
+  /**
+   * @spec approval-governance#assertion-authority (#1470): the authentication
+   * the approval surface verified for the Approver, never anything the client
+   * sent. Read only where direct approval recording is configured, which
+   * refuses an approval without it.
+   */
+  authentication?: DirectApprovalAuthentication;
   clientId: string;
   approvalEventId: string;
   /**
@@ -637,6 +657,17 @@ export interface KernelOptions {
    */
   governedPolicyApproval?: GovernedPolicyApprovalConfig;
   /**
+   * @spec approval-governance#triggers (#1470, D597): voluntary Approval
+   * Governance Records for `direct` approvals. OPTIONAL and default off:
+   * absent, a direct approval records none. Present, every approval through
+   * {@link MissionKernel.approve} evaluates this rule again at the commit,
+   * refuses the Mission when it denies, and records the signed record, the
+   * rule snapshot and the evaluated inputs in the Mission's creation
+   * transaction. Build the rule with `directApprovalRuleFrom` from the
+   * configuration the approval surface enforces.
+   */
+  directApprovalRecording?: { rule: RegisteredDirectApprovalRule };
+  /**
    * @spec resource-access#resource-contract (#249, D553): the trusted
    * configuration "which states whether an entry's `resource` requires a
    * reference and which contract version is current for it": the contract
@@ -822,6 +853,19 @@ export class MissionKernel {
    */
   readonly governanceRecords: ApprovalGovernanceRecordStore;
   /**
+   * @spec approval-governance#approval-policy (#1470): the retained direct
+   * approval rule snapshots and the inputs each recorded direct approval
+   * evaluated. Always present, so records stay re-checkable after recording
+   * is turned off.
+   */
+  readonly directApprovalRecords: DirectApprovalRecordStore;
+  /** The configured direct approval rule, parsed, with its `approval_policy` reference. */
+  private readonly directRule?: {
+    registered: RegisteredDirectApprovalRule;
+    parsed: DirectApprovalRule;
+    ref: { id: string; version: string; digest: string };
+  };
+  /**
    * @spec approval-governance#governed-policy-root: the retained governance
    * state of the `governed_policy` basis (consented roots, human consents,
    * recorded activation inputs), on this kernel's database.
@@ -942,6 +986,16 @@ export class MissionKernel {
     if (opts.governedPolicyApproval) validateGovernedPolicyApprovalConfig(opts.governedPolicyApproval);
     this.governanceRecords = new ApprovalGovernanceRecordStore(this.db);
     this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
+    this.directApprovalRecords = new DirectApprovalRecordStore(this.db);
+    // A malformed rule refuses construction, never an approval.
+    if (opts.directApprovalRecording) {
+      const registered = opts.directApprovalRecording.rule;
+      this.directRule = {
+        registered,
+        parsed: parseDirectApprovalRule(registered.content),
+        ref: directApprovalRuleRef(opts.issuer, registered),
+      };
+    }
   }
 
   validateIntent(raw: string): MissionIntent {
@@ -1517,6 +1571,9 @@ export class MissionKernel {
       activation: { approval_event_id: input.approvalEventId },
       activation_actor: input.approver,
       root_commitment: authorityHashValue,
+      // @spec approval-governance#issuance-relationship (#1470): a recorded
+      // direct approval names its mechanism and its record.
+      ...(this.directRule ? { adjudication: { kind: "human" as const, governance_record: true as const } } : {}),
     };
     const record: MissionRecord = {
       id,
@@ -1568,8 +1625,24 @@ export class MissionKernel {
       status_list_idx: null,
       ...(ceiling ?? {}),
     };
+    // @spec approval-governance#atomic-commitment (#1470): where direct
+    // approvals are recorded, the issuer evaluates the rule, then signs, then
+    // persists the record with the Mission in one transaction; a denial or a
+    // failure creates no Mission. A repeated event returns its Mission below.
+    const governance =
+      this.directRule && !this.findByApprovalEvent(input.approvalEventId)
+        ? this.prepareDirectRecord(record, input, resolvedSource.rootId, ceiling?.authority_ceiling)
+        : undefined;
     try {
-      this.insertRecord(record, undefined, { source: resolvedSource });
+      if (governance) {
+        withTransaction(this.db, () => {
+          this.insertRecord(record, undefined, { source: resolvedSource });
+          this.directApprovalRecords.retainInCallerTx(record.id, this.opts.issuer, governance.ref, governance.rule, governance.inputs);
+          this.governanceRecords.retainInCallerTx(record.id, governance.signed);
+        });
+      } else {
+        this.insertRecord(record, undefined, { source: resolvedSource });
+      }
     } catch (e) {
       if (e instanceof UniqueViolationError) {
         // Idempotent approval: return the record this event already created.
@@ -1591,6 +1664,39 @@ export class MissionKernel {
     // `findByGrant` first, so the gap before this write refuses nothing.
     if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
     return record;
+  }
+
+  /**
+   * @spec approval-governance#atomic-commitment, approval-governance#assertion-authority
+   * (#1470): evaluate the direct approval rule over the inputs this approval
+   * presents, at the creation instant; build the record with the Approver's
+   * `human` assertion; pass the commit gate; sign. A denial refuses the
+   * approval `access_denied`.
+   */
+  private prepareDirectRecord(record: MissionRecord, input: ApproveInput, sourceRoot: string, ceiling: AuthorityEntry[] | undefined) {
+    const rule = this.directRule as NonNullable<MissionKernel["directRule"]>;
+    if (!input.authentication) {
+      throw new Error("direct approval recording needs the authentication the approval surface verified");
+    }
+    const inputs: DirectApprovalInputs = {
+      approval_event_id: record.approval_event_id,
+      intent_hash: record.intent_hash,
+      approver: input.approver,
+      subject: record.subject,
+      source_root: sourceRoot,
+      authority: record.authority_set,
+      ...(ceiling?.length ? { ceiling } : {}),
+      authentication: {
+        acr: input.authentication.acr,
+        auth_time: input.authentication.auth_time,
+        interactive: input.authentication.interactive,
+      },
+    };
+    const decision = evaluateDirectApprovalRule(rule.parsed, inputs, record.created_at);
+    if (decision.decision !== "approve") throw new IntentError("access_denied", `the direct approval rule denies: ${decision.reason}`);
+    const unsigned = buildDirectApprovalRecord(record, rule.ref, inputs);
+    assertDirectApprovalRecord(unsigned, record.approval_basis as ApprovalBasisDirect, rule.ref);
+    return { ref: rule.ref, rule: rule.registered, inputs, signed: signApprovalGovernanceRecord(unsigned, this.statusSigner()) };
   }
 
   /** Insert a full record (shared by approve, expansion, template dispatch, and

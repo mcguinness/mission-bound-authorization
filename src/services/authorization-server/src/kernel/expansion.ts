@@ -73,6 +73,12 @@ export interface ExpansionInput {
    * members carry unchanged.
    */
   ceilingReconsent?: ReconsentedCeiling;
+  /**
+   * @spec progressive#audit-linkage (#1469): the digest of the resource
+   * self-declaration this approval's adjudication evaluated, recorded on the
+   * successor.
+   */
+  resourceDeclarationDigest?: string;
 }
 
 /**
@@ -241,7 +247,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     predecessor: input.predecessorId,
     // @spec progressive#ceiling-reconsent (#1413): a chain's ceiling members
     // carry to a human-approved successor unchanged, or as re-consented.
-    ...successorCeilingMembers(predecessor, input.ceilingReconsent),
+    ...successorCeilingMembers(predecessor, input.ceilingReconsent, input.resourceDeclarationDigest),
   };
   kernel.insertRecord(record, undefined, { source: resolvedSource });
 

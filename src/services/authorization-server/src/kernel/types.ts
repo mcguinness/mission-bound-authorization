@@ -415,6 +415,12 @@ export interface ApprovalBasisDirect {
   activation_actor: { iss: string; sub: string };
   /** This Mission's own `authority_hash`. */
   root_commitment: string;
+  /**
+   * @spec approval-governance#issuance-relationship (#1470): present only
+   * where the issuer records a voluntary Approval Governance Record for this
+   * approval; a human decided it.
+   */
+  adjudication?: { kind: "human"; governance_record: true };
 }
 
 /**
@@ -756,6 +762,13 @@ export interface MissionRecord {
    * `authority_ceiling`; 0 on the chain's root Mission, whose approval consented the ceiling.
    */
   drawdown_count?: number;
+  /**
+   * @spec progressive#audit-linkage, discovery#resource-identity (#1469): the
+   * digest of the self-declaration this successor's adjudication evaluated,
+   * over the bytes the Mission Issuer retrieved. Stored with the ceiling
+   * members; on that successor only.
+   */
+  resource_declaration_digest?: string;
 }
 
 /**

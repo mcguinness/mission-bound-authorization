@@ -41,6 +41,7 @@ import { conditionDigest, entryDigest, terminalWhenOf } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import {
   type CeilingConsent,
+  type EncounterFacts,
   ceilingAdjudicationLine,
   consentCeiling,
   consentedCeilingEntries,
@@ -341,6 +342,8 @@ function migrateExpansionDeferrals(db: Database): void {
     // @spec progressive#ceiling-reconsent (#1480 review): the re-consent offer
     // the disclosure rendered, the only one an approval may consent.
     "reconsent_offer_json",
+    // @spec discovery#adjudication (#1469 stage 1): the encounter facts.
+    "encounter_json",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -375,6 +378,8 @@ export interface ExpansionDisclosure {
   predecessor: string;
   /** Why a drawdown request of a ceiling chain came to a human, when it did. */
   drawdown_fallback?: string;
+  /** @spec discovery#adjudication (#1469 stage 1): the encounter this approval decides. */
+  encounter?: EncounterFacts;
   /** The chain's outstanding restrictions, which no approval or re-consent clears. */
   restrictions: {
     /** Each contained capability (a selector, `prefix` named), with the event class that caused its containment. */
@@ -624,6 +629,8 @@ export class ExpansionDeferralStore {
      * request beyond the ceiling).
      */
     drawdownFallback?: string;
+    /** @spec discovery#adjudication (#1469 stage 1): the encounter this fresh approval decides. */
+    encounter?: EncounterFacts;
   }): DeferralPending {
     const predecessor = this.kernel.get(input.predecessorId);
     if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
@@ -677,7 +684,7 @@ export class ExpansionDeferralStore {
       }
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, drawdown_fallback_reason, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, drawdown_fallback_reason, encounter_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -692,6 +699,7 @@ export class ExpansionDeferralStore {
           plan?.plan_id ?? null,
           plan ? JSON.stringify(plan) : null,
           input.drawdownFallback ?? null,
+          input.encounter ? JSON.stringify(input.encounter) : null,
           this.now().getTime(),
         );
     }
@@ -813,10 +821,16 @@ export class ExpansionDeferralStore {
   disclosure(deferralCode: string): ExpansionDisclosure | undefined {
     const row = this.db
       .prepare(
-        "SELECT predecessor_id, intent_json, client_id, drawdown_fallback_reason FROM expansion_deferrals WHERE deferral_code = ?",
+        "SELECT predecessor_id, intent_json, client_id, drawdown_fallback_reason, encounter_json FROM expansion_deferrals WHERE deferral_code = ?",
       )
       .get(deferralCode) as
-      | { predecessor_id: string; intent_json: string; client_id: string; drawdown_fallback_reason: string | null }
+      | {
+          predecessor_id: string;
+          intent_json: string;
+          client_id: string;
+          drawdown_fallback_reason: string | null;
+          encounter_json: string | null;
+        }
       | undefined;
     if (!row) return undefined;
     const chain: MissionRecord[] = [];
@@ -848,6 +862,7 @@ export class ExpansionDeferralStore {
     const disclosure: ExpansionDisclosure = {
       predecessor: row.predecessor_id,
       ...(row.drawdown_fallback_reason ? { drawdown_fallback: row.drawdown_fallback_reason } : {}),
+      ...(row.encounter_json ? { encounter: JSON.parse(row.encounter_json) as EncounterFacts } : {}),
       restrictions: { contained, discharged },
     };
     const predecessor = chain[0];
@@ -1272,6 +1287,11 @@ export class ExpansionDeferralStore {
         ...(batch ? { successorId: batch.manifest.successor.mission_id } : {}),
         ...(row.ceiling_reconsent_json
           ? { ceilingReconsent: JSON.parse(row.ceiling_reconsent_json as string) as ReconsentedCeiling }
+          : {}),
+        // @spec progressive#audit-linkage (#1469): the digest of the declaration
+        // the encounter's adjudication evaluated, on this successor.
+        ...(row.encounter_json && (JSON.parse(row.encounter_json as string) as EncounterFacts).declaration_digest
+          ? { resourceDeclarationDigest: (JSON.parse(row.encounter_json as string) as EncounterFacts).declaration_digest as string }
           : {}),
       });
       // @spec expansion#reconciliation check 3 (#1177), in the activation
