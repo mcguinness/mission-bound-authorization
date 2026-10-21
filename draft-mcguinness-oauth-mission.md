@@ -7121,6 +7121,12 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1490), no requirement changed: a consolidation pass
+  removes duplicated explanations in Principal Model, Derivation Modes,
+  Approver Authentication Strength, Denial Responses, Remediation
+  Grains, the Introspection opening, the Mission Record, Non-Goals and
+  Derivation Policy; each removed statement remains at its home.
+
 - Editorial and structure (#1483), no requirement changed: Binding the
   Mission to the Grant and Issuance Gating open Mission-Bound Access
   Tokens, and Mission Lifecycle and Gating becomes Mission Lifecycle.
