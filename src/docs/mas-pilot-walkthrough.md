@@ -7,7 +7,7 @@ refusal with its evidence record. What the pilot is, and what each of its
 properties rests on, is [mas-pilot-deployment.md](mas-pilot-deployment.md);
 this document covers running it.
 
-Every statement here is true of the reference implementation at `0d5c76b5`
+Every statement here is true of the reference implementation at `56c86f92`
 (paths relative to `src/`). The launcher tests are
 `demo/test/mas-pilot-launcher.test.ts` (§7); its smoke tests need a live
 OpenFGA and are skipped without one, and its startup refusals always run.
@@ -415,6 +415,8 @@ the operator console, as §3 does:
   (with a control: a launch that reaches the store meets the stub, and its
   failure frees its ports);
 - `… > refuses a running MAS's address in process, and one of the address and the PDP credential without the other`;
+- `… > the separated composition refuses a MAS advertising no mission_status_endpoint, and a PDP key that is not a private JWK, before reaching OpenFGA (#1407)`;
+- `… > the MAS process refuses a Status client registration it cannot use (#1407)`;
 - `… > refuses a PDP key that is not a private JWK with a kid (#1407)`.
 
 The smoke tests bind the MAS and estate on `127.0.0.1:14858` and `14859`
