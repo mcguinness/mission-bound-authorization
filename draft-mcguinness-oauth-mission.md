@@ -6548,9 +6548,7 @@ configured mappings, and issuance limits. Its inputs include:
 - any recorded model output.
 
 The output is the Authority Set committed by `authority_hash`, and
-`policy_version` identifies the policy used. The policy is not
-transmitted; its identifier and published Intent-to-Authority-Set
-fixtures let a partner review outcomes.
+`policy_version` identifies the policy used.
 
 Reproducing an Authority Set derivation requires the same inputs and
 the retained policy and catalog versions, not just the identifier of
