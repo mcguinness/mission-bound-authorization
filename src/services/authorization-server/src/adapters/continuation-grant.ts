@@ -76,7 +76,15 @@ import {
   isValidCreationRequestId,
   normalizedScope,
 } from "../kernel/creation-idempotency.js";
-import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
+import {
+  DEFERRAL_EXPIRES_IN,
+  DEFERRAL_INTERVAL,
+  DEFERRED_GRANT_TYPE,
+  EXPANSION_DEFERRAL_PREFIX,
+  ExpansionDeferralError,
+  type ExpansionDeferralStore,
+} from "../kernel/deferred.js";
+import { requestsDeferral } from "./deferred-mission-approval.js";
 import { reconciliationStatusFor } from "../kernel/expansion.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import {
@@ -2564,7 +2572,8 @@ async function recoverChildCreation(
  * predecessor's own effective Authority Set) is REFUSED — nothing to expand;
  * ordinary token derivation already serves it. There is no synchronous exchange
  * completion: an expansion response must never ambiguously be a non-successor (#486).
- * A poll (deferral_code, no subject_token) completes a deferred expansion.
+ * The deferred grant's poll ({@link pollDeferredExpansion}) completes a
+ * deferred expansion.
  */
 export async function handleExpansionExchange(
   opts: AdapterOptions,
@@ -2573,13 +2582,11 @@ export async function handleExpansionExchange(
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
 
-  // Deferred completion (poll): a deferral_code, no subject_token. Possession and
-  // the predecessor binding were RECORDED at request time (@spec deferred-window
-  // check (b): the subject_token's expiry does NOT gate this completion).
-  const deferralCode = params.deferral_code;
-  if (typeof deferralCode === "string" && deferralCode) {
-    await pollDeferredExpansion(opts, provider, ctx, deferralCode);
-    return;
+  // @spec expansion#completion-modes (#1177): the client polls a deferred
+  // expansion with the deferred token response's deferred grant type, so a
+  // token exchange carrying a deferral_code is refused.
+  if (params.deferral_code !== undefined) {
+    throw new errors.InvalidRequest(`a deferred expansion is polled with the ${DEFERRED_GRANT_TYPE} grant type`);
   }
   // @spec mission#scope-projection — the successor's token is issued on the
   // deferral_code poll, which is where a requested `scope` narrows it; on the
@@ -2777,6 +2784,15 @@ export async function handleExpansionExchange(
     if (handled) return;
   }
 
+  // @spec expansion#completion-modes (#1177): the deferred response goes only
+  // to an exchange whose completion_mode includes `deferred`. This AS offers
+  // no interactive completion, so any other exchange is refused before a
+  // deferral is opened or an operation is reserved.
+  if (!requestsDeferral(params.completion_mode)) {
+    txError(ctx, 400, "invalid_request", "this expansion needs asynchronous approval: include deferred in completion_mode");
+    return;
+  }
+
   // Widening: a FRESH approval is required. Complete via the DTR deferred path.
   const store = opts.expansionDeferrals;
   if (!store) {
@@ -2850,16 +2866,20 @@ export async function handleExpansionExchange(
 }
 
 /**
- * @spec expansion — poll/complete a deferred expansion. Re-establishes KEY
- * possession at completion (the poller's DPoP key MUST equal the key recorded at
- * request time; @spec deferred-window check (b) re-verifies the KEY, never the
- * expired subject_token) and requires the poller to be the acting client that
- * opened the deferral. redeem() runs deferred-window check (a) (predecessor STATE +
- * containment-version delta) and CREATES the successor on approval; this handler
- * mints the successor's first token and supersedes the predecessor on that first
- * redemption.
+ * @spec expansion#completion-modes — poll/complete a deferred expansion on the
+ * deferred token response's deferred grant (#1177), which routes an
+ * expansion deferral code here. Re-establishes KEY possession at completion
+ * (the poller's DPoP key MUST equal the key recorded at request time; @spec
+ * deferred-window check (b) re-verifies the KEY, never the expired
+ * subject_token) and requires the poller to be the acting client that opened
+ * the deferral. A code issued to another client is answered as an unknown
+ * one, and a proof under another key with invalid_dpop_proof (DTR -00
+ * Sections 5.5.1 and 10.1). redeem() runs deferred-window check (a)
+ * (predecessor STATE + containment-version delta) and CREATES the successor on
+ * approval; this handler mints the successor's first token and supersedes the
+ * predecessor on that first redemption.
  */
-async function pollDeferredExpansion(
+export async function pollDeferredExpansion(
   opts: AdapterOptions,
   provider: Provider,
   ctx: KoaContextWithOIDC,
@@ -2872,8 +2892,7 @@ async function pollDeferredExpansion(
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const recordedClient = store.recordedClientId(deferralCode);
   if (recordedClient !== undefined && recordedClient !== client.clientId) {
-    txError(ctx, 400, "invalid_grant", "deferral was not opened by the polling client");
-    return;
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
   }
   // KEY possession at completion (only the KEY, never the expired subject_token).
   const proofJws = ctx.get("DPoP");
@@ -2891,7 +2910,7 @@ async function pollDeferredExpansion(
   const { jkt } = verified.proof;
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
-    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
     return;
   }
   // @spec expansion#verification-order step 4 (#1326): the poll runs no
@@ -3151,6 +3170,15 @@ async function recoverExpansion(
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
     return;
   }
+  // @spec expansion#creation-revalidation (#1177): an operation recorded in
+  // the deferred mode is recovered only for a retry that opts in again.
+  if (
+    op.delivery?.mode === "deferred" &&
+    !requestsDeferral((ctx.oidc.params as Record<string, unknown>).completion_mode)
+  ) {
+    txError(ctx, 400, "invalid_request", "a retry of a deferred expansion must include deferred in completion_mode");
+    return;
+  }
   if (op.state === "failed") {
     ctx.status = op.failure?.status ?? 400;
     ctx.body = op.failure?.body ?? { error: "invalid_request" };
@@ -3231,4 +3259,22 @@ async function recoverExpansion(
       });
     }
   }
+}
+
+/**
+ * DTR -00 Section 7.2 (#1177): an expansion deferral code is cancelled at the
+ * RFC 7009 revocation endpoint, as a Mission approval's is. The endpoint
+ * answers 200 whatever the token, so a code that is unknown, another
+ * client's, or already finished is left unchanged.
+ */
+export function cancelExpansionDeferralOnRevocation(store: ExpansionDeferralStore) {
+  return async (ctx: KoaContextWithOIDC, next: () => Promise<void>): Promise<void> => {
+    await next();
+    if (ctx.oidc?.route !== "revocation" || ctx.status !== 200) return;
+    const token = (ctx.oidc.params as Record<string, unknown> | undefined)?.token;
+    const clientId = ctx.oidc.client?.clientId;
+    if (typeof token === "string" && token.startsWith(EXPANSION_DEFERRAL_PREFIX) && clientId) {
+      store.cancel(token, clientId);
+    }
+  };
 }
