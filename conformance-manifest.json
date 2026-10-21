@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ef25d408d21f77a9704a61c791fa1e571c8807c2",
-    "content_sha256": "cd6754426346a73fa99ad1a04fcaf981aafa265c77983591748791ce0e70033c"
+    "revision": "2549e597b9b7edbdb0f07a32a1f72354881c353a",
+    "content_sha256": "436884cb457e49f2a1b7cc5801d45b2e7068299b58c02877c99d0875554d4eee"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -3208,8 +3208,116 @@
     "normative": "push carrying a Request Object plus a mission_intent outside it fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a push that carries a mission_intent outside its Request Object with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the PAR intake records a present mission_intent beside a present request before the provider drops every parameter outside the Request Object (strip_outside_jar_params), and the Request Object hook refuses it after client authentication, whether or not the object carries its own mission_intent claim; the same object pushed alone is accepted. Proved by disabling the hook's refusal: the provider strips the outer value and the push is accepted (201). A Request Object that fails one of the provider's own earlier checks (decode, algorithm, iss, aud, exp, client_id) is refused invalid_request_object first."
+  },
+  {
+   "id": "core.submission.request-object-claim-is-envelope",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "The claim's value is the Submission envelope itself, a JSON object, not its serialization",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a signed Request Object pushed through PAR whose mission_intent claim is the Submission envelope as a JSON object is accepted and approved, and the Mission it yields commits the same intent_hash as the equivalent form-encoded submission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > accepts a mission_intent claim that is the Submission envelope as a JSON object, with the intent_hash of the equivalent form submission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the provider keeps only String(value) of an object claim, so the mission_intent validator reads the claim's JSON value from the strictly re-parsed payload and substitutes its serialization for the parameter, at PAR and where the authorization endpoint reads the pushed object. Proved twice: with the validator's Request Object branch disabled the push is refused (400), and with the payload not kept at the authorization endpoint the redemption is refused invalid_request and no approval interaction starts."
+  },
+  {
+   "id": "core.submission.request-object-claim-non-object-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "the AS MUST reject with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission_intent claim in a signed Request Object whose value is a string (including the Submission envelope's own serialization), a number, a boolean, null, or an array is refused invalid_request, while the same Request Object carrying the envelope as a JSON object is accepted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a mission_intent claim whose value is a string, even the envelope's own serialization, or any other value that is not a JSON object, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > accepts a mission_intent claim that is the Submission envelope as a JSON object, with the intent_hash of the equivalent form submission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the object-claim test is the accepted control. Proved by disabling the validator's Request Object branch (the provider's String(value) is then read as a form value): the envelope's serialization as a string claim is accepted (201). Removing only the non-object refusal also fails the test, on its error_description. An array value is refused by the provider itself as a repeated parameter (lib/shared/reject_dupes.js), also invalid_request."
+  },
+  {
+   "id": "core.submission.unparseable-refusal-not-an-object",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "An AS that cannot parse `mission_intent` as a JSON object, or that parses it but finds the Submission envelope or the Intent structurally invalid against this document's member definitions, MUST refuse the request with the `invalid_request` error code",
+   "facet": "not-a-json-object",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a form-encoded mission_intent that is not JSON, or is JSON but not an object (an array, a string, including a JSON string of the Submission envelope, a number, or null), is refused invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope as the form parameter of a push (@spec mission#submission-via-par, #1503) > refuses a form mission_intent that does not parse to a JSON object, including a JSON string of the envelope, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620). This facet covers only the parse clause; the structural clause is the subject of core.submission.closed-top-levels and the Intent member rows. Proved by removing the envelope parser's non-object refusal (the values then reach the bare-Intent refusal, a different error_description) and, separately, its non-JSON refusal: the test fails on the error_description each time."
   },
   {
    "id": "core.authority-proposal.governed-client-omission-refused",
@@ -3731,8 +3839,15 @@
      "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a Request Object whose payload repeats a member name, inside the envelope or among its claims, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
-   ]
+   ],
+   "notes": "#1503 (D620): the Request Object carriage is covered at the endpoint: the provider reads a Request Object's claims with JSON.parse (last value wins), so the hook re-parses the signed payload strictly. Proved by re-parsing with JSON.parse instead: a payload repeating the envelope's intent member is accepted (201)."
   },
   {
    "id": "core.commitment.unknown-prefix",
@@ -57951,7 +58066,7 @@
      "surface": "device-authorization-endpoint"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers request_not_supported or request_uri_not_supported and the test fails."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers invalid_request_object (the test's request is unsigned; Request Objects are enabled for PAR, #1503) or request_uri_not_supported and the test fails."
   },
   {
    "id": "device-authorization.request.whole-or-refuse",
