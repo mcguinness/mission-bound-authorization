@@ -1163,8 +1163,9 @@ The carriage rules of {{submission-via-par}} apply to the proposal.
 The AS records the array on the Mission exactly as submitted and
 commits it by `proposal_hash` ({{integrity-anchors}},
 {{mission-record}}), separately from the task (`intent_hash`) and
-the grant (`authority_hash`), so a narrowed grant can be audited
-against the proposal that sought it.
+the approved Authority Set (`authority_hash`), so a narrowed
+approved Authority Set can be audited against the proposal that
+sought it.
 
 Submitting `authorization_details` without `mission_intent` is an
 ordinary {{RFC9396}} request that this document does not govern. Two
