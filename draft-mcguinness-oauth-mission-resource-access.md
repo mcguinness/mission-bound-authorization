@@ -283,8 +283,13 @@ these members:
 
   A companion profile MAY define additional `delegation` members. Such a
   member is policy, not authority ({{subset}}): a derived entry's value
-  for it MUST NOT be broader than the parent entry's, and a member the
-  authorization server does not understand is carried unchanged.
+  for it MUST NOT be broader than the parent entry's. The authorization
+  server MUST refuse an entry whose `delegation` carries a member other
+  than `max_depth` and `allowed_delegates` with the
+  `invalid_authorization_details` error code ({{Section 5 of RFC9396}}),
+  unless a companion profile it implements defines that member's
+  processing. An authorization server cannot fulfill the processing
+  obligations of a member it does not implement.
 
 `resource_contract`:
 : OPTIONAL. An object. A reference to the resource contract under which
