@@ -6411,14 +6411,12 @@ The following are out of scope for this document:
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
   Identifier lets any party holding a token correlate a Mission's
-  activity across audiences and resources. That correlation is intended:
-  it lets a resource server, a cross-domain Resource AS, and an auditor
-  bind evidence to one approved Mission. `authority_hash` is not part of
-  that baseline correlation surface: it stays on the Mission Record and
-  the audit and profile surfaces that carry it by disclosure privilege
-  ({{mission-claim}}), not on every token by default. Pairwise or
-  unlinkable presentation of Mission-bound authority works against the
-  identifier and is therefore future work
+  activity across audiences and resources. `authority_hash` is not
+  part of that baseline correlation surface: it stays on the Mission
+  Record and the audit and profile surfaces that carry it by
+  disclosure privilege ({{mission-claim}}), not on every token by
+  default. Pairwise or unlinkable presentation of Mission-bound
+  authority works against the identifier and is therefore future work
   ({{mission-identifier-correlation}}).
 
 ## The `client_id` Claim in Delegated Tokens {#client-id-rebinding}
