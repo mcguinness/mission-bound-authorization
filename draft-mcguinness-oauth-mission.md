@@ -1266,7 +1266,11 @@ Mission Intent Submission Evidence for OAuth 2.0
 
 ## Submission Processing Order {#submission-processing}
 
-The AS processes a submission in this order:
+The AS processes a submission in the following order. Steps 1 to 6
+run when the submission arrives; step 7 can run provisionally then
+and is complete before the approval rendering
+({{derivation-modes}}); step 8 belongs to the approval event, and
+step 9 to activation.
 
 1. Parse the Submission envelope and enforce both closed top levels
    ({{submission-via-par}}).
