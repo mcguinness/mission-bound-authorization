@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-20T23:53:11Z
-Source repository commit: 268ca49d854cef06b69acba7a0af419e84c72dac
+Generated: 2026-10-21T00:25:09Z
+Source repository commit: 43822e1f7586a6ce39f85180edc189ca56e45fad
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           20 October 2026
-Expires: 23 April 2027
+Intended status: Informational                           21 October 2026
+Expires: 24 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -5866,8 +5866,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                      Mission Substrate Requirements
@@ -5925,7 +5925,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -7466,8 +7466,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7528,7 +7528,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -8530,13 +8530,25 @@ Table of Contents
       MUST NOT issue a token for that resource outside a Mission, except
       under documented policy exceptions.
 
-   *  If a client registered as Mission-governed sends an
-      authorization_details request that carries no mission_intent, the
-      AS MUST reject the request with the invalid_request error code, so
-      the client cannot drop the Intent from a request that still
-      carries authorization_details.  A request carrying neither is an
-      ordinary request that this rule does not reach; designation is
-      what keeps a resource's tokens inside a Mission.
+   *  If a client registered as Mission-governed sends an authorization
+      request, through PAR or at the authorization endpoint, that
+      carries authorization_details but no mission_intent, the AS MUST
+      reject the request with the invalid_request error code, so the
+      client cannot drop the Intent from a request that still carries
+      authorization_details.  The rule applies to that request until it
+      completes, including when the AS resumes it after an interaction.
+      A request carrying neither is an ordinary request that this rule
+      does not reach; designation is what keeps a resource's tokens
+      inside a Mission.
+
+   A token request under an existing Mission-bound grant, such as a
+   narrowing refresh, a self-exchange (Section 12.3) or an exchange for
+   a delegation designation (Section 12.1), needs no mission_intent
+   under the second rule.  This exception opens no Mission submission
+   carriage, and every other check still applies to the request:
+   Issuance Gating (Section 7.2), the subset rule (Section 5.4), the
+   first rule above, and the grant's binding to its Mission, client and
+   sender.
 
    The following is an example of an authority proposal submitted
    alongside the example Intent of Section 4.  Derivation narrows
@@ -10480,12 +10492,6 @@ Table of Contents
    | (Section 4.4), or a required    |                                 |
    | evidence type absent            |                                 |
    +---------------------------------+---------------------------------+
-   | Request from a client           | invalid_request                 |
-   | registered as Mission-          | (Section 4.1.2.1 of [RFC6749],  |
-   | governed:                       | Section 5.2 of [RFC6749]).      |
-   | authorization_details without   | Detail: safe error_description  |
-   | mission_intent (Section 4.3)    |                                 |
-   +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: invalid, unknown, or   | [RFC8707]).  Detail: safe       |
    | malformed actual RFC 8707       | error_description               |
@@ -10565,6 +10571,12 @@ Table of Contents
    | is not among the Intent's         | error_description             |
    | target_resources                  |                               |
    | (Section 4.3)                     |                               |
+   +-----------------------------------+-------------------------------+
+   | PAR or authorization request      | invalid_request               |
+   | from a client registered as       | (Section 4.1.2.1 of           |
+   | Mission-governed:                 | [RFC6749], Section 5.2 of     |
+   | authorization_details without     | [RFC6749]).  Detail: safe     |
+   | mission_intent (Section 4.3)      | error_description             |
    +-----------------------------------+-------------------------------+
    | Authorization request: scope      | invalid_scope                 |
    | includes openid and the           | (Section 4.1.2.1 of           |
@@ -12498,8 +12510,8 @@ Table of Contents
    Mission-governed.  Rules on three sides address this downgrade:
 
    *  *Issuance.* The rules of Section 4.3 keep such a resource's tokens
-      inside a Mission and refuse such a client's authorization_details
-      request that omits the Intent.
+      inside a Mission and refuse such a client's authorization request
+      that carries authorization_details but omits the Intent.
 
    *  *Client.* A client holding a Mission Intent does not fall back to
       an ordinary request where Mission support is not established, and
@@ -15059,6 +15071,14 @@ Appendix G.  Document History
 
    -01
 
+   *  Authority Proposal (#1448, D585): the Mission-governed client rule
+      reaches an authorization request, through PAR or at the
+      authorization endpoint, including a resumed one.  A token request
+      under an existing Mission-bound grant needs no mission_intent
+      under it, and every other check still applies.  Its Error and
+      Challenge Mapping row moves to the PAR and authorization endpoint
+      table.
+
    *  Submission processing (#1411, D559): Submission Processing Order
       validates an authority proposal's type, schema, and
       target_resources membership after the Intent and before evidence,
@@ -16002,8 +16022,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16056,7 +16076,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -18325,8 +18345,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18385,7 +18405,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -23307,8 +23327,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                         Mission Runtime Evidence
@@ -23358,7 +23378,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -26228,8 +26248,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -26285,7 +26305,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -29804,8 +29824,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -29857,7 +29877,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
@@ -31829,8 +31849,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         20 October 2026
-Expires: 23 April 2027
+Intended status: Standards Track                         21 October 2026
+Expires: 24 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -31885,7 +31905,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 April 2027.
+   This Internet-Draft will expire on 24 April 2027.
 
 Copyright Notice
 
