@@ -683,7 +683,7 @@ An ERP that instead introspects on every request stops honoring the
 token on its next request after revocation, through the composite
 `active` result ({{composite-active}}).
 
-The later message examples use Appendix A's separate Q3
+The later message examples use the end-to-end example's separate Q3
 reconciliation Mission ({{e2e-example}}), whose approved authority
 includes invoice reads and bounded journal writes. Its identifiers and
 timeline differ from this introductory example.
