@@ -320,7 +320,14 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
-import { ceilingConsentOf, consentedCeilingEntries, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
+import {
+  type CeilingConsent,
+  ceilingAdjudicationLine,
+  ceilingConsentOf,
+  consentedCeilingEntries,
+  consentsOffer,
+  type ProgressiveDrawdownOptions,
+} from "../kernel/progressive.js";
 import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
 import {
   committedPerChildMaximum,
@@ -3430,6 +3437,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         asyncDelegation: opts.familyStore !== undefined,
         progressive: opts.progressive !== undefined,
       });
+      // @spec progressive#progressive-authorization (#1017): the ceiling this
+      // deployment's approval surface offers, rendered for the Approver; the
+      // decision consents only exactly this offer. A device approval offers
+      // none (#1256).
+      const ceilingOffer =
+        !deviceJti && opts.progressive?.ceilingOffer
+          ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
+          : undefined;
+      // The decision is bound to this rendering, never to an offer computed afresh.
+      retainRenderedOffer(provider, interactionMatch[1] as string, ceilingOffer, details.exp);
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.body = renderApprovalPage(
@@ -3447,6 +3464,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             }
           : undefined,
         derivation,
+        ceilingOffer,
       );
       return;
     }
@@ -5414,6 +5432,20 @@ async function decide(
       throw e;
     }
   }
+  // @spec progressive#progressive-authorization (#1017): the consent disclosure
+  // renders the ceiling, so the decision consents only exactly the ceiling and
+  // drawdown policy this interaction's approval page rendered, as retained at
+  // that rendering. With no rendering there is nothing to consent.
+  if (ceiling) {
+    const offered = !deviceJti ? renderedOffer(provider, details.uid) : undefined;
+    if (!consentsOffer(ceiling, offered)) {
+      await finish({
+        error: "invalid_request",
+        error_description: "the decision consents a ceiling the approval page did not render",
+      });
+      return;
+    }
+  }
 
   // @spec mission#approval-authentication (#826, D425): the published
   // approval-authentication floor over the complete derived Authority Set,
@@ -5838,6 +5870,34 @@ function undisclosedChildGrant(
   return undefined;
 }
 
+/**
+ * @spec progressive#progressive-authorization (#1017): the ceiling offer each
+ * approval page rendered, by interaction, until the interaction expires. A
+ * later rendering of the same interaction replaces it; one that offers none
+ * withdraws it.
+ */
+const renderedCeilingOffers = new WeakMap<Provider, Map<string, { offer: CeilingConsent; expiresAt: number }>>();
+
+function retainRenderedOffer(provider: Provider, uid: string, offer: CeilingConsent | undefined, exp: number | undefined): void {
+  let byUid = renderedCeilingOffers.get(provider);
+  if (!byUid) {
+    byUid = new Map();
+    renderedCeilingOffers.set(provider, byUid);
+  }
+  const now = Date.now();
+  for (const [key, held] of byUid) if (held.expiresAt <= now) byUid.delete(key);
+  if (!offer) {
+    byUid.delete(uid);
+    return;
+  }
+  byUid.set(uid, { offer, expiresAt: typeof exp === "number" ? exp * 1000 : now + 3_600_000 });
+}
+
+function renderedOffer(provider: Provider, uid: string): CeilingConsent | undefined {
+  const held = renderedCeilingOffers.get(provider)?.get(uid);
+  return held && held.expiresAt > Date.now() ? held.offer : undefined;
+}
+
 function renderLines(lines: readonly string[], cls: string): string {
   return `<ul class="${cls}">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
 }
@@ -5852,6 +5912,8 @@ function renderApprovalPage(
   /** @spec device-authorization#approval: the verification user agent's additions. */
   device?: { userCode: string; client: DeviceClientView; subject: string },
   derivation?: ApprovalDerivationRendering,
+  /** @spec progressive#progressive-authorization: the ceiling the approval surface offers. */
+  ceiling?: CeilingConsent,
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -5920,8 +5982,21 @@ ${derivation.children
   .join("\n")}
 `
     : ""
-}${derivation.progressive ? `<h2>Authority ceiling</h2><p class="progressive-inheritance">${escapeHtml(derivation.progressive)}</p>\n` : ""}`
+}`
     : "";
+  // @spec progressive#progressive-authorization (#1017): the offered ceiling
+  // itself and the fact that in-ceiling expansion is policy-adjudicated; with
+  // no offer, only the derivation inheritance a ceiling consent would carry.
+  const inheritance = derivation?.progressive
+    ? `<p class="progressive-inheritance">${escapeHtml(derivation.progressive)}</p>\n`
+    : "";
+  const ceilingSection = ceiling
+    ? `<h2>Authority ceiling</h2><pre class="authority-ceiling">${escapeHtml(JSON.stringify(ceiling.authority_ceiling, null, 2))}</pre>
+<p class="ceiling-adjudication">${escapeHtml(ceilingAdjudicationLine(ceiling))}</p>
+${inheritance}`
+    : inheritance
+      ? `<h2>Authority ceiling</h2>${inheritance}`
+      : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
 ${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
@@ -5929,7 +6004,7 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-${limitNotice}${derivationSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 ${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }

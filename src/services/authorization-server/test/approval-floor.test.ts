@@ -92,6 +92,9 @@ const PROGRESSIVE_DEPLOYMENT = {
       "payments:payment.execute": "irreversible_action",
       "payments:remittance.send": "external_commitment",
     },
+    // The approval surface offers the payments ceiling under drawdown-std; a
+    // decision may consent only exactly what the page rendered (#1017).
+    ceilingOffer: () => CEILING_CONSENT,
   },
   activationPolicies: {
     "drawdown-std": {
@@ -229,6 +232,8 @@ async function authorize(
     keep(jar, res);
     let location = res.headers.get("location") ?? "";
     const uid = location.split("/interaction/")[1] as string;
+    // The Approver sees the page, which retains the ceiling it offers (#1017).
+    if (args.ceiling) await fetch(`${s.issuer}/interaction/${uid}`, { headers: { cookie: cookieOf(jar) } });
     const headers =
       "browser" in args.approval
         ? browserApprovalHeaders(s.sessions, uid, args.approval.browser, cookieOf(jar))
