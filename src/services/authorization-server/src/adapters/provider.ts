@@ -5519,6 +5519,10 @@ async function decide(
     ...(submissionEvidence?.length ? { submissionEvidence } : {}),
     subject: { iss: opts.issuer, sub: subject },
     approver: { iss: opts.issuer, sub: approver },
+    // @spec approval-governance#assertion-authority (#1470): the approval
+    // surface's verified authentication, read where direct approvals are
+    // recorded; never the request's acr_values or max_age.
+    authentication: { acr: principal.acr, auth_time: principal.auth_time, interactive },
     clientId: String(params.client_id),
     approvalEventId,
   };

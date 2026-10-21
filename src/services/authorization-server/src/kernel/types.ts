@@ -412,6 +412,12 @@ export interface ApprovalBasisDirect {
   activation_actor: { iss: string; sub: string };
   /** This Mission's own `authority_hash`. */
   root_commitment: string;
+  /**
+   * @spec approval-governance#issuance-relationship (#1470): present only
+   * where the issuer records a voluntary Approval Governance Record for this
+   * approval; a human decided it.
+   */
+  adjudication?: { kind: "human"; governance_record: true };
 }
 
 /**

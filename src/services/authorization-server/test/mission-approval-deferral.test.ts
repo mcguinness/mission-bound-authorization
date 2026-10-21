@@ -1,10 +1,12 @@
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { APPROVAL_FLOOR, DERIVATION_POLICY, WRITE_ACTIONS } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type AuthorityEntry,
   type AuthoritySourceCatalog,
+  directApprovalRuleFrom,
   type GovernedPolicyRoot,
+  recheckApprovalGovernanceRecord,
   DELIVERY_CLAIM_STALE_S,
   MissionApprovalDeferralError,
   MissionApprovalDeferralStore,
@@ -96,6 +98,7 @@ const held = (doc: GovernedPolicyRoot): RegisteredActivationPolicy => ({
 const setup = (
   roots: Record<string, GovernedPolicyRoot> = { "urn:root:reconciler": rootDoc() },
   opts: MissionApprovalDeferralOptions = {},
+  kernelOpts: Partial<ConstructorParameters<typeof MissionKernel>[0]> = {},
 ) => {
   const kernel = new MissionKernel({
     issuer: ISS,
@@ -108,6 +111,7 @@ const setup = (
       approvers: Object.fromEntries(Object.keys(roots).map((id) => [id, ["dana"]])),
     },
     now,
+    ...kernelOpts,
   });
   const consents = Object.keys(roots).map((id) =>
     recordGovernedPolicyConsent(kernel, {
@@ -194,6 +198,28 @@ describe("deferred approval policy completion (@spec deferred-approval#policy-co
     expect(await store.completeByPolicy(code)).toEqual({ outcome: "not_pending", state: "approved" });
     expect(kernel.allMissions()).toHaveLength(1);
     expect(kernel.governanceRecords.count()).toBe(0);
+  });
+
+  it("records a reviewer's direct approval where the deployment records direct approvals, and refuses one without the reviewer's authentication (@spec approval-governance#atomic-commitment, #1470)", () => {
+    const rule = directApprovalRuleFrom({
+      floor: APPROVAL_FLOOR,
+      knownSubjects: new Set(["svc-reconciler"]),
+      approverApprovesFor: new Map([["dana", new Set(["svc-reconciler"])]]),
+      approverRoleSubs: new Set(["dana"]),
+      writeActions: WRITE_ACTIONS,
+    });
+    const { kernel, store } = setup(undefined, {}, { directApprovalRecording: { rule } });
+    const code = open(store);
+    expect(() => store.approveDirect(code, { approver: DANA, subject: SUBJECT })).toThrow(/needs the authentication the approval surface verified/);
+    expect(kernel.allMissions()).toHaveLength(0);
+    expect(kernel.governanceRecords.count()).toBe(0);
+    expect(store.state(code)).toBe("pending");
+    const authentication = { acr: "mfa", auth_time: Math.floor(clockMs / 1000) - 10, interactive: true };
+    const mission = store.approveDirect(code, { approver: DANA, subject: SUBJECT, authentication });
+    expect(kernel.governanceRecords.forMission(mission.id)?.assertions).toEqual([
+      expect.objectContaining({ kind: "human", principal: DANA, authority: { auth_time: new Date(authentication.auth_time * 1000).toISOString(), acr: "mfa" } }),
+    ]);
+    expect(recheckApprovalGovernanceRecord(kernel, mission.id, { resolveKey: () => kernel.statusVerificationKey() })).toEqual({ rechecked: true });
   });
 
   it("resolves retried and concurrent completions of one pending approval to one Mission and one record", async () => {

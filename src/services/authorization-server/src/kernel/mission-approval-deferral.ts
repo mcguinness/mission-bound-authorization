@@ -30,6 +30,7 @@ import { randomBytes } from "node:crypto";
 import { withTransaction, type Database } from "@mission/store";
 import type { ApprovalGovernanceRecord } from "./approval-governance.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, type DeferralPending, type DeferralSlowDown } from "./deferred.js";
+import type { DirectApprovalAuthentication } from "./direct-approval-record.js";
 import {
   activateGovernedPolicy,
   eligibleGovernedPolicyConsents,
@@ -479,6 +480,8 @@ export class MissionApprovalDeferralStore {
       approver: { iss: string; sub: string };
       subject: { iss: string; sub: string };
       submissionEvidence?: IntentSubmissionEvidenceFact[];
+      /** The reviewer's verified authentication, which a recorded direct approval needs (#1470). */
+      authentication?: DirectApprovalAuthentication;
     },
   ): MissionRecord {
     const row = this.row(code);
@@ -508,6 +511,7 @@ export class MissionApprovalDeferralStore {
         clientId: current.client_id,
         approvalEventId: current.approval_event_id,
         ...(input.submissionEvidence?.length ? { submissionEvidence: input.submissionEvidence } : {}),
+        ...(input.authentication ? { authentication: input.authentication } : {}),
       });
       if (mission.approval_basis.type !== "direct") {
         throw new MissionApprovalDeferralError("not_pending", "this approval event already committed another basis");
