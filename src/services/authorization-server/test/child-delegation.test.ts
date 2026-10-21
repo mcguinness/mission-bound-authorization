@@ -12,13 +12,14 @@ import {
   childMissionClaim,
   createChildMission,
   GateError,
+  isSubsetEntry,
   isSubsetSet,
   type LifecycleCommit,
   MissionKernel,
   type MissionRecord,
   validateMissionIntent,
 } from "../src/index.js";
-import { presentedTokenChildRefusal } from "../src/kernel/child-delegation.js";
+import { inheritActionApprovalRequirement, presentedTokenChildRefusal } from "../src/kernel/child-delegation.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -1183,6 +1184,25 @@ describe("requires_action_approval Common Constraint (@spec txn-authorization#ap
   it("accepts a candidate that adds the requirement the grant does not carry", () => {
     const parent = approveParent();
     expect(isSubsetSet(gated(["payments:invoice.read"]), parent.authority_set)).toBe(true);
+  });
+
+  it("normalizes a child entry beneath a prefix ancestor entry carrying the requirement, through the shared matcher, and leaves a sibling outside the boundary alone (#1440)", () => {
+    const at = (resource: string, resource_match?: "prefix", requires?: true): AuthorityEntry => ({
+      type: "mission_resource_access",
+      resource,
+      ...(resource_match ? { resource_match } : {}),
+      actions: ["payments:invoice.read"],
+      ...(requires ? { constraints: { requires_action_approval: true } } : {}),
+    });
+    const ancestor = at(`${RESOURCE}/invoices`, "prefix", true);
+    const [finer, nested, sibling] = inheritActionApprovalRequirement(
+      [at(`${RESOURCE}/invoices/inv-1`), at(`${RESOURCE}/invoices/2026`, "prefix"), at(`${RESOURCE}/invoices-archive`)],
+      [ancestor],
+    );
+    expect(finer?.constraints?.requires_action_approval).toBe(true);
+    expect(nested?.constraints?.requires_action_approval).toBe(true);
+    expect(isSubsetEntry(finer as AuthorityEntry, ancestor)).toBe(true);
+    expect(sibling?.constraints?.requires_action_approval).toBeUndefined();
   });
 });
 

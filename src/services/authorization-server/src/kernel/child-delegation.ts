@@ -28,7 +28,7 @@
 
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
-import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
+import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash, resourceWithin } from "@mission/core";
 import { verifiedActivationPolicy } from "./activation-policy.js";
 import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
@@ -183,7 +183,10 @@ export function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefin
  * it on. Run BEFORE the strict-subset proof, so a delegated leaf that simply
  * omits the member is NORMALIZED (and therefore still challenged and enforced
  * at the resource) rather than refused: the constraint is monotonic, `false` is
- * equivalent to omission, and a child can only ever add it.
+ * equivalent to omission, and a child can only ever add it. An ancestor entry
+ * applies when its resource set contains the child entry's, through the shared
+ * matcher ({@link resourceWithin}, #1440), so a finer child entry beneath a
+ * `prefix` ancestor entry is normalized too.
  */
 export function inheritActionApprovalRequirement(
   childAuthority: AuthorityEntry[],
@@ -192,7 +195,7 @@ export function inheritActionApprovalRequirement(
   return childAuthority.map((entry) => {
     if (entry.constraints?.requires_action_approval === true) return entry;
     const required = parentEffective.some(
-      (p) => p.resource === entry.resource && p.constraints?.requires_action_approval === true,
+      (p) => resourceWithin(entry, p) && p.constraints?.requires_action_approval === true,
     );
     if (!required) return entry;
     return { ...entry, constraints: { ...entry.constraints, requires_action_approval: true } };

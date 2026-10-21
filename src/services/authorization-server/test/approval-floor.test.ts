@@ -492,6 +492,48 @@ describe("evaluateApprovalFloor guards the achieved context (@spec mission#appro
   });
 });
 
+describe("evaluateApprovalFloor classifies through the shared matcher (@spec mission#approval-authentication, resource-access#subset, #1440)", () => {
+  const t = 2_000_000_000;
+  const SERVICE = "https://erp.example.com";
+  const ADMIN = `${SERVICE}/admin`;
+  const policy: ApprovalFloorPolicy = {
+    ...APPROVAL_FLOOR,
+    classification: [
+      { type: "mission_resource_access", resource: SERVICE, actions: { "erp:read": "consequential_read", "erp:close": "consequential_read" } },
+      { type: "mission_resource_access", resource: ADMIN, actions: { "erp:read": "consequential_read", "erp:close": "privileged_administration" } },
+    ],
+  };
+  const at = (resource: string, actions: string[], resource_match?: "prefix"): AuthorityEntry[] => [
+    { type: "mission_resource_access", resource, ...(resource_match ? { resource_match } : {}), actions },
+  ];
+  const headless = { interactive: false, nowSeconds: t };
+
+  it("an entry beneath a classified service is classified by it; a prefix entry reaching a finer classified resource meets that classification too; one no classification contains, or a sibling sharing its characters, is unclassified", () => {
+    // Exact and prefix descendants of the service root: the root's low-risk class.
+    expect(evaluateApprovalFloor(policy, at(`${SERVICE}/invoices/inv-1`, ["erp:read"]), {}, headless)).toEqual({ outcome: "not_applicable" });
+    expect(evaluateApprovalFloor(policy, at(`${SERVICE}/invoices`, ["erp:close"], "prefix"), {}, headless)).toEqual({ outcome: "not_applicable" });
+    // A prefix entry at the service root reaches the admin tree, whose class invokes the floor.
+    expect(evaluateApprovalFloor(policy, at(SERVICE, ["erp:close"], "prefix"), {}, headless).outcome).toBe("refused");
+    expect(evaluateApprovalFloor(policy, at(SERVICE, ["erp:close"], "prefix"), { acr: "mfa", auth_time: t - 10 }, { interactive: true, nowSeconds: t })).toEqual({
+      outcome: "satisfied",
+      floors: ["high-risk-authority"],
+    });
+    // Beneath the admin tree, the admin classification applies as well as the root's.
+    expect(evaluateApprovalFloor(policy, at(`${ADMIN}/users`, ["erp:close"]), {}, headless).outcome).toBe("refused");
+    // A host sharing the service's characters, and a prefix entry broader than
+    // the only classification of its host, are unclassified.
+    const adminOnly: ApprovalFloorPolicy = { ...policy, classification: [policy.classification[1] as ApprovalFloorPolicy["classification"][number]] };
+    for (const [p, entry] of [
+      [policy, at("https://erp.example.com.evil/invoices", ["erp:read"])],
+      [adminOnly, at(SERVICE, ["erp:read"], "prefix")],
+    ] as const) {
+      const out = evaluateApprovalFloor(p, entry, {}, headless);
+      expect(out.outcome, entry[0]?.resource).toBe("refused");
+      expect(out.outcome === "refused" ? out.reason : "", entry[0]?.resource).toMatch(/unclassified authority is refused/);
+    }
+  });
+});
+
 describe("the published floor policy loads strictly (@spec mission#approval-authentication, #826, D425)", () => {
   const valid = {
     policy_id: "p",

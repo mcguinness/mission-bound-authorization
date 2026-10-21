@@ -23,8 +23,34 @@
  * consumption bound, so no derived entry can carry one to classify.
  */
 
-import type { ApprovalFloorPolicy } from "@mission/demo-data";
+import { entryOverlapsResource, resourceWithin } from "@mission/core";
+import type { ApprovalFloorClassification, ApprovalFloorPolicy } from "@mission/demo-data";
 import type { AuthorityEntry } from "./types.js";
+
+/**
+ * @spec resource-access#subset, resource-access#resource-matching (#1440): the
+ * classifications that apply to one derived entry, through the shared
+ * matcher. A classification names a service identifier and classifies the
+ * resource tree rooted there. An entry is classified only when one
+ * classification contains its whole resource set: the entry is within the
+ * classification's resource read as a `prefix` base, or, for an identifier
+ * that is not a `//` base, names it exactly ({@link resourceWithin}). Every
+ * classification whose tree overlaps the entry ({@link entryOverlapsResource})
+ * then applies, so a `prefix` entry that reaches a finer classified resource
+ * meets that classification as well. Undefined when no classification
+ * contains the entry: its authority is unclassified.
+ */
+function classificationsFor(
+  policy: ApprovalFloorPolicy,
+  entry: AuthorityEntry,
+): ApprovalFloorClassification[] | undefined {
+  const sameType = policy.classification.filter((c) => c.type === entry.type);
+  const contains = (c: ApprovalFloorClassification) =>
+    resourceWithin(entry, { resource: c.resource, resource_match: "prefix" }) ||
+    resourceWithin(entry, { resource: c.resource });
+  if (!sameType.some(contains)) return undefined;
+  return sameType.filter((c) => entryOverlapsResource(entry, c.resource));
+}
 
 /** The achieved authentication context the approval surface supplied. */
 export interface AchievedApproverContext {
@@ -52,17 +78,23 @@ export function evaluateApprovalFloor(
 ): ApprovalFloorOutcome {
   const invoked = new Set<string>();
   for (const entry of derived) {
-    const classes = policy.classification.find((c) => c.type === entry.type && c.resource === entry.resource);
+    const applicable = classificationsFor(policy, entry) ?? [];
     for (const action of entry.actions) {
-      const cls = classes && Object.hasOwn(classes.actions, action) ? classes.actions[action] : undefined;
-      if (cls === undefined) {
+      // Every applicable classification must name the action, and each class
+      // it names invokes its floors: two classes for one action both bind
+      // (the floors are conjunctive), and a classification silent on it
+      // leaves that part of the entry's authority unclassified.
+      const classes = applicable.map((c) => (Object.hasOwn(c.actions, action) ? c.actions[action] : undefined));
+      if (classes.length === 0 || classes.includes(undefined)) {
         return {
           outcome: "refused",
           reason: `the approval-authentication floor's classification does not name ${action} at ${entry.resource}; unclassified authority is refused`,
         };
       }
-      for (const floor of policy.floors) {
-        if (floor.applies_to.includes(cls)) invoked.add(floor.id);
+      for (const cls of classes) {
+        for (const floor of policy.floors) {
+          if (cls !== undefined && floor.applies_to.includes(cls)) invoked.add(floor.id);
+        }
       }
     }
   }

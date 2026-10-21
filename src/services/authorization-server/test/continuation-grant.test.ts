@@ -23,7 +23,8 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { prefixAdmits } from "@mission/core";
+import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
@@ -1919,5 +1920,74 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
         buildAuthorizationServer({ issuer: "http://localhost:14479", continuationHopLimit }),
       ).rejects.toThrow(/continuationHopLimit/);
     }
+  });
+});
+
+/**
+ * @spec id-continuation-assertion, resource-access#resource-matching (#1440):
+ * each requested resource is authorized, and the grant carries the entries
+ * for it, by the overlap of an entry's resource tree with it through the
+ * shared matcher. A deployment whose payments read ceiling entry is `prefix`
+ * and whose Resource AS serves the payments service's whole tree lets a
+ * Mission hold an entry finer than the requested resource.
+ */
+describe("continuation pairs entries with requested resources through the shared matcher (@spec id-continuation-assertion, resource-access#resource-matching, #1440)", () => {
+  const PORT4 = 14482;
+  const ISSUER4 = `http://localhost:${PORT4}`;
+  const ACT4 = { iss: ISSUER4, sub: "ap-agent" };
+  const INV1 = `${RESOURCE}/invoices/inv-1`;
+  const PREFIX_CEILING = DERIVATION_POLICY.ceiling.map((e, i) => (i === 0 ? { ...e, resource_match: "prefix" as const } : e));
+  let as4: BuiltAs;
+  let server4: Server;
+  let target4: Target;
+
+  beforeAll(async () => {
+    const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
+    as4 = await buildAuthorizationServer({
+      issuer: ISSUER4,
+      allowHeadlessAdjudication: true,
+      continuationAssertionIssuers: [{ iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER4, RAS_AUD] }],
+      resourceToAs: (r: string) => (prefixAdmits(RESOURCE, r) ? RAS_AUD : ISSUER4),
+      derivationPolicy: { ...DERIVATION_POLICY, ceiling: PREFIX_CEILING },
+      authoritySources: {
+        ...AUTHORITY_SOURCES,
+        entries: AUTHORITY_SOURCES.entries.map((e) => (e.id === "acme-people" ? { ...e, ceiling: PREFIX_CEILING } : e)),
+      },
+    } as never);
+    server4 = as4.provider.listen(PORT4);
+    target4 = { issuer: ISSUER4, clientKey: (await importJWK(as4.agentClientJwk as never, "ES256")) as CryptoKey };
+  });
+
+  afterAll(() => {
+    server4?.close();
+  });
+
+  it("an entry finer than the requested resource authorizes it and the grant carries it; a resource the audience serves that no entry overlaps is not authorized", async () => {
+    const mission = as4.kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Read one Acme invoice", target_resources: [RESOURCE, INV1], expires_at: MISSION_EXP }),
+      ),
+      proposedAuthority: [{ ...READ_ENTRY, resource: INV1 }],
+      subject: { iss: ISSUER4, sub: "alice" },
+      approver: { iss: ISSUER4, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-1440-continuation",
+    });
+    expect(mission.authority_set.map((e) => e.resource)).toEqual([INV1]);
+    const handle = as4.continuationStore.handlesForMission(mission.id)[0] as string;
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { aud: ISSUER4, act: ACT4 }), resource: RESOURCE }, target4);
+    const body = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const details = decodeJwt(body.access_token as string).authorization_details as Array<Record<string, unknown>>;
+    expect(details.map((e) => e.resource)).toEqual([INV1]);
+
+    const refused = await tokenExchange(
+      { subjectToken: await mintICA(handle, { aud: ISSUER4, act: ACT4 }), resource: `${RESOURCE}/vendors` },
+      target4,
+    );
+    const refusal = (await refused.json()) as { error?: string; error_description?: string };
+    expect(refused.status, JSON.stringify(refusal)).toBe(400);
+    expect(refusal.error).toBe("invalid_target");
+    expect(refusal.error_description).toMatch(/not authorized by the Mission/);
   });
 });
