@@ -542,7 +542,7 @@ risks.
 
 Issuing a cross-domain grant is a derivation event and is gated like
 any other derivation ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission Lifecycle and Gating"). It counts once against the Mission's
+"Issuance Gating"). It counts once against the Mission's
 derivation budget ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}},
 Section "Cross-Domain Issuance"), however many local tokens the partner
 domain later mints: the issuer cannot observe those tokens and does not count

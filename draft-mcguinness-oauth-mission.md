@@ -509,20 +509,28 @@ supports, such as `mission_resource_access`
 Mission-aware Resource Server enforces each applicable entry its tokens
 carry under that entry's type ({{rs-requirements}}).
 
-Some duties apply only when their condition holds:
+The following table summarizes which surfaces apply, to whom, and
+when; the cited sections govern. Ordinary JWT consumption does not
+require retrieving the Mission Record or recomputing the complete
+approved Authority Set.
 
-- a submitted authority proposal;
-- presented or required submission evidence
-  ({{intent-submission-evidence}},
-  {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}); or
-- opaque tokens, which require introspection or issuer-local
-  resolution.
-
-The optional capabilities (Delegation, Introspection as a state
-overlay for JWTs, and Cross-Domain projection) are adopted explicitly
-under {{conformance}}. Ordinary JWT consumption does not require
-retrieving the Mission Record or recomputing the complete approved
-Authority Set.
+| Surface (role) | Applies | Defined in |
+| --- | --- | --- |
+| Mission Intent via PAR (client, AS) | Mission-creating requests on the authorization-code path; companion-defined back-channel carriage follows its profile | {{submission-via-par}} |
+| Direct approval (AS); the Mission Record (AS) | Every direct approval event; the Mission Record at every approval event | {{direct-approval-steps}}, {{mission-record}} |
+| Evidence dispatch and refusal (AS) | Implemented by every AS, even one that supports no evidence type; applied to each presented entry | {{intent-submission-evidence}} |
+| Authority proposal (client, AS) | Optional for the client; the AS checks one that is submitted | {{authority-proposal}} |
+| Grant binding (AS) | Authorization-code lineages and other profile-defined reusable grants, including their refresh-token families | {{grant-binding}} |
+| Issuance gating (AS) | Every derivation, refresh and Token Exchange included | {{issuance-gating}} |
+| Scope projection (AS) | Every issuance that emits `scope` or whose request names a `scope` value; a `scope`-only target gets a safe projection or a refusal | {{scope-projection}} |
+| Sender constraint, primary and refresh tokens (AS) | Recommended for the access token, which may be a bearer token; a public client's refresh token is sender-constrained or rotated | {{token-claims}}, {{refresh-tokens}} |
+| Sender constraint, delegation and cross-domain (AS, RS) | The token presented for a designation is sender-constrained, and the designation carries no `cnf`; a delegated token is bound to the delegate's own key; across trust domains, as the cross-domain companion requires | {{designation}}, {{delegated-exchange}}, {{token-claims}} |
+| Revocation means (deployment) | An authenticated revocation by `mission_id`, independent of any token | {{revocation}} |
+| Enforcement (Mission-aware RS) | Every request the resource server serves | {{rs-enforcement}} |
+| Introspection (AS, RS) | Optional; required for opaque tokens served without issuer-local resolution | {{introspection}}, {{introspected-consumption}} |
+| Delegation, Cross-Domain (AS, client, RS) | Optional capabilities | {{delegation}}, {{optional-capabilities}} |
+| Standing consent (AS) | Only under a companion profile's standing-consent basis | {{standing-consent-bases}} |
+{: title="Applicability of this document's surfaces"}
 
 ## Applicability {#applicability}
 
@@ -674,6 +682,11 @@ All times are UTC on the same day.
 An ERP that instead introspects on every request stops honoring the
 token on its next request after revocation, through the composite
 `active` result ({{composite-active}}).
+
+The later message examples use the end-to-end example's separate Q3
+reconciliation Mission ({{e2e-example}}), whose approved authority
+includes invoice reads and bounded journal writes. Its identifiers and
+timeline differ from this introductory example.
 
 # Conventions and Terminology {#conventions-and-terminology}
 
@@ -1066,8 +1079,8 @@ Submission is governed by the following rules:
   - the processing order ({{submission-processing}});
   - Authority Set derivation ({{authorization-derivation}});
   - the approval-event rules for the Mission's approval basis
-    ({{approval-event}}, with a direct approval relocated only as
-    {{extensibility}} permits); and
+    ({{approval-event}}, {{standing-consent-instances}}, with a direct
+    approval relocated only as {{extensibility}} permits); and
   - the grant binding ({{grant-binding}}).
 
   Support for a grant type or endpoint never establishes such a carriage
@@ -1715,7 +1728,7 @@ a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 ## Direct Approval Steps {#direct-approval-steps}
 
-The steps fall into four phases. Steps 1 to 3 establish the Approver,
+Steps 1 to 3 establish the Approver,
 the Subject and the authority source, and check the derived Authority
 Set against that source. Step 4 establishes the effective expiry.
 Step 5 renders the derived Authority Set for consent, and
@@ -1723,7 +1736,18 @@ Step 5 renders the derived Authority Set for consent, and
 Steps 6 and 7 compute the integrity anchors over the approved context
 and create the Mission atomically with the decision.
 
-At a direct approval event the AS MUST, in order:
+At a direct approval event the AS MUST perform steps 1 to 7, in
+order, as one procedure: steps 1 to 5 prepare the approval
+({{approval-preparation}}), and steps 6 and 7, which continue the same
+procedure, commit the Mission ({{approval-commit}}).
+
+The steps of this section define the `direct` approval basis
+(`approval_basis`, {{mission-record}}); a companion profile that
+relocates a direct approval keeps them unchanged ({{extensibility}}).
+
+Refusals follow {{error-mapping}}.
+
+### Prepare the Approval {#approval-preparation}
 
 1. **Authenticate the Approver**, subject to the approval-authentication
    floor and any client-requested strength
@@ -1782,6 +1806,11 @@ At a direct approval event the AS MUST, in order:
      ({{I-D.draft-mcguinness-mission-capability-binding}}) states
      what the rendering presents about the source binding of a
      catalog-sourced action.
+
+### Commit the Mission {#approval-commit}
+
+The same procedure continues from step 5:
+
 6. **Compute the integrity anchors** ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
@@ -1799,17 +1828,19 @@ At a direct approval event the AS MUST, in order:
    Mission. A deferred or relocated approval flow ({{extensibility}})
    inherits this check at its own creation commit, with the
    completion error each flow defines.
+{: start="6"}
 
 The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
-The steps above define the `direct` approval basis (`approval_basis`,
-{{mission-record}}); a companion profile that relocates a direct
-approval keeps them unchanged ({{extensibility}}).
-
-Refusals follow {{error-mapping}}. A token-endpoint `resource` value
-outside the Authority Set is an invalid `resource` value in the sense
-of {{RFC8707}}.
+The Mission Record is what approval leaves behind: the approved
+content and its commitments (the approved Mission Intent, the
+Authority Set, and the integrity anchors over them); the principals
+(the Subject, the approved agent's `client_id`, and the
+`approval_basis` naming who consented and how); the authority source;
+the issuer's provenance (the policy version and the approval event's
+identifier); and the Mission's expiry and lifecycle state.
+{{mission-record}} defines each member and when it is present.
 
 ## Subject Establishment {#subject-establishment}
 
@@ -1831,23 +1862,6 @@ These rules apply at step 2 of the direct approval steps
   same local `sub`). A derived token's (`iss`, `sub`) pair then
   denotes exactly one Subject. Adopting the external `sub` verbatim
   is valid only where it collides with no other principal's `sub`.
-
-## Standing-Consent Instances {#standing-consent-instances}
-
-Under a standing-consent basis ({{standing-consent-bases}}), the
-standing consent and the instance's adjudication supply the human
-decision: the Approver's authentication (step 1), the Approver's
-authorization for the Subject and the authority source (steps 2 and
-3), and the consent rendering (step 5). The other creation rules
-still bind the instance's approval event wherever they apply:
-
-- the Subject is never taken from unauthenticated client input and
-  is mapped injectively (step 2, {{subject-establishment}});
-- the authority source and its ceiling ({{authority-sources}});
-- the effective expiry and its creation-commit check (steps 4 and 7);
-- the integrity anchors (step 6); and
-- atomic creation deduplicated on `approval_event_id`
-  ({{mission-record}}).
 
 ## Rendering Safeguards {#rendering-safeguards}
 
@@ -2031,6 +2045,192 @@ document defines no Mission Record member for them. A derived access
 token carries authentication claims only as authentication information
 about its own Subject ({{token-authentication-lifetime}}), never
 as evidence of approval.
+
+## Single Accountable Approver {#multi-party-approval}
+
+This document records exactly one accountable principal,
+`approval_basis.consent_principal`: the principal who approved the
+Mission. Two richer patterns are out of scope:
+
+- **Multi-party approval** (M-of-N or dual control), where more than
+  one principal must approve. The number of approvers does not change
+  the authority commitment: principals approving the same rendered
+  Authority Set produce the same `authority_hash` and the same
+  derived tokens. A deployment requiring dual control records one
+  accountable Approver; this document does not represent the
+  co-approvers.
+- **Approval-authority provenance**: the standing behind a delegate's
+  authority to approve for another principal (for example, whether
+  an administrator was entitled to approve on a user's behalf). This
+  is governance state about the delegate, not the standing-consent
+  basis that `approval_basis` records ({{mission-record}}).
+
+Where a deployment needs either, the Approval Governance Record
+({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
+and Consent Evidence can carry a partial presentation of that record
+through `co_approvals` and its approval-governance members
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
+The `adjudication.governance_record` member ({{mission-record}})
+marks an approval such a record backs, and {{role-mapping}} shows how
+each scenario assigns the three `approval_basis` roles.
+
+# Mission Lifecycle {#lifecycle}
+
+A Mission is in one of two states:
+
+- `active`: the only state in which the AS derives tokens.
+- `terminated`: a terminal state; the Mission has ended. Its
+  `termination` member ({{termination}}) gives the reason: `revoked`
+  when the Subject, Approver, or policy terminated it, or `expired` when
+  its `expires_at` passed.
+
+The transitions are:
+
+| From | Event | To | Reason |
+|---|---|---|---|
+| (none) | approval event | `active` | |
+| `active` | revoke | `terminated` | `revoked` |
+| `active` | `expires_at` reached | `terminated` | `expired` |
+{: title="Mission lifecycle transitions"}
+
+The Mission Lifecycle States registry ({{iana-lifecycle-states}})
+holds these states, and the Mission Termination Reasons registry
+({{iana-termination-reasons}}) holds the reasons. A companion profile
+MAY register an additional state for a lifecycle it introduces (for
+example, a paused state); only `active` permits issuance. A companion
+profile that defines a further way for a Mission to end registers a
+termination reason, not a state.
+
+Wherever a Mission state is reported, including the Mission Record
+and the introspection `mission` member, a consumer MUST treat only
+the exact value `active` as permitting derivation or continued
+reliance, and MUST treat every other value, including one it does
+not recognize, as non-active and non-deriving (the
+forward-compatibility rule).
+
+For every state-dependent decision this document defines, the AS MUST
+treat a Mission as `active` only when its stored state is `active`
+and the decision time is strictly before `expires_at`. From
+`expires_at`, a Mission whose stored state is still `active` is
+`terminated` with reason `expired` for every such decision, whether
+or not that transition is persisted, including when persisting it
+fails.
+
+Persisting that transition, and emitting any lifecycle event a
+state-distribution companion defines, can happen after the decision
+that observed the boundary; persisting it never replaces a
+termination already recorded.
+
+## Mission Termination {#termination}
+
+A Mission whose `state` is `terminated` carries a `termination`
+object, in the Mission Record and wherever its state is reported with
+it; a Mission in any other state carries none. Its members are:
+
+`reason`:
+: REQUIRED. A string, a value of the Mission Termination Reasons
+  registry ({{iana-termination-reasons}}): `revoked` or `expired` in
+  this document, or a reason a companion profile registers.
+
+`terminated_at`:
+: REQUIRED, except as {{termination-compatibility}} describes. A
+  string. An RFC 3339 {{RFC3339}} date-time: the instant the
+  termination took effect. For `expired`, it is the Mission's
+  `expires_at`.
+
+A companion profile that registers a reason defines that reason's
+further members. A profile that maintains a state version for the
+Mission adds the version of the transition that committed the
+termination as its audit reference.
+
+The issuer writes `termination` once, atomically with the transition
+to `terminated`, and never changes it: an expiry, or any later event,
+does not replace the reason or references of a Mission already
+terminated.
+
+A termination carries every member its reason requires, except as
+{{termination-compatibility}} describes.
+
+### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
+
+A termination need not carry a member its reason requires when it
+was recorded before its reason defined that member, or derived
+from such a termination: such a termination exposes only the facts
+its record retained and omits a member it has no retained value for,
+`terminated_at` included, rather than inventing one. For `expired`,
+the retained `terminated_at` is the Mission's `expires_at`; for
+another reason, a retained commit time is its `terminated_at` only
+where that commit was the termination's effect.
+
+A consumer that receives such a termination, or a `reason` it does
+not recognize, still treats the Mission as terminated: it stops work
+governed by the Mission, follows no absent reference, and infers no
+cause-specific action.
+
+For a transition period, a consumer of a report that still carries
+`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
+Mission's `state` MAY read it as `terminated` with that reason
+(`cascaded` as `parent_terminated`) and the facts the report
+retained; an emitter never reports those values as a state. That
+reading is local: the consumer never re-emits or re-signs it, and it
+verifies a signed artifact over its original bytes, which it retains,
+before reading it this way.
+
+## Revocation {#revocation}
+
+A Mission is revoked when the AS receives an authorized revocation
+for it. A deployment MUST provide an authenticated means for the
+Subject, the Approver, or an administrator to revoke a Mission by
+`mission_id`, independent of possession of any token (so a Mission
+can be stopped even when no refresh token is held).
+
+The wire shape of that operation is out of scope for this document. A
+deployment-defined authenticated surface satisfies this requirement;
+Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
+defines an interoperable `revoke` operation, authorized under its own
+lifecycle authorization policy, which a deployment can serve alone
+under that document's revoke-only conformance class.
+
+As {{Section 2.1 of RFC7009}} permits, a deployment's revocation
+policy can treat revoking a Mission's refresh token as revoking the
+Mission; a deployment that couples token revocation to Mission
+revocation documents that behavior.
+
+Token validity and Mission validity are distinct: an already-issued
+access token remains valid until it expires ({{issuance-gating}}), so
+a token can outlive a transition of its Mission by at most the token
+lifetime.
+
+Token introspection ({{introspection}}) is a state-observable overlay
+that lets a resource server see Mission state per request and refuse
+a revoked Mission's token before the token expires; Mission Status
+specifies another, a status surface keyed by `mission_id` with signed
+responses. A deployment whose consumers rely on Mission state beyond
+a token's lifetime offers one of these, so they read current state
+rather than infer it from token validity.
+
+# Mission-Bound Access Tokens {#mission-bound-tokens}
+
+An access token issued under a Mission takes one of two forms:
+
+- a self-contained JWT per {{RFC9068}}, which a resource server can
+  enforce from the token alone ({{rs-enforcement}}) and which this
+  document's token-carried enforcement assumes; or
+- an opaque Mission-bound token, profiled only under the introspected
+  consumption mode ({{introspected-consumption}}), where introspection
+  or issuer-local resolution carries its claims, with the same
+  enforcement obligations.
+
+A deployment whose AS can issue neither deploys a Mission Authority
+Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
+governs ordinary tokens at the enforcement layer.
+
+The first four subsections follow one issuance: resolving the Mission
+from the presented grant ({{grant-binding}}), the checks every issuance
+passes
+({{issuance-gating}}), and the token ({{token-claims}}) and its
+response ({{token-response}}).
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -2223,137 +2423,6 @@ token responses the member is additionally registered as a
 token-endpoint response parameter ({{oauth-parameters-registration}}).
 It is informational in the same way: presenting it authorizes nothing.
 
-## Single Accountable Approver {#multi-party-approval}
-
-This document records exactly one accountable principal,
-`approval_basis.consent_principal`: the principal who approved the
-Mission. Two richer patterns are out of scope:
-
-- **Multi-party approval** (M-of-N or dual control), where more than
-  one principal must approve. The number of approvers does not change
-  the authority commitment: principals approving the same rendered
-  Authority Set produce the same `authority_hash` and the same
-  derived tokens. A deployment requiring dual control records one
-  accountable Approver; this document does not represent the
-  co-approvers.
-- **Approval-authority provenance**: the standing behind a delegate's
-  authority to approve for another principal (for example, whether
-  an administrator was entitled to approve on a user's behalf). This
-  is governance state about the delegate, not the standing-consent
-  basis that `approval_basis` records ({{mission-record}}).
-
-Where a deployment needs either, the Approval Governance Record
-({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
-and Consent Evidence can carry a partial presentation of that record
-through `co_approvals` and its approval-governance members
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
-
-The `adjudication.governance_record` member ({{mission-record}})
-marks an approval such a record backs, and {{role-mapping}} shows how
-each scenario assigns the three `approval_basis` roles.
-
-# Mission Lifecycle and Gating {#lifecycle}
-
-A Mission is in one of two states:
-
-- `active`: the only state in which the AS derives tokens.
-- `terminated`: a terminal state; the Mission has ended. Its
-  `termination` member ({{termination}}) gives the reason: `revoked`
-  when the Subject, Approver, or policy terminated it, or `expired` when
-  its `expires_at` passed.
-
-The transitions are:
-
-| From | Event | To | Reason |
-|---|---|---|---|
-| (none) | approval event | `active` | |
-| `active` | revoke | `terminated` | `revoked` |
-| `active` | `expires_at` reached | `terminated` | `expired` |
-{: title="Mission lifecycle transitions"}
-
-The Mission Lifecycle States registry ({{iana-lifecycle-states}})
-holds these states, and the Mission Termination Reasons registry
-({{iana-termination-reasons}}) holds the reasons. A companion profile
-MAY register an additional state for a lifecycle it introduces (for
-example, a paused state); only `active` permits issuance. A companion
-profile that defines a further way for a Mission to end registers a
-termination reason, not a state.
-
-Wherever a Mission state is reported, including the Mission Record
-and the introspection `mission` member, a consumer MUST treat only
-the exact value `active` as permitting derivation or continued
-reliance, and MUST treat every other value, including one it does
-not recognize, as non-active and non-deriving (the
-forward-compatibility rule).
-
-For every state-dependent decision this document defines, the AS MUST
-treat a Mission as `active` only when its stored state is `active`
-and the decision time is strictly before `expires_at`. From
-`expires_at`, a Mission whose stored state is still `active` is
-`terminated` with reason `expired` for every such decision, whether
-or not that transition is persisted, including when persisting it
-fails.
-
-Persisting that transition, and emitting any lifecycle event a
-state-distribution companion defines, can happen after the decision
-that observed the boundary; persisting it never replaces a
-termination already recorded.
-
-## Mission Termination {#termination}
-
-A Mission whose `state` is `terminated` carries a `termination`
-object, in the Mission Record and wherever its state is reported with
-it; a Mission in any other state carries none. Its members are:
-
-`reason`:
-: REQUIRED. A string, a value of the Mission Termination Reasons
-  registry ({{iana-termination-reasons}}): `revoked` or `expired` in
-  this document, or a reason a companion profile registers.
-
-`terminated_at`:
-: REQUIRED, except as {{termination-compatibility}} describes. A
-  string. An RFC 3339 {{RFC3339}} date-time: the instant the
-  termination took effect. For `expired`, it is the Mission's
-  `expires_at`.
-
-A companion profile that registers a reason defines that reason's
-further members. A profile that maintains a state version for the
-Mission adds the version of the transition that committed the
-termination as its audit reference.
-
-The issuer writes `termination` once, atomically with the transition
-to `terminated`, and never changes it: an expiry, or any later event,
-does not replace the reason or references of a Mission already
-terminated.
-
-A termination carries every member its reason requires, except as
-{{termination-compatibility}} describes.
-
-### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
-
-A termination need not carry a member its reason requires when it
-was recorded before its reason defined that member, or derived
-from such a termination: such a termination exposes only the facts
-its record retained and omits a member it has no retained value for,
-`terminated_at` included, rather than inventing one. For `expired`,
-the retained `terminated_at` is the Mission's `expires_at`; for
-another reason, a retained commit time is its `terminated_at` only
-where that commit was the termination's effect.
-
-A consumer that receives such a termination, or a `reason` it does
-not recognize, still treats the Mission as terminated: it stops work
-governed by the Mission, follows no absent reference, and infers no
-cause-specific action.
-
-For a transition period, a consumer of a report that still carries
-`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
-Mission's `state` MAY read it as `terminated` with that reason
-(`cascaded` as `parent_terminated`) and the facts the report
-retained; an emitter never reports those values as a state. That
-reading is local: the consumer never re-emits or re-signs it, and it
-verifies a signed artifact over its original bytes, which it retains,
-before reading it this way.
-
 ## Issuance Gating {#issuance-gating}
 
 A derivation is one issuance operation the issuer AS performs for a
@@ -2402,55 +2471,6 @@ authenticated client presenting the Mission's grant.
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
 revocation checks.
-
-## Revocation {#revocation}
-
-A Mission is revoked when the AS receives an authorized revocation
-for it. A deployment MUST provide an authenticated means for the
-Subject, the Approver, or an administrator to revoke a Mission by
-`mission_id`, independent of possession of any token (so a Mission
-can be stopped even when no refresh token is held).
-
-The wire shape of that operation is out of scope for this document. A
-deployment-defined authenticated surface satisfies this requirement;
-Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
-defines an interoperable `revoke` operation, authorized under its own
-lifecycle authorization policy, which a deployment can serve alone
-under that document's revoke-only conformance class.
-
-As {{Section 2.1 of RFC7009}} permits, a deployment's revocation
-policy can treat revoking a Mission's refresh token as revoking the
-Mission; a deployment that couples token revocation to Mission
-revocation documents that behavior.
-
-Token validity and Mission validity are distinct: an already-issued
-access token remains valid until it expires ({{issuance-gating}}), so
-a token can outlive a transition of its Mission by at most the token
-lifetime.
-
-Token introspection ({{introspection}}) is a state-observable overlay
-that lets a resource server see Mission state per request and refuse
-a revoked Mission's token before the token expires; Mission Status
-specifies another, a status surface keyed by `mission_id` with signed
-responses. A deployment whose consumers rely on Mission state beyond
-a token's lifetime offers one of these, so they read current state
-rather than infer it from token validity.
-
-# Mission-Bound Access Tokens {#mission-bound-tokens}
-
-An access token issued under a Mission takes one of two forms:
-
-- a self-contained JWT per {{RFC9068}}, which a resource server can
-  enforce from the token alone ({{rs-enforcement}}) and which this
-  document's token-carried enforcement assumes; or
-- an opaque Mission-bound token, profiled only under the introspected
-  consumption mode ({{introspected-consumption}}), where introspection
-  or issuer-local resolution carries its claims, with the same
-  enforcement obligations.
-
-A deployment whose AS can issue neither deploys a Mission Authority
-Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
-governs ordinary tokens at the enforcement layer.
 
 ## Token Claims {#token-claims}
 
@@ -2510,6 +2530,9 @@ with the {{RFC8707}} `resource` parameter, and can narrow it further
 with `scope`; the AS narrows the Authority Set under {{subset}} to the
 requested resource(s) and sets `aud` accordingly.
 {: #token-audience}
+
+A token-endpoint `resource` value outside the Authority Set is an
+invalid `resource` value in the sense of {{RFC8707}}.
 
 Three identifiers stay distinct. An entry's `resource`, where its type
 defines one, names the protected resource its authority covers, and a
@@ -2647,6 +2670,11 @@ this bound extends transitively to tokens minted in another trust
 domain.
 
 ## Scope Projection {#scope-projection}
+
+This section applies to every issuance that emits `scope` on a
+Mission-bound token or whose request names a `scope` value, and to
+issuance for a target that consumes only `scope`: such a target
+receives a safe projection or a refusal (step 5 below).
 
 For every target audience, the AS MUST establish that the effective
 rights the target's enforcement path grants from the projected
@@ -3104,7 +3132,7 @@ exchange rows of the third table.
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
-| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{direct-approval-steps}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
@@ -3818,6 +3846,135 @@ a further hop can be evaluated: a depth-3 delegate, or a
 non-`ai_agent` one, would narrow it out too. The `mission` claim is
 unchanged.
 
+# Standing-Consent Bases {#standing-consent-bases}
+
+A companion profile can generalize approval to a named
+standing-consent basis. Under it, a template or policy activates
+Mission instances against an accountable human's earlier approval,
+with no fresh human approval per instance; each instance is still
+created at its own approval event ({{approval-event}}). The following
+`approval_basis.type` values ({{record-principal-members}}) are such
+bases:
+
+- `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
+  bounded instances of a recurring task;
+- `policy_drawdown`
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): Child
+  Missions that a parent agent requests and a policy adjudicates with
+  no human interaction, rooted in the Parent Mission's accountable
+  human;
+- `ceiling_drawdown`
+  ({{I-D.draft-mcguinness-oauth-mission-progressive}}): successor
+  Missions within a previously approved authority ceiling as a task
+  evolves; and
+- `governed_policy`
+  ({{I-D.draft-mcguinness-mission-approval-governance}}): an agent's
+  own proposals, decided by a policy version that a human approved.
+
+For a standing-consent `type`, `activation` takes the shape that its
+companion profile defines, and `activation_actor` names a dispatching
+or requesting party distinct from the consenting human.
+
+An unrecognized `type` or `adjudication.kind` is handled as
+{{record-principal-members}} states for every record consumer.
+
+A companion profile defining a standing-consent `type` MUST make its
+`consent_principal` and `root_commitment` trace to an accountable
+human's approval of the named standing consent, with no fresh human
+approval per instance, MUST carry that approval's instant as
+`approved_at`, and MUST state what the record's `approval_event_id`
+carries for an instance it activates. That value identifies this
+instance's approval event, never the standing approval, so a retried
+activation deduplicates and each distinct activation creates its own
+Mission.
+
+`approved_at`:
+: REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
+  the instant the accountable human approved the exact consented root
+  that `root_commitment` commits (the template version, the drawdown
+  policy version), not the instant this Mission instance was
+  activated. The activating issuer MUST verify `approved_at` against
+  its retained, authenticated record of that standing consent for
+  that exact version; it MUST NOT accept the value as the activating
+  request's own uncorroborated assertion.
+
+The `adjudication` member ({{record-principal-members}}), where
+present, follows the basis. Where a companion profile defining a
+standing-consent `type` populates `adjudication`, `kind` MUST be
+`policy`, naming the identity and version of the policy or workflow
+that adjudicated the instance. A companion profile MUST NOT flatten a
+policy's or an Approval Governance Record's assertion set into a
+single principal member.
+
+## Standing-Consent Instances {#standing-consent-instances}
+
+Under a standing-consent basis ({{standing-consent-bases}}), the
+standing consent and the instance's adjudication supply the human
+decision that a direct approval event makes in
+{{direct-approval-steps}}: the Approver's authentication (step 1),
+the Approver's authorization for the Subject and the authority source
+(steps 2 and 3), and the consent rendering (step 5). The other
+creation rules still bind the instance's approval event wherever they
+apply:
+
+- the Subject is never taken from unauthenticated client input and
+  is mapped injectively (step 2, {{subject-establishment}});
+- the authority source and its ceiling ({{authority-sources}});
+- the effective expiry and its creation-commit check (steps 4 and 7);
+- the integrity anchors (step 6); and
+- atomic creation deduplicated on `approval_event_id`
+  ({{mission-record}}).
+
+## Activation Policy Commitment {#activation-policy-commitment}
+
+Where a standing-consent basis lets
+a separate policy artifact adjudicate activation (a dispatch,
+drawdown, or child-creation policy, rather than the consented object
+itself), the object the accountable human consented to MUST carry
+that policy as an activation policy reference: an object of `id` (a
+string), `version` (a string), and `digest`.
+The `digest` is an integrity anchor ({{integrity-anchors}}) whose
+`typ` is `mission-activation-policy`, whose `iss` is the activating
+issuer, and whose `value` is an object of `content_type`, the media
+type of the policy snapshot, and `content`, the base64url, no-padding
+{{RFC4648}} encoding of the snapshot's exact bytes. Before each
+activation, the activating issuer MUST compute `digest` over the exact
+snapshot it evaluates, and MUST NOT activate the instance under that
+policy when the result differs; the companion profile fixes what
+follows, as it does for an activation the policy does not authorize.
+The issuer MUST retain each snapshot's bytes and media type for the
+audit horizon ({{record-provenance-members}}) of every Mission it activates
+under that snapshot, so an auditor can reproduce the digest.
+Where no separate policy artifact exists, as when child creation is
+adjudicated against the approved delegation entry itself, this rule
+does not apply.
+
+## Standing-Consent Recency {#standing-consent-recency}
+
+A deployment can declare a maximum
+standing-consent age (a recency ceiling), overall or per
+consequence class. Where a declared ceiling applies, the activating
+issuer MUST refuse to activate an instance whose `approved_at` is
+older than the ceiling. Where ceilings are declared:
+
+- The evaluation instant is the atomic Mission-creation commit
+  ({{approval-event}}), including the creation commit of a
+  deferred or relocated flow. Recency is issuance-time eligibility
+  only: a later change to a ceiling, or the passage of time past
+  one, does not terminate an active Mission ({{revocation}}).
+- The activating issuer MUST refuse an `approved_at` later than
+  the evaluation instant by more than the deployment's declared,
+  bounded clock-skew allowance.
+- Where ceilings are declared per consequence class, the issuer
+  MUST classify the committed Mission from the derived Authority
+  Set and from any consumption bound the Mission Intent carries
+  (for example, {{I-D.draft-mcguinness-mission-metering}}), and
+  MUST apply the strictest ceiling across every class present.
+- The ceilings and the skew allowance belong to the versioned
+  policy that `policy_version` identifies, or to a separately
+  versioned declaration retained with it, so an auditor can
+  reproduce the eligibility decision.
+
 # Mission Record {#mission-record}
 
 A Mission is the durable record created at the approval event; a
@@ -3959,8 +4116,17 @@ The following subsections define the record's members.
 
   `type`:
   : REQUIRED. A string: `direct`, or a standing-consent value that a
-    companion profile defines ({{standing-consent-bases}}, which also
-    states how a consumer handles an unrecognized value).
+    companion profile defines ({{standing-consent-bases}}).
+
+  An unrecognized `type`, and likewise an unrecognized
+  `adjudication.kind` ({{mission-record}}), is preserved unchanged as
+  opaque provenance on an otherwise valid record: a consumer MUST NOT
+  infer or fabricate the human, policy, or Approval Governance Record
+  standing behind it, and MUST refuse only a profile operation that
+  itself requires recognized adjudication semantics to proceed (for
+  example, evaluating a policy-approval recency ceiling). Unlike an
+  unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
+  here does not by itself invalidate or deactivate the Mission.
 
   `consent_principal`:
   : REQUIRED. An object with `iss` and `sub`. The accountable human
@@ -3999,7 +4165,7 @@ The following subsections define the record's members.
       companion profile MUST NOT define a `kind` value that names a
       record, an evidence store, or the requesting or dispatching
       party. An unrecognized value is handled under the same rule as
-      `approval_basis.type` ({{standing-consent-bases}}).
+      `approval_basis.type` ({{record-principal-members}}).
 
     `governance_record`:
     : OPTIONAL. A boolean. `true` when an Approval Governance Record
@@ -4111,122 +4277,6 @@ The **audit horizon** is the deployment-declared retention window for
 the Mission Record and its evidence: at least the Mission's lifetime
 plus a declared post-expiry period. A deployment retains a
 `terminated` Mission's record for its audit horizon.
-
-## Standing-Consent Bases {#standing-consent-bases}
-
-A companion profile can generalize approval to a named
-standing-consent basis. Under it, a template or policy activates
-Mission instances against an accountable human's earlier approval,
-with no fresh human approval per instance; each instance is still
-created at its own approval event ({{approval-event}}). The following
-`type` values are such bases:
-
-- `template` ({{I-D.draft-mcguinness-oauth-mission-template}}):
-  bounded instances of a recurring task;
-- `policy_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}): Child
-  Missions that a parent agent requests and a policy adjudicates with
-  no human interaction, rooted in the Parent Mission's accountable
-  human;
-- `ceiling_drawdown`
-  ({{I-D.draft-mcguinness-oauth-mission-progressive}}): successor
-  Missions within a previously approved authority ceiling as a task
-  evolves; and
-- `governed_policy`
-  ({{I-D.draft-mcguinness-mission-approval-governance}}): an agent's
-  own proposals, decided by a policy version that a human approved.
-
-For a standing-consent `type`, `activation` takes the shape that its
-companion profile defines, and `activation_actor` names a dispatching
-or requesting party distinct from the consenting human.
-
-An unrecognized `type`, and likewise an unrecognized
-`adjudication.kind` ({{mission-record}}), is preserved unchanged as
-opaque provenance on an otherwise valid record: a consumer MUST NOT
-infer or fabricate the human, policy, or Approval Governance Record
-standing behind it, and MUST refuse only a profile operation that
-itself requires recognized adjudication semantics to proceed (for
-example, evaluating a policy-approval recency ceiling). Unlike an
-unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
-here does not by itself invalidate or deactivate the Mission.
-
-A companion profile defining a standing-consent `type` MUST make its
-`consent_principal` and `root_commitment` trace to an accountable
-human's approval of the named standing consent, with no fresh human
-approval per instance, MUST carry that approval's instant as
-`approved_at`, and MUST state what the record's `approval_event_id`
-carries for an instance it activates. That value identifies this
-instance's approval event, never the standing approval, so a retried
-activation deduplicates and each distinct activation creates its own
-Mission.
-
-`approved_at`:
-: REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
-  the instant the accountable human approved the exact consented root
-  that `root_commitment` commits (the template version, the drawdown
-  policy version), not the instant this Mission instance was
-  activated. The activating issuer MUST verify `approved_at` against
-  its retained, authenticated record of that standing consent for
-  that exact version; it MUST NOT accept the value as the activating
-  request's own uncorroborated assertion.
-
-The `adjudication` member ({{mission-record}}), where present,
-follows the basis. Where a companion profile defining a
-standing-consent `type` populates `adjudication`, `kind` MUST be
-`policy`, naming the identity and version of the policy or workflow
-that adjudicated the instance. A companion profile MUST NOT flatten a
-policy's or an Approval Governance Record's assertion set into a
-single principal member.
-
-### Activation Policy Commitment {#activation-policy-commitment}
-
-Where a standing-consent basis lets
-a separate policy artifact adjudicate activation (a dispatch,
-drawdown, or child-creation policy, rather than the consented object
-itself), the object the accountable human consented to MUST carry
-that policy as an activation policy reference: an object of `id` (a
-string), `version` (a string), and `digest`.
-The `digest` is an integrity anchor ({{integrity-anchors}}) whose
-`typ` is `mission-activation-policy`, whose `iss` is the activating
-issuer, and whose `value` is an object of `content_type`, the media
-type of the policy snapshot, and `content`, the base64url, no-padding
-{{RFC4648}} encoding of the snapshot's exact bytes. Before each
-activation, the activating issuer MUST compute `digest` over the exact
-snapshot it evaluates, and MUST NOT activate the instance under that
-policy when the result differs; the companion profile fixes what
-follows, as it does for an activation the policy does not authorize.
-The issuer MUST retain each snapshot's bytes and media type for the
-audit horizon ({{record-provenance-members}}) of every Mission it activates
-under that snapshot, so an auditor can reproduce the digest.
-Where no separate policy artifact exists, as when child creation is
-adjudicated against the approved delegation entry itself, this rule
-does not apply.
-
-### Standing-Consent Recency {#standing-consent-recency}
-
-A deployment can declare a maximum
-standing-consent age (a recency ceiling), overall or per
-consequence class. Where a declared ceiling applies, the activating
-issuer MUST refuse to activate an instance whose `approved_at` is
-older than the ceiling. Where ceilings are declared:
-
-- The evaluation instant is the atomic Mission-creation commit
-  ({{approval-event}}), including the creation commit of a
-  deferred or relocated flow. Recency is issuance-time eligibility
-  only: a later change to a ceiling, or the passage of time past
-  one, does not terminate an active Mission ({{revocation}}).
-- The activating issuer MUST refuse an `approved_at` later than
-  the evaluation instant by more than the deployment's declared,
-  bounded clock-skew allowance.
-- Where ceilings are declared per consequence class, the issuer
-  MUST classify the committed Mission from the derived Authority
-  Set and from any consumption bound the Mission Intent carries
-  (for example, {{I-D.draft-mcguinness-mission-metering}}), and
-  MUST apply the strictest ceiling across every class present.
-- The ceilings and the skew allowance belong to the versioned
-  policy that `policy_version` identifies, or to a separately
-  versioned declaration retained with it, so an auditor can
-  reproduce the eligibility decision.
 
 ## Mission Identifier Format {#mission-id}
 
@@ -4877,7 +4927,7 @@ that supports none of them is still conformant:
   2. authority that only narrows ({{subset}});
   3. projection performed only by, or under the authorization of, the
      Mission `issuer`, gated on the Mission's `active` state
-     ({{lifecycle}}); and
+     ({{lifecycle}}, {{issuance-gating}}); and
   4. projected credential lifetimes capped by the Mission's
      `expires_at` ({{token-authentication-lifetime}}).
 
@@ -5545,7 +5595,7 @@ Parameters" registry:
 - Parameter name: `mission_error`
 - Parameter usage location: token response
 - Change controller: IETF
-- Specification document(s): this document, {{lifecycle}}
+- Specification document(s): this document, {{issuance-gating}}
 
 - Parameter name: `mission_expires_at`
 - Parameter usage location: token response
@@ -7094,6 +7144,21 @@ Cross-Domain:
 
 -01
 
+- Editorial and structure (#1483), no requirement changed: Binding the
+  Mission to the Grant and Issuance Gating open Mission-Bound Access
+  Tokens, and Mission Lifecycle and Gating becomes Mission Lifecycle.
+  Standing-Consent Bases becomes one section after Delegation, holding
+  Standing-Consent Instances, Activation Policy Commitment and
+  Standing-Consent Recency; the rule for an unrecognized
+  `approval_basis.type` or `adjudication.kind` stays with the record's
+  common members. Direct Approval Steps nests its one ordered procedure
+  in Prepare the Approval (steps 1 to 5) and Commit the Mission (steps
+  6 and 7), which says what approval leaves behind. The Implementation
+  Map gains an applicability table in place of its conditional-duty
+  list; Scope Projection opens with when it applies; the introductory
+  walk says the later examples follow a separate Mission. The
+  token-endpoint `resource` rule moves to Audience and Token Response.
+
 - Editorial (#1479): Conformance says that neither starting point
   removes a Mission Issuer surface, the evidence dispatch and refusal
   rules included, or the deployment's revocation means; Intent
@@ -7837,7 +7902,7 @@ Cross-Domain:
   submission trust rule, {{introspection}} for the RFC 7662
   deviation, the (since relocated) Resource Boundary Canonicalization
   section for the
-  single-normalization rule, {{lifecycle}} for short-lifetime
+  single-normalization rule, {{issuance-gating}} for short-lifetime
   guidance). The rejected `client_id`-freezing narrative compressed
   to its design rationale; spec-archaeology sentences removed in
   favor of this history; the Mission Drift consideration folded
