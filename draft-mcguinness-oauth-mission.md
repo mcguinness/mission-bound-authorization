@@ -3086,9 +3086,9 @@ an expansion where that companion is deployed ({{rs-enforcement}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
 
-A third grain, the requestable denial
-({{I-D.draft-mcguinness-mission-authzen}}), routes the same denial
-into a governed access request rather than a fresh derivation.
+A third grain, the requestable denial of {{AuthZEN.ARAP}}, profiled by
+{{I-D.draft-mcguinness-mission-authzen}}, routes the same denial into a
+governed access request rather than a fresh derivation.
 
 The three grains compose: a deployment can offer any subset, and none
 widens authority beyond what {{authorization-derivation}} derives
