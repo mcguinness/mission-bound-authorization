@@ -3864,10 +3864,12 @@ single principal member.
 
 Under a standing-consent basis ({{standing-consent-bases}}), the
 standing consent and the instance's adjudication supply the human
-decision: the Approver's authentication (step 1), the Approver's
-authorization for the Subject and the authority source (steps 2 and
-3), and the consent rendering (step 5). The other creation rules
-still bind the instance's approval event wherever they apply:
+decision that a direct approval event makes in
+{{direct-approval-steps}}: the Approver's authentication (step 1),
+the Approver's authorization for the Subject and the authority source
+(steps 2 and 3), and the consent rendering (step 5). The other
+creation rules still bind the instance's approval event wherever they
+apply:
 
 - the Subject is never taken from unauthenticated client input and
   is mapped injectively (step 2, {{subject-establishment}});
