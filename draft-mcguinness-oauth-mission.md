@@ -1944,7 +1944,8 @@ standing-consent basis a companion defines.
 
 Approval activates only authority the source already holds: the AS
 establishes the source and verifies the derived Authority Set against
-it before approval ({{direct-approval-steps}}).
+it before approval ({{direct-approval-steps}},
+{{standing-consent-instances}}).
 
 The subject-representation discipline is the same in every source:
 
@@ -2330,10 +2331,10 @@ A termination carries every member its reason requires, except as
 
 ### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
 
-The exception is a termination recorded before its reason defined a
-required member, or derived from such a termination: such a
-termination exposes only the facts its record
-retained and omits a member it has no retained value for,
+A termination need not carry every member its reason requires when
+it was recorded before its reason defined that member, or derived
+from such a termination: such a termination exposes only the facts
+its record retained and omits a member it has no retained value for,
 `terminated_at` included, rather than inventing one. For `expired`,
 the retained `terminated_at` is the Mission's `expires_at`; for
 another reason, a retained commit time is its `terminated_at` only
@@ -3124,7 +3125,7 @@ exchange rows of the third table.
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
 | Token exchange: a `subject_token` or `actor_token` that is invalid, whose sender constraint is not proven, or that is unacceptable for the exchange | `invalid_request` ({{Section 2.2.2 of RFC8693}}), unless a Token Exchange profile assigns the failure its own code. Detail: safe `error_description` |
-| Token exchange: a required DPoP proof that is missing, or a DPoP proof that fails its own validation | `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not `invalid_request` for an unproven sender constraint. Detail: safe `error_description` |
+| Token exchange: a required DPoP proof that is missing, or a DPoP proof that fails its own validation | `invalid_dpop_proof` ({{Section 5 of RFC9449}}): the failure is not an unproven sender constraint, so the row above does not apply. Detail: safe `error_description` |
 | Token exchange: a DPoP proof lacking the current DPoP nonce, where the authorization server requires one | `use_dpop_nonce` with a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`. Detail: safe `error_description` |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Delegated token exchange ({{delegated-exchange}}): the `subject_token` is not a designation this AS issued naming the requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
@@ -3952,7 +3953,7 @@ The following subsections define the record's members.
   approval basis, with the presence each one states. Their
   direct-approval values are described here; standing-consent
   specializations are defined in {{standing-consent-bases}}. Three of
-  them answer the questions an approval raises: who consented
+  these members answer the questions an approval raises: who consented
   (`consent_principal`), who triggered this instance
   (`activation_actor`), and what mechanism decided it
   (`adjudication`).
