@@ -1561,9 +1561,9 @@ a submission:
 - names the value, if any, that is equivalent to omitting the member;
   and
 - states the input the constraint reads at the point of use and the
-  predicate that input meets, in value-space terms, precisely enough for
-  independent resource servers to agree on which operations are within
-  the bound.
+  predicate that input meets, in value-space terms, precisely enough
+  that independent resource servers, given the same declared policy and
+  authoritative inputs, agree on which operations are within the bound.
 
 A specification-defined name is coordinated through this registry. Any
 other `constraints` member name is deployment-defined and stays outside
