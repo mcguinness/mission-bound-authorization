@@ -1,0 +1,331 @@
+/**
+ * @spec draft-mcguinness-mission-discovery (#encounter, #resource-identity,
+ * #adjudication), draft-mcguinness-oauth-mission-progressive (#ceiling-test,
+ * #audit-linkage), #1469 stage 1
+ *
+ * A discovery encounter on the Progressive drawdown path, through the real
+ * authorization server. The payments read ceiling is configured `prefix`
+ * (#1440), so a drawdown can reach a resource under it that no ceiling entry
+ * names: an encounter. Stage 1 detects it from the request's own entries,
+ * retrieves the resource's self-declaration through the deployment's port,
+ * digests the exact bytes, and records whether the sought actions are
+ * declared. Until identity pinning, trusted taint and the floors land (D607),
+ * no encounter binds by policy: each falls back to a fresh human approval,
+ * whose successor records the digest.
+ */
+
+const hoisted = await vi.hoisted(async () => {
+  const { cpSync, mkdtempSync, readFileSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const dir = mkdtempSync(join(tmpdir(), "mission-config-1469-"));
+  cpSync(fileURLToPath(new URL("../../../config", import.meta.url)), dir, { recursive: true });
+  const file = join(dir, "policy.json");
+  const policy = JSON.parse(readFileSync(file, "utf8")) as { ceiling: Record<string, unknown>[] };
+  (policy.ceiling[0] as Record<string, unknown>).resource_match = "prefix";
+  writeFileSync(file, JSON.stringify(policy, null, 2));
+  // Containment pairs a removal with an approved entry exactly, so a prefix
+  // ceiling loads only where no containment rule is configured (#1440).
+  const containment = join(dir, "containment.json");
+  const rules = JSON.parse(readFileSync(containment, "utf8")) as { rules: unknown[] };
+  rules.rules = [];
+  writeFileSync(containment, JSON.stringify(rules, null, 2));
+  const previous = process.env.MISSION_CONFIG_DIR;
+  process.env.MISSION_CONFIG_DIR = dir;
+  return { dir, previous };
+});
+
+import { rmSync } from "node:fs";
+import type { Server } from "node:http";
+import { CANONICAL_RESOURCE, DERIVATION_POLICY, PROGRESSIVE_PROFILE } from "@mission/demo-data";
+import { catalogDigest } from "@mission/core";
+import { type CryptoKey, decodeJwt, exportJWK, importJWK, SignJWT, generateKeyPair } from "jose";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
+import { type ProgressiveDrawdownOptions, progressiveFromProfile } from "../src/kernel/progressive.js";
+import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
+import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders } from "./approval-fixture.js";
+
+const PORT = 14858;
+const ISSUER = `http://localhost:${PORT}`;
+const REDIRECT_URI = "http://localhost:9999/cb";
+const RESOURCE = CANONICAL_RESOURCE;
+const FAR_EXP = "2027-01-01T00:00:00Z";
+/** A resource under the payments `prefix` read ceiling that no ceiling entry names. */
+const ENCOUNTERED = `${RESOURCE}/vendors/acme`;
+const ORIGIN = new URL(RESOURCE).origin;
+/** The payments read ceiling entry, configured `prefix`. */
+const PREFIX_CEILING = DERIVATION_POLICY.ceiling.filter((e) => e.resource === RESOURCE).slice(0, 1) as unknown as AuthorityEntry[];
+const CEILING = { authority_ceiling: PREFIX_CEILING, drawdown_policy: { id: "drawdown-wide", version: "1" } };
+const ALICE = { iss: ISSUER, sub: "alice" };
+
+/** The declaration the deployment's port serves for each origin, as the test sets it. */
+const declarations = new Map<string, string>();
+const declarationOf = (operations: string[]): string => JSON.stringify({ operations });
+
+const PUBLISHED = progressiveFromProfile(PROGRESSIVE_PROFILE);
+const PROGRESSIVE: ProgressiveDrawdownOptions = {
+  ...PUBLISHED.options,
+  ceilingOffer: () => CEILING,
+  resourceDeclarations: async (origin) => declarations.get(origin),
+};
+
+type DpopKeys = { privateKey: CryptoKey; publicKey: CryptoKey };
+type Client = { id: string; kid: string; key: CryptoKey; dpop: DpopKeys };
+let as: BuiltAs;
+let server: Server;
+let ap: Client;
+let verifierSeq = 0;
+const approvalSessions = new ApprovalSessionStore();
+
+const entry = (resource: string, actions: string[]): Record<string, unknown> => ({
+  type: "mission_resource_access",
+  resource,
+  actions,
+  constraints: { vendors: ["acme"] },
+});
+const intentJson = (goal: string, targets: string[]): string =>
+  JSON.stringify({ intent: { goal, target_resources: targets, expires_at: FAR_EXP } });
+
+async function clientAssertion(): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: "ES256", kid: ap.kid })
+    .setIssuer(ap.id)
+    .setSubject(ap.id)
+    .setAudience(ISSUER)
+    .setIssuedAt()
+    .setExpirationTime("2m")
+    .setJti(crypto.randomUUID())
+    .sign(ap.key);
+}
+
+async function tokenRequest(params: Record<string, string>): Promise<Response> {
+  const htu = `${ISSUER}/token`;
+  const proof = async (extra: Record<string, unknown> = {}) =>
+    new SignJWT({ htu, htm: "POST", ...extra })
+      .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(ap.dpop.publicKey) })
+      .setIssuedAt()
+      .setJti(crypto.randomUUID())
+      .sign(ap.dpop.privateKey);
+  const send = async (extra: Record<string, unknown> = {}) =>
+    fetch(htu, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(extra) },
+      body: new URLSearchParams({
+        ...params,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return res;
+}
+
+function cookieHeader(jar: Map<string, string>): string {
+  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+function storeCookies(res: Response, jar: Map<string, string>): void {
+  for (const line of res.headers.getSetCookie()) {
+    const [pair] = line.split(";");
+    const eq = (pair as string).indexOf("=");
+    jar.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+  }
+}
+
+/** PAR, render the approval page, approve consenting the offered ceiling, code, token: an ACTIVE Mission. */
+async function issueMission(): Promise<{ missionId: string; accessToken: string }> {
+  const jar = new Map<string, string>();
+  const verifier = `encounter-verifier-0123456789-0123456789-0123456789-${verifierSeq++}`;
+  const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
+  const par = await fetch(`${ISSUER}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: ap.id,
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      resource: RESOURCE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      login_hint: "alice",
+      mission_intent: intentJson("Pay Acme invoices", [RESOURCE]),
+      authorization_details: JSON.stringify([entry(RESOURCE, ["payments:invoice.read"])]),
+      client_assertion: await clientAssertion(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+  const parBody = (await par.json()) as { request_uri: string };
+  expect(par.status, JSON.stringify(parBody)).toBe(201);
+  let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: ap.id, request_uri: parBody.request_uri })}`, {
+    redirect: "manual",
+  });
+  storeCookies(res, jar);
+  const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+  expect((await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } })).status).toBe(200);
+  res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { ...floorApprovalHeaders(approvalSessions, uid, cookieHeader(jar)), "content-type": "application/json" },
+    body: JSON.stringify({ decision: "approve", ...CEILING }),
+  });
+  storeCookies(res, jar);
+  let location = res.headers.get("location") as string;
+  while (location?.startsWith(ISSUER)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
+    storeCookies(res, jar);
+    location = res.headers.get("location") as string;
+  }
+  const code = new URL(location).searchParams.get("code") as string;
+  const tok = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: verifier, resource: RESOURCE });
+  const body = (await tok.json()) as { access_token: string };
+  expect(tok.status, JSON.stringify(body)).toBe(200);
+  const claims = decodeJwt(body.access_token) as { mission: { id: string } };
+  return { missionId: claims.mission.id, accessToken: body.access_token };
+}
+
+/** An expansion token exchange: the predecessor's read plus `extra` entries, with optional encounter hints. */
+function expansion(subjectToken: string, extra: Record<string, unknown>[], hints: Record<string, string> = {}): Record<string, string> {
+  const targets = [RESOURCE, ...extra.map((e) => e.resource as string).filter((r) => r !== RESOURCE)];
+  return {
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: subjectToken,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    creation_request_id: crypto.randomUUID(),
+    completion_mode: "deferred",
+    mission_intent: intentJson("Read the vendor's invoices", targets),
+    authorization_details: JSON.stringify([entry(RESOURCE, ["payments:invoice.read"]), ...extra]),
+    ...hints,
+  };
+}
+
+/** Approve a deferral (no re-consent) and complete it by the deferred poll. */
+async function approveAndPoll(code: string): Promise<{ access_token: string; mission_id: string }> {
+  as.expansionDeferrals.approve(code, {
+    approver: ALICE,
+    authentication: FIXTURE_BROWSER_LOGIN,
+    approvalEventId: `apev-${crypto.randomUUID()}`,
+    approvedUntil: FAR_EXP,
+  });
+  const res = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+  const body = (await res.json()) as { access_token: string; mission_id: string };
+  expect(res.status, JSON.stringify(body)).toBe(200);
+  return body;
+}
+
+beforeAll(async () => {
+  as = await buildAuthorizationServer({
+    issuer: ISSUER,
+    approvalSessions,
+    activationPolicies: PUBLISHED.policies,
+    progressive: PROGRESSIVE,
+  });
+  server = as.provider.listen(PORT);
+  await new Promise<void>((r) => server.once("listening", () => r()));
+  ap = {
+    id: "ap-agent",
+    kid: "ap-agent-auth",
+    key: (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey,
+    dpop: await generateKeyPair("ES256", { extractable: true }),
+  };
+});
+
+afterAll(async () => {
+  await new Promise<void>((r) => server.close(() => r()));
+  if (hoisted.previous === undefined) delete process.env.MISSION_CONFIG_DIR;
+  else process.env.MISSION_CONFIG_DIR = hoisted.previous;
+  rmSync(hoisted.dir, { recursive: true, force: true });
+});
+
+describe("a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469)", () => {
+  it("a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it", async () => {
+    declarations.set(ORIGIN, declarationOf(["payments:invoice.read"]));
+    const root = await issueMission();
+    // Control: a widening on the named resource is adjudicated by policy.
+    const named = await tokenRequest(expansion(root.accessToken, [entry(RESOURCE, ["payments:invoice.list"])]));
+    expect(named.status, await named.clone().text()).toBe(200);
+    const successor = (await named.json()) as { access_token: string; mission_id: string };
+    // The same predecessor's encounter, no hint: a fresh human approval.
+    const before = as.kernel.allMissions().length;
+    const res = await tokenRequest(expansion(successor.access_token, [entry(ENCOUNTERED, ["payments:invoice.read"])]));
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("authorization_pending");
+    expect(as.kernel.allMissions().length).toBe(before);
+    const disclosure = as.expansionDeferrals.disclosure(body.deferral_code as string);
+    expect(disclosure?.drawdown_fallback).toBe("encounter");
+    expect(disclosure?.encounter).toMatchObject({ origin: ORIGIN, resources: [ENCOUNTERED] });
+    expect(disclosure?.encounter?.hint).toBeUndefined();
+  });
+
+  it("the declaration digest is the Mission Issuer's own, over the bytes it retrieved; the agent's hint is kept as its claim, and the human-approved successor records the digest", async () => {
+    const served = declarationOf(["payments:invoice.read"]);
+    declarations.set(ORIGIN, served);
+    const root = await issueMission();
+    const forged = "sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const res = await tokenRequest(
+      expansion(root.accessToken, [entry(ENCOUNTERED, ["payments:invoice.read"])], {
+        encountered_resource: JSON.stringify({ origin: ORIGIN }),
+        resource_declaration_digest: forged,
+      }),
+    );
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    const encounter = as.expansionDeferrals.disclosure(body.deferral_code as string)?.encounter;
+    expect(encounter?.declaration_digest).toBe(catalogDigest(served));
+    expect(encounter?.declared).toBe(true);
+    expect(encounter?.hint).toEqual({ origin: ORIGIN, resource_declaration_digest: forged, digest_matched: false });
+    const approved = await approveAndPoll(body.deferral_code as string);
+    expect((as.kernel.get(approved.mission_id) as MissionRecord).resource_declaration_digest).toBe(catalogDigest(served));
+  });
+
+  it("with no declaration retrievable, nothing is digested or recorded, whatever digest the agent's hint carries", async () => {
+    declarations.delete(ORIGIN);
+    const root = await issueMission();
+    const res = await tokenRequest(
+      expansion(root.accessToken, [entry(ENCOUNTERED, ["payments:invoice.read"])], {
+        encountered_resource: JSON.stringify({ origin: ORIGIN }),
+        resource_declaration_digest: catalogDigest(declarationOf(["payments:invoice.read"])),
+      }),
+    );
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    const encounter = as.expansionDeferrals.disclosure(body.deferral_code as string)?.encounter;
+    expect(encounter?.declaration_digest).toBeUndefined();
+    expect(encounter?.declared).toBeUndefined();
+    const approved = await approveAndPoll(body.deferral_code as string);
+    expect((as.kernel.get(approved.mission_id) as MissionRecord).resource_declaration_digest).toBeUndefined();
+  });
+
+  it("an action the declaration does not list is recorded as undeclared", async () => {
+    declarations.set(ORIGIN, declarationOf(["payments:invoice.list"]));
+    const root = await issueMission();
+    const res = await tokenRequest(expansion(root.accessToken, [entry(ENCOUNTERED, ["payments:invoice.read"])]));
+    const body = (await res.json()) as { error?: string; deferral_code?: string };
+    expect(body.error, JSON.stringify(body)).toBe("authorization_pending");
+    expect(as.expansionDeferrals.disclosure(body.deferral_code as string)?.encounter?.declared).toBe(false);
+  });
+
+  it("an encountered_resource that is not an origin object or names no resource the request seeks, and a digest hint without one, are refused invalid_request", async () => {
+    declarations.set(ORIGIN, declarationOf(["payments:invoice.read"]));
+    const root = await issueMission();
+    const before = as.kernel.allMissions().length;
+    for (const hints of [
+      { encountered_resource: "not json" },
+      { encountered_resource: JSON.stringify({ origin: `${ORIGIN}/path` }) },
+      { encountered_resource: JSON.stringify({ origin: "https://elsewhere.example" }) },
+      { resource_declaration_digest: catalogDigest("x") },
+    ]) {
+      const res = await tokenRequest(expansion(root.accessToken, [entry(ENCOUNTERED, ["payments:invoice.read"])], hints));
+      const body = (await res.json()) as { error?: string };
+      expect(res.status, JSON.stringify(hints)).toBe(400);
+      expect(body.error, JSON.stringify(hints)).toBe("invalid_request");
+    }
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
+});
