@@ -2353,6 +2353,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
         "resource",
         "requested_token_type",
         "authorization_details",
+        // @spec discovery#adjudication (#1469 stage 1): the encounter hints,
+        // kept as the agent's claim, never identity.
+        "encountered_resource",
+        "resource_declaration_digest",
         // @spec async-delegation — the async-delegation discriminator. Declared here
         // or the token endpoint strips it (the file documents `resource` was
         // empirically stripped for this custom grant); a test asserts its survival.

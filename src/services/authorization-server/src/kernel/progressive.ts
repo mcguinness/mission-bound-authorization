@@ -28,6 +28,7 @@ import { randomBytes } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
+  catalogDigest,
   type ActivationPolicyRef,
   authorityHash,
   compareAmounts,
@@ -144,6 +145,13 @@ export interface MissionCeiling {
    */
   ceiling_consent_principal?: { iss: string; sub: string };
   drawdown_count: number;
+  /**
+   * @spec progressive#audit-linkage, discovery#resource-identity (#1469): the
+   * digest of the self-declaration this successor's adjudication evaluated,
+   * computed over the bytes the Mission Issuer retrieved. On that successor
+   * only; never carried forward.
+   */
+  resource_declaration_digest?: string;
 }
 
 /**
@@ -238,11 +246,15 @@ export type ReconsentedCeiling = Omit<MissionCeiling, "drawdown_count">;
 export function successorCeilingMembers(
   predecessor: MissionRecord,
   reconsent?: ReconsentedCeiling,
+  /** @spec progressive#audit-linkage (#1469): the digest of the declaration this successor's adjudication evaluated. */
+  resourceDeclarationDigest?: string,
 ): Partial<MissionCeiling> {
   const drawdownCount = predecessor.drawdown_count ?? 0;
-  if (reconsent) return { ...reconsent, drawdown_count: drawdownCount };
+  const digest = resourceDeclarationDigest ? { resource_declaration_digest: resourceDeclarationDigest } : {};
+  if (reconsent) return { ...reconsent, drawdown_count: drawdownCount, ...digest };
   if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) return {};
   return {
+    ...digest,
     authority_ceiling: predecessor.authority_ceiling,
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
     ceiling_hash: predecessor.ceiling_hash,
@@ -282,6 +294,7 @@ export function serializeCeiling(record: MissionRecord): string | null {
     ceiling_consented_at: record.ceiling_consented_at,
     ...(record.ceiling_consent_principal ? { ceiling_consent_principal: record.ceiling_consent_principal } : {}),
     drawdown_count: record.drawdown_count ?? 0,
+    ...(record.resource_declaration_digest ? { resource_declaration_digest: record.resource_declaration_digest } : {}),
   };
   return JSON.stringify(stored);
 }
@@ -349,6 +362,138 @@ export interface ProgressiveDrawdownOptions {
    * never reaches it.
    */
   ceilingOffer?: (request: { clientId: string; intent: MissionIntent }) => CeilingConsent | undefined;
+  /**
+   * @spec discovery#resource-identity, progressive#ceiling-test (#1469 stage
+   * 1): the deployment's port to a resource's self-declaration, retrieved
+   * server-side by origin. The Mission Issuer digests the exact bytes it
+   * returns; nothing the agent sends is consulted. Absent, or resolving to
+   * nothing, no declaration is evaluated and no digest is recorded.
+   */
+  resourceDeclarations?: (origin: string) => Promise<Uint8Array | string | undefined>;
+}
+
+/**
+ * @spec discovery#adjudication, progressive#ceiling-test (#1469 stage 1): the
+ * facts an encounter records for the human approval it falls back to, and
+ * for audit. The encountered resources come from the request's own entries,
+ * never from the agent's `encountered_resource` hint, which is kept only as
+ * the agent's claim.
+ */
+export interface EncounterFacts {
+  origin: string;
+  resources: string[];
+  /** The raw-octet digest of the declaration bytes the Mission Issuer retrieved; absent when it retrieved none. */
+  declaration_digest?: string;
+  /** Whether the declaration lists every action sought at the resource; absent without a usable declaration. */
+  declared?: boolean;
+  /** The agent's hint, recorded as its claim, and whether its digest matched the retrieved one. */
+  hint?: { origin: string; resource_declaration_digest?: string; digest_matched?: boolean };
+}
+
+/** The `scheme://host[:port]` origin of a URI, or undefined when it has none. */
+function originOf(uri: string): string | undefined {
+  try {
+    const origin = new URL(uri).origin;
+    return origin === "null" ? undefined : origin;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * @spec discovery#resource-identity (#1469 stage 1): the agent's
+ * `encountered_resource` (an Encountered Resource object) and
+ * `resource_declaration_digest` are hints. Each is validated for shape and
+ * kept as the agent's claim, never as identity. A hint whose `origin` is not
+ * an origin, or names no resource the request seeks, and a digest hint
+ * without the object, are refused: the returned string is the reason.
+ */
+export function encounterHint(
+  raw: unknown,
+  digest: unknown,
+  requested: readonly AuthorityEntry[],
+): { origin: string; resource_declaration_digest?: string } | undefined | string {
+  if (raw === undefined && digest === undefined) return undefined;
+  if (typeof raw !== "string") return "resource_declaration_digest rides only with encountered_resource";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return "encountered_resource is not a JSON object";
+  }
+  const origin = (parsed as { origin?: unknown } | null)?.origin;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || typeof origin !== "string" || originOf(origin) !== origin) {
+    return "encountered_resource needs an origin";
+  }
+  if (digest !== undefined && typeof digest !== "string") return "resource_declaration_digest is a string";
+  if (!requested.some((e) => originOf(e.resource) === origin)) {
+    return "the encountered resource names no resource the request seeks";
+  }
+  return { origin, ...(typeof digest === "string" ? { resource_declaration_digest: digest } : {}) };
+}
+
+/**
+ * @spec discovery#resource-identity, discovery#adjudication,
+ * progressive#ceiling-test (#1469 stage 1): the facts of an encounter. The
+ * Mission Issuer retrieves the declaration itself, through the deployment's
+ * port, from the origin of the request's own entry, and digests the exact
+ * bytes; the hint is recorded beside them as the agent's claim. One origin per
+ * request in this reference, and a hint naming another origin is refused, so
+ * its digest is never compared with a different resource's declaration; the
+ * returned string is the reason.
+ */
+export async function encounterFacts(
+  options: ProgressiveDrawdownOptions,
+  encountered: readonly string[],
+  requested: readonly AuthorityEntry[],
+  hint: { origin: string; resource_declaration_digest?: string } | undefined,
+): Promise<EncounterFacts | string> {
+  const origins = [...new Set(encountered.map(originOf))];
+  const origin = origins[0];
+  if (origins.length !== 1 || origin === undefined) return "one encountered resource origin per request";
+  if (hint && hint.origin !== origin) return "encountered_resource names an origin other than the encounter's";
+  let bytes: Uint8Array | string | undefined;
+  try {
+    bytes = await options.resourceDeclarations?.(origin);
+  } catch {
+    bytes = undefined;
+  }
+  const digest = bytes === undefined ? undefined : catalogDigest(bytes);
+  const sought = requested.filter((e) => encountered.includes(e.resource)).flatMap((e) => e.actions);
+  const declared = bytes === undefined ? undefined : declaresActions(bytes, sought);
+  return {
+    origin,
+    resources: [...encountered],
+    ...(digest ? { declaration_digest: digest } : {}),
+    ...(declared === undefined ? {} : { declared }),
+    ...(hint
+      ? {
+          hint: {
+            origin: hint.origin,
+            ...(hint.resource_declaration_digest ? { resource_declaration_digest: hint.resource_declaration_digest } : {}),
+            ...(hint.resource_declaration_digest && digest ? { digest_matched: hint.resource_declaration_digest === digest } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * The reference's self-declaration form (a deployment assumption: the draft
+ * leaves the format to the deployment, R3 being one form): a JSON object whose
+ * `operations` lists the action identifiers the resource declares. Whether it
+ * lists every sought action; undefined when the bytes are not that form.
+ */
+export function declaresActions(bytes: Uint8Array | string, sought: readonly string[]): boolean | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(typeof bytes === "string" ? bytes : Buffer.from(bytes).toString("utf8"));
+  } catch {
+    return undefined;
+  }
+  const operations = (parsed as { operations?: unknown } | null)?.operations;
+  if (!Array.isArray(operations) || !operations.every((o) => typeof o === "string")) return undefined;
+  return sought.every((a) => operations.includes(a));
 }
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
@@ -419,6 +564,9 @@ export function validateProgressiveDrawdownOptions(
   }
   if (o.ceilingOffer !== undefined && typeof o.ceilingOffer !== "function") {
     throw new Error("progressive ceilingOffer must be a function of the request");
+  }
+  if (o.resourceDeclarations !== undefined && typeof o.resourceDeclarations !== "function") {
+    throw new Error("progressive resourceDeclarations must be a function of the origin");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
@@ -531,11 +679,12 @@ export type DrawdownFallbackReason =
   | "restricted_overlap"
   | "entire_remaining_ceiling"
   | "per_drawdown_bound"
-  | "chain_rate_bound";
+  | "chain_rate_bound"
+  | "encounter";
 
 export type DrawdownAdjudication =
   | { outcome: "out_of_ceiling" }
-  | { outcome: "fresh_approval"; reason: DrawdownFallbackReason }
+  | { outcome: "fresh_approval"; reason: DrawdownFallbackReason; encountered?: string[] }
   | { outcome: "policy"; ref: ActivationPolicyRef; snapshot: RegisteredActivationPolicy };
 
 /** One widened resource-action pair: authority the predecessor's effective set does not already hold. */
@@ -670,6 +819,20 @@ export function adjudicateDrawdown(
     return { outcome: "out_of_ceiling" };
   }
   const fallback = (reason: DrawdownFallbackReason): DrawdownAdjudication => ({ outcome: "fresh_approval", reason });
+  // @spec discovery#encounter, discovery#adjudication (#1469 stage 1, D607): a
+  // widened resource no ceiling entry names is an encounter. Until identity
+  // pinning, trusted taint and the floors are in place, no encounter binds by
+  // policy, whatever its other guards: it falls back to a fresh human
+  // approval. Authority the predecessor already holds is no new encounter.
+  const named = new Set(ceiling.map((e) => e.resource));
+  const encountered = [
+    ...new Set(
+      widenedPairs(requested, kernel.effectiveAuthoritySet(predecessor))
+        .filter((w) => !named.has(w.resource))
+        .map((w) => w.resource),
+    ),
+  ];
+  if (encountered.length) return { outcome: "fresh_approval", reason: "encounter", encountered };
   const ref = predecessor.drawdown_policy;
   if (!ref) return fallback("no_drawdown_policy");
   // @spec mission#standing-consent-bases, progressive#in-ceiling-expansion: a
