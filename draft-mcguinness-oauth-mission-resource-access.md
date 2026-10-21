@@ -634,7 +634,12 @@ the following hold:
 4. **Contract.** A carries `resource_contract` exactly when B does,
    and then with `id`, `version`, and `digest` each equal to B's
    ({{resource-contract}}). Removing, replacing, or adding a reference
-   is never narrowing.
+   is never narrowing. The one exception is approval: where B is a
+   policy ceiling without a reference, A can carry the reference the
+   authorization server assembles from configuration before approval
+   ({{resource-contract}}), since a policy ceiling need not carry one.
+   Derivation from an approved entry has no exception: it preserves
+   the reference exactly.
 
 The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
@@ -1055,10 +1060,7 @@ authoritative. Before approval, the authorization server:
 
 A superseded or retired version is never current
 ({{I-D.draft-mcguinness-mission-runtime}}), so no new approval
-references one. The reference is assembled from configuration, not
-narrowed: a policy ceiling a proposal is narrowed against need not
-carry one, and step 4 of {{subset}} applies to entries derived from an
-approved entry. An authorization server that does not implement this
+references one. An authorization server that does not implement this
 section MUST refuse a proposed or carried entry that carries
 `resource_contract`, with the `invalid_authorization_details` error
 code, and MUST NOT drop the member.
