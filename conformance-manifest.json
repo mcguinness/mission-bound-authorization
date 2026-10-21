@@ -11221,6 +11221,12 @@
      "name": "the discharge operation on the lifecycle endpoint > replays the stored signed response verbatim on a byte-identical retransmission",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
    "notes": "String equality of the compact JWS, which is only meaningful because the stored bytes are returned rather than re-signed: the assertion would pass vacuously under a frozen clock if the endpoint re-signed, so the companion event-replay row asserts the echoed nonce instead."
@@ -11483,6 +11489,38 @@
     }
    ],
    "notes": "The `discharge_result` object is a sibling of `mission` in the endpoint's existing signed envelope (kernel.signedStatus's `dischargeResult` option), asserted member-for-member for `discharged` and by outcome plus versions for `already_discharged` and `terminal_noop`, so all three vocabulary values are observed. The response is state-only (the request carries no audience) and echoes the request's own nonce."
+  },
+  {
+   "id": "status.discharge.legacy-current-version-retained",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-result",
+   "text": "An envelope that carries `current_version` in place of `new_version` verifies over its original bytes with that name.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a retained envelope signed before the migration, whose `discharge_result` carries `current_version`, is served on a same-nonce retransmission as its exact retained bytes, never re-signed or rewritten to `new_version`, and those bytes verify under the AS's published Status key with `current_version` as signed",
+    "local": "the fixture signs the pre-migration shape with the AS's Status key over the exchange's own header and observation and places it in the `final` row the exchange retained, under the current request digest; verification uses the test-side Status consumer procedure (discharge-consumer.helper.ts), since src/ has no production consumer of a Status envelope"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "the discharge operation on the lifecycle endpoint > replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#705 acceptance item 19 (D359: an envelope signed before the migration verifies over its original bytes with `current_version`). Partial: consumer-side verification exercised only by the test-side Status verifier (discharge-consumer.helper.ts), since src/ has no production consumer of a Status envelope; the AS half, retention and verbatim replay of the original bytes, is fully witnessed. The test also shows that a copy rewritten to `new_version` under the retained signature fails verification. Fault injection by test double (no source edit): serving a retained final row re-signed from its material, or rewritten to `new_version`, fails the test."
   },
   {
    "id": "status.discharge.atomic-commit",
@@ -47500,6 +47538,36 @@
    ]
   },
   {
+   "id": "approval-context.manifest.approver-from-consent-principal",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "approval-context-manifest",
+   "text": "`approver` copies the Mission Record's `approval_basis.consent_principal`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-context.manifest"
+   },
+   "profiles": [],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the manifest's `approver` member is the Mission Record's `approval_basis.consent_principal`, and a record without the retired `approver` alias yields the same v1 manifest and the same `approval_context_commitment` as the record that carried the alias equal to `consent_principal`",
+    "local": "the commitment is pinned to the value computed at bc6287cc, before the record alias was removed, over the same hand-built record; the manifest input is built by MissionKernel.approvalContextInput, and mission-core's approvalContextManifest copies it verbatim"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "the Approval Context Manifest keeps its digest (#705 witness 10) > sources the manifest's approver from approval_basis.consent_principal, byte-identical to the retired record alias",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#705 acceptance item 13, its approval-context half (D359: no new `typ`, a digest-equivalence regression witness). Its Mandate `approver` claim half has no implementation: src/ mints no Mandate. Fault injection by test double (no source edit): sourcing `approver` from `subject` fails the test."
+  },
+  {
    "id": "approval-context.construction.envelope-anchor",
    "spec": "draft-mcguinness-mission-approval-governance.md",
    "anchor": "approval-context-construction",
@@ -51119,6 +51187,110 @@
     }
    ],
    "notes": "#705 (D359); #1162 review P2."
+  },
+  {
+   "id": "child-delegation.child-state.parent-terminated-immediate-parent",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "REQUIRED. A string. The Mission identifier of the immediate Parent Mission, equal to the child's `parent.id`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Child Mission terminated with reason `parent_terminated` carries `termination.parent` naming its immediate Parent Mission, equal to its own lineage `parent.id` and never a more distant ancestor (a grandchild names the intermediate child, not the root or predecessor that started the cascade), on the committed ordinary cascade, under the ancestor-termination projection before and after materialization, and on the Child Mission Carryover path for carried and excluded rows alike, with the record, the lifecycle commit, the Status response and the authenticated Carryover map agreeing"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "cascade revocation (@spec child-delegation#cascade) > cascade is transitive: a grandchild also cascades (in generation order)",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "the ancestor-termination projection (#705 witness 7) > a child reads terminated parent_terminated before its cascade commits and while that write fails, and materializing keeps the cause",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "parent_terminated names the immediate parent; its provenance is optional (#705 acceptance item 9) > a grandchild under a legacy cascaded intermediate names that intermediate as parent and invents no origin, observed and materialized",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > names a carried grandchild's immediate parent, the old child, never the predecessor, on its record, its commit and its Status (#705 acceptance item 9)",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > names an excluded grandchild's immediate parent in its record and in the authenticated map, never the predecessor (#705 acceptance item 9)",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#705 acceptance item 9 (D359: the required reference is the immediate parent). Every test terminates a grandchild, so the immediate parent and the cascade's origin differ. Fault injection by test double (no source edit): naming the origin as `parent` in parentTerminatedTermination fails the transitive-cascade and projection tests, and naming it in the Carryover terminal funnel fails both Carryover tests."
+  },
+  {
+   "id": "child-delegation.child-state.parent-terminated-origin-provenance",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "OPTIONAL. A string. The Mission identifier of the ancestor whose termination started the cascade. Provenance only: `parent` remains the reference a consumer follows.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where present, `termination.origin` names the ancestor whose termination started the cascade (the root of a transitive cascade, or the superseded predecessor on the Carryover path), carried unchanged through every generation while `parent` stays the immediate parent; where the parent's termination retained no origin, the child's omits it rather than naming another Mission"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "cascade revocation (@spec child-delegation#cascade) > cascade is transitive: a grandchild also cascades (in generation order)",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "the ancestor-termination projection (#705 witness 7) > a child reads terminated parent_terminated before its cascade commits and while that write fails, and materializing keeps the cause",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "parent_terminated names the immediate parent; its provenance is optional (#705 acceptance item 9) > a grandchild under a legacy cascaded intermediate names that intermediate as parent and invents no origin, observed and materialized",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > names a carried grandchild's immediate parent, the old child, never the predecessor, on its record, its commit and its Status (#705 acceptance item 9)",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/carryover.test.ts",
+     "name": "Child Mission Carryover termination vocabulary (@spec mission#termination, child-delegation#cascade, #705) > names an excluded grandchild's immediate parent in its record and in the authenticated map, never the predecessor (#705 acceptance item 9)",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#705 acceptance item 9 (D359: the triggering ancestor and its reason are separate optional provenance). The same tests assert `origin_reason` beside `origin`. Fault injection by test double (no source edit): filling in an absent `origin` with the parent fails the legacy-intermediate test."
   },
   {
    "id": "child-delegation.source.commit-check",
