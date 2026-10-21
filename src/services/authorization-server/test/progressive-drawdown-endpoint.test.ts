@@ -954,8 +954,11 @@ async function approveAndPoll(
   approver: { iss: string; sub: string },
   ceiling?: CeilingDecision,
 ): Promise<{ access_token: string; mission_id: string }> {
-  // The approval surface offers the re-consent it makes (#1017).
-  if (ceiling) currentOffer = ceiling;
+  // The approval surface renders the disclosure, offering the re-consent it then makes (#1017).
+  if (ceiling) {
+    currentOffer = ceiling;
+    as.expansionDeferrals.disclosure(deferralCode);
+  }
   as.expansionDeferrals.approve(deferralCode, {
     approver,
     authentication: FIXTURE_BROWSER_LOGIN,
@@ -1837,6 +1840,29 @@ describe("the deferred expansion's consent disclosure (@spec progressive#fresh-a
     // Still pending: the rendered offer is accepted (approve only acts on a pending deferral).
     const approved = await approveAndPoll(code, ALICE, ceilingOf("drawdown-wide"));
     expect(get(approved.mission_id).drawdown_policy?.id).toBe("drawdown-wide");
+  });
+
+  it("a re-consent is bound to the offer the disclosure rendered, not to an offer computed at the approval", async () => {
+    const root = await issueMission(READ, ceilingOf());
+    const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
+    const approval = (ceiling: CeilingDecision) => ({
+      approver: ALICE,
+      authentication: FIXTURE_BROWSER_LOGIN,
+      approvalEventId: `apev-${crypto.randomUUID()}`,
+      approvedUntil: FAR_EXP,
+      ceiling,
+    });
+    // The disclosure renders drawdown-std; the offer then changes to drawdown-wide.
+    currentOffer = ceilingOf("drawdown-std");
+    as.expansionDeferrals.disclosure(code);
+    currentOffer = ceilingOf("drawdown-wide");
+    expect(() => as.expansionDeferrals.approve(code, approval(ceilingOf("drawdown-wide")))).toThrowError(IntentError);
+    // The rendered offer is still the one an approval may consent.
+    as.expansionDeferrals.approve(code, approval(ceilingOf("drawdown-std")));
+    const res = await tokenRequest({ grant_type: DEFERRED_GRANT_TYPE, deferral_code: code });
+    const body = (await res.json()) as { mission_id: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expect(get(body.mission_id).drawdown_policy?.id).toBe("drawdown-std");
   });
 
   it("a re-consent's disclosure renders the chain's record since the latest ceiling consent: drawdowns, escalations and the consent instant", async () => {

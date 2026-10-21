@@ -338,6 +338,9 @@ function migrateExpansionDeferrals(db: Database): void {
     // @spec progressive#ceiling-review (#1017): why a drawdown request came to
     // a human, the guard exception a review disclosure lists.
     "drawdown_fallback_reason",
+    // @spec progressive#ceiling-reconsent (#1480 review): the re-consent offer
+    // the disclosure rendered, the only one an approval may consent.
+    "reconsent_offer_json",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -711,9 +714,9 @@ export class ExpansionDeferralStore {
     // classified. A refusal records nothing and leaves the deferral pending.
     const pending = this.db
       .prepare(
-        "SELECT intent_json, predecessor_id, client_id FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "SELECT intent_json, predecessor_id, reconsent_offer_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
-      .get(deferralCode) as { intent_json: string; predecessor_id: string; client_id: string } | undefined;
+      .get(deferralCode) as { intent_json: string; predecessor_id: string; reconsent_offer_json: string | null } | undefined;
     let reconsent: ReconsentedCeiling | undefined;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
@@ -728,11 +731,12 @@ export class ExpansionDeferralStore {
       }
       // @spec progressive#ceiling-reconsent (#1017): the disclosure renders the
       // re-consented ceiling and policy as at the initial approval, so a
-      // re-consent consents only exactly the offer the disclosure rendered.
-      if (
-        approval.ceiling &&
-        !consentsOffer(approval.ceiling, this.ceilingOffer?.({ clientId: pending.client_id, intent: recorded.i }))
-      ) {
+      // re-consent consents only exactly the offer the disclosure rendered, as
+      // retained when it rendered, never an offer computed afresh.
+      const rendered = pending.reconsent_offer_json
+        ? (JSON.parse(pending.reconsent_offer_json) as CeilingConsent)
+        : undefined;
+      if (approval.ceiling && !consentsOffer(approval.ceiling, rendered)) {
         throw new IntentError("invalid_request", "the approval re-consents a ceiling its disclosure did not render");
       }
       const authentication = approval.authentication;
@@ -871,6 +875,14 @@ export class ExpansionDeferralStore {
       ).map((r) => ({ at: new Date(r.refused_at).toISOString() }));
       const recorded = JSON.parse(row.intent_json) as { i: MissionIntent };
       const offer = this.ceilingOffer?.({ clientId: row.client_id, intent: recorded.i });
+      // @spec progressive#ceiling-reconsent (#1480 review): retained as
+      // rendered; an approval re-consents only this. A rendering with no offer
+      // withdraws an earlier one.
+      this.db
+        .prepare(
+          "UPDATE expansion_deferrals SET reconsent_offer_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        )
+        .run(offer ? JSON.stringify(offer) : null, deferralCode);
       disclosure.ceiling = {
         ...(offer
           ? {
