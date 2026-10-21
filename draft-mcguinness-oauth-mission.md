@@ -5046,6 +5046,16 @@ evidence out of band. Such a commitment binds the structured disclosure
 the AS records, not the presentation itself; it narrows this gap for
 audit but does not close it.
 
+The anchors do not commit the approval basis either: who consented,
+who activated the Mission, and under which basis ({{mission-record}}).
+The record's immutability protects it, and only the AS enforces that.
+A deployment that needs the approval basis checkable outside the AS
+can register the approval event under Mission Audit Transparency
+{{I-D.draft-mcguinness-mission-audit}}, whose registration covers the
+whole record at creation, or carry the Approval Context Commitment of
+{{I-D.draft-mcguinness-mission-approval-governance}} in a signed
+artifact.
+
 ### Downgrade by Omission {#downgrade-by-omission}
 
 A token bearing equivalent `authorization_details` but no `mission`
