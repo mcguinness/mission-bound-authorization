@@ -1194,10 +1194,13 @@ document.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-the-containment-overlay" class="internal xref">The Containment Overlay</a></p>
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.1">
-                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-removal-only-expressiveness" class="internal xref">Removal-Only Expressiveness</a></p>
+                <p id="section-toc.1-1.6.2.1.1"><a href="#section-6.1" class="auto internal xref">6.1</a>.  <a href="#name-selector-matching" class="internal xref">Selector Matching</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.2">
-                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-relationship-to-entry-disch" class="internal xref">Relationship to Entry Discharge</a></p>
+                <p id="section-toc.1-1.6.2.2.1"><a href="#section-6.2" class="auto internal xref">6.2</a>.  <a href="#name-removal-only-expressiveness" class="internal xref">Removal-Only Expressiveness</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.3">
+                <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-relationship-to-entry-disch" class="internal xref">Relationship to Entry Discharge</a></p>
 </li>
             </ul>
 </li>
@@ -1362,8 +1365,11 @@ implementable alone. It reuses, without restating, that profile's
 Mission, Mission Intent, Authority Set and entry shape, integrity
 anchors, <code>mission</code> claim, subset rule, and lifecycle gating, and the
 Status profile's state version
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). It uses the terms
-Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). It pairs contained
+capability with Authority Set entries under the Resource Matching and
+Subset Rule of the Mission Resource Access Profile
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). It uses the
+terms Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
 Mission, and derived token as defined in the issuance profile.<a href="#section-2-1" class="pilcrow">¶</a></p>
 <p id="section-2-2">Where this document refers to "the issuance profile" without a
 section, it means <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> as a whole.<a href="#section-2-2" class="pilcrow">¶</a></p>
@@ -1422,7 +1428,7 @@ reports (<a href="#protected-events" class="auto internal xref">Section 8</a>);<
 <ul class="normal">
 <li class="normal" id="section-3-4.1">
           <p id="section-3-4.1.1">constraint tightening within an entry (for example, lowering a
-<code>max_amount</code> ceiling); the overlay is removal-only (<a href="#removal-only" class="auto internal xref">Section 6.1</a>);<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
+<code>max_amount</code> ceiling); the overlay is removal-only (<a href="#removal-only" class="auto internal xref">Section 6.2</a>);<a href="#section-3-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-3-4.2">
           <p id="section-3-4.2.1">any transition that reverts containment in place; restoration is a
@@ -1468,9 +1474,11 @@ Mission's effective authority (<a href="#overlay" class="auto internal xref">Sec
         <dd class="break"></dd>
 <dt id="section-4-3.3">Contained capability:</dt>
         <dd style="margin-left: 1.5em" id="section-4-3.4">
-          <p id="section-4-3.4.1">A <code>{resource, actions}</code> pair in the overlay's contained set. An
-entry with no <code>actions</code> member contains the whole Authority Set
-entry for that resource. It is this profile's own contribution to
+          <p id="section-4-3.4.1">A selector in the overlay's contained set: a <code>resource</code>, its
+<code>resource_match</code>, and optionally <code>actions</code> (<a href="#overlay" class="auto internal xref">Section 6</a>). It applies
+to every approved Authority Set entry whose resource set overlaps it
+(<a href="#selector-matching" class="auto internal xref">Section 6.1</a>), and with no <code>actions</code> member it contains
+each such entry whole. It is this profile's own contribution to
 the Effective Authority Set's reduction: every derivation gated
 after a contain transition excludes it; authority that left the
 Mission before the transition keeps its own bound, not this one
@@ -1548,12 +1556,12 @@ Context, and the overlay stays outside that commitment (<a href="#overlay" class
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Structured Authority</td>
             <td class="text-left" rowspan="1" colspan="1">required</td>
-            <td class="text-left" rowspan="1" colspan="1">The Effective Authority Set is what every derivation, delegation, projection, and attenuation root is gated on after a contain transition (<a href="#derivation-gating" class="auto internal xref">Section 9</a>); a contained capability names an approved Authority Set entry or its actions (<a href="#overlay" class="auto internal xref">Section 6</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">The Effective Authority Set is what every derivation, delegation, projection, and attenuation root is gated on after a contain transition (<a href="#derivation-gating" class="auto internal xref">Section 9</a>); a contained capability selects approved Authority Set entries, or their actions, by resource-set overlap (<a href="#selector-matching" class="auto internal xref">Section 6.1</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Monotonic Derivation</td>
             <td class="text-left" rowspan="1" colspan="1">required</td>
-            <td class="text-left" rowspan="1" colspan="1">Scoped to removal-only narrowing: a contain transition only adds contained capability, so monotonicity is trivially decidable, set union over entries, with no per-constraint comparator (<a href="#removal-only" class="auto internal xref">Section 6.1</a>, <a href="#contain-transition" class="auto internal xref">Section 7</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Scoped to removal-only narrowing: a contain transition only adds contained capability, so monotonicity is trivially decidable, set union over entries, with no per-constraint comparator (<a href="#removal-only" class="auto internal xref">Section 6.2</a>, <a href="#contain-transition" class="auto internal xref">Section 7</a>)</td>
           </tr>
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Lifecycle-Gated Authorization</td>
@@ -1619,10 +1627,25 @@ contain transition, strictly monotonic per Mission. A Mission with
         <dd style="margin-left: 1.5em" id="section-6-2.4">
           <p id="section-6-2.4.1"><span class="bcp14">REQUIRED</span> when <code>containment_version</code> is greater than 0. An array of
 contained-capability entries. Each entry is a JSON object
-<span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with <code>resource</code> (<span class="bcp14">REQUIRED</span>, the <code>resource</code> of an
-approved Authority Set entry) and <code>actions</code> (<span class="bcp14">OPTIONAL</span>, an array of
-that entry's action values). An entry with no <code>actions</code> member
-contains the whole Authority Set entry.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+<span>[<a href="#RFC8259" class="cite xref">RFC8259</a>]</span> with these members:<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-6-2.4.2.1">
+              <p id="section-6-2.4.2.1.1"><code>resource</code>: <span class="bcp14">REQUIRED</span>. An absolute URI, compared with the
+<code>resource</code> of approved Authority Set entries
+(<a href="#selector-matching" class="auto internal xref">Section 6.1</a>).<a href="#section-6-2.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6-2.4.2.2">
+              <p id="section-6-2.4.2.2.1"><code>resource_match</code>: <span class="bcp14">OPTIONAL</span>. <code>exact</code> (the default, and the behavior
+when the member is absent) or <code>prefix</code>, with the meaning and the
+<code>resource</code> limits the Mission Resource Access Profile defines for
+an entry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-6-2.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-6-2.4.2.3">
+              <p id="section-6-2.4.2.3.1"><code>actions</code>: <span class="bcp14">OPTIONAL</span>. A non-empty array of action values.<a href="#section-6-2.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-6-2.4.3">An entry with no <code>actions</code> member contains each approved entry it
+applies to whole.<a href="#section-6-2.4.3" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -1634,27 +1657,71 @@ state, not part of <code>authority_hash</code>; folding containment into the
 anchor would make the committed authority time-varying, exactly as
 folding an entry's fired completion status into it would
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>).<a href="#section-6-3" class="pilcrow">¶</a></p>
-<div id="removal-only">
+<div id="selector-matching">
 <section id="section-6.1">
-        <h3 id="name-removal-only-expressiveness">
-<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-removal-only-expressiveness" class="section-name selfRef">Removal-Only Expressiveness</a>
+        <h3 id="name-selector-matching">
+<a href="#section-6.1" class="section-number selfRef">6.1. </a><a href="#name-selector-matching" class="section-name selfRef">Selector Matching</a>
         </h3>
-<p id="section-6.1-1">The overlay removes capability; it expresses nothing else. Constraint
+<p id="section-6.1-1">A contained-capability entry is a selector over the approved Authority
+Set. Its resource set is the one its <code>resource</code> and <code>resource_match</code>
+denote under Resource Matching
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>): under
+<code>exact</code>, the <code>resource</code> alone; under <code>prefix</code>, the <code>resource</code> and every
+resource beneath it at a path-segment boundary. An <code>exact</code> selector
+never applies to the resources beneath its <code>resource</code>; a containment
+meant for a service and everything beneath it declares <code>prefix</code>.<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+<p id="section-6.1-2">Two resource sets overlap when one is contained in the other under the
+resource comparison of the Subset Rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
+"Subset Rule"). The Mission Issuer <span class="bcp14">MUST</span> apply each contained-capability
+entry to every approved Authority Set entry whose resource set overlaps
+the entry's own, whether the selector is broader or finer than that
+approved entry. The Mission Issuer <span class="bcp14">MUST NOT</span> admit to the overlay a
+contained-capability entry it cannot compare, such as one with an
+unrecognized <code>resource_match</code>: such an entry would apply to nothing.<a href="#section-6.1-2" class="pilcrow">¶</a></p>
+<p id="section-6.1-3">The removal is per approved entry. A selector with <code>actions</code> removes
+those actions from each approved entry it applies to, and a selector
+with no <code>actions</code> member removes each such entry whole. When more than
+one selector applies to an approved entry, the removals form a union:
+the entry loses every action any of them selects, and is removed whole
+when any of them has no <code>actions</code> member. Selectors sharing a
+<code>resource</code> value under different <code>resource_match</code> values select
+different resource sets and apply independently. An approved entry left
+with no actions is removed.<a href="#section-6.1-3" class="pilcrow">¶</a></p>
+<p id="section-6.1-4">An approved entry cannot express "this resource set except that
+resource". A selector finer than an approved entry, such as an <code>exact</code>
+selector for one invoice under a <code>prefix</code> entry for the invoice
+service, therefore removes the selected actions from the whole approved
+entry, including resources the selector does not name. This
+over-containment is conservative: it removes more authority than the
+selector names, never less, and what it removes returns only through
+restoration (<a href="#restoration" class="auto internal xref">Section 15</a>).<a href="#section-6.1-4" class="pilcrow">¶</a></p>
+<p id="section-6.1-5">Propagation to an existing Child Mission (<a href="#derivation-gating" class="auto internal xref">Section 9</a>)
+applies the same removal: a child entry justified by an approved entry
+a selector applies to loses what that approved entry lost.<a href="#section-6.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="removal-only">
+<section id="section-6.2">
+        <h3 id="name-removal-only-expressiveness">
+<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-removal-only-expressiveness" class="section-name selfRef">Removal-Only Expressiveness</a>
+        </h3>
+<p id="section-6.2-1">The overlay removes capability; it expresses nothing else. Constraint
 tightening within an entry (for example, lowering a <code>max_amount</code>
 ceiling) is a named deferral: removal keeps monotonicity trivially
 decidable, set union over entries, where tightening would need a
 per-constraint comparator to prove each successive overlay no broader
 than the last. A deployment that needs a tighter constraint contains
 the affected actions and re-approves them, tightened, through a
-successor Mission (<a href="#restoration" class="auto internal xref">Section 15</a>).<a href="#section-6.1-1" class="pilcrow">¶</a></p>
+successor Mission (<a href="#restoration" class="auto internal xref">Section 15</a>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="discharge-relationship">
-<section id="section-6.2">
+<section id="section-6.3">
         <h3 id="name-relationship-to-entry-disch">
-<a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-relationship-to-entry-disch" class="section-name selfRef">Relationship to Entry Discharge</a>
+<a href="#section-6.3" class="section-number selfRef">6.3. </a><a href="#name-relationship-to-entry-disch" class="section-name selfRef">Relationship to Entry Discharge</a>
         </h3>
-<p id="section-6.2-1">Containment composes with the Entry Discharge companion's discharge
+<p id="section-6.3-1">Containment composes with the Entry Discharge companion's discharge
 mechanism (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>) and
 duplicates none of it. Discharge retires an entry because the task
 the entry was granted for is done, under a <code>terminal_when</code> condition
@@ -1664,7 +1731,7 @@ the anchor never carried. Both are evaluated state; both commit as
 metadata-only state-version increments; derivation excludes both
 (<a href="#derivation-gating" class="auto internal xref">Section 9</a>). Discharge identifies the retired entry by the
 issuance profile's Authority Set entry commitment
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-6.3-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2667,22 +2734,31 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="section-23-1">[[ To be removed from the final specification ]]<a href="#section-23-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-23-2.1">
-          <p id="section-23-2.1.1">The Contain Transition (<a href="#contain-transition" class="auto internal xref">Section 7</a>): a contain
-transition is refused for a <code>terminated</code> Mission, whatever its
-termination reason (#705).<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
+          <p id="section-23-2.1.1">Selector Matching (<a href="#selector-matching" class="auto internal xref">Section 6.1</a>): a contained-capability
+entry is a selector with <code>resource_match</code>, <code>exact</code> by default and
+<code>prefix</code> by declaration. It applies to every approved entry whose
+resource set overlaps it, removals from several selectors form a
+union, and a selector finer than an approved entry removes its
+actions from the whole entry, a conservative over-containment
+(#1463).<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-23-2.2">
-          <p id="section-23-2.2.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): current-authority surfaces omit
-contained capability at action grain, keeping an entry's uncontained
-remainder; an annotation no longer substitutes for exclusion.<a href="#section-23-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-23-2.2.1">The Contain Transition (<a href="#contain-transition" class="auto internal xref">Section 7</a>): a contain
+transition is refused for a <code>terminated</code> Mission, whatever its
+termination reason (#705).<a href="#section-23-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-23-2.3">
-          <p id="section-23-2.3.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
+          <p id="section-23-2.3.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): current-authority surfaces omit
+contained capability at action grain, keeping an entry's uncontained
+remainder; an annotation no longer substitutes for exclusion.<a href="#section-23-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-23-2.4">
+          <p id="section-23-2.4.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
 capability places a restriction on the Mission's expansion chain,
 retained across later successors and surfaced in any later
 expansion consent whose authority overlaps it, until a fresh human
 approval explicitly restores that authority with its cause
-disclosed. A successor's overlay still starts empty.<a href="#section-23-2.3.1" class="pilcrow">¶</a></p>
+disclosed. A successor's overlay still starts empty.<a href="#section-23-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2719,6 +2795,10 @@ Expansion's widening.<a href="#section-24-1" class="pilcrow">¶</a></p>
 <dt id="I-D.draft-mcguinness-oauth-mission-expansion">[I-D.draft-mcguinness-oauth-mission-expansion]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Expansion for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="I-D.draft-mcguinness-oauth-mission-resource-access">[I-D.draft-mcguinness-oauth-mission-resource-access]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Resource Access Profile for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-oauth-mission-status">[I-D.draft-mcguinness-oauth-mission-status]</dt>
         <dd>

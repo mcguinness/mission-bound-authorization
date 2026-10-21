@@ -1509,8 +1509,13 @@ policy.<a href="#section-3-2.12.2.4.2" class="pilcrow">¶</a></p>
 </dl>
 <p id="section-3-2.12.3">A companion profile <span class="bcp14">MAY</span> define additional <code>delegation</code> members. Such a
 member is policy, not authority (<a href="#subset" class="auto internal xref">Section 5</a>): a derived entry's value
-for it <span class="bcp14">MUST NOT</span> be broader than the parent entry's, and a member the
-authorization server does not understand is carried unchanged.<a href="#section-3-2.12.3" class="pilcrow">¶</a></p>
+for it <span class="bcp14">MUST NOT</span> be broader than the parent entry's. The authorization
+server <span class="bcp14">MUST</span> refuse an entry whose <code>delegation</code> carries a member other
+than <code>max_depth</code> and <code>allowed_delegates</code> with the
+<code>invalid_authorization_details</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-5" class="relref">Section 5</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>),
+unless a companion profile it implements defines that member's
+processing. An authorization server cannot fulfill the processing
+obligations of a member it does not implement.<a href="#section-3-2.12.3" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-3-2.13">
