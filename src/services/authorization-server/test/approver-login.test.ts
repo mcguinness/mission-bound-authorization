@@ -18,7 +18,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, loginCookieName } from "../src/index.js";
@@ -520,5 +520,46 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
     expect(replay.status).toBe(401);
     expect(replay.description).toMatch(/names no login this server started/);
     expect((await decide(uid, jar, approver, undefined)).status).toBe(401);
+  });
+});
+
+describe("the Approver login for a template consent (@spec mission-template#template-consent, mission#approval-authentication, #1119)", () => {
+  it("returns the login to the consent page, whose session alone decides the proposal: the logged-in Approver is the template's approver of record, and no Subject is selected", async () => {
+    op.shape = (b) => ({ claims: b });
+    const { approver: _approver, approval_event_id: _event, issuer: _issuer, ...body } = demoReconciliationTemplate(ISSUER);
+    let res = await fetch(`${ISSUER}/templates/proposals`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify(body),
+    });
+    expect(res.status).toBe(201);
+    const { proposal_id: id } = (await res.json()) as { proposal_id: string };
+    const consentPage = `${ISSUER}/templates/proposals/${id}`;
+    expect(await (await fetch(consentPage)).text()).toContain(`href="/templates/proposals/${id}/approver-login"`);
+    expect((await fetch(`${consentPage}/approver-login?subject=alice`, { redirect: "manual" })).status).toBe(400);
+    const browser: PathJar = new Map();
+    let url = `${consentPage}/approver-login`;
+    res = await fetch(url, { redirect: "manual" });
+    expect(res.status).toBe(303);
+    storeByPath(browser, url, res);
+    res = await fetch(res.headers.get("location") as string, { redirect: "manual" });
+    url = res.headers.get("location") as string;
+    res = await fetch(url, { redirect: "manual", headers: { cookie: cookiesFor(browser, url) } });
+    expect(res.status).toBe(200);
+    storeByPath(browser, url, res);
+    const text = await res.text();
+    expect(text).toContain(`<a href="/templates/proposals/${id}">Continue to the approval</a>`);
+    const session = [...browser.values()].find((c) => c.name === "mission_approver_session");
+    expect(session?.path).toBe(`/templates/proposals/${id}`);
+    const csrf = /name="mission-approval-csrf" content="([^"]+)"/.exec(text)?.[1] as string;
+    url = `${consentPage}/decide`;
+    const decided = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: cookiesFor(browser, url), "x-csrf-token": csrf },
+      body: JSON.stringify({ decision: "approve" }),
+    });
+    const created = (await decided.json()) as { template_id: string };
+    expect(decided.status, JSON.stringify(created)).toBe(201);
+    expect(as.templateStore.get(created.template_id)?.approver).toEqual({ iss: ISSUER, sub: "bob" });
   });
 });

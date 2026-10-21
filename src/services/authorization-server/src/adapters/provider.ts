@@ -426,17 +426,25 @@ import type { ContinuationIssuer } from "../kernel/continuation-assertion.js";
 import type { ContinuationStore } from "../kernel/continuation-store.js";
 import type { DelegationFamilyStore } from "../kernel/delegation-family-store.js";
 import {
+  assertTemplateBody,
   createTemplate,
   dispatchFromTemplate,
   DispatchError,
   DispatchMismatchError,
   findDispatch,
+  pinDispatchPolicy,
   TemplateError,
   type CreateTemplateInput,
   type DispatchInput,
   type DispatchPolicies,
   type DispatchReason,
+  type TemplateProposalBody,
 } from "../kernel/template.js";
+import {
+  renderTemplateConsentPage,
+  TemplateConsentProposals,
+  templateConsentDisclosure,
+} from "./template-consent.js";
 import type { TemplateStore } from "../kernel/template-store.js";
 import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
 import {
@@ -3206,6 +3214,38 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
 
   /**
+   * @spec mission#approval-authentication (#826, #1320) — the Approver of one
+   * decision, keyed by what it decides (an interaction uid or a template
+   * proposal id): the login this user agent established for that key, on a
+   * same-origin request carrying its CSRF secret, or a trusted headless
+   * approval service. `interactive` is true for the browser login.
+   */
+  const approvalPrincipal = (
+    ctx: KoaCtx,
+    key: string,
+  ): { principal: ApprovalPrincipal; interactive: boolean } | undefined => {
+    const origin = ctx.get("origin");
+    const browser = (!origin || origin === new URL(opts.issuer).origin)
+      ? opts.approvalSessions?.resolve(ctx.get("cookie"), ctx.get("x-csrf-token"), key)
+      : undefined;
+    const token = ctx.get("x-service-token");
+    const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
+    // @spec mission#approval-event (step 2) (#826): a trusted headless
+    // approval service names the Subject it resolved on its own
+    // authenticated request; a browser session carries the selection its
+    // trusted login recorded. Neither comes from the client.
+    const headless = !browser && opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
+      validApprovalPrincipal(service.approver) ? service.approver : undefined;
+    const selected = ctx.get(APPROVAL_SUBJECT_HEADER);
+    const principal = browser ?? (headless ? { ...headless, ...(selected ? { subject: selected } : {}) } : undefined);
+    if (!principal || principal.auth_time > Math.floor(opts.kernel.nowDate().getTime() / 1000)) return undefined;
+    return { principal, interactive: browser !== undefined };
+  };
+
+  /** @spec mission-template#template-consent — template proposals and their decisions. */
+  const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
+
+  /**
    * @spec status#mission-status-authentication — the Mission Status operation's
    * authorization check, in ONE place: the deployment serves the operation and
    * the authenticated caller carries the `mission_status` grant. The Status
@@ -3506,11 +3546,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       const { uid, principal } = completed;
       const session = opts.approvalSessions.establish(uid, principal);
-      ctx.res.setHeader("set-cookie", `${session.cookie}; Path=/interaction/${uid}; HttpOnly; SameSite=Lax`);
+      // A template proposal's login returns to its consent page; every other
+      // login, to its interaction.
+      const base = templateProposals.get(uid) ? "/templates/proposals" : "/interaction";
+      ctx.res.setHeader("set-cookie", `${session.cookie}; Path=${base}/${uid}; HttpOnly; SameSite=Lax`);
       ctx.set("cache-control", "no-store");
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.status = 200;
-      ctx.body = `<!doctype html><html><head><meta charset="utf-8"><meta name="mission-approval-csrf" content="${session.csrf}"><title>Signed in</title></head><body><p>Signed in. <a href="/interaction/${encodeURIComponent(uid)}">Continue to the approval</a>.</p></body></html>`;
+      ctx.body = `<!doctype html><html><head><meta charset="utf-8"><meta name="mission-approval-csrf" content="${session.csrf}"><title>Signed in</title></head><body><p>Signed in. <a href="${base}/${encodeURIComponent(uid)}">Continue to the approval</a>.</p></body></html>`;
       return;
     }
     const decideMatch = ctx.path.match(/^\/interaction\/([^/]+)\/decide$/);
@@ -3523,26 +3566,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         return;
       }
       const uid = decideMatch[1]!;
-      const origin = ctx.get("origin");
-      const browser = (!origin || origin === new URL(opts.issuer).origin)
-        ? opts.approvalSessions?.resolve(ctx.get("cookie"), ctx.get("x-csrf-token"), uid)
-        : undefined;
-      const token = ctx.get("x-service-token");
-      const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
-      // @spec mission#approval-event (step 2) (#826): a trusted headless
-      // approval service names the Subject it resolved on its own
-      // authenticated request; a browser session carries the selection its
-      // trusted login recorded. Neither comes from the client.
-      const headless = !browser && opts.allowHeadlessAdjudication && service?.scopes.includes(MISSION_APPROVAL_SCOPE) &&
-        validApprovalPrincipal(service.approver) ? service.approver : undefined;
-      const selected = ctx.get(APPROVAL_SUBJECT_HEADER);
-      const principal = browser ?? (headless ? { ...headless, ...(selected ? { subject: selected } : {}) } : undefined);
-      if (!principal || principal.auth_time > Math.floor(opts.kernel.nowDate().getTime() / 1000)) {
+      const resolved = approvalPrincipal(ctx, uid);
+      if (!resolved) {
         ctx.status = 401;
         ctx.body = { error: "unauthorized" };
         return;
       }
-      await decide(provider, opts, ctx, body, principal, browser !== undefined);
+      await decide(provider, opts, ctx, body, resolved.principal, resolved.interactive);
       return;
     }
 
@@ -4558,8 +4588,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
     // --- Mission Template admin plane (@spec mission-template) ---
     // POST /templates -- create a Mission Template (service-token admin plane).
-    // Demo/test stand-in: a real deployment runs template consent through the full
-    // approval + consent-evidence surface.
+    // Demo/test stand-in: the service asserts the approver. The human consent
+    // is POST /templates/proposals and its consent page, below.
     if (ctx.path === "/templates" && ctx.method === "POST") {
       if (!requireServiceToken(ctx)) return;
       if (!opts.templateStore || !enabled("templates")) {
@@ -4605,6 +4635,166 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         } else {
           throw e;
         }
+      }
+      return;
+    }
+    // @spec mission-template#template-consent — the human consent to a
+    // Mission Template. An administrator proposes the body on the service-token
+    // admin plane; the Approver reads the consent disclosure and decides. The
+    // proposal id is the capability the consent URI carries.
+    if (ctx.path === "/templates/proposals" && ctx.method === "POST") {
+      if (!requireServiceToken(ctx)) return;
+      if (!opts.templateStore || !enabled("templates")) {
+        ctx.status = 501;
+        ctx.body = { error: "temporarily_unavailable" };
+        return;
+      }
+      const body = await readJsonBody(ctx.req);
+      // The Mission Issuer and the consent supply these; a proposal names none.
+      const supplied = ["issuer", "approver", "approval_event_id"].find((k) => Object.hasOwn(body, k));
+      if (supplied) {
+        ctx.status = 400;
+        ctx.body = {
+          error: "invalid_request",
+          error_description: `a template proposal carries no ${supplied}: the Mission Issuer and the consent supply it`,
+        };
+        return;
+      }
+      try {
+        const proposed = { ...body, issuer: opts.issuer } as unknown as TemplateProposalBody;
+        assertTemplateBody(proposed);
+        const proposal = templateProposals.propose(
+          proposed,
+          pinDispatchPolicy(opts.issuer, opts.dispatchPolicies, proposed.dispatch_policy),
+        );
+        ctx.status = 201;
+        ctx.body = { proposal_id: proposal.id, consent_uri: `${opts.issuer}/templates/proposals/${proposal.id}` };
+      } catch (e) {
+        if (!(e instanceof TemplateError)) throw e;
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: e.message };
+      }
+      return;
+    }
+    const proposalMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)$/);
+    if (proposalMatch && ctx.method === "GET" && opts.templateStore && enabled("templates")) {
+      const proposal = templateProposals.get(proposalMatch[1] as string);
+      ctx.set("cache-control", "no-store");
+      if (!proposal) {
+        ctx.status = 404;
+        ctx.body = { error: "not_found" };
+        return;
+      }
+      ctx.set("content-type", "text/html; charset=utf-8");
+      ctx.status = 200;
+      ctx.body = renderTemplateConsentPage(
+        proposal,
+        templateConsentDisclosure(proposal, opts.dispatchPolicies, {
+          issuer: opts.issuer,
+          asyncDelegation: opts.familyStore !== undefined,
+        }),
+        opts.approverLogin && opts.approvalSessions
+          ? { loginHref: `/templates/proposals/${encodeURIComponent(proposal.id)}/approver-login` }
+          : {},
+      );
+      return;
+    }
+    // @spec mission#approval-authentication (#1320): the Approver's login for
+    // one template consent. A template consent selects no Subject.
+    const proposalLoginMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)\/approver-login$/);
+    if (proposalLoginMatch && ctx.method === "GET" && opts.approverLogin && opts.approvalSessions && enabled("templates")) {
+      const id = proposalLoginMatch[1] as string;
+      if (templateProposals.get(id)?.state !== "pending" || ctx.query.subject !== undefined) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "no pending template consent to log in for, with no Subject" };
+        return;
+      }
+      const started = await opts.approverLogin.start(id, undefined);
+      ctx.res.setHeader("set-cookie", started.cookie);
+      ctx.set("cache-control", "no-store");
+      ctx.set("location", started.location);
+      ctx.status = 303;
+      ctx.body = "";
+      return;
+    }
+    const proposalDecideMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)\/decide$/);
+    if (proposalDecideMatch && ctx.method === "POST" && opts.templateStore && enabled("templates")) {
+      const body = await readJsonBody(ctx.req);
+      if (["approver", "subject", "approver_acr", "approver_auth_time"].some(k => Object.hasOwn(body, k)) ||
+          (body.decision !== "approve" && body.decision !== "deny")) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "decide accepts a decision, not resolving identity" };
+        return;
+      }
+      const id = proposalDecideMatch[1] as string;
+      const proposal = templateProposals.get(id);
+      if (!proposal) {
+        ctx.status = 404;
+        ctx.body = { error: "not_found" };
+        return;
+      }
+      const resolved = approvalPrincipal(ctx, id);
+      if (!resolved) {
+        ctx.status = 401;
+        ctx.body = { error: "unauthorized" };
+        return;
+      }
+      const { principal } = resolved;
+      // The template's recipients name its Subjects; its consent selects none.
+      if (principal.subject !== undefined && principal.subject !== principal.sub) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "a template consent selects no Subject" };
+        return;
+      }
+      if (proposal.state !== "pending") {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: "the template proposal is no longer pending" };
+        return;
+      }
+      if (body.decision !== "approve") {
+        templateProposals.settle(id, { state: "denied" });
+        ctx.status = 200;
+        ctx.body = { proposal_id: id, state: "denied" };
+        return;
+      }
+      // @spec mission-template#template-consent, derivation-limits#approval-rendering
+      // (#1119): no consent to a template whose disclosure cannot be
+      // rendered, so a Dispatch Policy changed since the proposal refuses it.
+      const rendered = templateConsentDisclosure(proposal, opts.dispatchPolicies, {
+        issuer: opts.issuer,
+        asyncDelegation: opts.familyStore !== undefined,
+      });
+      if ("refusal" in rendered) {
+        ctx.status = 403;
+        ctx.body = { error: "access_denied", error_description: rendered.refusal };
+        return;
+      }
+      try {
+        // The template pins the snapshot just verified: nothing runs between.
+        const template = createTemplate(
+          opts.templateStore,
+          {
+            ...proposal.body,
+            approver: { iss: opts.issuer, sub: principal.sub },
+            approval_event_id: `apev_${proposal.id}`,
+          },
+          {
+            ...kernel.authoritySourceOptions(),
+            ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
+          },
+        );
+        templateProposals.settle(id, { state: "approved", template_id: template.id });
+        ctx.status = 201;
+        ctx.body = {
+          template_id: template.id,
+          template_version: template.template_version,
+          template_hash: template.template_hash,
+        };
+      } catch (e) {
+        if (e instanceof IntentError) throw intentErrorToOidc(e);
+        if (!(e instanceof TemplateError)) throw e;
+        ctx.status = 400;
+        ctx.body = { error: "invalid_request", error_description: e.message };
       }
       return;
     }
