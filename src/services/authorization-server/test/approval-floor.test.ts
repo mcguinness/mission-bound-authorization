@@ -90,6 +90,9 @@ const PROGRESSIVE_DEPLOYMENT = {
       "payments:payment.execute": "irreversible_action",
       "payments:remittance.send": "external_commitment",
     },
+    // The approval surface offers the payments ceiling under drawdown-std; a
+    // decision may consent only exactly what the page rendered (#1017).
+    ceilingOffer: () => CEILING_CONSENT,
   },
   activationPolicies: {
     "drawdown-std": {
