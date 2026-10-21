@@ -4342,7 +4342,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1436 ruling 1 (D568). The family's adopting profile is the Enterprise Mission Authority Profile, which records under these triggers. The reference implementation decides no recording trigger (it commits records only under governed_policy), so no surface can witness this row yet; it stays todo. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4."
+   "notes": "#1436 ruling 1 (D568). The family's adopting profile is the Enterprise Mission Authority Profile, which records under these triggers. The reference implementation decides no recording trigger (it commits records only under governed_policy), so no surface can witness this row yet; it stays todo. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1454 owning implementation; voluntary recording does not witness trigger enforcement."
   },
   {
    "id": "approval-governance.triggers.voluntary-record-conforms",
@@ -4364,7 +4364,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row."
+   "notes": "#1436 ruling 1 (D568). The reference implementation records an Approval Governance Record only where governed_policy requires one, never voluntarily, so this row has no witness surface yet. #1470 Q1 proposes a default-off voluntary record for direct approvals, which would witness this row. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
   },
   {
    "id": "approval-governance.triggers.approver-differs-from-subject",
@@ -4387,7 +4387,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1313 item 2: #1295 (D482) added the sentence and no row quoted it. It restates for the first trigger the MAS obligation in mas.enterprise.approval-governance-record. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4."
+   "notes": "#1313 item 2: #1295 (D482) added the sentence and no row quoted it. It restates for the first trigger the MAS obligation in mas.enterprise.approval-governance-record. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1454 owning implementation; voluntary recording does not witness trigger enforcement."
   },
   {
    "id": "approval-governance.assertion.direct-accountable-human",
@@ -4423,7 +4423,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion). Committed-record witness: #1470 Q1."
+   "notes": "#1185 specification PR (D387, D390, D413). Moved from the OAuth binding on owner review of #1227: a BCP 14 rule on an Approval Governance Record's content belongs to Approval Governance, so the binding keeps no conditional normative dependency on it (Reference Classification Convention). #1436 ruling 2 (D568): the rule is per basis, exactly one human approve assertion under direct; requoted, and witnessed at the validator (mutations: ignoring kind, counting at least one instead of exactly one, admitting a service assertion). Committed-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
   },
   {
    "id": "approval-governance.assertion.event-binding",
@@ -4530,7 +4530,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks. Human and service eligibility: #1470 Q1 and Q2."
+   "notes": "#1436 item 5 edge case (b), an assumed ruling: since #1442 a policy assertion's principal is the human who approved the policy version, so policy-authorization names both checks. Human and service eligibility: #1470 Q1 and Q2. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
@@ -15623,7 +15623,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Found with #1313 item 2: no row quoted the MAS recording obligation. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4."
+   "notes": "Found with #1313 item 2: no row quoted the MAS recording obligation. Witness owner: the MAS Enterprise tier (#1454); #1470 Q4. Ruled D597 (#1470 Q4): stays todo under mas.enterprise, #1454 owning implementation; voluntary recording does not witness trigger enforcement."
   },
   {
    "id": "mas.join.credential-mission-equality",
@@ -46628,7 +46628,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable assertion. #1436 ruling 2 (D568): requoted; the governed witness gives the human and service variants an authority valid for their kind that also carries the deciding policy's members, so only the kind check refuses them (mutation: matching without kind). Committed direct-record witness: #1470 Q1."
+   "notes": "Makes explicit what the OAuth binding's adjudication kind enum (human, policy) implies when governance_record is true. A model-backed judge enters as a service assertion: a contributing governance input, never the accountable assertion. #1436 ruling 2 (D568): requoted; the governed witness gives the human and service variants an authority valid for their kind that also carries the deciding policy's members, so only the kind check refuses them (mutation: matching without kind). Committed direct-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
   },
   {
    "id": "approval-governance.assertion.governed-accountable-policy",
@@ -46693,7 +46693,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice)."
+   "notes": "#1436 ruling 2 (D568); mutation: demanding a matching assertion under these bases fails the witness. Committed-record witness: #1470 Q1 (second slice). Ruled D597 (#1470 Q1): standing-consent bases follow direct recording, as a separate slice."
   },
   {
    "id": "approval-governance.record.service-authority-logic-version",
@@ -46765,7 +46765,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 6: contributing lists what the satisfied rule counted; a non-blocking denial is recorded but not counted, and a blocking one leaves no record. Mutations: admitting a deny as contributing; the commit gate skipping the check. A recorded non-blocking deny needs a multi-decider rule: #1470 Q2."
+   "notes": "#1436 item 6: contributing lists what the satisfied rule counted; a non-blocking denial is recorded but not counted, and a blocking one leaves no record. Mutations: admitting a deny as contributing; the commit gate skipping the check. A recorded non-blocking deny needs a multi-decider rule: #1470 Q2. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
   },
   {
    "id": "approval-governance.assertion.policy-principal-approver",
@@ -46795,7 +46795,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness. A contributing policy assertion needs a multi-decider rule: #1470 Q2."
+   "notes": "#1436 ruling 3 (D568) resolves the contributing-policy principal question (#1436 item 5) this way, matching the governed_policy accountable assertion; mutation: naming the policy as principal fails the witness. A contributing policy assertion needs a multi-decider rule: #1470 Q2. Ruled D597 (#1470 Q2): no multi-decider rule for coverage alone; stays partial until a deployment needs it."
   },
   {
    "id": "approval-governance.authority.human-members",
@@ -46831,7 +46831,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 3 (D568). auth_time is REQUIRED (the issuer that verified the authentication knows when it happened); acr and amr follow Consent Evidence's authentication_context, recording each value the issuer possesses. Mutations: auth_time or amr unchecked. Committed-record witness: #1470 Q1."
+   "notes": "#1436 ruling 3 (D568). auth_time is REQUIRED (the issuer that verified the authentication knows when it happened); acr and amr follow Consent Evidence's authentication_context, recording each value the issuer possesses. Mutations: auth_time or amr unchecked. Committed-record witness: #1470 Q1. Ruled D597 (#1470 Q1): build default-off voluntary recording for direct approvals first."
   },
   {
    "id": "approval-governance.authority.policy-members",
@@ -46908,7 +46908,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 ruling 3 (D568); mutation: accepting any approved_by. Emission: #1470 Q3."
+   "notes": "#1436 ruling 3 (D568); mutation: accepting any approved_by. Emission: #1470 Q3. Ruled D597 (#1470 Q3): approved_by emission deferred; stays partial."
   },
   {
    "id": "approval-governance.authority.approved-by-corroborated",
@@ -46931,7 +46931,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1436 ruling 3 (D568): any approved_by is corroborated provenance, never self-authenticating evidence. todo on owner review of #1442 at e7a3a2bd: the equality test it once cited compares approved_by only with the supplied principal and consults no governance state. Provenance witness needs a party other than the issuer that supplies approved_by: #1470 Q3."
+   "notes": "#1436 ruling 3 (D568): any approved_by is corroborated provenance, never self-authenticating evidence. todo on owner review of #1442 at e7a3a2bd: the equality test it once cited compares approved_by only with the supplied principal and consults no governance state. Provenance witness needs a party other than the issuer that supplies approved_by: #1470 Q3. Ruled D597 (#1470 Q3): approved_by emission deferred; stays todo, since emission alone would not establish provenance."
   },
   {
    "id": "approval-governance.envelope.verifier-steps",
@@ -47112,7 +47112,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
-    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. A record under another basis is not re-checked, because the reference commits none (#1470 Q1)."
+    "local": "Witnessed on committed governed_policy records, the one basis under which the reference commits a record and retains the deciding policy's inputs: recheckApprovalGovernanceRecord, a reference Relying Auditor reading the issuer's retained store, replays each step, counting what the deciding policy counts rather than what the record lists, and each step's refusal is witnessed alone, including missing root, evaluator and input evidence and a high-risk class's recency exception. A record under another basis is not re-checked, because the reference commits none; direct records and their re-check are ruled next (#1470 Q1, D597)."
    },
    "level": "unit",
    "coverage": "tested",
@@ -47160,7 +47160,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. Mutations: each of seventeen checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, contributing, recency order, age and class exception) disabled alone fails a witness."
+   "notes": "#1436 item 12: defines the re-check that Conformance's Relying Auditor MUST already names, as present-tense steps with no new keyword. On owner review of #1452 at f8f5e6ec (P2): the re-check also retrieves and verifies the deciding evaluator and the recorded inputs, since a narrowing model output's service assertion carries only identifiers; missing evidence leaves the evaluation not re-checked. #1313 follow-up: tested by the reference re-check auditor. On owner review of #1471 at cebf665b (two P2s, D597): the counted set came from the record's own assertions, so removing assertions with their contributing entries re-checked (skipping recency when all were removed), and the event and Intent bindings held only per model output. The replay now counts the accountable policy assertion plus one service assertion per consulted model output, and the inputs as a whole carry the event and Intent; the regression cases fail on cebf665b. Mutations: each of 21 checks (record verification, root snapshot presence and digest, evaluator identity and snapshot, root-decided deciding digest, input presence, the set-level event and Intent bindings, each model output's event, Intent and evaluated-set bindings, service-assertion matching, approval, Authority Set, the governed record gate, one service assertion per model output, contributing, recency order, age and class exception) disabled alone fails a witness."
   },
   {
    "id": "approval-governance.conformance.auditor-obtains-retained-policy",
