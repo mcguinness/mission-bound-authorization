@@ -45,6 +45,7 @@ import {
 } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entryDigest } from "./discharge.js";
+import { restrictedSinceAdjudication } from "./expansion.js";
 import { childActorCeilingOrigin, inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
@@ -589,7 +590,7 @@ export function adjudicateDrawdown(
 /** A drawdown refused at its activating commit; nothing is created or superseded. */
 export class DrawdownRefusal extends Error {
   constructor(
-    readonly code: "derivations_exhausted" | "predecessor_not_active",
+    readonly code: "derivations_exhausted" | "predecessor_not_active" | "authority_restricted_since_approval",
     message: string,
   ) {
     super(message);
@@ -607,6 +608,8 @@ export interface CeilingDrawdownInput {
   activationActor: { iss: string; sub: string };
   /** The policy and the held snapshot {@link adjudicateDrawdown} verified. */
   policy: { ref: ActivationPolicyRef; snapshot: RegisteredActivationPolicy };
+  /** The predecessor's containment version and discharge-latch count as adjudicated. */
+  restrictionsAtAdjudication: { containment: number; discharge: number };
 }
 
 /**
@@ -642,6 +645,15 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   );
   if (!isSubsetSetIgnoringCapabilitySources(authoritySet, predecessor.authority_ceiling)) {
     throw new Error("ceiling drawdown successor is not within the consented ceiling");
+  }
+  // @spec expansion#reconciliation check 3, progressive#in-ceiling-expansion:
+  // in this atomic step, the successor's complete Authority Set overlaps no
+  // restriction of the predecessor that came after adjudication.
+  if (restrictedSinceAdjudication(predecessor, authoritySet, input.restrictionsAtAdjudication)) {
+    throw new DrawdownRefusal(
+      "authority_restricted_since_approval",
+      "the successor's authority came under a restriction of the predecessor after adjudication",
+    );
   }
   // @spec resource-access#delegate-eligibility: the drawdown keeps its own
   // derivation's origins and every obligation of the consented ceiling entries
