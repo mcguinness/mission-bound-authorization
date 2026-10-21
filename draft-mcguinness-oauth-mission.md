@@ -2451,7 +2451,8 @@ still apply.
 
 The error code alone does not tell a client which gate refused. On a
 refusal under this section the AS SHOULD include, alongside `error`,
-the `mission_error` token-error-response member ({{iana}}) with one
+the `mission_error` token-error-response member
+({{oauth-parameters-registration}}) with one
 of the values `revoked`, `expired`, or `superseded` (where a companion
 defines supersession), the Mission's termination reason
 ({{termination}}).
@@ -2702,7 +2703,7 @@ To emit `scope` for an entry, the AS:
    and
 6. for a multi-audience token, establishes the condition
    independently for each audience; a single-audience token
-   ({{mission-bound-tokens}}) remains preferred.
+   ({{token-response}}) remains preferred.
 
 Unknown `scope` semantics, unknown resource server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
@@ -3082,7 +3083,8 @@ the Mission does not obtain the Mission's wider authority.
 
 For entries outside the Authority Set, more authority requires a new
 approval, proposed as for a new Mission ({{authority-proposal}}), or
-an expansion where that companion is deployed ({{rs-enforcement}}).
+an expansion where that companion is deployed
+({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
 
@@ -4426,7 +4428,7 @@ issuer-bound envelope:
      `value` is the Authority Set as a JSON array of entries.
    - For an activation policy reference's `digest`, `typ` is
      `mission-activation-policy` and `value` is the policy snapshot
-     object that {{standing-consent-bases}} defines.
+     object that {{activation-policy-commitment}} defines.
 
 2. Canonicalize the envelope with JCS {{RFC8785}}.
 3. Compute SHA-256 {{RFC6234}} over the canonical bytes.
@@ -4456,7 +4458,7 @@ separation. To keep that domain separation safe without a registry, a
 new `typ` value MUST be a collision-resistant name (for example, a
 short name prefixed within a namespace the defining profile controls,
 following the Collision-Resistant Name guidance of
-{{Section 4.2 of RFC7519}}). `mission-` prefixed values, used by this
+{{Section 2 of RFC7519}}). `mission-` prefixed values, used by this
 document and the profiles that extend it, form a namespace
 coordinated through this document's change controller.
 
@@ -4503,8 +4505,9 @@ to computing an anchor and to comparing committed values:
   element sorting, so array order is significant. The AS MUST present
   each committed array in its recorded order wherever it emits the
   committed object; that order is part of the canonical form.
-- URI-valued members are compared byte-for-byte, consistent with
-  {{Section 12 of RFC9396}}, unless a member's own type definition
+- URI-valued members are compared byte-for-byte, with no
+  normalization ({{Section 12 of RFC9396}}), unless a member's own type
+  definition
   specifies a normalization. Where a type defines one, as
   `mission_resource_access` does for its `prefix`-match resource
   containment test
@@ -6391,7 +6394,8 @@ The following are out of scope for this document:
   ({{introspection}}); this document defines no push-based
   notification of Mission state changes. Mission Lifecycle Signals
   ({{I-D.draft-mcguinness-oauth-mission-signals}}) specifies a Shared
-  Signals ({{RFC8935}}) / CAEP profile for Mission lifecycle events.
+  Signals and CAEP profile for Mission lifecycle events, delivered as
+  Security Event Tokens ({{RFC8935}}).
 - **Human-in-the-loop suspension.** The base lifecycle is `active` and
   `terminated` ({{lifecycle}}). Mission Status
   ({{I-D.draft-mcguinness-oauth-mission-status}}) defines a
@@ -6415,7 +6419,8 @@ The following are out of scope for this document:
   activity across audiences and resources. `authority_hash` is not
   part of that baseline correlation surface: it stays on the Mission
   Record and the audit and profile surfaces that carry it by
-  disclosure privilege ({{mission-claim}}), not on every token by
+  disclosure privilege ({{mission-claim}},
+  {{caller-authorization-and-minimization}}), not on every token by
   default. Pairwise or unlinkable presentation of Mission-bound
   authority works against the identifier and is therefore future work
   ({{mission-identifier-correlation}}).
