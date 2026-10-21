@@ -2875,7 +2875,7 @@ export async function handleExpansionExchange(
  * the deferral. A code issued to another client is answered as an unknown
  * one, and a proof under another key with invalid_dpop_proof (DTR -00
  * Sections 5.5.1 and 10.1). redeem() runs deferred-window check (a)
- * (predecessor STATE + containment-version delta) and CREATES the successor on
+ * (predecessor STATE + restriction since adjudication) and CREATES the successor on
  * approval; this handler mints the successor's first token and supersedes the
  * predecessor on that first redemption.
  */

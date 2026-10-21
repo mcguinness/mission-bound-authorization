@@ -53686,12 +53686,44 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor discharges authority X after a successor carrying X was adjudicated (by policy or by a human approval that did not disclose the discharge) and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction.",
+    "local": "the reference completes an expansion only on a deferred poll, so the code-redemption and token-exchange-response codes are not witnessed; the restriction is the predecessor's own overlay after the initiation snapshot; witnessed at the deferral store, not the wire; discharge is compared per entry, constraints included, so an entry latched after the snapshot refuses even when its authority lies within one latched before it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > refuses the completion when a same-action entry with other constraints is discharged after adjudication, though another was discharged before",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > completes when the successor carries only an entry whose constraints are disjoint from the one discharged after adjudication",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > refuses the completion when the successor's entry is broader than, and so overlaps, the entry discharged after adjudication",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > refuses the completion with access_denied and authority_restricted_since_approval when the successor carries an entry discharged after adjudication",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge.test.ts",
+     "name": "a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177) > completes when the entry was discharged before adjudication: the approval restores it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177."
   },
   {
    "id": "expansion.reconciliation.containment-between-adjudication-and-activation",
@@ -53708,12 +53740,32 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction."
+    "normative": "When the predecessor contains authority X after a successor carrying X was adjudicated and before activation, the completion is refused with authority_restricted_since_approval and the completing step's code (access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion) and activates no successor; X returns only through a new expansion adjudicated against the current restriction.",
+    "local": "the reference completes an expansion only on a deferred poll, so the code-redemption and token-exchange-response codes are not witnessed; the restriction is the predecessor's own overlay after the initiation snapshot"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. No implementation yet."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > check 3: containment during the window that the successor's authority overlaps refuses completion with access_denied and authority_restricted_since_approval on every poll; a new expansion then restores it (@spec expansion#reconciliation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > check 3: containment during the window of authority the successor does not carry leaves completion untouched (@spec expansion#reconciliation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > check 3: a containment event during the window that names only authority already contained before the request restricts nothing new, so the restoring completion succeeds (@spec expansion#reconciliation, containment#restoration, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177."
   },
   {
    "id": "expansion.predecessor-active.refused-invalid-request",
@@ -53803,7 +53855,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion",
-    "local": "the reference completes an expansion only on a deferred poll, with no code redemption or token-exchange-response completion, and does not yet run the restriction-overlap check; the predecessor-state statuses on the poll are witnessed"
+    "local": "the reference completes an expansion only on a deferred poll, with no code redemption or token-exchange-response completion; the predecessor-state and restriction statuses on the poll are witnessed"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -53823,6 +53875,12 @@
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
      "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a concurrent expansion that activated first refuses the other completion with access_denied and superseded_by_concurrent_expansion (@spec expansion#reconciliation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > check 3: containment during the window that the successor's authority overlaps refuses completion with access_denied and authority_restricted_since_approval on every poll; a new expansion then restores it (@spec expansion#reconciliation, #1177)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
