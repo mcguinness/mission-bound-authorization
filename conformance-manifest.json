@@ -20795,6 +20795,12 @@
      "name": "the in-process Mission view resolves containment onto approved entries (@spec containment#selector-matching, #1463) > a prefix selector over a finer approved entry reaches the PDP as that entry's own removal, which denies authority_contained",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "review: same-resource entries under different modes > the PDP retains the union of removals for the matched prefix entry",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ]
   },
@@ -37252,9 +37258,15 @@
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness)."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -51667,9 +51679,15 @@
      "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > selectors naming one resource string under different modes stay separate in the overlay and select different resource sets",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "review: same-resource entries under different modes > the PDP retains the union of removals for the matched prefix entry",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1463, D606. Mutations: returning at the first overlapping selector fails the union witness; keying the overlay merge on resource alone fails the mode witness."
+   "notes": "#1463, D606. Mutations: returning at the first overlapping selector fails the union witness; keying the overlay merge on resource alone fails the mode witness. The PDP-view witness: an exact and a prefix entry naming one resource string keep separate per-entry unions in the delta the in-process view hands the PDP (mutation: keying the merge on resource alone fails it)."
   },
   {
    "id": "containment.selector-matching.conservative-over-containment",
@@ -51703,9 +51721,21 @@
      "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > resolves the overlay onto the approved entries for a consumer that pairs by an entry's own resource",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: conservative removal survives expansion > a fine selector removing an action from a broad predecessor restricts a sibling successor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1463, D606. Mutation: dropping the selector-within-entry direction of the overlap fails the witness."
+   "notes": "#1463, D606. Mutation: dropping the selector-within-entry direction of the overlap fails the witness. #1500 review: what over-containment removes returns only through restoration; expansion reconciliation and the progressive drawdown compare successor authority against the removals as they land on the predecessor's approved entries."
   },
   {
    "id": "containment.selector-matching.child-propagation",
@@ -55824,9 +55854,21 @@
      "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > a removal naming authority already contained at adjudication restricts nothing new, judged by resource set",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: conservative removal survives expansion > a fine selector removing an action from a broad predecessor restricts a sibling successor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > resolves the snapshot onto the approved entries too: an entry that had already lost the action at adjudication restricts nothing new",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option). #1463: check 3 compares restrictions by resource-set overlap (restrictedSinceAdjudication), witnessed at unit level; a removal restricts nothing new where it, or the successor entry, lies within a snapshot removal selecting the same action."
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option). #1463: check 3 compares restrictions by resource-set overlap (restrictedSinceAdjudication), witnessed at unit level; a removal restricts nothing new where it, or the successor entry, lies within a snapshot removal selecting the same action. #1500 review: check 3 also resolves the removals onto the predecessor's approved entries, at the snapshot and now, so a successor cannot restore what conservative over-containment removed from a broad entry (mutation: dropping the resolved comparison fails the sibling witness; resolving only the current removals fails the snapshot witness)."
   },
   {
    "id": "expansion.predecessor-active.refused-invalid-request",
