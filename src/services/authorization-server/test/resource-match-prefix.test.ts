@@ -5,8 +5,8 @@
  * a `prefix` ceiling under the subset rule, and projected through the
  * Mission's effective set over the narrower resource set of each pairing, so
  * a `prefix` entry stays `prefix` and an `exact` descendant keeps its own
- * resource. The shipped configuration admits `exact` ceiling entries only
- * (resource-match-unsupported.test.ts), so the ceiling here is programmatic.
+ * resource. The shipped ceilings are `exact`, so the ceiling here is
+ * programmatic; prefix-ceiling-endpoint.test.ts loads a configured one (#1440).
  */
 
 import { type CryptoKey, generateKeyPair } from "jose";

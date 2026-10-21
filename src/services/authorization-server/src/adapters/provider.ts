@@ -34,6 +34,7 @@ import {
   type ActivationPolicyRef,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
   type MissionAccessProfile,
   projectScope,
@@ -302,8 +303,10 @@ import {
   DeferralError,
   type DeferralStore,
   type DeferredToken,
+  EXPANSION_DEFERRAL_PREFIX,
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
+import type { ExpansionRateLimiter } from "../kernel/expansion.js";
 import {
   type ChildDenialReason,
   childMissionClaim,
@@ -404,8 +407,10 @@ import {
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
+  cancelExpansionDeferralOnRevocation,
   type ContinuationReplay,
   handleTokenExchangeGrant,
+  pollDeferredExpansion,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
   verifyTokenEndpointDpop,
@@ -662,6 +667,11 @@ export interface AdapterOptions {
    */
   expansionDeferrals?: ExpansionDeferralStore;
   /**
+   * @spec expansion#policy-probing (#1177): the per-predecessor, per-client
+   * bound on expansion requests. Unset, expansion requests are unbounded.
+   */
+  expansionRateLimiter?: ExpansionRateLimiter;
+  /**
    * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
    * store, served where the opt-in `deferred-approval` capability is on (the
    * PAR hint, the pending-request code, the `mdfr_` poll, cancellation by
@@ -760,7 +770,7 @@ export interface AdapterOptions {
    */
   issuerEvidence?: IssuerEvidenceStore;
   /**
-   * @spec expansion#creation-request-id — the durable creation-idempotency
+   * @spec expansion#creation-idempotency — the durable creation-idempotency
    * store (child creation + expansion + async-delegation). Lives over the KERNEL database so the
    * reservation commits atomically with Mission creation. Defaulted by
    * buildProvider when unset (instances over the same kernel share the table).
@@ -908,7 +918,7 @@ export function accountFinder(knownSubjects: ReadonlySet<string>) {
 
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
-  // @spec expansion#creation-request-id — idempotency is NOT optional wiring:
+  // @spec expansion#creation-idempotency — idempotency is NOT optional wiring:
   // default the store over the kernel database (any instance over the same
   // kernel sees the same table, so a caller-supplied store is equivalent).
   opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
@@ -945,9 +955,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (missionApproval && !enabled("token-revocation")) {
     throw new Error("the deferred-approval capability needs token-revocation (the deferred substrate's cancellation)");
   }
+  // @spec expansion#completion-modes (#1177): a deferred expansion is polled
+  // on the deferred grant and cancelled at the revocation endpoint, which the
+  // substrate requires (DTR -00 Section 7.2), as for Deferred Mission Approval.
+  const expansionDeferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
+  if (expansionDeferrals && !enabled("token-revocation")) {
+    throw new Error("the expansion capability's deferred completion needs token-revocation (the deferred substrate's cancellation)");
+  }
   const grantEnabled = new Map<string, boolean>([
-    // The deferred grant polls an AROP deferral and a Mission approval deferral.
-    [DEFERRED_GRANT_TYPE, enabled("deferred") || missionApproval !== undefined],
+    // The deferred grant polls an AROP deferral, a Mission approval deferral
+    // and an expansion deferral.
+    [DEFERRED_GRANT_TYPE, enabled("deferred") || missionApproval !== undefined || expansionDeferrals !== undefined],
     // The RFC 7523 grant redeems a child grant and a Dispatch Handoff grant.
     [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation") || enabled("templates")],
     [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
@@ -2238,10 +2256,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // `deferred_authorization` (AROP initiation) are declared so the token
   // endpoint does not strip them from ctx.oidc.params.
   const arop = opts.deferrals && enabled("deferred") ? opts.deferrals : undefined;
-  if (grantEnabled.get(DEFERRED_GRANT_TYPE) && (arop || missionApproval)) {
+  if (grantEnabled.get(DEFERRED_GRANT_TYPE) && (arop || missionApproval || expansionDeferrals)) {
     provider.registerGrantType(
       DEFERRED_GRANT_TYPE,
-      (ctx) => handleDeferredGrant(opts, arop, missionApproval, provider, ctx),
+      (ctx) => handleDeferredGrant(opts, arop, missionApproval, expansionDeferrals, provider, ctx),
       // `scope` (@spec mission#scope-projection) is read on the redeeming request.
       new Set(["deferral_code", "deferred_authorization", "scope"]),
     );
@@ -2253,6 +2271,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (missionApproval) {
     registerDeferredAuthorizationCodeGrant(provider, opts, missionApproval, new DeferredAuthorizationCodes(missionApproval));
     provider.use(cancelOnRevocation(missionApproval));
+  }
+  if (expansionDeferrals) {
+    provider.use(cancelExpansionDeferralOnRevocation(expansionDeferrals));
   }
 
   // @spec child-delegation#child-client-identity — the RFC 7523 JWT-bearer
@@ -2337,13 +2358,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
         "mission_intent",
         "child_actor",
         "parent",
-        // @spec expansion#creation-request-id — the non-authoritative
+        // @spec expansion#submission — the non-authoritative
         // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
         // `creation_request_id`; each MUST be declared here or
         // stripGrantIrrelevantParams removes it.
         "predecessor",
         "creation_request_id",
+        // Refused on the exchange: a deferred expansion is polled on the
+        // deferred grant (#1177).
         "deferral_code",
+        // @spec expansion#completion-modes (#1177): the deferred token
+        // response's opt-in.
+        "completion_mode",
         // @spec child-delegation#carryover-commit — the carryover result
         // retrieval mode of the child-creation completion surface (no new
         // endpoint and no new metadata member).
@@ -2604,10 +2630,18 @@ async function handleDeferredGrant(
   opts: AdapterOptions,
   deferrals: DeferralStore | undefined,
   missionApproval: MissionApprovalDeferralStore | undefined,
+  expansionDeferrals: ExpansionDeferralStore | undefined,
   provider: Provider,
   ctx: KoaContextWithOIDC,
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
+
+  // @spec expansion#completion-modes (#1177): a deferred expansion's poll.
+  if (typeof params.deferral_code === "string" && params.deferral_code.startsWith(EXPANSION_DEFERRAL_PREFIX)) {
+    if (!expansionDeferrals) throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+    await pollDeferredExpansion(opts, provider, ctx, params.deferral_code);
+    return;
+  }
 
   if (typeof params.deferral_code === "string" && params.deferral_code.startsWith(MISSION_APPROVAL_DEFERRAL_PREFIX)) {
     if (!missionApproval) throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
@@ -3042,6 +3076,19 @@ export function resourcesForAudiences(
     }
   }
   return out;
+}
+
+/**
+ * @spec mission#caller-authorization-and-minimization, resource-access#resource-matching
+ * (#1440): whether introspection discloses `entry` to a caller authorized for
+ * `resources`: the entry's resource tree overlaps one of them, through the
+ * shared matcher ({@link entryOverlapsResource}), as at token emission. A
+ * finer or `prefix` entry the caller's resource serves is disclosed, and a
+ * sibling sharing its characters is not.
+ */
+function disclosedFor(resources: ReadonlySet<string>, entry: AuthorityEntry): boolean {
+  for (const resource of resources) if (entryOverlapsResource(entry, resource)) return true;
+  return false;
 }
 
 /** The capability that enables each lifecycle-endpoint operation. */
@@ -4285,7 +4332,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // fragment's record-entry origin for discharge_selectors.
         const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
-        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const returned = narrowed.filter((e) => disclosedFor(resourceSet, e.entry));
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
         ctx.body = {
@@ -4423,7 +4470,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // it held authority it was never issued.
         const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
-        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const returned = narrowed.filter((e) => disclosedFor(resourceSet, e.entry));
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
 
@@ -4654,14 +4701,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (enabled("device-authorization")) meta.mission_device_authorization_supported = true;
       // DTR -00 (Client Opt-In Signaling): an AS that publishes metadata and
       // supports deferred token responses says so. Advertised where Deferred
-      // Mission Approval is served; the AROP deferral is initiated by its own
-      // grant request and never opted into with `completion_mode`.
-      if (deferredCodes) {
-        meta.deferred_token_response_supported = true;
-        // DTR -00 Section 7.4 (Discovery): an AS that supports deferral
-        // lists the deferral-code token type its revocation endpoint accepts
-        // (the cancellation), so a client can rely on it. The revocation
-        // endpoint is served wherever Deferred Mission Approval is.
+      // Mission Approval or a deferred expansion (#1177) is served; the AROP
+      // deferral is initiated by its own grant request and never opted into
+      // with `completion_mode`.
+      const expansionDeferred = enabled("expansion") && opts.expansionDeferrals !== undefined;
+      if (deferredCodes || expansionDeferred) meta.deferred_token_response_supported = true;
+      // DTR -00 Section 7.4 (Discovery): an AS that supports deferral lists
+      // the deferral-code token type its revocation endpoint accepts (the
+      // cancellation), so a client can rely on it. The revocation endpoint is
+      // served wherever Deferred Mission Approval or a deferred expansion is.
+      if (deferredCodes || expansionDeferred) {
         const listed = Array.isArray(meta.revocation_endpoint_token_type_values_supported)
           ? (meta.revocation_endpoint_token_type_values_supported as unknown[])
           : [];
@@ -4855,7 +4904,7 @@ async function handleMissionDispatchGrant(
     }
   }
 
-  // @spec expansion#creation-lookup-order, mission-template#dispatch —
+  // @spec expansion#creation-revalidation, mission-template#dispatch —
   // possession verification precedes the Dispatch idempotency lookup, and the
   // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
   const proofJws = ctx.get("DPoP");
@@ -4910,7 +4959,7 @@ async function handleMissionDispatchGrant(
     return false;
   };
 
-  // @spec expansion#creation-lookup-order, mission#intent-submission-evidence —
+  // @spec expansion#creation-revalidation, mission#intent-submission-evidence —
   // the completed-operation recovery lookup runs after possession verification
   // and BEFORE evidence re-verification and the gates.
   let record: MissionRecord | undefined;

@@ -826,7 +826,12 @@ describe("Deferred Mission Approval capability (@spec deferred-approval#deferred
 
   it("is off by default (the hint is ignored, an mdfr_ code is unknown, nothing is advertised), and where on advertises deferral and its cancellation", async () => {
     const issuer = "http://localhost:14186";
-    const { built, server: off } = await assembly(14186, { issuer });
+    // Without Expansion, whose deferred mode also advertises the deferred
+    // token response and its cancellation (#1177).
+    const { built, server: off } = await assembly(14186, {
+      issuer,
+      capabilities: new Set(ALL_PROVIDER_CAPABILITIES.filter((c) => c !== "expansion")),
+    });
     try {
       expect(built.missionApprovalDeferrals).toBeUndefined();
       const meta = (await (await fetch(`${issuer}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;

@@ -39,6 +39,7 @@ import {
   approvalPolicyDigest,
   authorityHash,
   canonicalize,
+  entryOverlapsResource,
   intentHash,
   isActivationPolicyRef,
   isAuthorityEntry,
@@ -358,14 +359,25 @@ export type GovernedPolicyDecision =
   | { decision: "approve"; authority: AuthorityEntry[] }
   | { decision: "deny"; reason: string };
 
-/** Remove the named resources or actions; never adds an entry or an action. */
+/**
+ * Remove the named resources or actions; never adds an entry or an action.
+ *
+ * @spec resource-access#resource-matching, resource-access#subset (#1440): a
+ * removal pairs with every entry whose resource set overlaps the resource it
+ * names, through the shared matcher ({@link entryOverlapsResource}): an entry
+ * naming it, an entry within its tree, and a `prefix` entry whose base
+ * contains it. An entry containing the removed resource cannot be split, so
+ * the removal applies to the whole entry. That over-removes, which only
+ * narrows, where pairing by string equality would leave a descendant's
+ * authority standing.
+ */
 function removeAuthority(
   set: readonly AuthorityEntry[],
   removals: ReadonlyArray<{ resource: string; actions?: string[] }>,
 ): AuthorityEntry[] {
   const out: AuthorityEntry[] = [];
   for (const entry of set) {
-    const hits = removals.filter((r) => r.resource === entry.resource);
+    const hits = removals.filter((r) => entryOverlapsResource(entry, r.resource));
     if (hits.some((r) => r.actions === undefined)) continue;
     const drop = new Set(hits.flatMap((r) => r.actions ?? []));
     const actions = entry.actions.filter((a) => !drop.has(a));
@@ -1539,7 +1551,8 @@ function recordingResolution(resolver: CapabilitySourceResolver | undefined): {
 /**
  * A resolver that answers from a retained resolution, for each entry only
  * the resolutions naming that entry's resource and actions; null replays no
- * resolver at all, as at an activation that had none.
+ * resolver at all, as at an activation that had none. A resolution names the
+ * resolved entry's own `resource`, so string equality pairs it exactly (#1440).
  */
 function replayResolution(recorded: CapabilitySourceResolution[] | null): CapabilitySourceResolver | undefined {
   if (!recorded) return undefined;

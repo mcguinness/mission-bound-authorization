@@ -53,6 +53,7 @@ import {
   revokeSuccessorsExpandedByAnotherClient,
   SourceUnavailableError,
 } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { GateError } from "../src/kernel/kernel.js";
 import {
   BARE_REFUSAL_MEMBERS,
@@ -2318,6 +2319,7 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
       }),
       authorization_details: JSON.stringify(fullAuthority()),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     expect(opened.status, JSON.stringify(ob)).toBe(400);
@@ -2330,8 +2332,7 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
       approvedUntil: FAR_EXP,
     });
     const poll = await codeTokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: ob.deferral_code as string,
     });
     const pb = (await poll.json()) as { access_token?: string };
@@ -2966,6 +2967,7 @@ describe("a fully contained family is refused after rotation, within the owner's
       }),
       authorization_details: JSON.stringify(fullAuthority()),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     expect(opened.status, JSON.stringify(ob)).toBe(400);
@@ -2977,8 +2979,7 @@ describe("a fully contained family is refused after rotation, within the owner's
       approvedUntil: FAR_EXP,
     });
     const polled = await codeTokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: ob.deferral_code as string,
     });
     const pb = (await polled.json()) as { access_token?: string; mission_id?: string; authorization_details?: unknown };
@@ -3295,6 +3296,7 @@ describe("successor remediation (@spec expansion#verification-order step 4, #134
       }),
       authorization_details: JSON.stringify(fullAuthority()),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const { deferral_code: deferralCode } = (await opened.json()) as { deferral_code: string };
     as.expansionDeferrals.approve(deferralCode, {
@@ -3304,8 +3306,7 @@ describe("successor remediation (@spec expansion#verification-order step 4, #134
       approvedUntil: FAR_EXP,
     });
     const poll = await codeTokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: deferralCode,
     });
     const polled = (await poll.json()) as { access_token: string; mission_id: string };
