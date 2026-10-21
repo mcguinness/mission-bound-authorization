@@ -2032,6 +2032,186 @@ token carries authentication claims only as authentication information
 about its own Subject ({{token-authentication-lifetime}}), never
 as evidence of approval.
 
+## Single Accountable Approver {#multi-party-approval}
+
+This document records exactly one accountable principal,
+`approval_basis.consent_principal`: the principal who approved the
+Mission. Two richer patterns are out of scope:
+
+- **Multi-party approval** (M-of-N or dual control), where more than
+  one principal must approve. The number of approvers does not change
+  the authority commitment: principals approving the same rendered
+  Authority Set produce the same `authority_hash` and the same
+  derived tokens. A deployment requiring dual control records one
+  accountable Approver; this document does not represent the
+  co-approvers.
+- **Approval-authority provenance**: the standing behind a delegate's
+  authority to approve for another principal (for example, whether
+  an administrator was entitled to approve on a user's behalf). This
+  is governance state about the delegate, not the standing-consent
+  basis that `approval_basis` records ({{mission-record}}).
+
+Where a deployment needs either, the Approval Governance Record
+({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
+and Consent Evidence can carry a partial presentation of that record
+through `co_approvals` and its approval-governance members
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+
+The `adjudication.governance_record` member ({{mission-record}})
+marks an approval such a record backs, and {{role-mapping}} shows how
+each scenario assigns the three `approval_basis` roles.
+
+# Mission Lifecycle and Gating {#lifecycle}
+
+A Mission is in one of two states:
+
+- `active`: the only state in which the AS derives tokens.
+- `terminated`: a terminal state; the Mission has ended. Its
+  `termination` member ({{termination}}) gives the reason: `revoked`
+  when the Subject, Approver, or policy terminated it, or `expired` when
+  its `expires_at` passed.
+
+The transitions are:
+
+| From | Event | To | Reason |
+|---|---|---|---|
+| (none) | approval event | `active` | |
+| `active` | revoke | `terminated` | `revoked` |
+| `active` | `expires_at` reached | `terminated` | `expired` |
+{: title="Mission lifecycle transitions"}
+
+The Mission Lifecycle States registry ({{iana-lifecycle-states}})
+holds these states, and the Mission Termination Reasons registry
+({{iana-termination-reasons}}) holds the reasons. A companion profile
+MAY register an additional state for a lifecycle it introduces (for
+example, a paused state); only `active` permits issuance. A companion
+profile that defines a further way for a Mission to end registers a
+termination reason, not a state.
+
+Wherever a Mission state is reported, including the Mission Record
+and the introspection `mission` member, a consumer MUST treat only
+the exact value `active` as permitting derivation or continued
+reliance, and MUST treat every other value, including one it does
+not recognize, as non-active and non-deriving (the
+forward-compatibility rule).
+
+For every state-dependent decision this document defines, the AS MUST
+treat a Mission as `active` only when its stored state is `active`
+and the decision time is strictly before `expires_at`. From
+`expires_at`, a Mission whose stored state is still `active` is
+`terminated` with reason `expired` for every such decision, whether
+or not that transition is persisted, including when persisting it
+fails.
+
+Persisting that transition, and emitting any lifecycle event a
+state-distribution companion defines, can happen after the decision
+that observed the boundary; persisting it never replaces a
+termination already recorded.
+
+## Mission Termination {#termination}
+
+A Mission whose `state` is `terminated` carries a `termination`
+object, in the Mission Record and wherever its state is reported with
+it; a Mission in any other state carries none. Its members are:
+
+`reason`:
+: REQUIRED. A string, a value of the Mission Termination Reasons
+  registry ({{iana-termination-reasons}}): `revoked` or `expired` in
+  this document, or a reason a companion profile registers.
+
+`terminated_at`:
+: REQUIRED, except as {{termination-compatibility}} describes. A
+  string. An RFC 3339 {{RFC3339}} date-time: the instant the
+  termination took effect. For `expired`, it is the Mission's
+  `expires_at`.
+
+A companion profile that registers a reason defines that reason's
+further members. A profile that maintains a state version for the
+Mission adds the version of the transition that committed the
+termination as its audit reference.
+
+The issuer writes `termination` once, atomically with the transition
+to `terminated`, and never changes it: an expiry, or any later event,
+does not replace the reason or references of a Mission already
+terminated.
+
+A termination carries every member its reason requires, except as
+{{termination-compatibility}} describes.
+
+### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
+
+A termination need not carry a member its reason requires when it
+was recorded before its reason defined that member, or derived
+from such a termination: such a termination exposes only the facts
+its record retained and omits a member it has no retained value for,
+`terminated_at` included, rather than inventing one. For `expired`,
+the retained `terminated_at` is the Mission's `expires_at`; for
+another reason, a retained commit time is its `terminated_at` only
+where that commit was the termination's effect.
+
+A consumer that receives such a termination, or a `reason` it does
+not recognize, still treats the Mission as terminated: it stops work
+governed by the Mission, follows no absent reference, and infers no
+cause-specific action.
+
+For a transition period, a consumer of a report that still carries
+`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
+Mission's `state` MAY read it as `terminated` with that reason
+(`cascaded` as `parent_terminated`) and the facts the report
+retained; an emitter never reports those values as a state. That
+reading is local: the consumer never re-emits or re-signs it, and it
+verifies a signed artifact over its original bytes, which it retains,
+before reading it this way.
+
+## Revocation {#revocation}
+
+A Mission is revoked when the AS receives an authorized revocation
+for it. A deployment MUST provide an authenticated means for the
+Subject, the Approver, or an administrator to revoke a Mission by
+`mission_id`, independent of possession of any token (so a Mission
+can be stopped even when no refresh token is held).
+
+The wire shape of that operation is out of scope for this document. A
+deployment-defined authenticated surface satisfies this requirement;
+Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
+defines an interoperable `revoke` operation, authorized under its own
+lifecycle authorization policy, which a deployment can serve alone
+under that document's revoke-only conformance class.
+
+As {{Section 2.1 of RFC7009}} permits, a deployment's revocation
+policy can treat revoking a Mission's refresh token as revoking the
+Mission; a deployment that couples token revocation to Mission
+revocation documents that behavior.
+
+Token validity and Mission validity are distinct: an already-issued
+access token remains valid until it expires ({{issuance-gating}}), so
+a token can outlive a transition of its Mission by at most the token
+lifetime.
+
+Token introspection ({{introspection}}) is a state-observable overlay
+that lets a resource server see Mission state per request and refuse
+a revoked Mission's token before the token expires; Mission Status
+specifies another, a status surface keyed by `mission_id` with signed
+responses. A deployment whose consumers rely on Mission state beyond
+a token's lifetime offers one of these, so they read current state
+rather than infer it from token validity.
+
+# Mission-Bound Access Tokens {#mission-bound-tokens}
+
+An access token issued under a Mission takes one of two forms:
+
+- a self-contained JWT per {{RFC9068}}, which a resource server can
+  enforce from the token alone ({{rs-enforcement}}) and which this
+  document's token-carried enforcement assumes; or
+- an opaque Mission-bound token, profiled only under the introspected
+  consumption mode ({{introspected-consumption}}), where introspection
+  or issuer-local resolution carries its claims, with the same
+  enforcement obligations.
+
+A deployment whose AS can issue neither deploys a Mission Authority
+Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
+governs ordinary tokens at the enforcement layer.
+
 ## Binding the Mission to the Grant {#grant-binding}
 
 A Mission is independent of any OAuth grant: it is identified
@@ -2223,137 +2403,6 @@ token responses the member is additionally registered as a
 token-endpoint response parameter ({{oauth-parameters-registration}}).
 It is informational in the same way: presenting it authorizes nothing.
 
-## Single Accountable Approver {#multi-party-approval}
-
-This document records exactly one accountable principal,
-`approval_basis.consent_principal`: the principal who approved the
-Mission. Two richer patterns are out of scope:
-
-- **Multi-party approval** (M-of-N or dual control), where more than
-  one principal must approve. The number of approvers does not change
-  the authority commitment: principals approving the same rendered
-  Authority Set produce the same `authority_hash` and the same
-  derived tokens. A deployment requiring dual control records one
-  accountable Approver; this document does not represent the
-  co-approvers.
-- **Approval-authority provenance**: the standing behind a delegate's
-  authority to approve for another principal (for example, whether
-  an administrator was entitled to approve on a user's behalf). This
-  is governance state about the delegate, not the standing-consent
-  basis that `approval_basis` records ({{mission-record}}).
-
-Where a deployment needs either, the Approval Governance Record
-({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
-and Consent Evidence can carry a partial presentation of that record
-through `co_approvals` and its approval-governance members
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
-
-The `adjudication.governance_record` member ({{mission-record}})
-marks an approval such a record backs, and {{role-mapping}} shows how
-each scenario assigns the three `approval_basis` roles.
-
-# Mission Lifecycle and Gating {#lifecycle}
-
-A Mission is in one of two states:
-
-- `active`: the only state in which the AS derives tokens.
-- `terminated`: a terminal state; the Mission has ended. Its
-  `termination` member ({{termination}}) gives the reason: `revoked`
-  when the Subject, Approver, or policy terminated it, or `expired` when
-  its `expires_at` passed.
-
-The transitions are:
-
-| From | Event | To | Reason |
-|---|---|---|---|
-| (none) | approval event | `active` | |
-| `active` | revoke | `terminated` | `revoked` |
-| `active` | `expires_at` reached | `terminated` | `expired` |
-{: title="Mission lifecycle transitions"}
-
-The Mission Lifecycle States registry ({{iana-lifecycle-states}})
-holds these states, and the Mission Termination Reasons registry
-({{iana-termination-reasons}}) holds the reasons. A companion profile
-MAY register an additional state for a lifecycle it introduces (for
-example, a paused state); only `active` permits issuance. A companion
-profile that defines a further way for a Mission to end registers a
-termination reason, not a state.
-
-Wherever a Mission state is reported, including the Mission Record
-and the introspection `mission` member, a consumer MUST treat only
-the exact value `active` as permitting derivation or continued
-reliance, and MUST treat every other value, including one it does
-not recognize, as non-active and non-deriving (the
-forward-compatibility rule).
-
-For every state-dependent decision this document defines, the AS MUST
-treat a Mission as `active` only when its stored state is `active`
-and the decision time is strictly before `expires_at`. From
-`expires_at`, a Mission whose stored state is still `active` is
-`terminated` with reason `expired` for every such decision, whether
-or not that transition is persisted, including when persisting it
-fails.
-
-Persisting that transition, and emitting any lifecycle event a
-state-distribution companion defines, can happen after the decision
-that observed the boundary; persisting it never replaces a
-termination already recorded.
-
-## Mission Termination {#termination}
-
-A Mission whose `state` is `terminated` carries a `termination`
-object, in the Mission Record and wherever its state is reported with
-it; a Mission in any other state carries none. Its members are:
-
-`reason`:
-: REQUIRED. A string, a value of the Mission Termination Reasons
-  registry ({{iana-termination-reasons}}): `revoked` or `expired` in
-  this document, or a reason a companion profile registers.
-
-`terminated_at`:
-: REQUIRED, except as {{termination-compatibility}} describes. A
-  string. An RFC 3339 {{RFC3339}} date-time: the instant the
-  termination took effect. For `expired`, it is the Mission's
-  `expires_at`.
-
-A companion profile that registers a reason defines that reason's
-further members. A profile that maintains a state version for the
-Mission adds the version of the transition that committed the
-termination as its audit reference.
-
-The issuer writes `termination` once, atomically with the transition
-to `terminated`, and never changes it: an expiry, or any later event,
-does not replace the reason or references of a Mission already
-terminated.
-
-A termination carries every member its reason requires, except as
-{{termination-compatibility}} describes.
-
-### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
-
-A termination need not carry a member its reason requires when it
-was recorded before its reason defined that member, or derived
-from such a termination: such a termination exposes only the facts
-its record retained and omits a member it has no retained value for,
-`terminated_at` included, rather than inventing one. For `expired`,
-the retained `terminated_at` is the Mission's `expires_at`; for
-another reason, a retained commit time is its `terminated_at` only
-where that commit was the termination's effect.
-
-A consumer that receives such a termination, or a `reason` it does
-not recognize, still treats the Mission as terminated: it stops work
-governed by the Mission, follows no absent reference, and infers no
-cause-specific action.
-
-For a transition period, a consumer of a report that still carries
-`revoked`, `expired`, `completed`, `superseded`, or `cascaded` as a
-Mission's `state` MAY read it as `terminated` with that reason
-(`cascaded` as `parent_terminated`) and the facts the report
-retained; an emitter never reports those values as a state. That
-reading is local: the consumer never re-emits or re-signs it, and it
-verifies a signed artifact over its original bytes, which it retains,
-before reading it this way.
-
 ## Issuance Gating {#issuance-gating}
 
 A derivation is one issuance operation the issuer AS performs for a
@@ -2402,55 +2451,6 @@ authenticated client presenting the Mission's grant.
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
 revocation checks.
-
-## Revocation {#revocation}
-
-A Mission is revoked when the AS receives an authorized revocation
-for it. A deployment MUST provide an authenticated means for the
-Subject, the Approver, or an administrator to revoke a Mission by
-`mission_id`, independent of possession of any token (so a Mission
-can be stopped even when no refresh token is held).
-
-The wire shape of that operation is out of scope for this document. A
-deployment-defined authenticated surface satisfies this requirement;
-Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
-defines an interoperable `revoke` operation, authorized under its own
-lifecycle authorization policy, which a deployment can serve alone
-under that document's revoke-only conformance class.
-
-As {{Section 2.1 of RFC7009}} permits, a deployment's revocation
-policy can treat revoking a Mission's refresh token as revoking the
-Mission; a deployment that couples token revocation to Mission
-revocation documents that behavior.
-
-Token validity and Mission validity are distinct: an already-issued
-access token remains valid until it expires ({{issuance-gating}}), so
-a token can outlive a transition of its Mission by at most the token
-lifetime.
-
-Token introspection ({{introspection}}) is a state-observable overlay
-that lets a resource server see Mission state per request and refuse
-a revoked Mission's token before the token expires; Mission Status
-specifies another, a status surface keyed by `mission_id` with signed
-responses. A deployment whose consumers rely on Mission state beyond
-a token's lifetime offers one of these, so they read current state
-rather than infer it from token validity.
-
-# Mission-Bound Access Tokens {#mission-bound-tokens}
-
-An access token issued under a Mission takes one of two forms:
-
-- a self-contained JWT per {{RFC9068}}, which a resource server can
-  enforce from the token alone ({{rs-enforcement}}) and which this
-  document's token-carried enforcement assumes; or
-- an opaque Mission-bound token, profiled only under the introspected
-  consumption mode ({{introspected-consumption}}), where introspection
-  or issuer-local resolution carries its claims, with the same
-  enforcement obligations.
-
-A deployment whose AS can issue neither deploys a Mission Authority
-Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
-governs ordinary tokens at the enforcement layer.
 
 ## Token Claims {#token-claims}
 
