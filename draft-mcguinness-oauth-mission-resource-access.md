@@ -51,14 +51,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-cross-domain:
-    title: "Mission Cross-Domain Projection for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   RFC6750:
@@ -105,6 +97,14 @@ informative:
   I-D.draft-mcguinness-mission-runtime:
     title: "Mission-Bound Runtime Enforcement"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
     author:
       -
         ins: K. McGuinness
@@ -1120,15 +1120,15 @@ consistent with the subset rule ({{subset}}). Surviving entries keep
 their `delegation` member intact, so the next hop is evaluated the same
 way.
 
-A cross-domain grant separates two stages. Eligibility for the grant
-itself is decided as above, against the approved entry in the Mission
-Record. The copy the grant conveys keeps `delegation` only as
-{{I-D.draft-mcguinness-oauth-mission-cross-domain}} allows; a copy
-without it delegates no further. Neither stage lets an entry without
-`delegation` in the Mission Record appear in a delegated token. The
-dependency on that profile, here and in the absent-member exception of
-{{resource-access-type}}, binds only an authorization server that
-issues cross-domain grants.
+A cross-domain grant, which an authorization server issues for use in
+another trust domain
+({{I-D.draft-mcguinness-oauth-mission-cross-domain}}), separates two
+stages. Eligibility for the grant itself is decided as above, against
+the approved entry in the Mission Record. Whether the copy the grant
+conveys keeps `delegation` is for the profile that defines the grant,
+within the subset rule ({{subset}}); a copy without it delegates no
+further. Neither stage lets an entry without `delegation` in the
+Mission Record appear in a delegated token.
 
 **Inherited eligibility.** A derived entry's `allowed_delegates`
 restricts eligibility; it never replaces an obligation the derivation
