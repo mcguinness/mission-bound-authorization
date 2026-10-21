@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T20:43:16Z
-Source repository commit: 5ce8a9d863af52bf1c11b70e9341b2f8c9ad10dd
+Generated: 2026-10-21T22:21:33Z
+Source repository commit: 30f08befcbd23164c94559b874c0ddc4dbd5aecf
 Member count: 9
 
 Reading order:
@@ -9214,6 +9214,11 @@ Table of Contents
           approval surface that renders only the goal or Mission Intent
           does not conform.
 
+       *  The rendering MUST identify the OAuth client that receives the
+          authority, the Agent, from client identity information the AS
+          trusts, such as its own registration of the client; display
+          text the client supplies does not by itself identify it.
+
        *  When the Approver is not the Subject, the rendering MUST
           identify the Subject the authority is granted for.
 
@@ -9445,7 +9450,8 @@ Table of Contents
    max_age carriage above; the floor is never relaxed by a narrower or
    absent client request.
 
-   An authorization request whose scope includes openid [OpenID.Core]
+   This document does not require an AS to support OpenID Connect
+   [OpenID.Core].  An authorization request whose scope includes openid
    asks for an ID Token about the End-User the approval interaction
    authenticates, who is the Approver.  When the Approver is not the
    Subject established at step 2 of Section 6.2, the AS MUST refuse such
@@ -10073,6 +10079,13 @@ Table of Contents
    detects replay of a consumed refresh token (Section 4.14.2 of
    [RFC9700]) and is not a cryptographic binding.
 
+   A refresh request can carry authorization_details to narrow the
+   issued token (Section 6 of [RFC9396]).  The AS MUST refuse such a
+   request with the invalid_authorization_details error code when a
+   requested entry exceeds the presented refresh grant or the Mission
+   Authority Set (Section 5.4), and MUST NOT instead issue a narrower
+   set than the one requested.
+
 8.6.  Authentication Claims and Lifetime
 
    A derived token's authority comes from the Mission, not from a fresh
@@ -10349,6 +10362,19 @@ Table of Contents
        prevents in Section 20.1.2, and the metadata that advertises the
        requirement in Section 18.
 
+   6.  MUST accept a mission claim only from an issuer it explicitly
+       trusts to issue Mission-bound authorization for the resource;
+       trusting the issuer's ordinary access tokens is not enough.  It
+       MUST require mission.issuer to equal the token's iss, unless a
+       cross-domain profile it has adopted
+       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) explicitly
+       establishes the permitted relationship between the two.  It MUST
+       reject a token that fails either check with the invalid_token
+       error code.  For an opaque token, the issuer is the AS whose
+       introspection response or issuer-local resolution the resource
+       server relies on, and the same checks apply to that response's
+       mission member (Section 11.4).
+
    A resource server can also:
 
    *  require that a token carry an act chain and record it, while
@@ -10541,8 +10567,9 @@ Table of Contents
    type (Section 17), narrowed same-type (Section 5.4, Section 5.5) like
    any other request.  The AS issues only what both the presented
    refresh grant (Section 6 of [RFC9396]) and the Authority Set contain,
-   so a refresh-token family narrower than the Mission does not obtain
-   the Mission's wider authority.
+   and refuses a request beyond either (Section 8.5), so a refresh-token
+   family narrower than the Mission does not obtain the Mission's wider
+   authority.
 
    For entries outside the Authority Set, more authority requires a new
    approval, proposed as for a new Mission (Section 4.3), or an
@@ -10643,10 +10670,12 @@ Table of Contents
    |                                 | (Section 8.2).  Detail:         |
    |                                 | mission_error (Section 23)      |
    +---------------------------------+---------------------------------+
-   | Token endpoint (Section 5.4):   | invalid_authorization_details   |
-   | the requested RAR subset        | (Section 6 of [RFC9396]).       |
-   | exceeds the Mission's granted   | Detail: safe error_description  |
-   | authority                       |                                 |
+   | Token endpoint (Section 5.4,    | invalid_authorization_details   |
+   | Section 8.5): the requested     | (Section 6 of [RFC9396]).       |
+   | RAR subset exceeds the          | Detail: safe error_description  |
+   | Mission's granted authority,    |                                 |
+   | or, on refresh, the presented   |                                 |
+   | refresh grant                   |                                 |
    +---------------------------------+---------------------------------+
 
                Table 5: Failures not confined to one surface
@@ -11827,13 +11856,24 @@ Table of Contents
       Members:
 
       type:  REQUIRED.  A string: user_delegated, service_owned, or
-         organizational, subject to the forward-compatibility rule of
-         Section 7.
+         organizational.  An unrecognized value is handled under the
+         same rule as an unrecognized approval_basis.type
+         (Section 14.3): it is preserved unchanged as opaque provenance
+         and does not by itself invalidate or deactivate the Mission,
+         and only an operation that itself requires recognized source
+         semantics refuses (for example, applying the source's authority
+         ceiling or its governed policy).  An AS MUST NOT approve a
+         Mission whose authority source it does not recognize.
 
       policy:  REQUIRED for organizational, absent otherwise.  An object
          with id, version, and digest: the stable reference to, and
          commitment over, the governed organizational policy the Mission
-         draws on.
+         draws on. digest is a prefixed commitment (Section 15.3) whose
+         exact committed input and construction the policy's format
+         specifies: its species and, for an envelope anchor, its typ,
+         iss, and value.  The party that produces the reference computes
+         digest; a consumer holding the policy can reproduce it, and one
+         that does not compares it as an opaque value.
 
       authority_source is provenance like approval_basis: recorded
       alongside it, folded into neither intent_hash nor authority_hash,
@@ -12048,6 +12088,15 @@ Table of Contents
    committed object from being transplanted across authorization
    servers.  The sha-256: prefix is the algorithm-agility mechanism
    (Section 15.3).
+
+   The anchors this section lists, and the Authority Set entry
+   commitment below, bind the AS issuer.  The digest of an
+   authority_source.policy reference (Section 14.3) is not one of them:
+   it uses the issuer the policy's format defines, for a governed
+   organizational policy its governing authority.  That binding keeps
+   the policy's commitment from being transplanted across policy
+   authorities, and the same policy commits identically at every AS that
+   records it.
 
    intent_hash and authority_hash are independent commitments to
    independent objects.  That the approved task bounds the derived
@@ -12384,8 +12433,8 @@ Table of Contents
    An AS that advertises mission_bound_authorization_supported: true
    SHOULD also advertise authorization_details_types_metadata_endpoint
    [I-D.draft-ietf-oauth-rar-metadata-remediation] where it implements
-   that endpoint.  Conformance to this document does not depend on that
-   endpoint.  Where the AS advertises it:
+   that endpoint.  Implementing that endpoint is optional, and the rules
+   below bind only an AS that advertises it:
 
    *  its response's key set is the source of truth for which types the
       AS supports;
@@ -13539,6 +13588,20 @@ Table of Contents
 
 24.1.  Normative References
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-01, 8 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-01>.
+
    [I-D.draft-mcguinness-oauth-client-instance-id]
               McGuinness, K., "Client Instance Identification for
               Attestation-Based Client Authentication", Work in
@@ -13546,6 +13609,11 @@ Table of Contents
               instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-id-00>.
+
+   [OpenID.Core]
+              OpenID Foundation, "OpenID Connect Core 1.0 incorporating
+              errata set 2", 2023,
+              <https://openid.net/specs/openid-connect-core-1_0.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -13702,13 +13770,6 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-cecchetti-
               oauth-rar-cedar-02>.
 
-   [I-D.draft-ietf-oauth-rar-metadata-remediation]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              rar-metadata-remediation-00>.
-
    [I-D.draft-ietf-oauth-spiffe-client-auth]
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
@@ -13796,13 +13857,6 @@ Table of Contents
               McGuinness, K., "Mission Substrate Requirements", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
-
-   [I-D.draft-mcguinness-oauth-actor-profile]
-              McGuinness, K., "OAuth Actor Profile for Delegation", Work
-              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
-              profile-01, 8 October 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
@@ -13926,11 +13980,6 @@ Table of Contents
               draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
               2026, <https://datatracker.ietf.org/doc/html/draft-
               niyikiza-oauth-attenuating-agent-tokens-01>.
-
-   [OpenID.Core]
-              OpenID Foundation, "OpenID Connect Core 1.0 incorporating
-              errata set 2", 2023,
-              <https://openid.net/specs/openid-connect-core-1_0.html>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
@@ -14479,9 +14528,9 @@ B.4.  Scope and Future Work
 
    Its reference to the OAuth Actor Profile
    ([I-D.draft-mcguinness-oauth-actor-profile]), for the act chain shape
-   the optional Delegation capability uses, is informative and confined
-   to Delegation, so the mandatory single-domain core does not depend on
-   it.
+   the optional Delegation capability uses, is normative and binds only
+   a deployment that claims Delegation, so the mandatory single-domain
+   core does not depend on it.
 
    The companion Mission Cross-Domain Projection profile
    [I-D.draft-mcguinness-oauth-mission-cross-domain] specifies cross-
@@ -15416,8 +15465,9 @@ Appendix G.  Document History
    klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and draft-
    mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC 3986,
    and draft-mcguinness-oauth-ai-agent-instance are removed; RFC 6750,
-   RFC 9700 and Client Instance ID are normative, and the OAuth Actor
-   Profile informative.
+   RFC 9700, Client Instance ID, OpenID Connect Core, the RAR metadata
+   remediation draft and, for Delegation, the OAuth Actor Profile are
+   normative.
 
    -00
 
