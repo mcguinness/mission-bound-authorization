@@ -43,7 +43,7 @@ export const UNWIND_PLAN_TYP = "mission-unwind-plan";
  */
 export const MISSION_TEMPLATE_TYP = "mission-template";
 /**
- * @spec expansion#creation-request-id (shared by child-delegation)
+ * @spec expansion#creation-idempotency (shared by child-delegation)
  * The integrity-anchor `typ` for the creation-operation FINGERPRINT: the typed
  * object a Mission Issuer binds to a `creation_request_id` so a repetition of
  * the same Mission-creating operation (child creation / expansion) is
