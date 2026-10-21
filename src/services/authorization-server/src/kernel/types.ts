@@ -753,6 +753,13 @@ export interface MissionRecord {
    * `authority_ceiling`; 0 on the chain's root Mission, whose approval consented the ceiling.
    */
   drawdown_count?: number;
+  /**
+   * @spec progressive#audit-linkage, discovery#resource-identity (#1469): the
+   * digest of the self-declaration this successor's adjudication evaluated,
+   * over the bytes the Mission Issuer retrieved. Stored with the ceiling
+   * members; on that successor only.
+   */
+  resource_declaration_digest?: string;
 }
 
 /**
