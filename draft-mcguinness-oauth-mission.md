@@ -745,8 +745,9 @@ Mission:
 : The durable authorization object that binds a disclosed task (its
   Mission Intent) to an explicitly approved Authority Set and governs
   the lifecycle of the authority derived from that approval. It is the
-  immutable record created at the approval event ({{mission-record}}),
-  identified by a Mission Identifier ({{mission-id}}) and, globally, by
+  record created at the approval event ({{mission-record}}), immutable
+  except for its `state` and `termination` members, identified by a
+  Mission Identifier ({{mission-id}}) and, globally, by
   the pair (`issuer`, `id`). A Mission is independent of any OAuth
   grant ({{grant-binding}}). "The approved task" is shorthand for this
   binding: the Approver approves the Authority Set, and the task is
@@ -3840,7 +3841,7 @@ The following subsections define the record's members.
   current policy ({{third-party-data-subjects}}).
 
   No integrity anchor commits `submission_evidence`: its digests are
-  only as trustworthy as this immutable record and do not
+  only as trustworthy as the Mission Record that holds them and do not
   independently prove which artifacts were presented at admission. A
   profile whose threat model requires that proof commits normalized
   provenance under its own anchor `typ` ({{integrity-anchors}},
