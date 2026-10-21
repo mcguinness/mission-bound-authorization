@@ -32,7 +32,7 @@ beforeAll(async () => {
   agentKeys = await generateKeyPair("ES256", { extractable: true });
   agentJkt = await calculateJwkThumbprint(await exportJWK(agentKeys.publicKey));
   const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: "ras-token", alg: "ES256" };
-  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] } });
+  saas = new SaasMcpServer({ rasIssuer: RAS_ISS, rasJwks: { keys: [rasPub as never] }, trustedMissionIssuers: ["https://as.test"] });
 });
 
 /** A RAS-issued local token carrying exactly one entry with `actions`. */
