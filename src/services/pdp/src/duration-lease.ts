@@ -38,8 +38,9 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { canonicalDigest } from "@mission/core";
+import { canonicalDigest, idempotencyScopeDigest, isIdempotencyKey } from "@mission/core";
 import type { EvaluationRequest } from "./evaluate.js";
+import { idempotencyScopeOf, operationIdentity } from "./projections.js";
 
 /** The five members a renewal must share with the evaluation it renews. */
 export interface LeaseContinuity {
@@ -70,8 +71,23 @@ export interface DurationLeaseDomain {
   lookup(evaluationId: string): { activity: DurationActivity; continuity: LeaseContinuity } | undefined;
   /** Open a new activity, leased by this permit. */
   open(evaluationId: string, continuity: LeaseContinuity, leaseEndMs: number): DurationActivity;
-  /** Lease an existing activity to this permit as well, opening no reservation. */
-  extend(activityId: string, evaluationId: string, continuity: LeaseContinuity, leaseEndMs: number): DurationActivity;
+  /**
+   * The lease end a keyed renewal ({@link renewalLeaseKey}) already extended
+   * its activity to, or undefined where that renewal has extended nothing.
+   */
+  extension(renewalKey: string): number | undefined;
+  /**
+   * Lease an existing activity to this permit as well, opening no
+   * reservation. For a keyed renewal already applied under `renewalKey`, the
+   * permit is recorded and the lease end is left where that renewal moved it.
+   */
+  extend(
+    activityId: string,
+    evaluationId: string,
+    continuity: LeaseContinuity,
+    leaseEndMs: number,
+    renewalKey?: string,
+  ): DurationActivity;
   /** Every activity this ledger has opened. */
   activities(): DurationActivity[];
 }
@@ -89,6 +105,8 @@ export function createDurationLeaseLedger(declared: Readonly<Record<string, numb
   }
   const activities = new Map<string, DurationActivity>();
   const leases = new Map<string, { activityId: string; continuity: LeaseContinuity }>();
+  /** Each keyed renewal applied, by its renewal key: the lease end it moved its activity to. */
+  const extensions = new Map<string, number>();
   const snapshot = (a: DurationActivity): DurationActivity => ({ ...a, evaluations: [...a.evaluations] });
   return {
     leaseSeconds: (action) => (Object.hasOwn(declared, action) ? declared[action] : undefined),
@@ -103,12 +121,17 @@ export function createDurationLeaseLedger(declared: Readonly<Record<string, numb
       leases.set(evaluationId, { activityId: activity.activityId, continuity });
       return snapshot(activity);
     },
-    extend(activityId, evaluationId, continuity, leaseEndMs) {
+    extension: (renewalKey) => extensions.get(renewalKey),
+    extend(activityId, evaluationId, continuity, leaseEndMs, renewalKey) {
       const activity = activities.get(activityId);
       if (!activity) throw new Error(`no duration-lease activity ${activityId}`);
       activity.evaluations.push(evaluationId);
-      activity.leaseEndMs = Math.max(activity.leaseEndMs, leaseEndMs);
       leases.set(evaluationId, { activityId, continuity });
+      // A keyed renewal moves the lease end once: a retry of it, after a
+      // permit that never left the PDP, finds the extension already applied.
+      if (renewalKey !== undefined && extensions.has(renewalKey)) return snapshot(activity);
+      activity.leaseEndMs = Math.max(activity.leaseEndMs, leaseEndMs);
+      if (renewalKey !== undefined) extensions.set(renewalKey, leaseEndMs);
       return snapshot(activity);
     },
     activities: () => [...activities.values()].map(snapshot),
@@ -189,6 +212,24 @@ export function renewalClaimIdentity(operationIdentity: string, priorEvaluationI
 }
 
 /**
+ * @spec metering#lease-renewal (#1464): what makes a keyed renewal's lease
+ * extension idempotent: the idempotency scope and key the renewal is claimed
+ * under, with its renewal identity ({@link renewalClaimIdentity}). Undefined
+ * for a renewal that carries no well-formed key or has no stable scope: each
+ * such request is its own renewal.
+ */
+export function renewalLeaseKey(req: EvaluationRequest, priorEvaluationId: string): string | undefined {
+  const key = req.action.properties?.idempotency_key;
+  const scope = isIdempotencyKey(key) ? idempotencyScopeOf(req) : undefined;
+  if (!scope || !isIdempotencyKey(key)) return undefined;
+  return canonicalDigest({
+    scope: idempotencyScopeDigest(scope),
+    idempotency_key: key,
+    renewal: renewalClaimIdentity(operationIdentity(req), priorEvaluationId),
+  });
+}
+
+/**
  * The lease step for one request that has passed every authority and
  * constraint check, at the decision instant `nowMs`. A request carrying
  * `context.prior_evaluation_id` is a renewal: refused unless `domain` holds
@@ -221,10 +262,15 @@ export function durationLeaseStep(
     return { kind: "refused" };
   }
   const { activityId } = renewed.activity;
+  // A keyed renewal already applied (its permit never left: evidence or
+  // persist failed after the commit) is answered with the lease end it set,
+  // so its retry neither moves the end again nor outlives it.
+  const renewalKey = renewalLeaseKey(req, prior);
+  const applied = renewalKey !== undefined ? domain.extension(renewalKey) : undefined;
   return {
     kind: "leased",
-    ceiling,
+    ceiling: applied !== undefined ? { name: "duration_lease_end", atMs: applied } : ceiling,
     renews: prior,
-    commit: (id, end) => void domain.extend(activityId, id, continuity, end),
+    commit: (id, end) => void domain.extend(activityId, id, continuity, end, renewalKey),
   };
 }

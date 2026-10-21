@@ -29,6 +29,7 @@ import type { Fga } from "../src/fga.js";
 import {
   type ClaimRequester,
   type ConsumptionStatusFn,
+  type IdempotencyClaimDomain,
   type IndeterminateClaim,
   openIdempotencyClaimDomain,
 } from "../src/idempotency-claims.js";
@@ -299,7 +300,13 @@ const keyedRequest = (at: number, key: string | undefined, over: { prior?: strin
  */
 function keyedHarness(
   consumption: ConsumptionStatusFn = () => "unconsumed",
-  over: { ledger?: DurationLeaseDomain; domainNow?: () => Date; onIndeterminate?: (c: IndeterminateClaim) => void } = {},
+  over: {
+    ledger?: DurationLeaseDomain;
+    domainNow?: () => Date;
+    onIndeterminate?: (c: IndeterminateClaim) => void;
+    /** The claim domain as the decision point is bound to it; the real one by default. */
+    wrapClaims?: (claims: IdempotencyClaimDomain) => IdempotencyClaimDomain;
+  } = {},
 ) {
   const ledger: DurationLeaseDomain = over.ledger ?? createDurationLeaseLedger({ [PAY]: PAY_LEASE_S });
   const file = join(mkdtempSync(join(tmpdir(), "lease-1464-")), "claims.sqlite");
@@ -315,7 +322,7 @@ function keyedHarness(
     audience: AUDIENCE,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     durationLeases: ledger,
-    claims,
+    claims: over.wrapClaims ? over.wrapClaims(claims) : claims,
   });
   const decideFor = point.decideAs(REQUESTER, consumption);
   const decide = (req: EvaluationRequest, at: number): Promise<Decision> =>
@@ -526,6 +533,47 @@ describe("a keyed renewal's claim settles when the PDP commits the lease extensi
     const retry = await decide(keyedRequest(at + 1_000, key, { prior: opening }), at + 1_000);
     expect(retry.decision, JSON.stringify(retry.context)).toBe(true);
     expect(real.activities()[0]?.evaluations).toEqual([opening, retry.context.evaluation_id]);
+    claims.close();
+  });
+
+  it("a persist that fails after the lease commit leaves the extension applied once: the retry under the same key gets a permit ending at that extension, and the lease end moves exactly once", async () => {
+    let failPersist = false;
+    const wrapClaims = (real: IdempotencyClaimDomain): IdempotencyClaimDomain =>
+      ({
+        declares: (c: string | undefined) => real.declares(c),
+        retransmit: (...args: Parameters<IdempotencyClaimDomain["retransmit"]>) => real.retransmit(...args),
+        claim: async (input: Parameters<IdempotencyClaimDomain["claim"]>[0]) => {
+          const outcome = await real.claim(input);
+          if (outcome.kind !== "claimed" || !failPersist) return outcome;
+          failPersist = false;
+          const { ticket } = outcome;
+          return {
+            kind: "claimed",
+            ticket: {
+              evaluationId: ticket.evaluationId,
+              persist: () => {
+                throw new Error("claim store unavailable at persist");
+              },
+              release: () => ticket.release(),
+            },
+          };
+        },
+      }) as unknown as IdempotencyClaimDomain;
+    const { ledger, claims, decide, opened } = keyedHarness(undefined, { wrapClaims });
+    const opening = await opened(freshKey());
+    const key = freshKey();
+    const at = T0 + 10_000;
+    failPersist = true;
+    await expect(decide(keyedRequest(at, key, { prior: opening }), at)).rejects.toThrow("claim store unavailable at persist");
+    // The lease commit ran before the persist failed: the extension is applied, though no permit left.
+    const extended = at + PAY_LEASE_S * 1000;
+    expect(ledger.activities()[0]?.leaseEndMs).toBe(extended);
+    const later = at + 3_000;
+    const retry = await decide(keyedRequest(later, key, { prior: opening }), later);
+    expect(retry.decision, JSON.stringify(retry.context)).toBe(true);
+    expect(validUntilOf(retry)).toBe(extended);
+    expect(ledger.activities()).toHaveLength(1);
+    expect(ledger.activities()[0]?.leaseEndMs).toBe(extended);
     claims.close();
   });
 });
