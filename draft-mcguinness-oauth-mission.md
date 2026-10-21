@@ -29,6 +29,7 @@ author:
 
 normative:
   I-D.draft-mcguinness-oauth-client-instance-id:
+  I-D.draft-ietf-oauth-rar-metadata-remediation:
   RFC3339:
   RFC4648:
   RFC5646:
@@ -56,9 +57,14 @@ normative:
   RFC8414:
   RFC7519:
   RFC9728:
+  OpenID.Core:
+    title: "OpenID Connect Core 1.0 incorporating errata set 2"
+    target: https://openid.net/specs/openid-connect-core-1_0.html
+    author:
+      - org: OpenID Foundation
+    date: 2023
 
 informative:
-  I-D.draft-ietf-oauth-rar-metadata-remediation:
   I-D.draft-ietf-wimse-arch:
   I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
@@ -113,12 +119,6 @@ informative:
     author:
       - org: OpenID Foundation
     date: 2026
-  OpenID.Core:
-    title: "OpenID Connect Core 1.0 incorporating errata set 2"
-    target: https://openid.net/specs/openid-connect-core-1_0.html
-    author:
-      - org: OpenID Foundation
-    date: 2023
   I-D.draft-ietf-wimse-aims:
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
@@ -2011,8 +2011,9 @@ published floor and, where the client requested one, the
 `acr_values`/`max_age` carriage above; the floor is never relaxed by
 a narrower or absent client request.
 
-An authorization request whose `scope` includes `openid`
-{{OpenID.Core}} asks for an ID Token about the End-User the approval
+This document does not require an AS to support OpenID Connect
+{{OpenID.Core}}. An authorization request whose `scope` includes
+`openid` asks for an ID Token about the End-User the approval
 interaction authenticates, who is the Approver. When the Approver is
 not the Subject established at step 2 of {{direct-approval-steps}}, the AS
 MUST refuse such a request, without creating the Mission, with the
@@ -4768,8 +4769,8 @@ Intent only through PAR ({{submission-via-par}}).
 An AS that advertises `mission_bound_authorization_supported: true`
 SHOULD also advertise `authorization_details_types_metadata_endpoint`
 {{I-D.draft-ietf-oauth-rar-metadata-remediation}} where it implements
-that endpoint. Conformance to this document does not depend on that
-endpoint. Where the AS advertises it:
+that endpoint. Implementing that endpoint is optional, and the rules
+below bind only an AS that advertises it:
 
 - its response's key set is the source of truth for which types the
   AS supports;
@@ -7240,8 +7241,9 @@ draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
-6750, RFC 9700 and Client Instance ID are normative, and the OAuth
-Actor Profile informative.
+6750, RFC 9700, Client Instance ID, OpenID Connect Core and the RAR
+metadata remediation draft are normative, and the OAuth Actor Profile
+informative.
 
 -00
 
