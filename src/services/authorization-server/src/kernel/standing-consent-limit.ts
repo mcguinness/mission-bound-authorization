@@ -11,7 +11,7 @@
  * so a later raise or removal of the deployment's ceiling cannot lift it.
  */
 
-import type { ActivationPolicySnapshot } from "@mission/core";
+import type { ActivationPolicyRef, ActivationPolicySnapshot } from "@mission/core";
 
 /** The snapshot member that states the maximum. */
 export const STANDING_CONSENT_LIMIT_MEMBER = "derivation_limit_ceiling";
@@ -62,4 +62,88 @@ export function withinStandingConsentMaximum(
 ): number | null {
   if (maximum.finite === null) return resolved;
   return resolved === null ? maximum.finite : Math.min(resolved, maximum.finite);
+}
+
+/**
+ * @spec child-delegation#derivation-budget (#1119, D327) — the per-child
+ * maximum a delegable entry's `children` grant commits, read the same way at
+ * the Parent Mission's approval rendering, at its approval decision, and at
+ * each child's creation. One reader means the three compute the figure the
+ * same way from the same committed state; it does not bind a rendering to the
+ * later decision, which re-reads (a figure that cannot be disclosed refuses
+ * the approval there). `held` resolves a `child_creation_policy` reference to
+ * the snapshot this issuer verifies against its committed digest, or
+ * undefined.
+ * - `policy`: the entry commits a policy whose snapshot states the maximum;
+ * - `deployment`: the entry commits no policy, so the deployment's policy
+ *   ceiling for a child's `derivation_limit` is the figure;
+ * - `unheld`: the committed policy is not one this issuer holds at that digest;
+ * - `unusable`: the held snapshot states a malformed maximum.
+ */
+export type CommittedPerChildMaximum =
+  | { readonly source: "policy"; readonly maximum: StandingConsentMaximum }
+  | { readonly source: "deployment" }
+  | { readonly source: "unheld"; readonly policy: ActivationPolicyRef }
+  | { readonly source: "unusable"; readonly policy: ActivationPolicyRef };
+
+export function committedPerChildMaximum(
+  children: { readonly child_creation_policy?: ActivationPolicyRef } | undefined,
+  held: (ref: ActivationPolicyRef) => ActivationPolicySnapshot | undefined,
+): CommittedPerChildMaximum {
+  const policy = children?.child_creation_policy;
+  if (!policy) return { source: "deployment" };
+  const snapshot = held(policy);
+  if (!snapshot) return { source: "unheld", policy };
+  const maximum = standingConsentMaximumOf(snapshot);
+  return maximum ? { source: "policy", maximum } : { source: "unusable", policy };
+}
+
+/**
+ * @spec derivation-limits#approval-rendering (#1119, D327) — the consent
+ * statements an approval renders, as plain lines: the approval page escapes
+ * and renders them, and the template-consent stand-in returns them.
+ */
+export const ASYNC_FAMILY_STATEMENT =
+  "The refreshes of an async delegation family are not counted against this limit.";
+
+/** The established limit of the Mission being approved (its own, not only the requested value). */
+export function establishedLimitLines(limit: number | null, opts: { asyncDelegation: boolean }): string[] {
+  return [
+    limit === null
+      ? "No derivation limit is established for this Mission: the number of tokens derived from it is not bounded."
+      : `Derivation limit (established): at most ${limit} token derivations from this Mission.`,
+    ...(opts.asyncDelegation ? [ASYNC_FAMILY_STATEMENT] : []),
+  ];
+}
+
+/**
+ * The rule and maximum a standing consent commits for each Mission it admits,
+ * and the scope statement. `admitted` names those Missions ("child Mission",
+ * "dispatched instance").
+ */
+export function standingConsentLines(
+  maximum: StandingConsentMaximum,
+  admitted: string,
+  opts: { asyncDelegation: boolean },
+): string[] {
+  const rule =
+    maximum.finite === null
+      ? `Each ${admitted} created under this consent establishes its own derivation limit from its own request; no finite maximum is guaranteed.`
+      : `Each ${admitted} created under this consent establishes its own derivation limit from its own request, never above ${maximum.finite}.`;
+  return [
+    rule,
+    `This maximum is local to each ${admitted}: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.`,
+    ...(opts.asyncDelegation ? [ASYNC_FAMILY_STATEMENT] : []),
+  ];
+}
+
+/** @spec child-delegation#subtree-rendering — no lineage-keyed budget is deployed in this reference. */
+export const SUBTREE_AGGREGATE_STATEMENT =
+  "No finite aggregate bound on this entry's subtree is enforced: no limit applies to children created over the Mission's lifetime.";
+
+/** @spec progressive#derivation-limits — the inheritance a ceiling consent discloses. */
+export function progressiveInheritanceLine(limit: number | null): string {
+  return limit === null
+    ? "If you also consent to an authority ceiling, this Mission has no derivation limit, so no finite limit is guaranteed for the successors its drawdown policy creates."
+    : `If you also consent to an authority ceiling, the successors its drawdown policy creates carry this Mission's derivation count forward and never exceed its derivation limit of ${limit}.`;
 }

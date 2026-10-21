@@ -212,6 +212,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-expansion:
     title: "Mission Expansion for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-expansion.html
@@ -1150,13 +1158,25 @@ request ({{discovery}} states the client-side rules and
 - Where a deployment designates a resource Mission-governed, its AS
   MUST NOT issue a token for that resource outside a Mission, except
   under documented policy exceptions.
-- If a client registered as Mission-governed sends an
-  `authorization_details` request that carries no `mission_intent`, the
-  AS MUST reject the request with the `invalid_request` error code, so
-  the client cannot drop the Intent from a request that still carries
-  `authorization_details`. A request carrying neither is an ordinary
-  request that this rule does not reach; designation is what keeps a
-  resource's tokens inside a Mission.
+- If a client registered as Mission-governed sends an authorization
+  request, through PAR or at the authorization endpoint, that carries
+  `authorization_details` but no `mission_intent`, the AS MUST reject
+  the request with the `invalid_request` error code, so the client
+  cannot drop the Intent from a request that still carries
+  `authorization_details`. The rule applies to that request until it
+  completes, including when the AS resumes it after an interaction. A
+  request carrying neither is an ordinary request that this rule does
+  not reach; designation is what keeps a resource's tokens inside a
+  Mission.
+
+A token request under an existing Mission-bound grant, such as a
+narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
+for a delegation designation ({{designation}}), needs no
+`mission_intent` under the second rule. This exception opens no
+Mission submission carriage, and every other check still applies to
+the request: Issuance Gating ({{issuance-gating}}), the subset rule
+({{subset}}), the first rule above, and the grant's binding to its
+Mission, client and sender.
 
 The following is an example of an authority proposal submitted alongside
 the example Intent of {{mission-intent}}. Derivation narrows
@@ -1715,6 +1735,10 @@ At a direct approval event the AS MUST, in order:
      ({{authority-proposal}}), the rendering MUST distinguish the
      entries the client proposed from any narrowing or restructuring
      the AS applied.
+   - Mission Capability Binding
+     ({{I-D.draft-mcguinness-mission-capability-binding}}) states
+     what the rendering presents about the source binding of a
+     catalog-sourced action.
 6. **Compute the integrity anchors** ({{integrity-anchors}}):
    `authority_hash` over the consented Authority Set, `intent_hash`
    over the approved Mission Intent, and, when an authority proposal
@@ -3025,7 +3049,6 @@ exchange rows of the third table.
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
-| Request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{direct-approval-steps}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
@@ -3039,6 +3062,7 @@ exchange rows of the third table.
 | PAR: malformed Submission envelope or Intent (schema, unknown member, invalid value) ({{submission-via-par}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | PAR or authorization: malformed or unsupported actual RAR object (an entry of a submitted `authorization_details` proposal) ({{authority-proposal}}) | `invalid_authorization_details` ({{Section 5 of RFC9396}}). Detail: RAR-defined detail |
 | PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| PAR or authorization request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
 | Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: none unless a defined extension applies |
 {: title="PAR and authorization endpoint failures"}
@@ -4877,7 +4901,8 @@ downgrade:
 
 - **Issuance.** The rules of {{authority-proposal}} keep such a
   resource's tokens inside a Mission and refuse such a client's
-  `authorization_details` request that omits the Intent.
+  authorization request that carries `authorization_details` but
+  omits the Intent.
 - **Client.** A client holding a Mission Intent does not fall back to an
   ordinary request where Mission support is not established, and a
   client performing a Mission's task does not present an ordinary
@@ -6917,6 +6942,18 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Direct Approval Steps (#1447, D584): the rendering rules point to
+  Mission Capability Binding for what the approval presents about a
+  catalog-sourced action's source binding.
+
+- Authority Proposal (#1448, D585): the Mission-governed client rule
+  reaches an authorization request, through PAR or at the
+  authorization endpoint, including a resumed one. A token request
+  under an existing Mission-bound grant needs no `mission_intent`
+  under it, and every other check still applies. Its Error and
+  Challenge Mapping row moves to the PAR and authorization endpoint
+  table.
 
 - Submission processing (#1411, D559): Submission Processing Order
   validates an authority proposal's type, schema, and

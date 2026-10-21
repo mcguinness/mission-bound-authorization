@@ -351,6 +351,31 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
   // (#1119, D327): each dispatched instance's derivation_limit is established
   // at its own Dispatch, never above the maximum the committed Dispatch Policy
   // states, whatever it requests; the deployment imposes no ceiling here.
+  // @spec mission-template#template-consent, derivation-limits#approval-rendering
+  // (#1119): the stand-in returns the disclosure a human template-consent page
+  // would render, beside max_active and the dispatch rate.
+  it("template consent discloses the per-instance derivation-limit rule and maximum the Dispatch Policy states, beside max_active and the dispatch rate", async () => {
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), dispatch_policy: { id: "test-limit-3", version: "1" } });
+    const body = (await created.json()) as {
+      disclosure?: { max_active?: number; dispatch_rate?: { limit: number; window_s: number }; derivation_limit?: string[] };
+    };
+    expect(created.status).toBe(201);
+    const template = readOnlyTemplateBody() as { max_active: number; rate_per_min: number };
+    expect(body.disclosure?.max_active).toBe(template.max_active);
+    expect(body.disclosure?.dispatch_rate).toEqual({ limit: template.rate_per_min, window_s: 60 });
+    expect(body.disclosure?.derivation_limit).toEqual([
+      "Each dispatched instance created under this consent establishes its own derivation limit from its own request, never above 3.",
+      "This maximum is local to each dispatched instance: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.",
+      "The refreshes of an async delegation family are not counted against this limit.",
+    ]);
+    // A Dispatch Policy stating no maximum is disclosed as guaranteeing none.
+    const unbounded = await createTemplateAdmin(readOnlyTemplateBody());
+    const unboundedBody = (await unbounded.json()) as { disclosure?: { derivation_limit?: string[] } };
+    expect(unboundedBody.disclosure?.derivation_limit?.[0]).toBe(
+      "Each dispatched instance created under this consent establishes its own derivation limit from its own request; no finite maximum is guaranteed.",
+    );
+  });
+
   it("a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own", async () => {
     const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), dispatch_policy: { id: "test-limit-3", version: "1" } });
     const { template_id } = (await created.json()) as { template_id: string };
