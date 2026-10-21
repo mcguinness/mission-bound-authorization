@@ -3905,8 +3905,8 @@ The following subsections define the record's members.
       party. An unrecognized value is handled under the same rule as
       `approval_basis.type` ({{standing-consent-bases}}).
 
-    For `kind: human`: no further members; the deciding human is
-    `consent_principal`.
+    For `kind: human`: no additional kind-specific members; the
+    deciding human is `consent_principal`.
 
     For `kind: policy`: `policy`, a REQUIRED object with `id` and
     `version` identifying the deciding policy or workflow. It decides
