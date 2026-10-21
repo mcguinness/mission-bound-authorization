@@ -3959,8 +3959,17 @@ The following subsections define the record's members.
 
   `type`:
   : REQUIRED. A string: `direct`, or a standing-consent value that a
-    companion profile defines ({{standing-consent-bases}}, which also
-    states how a consumer handles an unrecognized value).
+    companion profile defines ({{standing-consent-bases}}).
+
+  An unrecognized `type`, and likewise an unrecognized
+  `adjudication.kind` ({{mission-record}}), is preserved unchanged as
+  opaque provenance on an otherwise valid record: a consumer MUST NOT
+  infer or fabricate the human, policy, or Approval Governance Record
+  standing behind it, and MUST refuse only a profile operation that
+  itself requires recognized adjudication semantics to proceed (for
+  example, evaluating a policy-approval recency ceiling). Unlike an
+  unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
+  here does not by itself invalidate or deactivate the Mission.
 
   `consent_principal`:
   : REQUIRED. An object with `iss` and `sub`. The accountable human
@@ -3999,7 +4008,7 @@ The following subsections define the record's members.
       companion profile MUST NOT define a `kind` value that names a
       record, an evidence store, or the requesting or dispatching
       party. An unrecognized value is handled under the same rule as
-      `approval_basis.type` ({{standing-consent-bases}}).
+      `approval_basis.type` ({{record-principal-members}}).
 
     `governance_record`:
     : OPTIONAL. A boolean. `true` when an Approval Governance Record
@@ -4140,15 +4149,8 @@ For a standing-consent `type`, `activation` takes the shape that its
 companion profile defines, and `activation_actor` names a dispatching
 or requesting party distinct from the consenting human.
 
-An unrecognized `type`, and likewise an unrecognized
-`adjudication.kind` ({{mission-record}}), is preserved unchanged as
-opaque provenance on an otherwise valid record: a consumer MUST NOT
-infer or fabricate the human, policy, or Approval Governance Record
-standing behind it, and MUST refuse only a profile operation that
-itself requires recognized adjudication semantics to proceed (for
-example, evaluating a policy-approval recency ceiling). Unlike an
-unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
-here does not by itself invalidate or deactivate the Mission.
+An unrecognized `type` or `adjudication.kind` is handled as
+{{record-principal-members}} states for every record consumer.
 
 A companion profile defining a standing-consent `type` MUST make its
 `consent_principal` and `root_commitment` trace to an accountable
