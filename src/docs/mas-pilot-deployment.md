@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `8a8b68de`
+Every statement here is true of the reference implementation at `356deb64`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -546,9 +546,12 @@ Gaps:
    `mapping_version` claim: #1454 (§8 lists what they need). The
    introspection adapter here is what a MAS would use to inspect the estate
    token.
-2. A launcher and an operator walkthrough for either topology, attaching to
-   an administered Resource-policy store: #818's slice 5B. The separated MAS
-   has a process entry (`mas-serve.ts`) but no operator command.
+2. Done in slice 5B: operator launchers for both topologies
+   (`pnpm mas-pilot`, `pnpm mas-pilot:separated`), attaching to an
+   administered Resource-policy store, and the walkthrough
+   (`docs/mas-pilot-walkthrough.md`; §13). MAS key rotation stays
+   unsupported: the resolver reads the MAS's keys once, and restarting the
+   pilot is the remedy.
 3. Ledger: `mas.mapping-contract.floor-documented` is `tested` on
    `demo/test/mas-join-contract.test.ts`: every shipped deployment that
    mounts a join route declares its mapping contract (this pilot's in §2;
@@ -570,8 +573,20 @@ merged as #1352 (D523).
 
 ## 13. Run it
 
-From `src/`, with a live OpenFGA (`OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`,
-and `OPENFGA_CA_CERT` where it serves TLS):
+To run the pilot as an operator, `pnpm mas-pilot` starts the in-process
+topology and `pnpm mas-pilot:separated` the separated one
+(`demo/src/mas-pilot/launcher.ts`, #818 slice 5B). Each attaches to an
+administered Resource-policy store, or bootstraps a development store only on
+`MAS_PILOT_DEVELOPMENT_STORE=1`, and serves an operator console that
+approves Missions on the MAS's approval surface and revokes and contains them
+at its Lifecycle endpoint. [mas-pilot-walkthrough.md](mas-pilot-walkthrough.md)
+starts each topology, makes joined calls with a JWT and an opaque estate
+credential, revokes and contains at the MAS, reads the evidence, and states
+what rotation of the estate's keys, the introspection client and the MAS's
+keys takes.
+
+To run the tests, from `src/`, with a live OpenFGA (`OPENFGA_HTTP_URL`,
+`OPENFGA_PRESHARED_KEY`, and `OPENFGA_CA_CERT` where it serves TLS):
 
 ```sh
 pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.test.ts \
@@ -582,7 +597,8 @@ pnpm vitest run demo/test/mas-pilot.test.ts demo/test/mas-pilot-resource-policy.
   services/authorization-server/test/mission-status-resolver-as.test.ts services/pdp/test/mission-status-resolver.test.ts \
   services/pdp/test/evaluate-authzen-members.test.ts \
   demo/test/mas-pilot-separated.test.ts demo/test/mas-pilot-separated-wiring.test.ts \
-  services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts
+  services/pdp/test/evaluate-own-read.test.ts services/mcp-payments/test/view-source.test.ts \
+  demo/test/mas-pilot-launcher.test.ts demo/test/mas-pilot-launcher-shutdown.test.ts
 ```
 
 §10's four files and §11's three unit files need no OpenFGA. The reference authorization server binds
@@ -599,3 +615,8 @@ bind ephemeral ports. In `mas-pilot-separated.test.ts` the MAS process binds
 `127.0.0.1:14835` (the shipped `separated_mas.port` is 14834), and the four
 pilots it composes run their estates on `127.0.0.1:14843`, `14847`, `14850`
 and `14852`; the slow proxy and the Status double bind ephemeral ports.
+`mas-pilot-launcher.test.ts` binds `127.0.0.1:14858` to `14869`, except
+`14866` (walkthrough §7); its startup refusals need no OpenFGA.
+`mas-pilot-launcher-shutdown.test.ts` binds `127.0.0.1:14876` to `14889` and
+needs no OpenFGA: a stop at any point of startup stops the MAS process and
+frees its ports, and the MAS exits with its launcher.
