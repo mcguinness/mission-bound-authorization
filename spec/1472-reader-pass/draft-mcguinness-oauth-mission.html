@@ -12,8 +12,8 @@ object that binds an approved task, such as one an AI agent performs
 on a user's behalf, to the authority approved for it and governs the
 tokens later issued under that authority. This document defines that
 object for OAuth 2.0: a Mission. 
-       A client submits a Mission Intent describing the task it will perform
-through Pushed Authorization Requests. The authorization server
+       A client submits, through Pushed Authorization Requests, a Mission
+Intent describing the task it will perform. The authorization server
 derives Rich Authorization Requests authorization details from it,
 binds the approved task and that authority to the Approver's consent
 through integrity anchors, and records a durable Mission. Every
@@ -1104,8 +1104,8 @@ object that binds an approved task, such as one an AI agent performs
 on a user's behalf, to the authority approved for it and governs the
 tokens later issued under that authority. This document defines that
 object for OAuth 2.0: a Mission.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-<p id="section-abstract-2">A client submits a Mission Intent describing the task it will perform
-through Pushed Authorization Requests. The authorization server
+<p id="section-abstract-2">A client submits, through Pushed Authorization Requests, a Mission
+Intent describing the task it will perform. The authorization server
 derives Rich Authorization Requests authorization details from it,
 binds the approved task and that authority to the Approver's consent
 through integrity anchors, and records a durable Mission. Every
@@ -5384,8 +5384,8 @@ what the JWT would (<a href="#introspected-consumption" class="auto internal xre
         <li class="normal" id="section-11-2.3">
           <p id="section-11-2.3.1"><strong>Issuer-local resolution.</strong> In place of introspection for an opaque
 Mission-bound token, an AS can serve a qualifying resource server by
-a direct read of its authoritative committed token and grant state
-(<a href="#introspected-consumption" class="auto internal xref">Section 11.4</a>).<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+a direct read of the AS's authoritative committed token and grant
+state (<a href="#introspected-consumption" class="auto internal xref">Section 11.4</a>).<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-11-3">An AS <span class="bcp14">MAY</span> support OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> for
