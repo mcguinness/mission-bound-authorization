@@ -3445,6 +3445,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         !deviceJti && opts.progressive?.ceilingOffer
           ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
           : undefined;
+      // The decision is bound to this rendering, never to an offer computed afresh.
+      retainRenderedOffer(provider, interactionMatch[1] as string, ceilingOffer, details.exp);
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.body = renderApprovalPage(
@@ -5432,12 +5434,10 @@ async function decide(
   }
   // @spec progressive#progressive-authorization (#1017): the consent disclosure
   // renders the ceiling, so the decision consents only exactly the ceiling and
-  // drawdown policy the approval page offered and rendered.
+  // drawdown policy this interaction's approval page rendered, as retained at
+  // that rendering. With no rendering there is nothing to consent.
   if (ceiling) {
-    const offered =
-      !deviceJti && opts.progressive?.ceilingOffer
-        ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
-        : undefined;
+    const offered = !deviceJti ? renderedOffer(provider, details.uid) : undefined;
     if (!consentsOffer(ceiling, offered)) {
       await finish({
         error: "invalid_request",
@@ -5864,6 +5864,34 @@ function undisclosedChildGrant(
     }
   }
   return undefined;
+}
+
+/**
+ * @spec progressive#progressive-authorization (#1017): the ceiling offer each
+ * approval page rendered, by interaction, until the interaction expires. A
+ * later rendering of the same interaction replaces it; one that offers none
+ * withdraws it.
+ */
+const renderedCeilingOffers = new WeakMap<Provider, Map<string, { offer: CeilingConsent; expiresAt: number }>>();
+
+function retainRenderedOffer(provider: Provider, uid: string, offer: CeilingConsent | undefined, exp: number | undefined): void {
+  let byUid = renderedCeilingOffers.get(provider);
+  if (!byUid) {
+    byUid = new Map();
+    renderedCeilingOffers.set(provider, byUid);
+  }
+  const now = Date.now();
+  for (const [key, held] of byUid) if (held.expiresAt <= now) byUid.delete(key);
+  if (!offer) {
+    byUid.delete(uid);
+    return;
+  }
+  byUid.set(uid, { offer, expiresAt: typeof exp === "number" ? exp * 1000 : now + 3_600_000 });
+}
+
+function renderedOffer(provider: Provider, uid: string): CeilingConsent | undefined {
+  const held = renderedCeilingOffers.get(provider)?.get(uid);
+  return held && held.expiresAt > Date.now() ? held.offer : undefined;
 }
 
 function renderLines(lines: readonly string[], cls: string): string {
