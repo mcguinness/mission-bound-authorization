@@ -2784,8 +2784,11 @@ export async function handleExpansionExchange(
   // the ceiling adjudicates first. A drawdown its policy authorizes completes
   // here; any other request, out-of-ceiling ones included, falls back to the
   // fresh approval below, unless the deployment refuses beyond-ceiling ones.
+  // @spec progressive#ceiling-review (#1017): why a drawdown request fell
+  // back, recorded on the deferral for the chain's review disclosure.
+  let drawdownFallback: string | undefined;
   if (opts.progressive && active.authority_ceiling) {
-    const handled = await completeCeilingDrawdown(opts, provider, ctx, {
+    const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
       requested,
       intent,
@@ -2795,7 +2798,8 @@ export async function handleExpansionExchange(
       fingerprint,
       jkt: resolved.jkt,
     });
-    if (handled) return;
+    if (outcome === true) return;
+    if (typeof outcome === "string") drawdownFallback = outcome;
   }
 
   // @spec expansion#completion-modes (#1177): the deferred response goes only
@@ -2824,6 +2828,7 @@ export async function handleExpansionExchange(
       clientId: acting.sub,
       jkt: resolved.jkt,
       creationRequestId,
+      ...(drawdownFallback ? { drawdownFallback } : {}),
     });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
@@ -3054,7 +3059,7 @@ async function completeCeilingDrawdown(
     fingerprint: string;
     jkt: string;
   },
-): Promise<boolean> {
+): Promise<boolean | string> {
   const progressive = opts.progressive;
   const idem = opts.creationIdempotency;
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
@@ -3076,16 +3081,18 @@ async function completeCeilingDrawdown(
     // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
     // default it falls back to the fresh approval below, whose response carries
     // no denial reason (#1415).
-    if (progressive.beyondCeiling !== "refuse") return false;
+    if (progressive.beyondCeiling !== "refuse") return "beyond_ceiling";
     // The deployment's policy refuses it instead. `out_of_ceiling` is a MAY on
     // that refusal, which this reference carries. Set on ctx directly: err_out
     // would strip mission_denial_reason.
+    // @spec progressive#ceiling-review (#1017): recorded for the review disclosure.
+    opts.expansionDeferrals?.recordOutOfCeilingRefusal(predecessor.id);
     ctx.status = 400;
     ctx.body = { error: "invalid_request", mission_denial_reason: "out_of_ceiling" };
     ctx.set("cache-control", "no-store");
     return true;
   }
-  if (adjudication.outcome === "fresh_approval") return false;
+  if (adjudication.outcome === "fresh_approval") return adjudication.reason;
   const reservation: CreationReservation = {
     clientId: client.clientId,
     creationRequestId: d.creationRequestId,

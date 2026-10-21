@@ -1512,6 +1512,8 @@ export async function buildAuthorizationServer(opts: {
     () => kernel.nowDate(),
     opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
     opts.approvalFloor ?? APPROVAL_FLOOR,
+    // @spec progressive#ceiling-reconsent (#1017): the re-consent offer.
+    opts.progressive?.ceilingOffer,
   );
   const expansionRateLimit = opts.expansionRateLimit ?? DEFAULT_EXPANSION_RATE_LIMIT;
   const expansionRateLimiter = new ExpansionRateLimiter(

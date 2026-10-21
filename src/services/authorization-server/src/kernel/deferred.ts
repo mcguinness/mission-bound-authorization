@@ -37,11 +37,14 @@ import {
   reconciliationStatusFor,
   restrictedSinceAdjudication,
 } from "./expansion.js";
+import { conditionDigest, entryDigest, terminalWhenOf } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import {
   type CeilingConsent,
+  ceilingAdjudicationLine,
   consentCeiling,
   consentedCeilingEntries,
+  consentsOffer,
   type ReconsentedCeiling,
 } from "./progressive.js";
 import type { MissionKernel } from "./kernel.js";
@@ -51,6 +54,7 @@ import type {
   MissionClaim,
   MissionIntent,
   MissionRecord,
+  TerminalWhenCondition,
 } from "./types.js";
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
@@ -299,6 +303,10 @@ CREATE TABLE IF NOT EXISTS expansion_deferrals (
   created_at INTEGER NOT NULL,
   last_polled_at INTEGER
 ) STRICT;
+CREATE TABLE IF NOT EXISTS progressive_refusals (
+  mission_id TEXT NOT NULL,
+  refused_at INTEGER NOT NULL
+) STRICT;
 `;
 
 /**
@@ -327,6 +335,9 @@ function migrateExpansionDeferrals(db: Database): void {
     // @spec expansion#reconciliation (#1177): the reconciliation status a
     // refused completion recorded, repeated on every later poll of the deferral.
     "refusal_status",
+    // @spec progressive#ceiling-review (#1017): why a drawdown request came to
+    // a human, the guard exception a review disclosure lists.
+    "drawdown_fallback_reason",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
   }
@@ -349,6 +360,43 @@ export interface ApplyCarryoverOutcome {
   evidence: CarryoverEvidence;
   evidenceJws: string;
   replacements: MissionRecord[];
+}
+
+/**
+ * @spec progressive#fresh-approval, progressive#ceiling-reconsent,
+ * progressive#ceiling-review (#1017): what a deferred expansion's consent
+ * disclosure renders. The approval surface renders it; the store builds it
+ * from the chain's records, so it shows what the Mission Issuer holds.
+ */
+export interface ExpansionDisclosure {
+  predecessor: string;
+  /** Why a drawdown request of a ceiling chain came to a human, when it did. */
+  drawdown_fallback?: string;
+  /** The chain's outstanding restrictions, which no approval or re-consent clears. */
+  restrictions: {
+    /** Each contained capability, with the event class that caused its containment. */
+    contained: Array<{ resource: string; actions?: string[]; event_class: string; mission: string }>;
+    /** Each discharged entry, with the condition that discharged it. */
+    discharged: Array<{
+      entry: AuthorityEntry;
+      condition: TerminalWhenCondition | { event_type: string };
+      discharged_at: string;
+      mission: string;
+    }>;
+  };
+  /** Present where the chain carries a ceiling. */
+  ceiling?: {
+    /** The ceiling and policy a re-consent at this approval would consent, rendered as at the initial approval. */
+    reconsent_offer?: { authority_ceiling: AuthorityEntry[]; drawdown_policy?: { id: string; version: string }; adjudication: string };
+    /** The chain's record since the latest ceiling consent: the initial one or the latest re-consent. */
+    review: {
+      since: string;
+      policy_adjudicated_drawdowns: { count: number; per_hour: number };
+      escalations: Array<{ at: string; reason: string }>;
+      out_of_ceiling_refusals: Array<{ at: string }>;
+      discharged: ExpansionDisclosure["restrictions"]["discharged"];
+    };
+  };
 }
 
 /** The Approver's async adjudication payload for a deferred expansion. */
@@ -491,6 +539,12 @@ export class ExpansionDeferralStore {
      * approval-authentication floor every expansion approval meets.
      */
     private readonly approvalFloor: ApprovalFloorPolicy = APPROVAL_FLOOR,
+    /**
+     * @spec progressive#ceiling-reconsent (#1017): the ceiling and drawdown
+     * policy the deployment's approval surface offers for a re-consent, the
+     * same offer as at the initial approval. A re-consent consents only it.
+     */
+    private readonly ceilingOffer?: (request: { clientId: string; intent: MissionIntent }) => CeilingConsent | undefined,
   ) {
     // @spec control-plane#serialization — retiring this row and activating
     // its successor must share the kernel transaction, not two databases.
@@ -561,6 +615,12 @@ export class ExpansionDeferralStore {
      * to the same facts modulo `verified_at`).
      */
     submissionEvidence?: IntentSubmissionEvidenceFact[];
+    /**
+     * @spec progressive#ceiling-review (#1017): why a drawdown request of a
+     * ceiling chain fell back to this fresh approval (a guard exception, or a
+     * request beyond the ceiling).
+     */
+    drawdownFallback?: string;
   }): DeferralPending {
     const predecessor = this.kernel.get(input.predecessorId);
     if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
@@ -614,7 +674,7 @@ export class ExpansionDeferralStore {
       }
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, drawdown_fallback_reason, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -628,6 +688,7 @@ export class ExpansionDeferralStore {
           input.submissionEvidence?.length ? JSON.stringify(input.submissionEvidence) : null,
           plan?.plan_id ?? null,
           plan ? JSON.stringify(plan) : null,
+          input.drawdownFallback ?? null,
           this.now().getTime(),
         );
     }
@@ -650,9 +711,9 @@ export class ExpansionDeferralStore {
     // classified. A refusal records nothing and leaves the deferral pending.
     const pending = this.db
       .prepare(
-        "SELECT intent_json, predecessor_id FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "SELECT intent_json, predecessor_id, client_id FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
-      .get(deferralCode) as { intent_json: string; predecessor_id: string } | undefined;
+      .get(deferralCode) as { intent_json: string; predecessor_id: string; client_id: string } | undefined;
     let reconsent: ReconsentedCeiling | undefined;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
@@ -664,6 +725,15 @@ export class ExpansionDeferralStore {
       const ceilingEntries = approval.ceiling ? consentedCeilingEntries(approval.ceiling) : [];
       if (approval.ceiling && !predecessor?.authority_ceiling) {
         throw new IntentError("invalid_request", "the expansion chain carries no ceiling to re-consent");
+      }
+      // @spec progressive#ceiling-reconsent (#1017): the disclosure renders the
+      // re-consented ceiling and policy as at the initial approval, so a
+      // re-consent consents only exactly the offer the disclosure rendered.
+      if (
+        approval.ceiling &&
+        !consentsOffer(approval.ceiling, this.ceilingOffer?.({ clientId: pending.client_id, intent: recorded.i }))
+      ) {
+        throw new IntentError("invalid_request", "the approval re-consents a ceiling its disclosure did not render");
       }
       const authentication = approval.authentication;
       const floor = evaluateApprovalFloor(
@@ -715,6 +785,112 @@ export class ExpansionDeferralStore {
         reconsent ? JSON.stringify(reconsent) : null,
         deferralCode,
       );
+  }
+
+  /**
+   * @spec progressive#ceiling-review (#1017): record a drawdown request the
+   * deployment refused `out_of_ceiling`, for the chain's review disclosure.
+   */
+  recordOutOfCeilingRefusal(missionId: string): void {
+    this.db
+      .prepare("INSERT INTO progressive_refusals (mission_id, refused_at) VALUES (?, ?)")
+      .run(missionId, this.now().getTime());
+  }
+
+  /**
+   * @spec progressive#fresh-approval, progressive#ceiling-reconsent,
+   * progressive#ceiling-review, expansion#completion-modes (#1017): the
+   * consent disclosure of a deferred expansion, or undefined for an unknown
+   * code. It names every outstanding containment restriction of the chain with
+   * its event class and every discharged entry with its condition, and, where
+   * the chain carries a ceiling, the re-consent offer and the chain's record
+   * since the latest ceiling consent.
+   */
+  disclosure(deferralCode: string): ExpansionDisclosure | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT predecessor_id, intent_json, client_id, drawdown_fallback_reason FROM expansion_deferrals WHERE deferral_code = ?",
+      )
+      .get(deferralCode) as
+      | { predecessor_id: string; intent_json: string; client_id: string; drawdown_fallback_reason: string | null }
+      | undefined;
+    if (!row) return undefined;
+    const chain: MissionRecord[] = [];
+    const seen = new Set<string>();
+    for (let next: string | undefined = row.predecessor_id; next && !seen.has(next); ) {
+      seen.add(next);
+      const m = this.kernel.get(next);
+      if (!m) break;
+      chain.push(m);
+      next = m.predecessor;
+    }
+    const contained = chain.flatMap((m) =>
+      (m.containment?.events ?? []).flatMap((event) =>
+        event.removed.map((r) => ({ ...r, event_class: event.type, mission: m.id })),
+      ),
+    );
+    const discharged: ExpansionDisclosure["restrictions"]["discharged"] = [];
+    for (const m of chain) {
+      for (const latch of m.discharged ?? []) {
+        const entry = m.authority_set.find((e) => entryDigest(m.issuer, e) === latch.entry_digest);
+        if (!entry) continue;
+        const condition =
+          terminalWhenOf(entry)?.find((c) => conditionDigest(c) === latch.condition_digest) ?? {
+            event_type: latch.event_type,
+          };
+        discharged.push({ entry, condition, discharged_at: latch.discharged_at, mission: m.id });
+      }
+    }
+    const disclosure: ExpansionDisclosure = {
+      predecessor: row.predecessor_id,
+      ...(row.drawdown_fallback_reason ? { drawdown_fallback: row.drawdown_fallback_reason } : {}),
+      restrictions: { contained, discharged },
+    };
+    const predecessor = chain[0];
+    if (predecessor?.authority_ceiling && predecessor.ceiling_consented_at) {
+      const since = predecessor.ceiling_consented_at;
+      const sinceMs = Date.parse(since);
+      const ids = JSON.stringify(chain.map((m) => m.id));
+      const drawdowns = chain.filter(
+        (m) => m.approval_basis.type === "ceiling_drawdown" && Date.parse(m.created_at) > sinceMs,
+      ).length;
+      const hours = Math.max((this.now().getTime() - sinceMs) / 3_600_000, 1 / 3600);
+      const escalations = (
+        this.db
+          .prepare(
+            "SELECT created_at, drawdown_fallback_reason FROM expansion_deferrals WHERE predecessor_id IN (SELECT value FROM json_each(?)) AND drawdown_fallback_reason IS NOT NULL AND created_at > ? ORDER BY created_at",
+          )
+          .all(ids, sinceMs) as Array<{ created_at: number; drawdown_fallback_reason: string }>
+      ).map((e) => ({ at: new Date(e.created_at).toISOString(), reason: e.drawdown_fallback_reason }));
+      const refusals = (
+        this.db
+          .prepare(
+            "SELECT refused_at FROM progressive_refusals WHERE mission_id IN (SELECT value FROM json_each(?)) AND refused_at > ? ORDER BY refused_at",
+          )
+          .all(ids, sinceMs) as Array<{ refused_at: number }>
+      ).map((r) => ({ at: new Date(r.refused_at).toISOString() }));
+      const recorded = JSON.parse(row.intent_json) as { i: MissionIntent };
+      const offer = this.ceilingOffer?.({ clientId: row.client_id, intent: recorded.i });
+      disclosure.ceiling = {
+        ...(offer
+          ? {
+              reconsent_offer: {
+                authority_ceiling: offer.authority_ceiling,
+                ...(offer.drawdown_policy ? { drawdown_policy: offer.drawdown_policy } : {}),
+                adjudication: ceilingAdjudicationLine(offer),
+              },
+            }
+          : {}),
+        review: {
+          since,
+          policy_adjudicated_drawdowns: { count: drawdowns, per_hour: Math.round((drawdowns / hours) * 1000) / 1000 },
+          escalations,
+          out_of_ceiling_refusals: refusals,
+          discharged: discharged.filter((d) => Date.parse(d.discharged_at) > sinceMs),
+        },
+      };
+    }
+    return disclosure;
   }
 
   deny(deferralCode: string): void {
