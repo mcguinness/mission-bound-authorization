@@ -543,6 +543,29 @@ export function recheckDrawdownApprovalRecord(
   ) {
     return no(4, "the recorded inputs do not carry this Mission's ceiling consent, Subject and authority source");
   }
+  // The consent provenance is the consenting Mission's own retained record,
+  // an ancestor of this successor: its ceiling, policy, Authority Set and
+  // Subject as committed, never values the inputs alone assert.
+  const consenting = kernel.get(c.mission_id);
+  let ancestor = false;
+  const seen = new Set<string>();
+  for (let m: string | undefined = mission.predecessor; m && !seen.has(m); m = kernel.get(m)?.predecessor) {
+    seen.add(m);
+    if (m === c.mission_id) ancestor = true;
+  }
+  if (
+    !consenting ||
+    !ancestor ||
+    ceilingConsentHash(consenting) !== c.consent_hash ||
+    consenting.ceiling_consented_at !== c.consented_at ||
+    !sameJson(consenting.authority_ceiling, c.ceiling) ||
+    !sameJson(consenting.drawdown_policy, c.drawdown_policy) ||
+    !sameJson(consenting.authority_set, c.authority) ||
+    !samePrincipal(consenting.subject, c.subject) ||
+    kernel.sourceBindings.get(consenting.id)?.rootId !== c.source_root
+  ) {
+    return no(4, "the recorded consent provenance is not the consenting Mission's retained record");
+  }
   if (!isRfc3339Instant(record.evaluation.evaluated_at)) return no(5, "evaluation.evaluated_at is not an RFC 3339 timestamp");
   if (inputs.decided_at !== record.evaluation.evaluated_at || inputs.adjudication.now !== inputs.decided_at) {
     return no(4, "the recorded inputs were not read at the evaluation instant");
