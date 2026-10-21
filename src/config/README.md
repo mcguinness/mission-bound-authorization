@@ -160,9 +160,10 @@ option and its drawdown policy snapshots are built from it
 `payments:remittance.send` is deliberately unmapped: its drawdown falls back
 as unclassified.
 
-- **Selection.** Read only where a deployment selects Progressive ceiling
-  drawdown. The demo stack does not, so this declaration claims nothing for
-  it.
+- **Selection.** Like every file here, validated when `@mission/demo-data`
+  loads, so a malformed file stops startup; only a deployment that selects
+  Progressive ceiling drawdown uses it. The demo stack does not, so this
+  declaration claims nothing for it.
 - **Owner.** The deployment's security owner, who also owns the approval
   floor the mapping must agree with.
 - **Integrity.** Repository review and the strict loader, which refuses
