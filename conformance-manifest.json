@@ -6297,7 +6297,7 @@
     "normative": "after a revocation is acknowledged, a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, and nothing is issued"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/async-delegation.test.ts",
@@ -6324,7 +6324,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369)."
+   "notes": "#1154 (D369). Partial (#250, by the owner's ruling): every cited witness acknowledges the revocation before the derivation request arrives. A revocation committed and acknowledged after the save-time gate and before the response is not refused: the reference re-checks no Mission state after the gate, so the token is delivered. The release fence after all awaited response preparation is #250's revoke-during-issuance step; this row returns to tested only when its witnesses cover the issuance paths the clause covers."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
