@@ -3174,9 +3174,7 @@ one of three cases, with different obligations:
 - **JWT state observation.** A Mission-state-aware resource server
   holding a JWT Mission-bound token introspects it to observe the
   Mission's current state per request instead of waiting for the
-  token to expire. For the JWT carriage, introspection is a
-  state-observable overlay on the lifecycle-gated baseline
-  ({{mission-bound-tokens}}).
+  token to expire.
 - **Opaque-token consumption.** For an opaque Mission-bound token,
   introspection is the claims carriage: an active response carries
   what the JWT would ({{introspected-consumption}}).
