@@ -1177,16 +1177,16 @@ A scope-projection mapping's entry for this type names, for a target
 resource server:
 
 - the `scope` value or values it emits;
-- the `resource` and `resource_match` the mapping covers;
-- the `actions` value or values each `scope` value stands for;
+- the `resource` and `resource_match` it covers;
+- the `actions` each `scope` value stands for;
 - for every `constraints` key an entry may carry, whether the target
   independently and identically enforces that key on the
   `scope`-authorized path; and
 - where an entry may carry `resource_contract`, the contract under which
   the target performs the operations each `scope` value permits.
 
-Projecting a `mission_resource_access` entry's authority to `scope` is
-safe only when all of the following hold:
+Projecting an entry's authority to `scope` is safe only when all of the
+following hold:
 
 1. **The mapping covers the same resource set.** The mapping's `scope`
    value is defined over the entry's `resource` and `resource_match`. A
@@ -1207,8 +1207,8 @@ safe only when all of the following hold:
    target enforces that key, under a comparison at least as tight as the
    entry's value, on the `scope`-authorized path. An entry with no
    `constraints` satisfies this condition. A key the mapping does not
-   name as independently enforced fails the condition for that entry, as
-   an unenforced key fails closed at a resource server that consumes
+   name as independently enforced fails the condition, as an unenforced
+   key fails closed at a resource server that consumes
    `authorization_details` directly.
 4. **The contract is preserved.** For an entry carrying
    `resource_contract`, the mapping states that the target performs
@@ -1224,9 +1224,9 @@ preserves the bound: condition 3 needs a control that holds on every
 operation the projected `scope` value permits, at a value at least as
 tight as the entry's. For example, where a target enforces a fixed
 500.00 USD ceiling on every operation `payments.small` permits, an entry
-whose `max_amount` is 500.00 USD projects safely to `payments.small`. An
-entry whose `max_amount` is 200.00 USD does not, because the `scope`
-value does not convey the entry's value.
+whose `max_amount` is 500.00 USD projects safely to `payments.small`;
+one whose `max_amount` is 200.00 USD does not, because the `scope` value
+does not convey the entry's value.
 
 An entry failing any condition MUST NOT be projected to `scope`. Per
 {{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, the
@@ -1241,9 +1241,9 @@ projection.
 {{I-D.draft-mcguinness-oauth-mission}} requires an authorization server
 to declare, for every `authorization_details` type it supports, whether
 it understands the type's narrowing, delegation, and scope-projection
-semantics. The declaration is made through deployment documentation or,
-where available, the machine-readable
-`mission_transformation_capabilities` carrier that document defines.
+semantics. The declaration is made in deployment documentation or,
+where available, the `mission_transformation_capabilities` carrier that
+document defines.
 
 For `mission_resource_access`, an authorization server that implements
 this document in full declares:
@@ -1253,9 +1253,9 @@ this document in full declares:
   specifies, and the Common Constraint intersection rules of
   {{common-constraints}} are fully defined. An authorization server MUST
   NOT declare `narrowing` as `true` unless it implements these rules for
-  every Common Constraint of {{initial-common-constraints}}. A Common
-  Constraint registered later is not required by the declaration, but an
-  authorization server that meets one it does not support fails closed
+  every Common Constraint of {{initial-common-constraints}}. The
+  declaration does not require a Common Constraint registered later; an
+  authorization server fails closed on one it does not support
   ({{common-constraints}}).
 
 `delegation`: `true`
@@ -1264,19 +1264,16 @@ this document in full declares:
   bounds.
 
 `projection`: `true`
-: A safe scope projection is defined, and decidable per entry, by
-  {{scope-projection}}; it is not unconditionally available for every
-  entry, and that section's conditions apply to each entry before
-  `scope` is emitted.
+: A safe scope projection is defined by {{scope-projection}}, whose
+  conditions apply to each entry before `scope` is emitted.
 
 An authorization server that implements only part of this document (for
-example, `mission_resource_access` entries without ever emitting `scope`
-for them) leaves `projection` undeclared rather than declaring it
-`true`. {{I-D.draft-mcguinness-oauth-mission}}'s carried-as-approved
-fallback then applies to `scope` projection for this type at that
-deployment, as it would for an unsupported type. Omitting `projection`
-from one carrier leaves it undeclared by that carrier only, so a
-lower-priority carrier can still declare it
+example, one that never projects an entry to `scope`) leaves
+`projection` undeclared rather than declaring it `true`, so
+{{I-D.draft-mcguinness-oauth-mission}}'s carried-as-approved fallback
+applies to `scope` projection for this type, as for an unsupported
+type. Omitting `projection` from one carrier leaves it undeclared by
+that carrier only, so a lower-priority carrier can still declare it
 ({{I-D.draft-mcguinness-oauth-mission}}). Where no carrier declares it,
 the authorization server emits no projected resource `scope` for this
 type: it carries `authorization_details` where the target consumes them,
@@ -1289,40 +1286,36 @@ requested `scope` it cannot grant as
 
 This section is non-normative. A tool an agent invokes, such as a Model
 Context Protocol (MCP) tool or a function call, is modeled as a
-`mission_resource_access` entry. No separate entry type is needed: the
-subset and delegation rules apply unchanged, and derivation,
-`authority_hash`, and the Authority Set itself remain
-{{I-D.draft-mcguinness-oauth-mission}}'s.
+`mission_resource_access` entry, not a separate entry type: the subset
+and delegation rules apply unchanged, and derivation, `authority_hash`,
+and the Authority Set remain {{I-D.draft-mcguinness-oauth-mission}}'s.
 
 The mapping is:
 
-- `resource` names the operation target that the tool provider's
-  operation contract establishes for a call ({{resource-matching}}).
-  The MCP authorization model ({{MCP}}) makes an MCP server an
-  OAuth 2.0 resource server, and a token is audience-bound to its
-  URL; the server's contract can identify that URL or a finer target,
-  such as a record a tool acts on.
-- `actions` are the tool names the task needs at that provider.
-  Authorizing a tool is authorizing its name as an action, which lines
-  up with MCP filtering its tool list by the caller's granted authority
-  and routing each tool call for authorization.
-- `constraints` carry machine-actionable bounds on a tool's arguments,
-  for example an amount ceiling or a recipient domain (the `max_amount`
-  and `recipient_domain` Common Constraints, {{common-constraints}}).
-  Like all `constraints`, they are committed by `authority_hash` and
-  carried to the point of use, but the resource server, or a runtime
-  enforcement layer acting for it, evaluates them against the concrete
-  call arguments; the authorization server does not evaluate them at
+- `resource` names the operation target the tool provider's operation
+  contract establishes for a call ({{resource-matching}}). The MCP
+  authorization model ({{MCP}}) makes an MCP server an OAuth 2.0
+  resource server with tokens audience-bound to its URL; its contract
+  can identify that URL or a finer target, such as a record a tool acts
+  on.
+- `actions` are the tool names the task needs at that provider,
+  consistent with MCP filtering its tool list by the caller's granted
+  authority and routing each tool call for authorization.
+- `constraints` limit a tool's arguments, for example with the
+  `max_amount` or `recipient_domain` Common Constraint
+  ({{common-constraints}}). `authority_hash` commits them and they are
+  carried to the point of use, where the resource server, or a runtime
+  enforcement layer acting for it, evaluates them against the call's
+  arguments; the authorization server does not evaluate them at
   issuance ({{I-D.draft-mcguinness-oauth-mission}}).
 
-In the examples in this section, each MCP server's operation contract
-identifies the server's URL as the operation target. Tool names as
-actions, and constraints on their arguments, determine the permitted
-calls.
+In the examples below, each MCP server's operation contract identifies
+its URL as the operation target, so the actions and constraints
+determine the permitted calls.
 
-The following example shows the Authority Set of a Mission authorized to
-read invoices and post small adjustments through a finance MCP server,
-and to send messages through a messaging MCP server:
+The following Authority Set authorizes a Mission to read invoices and
+post small adjustments through a finance MCP server, and to send
+messages through a messaging MCP server:
 
 ~~~ json
 [
@@ -1343,13 +1336,12 @@ and to send messages through a messaging MCP server:
 ~~~
 
 An entry's `constraints` bind every action it lists, so the read tool
-has an entry of its own, outside the `max_amount` bound that applies to
-the adjustment tool.
+has its own entry, outside the adjustment tool's `max_amount` bound.
 
 Delegation to a sub-agent uses the same `delegation` member
-({{delegate-eligibility}}). The following example shows an Authority Set
-entry, approved with its `delegation` member, that a sub-agent of type
-`ai_agent` may exercise at depth 1 for the read tool only:
+({{delegate-eligibility}}). A sub-agent of type `ai_agent` may exercise
+the following Authority Set entry, approved with that member, at
+depth 1 for the read tool only:
 
 ~~~ json
 { "type": "mission_resource_access",
@@ -1361,25 +1353,23 @@ entry, approved with its `delegation` member, that a sub-agent of type
   } }
 ~~~
 
-This document does not define a typed, attenuable per-argument
-constraint grammar for tools: one that narrows a tool's argument schema
-(for example, `amount` in a `range`, or `recipient` in a `one_of` set)
-as the grant is derived or delegated. Argument bounds here are the same
-flat `constraints` used for any resource, evaluated at runtime.
-Structured per-argument attenuation
+Argument bounds are the flat `constraints` used for any resource. This
+document defines no typed, attenuable per-argument grammar that narrows
+a tool's argument schema (for example, `amount` in a `range`) as the
+grant is derived or delegated. Such attenuation
 ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, with
 object-capability systems such as UCAN as prior art) would extend the
-delegation and subset model of this document ({{delegate-eligibility}},
-{{subset}}) rather than introduce a new entry type.
+delegation and subset model ({{delegate-eligibility}}, {{subset}})
+rather than introduce a new entry type.
 
 # Conformance {#conformance}
 
 An implementation conforms to this document in one of two roles.
 
 An **authorization server** conforms by supporting
-`mission_resource_access` as one of the `authorization_details` types
-{{I-D.draft-mcguinness-oauth-mission}} names in its approved set, and
-implements:
+`mission_resource_access` among the `authorization_details` types
+{{I-D.draft-mcguinness-oauth-mission}} names in its approved set and
+implementing:
 
 - schema validation of a proposed or carried entry against the type
   definition ({{resource-access-type}});
@@ -1387,8 +1377,8 @@ implements:
   `resource_contract` reference, or refusal of every entry that carries
   one ({{resource-contract}}); and
 - the Transformation Capabilities declaration
-  ({{transformation-capabilities}}), stating which of narrowing,
-  delegation, and projection it claims for this type.
+  ({{transformation-capabilities}}), stating which capabilities it
+  claims for this type.
 
 For each capability it declares `true`, an authorization server also
 implements:
@@ -1412,16 +1402,14 @@ action-family matching, and every carried `constraints` key, failing
 closed on a member, matching mode, or key it does not implement. A
 resource server does not implement narrowing, delegate eligibility, or
 the Transformation Capabilities declaration; those are the authorization
-server's, and their presence or absence does not bear on a resource
-server's conformance.
+server's and do not bear on a resource server's conformance.
 
 # Security Considerations {#security-considerations}
 
-This document defines a subset relation, a delegation policy, and a
-scope-projection safety condition. The Security Considerations of
-{{I-D.draft-mcguinness-oauth-mission}} apply to everything upstream of a
-`mission_resource_access` entry: the approval event, the integrity
-anchors, and issuance gating. Three risks are specific to this type:
+The Security Considerations of {{I-D.draft-mcguinness-oauth-mission}}
+apply to everything upstream of a `mission_resource_access` entry: the
+approval event, the integrity anchors, and issuance gating. Risks
+specific to this type follow here and in the subsections below:
 
 - **Comparison, not meaning.** {{subset}} compares members, not effects:
   a candidate that compares as no broader can still permit an effect the
@@ -1430,14 +1418,10 @@ anchors, and issuance gating. Three risks are specific to this type:
 - **An unenforced constraint widens the grant.** A resource server or
   scope projection that treats an unrecognized `constraints` key as
   absent, or as disclosure-only, grants more than the entry authorizes;
-  {{rs-enforcement}} and {{scope-projection}} require fail-closed
-  handling instead.
-- **A safe projection is per entry, not per type.** That
-  `mission_resource_access` defines a projection relation
-  ({{scope-projection}}) does not make every entry of the type safely
-  projectable: {{scope-projection}}'s four conditions must hold for the
-  specific entry and mapping in force, and the type's general capability
-  does not extend to an entry by default.
+  {{rs-enforcement}} and {{scope-projection}} require failing closed.
+- **A safe projection is per entry, not per type.** An entry projects
+  safely only when the four conditions of {{scope-projection}} hold for
+  it and the mapping in force, whatever the type's general capability.
 
 ## Resource Boundary Canonicalization {#resource-boundary-canonicalization}
 
@@ -1446,9 +1430,8 @@ in URI space, and {{resource-matching}} requires the authorization
 server and the resource server to draw it with one normalization. A URI
 matcher that normalizes differently from the party that derived the
 entry can admit a request the Approver never authorized, or deny one the
-Approver did. An `exact` entry is compared literally, without
-normalization, so these vectors concern `prefix` entries. Each of the
-following vectors turns on such a difference:
+Approver did. An `exact` entry is compared literally, so each vector
+below concerns a `prefix` entry and turns on such a difference:
 
 - **Encoded slash (`%2F`).** A reserved octet, left encoded by the
   normalization (which decodes only unreserved octets) and never a
@@ -1457,26 +1440,24 @@ following vectors turns on such a difference:
   MUST prevent that rewriting or account for it.
 - **Encoded dot (`%2e`, `%2e%2e`).** The `.` octet is unreserved, so the
   normalization decodes it and then removes dot-segments. The hazard is
-  order: normalizing before the comparison collapses a decoded `%2e%2e`
-  out of the path and draws the boundary correctly, while matching the
-  raw string first and letting a downstream component decode and
-  collapse afterward can escape the prefix.
-- **Double or empty path segments.** Beyond the empty-path equivalence,
-  a URI matcher that coalesces `//` or trailing-slash differences of its
-  own draws a boundary the normalization does not, which
-  {{resource-matching}} forbids.
+  order: matching the raw string first and letting a downstream
+  component decode and collapse afterward can escape the prefix;
+  {{resource-matching}} requires normalizing first.
+- **Double or empty path segments.** A URI matcher that coalesces `//`
+  or trailing-slash differences beyond the empty-path equivalence draws
+  a boundary the normalization does not; {{resource-matching}} forbids
+  it.
 - **Default-port presence.** `https://a.example:443` and
   `https://a.example` are one authority only after the default-port
   removal of {{resource-matching}}; a URI matcher that skips it splits
   one boundary into two.
-- **Unicode and IDNA host.** The normalization lowercases the host but
-  defines no IDNA conversion, so two sides that convert differently draw
-  different boundaries; {{resource-matching}} requires them to compare
-  the same form.
-- **Percent-decoding order.** The normalization decodes only unreserved
-  octets and runs before comparison; decoding reserved octets, or
-  decoding after the comparison, changes which characters count as
-  separators and can move the boundary.
+- **Unicode and IDNA host.** The normalization defines no IDNA
+  conversion, so two sides that convert differently draw different
+  boundaries; {{resource-matching}} requires them to compare the same
+  form.
+- **Percent-decoding order.** Decoding reserved octets, or decoding
+  after the comparison, changes which characters count as separators
+  and can move the boundary ({{resource-matching}}).
 
 A deployment MAY agree out of band on the canonicalization profile its
 authorization server and resource servers apply; this document defines
@@ -1486,27 +1467,26 @@ for interoperation.
 ## Action Family Growth {#action-family-growth}
 
 An action family ({{resource-access-type}}) authorizes every action
-under its name, including an action the resource adds after approval. A
+under its name, including one the resource adds after approval. A
 durable approval naming `invoices.*` therefore authorizes an `invoices`
 action the resource defines later, which can confer more authority than
 any action the Approver saw.
 
 The family guidance in {{resource-access-type}} narrows this risk but
-does not remove it. It is a recommendation to the resource and does not
-freeze an existing family's membership, and this document defines no
-rule that binds an entry to the action semantics its resource
-documented at approval. An Approver or authorization server that needs
-a fixed set of actions approves or derives literal actions rather than
-a family.
+does not remove it: it is a recommendation to the resource and does not
+freeze an existing family's membership. Without a `resource_contract`
+reference ({{resource-contract}}), this document defines no rule that
+binds an entry to the action semantics its resource documented at
+approval. An Approver or authorization server that needs a fixed set of
+actions approves or derives literal actions rather than a family.
 
 # Privacy Considerations {#privacy-considerations}
 
 This document defines no data element beyond what
 {{I-D.draft-mcguinness-oauth-mission}} carries in
 `authorization_details`, and that document's Privacy Considerations
-apply unchanged. The `resource`, `actions`, and `constraints` values of
-an entry are as privacy-sensitive as the Authority Set that carries
-them.
+apply unchanged. An entry's `resource`, `actions`, and `constraints`
+values are as privacy-sensitive as the Authority Set that carries them.
 
 # IANA Considerations {#iana}
 
@@ -1514,8 +1494,8 @@ them.
 
 `mission_resource_access` is an `authorization_details` type
 ({{Section 2 of RFC9396}}), defined in {{resource-access-type}}.
-{{RFC9396}} establishes no IANA registry of authorization details types
-(the authorization server interprets type identifiers), so this document
+{{RFC9396}} establishes no IANA registry of such types (the
+authorization server interprets type identifiers), so this document
 requests no IANA action for it. If a registry of authorization details
 types is established in the future, this type SHOULD be registered in
 it.
@@ -1569,11 +1549,10 @@ Each registration records:
   registration.
 - **Reference**: the specification defining the key.
 
-The initial contents of the registry are the Common Constraints of
-{{initial-common-constraints}}. For every entry, the Change Controller
-is IETF and the Reference is {{initial-common-constraints}} of this
-document, which holds the full Subset Rule, Intersection Rule, Input,
-and Predicate text; the tables summarize them.
+The registry's initial contents are the Common Constraints of
+{{initial-common-constraints}}. For each, the Change Controller is IETF
+and the Reference is {{initial-common-constraints}} of this document,
+which holds the full text the tables summarize.
 
 | Key Name | Value Syntax | Subset Rule | Intersection Rule |
 |---|---|---|---|
