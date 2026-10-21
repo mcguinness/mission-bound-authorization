@@ -54,7 +54,13 @@ const POLICY: RegisteredActivationPolicy = {
   content_type: "application/json",
   content: JSON.stringify({ max_added_actions: 1, ceiling_review_cadence_s: 30 * 86400 }),
 };
-const REGISTRY = { "drawdown-std": POLICY };
+/** The same, retiring the vendor read a successor does not hold from the ceiling it carries (#1468). */
+const NARROWING: RegisteredActivationPolicy = {
+  version: "1",
+  content_type: "application/json",
+  content: JSON.stringify({ max_added_actions: 1, ceiling_review_cadence_s: 30 * 86400, retire_undrawn_actions: ["payments:vendor.read"] }),
+};
+const REGISTRY: Record<string, RegisteredActivationPolicy> = { "drawdown-std": POLICY, "drawdown-narrow": NARROWING };
 const CEILING = DERIVATION_POLICY.ceiling.filter((e) => e.resource === RESOURCE) as unknown as AuthorityEntry[];
 const CLASSES: ProgressiveDrawdownOptions["actionClasses"] = {
   "payments:invoice.list": "consequential_read",
@@ -120,7 +126,7 @@ const intentFor = (goal: string) =>
   validateMissionIntent(JSON.stringify({ goal, target_resources: [RESOURCE], expires_at: EXP }), { now: now() });
 
 /** A Mission whose Approver consented the payments ceiling and the drawdown policy, at the current instant. */
-const predecessorOn = (kernel: MissionKernel, proposal: AuthorityEntry[] = reads(["payments:invoice.read"])) =>
+const predecessorOn = (kernel: MissionKernel, proposal: AuthorityEntry[] = reads(["payments:invoice.read"]), policyId = "drawdown-std") =>
   kernel.approve({
     intent: intentFor("Read Acme invoices"),
     proposedAuthority: proposal,
@@ -128,7 +134,7 @@ const predecessorOn = (kernel: MissionKernel, proposal: AuthorityEntry[] = reads
     approver: BOB,
     clientId: "parent-agent",
     approvalEventId: `pred-${seq++}`,
-    ceiling: { authority_ceiling: CEILING, drawdown_policy: { id: "drawdown-std", version: "1" } },
+    ceiling: { authority_ceiling: CEILING, drawdown_policy: { id: policyId, version: "1" } },
   });
 
 /** The in-ceiling successor the predecessor's own agent requested, committed as the adapter commits it. */
@@ -144,7 +150,7 @@ const drawdownOn = (
       intent: intentFor(`Widen ${seq++}`),
       proposedAuthority: proposal,
       activationActor: { iss: ISS, sub: "parent-agent" },
-      policy: { ref: pred.drawdown_policy as never, snapshot: POLICY },
+      policy: { ref: pred.drawdown_policy as never, snapshot: REGISTRY[(pred.drawdown_policy as { id: string }).id] as RegisteredActivationPolicy },
       restrictionsAtAdjudication: { containment: 0, discharge: 0 },
       governance: { options: OPTIONS, isCrossDomain },
     }),
@@ -229,7 +235,8 @@ describe("a recorded ceiling drawdown (@spec approval-governance#accountable-ass
     const snapshot = kernel.drawdownApprovalRecords.ruleSnapshot(ISS, ref);
     expect(snapshot && approvalPolicyDigest(ISS, snapshot)).toBe(ref.digest);
     const rule = parseDrawdownRecordingRule((snapshot as { content: Uint8Array }).content);
-    expect(rule.deciding_policies).toEqual([pred.drawdown_policy]);
+    expect(rule.deciding_policies).toHaveLength(2);
+    expect(rule.deciding_policies).toContainEqual(pred.drawdown_policy);
     expect(rule.consent.activators).toEqual({ [SOURCE_ROOT]: ["bob"] });
     const retained = kernel.drawdownApprovalRecords.inputs(successor.id);
     expect(retained?.inputs).toMatchObject({
@@ -254,6 +261,22 @@ describe("a recorded ceiling drawdown (@spec approval-governance#accountable-ass
   it("re-checks the committed record from retained state", () => {
     const { kernel, successor } = recorded();
     expect(recheck(kernel, successor.id)).toEqual({ rechecked: true });
+  });
+
+  it("finds the consent through a narrowed chain: the oldest Mission carrying it, whose ceiling reproduces the commitment", () => {
+    const kernel = makeKernel();
+    const pred = predecessorOn(kernel, undefined, "drawdown-narrow");
+    clockMs = T0 + HOUR;
+    const first = drawdownOn(kernel, pred);
+    // The first successor carries a narrowed ceiling under its own hash; the consent's commitment is unchanged.
+    expect(first.ceiling_hash).not.toBe(first.ceiling_consent_hash);
+    expect(first.ceiling_consent_hash).toBe(pred.ceiling_hash);
+    clockMs = T0 + 2 * HOUR;
+    const second = drawdownOn(kernel, first);
+    const consent = kernel.drawdownApprovalRecords.inputs(second.id)?.inputs.consent;
+    expect(consent?.mission_id).toBe(pred.id);
+    expect(consent?.ceiling).toEqual(CEILING);
+    expect(recheck(kernel, second.id)).toEqual({ rechecked: true });
   });
 
   it("reads the inputs at the successor's creation instant, whatever the clock reads after it", () => {
