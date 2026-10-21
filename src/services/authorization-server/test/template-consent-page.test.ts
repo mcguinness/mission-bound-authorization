@@ -159,6 +159,25 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     expect((await decide(id, "approve", loggedIn(id))).status).toBe(400);
   });
 
+  it("retains an organizational authority source with its governed policy reference, with the consenting Approver and the consented template_version", async () => {
+    const res = await propose({
+      ...proposalBody(),
+      recipients: { subjects: [{ iss: ISSUER, sub: "acme-accounts-payable" }], agents: ["governed-agent"] },
+    });
+    const { proposal_id: id } = (await res.json()) as { proposal_id: string };
+    expect(res.status).toBe(201);
+    const approved = await decide(id, "approve", loggedIn(id));
+    const body = (await approved.json()) as { template_id: string };
+    expect(approved.status, JSON.stringify(body)).toBe(201);
+    const template = as.templateStore.get(body.template_id);
+    expect(template?.authority_source).toMatchObject({
+      type: "organizational",
+      policy: { id: "acme-accounts-payable-controls", version: "2026-09-01" },
+    });
+    expect(template?.approver).toEqual({ iss: ISSUER, sub: "bob" });
+    expect(template?.template_version).toBe("demo-reconciliation-1");
+  });
+
   it("refuses the consent while the Dispatch Policy the template was proposed under has changed: the page states why and offers no decision, and no template is created; restored, the same proposal is approved", async () => {
     const id = await proposed("test-editable");
     const original = EDITABLE.content;
