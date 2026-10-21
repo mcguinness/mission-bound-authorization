@@ -306,9 +306,11 @@ describe("the MAS process outlives no launcher (#818 slice 5B review)", () => {
       expect(mas.exitCode).toBeNull();
       expect((await fetch("http://127.0.0.1:14888/.well-known/openid-configuration")).status).toBe(200);
     } finally {
-      const exited = new Promise<void>((resolve) => mas.once("exit", () => resolve()));
-      mas.kill("SIGTERM");
-      await exited;
+      if (mas.exitCode === null && mas.signalCode === null) {
+        const exited = new Promise<void>((resolve) => mas.once("exit", () => resolve()));
+        mas.kill("SIGTERM");
+        await exited;
+      }
     }
   }, 60_000);
 
@@ -316,12 +318,16 @@ describe("the MAS process outlives no launcher (#818 slice 5B review)", () => {
     const stubborn = spawn(process.execPath, ["-e", "process.on('SIGTERM', () => {}); console.log('up'); setInterval(() => {}, 1000);"], {
       stdio: ["ignore", "pipe", "ignore"],
     });
-    await new Promise<void>((resolve) => stubborn.stdout?.once("data", () => resolve()));
-    const reports: string[] = [];
-    expect(await within(stopChild(stubborn, (m) => reports.push(m), 300).then(() => "stopped"), 5000, "stopChild")).toBe("stopped");
-    expect(stubborn.signalCode).toBe("SIGKILL");
-    expect(reports).toEqual([`stopped the MAS process ${stubborn.pid} (SIGKILL after 300 ms)`]);
-  });
+    try {
+      await new Promise<void>((resolve) => stubborn.stdout?.once("data", () => resolve()));
+      const reports: string[] = [];
+      expect(await within(stopChild(stubborn, (m) => reports.push(m), 300).then(() => "stopped"), 3000, "stopChild")).toBe("stopped");
+      expect(stubborn.signalCode).toBe("SIGKILL");
+      expect(reports).toEqual([`stopped the MAS process ${stubborn.pid} (SIGKILL after 300 ms)`]);
+    } finally {
+      if (stubborn.exitCode === null && stubborn.signalCode === null) stubborn.kill("SIGKILL");
+    }
+  }, 15_000);
 });
 
 describe("the launch's cleanup scope (#818 slice 5B review)", () => {
