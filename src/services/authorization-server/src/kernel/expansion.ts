@@ -11,6 +11,8 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { inheritCapabilitySources } from "./capability-binding.js";
+import { entriesMayOverlap } from "./derive.js";
+import { entryDigest } from "./discharge.js";
 import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
@@ -462,6 +464,74 @@ export function revokeDrawdownSuccessorsRequestedByAnotherClient(kernel: Mission
 }
 
 /**
+ * @spec expansion#reconciliation — the closed set of reconciliation statuses an
+ * expansion refusal carries in `mission_expansion_status`.
+ */
+export type ReconciliationStatus =
+  | "superseded_by_concurrent_expansion"
+  | "predecessor_state_changed"
+  | "predecessor_not_active"
+  | "authority_restricted_since_approval";
+
+/**
+ * @spec expansion#predecessor-active, expansion#reconciliation (#1177) — the
+ * status for a predecessor that is no longer `active`, from its OBSERVED
+ * record. A predecessor another expansion superseded answers
+ * `superseded_by_concurrent_expansion` (the attribution rule: its
+ * `termination` names that cause, so the client can discover the successor);
+ * any other terminal exit, or a predecessor that no longer resolves, answers
+ * `predecessor_state_changed`; a non-terminal non-active state such as
+ * `suspended` answers `predecessor_not_active`, which invites a retry.
+ */
+export function reconciliationStatusFor(observed: MissionRecord | undefined): ReconciliationStatus {
+  if (!observed || TERMINAL_STATES.has(observed.state)) {
+    return observed?.termination?.reason === "superseded"
+      ? "superseded_by_concurrent_expansion"
+      : "predecessor_state_changed";
+  }
+  return "predecessor_not_active";
+}
+
+/** A containment removal: a resource's listed actions, or the whole resource when `actions` is absent. */
+type Removal = { resource: string; actions?: string[] };
+
+const removes = (removals: Removal[], resource: string, action: string): boolean =>
+  removals.some((r) => r.resource === resource && (r.actions === undefined || r.actions.includes(action)));
+
+/**
+ * @spec expansion#reconciliation check 3 (#1177) — whether the successor's
+ * complete Authority Set touches a restriction of the predecessor that came
+ * after adjudication, the snapshot `at` (the first `containment` events and
+ * `discharge` latches; both lists are append-only). A restriction at or before
+ * adjudication was disclosed at consent and may be restored.
+ *
+ * Containment removes actions, whatever an entry's constraints, so it is
+ * compared per action: an action contained now and not at the snapshot. An
+ * event that names authority already contained restricts nothing new.
+ *
+ * Discharge latches whole entries, so it is compared per entry: any successor
+ * entry that may overlap an entry latched after the snapshot, constraints
+ * included ({@link entriesMayOverlap}). An entry latched after the snapshot
+ * still refuses when its authority lies within one latched before it.
+ */
+export function restrictedSinceAdjudication(
+  predecessor: MissionRecord,
+  successor: AuthorityEntry[],
+  at: { containment: number; discharge: number },
+): boolean {
+  const events = predecessor.containment?.events ?? [];
+  const before = events.slice(0, at.containment).flatMap((e) => e.removed);
+  const now = events.flatMap((e) => e.removed);
+  if (successor.some((e) => e.actions.some((a) => removes(now, e.resource, a) && !removes(before, e.resource, a)))) {
+    return true;
+  }
+  const latchedSince = new Set((predecessor.discharged ?? []).slice(at.discharge).map((l) => l.entry_digest));
+  if (latchedSince.size === 0) return false;
+  const discharged = predecessor.authority_set.filter((e) => latchedSince.has(entryDigest(predecessor.issuer, e)));
+  return successor.some((s) => discharged.some((d) => entriesMayOverlap(s, d)));
+}
+
+/**
  * The successor's `mission` claim, adding the `predecessor` lineage member.
  */
 export function successorMissionClaim(
@@ -478,4 +548,50 @@ export function successorWidensOnly(predecessor: AuthorityEntry[], successor: Au
   const succActions = new Set(successor.flatMap((e) => e.actions));
   for (const a of predActions) if (!succActions.has(a)) return false;
   return true;
+}
+
+/** @spec expansion#policy-probing (#1177): the default bound, requests per window. */
+export const DEFAULT_EXPANSION_RATE_LIMIT = { max: 30, windowSeconds: 600 } as const;
+
+/**
+ * @spec expansion#policy-probing (#1177) — the per-predecessor, per-client
+ * bound on expansion requests. It caps both policy probing and the approval
+ * prompts one client can drive against an Approver. A sliding window held in
+ * process memory: each admitted request counts until `windowSeconds` pass,
+ * and a refused one counts nothing, so capacity returns as the window moves.
+ */
+export class ExpansionRateLimiter {
+  private readonly admitted = new Map<string, number[]>();
+
+  constructor(
+    readonly max: number,
+    readonly windowSeconds: number,
+    private readonly nowMs: () => number,
+  ) {}
+
+  /**
+   * Admit one request of `clientId` for `predecessorId`, or refuse it with the
+   * seconds until the oldest counted request leaves the window.
+   */
+  admit(predecessorId: string, clientId: string): { ok: true } | { ok: false; retryAfterS: number } {
+    const now = this.nowMs();
+    const horizon = now - this.windowSeconds * 1000;
+    const key = `${predecessorId}\n${clientId}`;
+    const recent = (this.admitted.get(key) ?? []).filter((t) => t > horizon);
+    if (recent.length >= this.max) {
+      this.admitted.set(key, recent);
+      return { ok: false, retryAfterS: Math.max(1, Math.ceil(((recent[0] as number) - horizon) / 1000)) };
+    }
+    recent.push(now);
+    this.admitted.set(key, recent);
+    if (this.admitted.size > 10_000) this.sweep(horizon);
+    return { ok: true };
+  }
+
+  /** Drop every key whose requests have all left the window. */
+  private sweep(horizon: number): void {
+    for (const [key, times] of this.admitted) {
+      if (!times.some((t) => t > horizon)) this.admitted.delete(key);
+    }
+  }
 }

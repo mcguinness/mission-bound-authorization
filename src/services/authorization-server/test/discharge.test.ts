@@ -50,6 +50,7 @@ import {
   DischargeNotFoundError,
   DischargeSelectorStore,
   entryDigest,
+  ExpansionDeferralStore,
   GateError,
   isSubsetEntry,
   type LifecycleCommit,
@@ -1902,5 +1903,152 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     expect(res.status).toBeGreaterThanOrEqual(500);
     expect(await res.text()).not.toContain("not_found");
     expect(eventRows(record.id)).toBe(0);
+  });
+});
+
+describe("a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177)", () => {
+  /** Both actions sit below the approval-authentication floor, so the Approver needs no login here. */
+  const FLOOR = {
+    policy_id: "discharge-expansion-test",
+    deployment_scope: "this test's kernel",
+    floors: [
+      {
+        id: "high-risk-authority",
+        applies_to: ["irreversible_action" as const],
+        approval_surface: "browser" as const,
+        accepted_acr: ["mfa"],
+        max_authentication_age_seconds: 300,
+      },
+    ],
+    classification: [
+      {
+        type: "mission_resource_access",
+        resource: RES,
+        actions: {
+          "payments:invoice.read": "consequential_read" as const,
+          "payments:journal.write": "consequential_read" as const,
+        },
+      },
+    ],
+  };
+
+  /** Open a deferred expansion of `predecessor` carrying `entries` (both of {@link proposal} by default), and approve it. */
+  function openApproved(
+    kernel: MissionKernel,
+    predecessor: MissionRecord,
+    n: number,
+    entries: AuthorityEntry[] = proposal(),
+  ): { store: ExpansionDeferralStore; code: string } {
+    const store = new ExpansionDeferralStore(kernel, () => NOW, undefined, FLOOR);
+    const pending = store.open({
+      predecessorId: predecessor.id,
+      intent: intent("Reconcile Q3 payables and post adjustments"),
+      proposedAuthority: entries,
+      clientId: "ap-agent",
+      jkt: "jkt-discharge-expansion",
+      creationRequestId: `crid-discharge-expansion-${n}`,
+    });
+    store.approve(pending.deferral_code, {
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `xapev-discharge-expansion-${n}`,
+      approvedUntil: EXPIRES_AT,
+    });
+    return { store, code: pending.deferral_code };
+  }
+
+  const dischargeWrite = (kernel: MissionKernel, record: MissionRecord, eventId: string, vendor?: string) => {
+    const s = vendor === undefined ? selectorsFor(record) : vendorSelectors(record, vendor);
+    kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      entry_digest: s.entry_digest,
+      condition_digest: s.condition_digest,
+      event_type: s.event_type,
+      event_id: eventId,
+    });
+  };
+
+  /** A write entry for one vendor, discharged when the Q3 close is finalized. */
+  const vendorWrite = (vendors?: string[]): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource: RES,
+    actions: ["payments:journal.write"],
+    constraints: {
+      ...(vendors ? { vendors } : {}),
+      terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }],
+    },
+  });
+  const READ_ENTRY: AuthorityEntry = { type: "mission_resource_access", resource: RES, actions: ["payments:invoice.read"] };
+  /** Two write entries that share their action and differ only in vendor. */
+  const twoVendors = (): AuthorityEntry[] => [READ_ENTRY, vendorWrite(["acme"]), vendorWrite(["globex"])];
+
+  /** The selectors of the write entry for `vendor`. */
+  function vendorSelectors(record: MissionRecord, vendor: string) {
+    const entry = record.authority_set.find(
+      (e) => e.actions.includes("payments:journal.write") && e.constraints?.vendors?.includes(vendor),
+    );
+    if (!entry) throw new Error(`no write entry for ${vendor}`);
+    const condition = entry.constraints?.terminal_when?.[0];
+    if (!condition) throw new Error("entry carries no terminal_when");
+    return {
+      entry_digest: entryDigest(record.issuer, entry),
+      condition_digest: conditionDigest(condition),
+      event_type: condition.event_type,
+    };
+  }
+
+  it("refuses the completion when a same-action entry with other constraints is discharged after adjudication, though another was discharged before", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel, twoVendors());
+    expect(predecessor.authority_set.filter((e) => e.actions.includes("payments:journal.write"))).toHaveLength(2);
+    dischargeWrite(kernel, predecessor, "close-acme-before", "acme");
+    const { store, code } = openApproved(kernel, predecessor, 3, twoVendors());
+    dischargeWrite(kernel, predecessor, "close-globex-after", "globex");
+    const missionCountBefore = kernel.allMissions().length;
+    expect(store.redeem(code)).toEqual({ error: "access_denied", status: "authority_restricted_since_approval" });
+    expect(kernel.allMissions().length).toBe(missionCountBefore);
+    expect(kernel.get(predecessor.id)?.termination).toBeUndefined();
+  });
+
+  it("completes when the successor carries only an entry whose constraints are disjoint from the one discharged after adjudication", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel, twoVendors());
+    const { store, code } = openApproved(kernel, predecessor, 4, [READ_ENTRY, vendorWrite(["acme"])]);
+    dischargeWrite(kernel, predecessor, "close-globex-disjoint", "globex");
+    const out = store.redeem(code);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.successor.authority_set.find((e) => e.actions.includes("payments:journal.write"))?.constraints?.vendors).toEqual(["acme"]);
+  });
+
+  it("refuses the completion when the successor's entry is broader than, and so overlaps, the entry discharged after adjudication", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel, twoVendors());
+    const { store, code } = openApproved(kernel, predecessor, 5, [READ_ENTRY, vendorWrite()]);
+    dischargeWrite(kernel, predecessor, "close-globex-broader", "globex");
+    expect(store.redeem(code)).toEqual({ error: "access_denied", status: "authority_restricted_since_approval" });
+  });
+
+  it("refuses the completion with access_denied and authority_restricted_since_approval when the successor carries an entry discharged after adjudication", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel);
+    const { store, code } = openApproved(kernel, predecessor, 1);
+    dischargeWrite(kernel, predecessor, "close-after-adjudication");
+    const missionCountBefore = kernel.allMissions().length;
+    expect(store.redeem(code)).toEqual({ error: "access_denied", status: "authority_restricted_since_approval" });
+    expect(kernel.allMissions().length).toBe(missionCountBefore);
+    expect(kernel.get(predecessor.id)?.state).toBe("active");
+    expect(kernel.get(predecessor.id)?.termination).toBeUndefined();
+  });
+
+  it("completes when the entry was discharged before adjudication: the approval restores it", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel);
+    dischargeWrite(kernel, predecessor, "close-before-adjudication");
+    const { store, code } = openApproved(kernel, predecessor, 2);
+    const out = store.redeem(code);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.successor.authority_set.some((e) => e.actions.includes("payments:journal.write"))).toBe(true);
+    expect(kernel.get(predecessor.id)?.termination?.reason).toBe("superseded");
   });
 });

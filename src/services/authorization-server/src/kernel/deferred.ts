@@ -31,7 +31,12 @@ import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
-import { createExpansion } from "./expansion.js";
+import {
+  createExpansion,
+  type ReconciliationStatus,
+  reconciliationStatusFor,
+  restrictedSinceAdjudication,
+} from "./expansion.js";
 import { IntentError } from "./intent.js";
 import {
   type CeilingConsent,
@@ -49,6 +54,9 @@ import type {
 } from "./types.js";
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
+
+/** The prefix of an expansion deferral code; the deferred grant routes on it. */
+export const EXPANSION_DEFERRAL_PREFIX = "xdfr_";
 
 const SCHEMA = `
 CREATE TABLE deferrals (
@@ -143,7 +151,7 @@ export class DeferralStore {
         "requested authority exceeds the active Mission; use Expansion to widen",
       );
     }
-    // @spec expansion#creation-request-id (deferred mode, shared rule) — the
+    // @spec expansion#creation-idempotency (deferred mode, shared rule) — the
     // dedup key is CLIENT-SCOPED: the same semantic request from two different
     // clients MUST open two deferrals (per-client scoping prevents cross-client
     // interference and replay). The previous {m, r} key omitted the client.
@@ -316,8 +324,16 @@ function migrateExpansionDeferrals(db: Database): void {
     "carryover_manifest_hash",
     // @spec progressive#ceiling-reconsent (#1413): the committed re-consent.
     "ceiling_reconsent_json",
+    // @spec expansion#reconciliation (#1177): the reconciliation status a
+    // refused completion recorded, repeated on every later poll of the deferral.
+    "refusal_status",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
+  }
+  // @spec expansion#reconciliation check 3 (#1177): the predecessor's
+  // discharge-latch count at initiation, beside `pred_containment_version`.
+  if (!columns.has("pred_discharge_count")) {
+    db.exec("ALTER TABLE expansion_deferrals ADD COLUMN pred_discharge_count INTEGER");
   }
 }
 
@@ -421,26 +437,36 @@ export class ExpansionDeferralError extends Error {
 }
 
 /**
+ * @spec expansion#reconciliation check 3 (#1177): raised inside the
+ * completion transaction, rolling it back, when the successor carries
+ * authority restricted since adjudication.
+ */
+class RestrictedSinceApprovalError extends Error {}
+
+/**
  * @spec expansion — the DTR deferred-completion store for Mission Expansion.
  * Mirrors {@link DeferralStore}'s poll/interval/expiry shape, but its redemption
  * CREATES a successor Mission (widening) rather than issuing an AROP subset. It
  * records, AT REQUEST TIME, the predecessor binding, the acting client, the
- * possession key (`jkt`), and a snapshot of the predecessor containment version.
+ * possession key (`jkt`), and a snapshot of the predecessor's containment
+ * version and discharge-latch count.
  *
  * Deferred-window checks (@spec expansion#deferred-window):
  *  (a) predecessor STATE is re-verified AT REDEMPTION (completion): a predecessor
- *      terminated, superseded, or NEWLY CONTAINED during the deferred window fails
- *      completion (a deferred approval MUST NOT become a containment bypass). A
- *      predecessor that was ALREADY contained at request time stays expandable
- *      (containment#restoration): the check is on whether containment ADVANCED
- *      during the window (version delta), not on the presence of an overlay.
+ *      terminated or superseded during the deferred window fails completion, and
+ *      so does a successor carrying authority the predecessor's containment or
+ *      discharge restricted after the snapshot (@spec expansion#reconciliation
+ *      check 3; a deferred approval MUST NOT become a containment bypass). A
+ *      restriction already present at request time stays restorable
+ *      (containment#restoration): the check is on what came after the
+ *      snapshot, not on the presence of an overlay.
  *  (b) the `subject_token` is deliberately NOT stored and NOT re-verified here:
  *      its expiry MUST NOT gate completion. Possession was evaluated and RECORDED
  *      (the `jkt`) at request time; re-verification is of Mission STATE only.
  */
 export class ExpansionDeferralStore {
   readonly db: Database;
-  /** @spec expansion#creation-request-id — completion marks the reservation
+  /** @spec expansion#creation-idempotency — completion marks the reservation
    *  completed ATOMICALLY with successor creation. Instances over the same
    *  kernel share the table, so this internal instance needs no wiring. */
   private readonly creationIdempotency: CreationIdempotencyStore;
@@ -502,8 +528,8 @@ export class ExpansionDeferralStore {
 
   /**
    * Open a deferred expansion. The predecessor MUST be active at request time.
-   * Records the possession `jkt` and the predecessor containment-version snapshot
-   * (deferred-window check (a) baseline). Idempotent for the same (predecessor,
+   * Records the possession `jkt` and the predecessor's containment-version and
+   * discharge-latch snapshot (deferred-window check (a) baseline). Idempotent for the same (predecessor,
    * intent, client): returns the existing pending handle.
    */
   open(input: {
@@ -520,7 +546,7 @@ export class ExpansionDeferralStore {
     clientId: string;
     jkt: string;
     /**
-     * @spec expansion#creation-request-id — the REQUIRED creation identifier
+     * @spec expansion#submission — the REQUIRED creation identifier
      * (the wire handler always passes it; optional here so kernel-level unit
      * use stays valid). Part of the dedup key: distinct identifiers are
      * distinct creation operations and open distinct deferrals.
@@ -541,6 +567,9 @@ export class ExpansionDeferralStore {
       throw new ExpansionDeferralError("predecessor_not_active", "predecessor mission is not active");
     }
     const snapshotCv = predecessor.containment?.containment_version ?? 0;
+    // @spec expansion#reconciliation check 3 (#1177): the adjudication
+    // snapshot of the predecessor's discharge latches.
+    const snapshotDischarges = predecessor.discharged?.length ?? 0;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
     // Client-scoped (the `c` member AND the explicit column predicate below):
     // the same widening request from two different clients opens two deferrals.
@@ -558,7 +587,7 @@ export class ExpansionDeferralStore {
         "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ? AND client_id = ?",
       )
       .get(key, input.clientId) as { deferral_code: string } | undefined;
-    const code = existing?.deferral_code ?? `xdfr_${randomBytes(18).toString("base64url")}`;
+    const code = existing?.deferral_code ?? `${EXPANSION_DEFERRAL_PREFIX}${randomBytes(18).toString("base64url")}`;
     if (!existing) {
       // @spec child-delegation#carryover-manifest — PREPARATION: render the
       // plan read-only and RESERVE the proposed successor and replacement
@@ -585,7 +614,7 @@ export class ExpansionDeferralStore {
       }
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, submission_evidence_json, carryover_plan_id, carryover_plan_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -595,6 +624,7 @@ export class ExpansionDeferralStore {
           input.jkt,
           input.creationRequestId ?? null,
           snapshotCv,
+          snapshotDischarges,
           input.submissionEvidence?.length ? JSON.stringify(input.submissionEvidence) : null,
           plan?.plan_id ?? null,
           plan ? JSON.stringify(plan) : null,
@@ -697,6 +727,42 @@ export class ExpansionDeferralStore {
     this.cancelCarryoverPlan(deferralCode);
   }
 
+  /**
+   * DTR -00 Section 7.2 (#1177): cancel a deferral at the revocation endpoint.
+   * Only the client the deferral was issued to cancels it, and only within its
+   * `expires_in`. A pending or approved deferral that has not completed is
+   * refused, so its next poll answers `access_denied`. A completion that
+   * committed but was never released to the token adapter is treated as
+   * redeemed and then cancelled: no later poll delivers its token. Anything
+   * else is left unchanged. Returns whether the deferral was cancelled.
+   */
+  cancel(deferralCode: string, clientId: string): boolean {
+    const row = this.db
+      .prepare("SELECT client_id, state, redeemed, completion_released, created_at FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as
+      | { client_id: string; state: string; redeemed: number; completion_released: number | null; created_at: number }
+      | undefined;
+    if (!row || row.client_id !== clientId) return false;
+    if (this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return false;
+    if (row.redeemed === 0) {
+      const cancelled =
+        this.db
+          .prepare(
+            "UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ? AND redeemed = 0 AND state IN ('authorization_pending', 'approved')",
+          )
+          .run(deferralCode).changes === 1;
+      if (cancelled) this.cancelCarryoverPlan(deferralCode);
+      return cancelled;
+    }
+    return (
+      this.db
+        .prepare(
+          "UPDATE expansion_deferrals SET state = 'access_denied', completion_released = 1 WHERE deferral_code = ? AND redeemed = 1 AND completion_released IS NOT 1",
+        )
+        .run(deferralCode).changes === 1
+    );
+  }
+
   /** Mark a denied or abandoned deferral's carryover reservations cancelled. */
   private cancelCarryoverPlan(deferralCode: string): void {
     const row = this.db
@@ -769,7 +835,7 @@ export class ExpansionDeferralStore {
     | DeferralPending
     | DeferralSlowDown
     | { error: "expired_token" }
-    | { error: "access_denied" }
+    | { error: "access_denied"; status?: ReconciliationStatus }
     | { error: "invalid_grant" }
     | ExpansionDeferredResult {
     const row = this.db
@@ -863,29 +929,34 @@ export class ExpansionDeferralStore {
         interval: DEFERRAL_INTERVAL,
       };
     }
-    if (row.state === "access_denied") return { error: "access_denied" };
+    // @spec expansion#reconciliation (#1177): a refused deferral answers
+    // `access_denied` with the reconciliation status it recorded, if any, on
+    // every later poll. An Approver's denial records none.
+    if (row.state === "access_denied") {
+      return {
+        error: "access_denied",
+        ...(typeof row.refusal_status === "string" && row.refusal_status
+          ? { status: row.refusal_status as ReconciliationStatus }
+          : {}),
+      };
+    }
     if (row.redeemed === 1) return { error: "invalid_grant" };
+    // Record a refusal: `access_denied`, the deferred substrate's outcome for a
+    // request that resolved with an error (DTR -00 Section 5.5.1 step 4), with
+    // the reconciliation status when a reconciliation check failed.
+    const refuse = (status?: ReconciliationStatus): { error: "access_denied"; status?: ReconciliationStatus } => {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied', refusal_status = ? WHERE deferral_code = ?")
+        .run(status ?? null, deferralCode);
+      return { error: "access_denied", ...(status ? { status } : {}) };
+    };
 
     // @spec expansion#deferred-window check (a): re-verify predecessor STATE at
     // completion. A predecessor terminated/superseded during the window fails.
     const predecessor = this.kernel.get(row.predecessor_id as string);
-    if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
-    }
-    // @spec expansion#deferred-window check (a): containment that ADVANCED during
-    // the window fails completion (the deferred approval MUST NOT bypass a
-    // containment applied after the request). A predecessor already contained at
-    // request time still expands (containment#restoration) because the version is
-    // unchanged.
-    const currentCv = predecessor.containment?.containment_version ?? 0;
-    if (currentCv !== (row.pred_containment_version as number)) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+    const observedPredecessor = predecessor ? this.kernel.applyExpiry(predecessor) : undefined;
+    if (!observedPredecessor || observedPredecessor.state !== "active") {
+      return refuse(reconciliationStatusFor(observedPredecessor));
     }
 
     const recorded = JSON.parse(row.intent_json as string) as {
@@ -894,7 +965,7 @@ export class ExpansionDeferralStore {
     };
     const intent = recorded.i;
     const approver = JSON.parse(row.approver_json as string) as { iss: string; sub: string };
-    // @spec expansion#creation-request-id — the successor INSERT and the
+    // @spec expansion#creation-idempotency — the successor INSERT and the
     // idempotency-reservation completion commit in ONE kernel-db transaction
     // (createExpansion's insertRecord nests as a savepoint), so a lost response
     // after this commit is recovered by an initiation retry finding the
@@ -924,8 +995,13 @@ export class ExpansionDeferralStore {
     let txOut:
       | { successor: MissionRecord; predecessorId: string; carryover?: ApplyCarryoverOutcome }
       | undefined;
+    // The in-transaction re-check refuses by returning undefined: the
+    // predecessor stopped being effectively active between check and commit.
+    let predecessorRefused = false;
+    let restricted = false;
     try {
       txOut = this.redeemInTransaction(row, intent, recorded, approver, submissionEvidence, creationRequestId);
+      predecessorRefused = txOut === undefined;
     } catch (e) {
       // @spec child-delegation#carryover-commit — a carryover refusal rolls the
       // WHOLE completion back: no partial successor, no surviving replacement
@@ -936,15 +1012,20 @@ export class ExpansionDeferralStore {
         txOut = undefined;
       } else if (e instanceof IntentError) {
         txOut = undefined;
+      } else if (e instanceof RestrictedSinceApprovalError) {
+        restricted = true;
+        txOut = undefined;
       } else {
         throw e;
       }
     }
     if (!txOut) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+      if (restricted) return refuse("authority_restricted_since_approval");
+      // An expiry or carryover refusal is not a reconciliation failure and
+      // carries no status (@spec expansion#successor-expiry).
+      if (!predecessorRefused) return refuse();
+      const now = this.kernel.get(row.predecessor_id as string);
+      return refuse(reconciliationStatusFor(now ? this.kernel.observe(now) : undefined));
     }
     this.kernel.publishPendingCommits();
     this.db.prepare("UPDATE expansion_deferrals SET completion_released = 1 WHERE deferral_code = ?").run(deferralCode);
@@ -1005,6 +1086,19 @@ export class ExpansionDeferralStore {
           ? { ceilingReconsent: JSON.parse(row.ceiling_reconsent_json as string) as ReconsentedCeiling }
           : {}),
       });
+      // @spec expansion#reconciliation check 3 (#1177), in the activation
+      // transaction and before any carryover work: the successor's complete
+      // Authority Set, carried authority included, overlaps no restriction of
+      // the predecessor that came after adjudication, the initiation snapshot.
+      // A deferral opened before this snapshot existed counts every latch.
+      if (
+        restrictedSinceAdjudication(predNow, res.successor.authority_set, {
+          containment: row.pred_containment_version as number,
+          discharge: (row.pred_discharge_count as number | null) ?? 0,
+        })
+      ) {
+        throw new RestrictedSinceApprovalError();
+      }
       if (creationRequestId) {
         this.creationIdempotency.completeInCallerTx(
           row.client_id as string,
