@@ -2048,6 +2048,12 @@ same rule as vector 5.
 
 \[\[ To be removed from the final specification ]]
 
+- Immutability Witness: a mismatch between a recomputed Approval
+  Context Commitment and the value an earlier signed or registered
+  artifact disclosed is also evidence that the Mission Record was
+  altered, not only that the artifact's reference is invalid. No
+  requirement changed.
+
 - An assertion that can narrow the authority, such as a model output, is
   bound to the `authority_hash` of the set it evaluated, which the
   issuer records with the activation's inputs, rather than to the
