@@ -5320,7 +5320,7 @@ Sender-constraining the primary token ({{token-claims}})
 likewise keeps a stolen token from being designated or
 self-exchanged.
 
-### client_id Conformance and the Approved-Agent Residual {#client-id-misattribution}
+### Client Attribution and Delegation Lineage {#client-id-misattribution}
 
 Because this document keeps the ordinary {{RFC9068}} meaning of the
 `client_id` claim ({{client-id-rebinding}}), a generic {{RFC9068}}
@@ -6487,7 +6487,7 @@ The following are out of scope for this document:
   authority works against the identifier and is therefore future work
   ({{mission-identifier-correlation}}).
 
-## The `client_id` Claim in Delegated Tokens {#client-id-rebinding}
+## Client Identification in Delegated Tokens {#client-id-rebinding}
 
 This document keeps the registered meaning of the `client_id` claim,
 stated normatively in {{token-claims}} and enforced in
