@@ -439,11 +439,13 @@ import {
   type DispatchPolicies,
   type DispatchReason,
   type TemplateProposalBody,
+  templateCeiling,
 } from "../kernel/template.js";
 import {
   renderTemplateConsentPage,
   TemplateConsentProposals,
   templateConsentDisclosure,
+  type TemplateProposal,
 } from "./template-consent.js";
 import type { TemplateStore } from "../kernel/template-store.js";
 import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
@@ -3217,16 +3219,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    * @spec mission#approval-authentication (#826, #1320): the Approver of one
    * decision, keyed by what it decides (an interaction uid or a template
    * proposal id): the login this user agent established for that key, on a
-   * same-origin request carrying its CSRF secret, or a trusted headless
-   * approval service. `interactive` is true for the browser login.
+   * same-origin request carrying its CSRF secret (in the `x-csrf-token`
+   * header unless the caller passes the one a form submitted), or a trusted
+   * headless approval service. `interactive` is true for the browser login.
    */
   const approvalPrincipal = (
     ctx: KoaCtx,
     key: string,
+    csrf: string = ctx.get("x-csrf-token"),
   ): { principal: ApprovalPrincipal; interactive: boolean } | undefined => {
     const origin = ctx.get("origin");
     const browser = (!origin || origin === new URL(opts.issuer).origin)
-      ? opts.approvalSessions?.resolve(ctx.get("cookie"), ctx.get("x-csrf-token"), key)
+      ? opts.approvalSessions?.resolve(ctx.get("cookie"), csrf, key)
       : undefined;
     const token = ctx.get("x-service-token");
     const service = token && Object.hasOwn(serviceTokenPrincipals, token) ? serviceTokenPrincipals[token] : undefined;
@@ -3244,6 +3248,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
   /** @spec mission-template#template-consent: template proposals and their decisions. */
   const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
+  /** A proposal's consent disclosure against this issuer's current Dispatch Policies and capability catalog. */
+  const templateDisclosure = (proposal: TemplateProposal) => {
+    const { capabilityResolver } = kernel.authoritySourceOptions();
+    return templateConsentDisclosure(proposal, opts.dispatchPolicies, {
+      issuer: opts.issuer,
+      asyncDelegation: opts.familyStore !== undefined,
+      ...(capabilityResolver ? { capabilityResolver } : {}),
+    });
+  };
 
   /**
    * @spec status#mission-status-authentication — the Mission Status operation's
@@ -4663,13 +4676,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       try {
         const proposed = { ...body, issuer: opts.issuer } as unknown as TemplateProposalBody;
         assertTemplateBody(proposed);
+        // @spec capability-binding#conformance: the ceiling as the template
+        // will commit it, caller-supplied bindings discarded and the trusted
+        // ones resolved, so the consent page renders what approval commits.
+        const ceiling = templateCeiling(proposed.ceiling, kernel.authoritySourceOptions().capabilityResolver);
         const proposal = templateProposals.propose(
-          proposed,
+          { ...proposed, ceiling },
           pinDispatchPolicy(opts.issuer, opts.dispatchPolicies, proposed.dispatch_policy),
         );
         ctx.status = 201;
         ctx.body = { proposal_id: proposal.id, consent_uri: `${opts.issuer}/templates/proposals/${proposal.id}` };
       } catch (e) {
+        if (e instanceof IntentError) throw intentErrorToOidc(e);
         if (!(e instanceof TemplateError)) throw e;
         ctx.status = 400;
         ctx.body = { error: "invalid_request", error_description: e.message };
@@ -4685,18 +4703,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = { error: "not_found" };
         return;
       }
+      // The user agent holding the Approver's login for this proposal gets
+      // that login's CSRF secret in the form; any other is offered the login.
+      const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), proposal.id);
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.status = 200;
-      ctx.body = renderTemplateConsentPage(
-        proposal,
-        templateConsentDisclosure(proposal, opts.dispatchPolicies, {
-          issuer: opts.issuer,
-          asyncDelegation: opts.familyStore !== undefined,
-        }),
-        opts.approverLogin && opts.approvalSessions
+      ctx.body = renderTemplateConsentPage(proposal, templateDisclosure(proposal), {
+        ...(opts.approverLogin && opts.approvalSessions
           ? { loginHref: `/templates/proposals/${encodeURIComponent(proposal.id)}/approver-login` }
-          : {},
-      );
+          : {}),
+        ...(csrf ? { csrf } : {}),
+      });
       return;
     }
     // @spec mission#approval-authentication (#1320): the Approver's login for
@@ -4720,41 +4737,62 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     const proposalDecideMatch = ctx.path.match(/^\/templates\/proposals\/([^/]+)\/decide$/);
     if (proposalDecideMatch && ctx.method === "POST" && opts.templateStore && enabled("templates")) {
       const body = await readJsonBody(ctx.req);
+      const id = proposalDecideMatch[1] as string;
+      // The consent page's form posts form-encoded with the login's CSRF
+      // secret as a field; an approval service posts JSON with it in the
+      // header. The form is answered with a redirect back to the page.
+      const form = (ctx.get("content-type") ?? "").startsWith("application/x-www-form-urlencoded");
+      const refuse = (status: number, error: string, description?: string) => {
+        ctx.status = status;
+        if (form) {
+          ctx.set("content-type", "text/html; charset=utf-8");
+          ctx.body = `<!doctype html><title>Template consent</title>\n<p class="decision-refused">${escapeHtml(description ?? error)}</p>`;
+        } else {
+          ctx.body = { error, ...(description ? { error_description: description } : {}) };
+        }
+      };
+      const decided = (status: number, result: Record<string, unknown>) => {
+        if (form) {
+          ctx.status = 303;
+          ctx.set("location", `/templates/proposals/${encodeURIComponent(id)}`);
+          ctx.body = "";
+        } else {
+          ctx.status = status;
+          ctx.body = result;
+        }
+      };
       if (["approver", "subject", "approver_acr", "approver_auth_time"].some(k => Object.hasOwn(body, k)) ||
           (body.decision !== "approve" && body.decision !== "deny")) {
-        ctx.status = 400;
-        ctx.body = { error: "invalid_request", error_description: "decide accepts a decision, not resolving identity" };
+        refuse(400, "invalid_request", "decide accepts a decision, not resolving identity");
         return;
       }
-      const id = proposalDecideMatch[1] as string;
       const proposal = templateProposals.get(id);
       if (!proposal) {
-        ctx.status = 404;
-        ctx.body = { error: "not_found" };
+        refuse(404, "not_found");
         return;
       }
-      const resolved = approvalPrincipal(ctx, id);
+      const resolved = approvalPrincipal(
+        ctx,
+        id,
+        form ? (typeof body.csrf_token === "string" ? body.csrf_token : "") : ctx.get("x-csrf-token"),
+      );
       if (!resolved) {
-        ctx.status = 401;
-        ctx.body = { error: "unauthorized" };
+        refuse(401, "unauthorized");
         return;
       }
       const { principal } = resolved;
       // The template's recipients name its Subjects; its consent selects none.
       if (principal.subject !== undefined && principal.subject !== principal.sub) {
-        ctx.status = 400;
-        ctx.body = { error: "invalid_request", error_description: "a template consent selects no Subject" };
+        refuse(400, "invalid_request", "a template consent selects no Subject");
         return;
       }
       if (proposal.state !== "pending") {
-        ctx.status = 400;
-        ctx.body = { error: "invalid_request", error_description: "the template proposal is no longer pending" };
+        refuse(400, "invalid_request", "the template proposal is no longer pending");
         return;
       }
       if (body.decision !== "approve") {
         templateProposals.settle(id, { state: "denied" });
-        ctx.status = 200;
-        ctx.body = { proposal_id: id, state: "denied" };
+        decided(200, { proposal_id: id, state: "denied" });
         return;
       }
       // @spec mission#approval-authentication (#826, D425): dispatch later
@@ -4769,24 +4807,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         { interactive: resolved.interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
       );
       if (floor.outcome === "refused") {
-        ctx.status = 403;
-        ctx.body = { error: "access_denied", error_description: floor.reason };
+        refuse(403, "access_denied", floor.reason);
         return;
       }
       // @spec mission-template#template-consent, derivation-limits#approval-rendering
       // (#1119): no consent to a template whose disclosure cannot be
-      // rendered, so a Dispatch Policy changed since the proposal refuses it.
-      const rendered = templateConsentDisclosure(proposal, opts.dispatchPolicies, {
-        issuer: opts.issuer,
-        asyncDelegation: opts.familyStore !== undefined,
-      });
+      // rendered, so a Dispatch Policy, or a trusted capability binding of
+      // the ceiling, changed since the proposal refuses it.
+      const rendered = templateDisclosure(proposal);
       if ("refusal" in rendered) {
-        ctx.status = 403;
-        ctx.body = { error: "access_denied", error_description: rendered.refusal };
+        refuse(403, "access_denied", rendered.refusal);
         return;
       }
       try {
-        // The template pins the snapshot just verified: nothing runs between.
+        // The template commits the policy snapshot and the ceiling just
+        // verified against the proposal: nothing runs between.
         const template = createTemplate(
           opts.templateStore,
           {
@@ -4800,17 +4835,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           },
         );
         templateProposals.settle(id, { state: "approved", template_id: template.id });
-        ctx.status = 201;
-        ctx.body = {
+        decided(201, {
           template_id: template.id,
           template_version: template.template_version,
           template_hash: template.template_hash,
-        };
+        });
       } catch (e) {
         if (e instanceof IntentError) throw intentErrorToOidc(e);
         if (!(e instanceof TemplateError)) throw e;
-        ctx.status = 400;
-        ctx.body = { error: "invalid_request", error_description: e.message };
+        refuse(400, "invalid_request", e.message);
       }
       return;
     }

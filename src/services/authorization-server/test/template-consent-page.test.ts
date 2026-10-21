@@ -17,7 +17,7 @@
  */
 
 import { type Server } from "node:http";
-import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   MACHINE_SPEED_STATEMENT,
@@ -87,9 +87,19 @@ async function proposed(policy?: string): Promise<string> {
   return body.proposal_id;
 }
 
-async function page(id: string): Promise<{ status: number; html: string }> {
-  const res = await fetch(`${ISSUER}/templates/proposals/${id}`);
+async function page(id: string, cookie?: string): Promise<{ status: number; html: string }> {
+  const res = await fetch(`${ISSUER}/templates/proposals/${id}`, cookie ? { headers: { cookie } } : {});
   return { status: res.status, html: await res.text() };
+}
+
+/** The Template Ceiling the page renders. */
+function renderedCeiling(html: string): Array<Record<string, unknown>> {
+  const text = (/<pre class="template-ceiling">([\s\S]*?)<\/pre>/.exec(html)?.[1] as string)
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+  return JSON.parse(text) as Array<Record<string, unknown>>;
 }
 
 /** The items of the page's `ul.<cls>`, or none. */
@@ -119,13 +129,16 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
       MACHINE_SPEED_STATEMENT,
       PROHIBITED_CLASSES_STATEMENT,
     ]);
-    const ceiling = (/<pre class="template-ceiling">([\s\S]*?)<\/pre>/.exec(html)?.[1] as string)
-      .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&amp;/g, "&");
-    expect(JSON.parse(ceiling)).toEqual(proposalBody().ceiling);
-    expect(html).toContain(`<form method="post" action="/templates/proposals/${id}/decide"`);
+    // The proposed ceiling, with the trusted capability bindings it will commit.
+    expect(renderedCeiling(html).map(({ capability_sources: _bindings, ...entry }) => entry)).toEqual(proposalBody().ceiling);
+    // Only the user agent holding the Approver's login for this proposal is
+    // offered the decision, and its form carries that login's CSRF secret.
+    expect(html).not.toContain("<form");
+    expect(html).toContain('<p class="sign-in">');
+    const session = loggedIn(id);
+    const signedIn = (await page(id, session.cookie)).html;
+    expect(signedIn).toContain(`<form method="post" action="/templates/proposals/${id}/decide">`);
+    expect(signedIn).toContain(`<input type="hidden" name="csrf_token" value="${session["x-csrf-token"]}">`);
     expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
   });
 
@@ -190,7 +203,7 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     const original = EDITABLE.content;
     EDITABLE.content = JSON.stringify({ id: "test-editable", derivation_limit_ceiling: 50 });
     try {
-      const { html } = await page(id);
+      const { html } = await page(id, loggedIn(id).cookie);
       expect(html).toContain('<p class="consent-refused">The Dispatch Policy test-editable version 1 is not the one');
       expect(html).not.toContain("<form");
       expect(items(html, "dispatch-bounds")).toEqual([]);
@@ -204,6 +217,50 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     const approved = await decide(id, "approve", loggedIn(id));
     expect(approved.status).toBe(201);
     expect(items((await page(await proposed("test-editable"))).html, "dispatch-bounds")[2]).toContain("never above 3.");
+  });
+
+  it("renders the Template Ceiling with its trusted capability bindings, discarding caller-supplied ones, and the approval commits exactly the ceiling rendered (@spec capability-binding#conformance)", async () => {
+    const forged = {
+      action: "payments:invoice.read",
+      tool_id: "mcp://forged.example/tools/anything",
+      source_uri: "https://forged.example/catalog",
+      source_digest: "sha-256:AAAA",
+      operation_ref: "anything",
+    };
+    const body = proposalBody();
+    const ceiling = (body.ceiling as Array<Record<string, unknown>>).map((entry) => ({ ...entry, capability_sources: [forged] }));
+    const res = await propose({ ...body, ceiling });
+    const { proposal_id: id } = (await res.json()) as { proposal_id: string };
+    expect(res.status).toBe(201);
+    const session = loggedIn(id);
+    const rendered = renderedCeiling((await page(id, session.cookie)).html);
+    expect(JSON.stringify(rendered)).not.toContain("forged.example");
+    expect(JSON.stringify(rendered)).toContain("mcp://payments.demo/tools/");
+    const approved = await decide(id, "approve", session);
+    const { template_id } = (await approved.json()) as { template_id: string };
+    expect(approved.status).toBe(201);
+    expect(as.templateStore.get(template_id)?.ceiling).toEqual(rendered);
+  });
+
+  it("refuses the consent while a trusted capability definition of the ceiling has changed since the proposal: the page offers no decision and no template is created; restored, the same proposal is approved (@spec capability-binding#conformance)", async () => {
+    const id = await proposed();
+    const catalog = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments") as { text: string };
+    const original = catalog.text;
+    const edited = JSON.parse(original) as { tools: Array<{ description?: string }> };
+    for (const tool of edited.tools) tool.description = `${tool.description ?? ""} (edited after the proposal)`;
+    catalog.text = JSON.stringify(edited);
+    try {
+      const { html } = await page(id, loggedIn(id).cookie);
+      expect(html).toContain('<p class="consent-refused">The trusted capability bindings of the Template Ceiling changed');
+      expect(html).not.toContain("<form");
+      const refused = await decide(id, "approve", loggedIn(id));
+      expect(refused.status).toBe(403);
+      expect(((await refused.json()) as { error: string }).error).toBe("access_denied");
+      expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
+    } finally {
+      catalog.text = original;
+    }
+    expect((await decide(id, "approve", loggedIn(id))).status).toBe(201);
   });
 
   it("decides only for an authenticated Approver, never one the request names, and selects no Subject; a denial creates no template", async () => {

@@ -5,17 +5,21 @@
  * template with the authenticated Approver as its approver of record; the
  * proposal never names one.
  *
- * The Dispatch Policy is pinned when the template is proposed: its digest is
- * minted from the snapshot the issuer then holds. The disclosure and the
- * decision both verify the held snapshot against that pin, so a policy edited
- * after the proposal is neither rendered nor consented to; the proposal is
- * then refused and proposed again.
+ * Both mutable inputs are fixed when the template is proposed. The Dispatch
+ * Policy is pinned: its digest is minted from the snapshot the issuer then
+ * holds. The Template Ceiling is resolved: caller-supplied capability bindings
+ * are discarded and the trusted ones resolved, as the template will commit
+ * them. The disclosure and the decision both re-check each against the
+ * issuer's current state, so a policy edited, or a trusted capability
+ * definition changed, after the proposal is neither rendered nor consented
+ * to; the proposal is then refused and proposed again.
  */
 import { randomBytes } from "node:crypto";
-import type { ActivationPolicyRef, AuthorityEntry } from "@mission/core";
+import { type ActivationPolicyRef, type AuthorityEntry, canonicalize, type JsonValue } from "@mission/core";
 import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
+import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
 import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
-import type { DispatchPolicies, TemplateProposalBody } from "../kernel/template.js";
+import { type DispatchPolicies, type TemplateProposalBody, templateCeiling } from "../kernel/template.js";
 
 /** Prefix of a template proposal's identifier. */
 export const TEMPLATE_CONSENT_PREFIX = "tcon_";
@@ -97,14 +101,15 @@ export interface TemplateConsentDisclosure {
 }
 
 /**
- * The consent disclosure of a proposal, from the proposal and the Dispatch
- * Policy snapshot this issuer holds, or why it cannot be rendered: a snapshot
- * that no longer verifies against the proposal's pin.
+ * The consent disclosure of a proposal, from the proposal and the issuer's
+ * current state, or why it cannot be rendered: a Dispatch Policy snapshot that
+ * no longer verifies against the proposal's pin, or a Template Ceiling whose
+ * trusted capability bindings no longer resolve as they did.
  */
 export function templateConsentDisclosure(
   proposal: TemplateProposal,
   dispatchPolicies: DispatchPolicies | undefined,
-  opts: { issuer: string; asyncDelegation: boolean },
+  opts: { issuer: string; asyncDelegation: boolean; capabilityResolver?: CapabilitySourceResolver },
 ): { disclosure: TemplateConsentDisclosure } | { refusal: string } {
   const { body } = proposal;
   const held = verifiedActivationPolicy(opts.issuer, dispatchPolicies, proposal.dispatch_policy);
@@ -112,6 +117,21 @@ export function templateConsentDisclosure(
   if (!maximum) {
     return {
       refusal: `The Dispatch Policy ${body.dispatch_policy.id} version ${body.dispatch_policy.version} is not the one this template was proposed under, so its per-instance derivation limit cannot be shown. This consent is refused; propose the template again.`,
+    };
+  }
+  // @spec capability-binding#conformance: the page renders the ceiling the
+  // template would commit, so a trusted binding that now resolves differently
+  // refuses rather than shows a ceiling the approval would not commit.
+  let current: AuthorityEntry[] | undefined;
+  try {
+    current = templateCeiling(body.ceiling, opts.capabilityResolver);
+  } catch {
+    current = undefined;
+  }
+  if (!current || canonicalize(current as unknown as JsonValue) !== canonicalize(body.ceiling as unknown as JsonValue)) {
+    return {
+      refusal:
+        "The trusted capability bindings of the Template Ceiling changed since this template was proposed, so the ceiling shown would not be the one committed. This consent is refused; propose the template again.",
     };
   }
   return {
@@ -148,12 +168,15 @@ function renderLines(lines: readonly string[], cls: string): string {
 
 /**
  * The consent page. A pending proposal whose disclosure renders offers the
- * decision; a refused disclosure offers none, and states why.
+ * decision to the user agent holding the Approver's login for this proposal:
+ * the form carries that login's CSRF secret, which the decision checks. Any
+ * other user agent is offered the login. A refused disclosure offers no
+ * decision, and states why.
  */
 export function renderTemplateConsentPage(
   proposal: TemplateProposal,
   rendered: { disclosure: TemplateConsentDisclosure } | { refusal: string },
-  opts: { loginHref?: string },
+  opts: { loginHref?: string; csrf?: string },
 ): string {
   const id = encodeURIComponent(proposal.id);
   const head = `<!doctype html><title>Template consent</title>
@@ -170,14 +193,19 @@ export function renderTemplateConsentPage(
     return `${head}<p class="consent-refused">${escapeHtml(rendered.refusal)}</p>`;
   }
   const { disclosure } = rendered;
-  const login = opts.loginHref ? `<p><a href="${escapeHtml(opts.loginHref)}">Sign in to decide</a></p>\n` : "";
+  const decision = opts.csrf
+    ? `<form method="post" action="/templates/proposals/${id}/decide">
+<input type="hidden" name="csrf_token" value="${escapeHtml(opts.csrf)}">
+<button name="decision" value="approve">Approve</button>
+<button name="decision" value="deny">Deny</button></form>`
+    : opts.loginHref
+      ? `<p class="sign-in"><a href="${escapeHtml(opts.loginHref)}">Sign in to decide</a></p>`
+      : `<p class="sign-in">Sign in on the approval surface to decide.</p>`;
   return `${head}<h2>What this consent admits</h2>${renderLines(disclosure.statements, "template-statements")}
 <h2>Template Ceiling (the maximum authority of any dispatched Mission)</h2><pre class="template-ceiling">${escapeHtml(
     JSON.stringify(disclosure.ceiling, null, 2),
   )}</pre>
 <h2>Dispatch bounds</h2>${renderLines(disclosure.bounds, "dispatch-bounds")}
 <h2>Terms</h2>${renderLines(disclosure.terms, "template-terms")}
-${login}<form method="post" action="/templates/proposals/${id}/decide" enctype="application/json">
-<button name="decision" value="approve">Approve</button>
-<button name="decision" value="deny">Deny</button></form>`;
+${decision}`;
 }

@@ -281,6 +281,19 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
 }
 
 /**
+ * @spec capability-binding#conformance: the Template Ceiling a template
+ * commits. At this trusted establishment boundary, request-body bindings are
+ * never facts: every caller-supplied capability binding is discarded and the
+ * trusted bindings are resolved fresh. The consent page renders this ceiling,
+ * so the human reviews what the template commits.
+ */
+export function templateCeiling(ceiling: AuthorityEntry[], resolver?: CapabilitySourceResolver): AuthorityEntry[] {
+  return resolver
+    ? resolveFreshCapabilitySources(ceiling.map(({ capability_sources: _drop, ...entry }) => entry), resolver)
+    : ceiling;
+}
+
+/**
  * @spec mission#standing-consent-bases: the consented template commits the
  * Dispatch Policy's content: the issuer mints the reference from the snapshot
  * it holds for that id and version, and refuses a policy it does not hold.
@@ -360,10 +373,7 @@ export function createTemplate(
   if (existing) return existing;
 
   const { authority_source, source_bindings } = establishTemplateAuthoritySource(input, options);
-  // At this trusted establishment boundary, request-body bindings are never facts.
-  const ceiling = options.capabilityResolver
-    ? resolveFreshCapabilitySources(input.ceiling.map(({ capability_sources: _drop, ...entry }) => entry), options.capabilityResolver)
-    : input.ceiling;
+  const ceiling = templateCeiling(input.ceiling, options.capabilityResolver);
 
   const dispatch_policy = pinDispatchPolicy(input.issuer, options.dispatchPolicies, input.dispatch_policy);
   const templateBody = {
