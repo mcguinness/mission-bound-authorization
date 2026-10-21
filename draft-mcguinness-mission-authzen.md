@@ -2518,6 +2518,7 @@ carrier's extensibility rule.
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
+| Duration-lease renewal names no lease the PDP issued or an ended activity, or fails continuity with the evaluation it renews | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context satisfiable only by a new access token (RFC 9470) | PDP denial (with obligation) | `resource_policy` with the step-up obligation ({{AUTHZEN-OBL}}) |
 | Resource policy requires a stronger authentication context and refuses outright, no step-up path available | PDP denial | `resource_policy` |
@@ -2533,7 +2534,7 @@ carrier's extensibility rule.
 | No entry of the presented credential's own authority names the action's resource and action, established by the PDP | PDP denial | `out_of_authority` |
 | Entries of the presented credential's own authority name the action, but its parameters violate a constraint on each | PDP denial | `parameter_violation` |
 | Parameter constraint violated, PDP digest mismatch, or required digest absent | PDP denial | `parameter_violation` |
-| Idempotency key and operation identity match a prior unresolved or completed claim | PDP denial | `duplicate_suppressed` |
+| Idempotency key and operation identity match a prior unresolved or completed claim, except a retransmitted settled duration-lease renewal, which receives its permit while valid | PDP denial | `duplicate_suppressed` |
 | Idempotency key reused with a different operation identity | PDP denial | `idempotency_conflict` |
 | Resource policy refuses the action | PDP denial | `resource_policy` |
 | Consumption bound exhausted | PDP denial | `quota_exceeded` |
@@ -3167,6 +3168,12 @@ registered by {{I-D.draft-mcguinness-oauth-mission}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Failure-condition coverage: a duration-lease renewal that names no
+  lease the PDP issued or an ended activity, or fails continuity with
+  the evaluation it renews, is denied `out_of_authority`; a
+  retransmission of a settled renewal receives that renewal's permit
+  while it is valid, not `duplicate_suppressed` (#1464).
 
 - Runtime Denial Classification and Failure-condition coverage: a
   resource contract reference missing where required, or not
