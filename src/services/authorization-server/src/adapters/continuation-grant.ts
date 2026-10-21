@@ -62,6 +62,7 @@ import {
 } from "../kernel/derive.js";
 import {
   DPOP_PROOF_REPLAY_WINDOW_S,
+  entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
   projectScope,
   splitScope,
@@ -272,12 +273,15 @@ function isMissionClient(ctx: KoaContextWithOIDC, mission: MissionRecord | undef
  * the issued ID-JAG carries the values "that express the granted authority").
  * With no `resource`, every entry the delegate may carry. The rule-7
  * pre-check and the post-gate filter in issueCrossDomainGrant apply this same
- * function to the gate's result.
+ * function to the gate's result. An entry is for a requested resource when
+ * its resource tree overlaps it, through the shared matcher, as at token
+ * emission (resource-access#resource-matching, #1440).
  */
 export function continuationResourceFilter(
   resources: readonly string[],
 ): (entries: AuthorityEntry[]) => AuthorityEntry[] {
-  return (entries) => (resources.length === 0 ? entries : entries.filter((e) => resources.includes(e.resource)));
+  return (entries) =>
+    resources.length === 0 ? entries : entries.filter((e) => resources.some((r) => entryOverlapsResource(e, r)));
 }
 
 /** @spec RFC 9449 Section 4.3 — the proof's clock-skew allowance, one value for every verifier (`@mission/core`). */
@@ -804,10 +808,10 @@ export async function handleTokenExchangeGrant(
   // audience-scoped effective entry names is "not permitted by the chain
   // authorization" (ICA -02 5.5.6: invalid_target), as a token-endpoint
   // `resource` outside the Authority Set is at core issuance
-  // (mission#error-mapping). Membership is the exact `resource` equality the
-  // kernel's audience-scoped projections use, over the entries this delegate
-  // may carry.
-  if (effective.length > 0 && resources.some((r) => !delegable.some((e) => e.resource === r))) {
+  // (mission#error-mapping). Membership is the overlap pairing the kernel's
+  // audience-scoped projections use, through the shared matcher, over the
+  // entries this delegate may carry (#1440).
+  if (effective.length > 0 && resources.some((r) => !delegable.some((e) => entryOverlapsResource(e, r)))) {
     txError(ctx, 400, "invalid_target", "requested resource is not authorized by the Mission");
     return;
   }

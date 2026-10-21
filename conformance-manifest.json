@@ -288,6 +288,7 @@
    "request-provenance.intake",
    "expansion.adjudication",
    "expansion.interactive-completion",
+   "expansion.related-to-correlation",
    "continuation.async-transport",
    "aauth.supervision-server",
    "aauth.supervision-proof",
@@ -1569,6 +1570,12 @@
      "name": "validated capability evidence (#657) > applies the shared recording digest vectors independently at the evidence boundary",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a finer entry pairs with the resource that serves it through the shared matcher (@spec mission#introspection, status#mission-status-response, capability-binding#capability-source-binding, #1440) > the trusted catalog resolves the finer entry's catalog-sourced action, as for the payments service's own entry",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ]
   },
@@ -8466,7 +8473,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since this deployment's configured ceilings admit exact entries only, so its derivation never produces a prefix entry (#1276)."
+   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since the shipped ceilings are exact, so the shipped derivation never produces a prefix entry (#1276; the ceiling loaders admit prefix, #1440)."
   },
   {
    "id": "core.scope-projection.union-widening-fails",
@@ -9280,6 +9287,12 @@
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
      "name": "audience-to-resource mapping (cleanup, issue #541): an OAuth aud need not be byte-equal to a RAR resource > a mapped audience contributes its FULL mapped resource set, not itself",
      "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a finer entry pairs with the resource that serves it through the shared matcher (@spec mission#introspection, status#mission-status-response, capability-binding#capability-source-binding, #1440) > introspection by the payments resource server discloses the finer entry its resource serves",
+     "level": "endpoint",
      "surface": "introspection"
     }
    ]
@@ -27380,9 +27393,58 @@
     "normative": "a duration-lease renewal whose Mission, subject, action, operation target or audience differs from the evaluation named by context.prior_evaluation_id does not continue that metered activity; one that matches in all five does"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457, D475). The reference implements no duration-lease renewal: nothing in src/ reads context.prior_evaluation_id or reports measured_duration, so no part of this check (the operation target included) has a witness. #1285 deferred the operation-target clause until a renewal path exists; the row stays todo until one is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal matching the renewed evaluation in Mission, subject, action, operation target and audience continues the same activity, opening no new reservation, and moves the lease's end",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another Mission does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another subject does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another action does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal at another operation target, though the Mission's prefix entry admits both, does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another audience does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal naming no lease this PDP issued, a malformed identifier, or a lease that has ended continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-leased permit opens one metered activity that expires with its lease (@spec metering#metering, #1440) > the initial permit opens an activity leased by it, and its valid_until is the lease's end",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1440 (D570). The PDP leases each action the deployment declares duration-leased (services/pdp/src/duration-lease.ts): a permit opens one metered activity, and its valid_until is the lease's end. A renewal carrying context.prior_evaluation_id is evaluated in full and, on a permit, continues the renewed evaluation's activity, opening no second reservation, only when its Mission, subject, action, operation target and audience equal that evaluation's; the target is compared as spelled, so a second target the same prefix entry admits does not continue it. A renewal naming no lease this PDP issued, a malformed identifier, an ended lease, or any mismatch is denied out_of_authority (the request-fault classification; the metering draft names no reason). Witnessed through a decision point whose ledger is bound PDP-side. Mutations: dropping each of the five comparisons fails its own mismatch witness; opening a new activity on renewal fails the matching witness. The ledger is in memory, and nothing accumulates max_duration or commits measured_duration; no reference PEP renews a lease yet."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -37116,15 +37178,28 @@
    },
    "profiles": [],
    "surface": "token-endpoint",
-   "assertion": "refusal",
+   "assertion": "ignore",
    "observation": {
     "normative": "a ceiling or drawdown policy that only a client supplied, without the Approver's consent on the approval surface, is never recorded as consented",
-    "local": "The reference reads the ceiling only from the approval surface's decision body (ceilingConsentOf); no test yet shows a client-supplied ceiling ignored."
+    "local": "The pushed authorization request and the token endpoint strip parameters they do not declare, and the reference reads the ceiling only from the approval surface's decision body (ceilingConsentOf). A client-sent authority_ceiling and drawdown_policy leave a Mission with no ceiling, and on an expansion request leave the successor under the consented ceiling, so authority only the client's ceiling admits falls back to a fresh human approval."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent (@spec progressive#progressive-authorization) > a ceiling and drawdown policy the client sends on the authorization request are never consented: the Mission carries none",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent (@spec progressive#progressive-authorization) > a ceiling and drawdown policy the client sends on an expansion request are not the successor's: the consented ones govern",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572. Proved by adopting a client-pushed ceiling at the approval decision and a client-sent ceiling at the drawdown."
   },
   {
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
@@ -37246,9 +37321,10 @@
     "local": "The reference AS has no resource self-declaration intake (AAuth Rich Resource Requests, the discovery companion)."
    },
    "level": "endpoint",
-   "coverage": "todo",
+   "coverage": "blocked",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row."
+   "blocked_by": "#1469",
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row. D593: blocked on #1469, the reference's discovery encounter intake (roadmap)."
   },
   {
    "id": "progressive.ceiling-test.retained-outside-authority-needs-human",
@@ -37721,7 +37797,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
   },
   {
    "id": "progressive.in-ceiling.policy-mismatch-falls-back",
@@ -38188,12 +38264,12 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a deployment of progressive authorization bounds successor lifetimes, constrains its ceilings, and runs runtime enforcement",
-    "local": "Deployment guidance; the reference deployment declares no successor lifetime bound of its own."
+    "local": "Deployment guidance, not applicable to the current reference deployments: none selects Progressive authorization (the AS option is default off and the demo stack does not set it)."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row. D593."
   },
   {
    "id": "progressive.sec.drawdown-policy-reviewed-versioned",
@@ -38211,12 +38287,12 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
-    "local": "Deployment governance; versioning is visible in the activation policy registry, review is outside the reference."
+    "local": "Not witnessed. The digest check protects an existing consent's content commitment: a snapshot edited under an unchanged version authorizes nothing for a Mission that committed the old digest. It does not show that every policy change is versioned, since edited content can still be consented by a new Mission under the same version with a different digest. Review is a deployment process outside the reference."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row. D593: stays todo; the digest test witnesses the commitment and cadence rows, not deployment versioning."
   },
   {
    "id": "progressive.audit.cumulative-drawdown-count",
@@ -38306,7 +38382,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor. D593: the policy narrowing path and its tests are #1468."
   },
   {
    "id": "progressive.audit.ceiling-retained-in-chain",
@@ -38362,9 +38438,10 @@
     "normative": "a successor created by policy adjudication or by a fresh human approval, whose adjudication evaluated a resource's content-addressed self-declaration, records that declaration's digest as resource_declaration_digest; a refused request creates no successor and no such record"
    },
    "level": "endpoint",
-   "coverage": "todo",
+   "coverage": "blocked",
    "tests": [],
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved."
+   "blocked_by": "#1469",
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved. D593: blocked on #1469, the reference's discovery encounter intake (roadmap)."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
@@ -38587,7 +38664,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -42176,7 +42253,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only. Derivation implements prefix (#1276), but this deployment's configured ceilings admit exact entries only (the policy.json, governed-policy.json and containment.json loaders refuse prefix with a ConfigError, #1264), so no issuance path in this deployment carries a prefix entry, and the cross-org exchange's tool mapping emits none. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only. Derivation implements prefix (#1276) and the ceiling loaders admit it (#1440), but the shipped ceilings are exact, so no shipped issuance path carries a prefix entry, the cross-org exchange's tool mapping emits none, and no endpoint test projects a scope for a narrower prefix entry. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -43077,8 +43154,8 @@
    "observation": {
     "normative": "an exact candidate is within a prefix reference exactly when the reference's prefix matcher admits the candidate's resource as a target"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
@@ -43103,9 +43180,21 @@
      "name": "a prefix Mission entry through approval and the effective-set projection (@spec resource-access#subset, issuance-grant#effective-set-projection, #1276) > approves a prefix proposal and an exact descendant under a prefix ceiling, each keeping its own resource and resource_match",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a configured prefix ceiling derives through the authorization server (@spec resource-access#subset, #1440) > an exact proposal beneath the prefix ceiling derives as the proposal's own exact resource, is classified by the approval floor, and the issued token carries it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a configured prefix ceiling derives through the authorization server (@spec resource-access#subset, #1440) > a proposal for a sibling outside the prefix boundary derives nothing and is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05, and pairing ceilings by equal resource string fails both derivation witnesses."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): the authorization server booted over a configuration whose payments read ceiling entry is prefix derives an exact proposal beneath it as the proposal's own exact resource, the approval floor classifies it, and the issued token carries it; a sibling outside the boundary derives nothing. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05; pairing ceilings by equal resource string fails both derivation witnesses; an exact candidate compared to a prefix reference by string equality, or approval-floor classification by string equality, fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
   },
   {
    "id": "resource-access.subset.prefix-under-prefix",
@@ -43126,8 +43215,8 @@
    "observation": {
     "normative": "a prefix candidate is within a prefix reference exactly when the reference's prefix matcher admits the candidate's normalized base"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
@@ -43146,9 +43235,15 @@
      "name": "derivation under prefix entries (@spec resource-access#subset, mission#derivation-modes, #1276) > carries prefix onto the derived entry: a prefix proposal within a prefix ceiling keeps its own base, and a configured mapping keeps a prefix ceiling entry unchanged",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a configured prefix ceiling derives through the authorization server (@spec resource-access#subset, #1440) > a prefix proposal within the prefix ceiling derives as a prefix entry keeping its own base",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. A derived prefix entry keeps its own base and resource_match. Mutations: coalescing a trailing-slash base fails sub-res-07, and dropping prefix from the derived entry fails the derivation witness."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): under a configured prefix ceiling the authorization server derives a narrower prefix proposal as a prefix entry keeping its own base, and the issued token carries it. Mutations: coalescing a trailing-slash base fails sub-res-07; dropping prefix from the derived entry fails the derivation witness; comparing a prefix candidate's base to a prefix reference by string equality fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
   },
   {
    "id": "resource-access.subset.prefix-under-exact-never",
@@ -43169,8 +43264,8 @@
    "observation": {
     "normative": "a prefix candidate is never within an exact reference, even one naming the same resource"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
@@ -43189,9 +43284,15 @@
      "name": "a prefix Mission entry through approval and the effective-set projection (@spec resource-access#subset, issuance-grant#effective-set-projection, #1276) > a prefix candidate through an exact effective entry naming its base narrows to that exact entry, and two disjoint resource sets yield no fragment",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix request is never within an exact grant naming the same resource (@spec resource-access#subset, #1440) > a prefix proposal over the exact write ceiling narrows to the exact entry, and a refresh asking for the prefix entry is refused invalid_authorization_details while the exact one is issued",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. Derivation narrows a prefix proposal to an exact ceiling entry naming its base, and the effective-set projection narrows a prefix candidate to such an entry. Mutation: comparing an exact reference's string alone fails sub-res-08 and both witnesses, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): through the authorization server, a prefix proposal over an exact ceiling entry naming its base narrows to that exact entry, and a refresh requesting the prefix entry against the exact grant is refused invalid_authorization_details while the exact entry is issued. Mutation: comparing an exact reference's string alone fails sub-res-08, both kernel witnesses and the endpoint witness, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
   },
   {
    "id": "resource-access.subset.false-equivalent-absent",
@@ -47949,6 +48050,12 @@
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > lets a recorded model output refuse or narrow an activation, never widen it, and records it as a service assertion",
+     "level": "unit",
+     "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "a governed removal pairs with entries through the shared matcher (@spec approval-governance#governed-policy-activation, resource-access#subset, #1440) > a removal naming a descendant of a prefix entry narrows that whole entry, a removal naming a service narrows an entry within its tree, and a sibling sharing the base's characters is untouched",
      "level": "unit",
      "surface": "governance-decision"
     }
@@ -54713,7 +54820,7 @@
    "strength": "stated",
    "applicability": {
     "kind": "capability",
-    "capability": "expansion.adjudication"
+    "capability": "expansion.related-to-correlation"
    },
    "profiles": [],
    "surface": "derivation",
@@ -55021,6 +55128,116 @@
     }
    ],
    "notes": "#1177."
+  },
+  {
+   "id": "expansion.related-to.resolve-before-approval",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "MUST authorize and resolve the reference, in its own namespace, before the new Mission's approval completes",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a related_to reference that is unauthorized, unresolved in the issuer's namespace, or cross-issuer is settled before the new Mission's approval completes, never recorded unresolved"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.atomic-at-creation",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "MUST set `related_to` atomically when the Mission Record is created",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "related_to is present on the Mission Record from the creation commit, written in the same transaction"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.immutable",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "MUST NOT add or change it afterward.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "no operation after creation adds, replaces or removes a Mission's related_to"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.non-disclosing-failure",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "An unresolved or unauthorized reference is never recorded: deployment policy either rejects the creation uniformly or proceeds without the relationship, applied consistently across requests, and neither behavior discloses whether the referenced Mission exists.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an unresolved or unauthorized related_to reference is never recorded, and the creation outcome (uniform refusal or creation without the relationship) is the same whether or not the referenced Mission exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
+  },
+  {
+   "id": "expansion.related-to.no-predecessor",
+   "spec": "draft-mcguinness-oauth-mission-expansion.md",
+   "anchor": "independent-continuation",
+   "text": "A Mission created this way MUST NOT carry the `predecessor` member",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "expansion.related-to-correlation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created by independent continuation carries no predecessor member on its record or mission claim"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "The reference AS records related_to only in Child Mission Carryover replacement records; it implements no related_to correlation target, so the capability is unclaimed."
   },
   {
    "id": "aauth-management.person-path.authorize-as-person",
