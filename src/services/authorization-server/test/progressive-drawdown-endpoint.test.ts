@@ -652,6 +652,45 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
   });
 
+  it("a containment committed after adjudication and before the activating commit fails the completion: the successor restores no contained capability", async () => {
+    const pred = await issueMission(READ, ceilingOf());
+    const crid = crypto.randomUUID();
+    const before = as.kernel.allMissions().length;
+    // Another writer commits a containment after adjudication, just before the activating transaction opens.
+    const commit = as.creationIdempotency.createCompleted.bind(as.creationIdempotency);
+    let contained = false;
+    const racing = vi.spyOn(as.creationIdempotency, "createCompleted").mockImplementation((...args) => {
+      if (!contained) {
+        contained = true;
+        as.kernel.contain(pred.missionId, {
+          event: {
+            type: "tainted_read",
+            source: "https://siem.example/detections",
+            observed_at: "2026-07-02T00:00:00Z",
+            event_id: `evt-${crypto.randomUUID()}`,
+          },
+          remove: [{ resource: RESOURCE, actions: ["payments:invoice.list"] }],
+        });
+      }
+      return commit(...(args as Parameters<typeof commit>));
+    });
+    let res: Response;
+    try {
+      res = await tokenRequest(expansionParams(pred.accessToken, crid, READ_LIST));
+    } finally {
+      racing.mockRestore();
+    }
+    expect(contained).toBe(true);
+    const body = (await res.json()) as { error?: string; mission_expansion_status?: string };
+    // @spec expansion#reconciliation check 3: refused at the commit, nothing created or superseded.
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_request");
+    expect(body.mission_expansion_status).toBe("authority_restricted_since_approval");
+    expect(as.kernel.allMissions().length).toBe(before);
+    expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+    expect(as.creationIdempotency.find("ap-agent", crid)).toBeUndefined();
+  });
+
   it("verifies the drawdown policy digest before activation and retains the verified snapshot with the successor", async () => {
     const pred = await issueMission(READ, ceilingOf());
     const body = await drawdown(pred.accessToken, crypto.randomUUID(), READ_LIST);

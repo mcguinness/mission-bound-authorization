@@ -3104,6 +3104,10 @@ async function completeCeilingDrawdown(
         ...(d.submissionEvidence?.length ? { submissionEvidence: d.submissionEvidence } : {}),
         activationActor: { iss: opts.issuer, sub: client.clientId },
         policy: { ref: adjudication.ref, snapshot: adjudication.snapshot },
+        restrictionsAtAdjudication: {
+          containment: predecessor.containment?.containment_version ?? 0,
+          discharge: predecessor.discharged?.length ?? 0,
+        },
       });
       return { missionId: created.id, value: created };
     });
@@ -3131,6 +3135,10 @@ async function completeCeilingDrawdown(
         return true;
       }
       txError(ctx, 400, "invalid_request", e.message);
+      // @spec expansion#reconciliation check 3: authority restricted since adjudication.
+      if (e.code === "authority_restricted_since_approval" && observed && isMissionClient(ctx, observed)) {
+        (ctx.body as Record<string, unknown>).mission_expansion_status = e.code;
+      }
       return true;
     }
     if (e instanceof IntentError) throw intentErrorToOidc(e);
