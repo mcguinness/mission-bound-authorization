@@ -59,14 +59,6 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-mission-runtime:
-    title: "Mission-Bound Runtime Enforcement"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
 
 informative:
   RFC6750:
@@ -105,6 +97,14 @@ informative:
   I-D.draft-mcguinness-mission-capability-binding:
     title: "Mission Capability Binding"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
     author:
       -
         ins: K. McGuinness
@@ -1022,15 +1022,12 @@ can change that meaning while the names and values stay the same. The
 was approved under.
 
 A **resource contract** is a JSON document, identified by an `id` and a
-`version`, whose bytes never change for that pair. It fixes the
-contract material that Mission-Bound Runtime Enforcement lists
-({{I-D.draft-mcguinness-mission-runtime}}, Section "Resource
-Contract"), including the operation contract ({{resource-matching}}) of
-each operation it covers and the members of each action family it
-defines. That section also defines the version states and how a
-reference resolves. This section depends on those rules normatively;
-the dependency binds only a deployment that supports
-`resource_contract`. The contract assembles those definitions and
+`version`, whose bytes never change for that pair. It fixes at least
+the operation contract ({{resource-matching}}) of each operation it
+covers and the members of each action family it defines. A runtime
+profile can add contract material, as Mission-Bound Runtime
+Enforcement does ({{I-D.draft-mcguinness-mission-runtime}}, Section
+"Resource Contract"). The contract assembles those definitions and
 overrides none of them: a Common Constraint keeps the semantics its
 definition gives it ({{common-constraints}}). A resource that changes
 any of that material publishes a new version with its own `digest`.
@@ -1070,9 +1067,8 @@ authoritative. Before approval, the authorization server:
   contract's reference in the entry, so that the Approver approves the
   entry with it.
 
-A superseded or retired version is never current
-({{I-D.draft-mcguinness-mission-runtime}}), so no new approval
-references one. An authorization server that does not implement this
+No new approval references a version that is not current. An
+authorization server that does not implement this
 section MUST refuse a proposed or carried entry that carries
 `resource_contract`, with the `invalid_authorization_details` error
 code, and MUST NOT drop the member.
@@ -1093,10 +1089,11 @@ applicable entry without one provides no authority for it. In both
 cases the entry is one the resource server cannot fully enforce
 ({{rs-enforcement}}). The reference fixes meaning, not state: it
 supplies no observation of the resource and exempts no operation from
-the resource's other authorization checks. Which versions a resource
-still performs, and for which entries, follows the version states of
-{{I-D.draft-mcguinness-mission-runtime}}: a reference that does not
-resolve there authorizes nothing.
+the resource's other authorization checks. The resource declares
+which versions it still performs, and for which entries;
+Mission-Bound Runtime Enforcement defines one such version lifecycle
+({{I-D.draft-mcguinness-mission-runtime}}). A reference to a version
+the resource does not perform for the entry authorizes nothing.
 
 # Delegate Eligibility {#delegate-eligibility}
 

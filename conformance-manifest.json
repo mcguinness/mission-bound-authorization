@@ -45938,10 +45938,10 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where the declaration requires a reference, an unpinned entry authorizes nothing (refused before any decision), and a second entry carrying the current reference covers the operation. Proved by ignoring the requirement at the PEP."
   },
   {
-   "id": "resource-access.resource-contract.rs-follows-runtime-version-states",
+   "id": "resource-access.resource-contract.rs-unperformed-version-no-authority",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
-   "text": "Which versions a resource still performs, and for which entries, follows the version states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that does not resolve there authorizes nothing.",
+   "text": "A reference to a version the resource does not perform for the entry authorizes nothing.",
    "role": "RS",
    "strength": "stated",
    "applicability": {
@@ -45952,7 +45952,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server performs an entry's operation under a superseded version only within its declared retention and never under a retired one; outside those states the entry authorizes nothing"
+    "normative": "an entry whose reference names a version the resource does not perform for it authorizes nothing; the reference resource declares a version lifecycle, under which a superseded version is performed only within its declared retention and a retired version never"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -45970,7 +45970,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
