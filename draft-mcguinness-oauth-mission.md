@@ -1255,8 +1255,9 @@ Processing is governed by the following rules:
   policy; AS policy decides whether the verified claims are acceptable
   for this request.
 
-Supporting an evidence type is optional: an AS that supports none
-refuses every presented entry under these rules ({{conformance}}).
+Supporting an evidence type is optional, but these rules are not: an
+AS that supports none still applies them and refuses every presented
+entry ({{conformance-roles}}).
 
 Mission Intent Submission Evidence for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) specifies:
