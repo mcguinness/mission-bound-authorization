@@ -364,6 +364,8 @@ The authorization server MUST also refuse an entry with the
 - its `resource` is an `http` or `https` URI without the `//` authority
   form naming a non-empty host ({{Section 4.2.1 of RFC9110}},
   {{Section 4.2.2 of RFC9110}});
+- its `resource_match` is a value the authorization server does not
+  recognize ({{resource-access-type}});
 - its `actions` array is empty, or one of its values is neither an
   action identifier nor an action family ({{resource-access-type}});
 - its `delegation.max_depth` is not a non-negative integer, so a

@@ -47418,6 +47418,38 @@
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
   },
   {
+   "id": "resource-access.entry-validation.resource-match-unrecognized-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource_match` is a value the authorization server does not recognize",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_match value the authorization server does not recognize is refused invalid_authorization_details",
+    "local": "the reference AS recognizes exact and prefix; PAR refuses any other value through the shared resourceMatchViolation rule before any interaction, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D634 R3. The authorization server's side of the unrecognized-resource_match rule; the resource server's fail-closed side is resource-access.rs-enforcement.resource-match-unrecognized-fail-closed. The reference already refused the value at PAR (#1276). Proved by mutation: letting the PAR validator admit an unrecognized resource_match fails the witness ('unrecognized: expected 201 to be 400'). The direct-derivation refusal in resource-match-unsupported.test.ts is cited on resource-access.type.prefix-query-fragment-refused, not here."
+  },
+  {
    "id": "resource-access.entry-validation.actions-non-empty-grammar",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
