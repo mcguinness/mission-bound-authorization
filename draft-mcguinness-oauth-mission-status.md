@@ -908,7 +908,7 @@ This extension adds the following to that projection:
 This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
 of the same shape: the open `mission` claim object of
-{{I-D.draft-mcguinness-oauth-mission}} (Section "The Mission Claim")
+{{I-D.draft-mcguinness-oauth-mission}} (Section "Mission Claim")
 with status members (`state`, `termination`, `fresh_until`, any
 companion-defined extension member such as the Status List companion's `status_list`
 reference ({{I-D.draft-mcguinness-oauth-mission-status-list}}), and,
