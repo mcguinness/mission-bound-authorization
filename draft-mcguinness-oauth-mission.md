@@ -619,7 +619,8 @@ server enforces the `authorization_details` statelessly and can check
 the `mission` claim ({{rs-enforcement}}), with no callback to the AS
 required.
 
-(5) A management revoke, or `expires_at` passing, moves the Mission
+(5) An authorized revocation ({{revocation}}), or `expires_at`
+passing, moves the Mission
 to `terminated`, with reason `revoked` or `expired`, after which the
 AS refuses further issuance and refresh. A deployment can also treat
 {{RFC7009}} revocation of the refresh token as revoking the Mission
@@ -3025,7 +3026,7 @@ applies by including, alongside `error` ({{RFC6750}}), the
 A value the client does not recognize is treated as
 `insufficient_authority`. A resource server SHOULD include the
 attribute only in a response to a validly signed, audience-correct
-token whose holder its deployment accepts learning the distinction
+token whose holder its deployment permits to learn the distinction
 ({{denial-disclosure}}).
 
 ## Enforcement Responsibilities {#rs-responsibilities}
@@ -4662,8 +4663,9 @@ This document's extension points are:
   issuance.
 - **Approval-event sequencing.** The approval-event steps, their
   order, and the atomicity of record creation with the approval decision
-  are the model's ({{direct-approval-steps}}); the coupling of that
-  decision to authorization-code issuance is this flow's. A companion
+  are fixed by {{direct-approval-steps}}; the coupling of that
+  decision to authorization-code issuance belongs to the direct flow.
+  A companion
   profile MAY relocate the approval event relative to code issuance
   (for example, deferring the decision beyond the authorization
   response), provided the steps and their atomicity hold unchanged
@@ -5206,7 +5208,7 @@ exists.
 Introspection guards the same class of fact behind caller
 authorization ({{caller-authorization-and-minimization}}), and
 {{rs-enforcement}} limits the attribute to a token holder that the
-deployment accepts learning the distinction. Of the two values,
+deployment permits to learn the distinction. Of the two values,
 `insufficient_authority` reveals least, and omitting the attribute
 reveals nothing.
 
@@ -5672,7 +5674,7 @@ A Designated Expert reviews a submission for the discipline
 {{lifecycle}} requires:
 
 - a `Value` matching `^[a-z][a-z0-9_]*$` not already registered;
-- a `Terminal` designation of `no` consistent with the transitions
+- a `Terminal` value of `no`, consistent with the transitions
   the registrant's specification defines (a `no` state admits a
   further transition; `terminated` is the one terminal state, and a
   further way for a Mission to end is a termination reason,
@@ -6305,7 +6307,8 @@ deriving it from a natural-language instruction) is out of scope.
 ## Scope and Future Work {#scope-and-future-work}
 
 This document is self-contained: it binds Missions to OAuth 2.0 and
-depends only on the OAuth and JOSE specifications it cites.
+depends normatively only on the specifications listed as its
+normative references.
 
 Its reference to the OAuth Actor Profile
 ({{I-D.draft-mcguinness-oauth-actor-profile}}), for the `act` chain
@@ -6317,7 +6320,8 @@ The companion Mission Cross-Domain Projection profile
 {{I-D.draft-mcguinness-oauth-mission-cross-domain}} specifies
 cross-domain projection, a single hop that lets an authorization
 server in another trust domain honor a Mission, and carries the
-identity-chaining and ID-JAG dependencies. The Cross-Domain
+identity-chaining and Identity Assertion JWT Authorization Grant
+(ID-JAG) dependencies. The Cross-Domain
 capability's conformance bar is self-contained in this document
 ({{conformance}}), so that companion is not a normative dependency.
 
