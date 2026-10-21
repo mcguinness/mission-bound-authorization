@@ -5525,9 +5525,22 @@
     "local": "requires the deployment to also offer Continuation's async delegation transport"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#885 ruling (2026-10-01). No implementation witness yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders the established derivation limit, not only the requested one, with the async delegation family statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#885 ruling (2026-10-01); witnessed under #1119. Async delegation is on wherever the AS holds a family store, and the approval page renders the statement with the Mission's established limit (asserted inside that section) and in each policy-created child block (child-derivation-limit-endpoint.test.ts). Proved by removing it from the established section (that witness fails)."
   },
   {
    "id": "derivation-limits.rendering.issuance-grant-disclosure",
@@ -5550,7 +5563,37 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet."
+   "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet. Not applicable to the reference as built: it issues no grants under the Mission Issuance Grant profile, so its renderings carry no such statement."
+  },
+  {
+   "id": "derivation-limits.rendering.established-limit",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "Where an effective `derivation_limit` is established at a human approval event, the AS MUST render it for consent at that event",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering shows the derivation_limit the approval establishes, the value the request and the policy ceiling resolve to, not only the requested one",
+    "local": "the reference renders it on the approval page with the derived Authority Set, or that no derivation limit is established"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders the established derivation limit, not only the requested one, with the async delegation family statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119. The base Approval Rendering duty, which had no row before. An Intent requesting 150 under a deployment ceiling of 100 renders 100 and never 150 on the approval page. Proved by emptying the section and by rendering the requested value instead (the witness fails each time)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-rule",
@@ -5571,9 +5614,22 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -5594,9 +5650,16 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -5617,9 +5680,10 @@
     "local": "requires the deployment to also record Consent Evidence (draft-mcguinness-oauth-mission-consent-evidence), and requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
+   "coverage": "blocked",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
+   "notes": "#1119 (D327). Blocked on #1305: the reference records no Consent Evidence, so no Consent Disclosure carries this rendering; #1305 is the parked issue for mission_summary content once the reference builds Consent Evidence (O-11).",
+   "blocked_by": "#1305"
   },
   {
    "id": "derivation-limits.effective.standing-consent-ceiling",
@@ -34961,7 +35025,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
+   "notes": "#1119 (D327). Todo: the reference has no human template-consent approval surface. The service-token stand-in (POST /templates) returns the per-instance rule and maximum the committed Dispatch Policy states, beside max_active and the dispatch rate, in its creation response (template-dispatch-endpoint.test.ts); that is disclosure preparation returned after creation, not a rendering at a human approval, so it is not a witness here (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -36608,9 +36672,16 @@
     "normative": "the ceiling consent's disclosure states that policy-adjudicated successors carry the Mission's derivation count forward and never exceed its rendered derivation_limit; for a Mission with no derivation_limit it states that no finite limit is guaranteed for its successors"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119) > states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Tested on the approval page, where ceiling consent is given: it renders that the successors the drawdown policy creates carry the Mission's derivation count forward and never exceed its established limit, or that no finite limit is guaranteed without one, and renders nothing where the deployment offers no ceiling consent (progressive-drawdown-endpoint.test.ts). The ceiling itself is not rendered; that is progressive.ceiling.consent-disclosure, still todo, since the ceiling reaches the AS only with the decision. Proved by removing the line (the witness fails)."
   },
   {
    "id": "progressive.in-ceiling.successor-subject-source",
@@ -36767,7 +36838,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
+   "notes": "Not implemented: the reference approval page renders no ceiling, because the Approver's decision posts the consented ceiling with no rendering of it and the page never receives it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
   },
   {
    "id": "progressive.ceiling.client-input-not-consent",
@@ -49066,9 +49137,16 @@
     "normative": "an approval interface that displays a per-Mission derivation control as a limit on child creation renders max_children (as a concurrency limit), max_child_depth, and the per-child derivation limit as distinct values beside it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#987 (D219 ruling); witnessed under #1119. The parent's approval page renders, for each entry admitting policy-created children, the concurrent max_children (a limit at one time, not over the Mission's lifetime), max_child_depth with its default, the per-child derivation limit, and that no finite aggregate bound on the subtree is enforced (no lineage-keyed budget is deployed) (child-derivation-limit-endpoint.test.ts); unit witnesses cover an entry committing no policy, an unheld policy and a malformed one (approval-derivation-rendering.test.ts), and the approval is refused while the per-child figure cannot be disclosed. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails)."
   },
   {
    "id": "child-delegation.subtree-rendering.policy-created",
@@ -49088,9 +49166,22 @@
     "normative": "where child creation under an entry can be adjudicated by policy (policy_drawdown), the Parent Mission's approval rendering for that entry carries the three subtree figures as distinct values"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#987 (D219 ruling); witnessed under #1119. The parent's approval page renders, for each entry admitting policy-created children, the concurrent max_children (a limit at one time, not over the Mission's lifetime), max_child_depth with its default, the per-child derivation limit, and that no finite aggregate bound on the subtree is enforced (no lineage-keyed budget is deployed) (child-derivation-limit-endpoint.test.ts); unit witnesses cover an entry committing no policy, an unheld policy and a malformed one (approval-derivation-rendering.test.ts), and the approval is refused while the per-child figure cannot be disclosed. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "child-delegation.subtree-rendering.aggregate-statement",
@@ -49110,9 +49201,16 @@
     "normative": "the subtree rendering states whether a finite aggregate bound is enforced, and states that none is unless a lineage-keyed budget is deployed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#987 (D219 ruling); witnessed under #1119. The parent's approval page renders, for each entry admitting policy-created children, the concurrent max_children (a limit at one time, not over the Mission's lifetime), max_child_depth with its default, the per-child derivation limit, and that no finite aggregate bound on the subtree is enforced (no lineage-keyed budget is deployed) (child-derivation-limit-endpoint.test.ts); unit witnesses cover an entry committing no policy, an unheld policy and a malformed one (approval-derivation-rendering.test.ts), and the approval is refused while the per-child figure cannot be disclosed. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the aggregate statement (the page witness fails)."
   },
   {
    "id": "child-delegation.policy-drawdown.per-child-derivation-limit-ceiling",
