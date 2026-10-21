@@ -139,6 +139,22 @@ describe("the SaaS resource gives each entry member its resource-server role (@s
     expect(saas.journalEntries()).toHaveLength(before + 1);
   });
 
+  // @spec resource-access#resource-access-type, resource-access#rs-enforcement
+  // (D634): the authorization server refuses a `delegation` member it does not
+  // implement; the resource server's permission to disregard `delegation` is
+  // unchanged, so such a member reaching it still leaves the entry enforced
+  // on its other members.
+  it("disregards a delegation member the authorization server would refuse as unsupported, and still enforces the entry's other members (D634)", async () => {
+    const delegation = { max_depth: 1, future_policy: { max_uses: 1 } };
+    const token = await mintedToken([entry([WRITE], { delegation, constraints: { vendors: ["acme"] } })]);
+    const before = saas.journalEntries().length;
+    const permitted = await write(token, "acme");
+    expect(permitted.ok, JSON.stringify(permitted)).toBe(true);
+    expect(saas.journalEntries()).toHaveLength(before + 1);
+    expect(await write(token, "globex")).toEqual(REFUSED);
+    expect(saas.journalEntries()).toHaveLength(before + 1);
+  });
+
   it("refuses an entry whose actions carry a non-string or empty element beside the requested action, with no effect", async () => {
     for (const element of [5, null, true, {}, [WRITE], ""]) {
       await expectRefusedWithNoEffect([entry([READ, WRITE, element as unknown as string])]);
