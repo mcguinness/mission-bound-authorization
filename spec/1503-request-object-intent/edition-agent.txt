@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T20:05:42Z
-Source repository commit: 9091b577222657392277be384304b91592ae4f54
+Generated: 2026-10-21T21:10:33Z
+Source repository commit: 63a9f53a230e798b8c016df04d2915dba2c81c46
 Member count: 9
 
 Reading order:
@@ -8601,9 +8601,10 @@ Table of Contents
    request (Section 17 states the client-side rules and Section 20.1.2
    the threat):
 
-   *  Where a deployment designates a resource Mission-governed, its AS
-      MUST NOT issue a token for that resource outside a Mission, except
-      under documented policy exceptions.
+   *  Where a deployment classifies a resource as Mission-governed (a
+      Mission-governed resource), its AS MUST NOT issue a token for that
+      resource outside a Mission, except under documented policy
+      exceptions.
 
    *  If a client registered as Mission-governed sends an authorization
       request, through PAR or at the authorization endpoint, that
@@ -8613,8 +8614,8 @@ Table of Contents
       authorization_details.  The rule applies to that request until it
       completes, including when the AS resumes it after an interaction.
       A request carrying neither is an ordinary request that this rule
-      does not reach; designation is what keeps a resource's tokens
-      inside a Mission.
+      does not reach; the first rule, for a Mission-governed resource,
+      is what keeps that resource's tokens inside a Mission.
 
    A token request under an existing Mission-bound grant, such as a
    narrowing refresh, a self-exchange (Section 12.4) or an exchange for
@@ -9217,6 +9218,11 @@ Table of Contents
           approval surface that renders only the goal or Mission Intent
           does not conform.
 
+       *  The rendering MUST identify the OAuth client that receives the
+          authority, the Agent, from client identity information the AS
+          trusts, such as its own registration of the client; display
+          text the client supplies does not by itself identify it.
+
        *  When the Approver is not the Subject, the rendering MUST
           identify the Subject the authority is granted for.
 
@@ -9448,7 +9454,8 @@ Table of Contents
    max_age carriage above; the floor is never relaxed by a narrower or
    absent client request.
 
-   An authorization request whose scope includes openid [OpenID.Core]
+   This document does not require an AS to support OpenID Connect
+   [OpenID.Core].  An authorization request whose scope includes openid
    asks for an ID Token about the End-User the approval interaction
    authenticates, who is the Approver.  When the Approver is not the
    Subject established at step 2 of Section 6.2, the AS MUST refuse such
@@ -10076,6 +10083,13 @@ Table of Contents
    detects replay of a consumed refresh token (Section 4.14.2 of
    [RFC9700]) and is not a cryptographic binding.
 
+   A refresh request can carry authorization_details to narrow the
+   issued token (Section 6 of [RFC9396]).  The AS MUST refuse such a
+   request with the invalid_authorization_details error code when a
+   requested entry exceeds the presented refresh grant or the Mission
+   Authority Set (Section 5.4), and MUST NOT instead issue a narrower
+   set than the one requested.
+
 8.6.  Authentication Claims and Lifetime
 
    A derived token's authority comes from the Mission, not from a fresh
@@ -10352,6 +10366,19 @@ Table of Contents
        prevents in Section 20.1.2, and the metadata that advertises the
        requirement in Section 18.
 
+   6.  MUST accept a mission claim only from an issuer it explicitly
+       trusts to issue Mission-bound authorization for the resource;
+       trusting the issuer's ordinary access tokens is not enough.  It
+       MUST require mission.issuer to equal the token's iss, unless a
+       cross-domain profile it has adopted
+       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) explicitly
+       establishes the permitted relationship between the two.  It MUST
+       reject a token that fails either check with the invalid_token
+       error code.  For an opaque token, the issuer is the AS whose
+       introspection response or issuer-local resolution the resource
+       server relies on, and the same checks apply to that response's
+       mission member (Section 11.4).
+
    A resource server can also:
 
    *  require that a token carry an act chain and record it, while
@@ -10544,8 +10571,9 @@ Table of Contents
    type (Section 17), narrowed same-type (Section 5.4, Section 5.5) like
    any other request.  The AS issues only what both the presented
    refresh grant (Section 6 of [RFC9396]) and the Authority Set contain,
-   so a refresh-token family narrower than the Mission does not obtain
-   the Mission's wider authority.
+   and refuses a request beyond either (Section 8.5), so a refresh-token
+   family narrower than the Mission does not obtain the Mission's wider
+   authority.
 
    For entries outside the Authority Set, more authority requires a new
    approval, proposed as for a new Mission (Section 4.3), or an
@@ -10646,10 +10674,12 @@ Table of Contents
    |                                 | (Section 8.2).  Detail:         |
    |                                 | mission_error (Section 23)      |
    +---------------------------------+---------------------------------+
-   | Token endpoint (Section 5.4):   | invalid_authorization_details   |
-   | the requested RAR subset        | (Section 6 of [RFC9396]).       |
-   | exceeds the Mission's granted   | Detail: safe error_description  |
-   | authority                       |                                 |
+   | Token endpoint (Section 5.4,    | invalid_authorization_details   |
+   | Section 8.5): the requested     | (Section 6 of [RFC9396]).       |
+   | RAR subset exceeds the          | Detail: safe error_description  |
+   | Mission's granted authority,    |                                 |
+   | or, on refresh, the presented   |                                 |
+   | refresh grant                   |                                 |
    +---------------------------------+---------------------------------+
 
                Table 5: Failures not confined to one surface
@@ -11699,8 +11729,8 @@ Table of Contents
       verified_at:  An RFC 3339 timestamp of verification.
 
       facts:  An object holding the verified output facts the type's
-         specification designates for recording, nested so type-owned
-         facts cannot collide with the common members.
+         specification selects for recording, nested so type-owned facts
+         cannot collide with the common members.
 
       submission_evidence is provenance, not enforcement input, and is
       not carried on the mission claim (Section 8.8).  Recorded facts,
@@ -12387,8 +12417,8 @@ Table of Contents
    An AS that advertises mission_bound_authorization_supported: true
    SHOULD also advertise authorization_details_types_metadata_endpoint
    [I-D.draft-ietf-oauth-rar-metadata-remediation] where it implements
-   that endpoint.  Conformance to this document does not depend on that
-   endpoint.  Where the AS advertises it:
+   that endpoint.  Implementing that endpoint is optional, and the rules
+   below bind only an AS that advertises it:
 
    *  its response's key set is the source of truth for which types the
       AS supports;
@@ -12665,8 +12695,9 @@ Table of Contents
 
    A token bearing equivalent authorization_details but no mission claim
    is governed by no Mission state, revocation, or consent commitment.
-   A deployment can designate a resource, or register a client, as
-   Mission-governed.  Rules on three sides address this downgrade:
+   A deployment can classify a resource as Mission-governed (a Mission-
+   governed resource) or register a client as Mission-governed.  Rules
+   on three sides address this downgrade:
 
    *  *Issuance.* The rules of Section 4.3 keep such a resource's tokens
       inside a Mission and refuse such a client's authorization request
@@ -12685,7 +12716,8 @@ Table of Contents
    AS nor a resource server can generally tell that a request made with
    one serves a Mission:
 
-   *  Designation closes this path at a designated resource.
+   *  Classifying a resource as Mission-governed closes this path at
+      that resource.
 
    *  Mandatory mediation closes it where the client's requests must
       pass through a runtime layer that holds custody of the client's
@@ -12696,8 +12728,9 @@ Table of Contents
       [I-D.draft-mcguinness-mission-authority-server], is one
       realization of the enforcement path that Section 17 permits.
 
-   *  An unmediated ordinary workflow at an undesignated resource
-      remains a residual that only the client's own conformance closes.
+   *  An unmediated ordinary workflow at a resource that is not Mission-
+      governed remains a residual that only the client's own conformance
+      closes.
 
    The integrity of the mission_bound_authorization_supported
    (Section 17) and mission_bound_authorization_required (Section 18)
@@ -13157,8 +13190,9 @@ Table of Contents
    puts no goal, task_bounds, or other Intent content in a credential.
    An Intent Submission Evidence artifact can carry personal data (an
    originator identity, a consent reference); PAR keeps it off the front
-   channel, and the record retains the designated verified facts under
-   the same access governance as the rest of the Mission's evidence.
+   channel, and the record retains the verified facts selected for
+   recording under the same access governance as the rest of the
+   Mission's evidence.
 
    Access to the record and to Mission evidence is policy-governed and
    auditable: reading a Mission's evidence is a privileged operation,
@@ -13538,6 +13572,20 @@ Table of Contents
 
 24.1.  Normative References
 
+   [I-D.draft-ietf-oauth-rar-metadata-remediation]
+              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
+              Remediation", Work in Progress, Internet-Draft, draft-
+              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
+              rar-metadata-remediation-00>.
+
+   [I-D.draft-mcguinness-oauth-actor-profile]
+              McGuinness, K., "OAuth Actor Profile for Delegation", Work
+              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
+              profile-01, 8 October 2026,
+              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
+              oauth-actor-profile-01>.
+
    [I-D.draft-mcguinness-oauth-client-instance-id]
               McGuinness, K., "Client Instance Identification for
               Attestation-Based Client Authentication", Work in
@@ -13545,6 +13593,11 @@ Table of Contents
               instance-id-00, 28 September 2026,
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-client-instance-id-00>.
+
+   [OpenID.Core]
+              OpenID Foundation, "OpenID Connect Core 1.0 incorporating
+              errata set 2", 2023,
+              <https://openid.net/specs/openid-connect-core-1_0.html>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -13701,13 +13754,6 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-cecchetti-
               oauth-rar-cedar-02>.
 
-   [I-D.draft-ietf-oauth-rar-metadata-remediation]
-              Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
-              Remediation", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-rar-metadata-remediation-00, 23 August 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              rar-metadata-remediation-00>.
-
    [I-D.draft-ietf-oauth-spiffe-client-auth]
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
               S., and N. Cam-Winget, "OAuth SPIFFE Client
@@ -13795,13 +13841,6 @@ Table of Contents
               McGuinness, K., "Mission Substrate Requirements", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-mission-substrate.html>.
-
-   [I-D.draft-mcguinness-oauth-actor-profile]
-              McGuinness, K., "OAuth Actor Profile for Delegation", Work
-              in Progress, Internet-Draft, draft-mcguinness-oauth-actor-
-              profile-01, 8 October 2026,
-              <https://datatracker.ietf.org/doc/html/draft-mcguinness-
-              oauth-actor-profile-01>.
 
    [I-D.draft-mcguinness-oauth-client-attesters]
               McGuinness, K., "OAuth 2.0 Client Attester Endorsement",
@@ -13925,11 +13964,6 @@ Table of Contents
               draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
               2026, <https://datatracker.ietf.org/doc/html/draft-
               niyikiza-oauth-attenuating-agent-tokens-01>.
-
-   [OpenID.Core]
-              OpenID Foundation, "OpenID Connect Core 1.0 incorporating
-              errata set 2", 2023,
-              <https://openid.net/specs/openid-connect-core-1_0.html>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
@@ -14478,9 +14512,9 @@ B.4.  Scope and Future Work
 
    Its reference to the OAuth Actor Profile
    ([I-D.draft-mcguinness-oauth-actor-profile]), for the act chain shape
-   the optional Delegation capability uses, is informative and confined
-   to Delegation, so the mandatory single-domain core does not depend on
-   it.
+   the optional Delegation capability uses, is normative and binds only
+   a deployment that claims Delegation, so the mandatory single-domain
+   core does not depend on it.
 
    The companion Mission Cross-Domain Projection profile
    [I-D.draft-mcguinness-oauth-mission-cross-domain] specifies cross-
@@ -15415,8 +15449,9 @@ Appendix G.  Document History
    klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and draft-
    mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC 3986,
    and draft-mcguinness-oauth-ai-agent-instance are removed; RFC 6750,
-   RFC 9700 and Client Instance ID are normative, and the OAuth Actor
-   Profile informative.
+   RFC 9700, Client Instance ID, OpenID Connect Core, the RAR metadata
+   remediation draft and, for Delegation, the OAuth Actor Profile are
+   normative.
 
    -00
 
@@ -20897,6 +20932,12 @@ Table of Contents
 
                 Table 6: Idempotency claim state resolution
 
+   A duration-lease renewal's claim, which the PDP settles completed
+   when it commits the lease extension, returns the renewal's permit to
+   a retransmission while that permit is valid, instead of
+   duplicate_suppressed (Duration-Lease Renewal in
+   [I-D.draft-mcguinness-mission-metering]).
+
    A different operation identity under the same key is always a
    conflict, never a new execution: an idempotency key identifies one
    intended execution of one normalized request, the same discipline
@@ -22546,6 +22587,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Idempotency: a duration-lease renewal's completed claim returns
+      the renewal's permit to a retransmission while that permit is
+      valid (#1464).
 
    *  Resource Contract: an authority entry can reference, at approval,
       an immutable and versioned resource contract that assembles the
@@ -28129,6 +28174,14 @@ Table of Contents
    |request would broaden|           |                                 |
    |it                   |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Duration-lease       |PDP denial |out_of_authority                 |
+   |renewal names no     |           |                                 |
+   |lease the PDP issued |           |                                 |
+   |or an ended activity,|           |                                 |
+   |or fails continuity  |           |                                 |
+   |with the evaluation  |           |                                 |
+   |it renews            |           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Resource policy      |Obligation |step-up obligation               |
    |requires a stronger  |on permit  |([AUTHZEN-OBL])                  |
    |authentication       |           |                                 |
@@ -28221,7 +28274,13 @@ Table of Contents
    |operation identity   |           |                                 |
    |match a prior        |           |                                 |
    |unresolved or        |           |                                 |
-   |completed claim      |           |                                 |
+   |completed claim,     |           |                                 |
+   |except a             |           |                                 |
+   |retransmitted settled|           |                                 |
+   |duration-lease       |           |                                 |
+   |renewal, which       |           |                                 |
+   |receives its permit  |           |                                 |
+   |while valid          |           |                                 |
    +---------------------+-----------+---------------------------------+
    |Idempotency key      |PDP denial |idempotency_conflict             |
    |reused with a        |           |                                 |
@@ -29143,6 +29202,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure-condition coverage: a duration-lease renewal that names no
+      lease the PDP issued or an ended activity, or fails continuity
+      with the evaluation it renews, is denied out_of_authority; a
+      retransmission of a settled renewal receives that renewal's permit
+      while it is valid, not duplicate_suppressed (#1464).
 
    *  Runtime Denial Classification and Failure-condition coverage: a
       resource contract reference missing where required, or not
