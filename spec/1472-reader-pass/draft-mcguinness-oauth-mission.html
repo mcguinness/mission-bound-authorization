@@ -21,7 +21,8 @@ access token issued under the Mission carries a subset of the approved
 authority and a &quot;mission&quot; claim, and every issuance is gated on the
 Mission's lifecycle state. Revoking a Mission stops further issuance;
 it does not recall tokens already issued, which a resource server
-that enforces from the token alone honors until they expire. 
+that enforces from the token alone can continue to honor until they
+expire. 
        Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
 Mission be honored across trust domains. Runtime enforcement of each
@@ -1113,7 +1114,8 @@ access token issued under the Mission carries a subset of the approved
 authority and a "mission" claim, and every issuance is gated on the
 Mission's lifecycle state. Revoking a Mission stops further issuance;
 it does not recall tokens already issued, which a resource server
-that enforces from the token alone honors until they expire.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+that enforces from the token alone can continue to honor until they
+expire.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
 <p id="section-abstract-3">Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
 Mission be honored across trust domains. Runtime enforcement of each
@@ -9625,7 +9627,7 @@ only where that companion is deployed.<a href="#appendix-A.7-1" class="pilcrow">
               <td class="text-left" rowspan="1" colspan="1">this document</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">08:53:20</td>
+              <td class="text-left" rowspan="1" colspan="1">After revocation; delivery time unspecified</td>
               <td class="text-left" rowspan="1" colspan="1">A receiver learns of the revocation from a Security Event Token</td>
               <td class="text-left" rowspan="1" colspan="1">Mission Signals</td>
             </tr>

@@ -28,7 +28,8 @@ Abstract
    approved authority and a "mission" claim, and every issuance is gated
    on the Mission's lifecycle state.  Revoking a Mission stops further
    issuance; it does not recall tokens already issued, which a resource
-   server that enforces from the token alone honors until they expire.
+   server that enforces from the token alone can continue to honor until
+   they expire.
 
    Optional capabilities represent delegation among agents with the
    OAuth Actor Profile and, as specified by a companion, let a single
@@ -6757,43 +6758,44 @@ A.7.  Timeline
    All times are 2026-11-02 UTC.  The rows marked with a companion occur
    only where that companion is deployed.
 
-      +===========+====================================+===========+
-      | Time      | Event                              | Defined   |
-      |           |                                    | by        |
-      +===========+====================================+===========+
-      | 08:00:00  | alice approves; the AS creates the | this      |
-      |           | Mission                            | document  |
-      +-----------+------------------------------------+-----------+
-      | 08:00:05  | The agent redeems the code; the    | this      |
-      |           | access token expires at 08:05:05   | document  |
-      +-----------+------------------------------------+-----------+
-      | 08:14:00  | The agent refreshes for a write-   | this      |
-      |           | only token                         | document  |
-      +-----------+------------------------------------+-----------+
-      | 08:14:03  | A point-of-use permit for a 423.50 | runtime   |
-      |           | USD posting                        | profile   |
-      |           |                                    | (AuthZEN) |
-      +-----------+------------------------------------+-----------+
-      | 08:20:00, | The Mission is suspended, then     | Mission   |
-      | 08:30:00  | resumed                            | Status    |
-      +-----------+------------------------------------+-----------+
-      | 08:50:00  | The agent refreshes for a read-    | this      |
-      |           | only token that expires at         | document  |
-      |           | 08:55:00                           |           |
-      +-----------+------------------------------------+-----------+
-      | 08:53:20  | The Mission is revoked and         | this      |
-      |           | terminated; later refreshes are    | document  |
-      |           | refused, and introspection reports |           |
-      |           | the read-only token inactive       |           |
-      +-----------+------------------------------------+-----------+
-      | 08:53:20  | A receiver learns of the           | Mission   |
-      |           | revocation from a Security Event   | Signals   |
-      |           | Token                              |           |
-      +-----------+------------------------------------+-----------+
-      | 08:55:00  | The read-only token expires; a     | this      |
-      |           | resource server enforcing from the | document  |
-      |           | token alone stops honoring it      |           |
-      +-----------+------------------------------------+-----------+
+    +===============+====================================+===========+
+    | Time          | Event                              | Defined   |
+    |               |                                    | by        |
+    +===============+====================================+===========+
+    | 08:00:00      | alice approves; the AS creates the | this      |
+    |               | Mission                            | document  |
+    +---------------+------------------------------------+-----------+
+    | 08:00:05      | The agent redeems the code; the    | this      |
+    |               | access token expires at 08:05:05   | document  |
+    +---------------+------------------------------------+-----------+
+    | 08:14:00      | The agent refreshes for a write-   | this      |
+    |               | only token                         | document  |
+    +---------------+------------------------------------+-----------+
+    | 08:14:03      | A point-of-use permit for a 423.50 | runtime   |
+    |               | USD posting                        | profile   |
+    |               |                                    | (AuthZEN) |
+    +---------------+------------------------------------+-----------+
+    | 08:20:00,     | The Mission is suspended, then     | Mission   |
+    | 08:30:00      | resumed                            | Status    |
+    +---------------+------------------------------------+-----------+
+    | 08:50:00      | The agent refreshes for a read-    | this      |
+    |               | only token that expires at         | document  |
+    |               | 08:55:00                           |           |
+    +---------------+------------------------------------+-----------+
+    | 08:53:20      | The Mission is revoked and         | this      |
+    |               | terminated; later refreshes are    | document  |
+    |               | refused, and introspection reports |           |
+    |               | the read-only token inactive       |           |
+    +---------------+------------------------------------+-----------+
+    | After         | A receiver learns of the           | Mission   |
+    | revocation;   | revocation from a Security Event   | Signals   |
+    | delivery time | Token                              |           |
+    | unspecified   |                                    |           |
+    +---------------+------------------------------------+-----------+
+    | 08:55:00      | The read-only token expires; a     | this      |
+    |               | resource server enforcing from the | document  |
+    |               | token alone stops honoring it      |           |
+    +---------------+------------------------------------+-----------+
 
                   Table 11: End-to-end example timeline
 
