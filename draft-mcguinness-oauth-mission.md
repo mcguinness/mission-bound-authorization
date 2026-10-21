@@ -7183,8 +7183,9 @@ Cross-Domain:
 `activation_actor`, and optional `adjudication` (#701): `direct`
 approval is human (#1185), approval activates only authority its
 source holds (#316), and standing-consent bases activate instances at
-their own approval events (#1078). Derivation is mechanical; `purpose`
-and model output only refuse or narrow (#1102). Each grant lineage
+their own approval events (#1078). Derivation is mechanical.
+`purpose` selects configured mappings; its other uses, and model
+output, only refuse or narrow (#1102). Each grant lineage
 binds to one Mission, never through consent reuse (#700, #1259).
 Authority is type-agnostic, with scope projection; opaque tokens use
 introspection or issuer-local resolution (#1203). Submission
@@ -7205,8 +7206,9 @@ Metering's Intent members; and Approval Governance's assertion rules.
 **Security and privacy.** Delegation hardening and no authority from
 an entry a resource server cannot fully enforce (#1258); Approver
 authentication kept off derived tokens and out of OpenID Connect
-results for another Subject (#826); no held credential for a Mission's
-task (#1205); refresh tokens bound per client type (#1204);
+results for another Subject (#826); task credentials that are
+Mission-bound or covered by a trusted enforcement path (#1205);
+refresh tokens bound per client type (#1204);
 issuer-checked Mission resolution (#725); third-party data subjects
 (#344); key retention to the audit horizon.
 
