@@ -29,11 +29,10 @@ author:
 normative:
   RFC3339:
   RFC3986:
-  RFC6750:
+  RFC5890:
   RFC8259:
-  RFC8693:
-  RFC8707:
   RFC8785:
+  RFC9110:
   RFC9396:
   RFC9728:
   ISO4217:
@@ -69,7 +68,9 @@ normative:
     date: 2026
 
 informative:
+  RFC6750:
   RFC8126:
+  RFC8693:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   MCP:
     title: "Model Context Protocol: Authorization"
@@ -135,8 +136,8 @@ Mission's Authority Set as one or more {{RFC9396}}
 `authorization_details` entries, of any type the authorization server
 supports. It derives, commits, and gates entries of every type the same
 way, and leaves each type's comparison and transformation semantics to
-the specification that defines the type, as {{Section 2 of RFC9396}}
-permits.
+the specification that defines the type, since an entry's `type`
+determines its allowable contents ({{Section 2 of RFC9396}}).
 
 This document is that specification for one type,
 `mission_resource_access`. It defines:
@@ -187,8 +188,7 @@ these members:
 
 `resource`:
 : REQUIRED. A string. The resource the entry applies to: an absolute URI
-  compared with the target of an operation ({{resource-matching}}), the
-  same kind of identifier as the {{RFC8707}} `resource` value.
+  compared with the target of an operation ({{resource-matching}}).
 
   - A per-entry `resource`, which {{RFC9396}} permits, lets one token
     scope distinct authority to distinct resources; a Mission-bound
@@ -362,7 +362,8 @@ The authorization server also refuses an entry with the
 - its `resource` is not an `absolute-URI` ({{Section 4.3 of RFC3986}}),
   so no entry's `resource` carries a fragment component;
 - its `resource` is an `http` or `https` URI without the `//` authority
-  form naming a non-empty host;
+  form naming a non-empty host ({{Section 4.2.1 of RFC9110}},
+  {{Section 4.2.2 of RFC9110}});
 - its `actions` array is empty, or one of its values is neither an
   action identifier nor an action family ({{resource-access-type}});
 - its `delegation.max_depth` is not a non-negative integer, so a
@@ -379,7 +380,8 @@ The authorization server also refuses an entry with the
   form, with each internationalized label in its A-label form, or ends
   in a dot.
 
-Letter case does not make a `recipient_domain` invalid; values compare
+An A-label is as {{Section 2.3.2.1 of RFC5890}} defines it. Letter case
+does not make a `recipient_domain` invalid; values compare
 case-insensitively ({{value-space-comparison}}).
 
 The following values are valid and carry a defined meaning:
