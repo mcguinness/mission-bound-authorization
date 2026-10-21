@@ -9154,9 +9154,15 @@
      "name": "a dispatched instance's token is sender-constrained at introspection too (@spec mission-template#grant-type, mission#introspection, #825 D402) > answers a dispatched token re-signed without cnf with a bare active:false, while the token as issued introspects active as DPoP",
      "level": "endpoint",
      "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > introspects the delegated token and the designation minted before the restart bare inactive while the Mission is active",
+     "level": "endpoint",
+     "surface": "introspection"
     }
    ],
-   "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Dispatch request and response, and its Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token."
+   "notes": "#825 acceptance item 7 (D402): introspection and the resource read the Mission access-token profile with one reader, readMissionAccessProfile in @mission/core (the typed claim set and its clock bounds, the `mission` claim's members, the authority through parseCredentialAuthority, a present `act` through the Actor Profile's validateActChain (#904, D428), and `cnf` structure through parseConfirmation), and run one negative-vector list, @mission/core/test-vectors. Each adds only its own rule: the resource requires the DPoP key it proves possession of; introspection requires `cnf` where the token's profile requires sender constraint and never proves possession, as Composite Active State says. The authority read only gates; the projection still reads the raw entries, delegation and capability bindings included. Sender constraint is required where a draft requires it of the issued token: a delegated token (the OAuth binding's Delegation section), a Child Mission's token (child-delegation, Attenuation Rules) and a dispatched template instance's token (the Template's Dispatch request and response, and its Dispatch Handoff), identified by the record's template basis. The Child Mission case stubs the kernel read; the dispatch case re-signs a real dispatched token. #250: a delegated token minted before a restart, whose issuance record the restart lost, is correctly signed under the key ring and introspects bare inactive while its Mission is active, where it introspected active before the restart. Proven by disabling the code it covers: reading a missing issuance record as the Mission's approval grant answers it active."
   },
   {
    "id": "core.introspection.caller-authentication",
@@ -9462,9 +9468,15 @@
      "name": "constructDelegatedIssuance — authority narrowing + empty-result refusal (@spec per-entry-enforcement, empty-result) > refuses with invalid_target when the depth cannot be established (@spec mission#delegation-constraints)",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > refuses to designate the origin token or the delegated token minted before the restart invalid_target: depth is not established, nothing issued or counted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: treating a lost record as depth 0, or skipping the chain-to-`act` match, each fails its witness."
+   "notes": "#869 (D449): proven by disabling the code it covers: treating a lost record as depth 0, or skipping the chain-to-`act` match, each fails its witness. #250: a restart on the file-backed kernel with a key ring loses the accounting while every earlier token still verifies; designating an origin or a delegated token minted before the restart is refused invalid_target with nothing issued or counted, where the same requests succeeded before the restart in the same run. Proven by disabling the code it covers: reading a missing record as depth 0 fails the origin leg, and inferring the accounting from the presented `act` fails the delegated leg."
   },
   {
    "id": "core.delegation.designation-only-subject-token",
@@ -9499,7 +9511,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses."
+   "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses. #250: by the owner's review of #1488, the restart witness's refused redemption is not cited here. It presents a designation this AS issued to the client it names, so it shows the deployment's per-boot restart policy, not this row's refusal of another token kind or recipient; the restart inventory in src/docs/control-plane-deployment.md records it."
   },
   {
    "id": "core.delegation.redemption-evaluated-afresh",
@@ -9971,16 +9983,22 @@
     "normative": "introspecting a designation returns active: false with no mission member, to every caller"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
      "name": "a designation authorizes no resource access (@spec mission#designation, mission#composite-active) > introspection reports a designation inactive with no Mission data, even to a resource server that starts accepting the designated client's identifier during its life",
      "level": "endpoint",
      "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-accounting-restart.test.ts",
+     "name": "delegation accounting across a restart on the same kernel file and key ring (@spec mission#delegation-constraints, #869, #250) > keeps a designation minted before the restart bare inactive, with no Mission data, once its Mission is not active, to a resource server it is not an audience of: audience separation",
+     "level": "endpoint",
+     "surface": "introspection"
     }
    ],
-   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active."
+   "notes": "#869 (D449): proven by disabling the code it covers: without the check, a resource server that starts accepting the designated client's identifier during the designation's life is told it is active. Partial (#250): the designation check reads the token issuance index, which is per boot, so it does not survive a restart. On the file-backed kernel with a key ring, a designation minted before the restart stays bare inactive to a resource server it is not an audience of, through the missing issuance record while its Mission is active and through caller visibility (audience separation) once it is not; disabling the caller-visibility check fails that witness. Not met across a restart: once the Mission is not active, a caller that accepts the designated client's identifier, which audience separation forbids, receives the Mission member (delegation-accounting-restart.test.ts, the residual test, pinned; before the restart the same request answers bare inactive). Keeping the accounting with the provider's tokens, or a designation marker the AS can read from the token itself, would close it."
   },
   {
    "id": "core.introspection.opaque-requires-introspection",
