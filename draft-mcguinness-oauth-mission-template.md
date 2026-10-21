@@ -609,8 +609,8 @@ template's anchor are never merged.
 
 A Mission Template has its own lifecycle, distinct from the Mission
 lifecycle of the Missions it dispatches
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-and Gating"). A template is in one of three states:
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle"). A
+template is in one of three states:
 
 - `active`: the template dispatches, subject to its bounds and review
   cadence;
