@@ -35,7 +35,7 @@
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { openStore } from "@mission/store";
-import { decodeJwt } from "jose";
+import { createRemoteJWKSet, decodeJwt } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type AuthorityEntry,
@@ -62,6 +62,7 @@ import {
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { verifyStatusResponse } from "./discharge-consumer.helper.js";
 
 const ISS = "https://as.discharge.test";
 const RES = "https://payments.test/mcp";
@@ -1190,6 +1191,59 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await divergent.json()).toMatchObject({ error: "invalid_request", nonce: body.nonce });
     // The original response is still replayable (first writer wins).
     expect(await (await lifecycle(record.id, body)).text()).toBe(firstJws);
+  });
+
+  it("replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)", async () => {
+    const record = approveOnAs();
+    const body = dischargeBody(record);
+    const first = await lifecycle(record.id, body);
+    expect(first.status).toBe(200);
+    const [headerB64, payloadB64] = (await first.text()).split(".") as [string, string];
+    const enc = (v: unknown) => Buffer.from(JSON.stringify(v), "utf8").toString("base64url");
+    const current = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as Record<string, unknown>;
+    const { new_version: newVersion, ...result } = current.discharge_result as Record<string, unknown>;
+    expect(newVersion).toBe(2);
+    // The envelope the AS signed for this exchange before the migration: the
+    // same header and observation, its Discharge Result naming the
+    // after-commit version `current_version`. It is the response retained
+    // under this nonce, as the store keeps it.
+    const legacyResult = { ...result, current_version: newVersion };
+    const signingInput = `${headerB64}.${enc({ ...current, discharge_result: legacyResult })}`;
+    const legacyJws = `${signingInput}.${as.kernel.statusSigner().sign(signingInput).toString("base64url")}`;
+    const retained = as.kernel.db
+      .prepare("UPDATE lifecycle_responses SET body = ? WHERE mission_id = ? AND nonce = ? AND state = 'final'")
+      .run(legacyJws, record.id, body.nonce);
+    expect(retained.changes).toBe(1);
+
+    // A retransmission is answered with those exact bytes: never re-signed,
+    // never rewritten into the current member name, and nothing re-executed.
+    const retransmit = await lifecycle(record.id, body);
+    expect(retransmit.status).toBe(200);
+    const replayed = await retransmit.text();
+    expect(replayed).toBe(legacyJws);
+    expect(as.kernel.get(record.id)?.version).toBe(2);
+
+    // The bytes verify under the AS's published key, by the Status consumer
+    // procedure, with `current_version` as signed.
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+    const opts = {
+      keys: createRemoteJWKSet(new URL(`${ISSUER}/jwks`)),
+      algs: meta.mission_status_signing_alg_values_supported as string[],
+      issuer: ISSUER,
+      audience: "svc:console",
+      nonce: body.nonce as string,
+      missionId: record.id,
+      now: Math.floor(Date.now() / 1000),
+    };
+    const verified = await verifyStatusResponse(replayed, opts);
+    expect(verified.discharge_result).toEqual({ ...result, prior_version: 1, current_version: 2 });
+    expect(verified.discharge_result).not.toHaveProperty("new_version");
+    // Normalizing first breaks the signature: the same payload rewritten to
+    // `new_version` under the retained signature does not verify.
+    const signature = replayed.split(".")[2];
+    await expect(
+      verifyStatusResponse(`${headerB64}.${enc({ ...current, discharge_result: { ...result, new_version: 2 } })}.${signature}`, opts),
+    ).rejects.toMatchObject({ check: "signature" });
   });
 
   it("replays the event under a NEW nonce as a fresh envelope carrying the original versions", async () => {
