@@ -28308,7 +28308,42 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#1464 (D606). Mutations: claiming a renewal with the plain operation identity turns three of the four conflicts into duplicate_suppressed; committing the lease before the claim extends the activity once per concurrent duplicate; skipping the lease commit for a keyed renewal fails the permitted renewal. A renewal's claim row has no Execution Evidence to settle it, so it ages to unresolved and then indeterminate. Out of scope (D606): max_duration accumulation, the measured_duration commit and settlement; no reference PEP renews a lease."
+   "notes": "#1464 (D606). Mutations: claiming a renewal with the plain operation identity turns three of the four conflicts into duplicate_suppressed; committing the lease before the claim extends the activity once per concurrent duplicate; skipping the lease commit for a keyed renewal fails the permitted renewal. The PDP settles the renewal's claim itself (metering.lease-renewal.claim-settles-at-lease-commit). Out of scope (D606): max_duration accumulation, the measured_duration commit and settlement; no reference PEP renews a lease."
+  },
+  {
+   "id": "metering.lease-renewal.claim-settles-at-lease-commit",
+   "spec": "draft-mcguinness-mission-metering.md",
+   "anchor": "lease-renewal",
+   "text": "A renewal's idempotency claim settles when the PDP commits the lease extension, and no Execution Evidence is expected for it.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a keyed renewal's idempotency claim is settled by the PDP when it commits the lease extension, with no Execution Evidence: it never ages to unresolved or indeterminate and raises no operator alert, while an unsettled claim beside it does",
+    "local": "the claim settles completed under the outcome lease_extended in the transaction that persists the decision (LEASE_EXTENSION_OUTCOME, services/pdp/src/idempotency-claims.ts); its stored permit still answers a retransmission while valid, and a lease commit that fails releases the claim so a retry under the same key renews once"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > the renewal's claim settles completed with no Execution Evidence, never ages to unresolved or indeterminate, raises no operator alert, and its retransmission returns the same permit without extending the lease again",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a keyed renewal's claim settles when the PDP commits the lease extension (@spec metering#lease-renewal, runtime#idempotency, #1464) > a lease commit that fails releases the renewal's claim, so the retry under the same key renews once instead of meeting a held claim",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1464 (D606). Mutations: persisting a renewal's decision without settling it puts the renewal on the unresolved list (and later the operator alert); dropping the settled renewal from the retransmittable rows turns both retransmission witnesses into a denial; not releasing the claim when the lease commit fails leaves the retry duplicate_suppressed."
   },
   {
    "id": "metering.lease-renewal.resource-side-identity-unchanged",
