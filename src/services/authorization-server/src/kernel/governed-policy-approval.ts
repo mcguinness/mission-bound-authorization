@@ -65,6 +65,7 @@ import {
 } from "./capability-binding.js";
 import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
 import { recheckDirectApprovalRecord } from "./direct-approval-record.js";
+import { recheckDrawdownApprovalRecord } from "./drawdown-approval-record.js";
 import { inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { inheritOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
@@ -1415,6 +1416,8 @@ export function recheckApprovalGovernanceRecord(
   if (mission.approval_basis.type === "direct") {
     return recheckDirectApprovalRecord(kernel.directApprovalRecords, kernel.sourceBindings.get(missionId), mission, record);
   }
+  // A recorded ceiling drawdown replays its decision, gate and recency (#1470 slice 2).
+  if (mission.approval_basis.type === "ceiling_drawdown") return recheckDrawdownApprovalRecord(kernel, mission, record);
   const activation = kernel.governedPolicyConsents.activation(missionId);
   if (mission.approval_basis.type !== "governed_policy" || !activation) {
     return no(4, "no recorded inputs to replay");
