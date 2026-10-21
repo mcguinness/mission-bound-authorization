@@ -16127,8 +16127,21 @@
      "name": "Operation Profile resolution and drift (@spec txn-authorization#resource-challenge) > completes a workflow admitted under a superseded version, and refuses new challenges naming it",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow completes under the version declared for its resource and type, never under the current one",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow keeps no recorded version, and with no binding declared for its resource and type its completion is refused terminally, never read under the current version",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
-   ]
+   ],
+   "notes": "#249 store upgrade: a workflow store file created before Operation Profile versions were recorded is migrated in place (the nullable profile_version column, added once, never backfilled). A workflow admitted before the upgrade keeps no recorded version and completes only under the retained version the deployment declares for its (iss, type) (OperationProfileRegistry.bindLegacyType), never under the current one; with none declared its completion is refused terminally. Proved by reading such a workflow under the current version, and by not marking the refusal terminal. Coverage stays partial as before: the retention bound across a deployment's retirement of a version is not witnessed."
   },
   {
    "id": "txn-authorization.challenge.contract-reference-names-version",
@@ -16189,9 +16202,21 @@
      "name": "the Transaction Authorization Server resolves the Operation Profile version from the reference, never from type (@spec txn-authorization#resource-challenge, #249) > admits an entry without a reference under the resource's current version, records it, and completes under it after a later version supersedes it",
      "level": "unit",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopened by this store, the file admits a new workflow, which records the version it was admitted under",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > reopening the upgraded file again changes nothing: one profile_version column, the earlier workflow still unversioned, a later one still versioned",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The registry is keyed on the Operation Profile version, never on the entry's type: a workflow records the version it was admitted under (txn_workflows.profile_version) and completes under it after a later version of the same type supersedes it. Proved by completing under the current version instead of the recorded one."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The registry is keyed on the Operation Profile version, never on the entry's type: a workflow records the version it was admitted under (txn_workflows.profile_version) and completes under it after a later version of the same type supersedes it. Proved by completing under the current version instead of the recorded one. A store file created before versions were recorded is migrated in place on open, idempotently, so a new admission records its version there too; rows admitted before the migration stay unversioned. Proved by skipping the migration and by a migration that redoes itself on every open."
   },
   {
    "id": "txn-authorization.redemption.subject-token-audience-pop",
@@ -20322,7 +20347,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none in the shipped deployment) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -43601,7 +43626,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. The shipped declaration requires none, so the endpoint witness configures one that does. Proved by not recording it."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
