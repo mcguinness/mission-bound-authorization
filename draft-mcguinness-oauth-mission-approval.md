@@ -371,10 +371,10 @@ human decision, so step 3 of {{deferred-sequencing}} does not apply:
 as under any standing-consent basis, the standing consent and the
 policy's adjudication supply the Approver's authentication,
 authorization, and consent ({{I-D.draft-mcguinness-oauth-mission}},
-Section "Mission Approval"). The creation commit of step 4 runs at
-the policy's decision, under that basis's activation checks and with
-its Approval Governance Record, and keeps the effective-expiry
-recheck.
+Section "Standing-Consent Instances"). The creation commit of
+step 4 runs at the policy's decision, under that basis's activation
+checks and with its Approval Governance Record, and keeps the
+effective-expiry recheck.
 
 Nothing else about the deferral changes. Polling, cancellation,
 client binding, and token delivery follow the deferred substrate and

@@ -407,7 +407,7 @@ match against the Mission record
   Mission at or past its `expires_at` is `terminated` with reason
   `expired` for this match and in its summary, whether or not that
   transition was persisted ({{I-D.draft-mcguinness-oauth-mission}},
-  Section "Mission Lifecycle and Gating").
+  Section "Mission Lifecycle").
   The AS MUST NOT refuse a filter for carrying a state value it does
   not produce; such a value matches no Mission, except that, for a
   transition period, `revoked`, `expired`, `completed`, `superseded`,
