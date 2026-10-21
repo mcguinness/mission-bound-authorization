@@ -8,11 +8,13 @@ import {
   AGR_JWS_CTY,
   AGR_JWS_TYP,
   type ApprovalGovernanceRecord,
+  approvalGovernanceRecordDigest,
   assertGovernedPolicyRecord,
   type AuthorityEntry,
   type AuthoritySourceCatalog,
   type CapabilitySourceResolver,
   eligibleGovernedPolicyConsents,
+  evaluateGovernedPolicyRules,
   type GovernedActivation,
   type GovernedPolicyApprovalConfig,
   GovernedPolicyConfigError,
@@ -24,10 +26,12 @@ import {
   mintActivationPolicyRef,
   parseGovernedPolicyRoot,
   previewGovernedActivation,
+  recheckApprovalGovernanceRecord,
   recheckGovernedActivation,
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
+  signApprovalGovernanceRecord,
   type UnsignedApprovalGovernanceRecord,
   validateMissionIntent,
   verifyApprovalGovernanceRecord,
@@ -344,9 +348,18 @@ describe("governed policy root and record (@spec approval-governance#governed-po
       edit(copy.assertions[0] as never);
       return copy;
     };
+    // A human or service assertion in its place fails the accountable-approver
+    // rule itself, even with an authority valid for its own kind that also
+    // carries the deciding policy's members.
     for (const bad of [
-      variant((a) => (a.kind = "human")),
-      variant((a) => (a.kind = "service")),
+      variant((a) => Object.assign(a, { kind: "human", authority: { ...a.authority, auth_time: iso(T0) } })),
+      variant((a) =>
+        Object.assign(a, { kind: "service", authority: { ...a.authority, logic_id: "risk-model", logic_version: "3" } }),
+      ),
+    ]) {
+      expect(() => assertGovernedPolicyRecord(bad, basis)).toThrow(/exactly one approve assertion of kind policy/);
+    }
+    for (const bad of [
       variant((a) => (a.principal = { iss: ISS, sub: "bob" })),
       variant((a) => (a.authority.policy_id = "urn:policy:other")),
       variant((a) => (a.authority.version = "2")),
@@ -668,6 +681,27 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(outcome(() => activate(excepted, c.consent_id, { proposedAuthority: [readEntry()] }))).toBe("activated");
   });
 
+  it("never lets an exception lengthen its class's recency ceiling: the smaller of the two applies", () => {
+    const ceiling = [readEntry(), executeEntry()];
+    const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
+    const kernel = makeKernel({
+      doc: rootDoc({
+        authority_ceiling: ceiling,
+        recency: {
+          ceilings: { default: 30 * 86400, irreversible_action: 300 },
+          clock_skew_s: 60,
+          exceptions: { irreversible_action: { max_age_s: 600 } },
+        },
+      }),
+    });
+    const c = consent(kernel);
+    clockMs = T0 + 299_000;
+    expect(outcome(() => activate(kernel, c.consent_id, { proposedAuthority: proposal }))).toBe("activated");
+    // Older than the class ceiling but within the exception's looser age: refused.
+    clockMs = T0 + 301_000;
+    expect(outcome(() => activate(kernel, c.consent_id, { proposedAuthority: proposal }))).toBe("recency_exceeded");
+  });
+
   it("re-checks against the capability resolution retained at activation, while a new activation resolves current trusted state", () => {
     const digestA = `sha-256:${createHash("sha256").update("definition A").digest("base64url")}`;
     const digestB = `sha-256:${createHash("sha256").update("definition B").digest("base64url")}`;
@@ -774,7 +808,7 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
       kind: "service",
       decision: "approve",
       decided_at: mission.created_at,
-      authority: { model_id: "risk-model", model_version: "3" },
+      authority: { logic_id: "risk-model", logic_version: "3", model_id: "risk-model", model_version: "3" },
       reason: "narrowed",
     });
     expect(record.evaluation.contributing).toEqual(["ast_policy", "ast_model_1"]);
@@ -805,6 +839,49 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     const { record } = activate(kernel, c.consent_id, { approvalEventId: "ape-a", modelOutputs: [bindingOnly] });
     expect(record.approval_event_id).toBe("ape-a");
     expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
+  });
+
+  it("does not count an assertion bound to another Intent under the same approval event and Authority Set", () => {
+    const MODEL = { id: "risk-model", version: "3" };
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-i", intent: intent(), clientId: "svc-agent" });
+    const captured: RecordedModelOutput = { model: MODEL, ...view, verdict: "no_objection" };
+    const { authority: _drop, ...bindingOnly } = captured as RecordedModelOutput & { authority?: unknown };
+    const otherIntent = { ...bindingOnly, intent_hash: "sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU" };
+    expect(outcome(() => activate(kernel, c.consent_id, { approvalEventId: "ape-i", modelOutputs: [otherIntent] }))).toBe(
+      "policy_refused",
+    );
+    nothingCommitted(kernel);
+    const { record } = activate(kernel, c.consent_id, { approvalEventId: "ape-i", modelOutputs: [bindingOnly] });
+    expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
+  });
+
+  it("binds a narrowing model output to the Authority Set it evaluated, which the issuer records with the activation's inputs", () => {
+    const MODEL = { id: "risk-model", version: "3" };
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-n", intent: intent(), clientId: "svc-agent" });
+    const output: RecordedModelOutput = {
+      model: MODEL,
+      approval_event_id: view.approval_event_id,
+      intent_hash: view.intent_hash,
+      authority_hash: view.authority_hash,
+      verdict: "no_objection",
+      remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }],
+    };
+    const { mission, record } = activate(kernel, c.consent_id, { approvalEventId: "ape-n", modelOutputs: [output] });
+    // Counted, though bound to the set it evaluated rather than the narrowed result.
+    expect(record.assertions.map((a) => a.assertion_id)).toEqual(["ast_policy", "ast_model_1"]);
+    expect(mission.authority_hash).not.toBe(output.authority_hash);
+    expect(record.mission.authority_hash).toBe(mission.authority_hash);
+    // The issuer records that set with the activation's inputs, and the committed set lies within it.
+    const retained = kernel.governedPolicyConsents.activation(mission.id);
+    if (!retained) throw new Error("no retained activation");
+    expect(authorityHash(ISS, retained.inputs.authority as never)).toBe(output.authority_hash);
+    const pairs = (set: AuthorityEntry[]) => set.flatMap((e) => e.actions.map((a) => `${e.resource} ${a}`));
+    const evaluated = new Set(pairs(retained.inputs.authority));
+    expect(pairs(mission.authority_set).every((p) => evaluated.has(p))).toBe(true);
   });
 
   it("leaves no Mission, no record, and no retained inputs when signing or persistence fails", () => {
@@ -843,6 +920,269 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
   });
 });
 
+describe("re-checking an evaluation (@spec approval-governance#re-check)", () => {
+  const MODEL = { id: "risk-model", version: "3" };
+  const recheck = (kernel: MissionKernel, missionId: string) =>
+    recheckApprovalGovernanceRecord(kernel, missionId, { resolveKey: resolveKey(kernel) });
+
+  /** Re-sign the committed record with `edit` applied: a record that verifies but says something else. */
+  const resign = (kernel: MissionKernel, missionId: string, edit: (r: UnsignedApprovalGovernanceRecord) => void) => {
+    const { envelope: _drop, ...unsigned } = kernel.governanceRecords.forMission(missionId) as ApprovalGovernanceRecord;
+    const copy = structuredClone(unsigned);
+    edit(copy);
+    const signed = signApprovalGovernanceRecord(copy, kernel.statusSigner());
+    kernel.db
+      .prepare("UPDATE approval_governance_records SET record_json = ?, record_digest = ? WHERE mission_id = ?")
+      .run(JSON.stringify(signed), approvalGovernanceRecordDigest(signed), missionId);
+  };
+
+  const evaluatorKernel = () => {
+    const registry: Record<string, RegisteredActivationPolicy> = {
+      [EVAL_ID]: { version: "e1", content_type: "application/json", content: JSON.stringify({ max_entries: 3 }) },
+    };
+    const kernel = makeKernel({ doc: evaluatorRoot(mintActivationPolicyRef(ISS, registry, EVAL_ID, "e1")), activationPolicies: registry });
+    return { kernel, mission: activate(kernel, consent(kernel).consent_id).mission };
+  };
+
+  /** A Mission one model output narrowed from the set it evaluated. */
+  const narrowedByModel = () => {
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-r", intent: intent(), clientId: "svc-agent" });
+    const output: RecordedModelOutput = {
+      model: MODEL,
+      approval_event_id: view.approval_event_id,
+      intent_hash: view.intent_hash,
+      authority_hash: view.authority_hash,
+      verdict: "no_objection",
+      remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }],
+    };
+    return { kernel, mission: activate(kernel, c.consent_id, { approvalEventId: "ape-r", modelOutputs: [output] }).mission };
+  };
+
+  it("re-checks a committed record from retained evidence, whether the root, its evaluator, or the root with a narrowing model output decided", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    clockMs = T0 + 60_000;
+    expect(recheck(kernel, activate(kernel, c.consent_id).mission.id)).toEqual({ rechecked: true });
+    const byEval = evaluatorKernel();
+    expect(recheck(byEval.kernel, byEval.mission.id)).toEqual({ rechecked: true });
+    const byModel = narrowedByModel();
+    expect(byModel.mission.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    expect(recheck(byModel.kernel, byModel.mission.id)).toEqual({ rechecked: true });
+    // No committed record, nothing to re-check.
+    expect(recheck(kernel, "mis_none")).toEqual({ rechecked: false, step: 1, reason: "no committed record" });
+  });
+
+  it("step 1: refuses a record that does not verify, or is not bound to the Mission it is retained with", () => {
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    expect(recheckApprovalGovernanceRecord(kernel, mission.id, { resolveKey: () => undefined })).toMatchObject({ rechecked: false, step: 1 });
+    resign(kernel, mission.id, (r) => {
+      r.mission.intent_hash = "sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU";
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 1 });
+    kernel.db
+      .prepare("UPDATE approval_governance_records SET record_json = json_set(record_json, '$.evaluation.evaluated_at', ?)")
+      .run(iso(T0 + 1));
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "record differs from its signed payload" });
+  });
+
+  it("step 2: refuses when the retained root snapshot is missing or does not reproduce approval_policy.digest", () => {
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    kernel.db
+      .prepare("UPDATE governed_policy_roots SET content = ?")
+      .run(Buffer.from(JSON.stringify(rootDoc({ rules: { max_entries: 99 } })), "utf8"));
+    expect(recheck(kernel, mission.id)).toEqual({
+      rechecked: false,
+      step: 2,
+      reason: "the retained root snapshot does not reproduce approval_policy.digest",
+    });
+    const gone = makeKernel();
+    const g = activate(gone, consent(gone).consent_id).mission;
+    gone.db.prepare("DELETE FROM governed_policy_roots").run();
+    expect(recheck(gone, g.id)).toEqual({ rechecked: false, step: 2, reason: "the root snapshot the record names is not retained" });
+  });
+
+  it("step 3: refuses an evaluator snapshot that is missing or does not verify, and a recorded deciding policy the root does not name", () => {
+    const missing = evaluatorKernel();
+    missing.kernel.db.prepare("DELETE FROM activation_policy_snapshots").run();
+    expect(recheck(missing.kernel, missing.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the retained evaluator snapshot does not verify",
+    });
+    const byEval = evaluatorKernel();
+    byEval.kernel.db.prepare("UPDATE activation_policy_snapshots SET content = ?").run(Buffer.from(JSON.stringify({ max_entries: 9 }), "utf8"));
+    expect(recheck(byEval.kernel, byEval.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the retained evaluator snapshot does not verify",
+    });
+    const renamed = evaluatorKernel();
+    renamed.kernel.db.prepare("UPDATE governed_policy_activations SET deciding_json = json_set(deciding_json, '$.version', 'e2')").run();
+    expect(recheck(renamed.kernel, renamed.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the recorded deciding policy is not the evaluator the root commits",
+    });
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    kernel.db
+      .prepare("UPDATE governed_policy_activations SET deciding_json = json_set(deciding_json, '$.digest', ?)")
+      .run(activationPolicyDigest(ISS, held(rootDoc())));
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 3, reason: "the recorded deciding policy is not the root" });
+  });
+
+  it("step 4: refuses missing inputs, an input not bound to this event, Intent and evaluated set, and a contributing service assertion matching no input", () => {
+    const noInputs = narrowedByModel();
+    noInputs.kernel.db.prepare("DELETE FROM governed_policy_activations").run();
+    expect(recheck(noInputs.kernel, noInputs.mission.id)).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
+    // The inputs as a whole carry the event and Intent, with no model output to carry them.
+    const unbound = { rechecked: false, step: 4, reason: "the recorded inputs are not bound to this approval event and Intent" };
+    const otherActivation = makeKernel();
+    const oa = activate(otherActivation, consent(otherActivation).consent_id).mission;
+    otherActivation.db.prepare("UPDATE governed_policy_activations SET approval_event_id = 'ape-other'").run();
+    expect(recheck(otherActivation, oa.id)).toEqual(unbound);
+    const otherIntent = makeKernel();
+    const oi = activate(otherIntent, consent(otherIntent).consent_id).mission;
+    otherIntent.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.intent_hash', ?)")
+      .run("sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
+    expect(recheck(otherIntent, oi.id)).toEqual(unbound);
+    const rebound = narrowedByModel();
+    rebound.kernel.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.model_outputs[0].intent_hash', ?)")
+      .run("sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
+    expect(recheck(rebound.kernel, rebound.mission.id)).toMatchObject({ rechecked: false, step: 4 });
+    const otherEvent = narrowedByModel();
+    otherEvent.kernel.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.model_outputs[0].approval_event_id', 'ape-other')")
+      .run();
+    expect(recheck(otherEvent.kernel, otherEvent.mission.id)).toMatchObject({ rechecked: false, step: 4 });
+    // The set recorded as evaluated is what the output is bound to.
+    const reset = narrowedByModel();
+    reset.kernel.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.authority', json(?))")
+      .run(JSON.stringify([readEntry(["payments:invoice.list", "payments:invoice.read"])]));
+    expect(recheck(reset.kernel, reset.mission.id)).toMatchObject({ rechecked: false, step: 4 });
+    const unmatched = narrowedByModel();
+    resign(unmatched.kernel, unmatched.mission.id, (r) => {
+      const svc = r.assertions.find((a) => a.kind === "service") as { authority: { model_version: string } };
+      svc.authority.model_version = "4";
+    });
+    expect(recheck(unmatched.kernel, unmatched.mission.id)).toEqual({
+      rechecked: false,
+      step: 4,
+      reason: "service assertion ast_model_1 matches no recorded input",
+    });
+  });
+
+  it("step 5: refuses a replay that does not approve, approves another Authority Set, or counts other than contributing", () => {
+    const denied = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, require_purpose: true } }) });
+    const d = activate(denied, consent(denied).consent_id, { intent: intent({ purpose: "Quarter-end close" }) }).mission;
+    denied.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.purpose_present', json('false'))")
+      .run();
+    expect(recheck(denied, d.id)).toEqual({ rechecked: false, step: 5, reason: "the replay does not approve" });
+    const other = makeKernel();
+    const o = activate(other, consent(other).consent_id).mission;
+    other.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.authority', json(?))")
+      .run(JSON.stringify([readEntry(["payments:invoice.read"])]));
+    expect(recheck(other, o.id)).toEqual({ rechecked: false, step: 5, reason: "the replay approves a different Authority Set" });
+    // The model output counts toward the approval; a record omitting it from contributing is not the replay's.
+    const uncounted = narrowedByModel();
+    resign(uncounted.kernel, uncounted.mission.id, (r) => {
+      r.evaluation.contributing = ["ast_policy"];
+    });
+    expect(recheck(uncounted.kernel, uncounted.mission.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "contributing is not the set the replay counts",
+    });
+    // The replay, not the record, sets what is counted: removing a counted
+    // assertion together with its contributing entry is refused.
+    const unrecorded = narrowedByModel();
+    resign(unrecorded.kernel, unrecorded.mission.id, (r) => {
+      r.assertions = r.assertions.filter((a) => a.kind !== "service");
+      r.evaluation.contributing = ["ast_policy"];
+    });
+    expect(recheck(unrecorded.kernel, unrecorded.mission.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "model output risk-model@3 has no single recorded service assertion",
+    });
+    const unaccountable = narrowedByModel();
+    resign(unaccountable.kernel, unaccountable.mission.id, (r) => {
+      r.assertions = r.assertions.filter((a) => a.kind !== "policy");
+      r.evaluation.contributing = ["ast_model_1"];
+    });
+    expect(recheck(unaccountable.kernel, unaccountable.mission.id)).toMatchObject({ rechecked: false, step: 5 });
+    const empty = makeKernel();
+    const e = activate(empty, consent(empty).consent_id).mission;
+    resign(empty, e.id, (r) => {
+      r.assertions = [];
+      r.evaluation.contributing = [];
+    });
+    expect(recheck(empty, e.id)).toMatchObject({ rechecked: false, step: 5 });
+    // The accountable approval is the consent the Mission records, not a fresher one the record claims.
+    const fresher = makeKernel();
+    const f = activate(fresher, consent(fresher).consent_id).mission;
+    resign(fresher, f.id, (r) => {
+      (r.assertions[0] as { authority: { approved_at: string } }).authority.approved_at = iso(T0 + 1000);
+    });
+    expect(recheck(fresher, f.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "governed_policy record: the accountable assertion's approved_at is not approval_basis.approved_at",
+    });
+  });
+
+  it("step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, c.consent_id);
+    // Older than the 30-day default ceiling at the recorded evaluation instant.
+    resign(kernel, mission.id, (r) => {
+      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
+    // Decided after the recorded evaluation instant, beyond the skew.
+    resign(kernel, mission.id, (r) => {
+      r.evaluation.evaluated_at = iso(T0 - 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
+    // Removing every assertion does not leave the aged approval unchecked.
+    resign(kernel, mission.id, (r) => {
+      r.assertions = [];
+      r.evaluation.contributing = [];
+      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false });
+
+    const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
+    const excepted = makeKernel({
+      doc: rootDoc({
+        authority_ceiling: [readEntry(), executeEntry()],
+        recency: { ceilings: { default: 30 * 86400 }, clock_skew_s: 60, exceptions: { irreversible_action: { max_age_s: 600 } } },
+      }),
+    });
+    clockMs = T0;
+    const ce = consent(excepted);
+    clockMs = T0 + 300_000;
+    const high = activate(excepted, ce.consent_id, { proposedAuthority: proposal }).mission;
+    expect(recheck(excepted, high.id)).toEqual({ rechecked: true });
+    // Within the default ceiling but past the class exception's age.
+    resign(excepted, high.id, (r) => {
+      r.evaluation.evaluated_at = iso(T0 + 601_000);
+    });
+    expect(recheck(excepted, high.id)).toMatchObject({ rechecked: false, step: 6 });
+  });
+});
+
 describe("governed activation retains child-actor provenance (@spec child-delegation#fanout, #1304)", () => {
   it("a root ceiling granting children without allowed_child_actors defers the activated entry's child actor to policy, keeping the deployment's list as a restriction", () => {
     const deferring = { ...readEntry(), delegation: { max_depth: 2, children: { max_children: 2, max_child_depth: 2 } } };
@@ -852,5 +1192,50 @@ describe("governed activation retains child-actor provenance (@spec child-delega
     expect(children.allowed_child_actors).toEqual([{ sub_profile: "ai_agent" }]);
     expect(mission.child_actor_provenance).toEqual(["policy"]);
     expect(kernel.get(mission.id)?.child_actor_provenance).toEqual(["policy"]);
+  });
+});
+
+describe("a governed removal pairs with entries through the shared matcher (@spec approval-governance#governed-policy-activation, resource-access#subset, #1440)", () => {
+  const MODEL = { id: "risk-model", version: "3" };
+  const SERVICE = "https://erp.example.com";
+  const LEDGER = "https://ledger.example.com";
+  const at = (resource: string, resource_match?: "prefix", actions = ["invoices.read", "invoices.pay"]): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource,
+    ...(resource_match ? { resource_match } : {}),
+    actions,
+  });
+  const decide = (authority: AuthorityEntry[], remove: NonNullable<RecordedModelOutput["remove"]>) =>
+    evaluateGovernedPolicyRules(
+      { models: [MODEL] },
+      {
+        client_id: "svc-agent",
+        subject: { iss: ISS, sub: "bob" },
+        authority_source: "organizational",
+        intent_hash: "sha-256:intent",
+        purpose_present: false,
+        authority,
+        model_outputs: [
+          { model: MODEL, approval_event_id: "ape-1440", intent_hash: "sha-256:intent", authority_hash: "sha-256:set", verdict: "no_objection", remove },
+        ],
+      },
+    );
+
+  it("a removal naming a descendant of a prefix entry narrows that whole entry, a removal naming a service narrows an entry within its tree, and a sibling sharing the base's characters is untouched", () => {
+    // The removed descendant cannot be split out of the prefix entry, so the
+    // named action leaves the whole entry; the unrelated entry is unchanged.
+    expect(
+      decide([at(`${SERVICE}/invoices`, "prefix"), at(LEDGER)], [{ resource: `${SERVICE}/invoices/inv-1`, actions: ["invoices.pay"] }]),
+    ).toEqual({ decision: "approve", authority: [at(`${SERVICE}/invoices`, "prefix", ["invoices.read"]), at(LEDGER)] });
+    // A whole-resource removal naming the service removes an entry beneath it.
+    expect(decide([at(`${SERVICE}/invoices/inv-1`), at(LEDGER)], [{ resource: SERVICE }])).toEqual({
+      decision: "approve",
+      authority: [at(LEDGER)],
+    });
+    // A sibling sharing the characters of the removed resource is outside its tree.
+    expect(decide([at(`${SERVICE}/invoices-archive`)], [{ resource: `${SERVICE}/invoices` }])).toEqual({
+      decision: "approve",
+      authority: [at(`${SERVICE}/invoices-archive`)],
+    });
   });
 });

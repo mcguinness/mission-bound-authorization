@@ -11,9 +11,12 @@
 import { randomBytes } from "node:crypto";
 import { authorityHash, intentHash, proposalHash } from "@mission/core";
 import { inheritCapabilitySources } from "./capability-binding.js";
+import { entriesMayOverlap } from "./derive.js";
+import { entryDigest } from "./discharge.js";
 import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { type ReconsentedCeiling, successorCeilingMembers } from "./progressive.js";
 import {
   type ApprovalBasis,
   type AuthorityEntry,
@@ -63,6 +66,13 @@ export interface ExpansionInput {
    * no authority: this member only fixes which identifier the record takes.
    */
   successorId?: string;
+  /**
+   * @spec progressive#ceiling-reconsent (#1413) — a ceiling and drawdown
+   * policy the Approver explicitly re-consented at this approval, already
+   * committed with its consent instant. Absent, a predecessor's ceiling
+   * members carry unchanged.
+   */
+  ceilingReconsent?: ReconsentedCeiling;
 }
 
 /**
@@ -229,6 +239,9 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
     grant_id: null,
     status_list_idx: null,
     predecessor: input.predecessorId,
+    // @spec progressive#ceiling-reconsent (#1413): a chain's ceiling members
+    // carry to a human-approved successor unchanged, or as re-consented.
+    ...successorCeilingMembers(predecessor, input.ceilingReconsent),
   };
   kernel.insertRecord(record, undefined, { source: resolvedSource });
 
@@ -282,11 +295,13 @@ export interface SuccessorRemediation {
  * created by polling a deferral before the poll check existed (#1326). Such a
  * successor carries the predecessor's client, so its own record cannot show
  * the defect; the retained committed deferral is the link. A successor is
- * identified only when the links agree: exactly one Mission carries the
- * deferral's predecessor and approval event, the predecessor's supersession
- * names it, it carries the predecessor's client, and no deferral the
- * predecessor's own client opened claims the same approval event. Anything
- * else is reported, never resolved to another Mission.
+ * identified only when the links agree: the predecessor and the successor are
+ * both this kernel's issuer (`issuerId`, #1392), exactly one Mission carries
+ * the deferral's predecessor and approval event, the predecessor's
+ * supersession names it, it carries the predecessor's client, and no deferral
+ * the predecessor's own client opened claims the same approval event.
+ * Anything else is reported before the expiry clock or any transition runs,
+ * never resolved to another Mission.
  *
  * Revocation is the ordinary lifecycle transition, after the expiry clock: the
  * predecessor stays superseded, a terminal successor keeps its recorded
@@ -300,6 +315,7 @@ export function revokeSuccessorsExpandedByAnotherClient(
   kernel: MissionKernel,
   deferrals: Pick<ExpansionDeferralStore, "retainedCommittedExpansions">,
 ): SuccessorRemediation {
+  const issuer = kernel.issuerId();
   const committed = deferrals.retainedCommittedExpansions();
   const revoked: string[] = [];
   const unresolved: UnresolvedSuccessorProvenance[] = [];
@@ -307,9 +323,16 @@ export function revokeSuccessorsExpandedByAnotherClient(
     const report = (reason: string): void => {
       unresolved.push({ deferralCode: op.deferralCode, predecessorId: op.predecessorId, clientId: op.clientId, reason });
     };
+    // Every check below precedes the expiry clock and the transition, so an
+    // inconsistent record is reported with nothing committed for it.
     const predecessor = kernel.get(op.predecessorId);
     if (!predecessor) {
       report("the predecessor record is missing");
+      continue;
+    }
+    // Before the client comparison, which a foreign record cannot support.
+    if (predecessor.issuer !== issuer) {
+      report("the predecessor is not this issuer's");
       continue;
     }
     if (op.clientId === predecessor.client_id) continue;
@@ -321,6 +344,10 @@ export function revokeSuccessorsExpandedByAnotherClient(
     const successor = linked[0];
     if (!successor || linked.length > 1) {
       report(successor ? "several successors carry the deferral's approval event" : "no successor carries the deferral's approval event");
+      continue;
+    }
+    if (successor.issuer !== issuer) {
+      report("the successor is not this issuer's");
       continue;
     }
     const termination = predecessor.termination;
@@ -349,6 +376,161 @@ export function revokeSuccessorsExpandedByAnotherClient(
   return { revoked, unresolved };
 }
 
+/** A ceiling-drawdown successor from another client whose provenance the remediation could not confirm. */
+export interface UnresolvedDrawdownProvenance {
+  successorId: string;
+  /** The client the successor's `activation_actor` names, if any. */
+  clientId: string | undefined;
+  reason: string;
+}
+
+/** What {@link revokeDrawdownSuccessorsRequestedByAnotherClient} did. */
+export interface DrawdownRemediation {
+  /** The drawdown successors it revoked. */
+  revoked: string[];
+  /** Drawdown successors whose provenance disagrees, which it did not act on. */
+  unresolved: UnresolvedDrawdownProvenance[];
+}
+
+/**
+ * @spec expansion#verification-order step 4 (#1372, D528): revoke every
+ * non-terminal ceiling-drawdown successor that a client other than its
+ * predecessor's own requested before the step-4 check existed (#1326). A
+ * drawdown opens no deferral, but its basis records the requesting client as
+ * `activation_actor`, while `client_id` is copied from the predecessor, so
+ * the successor's own record is the link. A successor is a target only when
+ * its provenance agrees: the activation actor carries an issuer and a client,
+ * the actor, the successor and the predecessor are all this kernel's issuer
+ * (`issuerId`), the actor names a client other than the successor's, the
+ * successor carries its predecessor's client, and the predecessor's
+ * supersession names it. A missing subject does not identify another client,
+ * and two stored issuer values that agree with each other but not with this
+ * kernel do not make the record this issuer's. Anything else is reported
+ * before the expiry clock or any transition runs, never resolved by guessing.
+ *
+ * As {@link revokeSuccessorsExpandedByAnotherClient}: the ordinary lifecycle
+ * transition after the expiry clock, the predecessor stays superseded, a
+ * terminal successor keeps its termination, the cascade reaches its children,
+ * a later successor its own client requested is not a target, a later run
+ * commits nothing, and a failed transition throws.
+ */
+export function revokeDrawdownSuccessorsRequestedByAnotherClient(kernel: MissionKernel): DrawdownRemediation {
+  const issuer = kernel.issuerId();
+  const revoked: string[] = [];
+  const unresolved: UnresolvedDrawdownProvenance[] = [];
+  for (const successor of kernel.missionsByApprovalBasis("ceiling_drawdown")) {
+    if (successor.approval_basis.type !== "ceiling_drawdown") continue;
+    // Read as stored, not as typed: a damaged row may lack either member.
+    const actor = successor.approval_basis.activation_actor as { iss?: unknown; sub?: unknown } | undefined;
+    const actorIss = typeof actor?.iss === "string" && actor.iss ? actor.iss : undefined;
+    const actorSub = typeof actor?.sub === "string" && actor.sub ? actor.sub : undefined;
+    const report = (reason: string): void => {
+      unresolved.push({ successorId: successor.id, clientId: actorSub, reason });
+    };
+    // Every check below precedes the expiry clock and the transition, so an
+    // inconsistent record is reported with nothing committed for it.
+    if (!actorIss || !actorSub) {
+      report("the activation actor has no issuer and client");
+      continue;
+    }
+    if (actorIss !== issuer || successor.issuer !== issuer) {
+      report("the successor or its activation actor is not this issuer's");
+      continue;
+    }
+    if (actorSub === successor.client_id) continue;
+    const predecessor = successor.predecessor ? kernel.get(successor.predecessor) : undefined;
+    if (!predecessor) {
+      report("the predecessor record is missing");
+      continue;
+    }
+    if (predecessor.issuer !== issuer) {
+      report("the predecessor is not this issuer's");
+      continue;
+    }
+    if (successor.client_id !== predecessor.client_id) {
+      report("the successor does not carry the predecessor's client");
+      continue;
+    }
+    const termination = predecessor.termination;
+    if (predecessor.state !== "terminated" || termination?.reason !== "superseded" || termination.successor !== successor.id) {
+      report("the predecessor's supersession does not name the successor");
+      continue;
+    }
+    if (TERMINAL_STATES.has(kernel.applyExpiry(successor).state)) continue;
+    kernel.transition(successor.id, "revoke");
+    revoked.push(successor.id);
+  }
+  return { revoked, unresolved };
+}
+
+/**
+ * @spec expansion#reconciliation — the closed set of reconciliation statuses an
+ * expansion refusal carries in `mission_expansion_status`.
+ */
+export type ReconciliationStatus =
+  | "superseded_by_concurrent_expansion"
+  | "predecessor_state_changed"
+  | "predecessor_not_active"
+  | "authority_restricted_since_approval";
+
+/**
+ * @spec expansion#predecessor-active, expansion#reconciliation (#1177) — the
+ * status for a predecessor that is no longer `active`, from its OBSERVED
+ * record. A predecessor another expansion superseded answers
+ * `superseded_by_concurrent_expansion` (the attribution rule: its
+ * `termination` names that cause, so the client can discover the successor);
+ * any other terminal exit, or a predecessor that no longer resolves, answers
+ * `predecessor_state_changed`; a non-terminal non-active state such as
+ * `suspended` answers `predecessor_not_active`, which invites a retry.
+ */
+export function reconciliationStatusFor(observed: MissionRecord | undefined): ReconciliationStatus {
+  if (!observed || TERMINAL_STATES.has(observed.state)) {
+    return observed?.termination?.reason === "superseded"
+      ? "superseded_by_concurrent_expansion"
+      : "predecessor_state_changed";
+  }
+  return "predecessor_not_active";
+}
+
+/** A containment removal: a resource's listed actions, or the whole resource when `actions` is absent. */
+type Removal = { resource: string; actions?: string[] };
+
+const removes = (removals: Removal[], resource: string, action: string): boolean =>
+  removals.some((r) => r.resource === resource && (r.actions === undefined || r.actions.includes(action)));
+
+/**
+ * @spec expansion#reconciliation check 3 (#1177) — whether the successor's
+ * complete Authority Set touches a restriction of the predecessor that came
+ * after adjudication, the snapshot `at` (the first `containment` events and
+ * `discharge` latches; both lists are append-only). A restriction at or before
+ * adjudication was disclosed at consent and may be restored.
+ *
+ * Containment removes actions, whatever an entry's constraints, so it is
+ * compared per action: an action contained now and not at the snapshot. An
+ * event that names authority already contained restricts nothing new.
+ *
+ * Discharge latches whole entries, so it is compared per entry: any successor
+ * entry that may overlap an entry latched after the snapshot, constraints
+ * included ({@link entriesMayOverlap}). An entry latched after the snapshot
+ * still refuses when its authority lies within one latched before it.
+ */
+export function restrictedSinceAdjudication(
+  predecessor: MissionRecord,
+  successor: AuthorityEntry[],
+  at: { containment: number; discharge: number },
+): boolean {
+  const events = predecessor.containment?.events ?? [];
+  const before = events.slice(0, at.containment).flatMap((e) => e.removed);
+  const now = events.flatMap((e) => e.removed);
+  if (successor.some((e) => e.actions.some((a) => removes(now, e.resource, a) && !removes(before, e.resource, a)))) {
+    return true;
+  }
+  const latchedSince = new Set((predecessor.discharged ?? []).slice(at.discharge).map((l) => l.entry_digest));
+  if (latchedSince.size === 0) return false;
+  const discharged = predecessor.authority_set.filter((e) => latchedSince.has(entryDigest(predecessor.issuer, e)));
+  return successor.some((s) => discharged.some((d) => entriesMayOverlap(s, d)));
+}
+
 /**
  * The successor's `mission` claim, adding the `predecessor` lineage member.
  */
@@ -366,4 +548,50 @@ export function successorWidensOnly(predecessor: AuthorityEntry[], successor: Au
   const succActions = new Set(successor.flatMap((e) => e.actions));
   for (const a of predActions) if (!succActions.has(a)) return false;
   return true;
+}
+
+/** @spec expansion#policy-probing (#1177): the default bound, requests per window. */
+export const DEFAULT_EXPANSION_RATE_LIMIT = { max: 30, windowSeconds: 600 } as const;
+
+/**
+ * @spec expansion#policy-probing (#1177) — the per-predecessor, per-client
+ * bound on expansion requests. It caps both policy probing and the approval
+ * prompts one client can drive against an Approver. A sliding window held in
+ * process memory: each admitted request counts until `windowSeconds` pass,
+ * and a refused one counts nothing, so capacity returns as the window moves.
+ */
+export class ExpansionRateLimiter {
+  private readonly admitted = new Map<string, number[]>();
+
+  constructor(
+    readonly max: number,
+    readonly windowSeconds: number,
+    private readonly nowMs: () => number,
+  ) {}
+
+  /**
+   * Admit one request of `clientId` for `predecessorId`, or refuse it with the
+   * seconds until the oldest counted request leaves the window.
+   */
+  admit(predecessorId: string, clientId: string): { ok: true } | { ok: false; retryAfterS: number } {
+    const now = this.nowMs();
+    const horizon = now - this.windowSeconds * 1000;
+    const key = `${predecessorId}\n${clientId}`;
+    const recent = (this.admitted.get(key) ?? []).filter((t) => t > horizon);
+    if (recent.length >= this.max) {
+      this.admitted.set(key, recent);
+      return { ok: false, retryAfterS: Math.max(1, Math.ceil(((recent[0] as number) - horizon) / 1000)) };
+    }
+    recent.push(now);
+    this.admitted.set(key, recent);
+    if (this.admitted.size > 10_000) this.sweep(horizon);
+    return { ok: true };
+  }
+
+  /** Drop every key whose requests have all left the window. */
+  private sweep(horizon: number): void {
+    for (const [key, times] of this.admitted) {
+      if (!times.some((t) => t > horizon)) this.admitted.delete(key);
+    }
+  }
 }

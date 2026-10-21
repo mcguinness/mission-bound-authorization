@@ -9,8 +9,10 @@
  */
 
 import {
+  canonicalize,
   capabilitySourceIdentity,
   compareAmounts,
+  delegateMatcherListViolation,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
   isAbsoluteUri,
@@ -18,7 +20,11 @@ import {
   isSubsetEntry,
   isSubsetSet,
   refusedEntryMember,
+  resourceMatchViolation,
+  resourceWithin,
+  sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
+  unsupportedEntryMember,
 } from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
 import type { CapabilitySourceBinding, JsonValue } from "@mission/core";
@@ -53,23 +59,54 @@ import type { AuthorityEntry, DelegateMatcher, MissionIntent, MissionRecord } fr
  * the config loader and PAR intake gates entirely.
  */
 /**
- * @spec resource-access#resource-matching (#1264, D446): derivation
- * implements `exact` resource matching only, and `intersect` rebuilds each
- * entry without `resource_match`. An entry naming any other value is refused
- * here, over the full ceiling and proposal, so a programmatic caller that
- * bypasses intake and the config loader cannot have a `prefix` entry
- * silently derived as an exact one.
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1264, D446, #1276): derivation implements both `resource_match` values,
+ * and `intersect` carries `prefix` onto the derived entry. An entry naming
+ * any other value, or a `prefix` entry whose `resource` the shared matcher
+ * cannot enforce (a query, or no `//` authority), is refused here, over the
+ * full ceiling and proposal, so a programmatic caller that bypasses intake
+ * and the config loader cannot have it derived as an exact entry.
  */
-function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
+function assertSupportedResourceMatch(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
-    const match = (entry as { resource_match?: unknown }).resource_match;
-    if (match !== undefined && match !== "exact") {
-      throw new IntentError(
-        "invalid_authorization_details",
-        `resource_match ${JSON.stringify(match)} is not supported; this authorization server implements exact resource matching only`,
-      );
+    const violation = resourceMatchViolation(entry);
+    if (violation !== undefined) {
+      throw new IntentError("invalid_authorization_details", violation);
     }
   }
+}
+
+/**
+ * @spec resource-access#subset step 1, mission#derivation-modes (#1276): the
+ * `resource` and `resource_match` an entry derived from `proposal` under
+ * `ceiling` carries, or null when the pair derives nothing. The derived
+ * resource set is the narrower of the two, so it is "a same-type subset of a
+ * proposed entry" and of the ceiling entry, and its `resource` is always the
+ * proposal's own string, which intake held to the Intent's
+ * `target_resources` by exact equality:
+ *
+ * - the proposal within the ceiling ({@link resourceWithin}): the proposal's
+ *   resource set (an `exact` proposal under a `prefix` ceiling admitting it,
+ *   or a `prefix` proposal within a `prefix` ceiling);
+ * - the ceiling within the proposal under the same string (a `prefix`
+ *   proposal over an `exact` ceiling naming its base): the ceiling's `exact`
+ *   resource.
+ *
+ * A ceiling narrower than the proposal under a different string derives
+ * nothing from this pair: its `resource` is not one intake checked against
+ * `target_resources`.
+ */
+function derivedResource(
+  proposal: AuthorityEntry,
+  ceiling: AuthorityEntry,
+): Pick<AuthorityEntry, "resource" | "resource_match"> | null {
+  const carried = (e: AuthorityEntry) =>
+    e.resource_match === "prefix"
+      ? { resource: e.resource, resource_match: "prefix" as const }
+      : { resource: e.resource };
+  if (resourceWithin(proposal, ceiling)) return carried(proposal);
+  if (ceiling.resource === proposal.resource && resourceWithin(ceiling, proposal)) return carried(ceiling);
+  return null;
 }
 
 /**
@@ -79,6 +116,10 @@ function assertExactResourceMatch(entries: readonly AuthorityEntry[]): void {
  * derived entry. An entry carrying it, whatever its value, is refused here,
  * over the full ceiling and proposal, so a programmatic caller that bypasses
  * intake and the config loader cannot have it silently dropped.
+ *
+ * @spec mission#subset (#1399, D538): the same holds for any member outside
+ * the supported set ({@link unsupportedEntryMember}): `intersect` would drop
+ * it and erase a restriction it may express, so it is refused here too.
  */
 function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
@@ -87,6 +128,13 @@ function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry carries ${member}, which the mission_resource_access type does not use; refusing rather than silently dropping it`,
+      );
+    }
+    const unsupported = unsupportedEntryMember(entry);
+    if (unsupported !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry carries ${unsupported}, which is not a supported member of the mission_resource_access type; refusing rather than silently dropping it`,
       );
     }
   }
@@ -104,6 +152,37 @@ function assertWellFormedResources(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry resource ${JSON.stringify(entry.resource)} is not an RFC 3986 absolute URI`,
+      );
+    }
+  }
+}
+
+/**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): `narrowMatchers` and `narrowChildren` rebuild each matcher from
+ * `sub` and `sub_profile` alone, so an admitted matcher carrying any other
+ * member would lose it and widen the eligibility the entry commits. Every
+ * `allowed_delegates` and `allowed_child_actors` matcher is checked under the
+ * shared rule here, over the full ceiling and proposal, so a programmatic
+ * caller that bypasses intake and the config loader cannot have a member
+ * silently dropped.
+ */
+function assertWellFormedMatchers(entries: readonly AuthorityEntry[]): void {
+  for (const entry of entries) {
+    const delegation = asJsonObject(entry.delegation as JsonValue | undefined);
+    if (!delegation) continue;
+    const children = asJsonObject(delegation.children);
+    const violation =
+      (delegation.allowed_delegates !== undefined
+        ? delegateMatcherListViolation(delegation.allowed_delegates, "delegation.allowed_delegates")
+        : undefined) ??
+      (children?.allowed_child_actors !== undefined
+        ? delegateMatcherListViolation(children.allowed_child_actors, "delegation.children.allowed_child_actors")
+        : undefined);
+    if (violation !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry ${violation}; refusing rather than silently dropping it`,
       );
     }
   }
@@ -338,12 +417,14 @@ export function deriveAuthoritySetWithProvenance(
   // with any proposal element would otherwise never reach `intersect` below).
   assertSupportedConstraints(policy.ceiling);
   if (proposal) assertSupportedConstraints(proposal);
-  assertExactResourceMatch(policy.ceiling);
-  if (proposal) assertExactResourceMatch(proposal);
+  assertSupportedResourceMatch(policy.ceiling);
+  if (proposal) assertSupportedResourceMatch(proposal);
   assertNoRefusedMembers(policy.ceiling);
   if (proposal) assertNoRefusedMembers(proposal);
   assertWellFormedResources(policy.ceiling);
   if (proposal) assertWellFormedResources(proposal);
+  assertWellFormedMatchers(policy.ceiling);
+  if (proposal) assertWellFormedMatchers(proposal);
 
   // @spec mission#error-mapping — captured BEFORE the template-mode fallback
   // below reassigns `proposals`: whether the client actually submitted an
@@ -388,8 +469,13 @@ export function deriveAuthoritySetWithProvenance(
   const provenance: RetainedOrigin[] = [];
   const childActorProvenance: RetainedOrigin[] = [];
   proposals.forEach((proposal, p) => {
+    // @spec resource-access#subset step 1 (#1276): a ceiling entry governs a
+    // proposal entry when the pair derives a resource set
+    // ({@link derivedResource}): the same `exact` string, a `prefix` ceiling
+    // admitting the proposal, or an `exact` ceiling naming a `prefix`
+    // proposal's base.
     const matchingCeilings = hasProposal
-      ? policy.ceiling.filter((c) => c.resource === proposal.resource)
+      ? policy.ceiling.filter((c) => derivedResource(proposal, c) !== null)
       : [proposal];
     // An already-derived proposal entry contributes the origin it carries; a
     // client proposal contributes none of its own.
@@ -438,6 +524,8 @@ export function deriveAuthoritySetWithProvenance(
  * `approve`, before `authority_hash`.
  */
 function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): AuthorityEntry | null {
+  const resource = derivedResource(proposal, ceiling);
+  if (resource === null) return null;
   const actions = proposal.actions.filter((a) => ceiling.actions.includes(a));
   if (actions.length === 0) return null;
   // @spec mission#common-constraints — both operands already passed
@@ -445,7 +533,7 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   // ceiling and proposal arrays, before this filtering), so neither can carry
   // an unsupported key here. Not re-checked per pair: this function is only
   // ever called from that loop, over entries it already validated.
-  const entry: AuthorityEntry = { type: "mission_resource_access", resource: ceiling.resource, actions };
+  const entry: AuthorityEntry = { type: "mission_resource_access", ...resource, actions };
   const constraints: NonNullable<AuthorityEntry["constraints"]> = {};
   const ceilCap = ceiling.constraints?.max_amount;
   const propCap = proposal.constraints?.max_amount;
@@ -496,6 +584,24 @@ function intersect(proposal: AuthorityEntry, ceiling: AuthorityEntry): Authority
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   const delegation = narrowDelegation(proposal.delegation, ceiling.delegation);
   if (delegation) entry.delegation = delegation;
+  // @spec resource-access#resource-contract, resource-access#subset step 4
+  // (#249, D553): the reference is carried, never narrowed or intersected. A
+  // policy ceiling "need not carry one", so the proposal's (validated against
+  // configuration by the kernel) is kept; an approved ceiling's (a template's
+  // or governed root's) is preserved exactly, and a proposal naming another
+  // replaces it, which is never narrowing.
+  if (
+    proposal.resource_contract !== undefined &&
+    ceiling.resource_contract !== undefined &&
+    !sameResourceContract(proposal.resource_contract, ceiling.resource_contract)
+  ) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      "resource_contract differs from the approved entry's; replacing a reference is never narrowing",
+    );
+  }
+  const contract = proposal.resource_contract ?? ceiling.resource_contract;
+  if (contract !== undefined) entry.resource_contract = contract;
   return entry;
 }
 
@@ -730,9 +836,20 @@ function intersectMatchers(
  */
 function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
   if (!a || !b) return undefined;
-  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors"]);
+  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"]);
   if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
   const out: JsonObject = {};
+  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // `child_creation_policy` reference is compared for identity, never
+  // intersected. It is carried where both sides commit the same reference, so
+  // a token projected from an entry that commits one still carries the
+  // children grant a child entry is a subset of; where only one side commits
+  // it, or they differ, no fragment is a subset of both, and the grant drops.
+  if (a.child_creation_policy !== undefined || b.child_creation_policy !== undefined) {
+    if (a.child_creation_policy === undefined || b.child_creation_policy === undefined) return undefined;
+    if (canonicalize(a.child_creation_policy) !== canonicalize(b.child_creation_policy)) return undefined;
+    out.child_creation_policy = a.child_creation_policy;
+  }
   const maxChildren = minNum(asNum(a.max_children), asNum(b.max_children));
   if (maxChildren !== undefined) out.max_children = maxChildren;
   const maxChildDepth = minNum(asNum(a.max_child_depth), asNum(b.max_child_depth));
@@ -771,6 +888,31 @@ function intersectDelegation(
 }
 
 /**
+ * @spec expansion#reconciliation check 3 (#1177) — whether some operation
+ * could be authorized by both entries. `false` only where the two are
+ * provably disjoint: no shared action, resources neither of which lies within
+ * the other, `vendors` lists with no common member, `max_amount` caps in
+ * different currencies, or Common Constraints with an empty intersection. A
+ * member or constraint key this cannot evaluate only narrows its entry, so it
+ * never makes two entries overlap; but nothing else proves them disjoint, and
+ * the caller refuses rather than restore authority it cannot show is
+ * untouched.
+ */
+export function entriesMayOverlap(a: AuthorityEntry, b: AuthorityEntry): boolean {
+  if (!a.actions.some((action) => b.actions.includes(action))) return false;
+  if (!resourceWithin(a, b) && !resourceWithin(b, a)) return false;
+  const aVendors = a.constraints?.vendors;
+  const bVendors = b.constraints?.vendors;
+  if (aVendors && bVendors && !aVendors.some((v) => bVendors.includes(v))) return false;
+  const aCap = a.constraints?.max_amount;
+  const bCap = b.constraints?.max_amount;
+  if (aCap && bCap && aCap.currency !== bCap.currency) return false;
+  const common = intersectCommonConstraints(a.constraints, b.constraints);
+  if (!common.ok && !common.reason.startsWith("malformed")) return false;
+  return true;
+}
+
+/**
  * One candidate x effective pairing: the non-empty intersection FRAGMENT, or
  * null where no fragment can be a subset of both. Fail-closed-by-DROPPING and
  * total (never throws), unlike {@link intersect}, which is the derivation-time
@@ -781,7 +923,28 @@ function intersectForProjection(
   effective: AuthorityEntry,
 ): AuthorityEntry | null {
   if (candidate.type !== effective.type) return null;
-  if (candidate.resource !== effective.resource) return null;
+  // @spec resource-access#subset step 1 (#1276): the fragment's resource set
+  // is the narrower of the two sides, so it stays a subset of both: the
+  // candidate's when it lies within the effective entry, the effective
+  // entry's when that lies within the candidate. Two disjoint sets yield no
+  // fragment. A `prefix` side keeps its `resource_match`; `exact` stays absent.
+  const narrower = resourceWithin(candidate, effective)
+    ? candidate
+    : resourceWithin(effective, candidate)
+      ? effective
+      : undefined;
+  if (narrower === undefined) return null;
+  // @spec mission#subset (#1399, D538): a top-level member outside the
+  // supported set, `locations` included, makes the pairing unprovable: the
+  // member-by-member rebuild below would drop it and erase a restriction it
+  // may express. Drop the fragment, as for an unprojectable constraint key.
+  if (unsupportedEntryMember(candidate) !== undefined) return null;
+  if (unsupportedEntryMember(effective) !== undefined) return null;
+  // @spec resource-access#subset step 4 (#249, D553): "A carries
+  // `resource_contract` exactly when B does": a pairing whose sides differ in
+  // the reference, or where one side has none, yields no fragment, since no
+  // fragment is a subset of both. The common reference is carried below.
+  if (!sameResourceContract(candidate.resource_contract, effective.resource_contract)) return null;
   const actions = candidate.actions.filter((a) => effective.actions.includes(a));
   if (actions.length === 0) return null;
   // A constraint key this projection cannot intersect makes the pairing
@@ -851,9 +1014,15 @@ function intersectForProjection(
   // a candidate cannot introduce a binding the effective side does not carry.
   const sources = projectCapabilitySources(candidate, effective, actions);
   if (sources === null) return null;
-  const entry: AuthorityEntry = { type: candidate.type, resource: candidate.resource, actions };
+  const entry: AuthorityEntry = {
+    type: candidate.type,
+    resource: narrower.resource,
+    ...(narrower.resource_match === "prefix" ? { resource_match: "prefix" as const } : {}),
+    actions,
+  };
   if (Object.keys(constraints).length > 0) entry.constraints = constraints;
   if (sources) entry.capability_sources = sources;
+  if (effective.resource_contract !== undefined) entry.resource_contract = effective.resource_contract;
   const delegation = intersectDelegation(candidate.delegation, effective.delegation);
   if (delegation) entry.delegation = delegation;
   return entry;
@@ -903,8 +1072,10 @@ function projectCapabilitySources(
  * issuance-grant#effective-set-projection — project a candidate Authority Set
  * through a TARGET's current effective set: ENTRY-WISE INTERSECTION. Each
  * candidate entry is paired against EVERY effective entry sharing its `type`
- * and `resource`, and each pairing contributes its non-empty intersection
- * fragment: actions intersected, `max_amount` the smaller (exact decimal
+ * whose resource set contains its own or lies within it (#1276: the same
+ * `resource` for two `exact` entries), and each pairing contributes its
+ * non-empty intersection fragment, over the narrower resource set: actions
+ * intersected, `max_amount` the smaller (exact decimal
  * comparison), `vendors` intersected, `requires_action_approval` OR-ed,
  * `delegation` carried only where both sides grant it and then narrowed. The
  * result satisfies BOTH authority-only comparisons via

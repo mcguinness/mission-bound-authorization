@@ -51,6 +51,22 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-cross-domain:
+    title: "Mission Cross-Domain Projection for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-runtime:
+    title: "Mission-Bound Runtime Enforcement"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   RFC8126:
@@ -69,9 +85,25 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-cross-domain:
-    title: "Mission Cross-Domain Projection for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-cross-domain.html
+  I-D.draft-mcguinness-mission-authzen:
+    title: "Mission-Bound Runtime Enforcement: AuthZEN Profile"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-authzen.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-oauth-mission-transaction-authorization:
+    title: "Mission Transaction Authorization Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-transaction-authorization.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
+  I-D.draft-mcguinness-mission-capability-binding:
+    title: "Mission Capability Binding"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-capability-binding.html
     author:
       -
         ins: K. McGuinness
@@ -118,7 +150,9 @@ This document is that specification for one type,
   Constraints with their subset and intersection rules
   ({{common-constraints}});
 - resource server enforcement ({{rs-enforcement}}) and delegate
-  eligibility ({{delegate-eligibility}}); and
+  eligibility ({{delegate-eligibility}});
+- the resource contract reference an entry can commit at approval, and
+  its exact preservation ({{resource-contract}}); and
 - the conditions under which an entry can be projected to `scope`
   ({{scope-projection}}), and the type's declaration under the issuance
   profile's transformation-capability map
@@ -216,6 +250,11 @@ with these members:
     not one action.
   - An authorization server SHOULD treat deriving a family as high-risk
     breadth.
+  - A resource that documents an action family SHOULD treat the family's
+    membership as part of its authorization contract, and SHOULD place
+    an action that confers materially different authority under a new
+    family or namespace version rather than under an existing family
+    ({{action-family-growth}}).
 
 `constraints`:
 : OPTIONAL. An object. Machine-actionable per-resource bounds (for
@@ -235,8 +274,10 @@ with these members:
 `delegation`:
 : OPTIONAL. An object. The delegation policy for this entry
   ({{delegate-eligibility}}). When absent, this entry's authority is
-  non-delegable: it MUST NOT appear in a delegated token. When present,
-  it has these members:
+  non-delegable: it MUST NOT appear in a delegated token. This applies
+  to the entry the authorization server evaluates for a delegated
+  token, not to a copy a cross-domain grant conveys without the member
+  ({{delegate-eligibility}}). When present, it has these members:
 
   `max_depth`:
   : REQUIRED. An integer. The maximum delegation depth at which this
@@ -259,6 +300,27 @@ with these members:
   member is policy, not authority ({{subset}}): a derived entry's value
   for it MUST NOT be broader than the parent entry's, and a member the
   authorization server does not understand is carried unchanged.
+
+`resource_contract`:
+: OPTIONAL. An object. A reference to the resource contract under which
+  the resource interprets the entry's `actions` and `constraints`
+  ({{resource-contract}}). The entry's `type` stays
+  `mission_resource_access`; the reference carries the version. When
+  present, it has exactly these members:
+
+  `id`:
+  : REQUIRED. A string containing an absolute URI that names the
+    contract across its versions.
+
+  `version`:
+  : REQUIRED. A non-empty string naming one version of the contract.
+
+  `digest`:
+  : REQUIRED. A string. The SHA-256 digest of the JCS {{RFC8785}}
+    serialization of that version's contract document, in the
+    integrity-anchor encoded form
+    ({{I-D.draft-mcguinness-oauth-mission}}): `sha-256:` followed by
+    the base64url encoding of the digest, without padding.
 
 The following example shows an Authority Set with two entries for one
 resource:
@@ -312,6 +374,47 @@ This type does not use the {{RFC9396}} common `locations` field:
 `resource` identifies where an entry applies. The authorization server
 refuses an entry carrying `locations` with the
 `invalid_authorization_details` error code.
+
+The authorization server also refuses an entry with the
+`invalid_authorization_details` error code when:
+
+- its `resource` is not an `absolute-URI` ({{Section 4.3 of RFC3986}}),
+  so no entry's `resource` carries a fragment component;
+- its `resource` is an `http` or `https` URI without the `//` authority
+  form naming a non-empty host;
+- its `actions` array is empty, or one of its values is neither an
+  action identifier nor an action family ({{resource-access-type}});
+- its `delegation.max_depth` is not a non-negative integer, so a
+  negative or fractional value is refused;
+- an `allowed_delegates` matcher carries neither `sub` nor
+  `sub_profile`, or carries any other member
+  ({{matching-allowed-delegates}});
+- its `resource_contract` is not an object with exactly the members
+  `id`, `version`, and `digest`, or one of them does not have the form
+  {{resource-access-type}} gives it;
+- its `time_window` Common Constraint has a `not_before` later than its
+  `not_after`, a window that admits no instant; or
+- its `recipient_domain` Common Constraint is not a DNS name in ASCII
+  form, with each internationalized label in its A-label form, or ends
+  in a dot.
+
+Letter case does not make a `recipient_domain` invalid; values compare
+case-insensitively ({{value-space-comparison}}).
+
+The following values are valid and carry a defined meaning:
+
+- A `max_depth` of 0 admits the entry into no delegated token, since a
+  delegated token's delegation depth is 1 or more
+  ({{delegate-eligibility}}): the entry supplies no in-Mission delegated
+  authority. Any other `delegation` member stays intact; a member a
+  companion profile defines there, such as a child-creation grant, keeps
+  the bound that profile gives it.
+- An empty `allowed_delegates` array permits no delegate. It differs
+  from an absent member, which defers eligibility to the authorization
+  server's delegation-authorization policy ({{delegate-eligibility}}).
+- An action value that a consumer does not recognize for the entry's
+  `resource` grants nothing. It does not make the entry unenforceable:
+  the entry's other actions remain enforceable ({{rs-enforcement}}).
 
 ### Decimal Values {#decimal-values}
 
@@ -368,6 +471,25 @@ resource the operation acts on. The resource server:
   target; and
 - MUST execute the operation on the target it matched: matching a
   different target never authorizes the execution.
+
+**Operation contract.** An operation contract is the resource server's
+documented, trusted statement of how it authorizes an operation. For
+each operation it covers, it establishes:
+
+- the rule that derives the operation target from the operation's
+  validated inputs;
+- the `resource_match` values the resource server supports for that
+  target;
+- the action identifier the operation exercises
+  ({{resource-access-type}}); and
+- for each `constraints` key the operation supports, the authoritative
+  input that key's predicate reads ({{common-constraints}}).
+
+A resource URL or a protected resource metadata identifier alone is not
+an operation contract. A deployment that adopts Mission-Bound Runtime
+Enforcement {{I-D.draft-mcguinness-mission-runtime}} records an
+operation's action identifier and constraint inputs in that document's
+Operation Profile.
 
 An operation contract preserves every resource distinction the
 deployment's authorization constrains; it cannot collapse `/orders/123`
@@ -533,6 +655,10 @@ Mission entry B when all of the following hold:
      specification-defined rule when K is a Common Constraint
      ({{common-constraints}}), the deployment-defined comparison
      otherwise.
+4. **Contract.** A carries `resource_contract` exactly when B does,
+   and then with `id`, `version`, and `digest` each equal to B's
+   ({{resource-contract}}). Removing, replacing, or adding a reference
+   is never narrowing.
 
 The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
@@ -582,6 +708,11 @@ A Common Constraint definition fixes:
   reference value, used by the subset comparison of {{subset}}.
 - **Intersection rule**: how two values for the same key combine; the
   result MUST be no broader than either operand.
+- **Input**: what the constraint reads at the point of use, which an
+  operation contract identifies for each operation
+  ({{resource-matching}}).
+- **Predicate**: the condition the input meets when the operation is
+  within the bound.
 
 {{subset}} applies a constraint's subset rule. Its intersection rule
 applies where a derivation combines two bounds for the same key, as in
@@ -590,6 +721,16 @@ appendix of {{I-D.draft-mcguinness-oauth-mission}}. This document does
 not require a derivation to run a particular intersection algorithm, and
 a ceiling whose specification defines a refusal rule is enforced by that
 rule, not silently intersected.
+
+At the point of use ({{rs-enforcement}}), the resource server applies
+the predicate of each Common Constraint an applicable entry carries to
+that constraint's input. Any fact a predicate needs that is missing or
+malformed makes the entry provide no authority. An operation contract
+may leave a constraint unsupported for that operation. The resource
+server MUST treat an applicable entry whose constraint it cannot
+evaluate or satisfy as providing no authority. It MUST refuse the
+request unless another applicable entry independently authorizes the
+whole request with every constraint satisfied.
 
 A `constraints` member whose name is a specification-defined Common
 Constraint is interpreted per its definition. Any other member name
@@ -643,6 +784,10 @@ This document defines the following Common Constraints.
   - Intersection: when the `currency` values are equal, the value with
     the smaller `amount`; differing currencies have no intersection and
     the combination fails.
+  - Input: the action's amount and its currency, as the operation
+    contract identifies them.
+  - Predicate: the input currency equals `currency`, and the input
+    amount is less than or equal to `amount` in decimal value space.
 
 `resource_issued_after`:
 : The action applies only to resources issued at or after this instant.
@@ -650,6 +795,9 @@ This document defines the following Common Constraints.
   - Value: a date-time string as defined in {{RFC3339}}.
   - Subset: no broader when greater than or equal to the reference.
   - Intersection: the later instant.
+  - Input: the recorded issuance instant of the resource the operation
+    acts on.
+  - Predicate: the input is at or after the value.
 
 `resource_issued_before`:
 : The action applies only to resources issued at or before this instant.
@@ -659,6 +807,9 @@ This document defines the following Common Constraints.
   - Value: a date-time string as defined in {{RFC3339}}.
   - Subset: no broader when less than or equal to the reference.
   - Intersection: the earlier instant.
+  - Input: the recorded issuance instant of the resource the operation
+    acts on.
+  - Predicate: the input is at or before the value.
 
 `tenant`:
 : The action applies only to resources of the named tenant.
@@ -667,6 +818,9 @@ This document defines the following Common Constraints.
   - Subset: no broader when equal to the reference value.
   - Intersection: the common value when the two are equal; otherwise
     there is no intersection and the combination fails.
+  - Input: the authoritative tenant of the resource the operation acts
+    on.
+  - Predicate: the input equals the value.
 
 `recipient_domain`:
 : The action applies only to recipients within the named domain. An
@@ -679,6 +833,10 @@ This document defines the following Common Constraints.
   - Intersection: the narrower value when one is equal to or a subdomain
     of the other; otherwise there is no intersection and the combination
     fails.
+  - Input: every final recipient of the action, after routing and list
+    expansion.
+  - Predicate: the domain of every input recipient is equal to the value
+    or a subdomain of it.
 
 `time_window`:
 : The action may be exercised only within the window, evaluated at the
@@ -695,6 +853,9 @@ This document defines the following Common Constraints.
   - Intersection: the overlap (the later `not_before`, the earlier
     `not_after`); an empty overlap has no intersection and the
     combination fails.
+  - Input: the enforcement point's own clock at the time of use.
+  - Predicate: the input is at or after `not_before` and at or before
+    `not_after`, for each member present.
 
 `data_classification`:
 : The action applies only to data whose classification label is among
@@ -706,6 +867,10 @@ This document defines the following Common Constraints.
     of the reference array's, compared as exact strings.
   - Intersection: the common members; an empty result has no
     intersection and the combination fails.
+  - Input: the authoritative classification labels of all data the
+    operation reads or writes.
+  - Predicate: every input label is among the values, compared as exact
+    strings.
 
 `allowed_tools`:
 : The action may be exercised only through a capability whose identifier
@@ -718,6 +883,11 @@ This document defines the following Common Constraints.
     of the reference array's, compared as exact strings.
   - Intersection: the common members; an empty result has no
     intersection and the combination fails.
+  - Input: the identity of the capability the enforcement point
+    dispatches or verifies for the action. Mission Capability Binding
+    {{I-D.draft-mcguinness-mission-capability-binding}} defines one way
+    to verify that identity against the capability's approved source.
+  - Predicate: the input is among the values, compared as exact strings.
 
 `requires_action_approval`:
 : When `true`, each exercise of the action requires a fresh,
@@ -730,6 +900,24 @@ This document defines the following Common Constraints.
   - Subset: no broader when the candidate is `true` or equals the
     reference (narrowing may add the requirement, never remove it).
   - Intersection: the logical OR of the two values.
+  - Input: none when the value is `false`; when it is `true`, the
+    action-bound approval presented for the action.
+  - Predicate: when the value is `true`, an action-bound approval is
+    present and is:
+    - verified by a trusted enforcement point;
+    - fresh within a maximum age the deployment states;
+    - bound to the action, the resource, and the action's parameters;
+    - never resolvable through approval authority the agent supplies;
+      and
+    - consumed as a decision input, not as a bearer grant.
+
+  Mission-Bound Runtime Enforcement
+  {{I-D.draft-mcguinness-mission-runtime}} and the Mission Transaction
+  Authorization Profile
+  {{I-D.draft-mcguinness-oauth-mission-transaction-authorization}}
+  define ways to obtain and verify such an approval, and the AuthZEN
+  profile {{I-D.draft-mcguinness-mission-authzen}} carries one as
+  decision input.
 
 ### Value-Space Comparison {#value-space-comparison}
 
@@ -748,10 +936,13 @@ Common Constraint comparisons are in value space, not lexical:
   case-insensitively and on whole labels, so `mail.example.com` is
   within `example.com` and `example.net` is not.
 
-A Common Constraint definition MUST fix its subset and intersection in
-value-space terms, so that independent deployments compute the same
-result for the same values and the subset rule of {{subset}} is
-reproducible.
+A predicate compares its input with the constraint value under the same
+rules.
+
+A Common Constraint definition MUST fix its subset rule, intersection
+rule, and predicate in value-space terms, so that independent
+deployments compute the same result for the same values and inputs, and
+the subset rule of {{subset}} is reproducible.
 
 ## Resource Server Enforcement {#rs-enforcement}
 
@@ -788,7 +979,8 @@ understand or cannot enforce. The resource server then authorizes the
 request only through another applicable entry that it can fully enforce
 and that covers the whole request on its own: the entry's `resource`
 matches the target, the action is among its `actions`, and every key in
-its `constraints` is satisfied. The resource server:
+its `constraints` is satisfied ({{common-constraints}}). The resource
+server:
 
 - MUST NOT combine parts of several entries to authorize one request, or
   borrow authority from an entry it cannot fully enforce; and
@@ -806,6 +998,7 @@ or none:
 
 - `type`, `resource`, `resource_match`, `actions`, and `constraints` are
   enforced as above;
+- `resource_contract` is enforced as {{resource-contract}} requires;
 - `delegation` has no resource-server enforcement role: the
   authorization server applies it at issuance
   ({{delegate-eligibility}}), so a resource server MAY disregard it,
@@ -837,6 +1030,96 @@ resource metadata ({{RFC9728}}):
   constraint mismatch before making a request. When absent, that
   knowledge is established out of band.
 
+## Resource Contracts {#resource-contract}
+
+An entry's `actions` and `constraints` carry meaning only at the
+resource that defines them ({{resource-access-type}}), and the resource
+can change that meaning while action names and parameter values stay
+the same. The `resource_contract` member fixes, at approval, the
+version of that meaning the entry was approved under.
+
+A **resource contract** is a JSON document, identified by an `id` and a
+`version`, whose bytes never change for that pair. It fixes the
+contract material that Mission-Bound Runtime Enforcement lists
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Resource
+Contract"), including the operation contract ({{resource-matching}}) of
+each operation it covers and the members of each action family it
+defines. That section also defines the version states and how a
+reference resolves. This section depends on those rules normatively;
+the dependency binds only a deployment that supports
+`resource_contract`. The contract assembles those definitions and overrides none of them: a Common
+Constraint keeps the semantics its definition gives it
+({{common-constraints}}). A resource that changes any of that material
+publishes a new version with its own `digest`. The resource publishes
+its contracts and their references through its operation contract
+documentation or other deployment documentation; this document defines
+no metadata member or endpoint for them.
+
+The following entry references version `2026-10-01` of a payments
+contract:
+
+~~~ json
+{ "type": "mission_resource_access",
+  "resource": "https://payments.example/mcp",
+  "actions": ["execute_wire_transfer"],
+  "constraints": {
+    "max_amount": { "amount": "500.00", "currency": "USD" } },
+  "resource_contract": {
+    "id": "https://payments.example/contracts/payments",
+    "version": "2026-10-01",
+    "digest":
+      "sha-256:Tvvs9KfBVei4YUbtWRfmCKsquFxzgWvqxhSAsWPiu_o" } }
+~~~
+
+**Approval.** The authorization server assembles the reference from
+trusted resource or deployment configuration, which states whether an
+entry's `resource` requires a reference and which contract version is
+current for it. A `resource_contract` a client proposes is a proposal,
+never an authoritative declaration. Before approval, the authorization
+server:
+
+- MUST refuse, with the `invalid_authorization_details` error code, a
+  proposed entry whose `resource_contract` does not equal, member for
+  member, the reference of a contract its configuration names as current
+  for the entry's `resource` and that defines every action and action
+  family the entry lists; and
+- MUST, where its configuration requires a reference for the entry's
+  `resource` and the proposal carries none, record the current
+  contract's reference in the entry, so that the Approver approves the
+  entry with it.
+
+A superseded or retired version is never current
+({{I-D.draft-mcguinness-mission-runtime}}), so no new approval
+references one. The reference is assembled from configuration, not
+narrowed: a policy ceiling a proposal is narrowed against need not
+carry one, and step 4 of {{subset}} applies to entries derived from an
+approved entry. An authorization server that does not implement this
+section refuses a proposed or carried entry that carries
+`resource_contract`, with the `invalid_authorization_details` error
+code, and never drops the member.
+
+**Preservation.** The reference is part of the entry, so
+`authority_hash` commits it ({{I-D.draft-mcguinness-oauth-mission}}).
+Every derivation, narrowing, and delegation of the entry preserves it
+exactly ({{subset}}), and scope projection never drops it
+({{scope-projection}}). An entry approved without a reference gains one
+only through a new approval of an entry that carries it; a derivation
+never attaches the current contract to it.
+
+**Enforcement.** A resource server MUST NOT treat an entry carrying
+`resource_contract` as authorizing an operation unless it performs that
+operation under exactly the referenced contract: the one whose `id`,
+`version`, and `digest` all equal the reference's. Where the resource
+server's operation contract requires a reference for an operation, an
+applicable entry without one provides no authority for it. In both
+cases the entry is one the resource server cannot fully enforce
+({{rs-enforcement}}). The reference fixes meaning, not state: it
+supplies no observation of the resource, and it exempts no operation
+from the resource's other authorization checks. Which versions a
+resource still performs, and for which entries, follows the version
+states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that
+does not resolve there authorizes nothing.
+
 ## Delegate Eligibility {#delegate-eligibility}
 
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
@@ -864,6 +1147,16 @@ consistent with the subset rule ({{subset}}). Surviving entries are
 carried with their `delegation` member intact, so the next hop is
 evaluated the same way.
 
+A cross-domain grant separates two stages. Eligibility for the grant
+itself is decided as above, against the approved entry in the Mission
+Record. The copy the grant conveys keeps `delegation` only as
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}} allows, and an
+omitted member ends onward delegation from that copy. Neither stage
+lets an entry without `delegation` in the Mission Record appear in a
+delegated token. The dependency on that profile, here and in the
+absent-member exception of {{resource-access-type}}, binds only an
+authorization server that issues cross-domain grants.
+
 **Inherited eligibility.** A derived entry's `allowed_delegates`
 restricts eligibility; it never replaces an obligation the derivation
 inherits. An entry derived from a reference entry that has no
@@ -883,7 +1176,9 @@ that provenance with the Mission. It evaluates every later exchange
 against the approved entry in the Mission Record
 ({{I-D.draft-mcguinness-oauth-mission}}) and that provenance, never
 against a presented token alone. Where it cannot resolve either, the
-entry narrows out of the delegated token.
+entry narrows out of the delegated token. A cross-domain grant conveys
+no such provenance; {{I-D.draft-mcguinness-oauth-mission-cross-domain}}
+specifies how its conveyed copy treats `delegation`.
 
 ### Matching `allowed_delegates` {#matching-allowed-delegates}
 
@@ -934,10 +1229,12 @@ resource server:
 
 - the `scope` value or values it emits;
 - the `resource` and `resource_match` the mapping covers;
-- the `actions` value or values each `scope` value stands for; and
+- the `actions` value or values each `scope` value stands for;
 - for every `constraints` key an entry may carry, whether the target
   independently and identically enforces that key on the
-  `scope`-authorized path.
+  `scope`-authorized path; and
+- where an entry may carry `resource_contract`, the contract under which
+  the target performs the operations each `scope` value permits.
 
 Projecting a `mission_resource_access` entry's authority to `scope` is
 safe only when all of the following hold:
@@ -964,6 +1261,23 @@ safe only when all of the following hold:
    name as independently enforced fails the condition for that entry, as
    an unenforced key fails closed at a resource server that consumes
    `authorization_details` directly.
+4. **The contract is preserved.** For an entry carrying
+   `resource_contract`, the mapping states that the target performs
+   every operation the mapped `scope` value permits under exactly the
+   referenced contract ({{resource-contract}}). A `scope` value conveys
+   no contract reference of its own. An entry without the member
+   satisfies this condition only where the target requires no reference
+   for those operations.
+
+Advertising a key in `mission_constraints_supported`
+({{protected-resource-metadata}}) is not evidence that a projection
+preserves the bound: condition 3 needs a control that holds on every
+operation the projected `scope` value permits, at a value at least as
+tight as the entry's. For example, where a target enforces a fixed
+500.00 USD ceiling on every operation `payments.small` permits, an entry
+whose `max_amount` is 500.00 USD projects safely to `payments.small`. An
+entry whose `max_amount` is 200.00 USD does not, because the `scope`
+value does not convey the entry's value.
 
 An entry failing any condition MUST NOT be projected to `scope`. Per
 {{I-D.draft-mcguinness-oauth-mission}}'s issuance algorithm, the
@@ -1065,7 +1379,10 @@ and to send messages through a messaging MCP server:
 [
   { "type": "mission_resource_access",
     "resource": "https://finance.example.com/mcp",
-    "actions": ["query_invoices", "post_adjustment"],
+    "actions": ["query_invoices"] },
+  { "type": "mission_resource_access",
+    "resource": "https://finance.example.com/mcp",
+    "actions": ["post_adjustment"],
     "constraints": {
       "max_amount": { "amount": "500.00", "currency": "USD" }
     } },
@@ -1075,6 +1392,10 @@ and to send messages through a messaging MCP server:
     "constraints": { "recipient_domain": "example.com" } }
 ]
 ~~~
+
+An entry's `constraints` bind every action it lists, so the read tool
+has an entry of its own, outside the `max_amount` bound that applies to
+the adjustment tool.
 
 Delegation to a sub-agent uses the same `delegation` member
 ({{delegate-eligibility}}). The following example shows an Authority Set
@@ -1112,7 +1433,10 @@ An **authorization server** conforms by supporting
 implements:
 
 - schema validation of a proposed or carried entry against the type
-  definition ({{resource-access-type}}); and
+  definition ({{resource-access-type}});
+- either the approval-time assembly and validation of a
+  `resource_contract` reference, or refusal of every entry that carries
+  one ({{resource-contract}}); and
 - the Transformation Capabilities declaration
   ({{transformation-capabilities}}), stating which of narrowing,
   delegation, and projection it claims for this type.
@@ -1124,7 +1448,7 @@ implements:
   rules ({{subset}}, {{common-constraints}});
 - **delegation**: the delegate eligibility test
   ({{delegate-eligibility}}); and
-- **projection**: the three per-entry, per-target safety conditions of
+- **projection**: the four per-entry, per-target safety conditions of
   {{scope-projection}} before emitting `scope`.
 
 An authorization server that does not claim `projection` MUST NOT emit
@@ -1162,7 +1486,7 @@ anchors, and issuance gating. Three risks are specific to this type:
 - **A safe projection is per entry, not per type.** That
   `mission_resource_access` defines a projection relation
   ({{scope-projection}}) does not make every entry of the type safely
-  projectable: {{scope-projection}}'s three conditions must hold for the
+  projectable: {{scope-projection}}'s four conditions must hold for the
   specific entry and mapping in force, and the type's general capability
   does not extend to an entry by default.
 
@@ -1210,6 +1534,22 @@ authorization server and resource servers apply; this document defines
 one rule ({{resource-matching}}), so no profile identifier is required
 for interoperation.
 
+## Action Family Growth {#action-family-growth}
+
+An action family ({{resource-access-type}}) authorizes every action
+under its name, including an action the resource adds after approval. A
+durable approval naming `invoices.*` therefore authorizes an `invoices`
+action the resource defines later, which can confer more authority than
+any action the Approver saw.
+
+The family guidance in {{resource-access-type}} narrows this risk but
+does not remove it. It is a recommendation to the resource and does not
+freeze an existing family's membership, and this document defines no
+rule that binds an entry to the action semantics its resource
+documented at approval. An Approver or authorization server that needs
+a fixed set of actions approves or derives literal actions rather than
+a family.
+
 # Privacy Considerations {#privacy-considerations}
 
 This document defines no data element beyond what
@@ -1252,10 +1592,14 @@ Designated Expert checks that a submission:
 - uses a name matching `^[A-Za-z0-9_.:-]+$` that is not already
   registered;
 - gives a JSON value syntax ({{RFC8259}}) precise enough for independent
-  implementations to agree on; and
+  implementations to agree on;
 - states a subset rule and an intersection rule, both in value-space
   terms ({{value-space-comparison}}), with the intersection of any two
-  valid values never broader than either operand.
+  valid values never broader than either operand; and
+- states the input the constraint reads at the point of use and the
+  predicate that input meets, in value-space terms, precisely enough for
+  independent resource servers to agree on which operations are within
+  the bound.
 
 A specification-defined name is coordinated through this registry. Any
 other `constraints` member name is either collision-resistant or
@@ -1269,6 +1613,9 @@ Each registration records:
   reference value.
 - **Intersection Rule**: how two values for the key combine into a
   result no broader than either operand.
+- **Input**: what the constraint reads at the point of use.
+- **Predicate**: the condition the input meets when an operation is
+  within the bound.
 - **Change Controller**: IETF, or the registrant for any other
   registration.
 - **Reference**: the specification defining the key.
@@ -1276,8 +1623,8 @@ Each registration records:
 The initial contents of the registry are the Common Constraints of
 {{initial-common-constraints}}. For every entry, the Change Controller
 is IETF and the Reference is {{initial-common-constraints}} of this
-document, which holds the full Subset Rule and Intersection Rule text;
-the table summarizes them.
+document, which holds the full Subset Rule, Intersection Rule, Input,
+and Predicate text; the tables summarize them.
 
 | Key Name | Value Syntax | Subset Rule | Intersection Rule |
 |---|---|---|---|
@@ -1291,6 +1638,19 @@ the table summarizes them.
 | `allowed_tools` | Array of strings | Candidate a subset of reference | The common members |
 | `requires_action_approval` | Boolean | Candidate `true` or equal to reference | The logical OR |
 {: title="Initial Mission Common Constraints registry"}
+
+| Key Name | Input | Predicate |
+|---|---|---|
+| `max_amount` | The action's amount and currency | Same currency; input amount <= bound |
+| `resource_issued_after` | The resource's recorded issuance instant | Input >= value |
+| `resource_issued_before` | The resource's recorded issuance instant | Input <= value |
+| `tenant` | The resource's authoritative tenant | Equal |
+| `recipient_domain` | Every final recipient | Every domain equal or a subdomain |
+| `time_window` | The enforcement point's clock at use | Within the window, inclusive |
+| `data_classification` | The labels of all data read or written | Every label among the values |
+| `allowed_tools` | The dispatched or verified capability identity | Among the values |
+| `requires_action_approval` | When `true`, the action-bound approval | When `true`, a verified, fresh, bound approval |
+{: title="Initial Mission Common Constraints registry: inputs and predicates"}
 
 --- back
 

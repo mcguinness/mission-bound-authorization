@@ -505,6 +505,12 @@ export interface ApprovalBasisCeilingDrawdown {
   activation: { policy_id: string; policy_version: string };
   /** The requesting client. */
   activation_actor: { iss: string; sub: string };
+  /**
+   * @spec progressive#ceiling-drawdown-basis (#1438, D572): REQUIRED. The
+   * drawdown policy evaluated, naming the same `id` and `version` as
+   * `activation`.
+   */
+  adjudication: { kind: "policy"; policy: { id: string; version: string } };
   /** The `ceiling_hash`. */
   root_commitment: string;
   /**
@@ -719,6 +725,15 @@ export interface MissionRecord {
   /** @spec progressive#progressive-authorization: commits `authority_ceiling` and `drawdown_policy`. */
   ceiling_hash?: string;
   /**
+   * @spec progressive#progressive-authorization, progressive#ceiling-drawdown-basis
+   * (#1468): the `ceiling_hash` of the ceiling and drawdown policy a human last
+   * explicitly consented, every drawdown's `root_commitment`. Equal to
+   * `ceiling_hash` until a policy-adjudicated drawdown narrows the ceiling;
+   * only a re-consent replaces it. Absent on a record stored before #1468,
+   * whose ceiling was never narrowed, so `ceiling_hash` names that consent.
+   */
+  ceiling_consent_hash?: string;
+  /**
    * @spec progressive#in-ceiling-expansion, progressive#ceiling-review: the
    * issuer's retained record of the instant the Approver consented the
    * ceiling `ceiling_hash` commits. A drawdown's `approved_at` and the ceiling
@@ -726,9 +741,16 @@ export interface MissionRecord {
    */
   ceiling_consented_at?: string;
   /**
+   * @spec progressive#ceiling-drawdown-basis, progressive#ceiling-reconsent
+   * (#1413): the Approver who consented the ceiling `ceiling_hash` commits,
+   * the `consent_principal` of every drawdown under it. Present beside
+   * `authority_ceiling` on records stored since #1413.
+   */
+  ceiling_consent_principal?: { iss: string; sub: string };
+  /**
    * @spec progressive#audit-linkage: the chain's cumulative count of
    * policy-adjudicated drawdowns, this record's own included. Present beside
-   * `authority_ceiling`; 0 on the Mission whose approval consented the ceiling.
+   * `authority_ceiling`; 0 on the chain's root Mission, whose approval consented the ceiling.
    */
   drawdown_count?: number;
 }

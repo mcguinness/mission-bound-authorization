@@ -12,17 +12,46 @@
  */
 
 import {
+  delegateMatcherListViolation,
+  entryDelegateMatcherViolation,
   isAbsoluteUri,
   isActivationPolicyRef,
   isImplementedCommonConstraint,
   refusedEntryMember,
+  resourceContractViolation,
+  resourceMatchViolation,
   SUPPORTED_CONSTRAINT_KEYS,
   type JsonValue,
+  unsupportedEntryMember,
   validCommonConstraint,
 } from "@mission/core";
 
 /** @spec mission#authorization-derivation — the sole type this AS derives. */
 export const MISSION_RESOURCE_ACCESS_TYPE = "mission_resource_access" as const;
+
+/**
+ * @spec resource-access#resource-access-type, resource-access#entry-validation
+ * (#1376): one `actions` value, matched as a whole: an action identifier
+ * (`[A-Za-z0-9_.:-]+`), or an action family, an identifier followed by `.*`.
+ * Anchored and without the `m` flag, so a character outside the grammar
+ * anywhere in the value, a trailing newline included, fails it.
+ */
+export const ACTION_VALUE = /^[A-Za-z0-9_.:-]+(?:\.\*)?$/;
+
+/**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): one delegate matcher, the item of both `allowed_delegates` and
+ * `allowed_child_actors`. Closed to `sub` and `sub_profile`, at least one
+ * present, each a non-empty string: the published form of the shared rule
+ * {@link validateMissionResourceAccessSchema} applies
+ * (`delegateMatcherListViolation`).
+ */
+const DELEGATE_MATCHER_SCHEMA: Record<string, JsonValue> = {
+  type: "object",
+  properties: { sub: { type: "string", minLength: 1 }, sub_profile: { type: "string", minLength: 1 } },
+  minProperties: 1,
+  additionalProperties: false,
+};
 
 /** draft-zehavi-oauth-rar-metadata §5 — one type's published metadata entry. */
 export interface AuthorizationDetailsTypeMetadata {
@@ -53,10 +82,13 @@ export interface AuthorizationDetailsTypeMetadata {
  * `const` below.
  *
  * @spec resource-access#entry-validation (#1278, D457): `locations` is
- * prohibited by name (`"locations": false`), not by closing the top level:
- * `additionalProperties` stays `true`, so a member another specification
- * defines for this type (such as `capability_sources`) remains possible.
- * {@link validateMissionResourceAccessSchema} enforces the same prohibition.
+ * prohibited by name (`"locations": false`). @spec mission#subset (#1399,
+ * D538): the top level is CLOSED (`additionalProperties: false`) to
+ * {@link SUPPORTED_ENTRY_MEMBERS}, the type's own members and
+ * `capability_sources`, which Capability Binding defines for it. Any other
+ * member is refused rather than admitted and then dropped by derivation's
+ * member-by-member rebuild. {@link validateMissionResourceAccessSchema}
+ * enforces both prohibitions.
  */
 export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -66,11 +98,18 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
   properties: {
     type: { const: MISSION_RESOURCE_ACCESS_TYPE },
     resource: { type: "string", format: "uri" },
+    // @spec resource-access#resource-access-type (#1276): the two values
+    // Resource Access defines. A `prefix` entry's `resource` carries no
+    // query and names a `//` authority, which
+    // validateMissionResourceAccessSchema enforces.
+    resource_match: { enum: ["exact", "prefix"] },
     // @spec resource-access#entry-validation (#1278): this type does not use
     // the RFC 9396 common `locations` field; its presence, whatever its value,
     // fails the schema.
     locations: false,
-    actions: { type: "array", items: { type: "string" }, minItems: 1 },
+    // @spec resource-access#entry-validation (#1376): non-empty, each value an
+    // action identifier or an action family ({@link ACTION_VALUE}).
+    actions: { type: "array", items: { type: "string", pattern: ACTION_VALUE.source }, minItems: 1 },
     constraints: {
       type: "object",
       description: "Common Constraints (@spec mission#common-constraints)",
@@ -132,14 +171,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       description: "@spec attenuation#delegation, child-delegation#fanout",
       properties: {
         max_depth: { type: "integer", minimum: 0 },
-        allowed_delegates: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: { sub: { type: "string" }, sub_profile: { type: "string" } },
-            additionalProperties: true,
-          },
-        },
+        allowed_delegates: { type: "array", items: DELEGATE_MATCHER_SCHEMA },
         // @spec child-delegation#fanout — the per-entry child-creation controls.
         // `allowed_child_actors` is the same matcher shape as `allowed_delegates`
         // (shared vocabulary); both are now schema-covered so neither rides on
@@ -150,14 +182,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
           properties: {
             max_children: { type: "integer", minimum: 0 },
             max_child_depth: { type: "integer", minimum: 1 },
-            allowed_child_actors: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: { sub: { type: "string" }, sub_profile: { type: "string" } },
-                additionalProperties: true,
-              },
-            },
+            allowed_child_actors: { type: "array", items: DELEGATE_MATCHER_SCHEMA },
             child_creation_policy: {
               type: "object",
               properties: {
@@ -175,9 +200,28 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       required: ["max_depth"],
       additionalProperties: true,
     },
+    // @spec capability-binding#capability-source-binding: recorded by the
+    // authorization server at derivation; a proposal's value is never carried.
+    capability_sources: { type: "array", items: { type: "object" } },
+    // @spec resource-access#resource-access-type, resource-access#resource-contract
+    // (#249): exactly `id` (an absolute URI), `version` (a non-empty string)
+    // and `digest` (the integrity-anchor encoded form). A proposed value is a
+    // proposal the authorization server validates against its trusted
+    // configuration before approval, never an authoritative declaration.
+    resource_contract: {
+      type: "object",
+      properties: {
+        id: { type: "string", format: "uri" },
+        version: { type: "string", minLength: 1 },
+        digest: { type: "string", pattern: "^sha-256:[A-Za-z0-9_-]{43}$" },
+      },
+      required: ["id", "version", "digest"],
+      additionalProperties: false,
+    },
   },
   required: ["type", "resource", "actions"],
-  additionalProperties: true,
+  // @spec mission#subset (#1399, D538): closed to SUPPORTED_ENTRY_MEMBERS.
+  additionalProperties: false,
 };
 
 /**
@@ -246,14 +290,38 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   if (!isAbsoluteUri(e.resource)) {
     return `resource ${JSON.stringify(e.resource)} is not an RFC 3986 absolute URI`;
   }
-  // @spec resource-access#resource-matching (#1264, D446): this authorization
-  // server implements `exact` resource matching only. Any other value is
-  // refused at intake, never admitted and then rebuilt as an exact entry.
-  if (e.resource_match !== undefined && e.resource_match !== "exact") {
-    return `resource_match ${JSON.stringify(e.resource_match)} is not supported; this authorization server implements exact resource matching only`;
-  }
+  // @spec resource-access#resource-access-type, resource-access#entry-validation
+  // (#1276): `exact` or `prefix`, and "A `resource` value under `prefix` MUST
+  // NOT carry a query or fragment component; the authorization server
+  // refuses such an entry with the `invalid_authorization_details` error
+  // code." The shared rule also refuses a `prefix` base with no `//`
+  // authority, where the matcher draws no boundary. Refused at intake, never
+  // admitted and then rebuilt as an exact entry.
+  const matchViolation = resourceMatchViolation(e);
+  if (matchViolation !== undefined) return matchViolation;
   if (!Array.isArray(e.actions) || e.actions.length === 0 || !e.actions.every((a) => typeof a === "string")) {
     return "actions must be a non-empty array of strings";
+  }
+  if (
+    e.capability_sources !== undefined &&
+    (!Array.isArray(e.capability_sources) ||
+      !e.capability_sources.every((b) => b !== null && typeof b === "object" && !Array.isArray(b)))
+  ) {
+    return "capability_sources must be an array of objects";
+  }
+  // @spec resource-access#entry-validation (#249): "its `resource_contract`
+  // is not an object with exactly the members `id`, `version`, and `digest`,
+  // or one of them does not have the form {{resource-access-type}} gives it".
+  if (e.resource_contract !== undefined) {
+    const violation = resourceContractViolation(e.resource_contract);
+    if (violation !== undefined) return violation;
+  }
+  // @spec resource-access#entry-validation (#1376): each value matches the
+  // action grammar as a whole, so an identifier the namespace cannot carry
+  // is refused at intake rather than admitted and never matched.
+  const malformedAction = e.actions.find((a) => !ACTION_VALUE.test(a));
+  if (malformedAction !== undefined) {
+    return `actions value ${JSON.stringify(malformedAction)} is neither an action identifier nor an action family`;
   }
   if (e.constraints !== undefined) {
     if (e.constraints === null || typeof e.constraints !== "object" || Array.isArray(e.constraints)) {
@@ -335,8 +403,11 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
     if (typeof d.max_depth !== "number" || !Number.isInteger(d.max_depth) || d.max_depth < 0) {
       return "delegation.max_depth must be a non-negative integer";
     }
+    // @spec resource-access#matching-allowed-delegates (#1373): the shared
+    // matcher rule, applied before derivation can rebuild a matcher without a
+    // member it does not recognize.
     if (d.allowed_delegates !== undefined) {
-      const err = validateMatcherList(d.allowed_delegates, "delegation.allowed_delegates");
+      const err = delegateMatcherListViolation(d.allowed_delegates, "delegation.allowed_delegates");
       if (err) return err;
     }
     // @spec child-delegation#fanout — the per-entry `children` controls, including
@@ -364,7 +435,10 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         return "delegation.children.child_creation_policy must be an activation policy reference (id, version, digest)";
       }
       if (ch.allowed_child_actors !== undefined) {
-        const err = validateMatcherList(ch.allowed_child_actors, "delegation.children.allowed_child_actors");
+        const err = delegateMatcherListViolation(
+          ch.allowed_child_actors,
+          "delegation.children.allowed_child_actors",
+        );
         if (err) return err;
       }
     }
@@ -373,17 +447,23 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
 }
 
 /**
- * @spec resource-access#entry-validation (#1278, D457): the violation for a
- * `mission_resource_access` entry carrying a member this type refuses by
- * name ({@link refusedEntryMember}: `locations`), or undefined. Shared by the
- * schema check above and by the token-exchange and deferred intakes that read
- * requested entries without it, each refusing `invalid_authorization_details`.
+ * @spec resource-access#entry-validation (#1278, D457), mission#subset
+ * (#1399, D538): the violation for a `mission_resource_access` entry carrying
+ * a member this type refuses by name ({@link refusedEntryMember}:
+ * `locations`), or any other member outside the supported set
+ * ({@link unsupportedEntryMember}), or undefined. Shared by the schema check
+ * above and by the token-exchange and deferred intakes that read requested
+ * entries without it, each refusing `invalid_authorization_details`.
  */
 export function refusedMemberViolation(entry: unknown): string | undefined {
   const member = refusedEntryMember(entry);
-  return member === undefined
+  if (member !== undefined) {
+    return `${member} must be absent: the ${MISSION_RESOURCE_ACCESS_TYPE} type does not use this RFC 9396 common field`;
+  }
+  const unsupported = unsupportedEntryMember(entry);
+  return unsupported === undefined
     ? undefined
-    : `${member} must be absent: the ${MISSION_RESOURCE_ACCESS_TYPE} type does not use this RFC 9396 common field`;
+    : `${unsupported} is not a supported member of the ${MISSION_RESOURCE_ACCESS_TYPE} type; refusing rather than dropping it`;
 }
 
 /**
@@ -403,22 +483,22 @@ export function refusedMemberInRequest(entries: readonly unknown[]): string | un
 }
 
 /**
- * Shared structural check for a delegate-matcher list (`allowed_delegates` /
- * `allowed_child_actors`): an array of objects each with optional string `sub` /
- * `sub_profile`. Returns a violation description or undefined. Mirrors the
- * runtime matcher's shape ({@link DelegateMatcher}).
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): the shared delegate-matcher rule over a requested
+ * `authorization_details` array, for the same intakes as
+ * {@link refusedMemberInRequest}: the first `mission_resource_access` entry
+ * whose `allowed_delegates` or `allowed_child_actors` carries a malformed
+ * matcher yields the violation (`entryDelegateMatcherViolation`, which applies
+ * `delegateMatcherListViolation`). Each intake's subset check reads a matcher's
+ * `sub` and `sub_profile` only, so a matcher carrying another member would be
+ * admitted, then issued either rebuilt without the member (a projection) or
+ * carrying a member no enforcement point reads (the deferred grant).
  */
-function validateMatcherList(value: unknown, path: string): string | undefined {
-  if (!Array.isArray(value)) return `${path} must be an array`;
-  for (const m of value) {
-    if (m === null || typeof m !== "object" || Array.isArray(m)) {
-      return `${path} entries must be objects`;
-    }
-    const mm = m as Record<string, unknown>;
-    if (mm.sub !== undefined && typeof mm.sub !== "string") return `${path}.sub must be a string`;
-    if (mm.sub_profile !== undefined && typeof mm.sub_profile !== "string") {
-      return `${path}.sub_profile must be a string`;
-    }
+export function malformedMatcherInRequest(entries: readonly unknown[]): string | undefined {
+  for (const entry of entries) {
+    if ((entry as { type?: unknown } | null)?.type !== MISSION_RESOURCE_ACCESS_TYPE) continue;
+    const violation = entryDelegateMatcherViolation(entry);
+    if (violation) return violation;
   }
   return undefined;
 }

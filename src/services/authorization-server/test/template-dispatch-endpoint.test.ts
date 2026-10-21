@@ -195,7 +195,7 @@ async function dispatch(params: {
 }
 
 /** A held Dispatch Policy snapshot; `select_agent` is its Agent selection rule (@spec mission#standing-consent-bases). */
-const heldPolicy = (id: string, rule: { select_agent?: string } = {}) => ({
+const heldPolicy = (id: string, rule: { select_agent?: string; derivation_limit_ceiling?: number | null } = {}) => ({
   version: "1",
   content_type: "application/json",
   content: JSON.stringify({ id, ...rule }),
@@ -241,6 +241,9 @@ beforeAll(async () => {
       "test-route-unlisted": heldPolicy("test-route-unlisted", { select_agent: "governed-agent" }),
       "test-no-rule": heldPolicy("test-no-rule"),
       "wide-reconciliation": heldPolicy("wide-reconciliation"),
+      // @spec mission-template#dispatch, derivation-limits#effective-limit
+      // (#1119): a Dispatch Policy stating the per-instance maximum.
+      "test-limit-3": heldPolicy("test-limit-3", { derivation_limit_ceiling: 3 }),
     },
   });
   asServer = as.provider.listen(PORT);
@@ -288,6 +291,53 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
     }
   });
 
+  // @spec mission#subset (#1399, D538): a template ceiling entry carrying an
+  // unsupported member is refused at consent, naming the entry, rather than
+  // stored and dropped when a dispatch derives from it.
+  it("refuses a template whose ceiling entry carries an unsupported member, naming the entry, and creates no template", async () => {
+    for (const invoice_ids of [["INV-7"], null]) {
+      const body = readOnlyTemplateBody();
+      const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) => (i === 0 ? { ...e, invoice_ids } : e));
+      const res = await createTemplateAdmin({ ...body, ceiling });
+      const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+      expect(res.status, JSON.stringify(out)).toBe(400);
+      expect(out.error).toBe("invalid_request");
+      expect(out.error_description).toBe(
+        "ceiling[0] carries invoice_ids, which is not a supported member of the mission_resource_access type",
+      );
+      expect(out.template_id).toBeUndefined();
+      expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+    }
+  });
+
+  // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+  // (#1373): a template ceiling entry whose delegate matcher carries a member
+  // other than `sub` and `sub_profile`, or neither, is refused at consent,
+  // naming the entry, rather than stored and refused only at dispatch.
+  it("refuses a template whose ceiling entry carries a malformed delegate matcher, naming the entry, and creates no template", async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [
+        { max_depth: 1, allowed_delegates: [{ sub_profile: "ai_agent", org: "A" }] },
+        "ceiling[0] delegation.allowed_delegates entries carry no member 'org'",
+      ],
+      [
+        { max_depth: 1, children: { allowed_child_actors: [{}] } },
+        "ceiling[0] delegation.children.allowed_child_actors entries must carry sub or sub_profile",
+      ],
+    ];
+    for (const [delegation, description] of cases) {
+      const body = readOnlyTemplateBody();
+      const ceiling = (body.ceiling as Record<string, unknown>[]).map((e, i) => (i === 0 ? { ...e, delegation } : e));
+      const res = await createTemplateAdmin({ ...body, ceiling });
+      const out = (await res.json()) as { error?: string; error_description?: string; template_id?: string };
+      expect(res.status, JSON.stringify(out)).toBe(400);
+      expect(out.error).toBe("invalid_request");
+      expect(out.error_description).toBe(description);
+      expect(out.template_id).toBeUndefined();
+      expect(as.templateStore.getByApprovalEvent(body.approval_event_id as string)).toBeUndefined();
+    }
+  });
+
   it("rejects an absent or wrong x-service-token with 401", async () => {
     const absent = await createTemplateAdmin(readOnlyTemplateBody(), null);
     expect(absent.status).toBe(401);
@@ -297,6 +347,58 @@ describe("Mission Template admin plane (@spec mission-template)", () => {
 });
 
 describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", () => {
+  // @spec mission-template#dispatch, derivation-limits#effective-limit
+  // (#1119, D327): each dispatched instance's derivation_limit is established
+  // at its own Dispatch, never above the maximum the committed Dispatch Policy
+  // states, whatever it requests; the deployment imposes no ceiling here.
+  // @spec mission-template#template-consent, derivation-limits#approval-rendering
+  // (#1119): the stand-in returns the disclosure a human template-consent page
+  // would render, beside max_active and the dispatch rate.
+  it("template consent discloses the per-instance derivation-limit rule and maximum the Dispatch Policy states, beside max_active and the dispatch rate", async () => {
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), dispatch_policy: { id: "test-limit-3", version: "1" } });
+    const body = (await created.json()) as {
+      disclosure?: { max_active?: number; dispatch_rate?: { limit: number; window_s: number }; derivation_limit?: string[] };
+    };
+    expect(created.status).toBe(201);
+    const template = readOnlyTemplateBody() as { max_active: number; rate_per_min: number };
+    expect(body.disclosure?.max_active).toBe(template.max_active);
+    expect(body.disclosure?.dispatch_rate).toEqual({ limit: template.rate_per_min, window_s: 60 });
+    expect(body.disclosure?.derivation_limit).toEqual([
+      "Each dispatched instance created under this consent establishes its own derivation limit from its own request, never above 3.",
+      "This maximum is local to each dispatched instance: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.",
+      "The refreshes of an async delegation family are not counted against this limit.",
+    ]);
+    // A Dispatch Policy stating no maximum is disclosed as guaranteeing none.
+    const unbounded = await createTemplateAdmin(readOnlyTemplateBody());
+    const unboundedBody = (await unbounded.json()) as { disclosure?: { derivation_limit?: string[] } };
+    expect(unboundedBody.disclosure?.derivation_limit?.[0]).toBe(
+      "Each dispatched instance created under this consent establishes its own derivation limit from its own request; no finite maximum is guaranteed.",
+    );
+  });
+
+  it("a Dispatch under a Dispatch Policy stating a per-instance maximum records it, capping a larger request, each instance counting its own", async () => {
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), dispatch_policy: { id: "test-limit-3", version: "1" } });
+    const { template_id } = (await created.json()) as { template_id: string };
+    expect(created.status).toBe(201);
+    const intentRequesting = (limit?: number) =>
+      JSON.stringify({
+        intent: {
+          goal: "reconcile Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: FAR_FUTURE,
+          ...(limit === undefined ? {} : { requested_derivation_limit: limit }),
+        },
+      });
+    for (const [limit, recorded] of [[undefined, 3], [10, 3], [2, 2]] as const) {
+      const res = await dispatch({ templateId: template_id, intent: intentRequesting(limit), dispatchEventId: `evt-limit-${seq++}` });
+      const body = (await res.json()) as { mission_id?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
+      const instance = as.kernel.get(body.mission_id as string);
+      expect(instance?.derivation_limit, String(limit)).toBe(recorded);
+      expect(instance?.derivation_count, String(limit)).toBe(1);
+    }
+  });
+
   it("happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent", async () => {
     const created = await createTemplateAdmin(readOnlyTemplateBody());
     const { template_id } = (await created.json()) as { template_id: string };

@@ -72,8 +72,8 @@ interface Semantics {
   /** Whether the authoritative facts satisfy the bound; an absent fact never does. */
   satisfied(value: JsonValue, facts: ConstraintFacts): boolean;
   /**
-   * Whether a (valid) value admits nothing: a window with no instant, a list
-   * with no member. A combination whose result is empty has no
+   * Whether a (valid) value admits nothing: a list with no member. A
+   * combination whose result is empty has no
    * intersection, whether it came from two operands or was carried from one.
    */
   empty?(value: JsonValue): boolean;
@@ -135,19 +135,37 @@ function earlier(a: string | undefined, b: string | undefined): string | undefin
   return compareInstants(instant(a), instant(b)) <= 0 ? a : b;
 }
 
+/** Whether `not_before` is later than `not_after`, so no instant lies between them. */
+function inverted(notBefore: string | undefined, notAfter: string | undefined): boolean {
+  return (
+    notBefore !== undefined &&
+    notAfter !== undefined &&
+    compareInstants(instant(notBefore), instant(notAfter)) > 0
+  );
+}
+
 /**
  * `time_window`: the action may be exercised only within the window,
  * evaluated at the point of use against a trusted clock. Both bounds are
  * inclusive; an absent bound is unbounded on its side, so a candidate that
- * omits a bound its reference carries is broader. A window whose
- * `not_before` is later than its `not_after` admits no instant.
+ * omits a bound its reference carries is broader.
+ *
+ * @spec resource-access#entry-validation (#1376): a window whose
+ * `not_before` is later than its `not_after` admits no instant and is
+ * malformed, so intake refuses it, as do configuration load, derivation and
+ * credential parsing, which read the same check. Equal bounds name one
+ * instant and are valid.
  */
 const TIME_WINDOW: Semantics = {
   valid: (v) => {
     if (v === null || typeof v !== "object" || Array.isArray(v)) return false;
     const keys = Object.keys(v);
     if (keys.length === 0 || keys.some((k) => !WINDOW_MEMBERS.has(k))) return false;
-    return keys.every((k) => parseRfc3339Instant((v as Record<string, unknown>)[k]) !== undefined);
+    if (!keys.every((k) => parseRfc3339Instant((v as Record<string, unknown>)[k]) !== undefined)) {
+      return false;
+    }
+    const w = v as Window;
+    return !inverted(w.not_before, w.not_after);
   },
   noBroader: (c, r) => {
     const cw = c as Window;
@@ -163,31 +181,18 @@ const TIME_WINDOW: Semantics = {
     return true;
   },
   // The overlap: the later not_before and the earlier not_after. An empty
-  // overlap has no intersection.
+  // overlap has no intersection. A valid window is never inverted, so one
+  // carried from a single operand is never empty.
   intersect: (a, b) => {
     const aw = a as Window;
     const bw = b as Window;
     const notBefore = later(aw.not_before, bw.not_before);
     const notAfter = earlier(aw.not_after, bw.not_after);
-    if (
-      notBefore !== undefined &&
-      notAfter !== undefined &&
-      compareInstants(instant(notBefore), instant(notAfter)) > 0
-    ) {
-      return undefined;
-    }
+    if (inverted(notBefore, notAfter)) return undefined;
     return {
       ...(notBefore !== undefined ? { not_before: notBefore } : {}),
       ...(notAfter !== undefined ? { not_after: notAfter } : {}),
     };
-  },
-  empty: (v) => {
-    const w = v as Window;
-    return (
-      w.not_before !== undefined &&
-      w.not_after !== undefined &&
-      compareInstants(instant(w.not_before), instant(w.not_after)) > 0
-    );
   },
   satisfied: (v, facts) => {
     if (typeof facts.now !== "number" || !Number.isFinite(facts.now)) return false;
@@ -446,6 +451,91 @@ export function commonConstraintGates(
     evaluated.push(key);
     const s = SEMANTICS[key];
     if (!s.valid(v) || !s.satisfied(v as JsonValue, facts)) return { satisfied: false, evaluated };
+  }
+  return { satisfied: true, evaluated };
+}
+
+/**
+ * @spec resource-access#initial-common-constraints (#1266): the Common
+ * Constraints whose input is a fact of the resource the operation acts on:
+ * its issuance instant, its tenant, and the classification of its data. For
+ * an operation over a collection, each member is a resource the operation
+ * acts on, so each is evaluated with its own facts.
+ */
+export const MEMBER_FACT_CONSTRAINTS: readonly CommonConstraintKey[] = Object.freeze([
+  "resource_issued_after",
+  "resource_issued_before",
+  "tenant",
+  "data_classification",
+]);
+
+/**
+ * One member of a collection as an enforcement point establishes it from its
+ * own records: `id`, and each fact the record holds. A fact the record does
+ * not hold is absent.
+ */
+export interface CollectionMemberFacts {
+  id: string;
+  issued_at?: string;
+  tenant?: string;
+  data_classification?: string;
+}
+
+const MEMBER_FIELDS = new Set(["id", "issued_at", "tenant", "data_classification"]);
+
+/**
+ * Read one collection member as {@link ConstraintFacts}: an object whose `id`
+ * is a non-empty string and whose other members, each optional, are strings.
+ * Anything else is unreadable and returns `undefined`, never a member with
+ * the unreadable fact silently absent.
+ */
+export function collectionMemberConstraintFacts(member: unknown): ConstraintFacts | undefined {
+  if (member === null || typeof member !== "object" || Array.isArray(member)) return undefined;
+  const m = member as Record<string, unknown>;
+  if (Object.keys(m).some((k) => !MEMBER_FIELDS.has(k))) return undefined;
+  if (typeof m.id !== "string" || m.id.length === 0) return undefined;
+  for (const k of ["issued_at", "tenant", "data_classification"]) {
+    if (m[k] !== undefined && typeof m[k] !== "string") return undefined;
+  }
+  return {
+    ...(typeof m.issued_at === "string" ? { resourceIssuedAt: m.issued_at } : {}),
+    ...(typeof m.tenant === "string" ? { tenant: m.tenant } : {}),
+    ...(typeof m.data_classification === "string"
+      ? { dataClassification: [m.data_classification] }
+      : {}),
+  };
+}
+
+/**
+ * @spec resource-access#common-constraints, #initial-common-constraints
+ * (#1266): {@link commonConstraintGates} for an operation over a collection.
+ * `members` is each member's own facts; `facts` carries what the whole
+ * operation shares (the clock, the dispatched tool, the recipients), and any
+ * single-resource fact it carries is not read here. The entry provides
+ * authority only when every member satisfies every gate: a member whose fact
+ * is missing, malformed or outside the bound denies the whole operation,
+ * never narrows it to the members that pass. An empty collection establishes
+ * no member fact, so a bound that reads one is not satisfied. Absent
+ * `members`, the operation acts on one resource and `facts` is read whole.
+ */
+export function commonConstraintGatesOverMembers(
+  constraints: Constraints,
+  facts: ConstraintFacts,
+  members: readonly ConstraintFacts[] | undefined,
+): CommonConstraintTrace {
+  if (members === undefined) return commonConstraintGates(constraints, facts);
+  const {
+    resourceIssuedAt: _issued,
+    tenant: _tenant,
+    dataClassification: _labels,
+    ...shared
+  } = facts;
+  if (members.length === 0) return commonConstraintGates(constraints, shared);
+  const evaluated: CommonConstraintKey[] = [];
+  for (const member of members) {
+    const trace = commonConstraintGates(constraints, { ...shared, ...member });
+    for (const key of trace.evaluated) if (!evaluated.includes(key)) evaluated.push(key);
+    if (!trace.satisfied) return { satisfied: false, evaluated };
   }
   return { satisfied: true, evaluated };
 }

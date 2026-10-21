@@ -25,7 +25,7 @@ import {
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
-import type { ScopeProjectionMapping } from "@mission/core";
+import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
@@ -60,7 +60,14 @@ import { IssuerEvidenceStore } from "./kernel/issuer-evidence.js";
 import { defaultSubjectResolver, type SubjectResolver } from "./adapters/continuation-grant.js";
 import type { CarryoverConfig } from "./kernel/carryover.js";
 import { revokeChildrenCreatedByAnotherClient } from "./kernel/child-delegation.js";
-import { revokeSuccessorsExpandedByAnotherClient, type SuccessorRemediation } from "./kernel/expansion.js";
+import {
+  DEFAULT_EXPANSION_RATE_LIMIT,
+  type DrawdownRemediation,
+  ExpansionRateLimiter,
+  revokeDrawdownSuccessorsRequestedByAnotherClient,
+  revokeSuccessorsExpandedByAnotherClient,
+  type SuccessorRemediation,
+} from "./kernel/expansion.js";
 import type { ContinuationIssuer } from "./kernel/continuation-assertion.js";
 import type { DestinationClientRegistration } from "./kernel/cross-domain.js";
 import { ContinuationStore, DEFAULT_CONTINUATION_HOP_LIMIT } from "./kernel/continuation-store.js";
@@ -206,6 +213,7 @@ export {
   provisionalIntentHash,
   registerIntentSubmissionEvidenceType,
   type SubmissionEvidenceBounds,
+  type SubmissionIntakeOptions,
   unregisterIntentSubmissionEvidenceType,
   validateAuthorityProposal,
   validateIntentSubmissionEvidence,
@@ -408,14 +416,19 @@ export {
 } from "./kernel/delegation.js";
 export {
   createExpansion,
+  DEFAULT_EXPANSION_RATE_LIMIT,
+  ExpansionRateLimiter,
+  revokeDrawdownSuccessorsRequestedByAnotherClient,
   revokeSuccessorsExpandedByAnotherClient,
   successorMissionClaim,
   successorWidensOnly,
   type ContainmentHistoryEntry,
+  type DrawdownRemediation,
   type ExpansionEvidence,
   type ExpansionInput,
   type ExpansionResult,
   type SuccessorRemediation,
+  type UnresolvedDrawdownProvenance,
   type UnresolvedSuccessorProvenance,
 } from "./kernel/expansion.js";
 export {
@@ -532,7 +545,14 @@ export {
   ApprovalGovernanceError,
   ApprovalGovernanceRecordStore,
   approvalGovernanceRecordDigest,
+  assertAccountableApprover,
+  assertAssertionAuthority,
+  assertContributing,
   assertGovernedPolicyRecord,
+  type HumanAuthority,
+  jwsMediaTypeMatches,
+  type PolicyAuthority,
+  type ServiceAuthority,
   assertMissionBinding,
   signApprovalGovernanceRecord,
   type UnsignedApprovalGovernanceRecord,
@@ -560,6 +580,8 @@ export {
   parseGovernedPolicyRoot,
   parseGovernedPolicyRules,
   previewGovernedActivation,
+  type ApprovalGovernanceRecheck,
+  recheckApprovalGovernanceRecord,
   recheckGovernedActivation,
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
@@ -736,6 +758,8 @@ export interface BuiltAs {
    * (drive open/approve/deny headlessly, mirroring `deferrals`).
    */
   expansionDeferrals: ExpansionDeferralStore;
+  /** @spec expansion#policy-probing (#1177): the expansion rate limiter this assembly applies. */
+  expansionRateLimiter: ExpansionRateLimiter;
   /**
    * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
    * store, present exactly where the `deferred-approval` capability is on.
@@ -744,7 +768,7 @@ export interface BuiltAs {
    */
   missionApprovalDeferrals?: MissionApprovalDeferralStore;
   /**
-   * @spec expansion#creation-request-id — the creation-idempotency store
+   * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
   creationIdempotency: CreationIdempotencyStore;
@@ -833,7 +857,12 @@ export interface BuiltAs {
    * the acting-client checks existed, and the committed expansions from
    * another client whose successor it could not identify, for the operator.
    */
-  startupRemediation: { revokedChildren: string[]; successors: SuccessorRemediation };
+  startupRemediation: {
+    revokedChildren: string[];
+    successors: SuccessorRemediation;
+    /** #1372: the ceiling-drawdown successors another client requested. */
+    drawdownSuccessors: DrawdownRemediation;
+  };
 }
 
 export async function buildAuthorizationServer(opts: {
@@ -982,6 +1011,12 @@ export async function buildAuthorizationServer(opts: {
    */
   authoritySources?: typeof AUTHORITY_SOURCES;
   /**
+   * @spec resource-access#resource-contract (#249): override the contract
+   * versions the kernel assembles and validates `resource_contract` against.
+   * Defaults to the Enforcement Scope Statement's (`RESOURCE_CONTRACTS`).
+   */
+  resourceContracts?: ResourceContractDeclarations;
+  /**
    * @spec mission#introspection (issue #541 P1-4) — TEST-ONLY: inject the AT
    * signing key (a private JWK matching {@link TOPOLOGY.keys.asToken}'s alg)
    * instead of generating one per boot. Lets a test craft adversarial at+jwt
@@ -1069,6 +1104,14 @@ export async function buildAuthorizationServer(opts: {
    * lifecycle-only token to prove the two grants do not imply one another.
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
+  /**
+   * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
+   * enforcement scope, keyed by service principal, each naming the Status
+   * `audience` values it is enrolled for. Deployment configuration the MAS
+   * holds; absent (the default), no caller is enrolled and no Status response
+   * discloses the Mission's `subject` or `client_id`.
+   */
+  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
   /**
    * @spec status#lifecycle-authorization: the grants bound to a client that
    * authenticates to the Mission Lifecycle endpoint by private-key JWT, keyed by
@@ -1158,7 +1201,19 @@ export async function buildAuthorizationServer(opts: {
     onPolicyRefusal?: "await_human" | "deny";
     modelAdvisor?: ModelAdvisor;
   };
+  /**
+   * @spec expansion#policy-probing (#1177): the per-predecessor, per-client
+   * bound on expansion requests, `max` per `windowSeconds`. Default
+   * {@link DEFAULT_EXPANSION_RATE_LIMIT}.
+   */
+  expansionRateLimit?: { max: number; windowSeconds: number };
 }): Promise<BuiltAs> {
+  // @spec progressive#in-ceiling-expansion, mission#approval-authentication
+  // (#1255): a configuration refusal, before any key, store or recovery is
+  // touched. A drawdown mapping that disagrees with the approval floor does not start.
+  const progressive = opts.progressive
+    ? validateProgressiveDrawdownOptions(opts.progressive, opts.approvalFloor ?? APPROVAL_FLOOR)
+    : undefined;
   // Per-purpose keys on one jwks_uri (@spec mission#as-metadata; matrix D39):
   // as-token signs tokens, as-status signs Status responses, as-txn signs
   // txn-bound single-use approval tokens (AROP Transaction Challenge), and
@@ -1356,6 +1411,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.childCreationPolicy ? { childCreationPolicy: opts.childCreationPolicy } : {}),
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.governedPolicyApproval ? { governedPolicyApproval: opts.governedPolicyApproval } : {}),
+    ...(opts.resourceContracts ? { resourceContracts: opts.resourceContracts } : {}),
     // @spec mission#authority-sources, mission#approval-event — the deployment's
     // TRUSTED authority-source catalog (config/authority-sources.json plus the
     // governed policies it references). The approval event establishes
@@ -1465,8 +1521,16 @@ export async function buildAuthorizationServer(opts: {
     () => kernel.nowDate(),
     opts.childMissionCarryover ?? CHILD_MISSION_CARRYOVER,
     opts.approvalFloor ?? APPROVAL_FLOOR,
+    // @spec progressive#ceiling-reconsent (#1017): the re-consent offer.
+    opts.progressive?.ceilingOffer,
   );
-  // @spec expansion#creation-request-id — the creation-idempotency store over
+  const expansionRateLimit = opts.expansionRateLimit ?? DEFAULT_EXPANSION_RATE_LIMIT;
+  const expansionRateLimiter = new ExpansionRateLimiter(
+    expansionRateLimit.max,
+    expansionRateLimit.windowSeconds,
+    () => kernel.nowDate().getTime(),
+  );
+  // @spec expansion#creation-idempotency — the creation-idempotency store over
   // the kernel database (instances over the same kernel share the table; this
   // one is exposed for tests/exhibit to observe or perturb recorded operations).
   const creationIdempotency = new CreationIdempotencyStore(kernel);
@@ -1541,6 +1605,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    expansionRateLimiter,
     ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     statusListPublisher,
@@ -1571,6 +1636,7 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.serviceTokenPrincipals
       ? { serviceTokenPrincipals: opts.serviceTokenPrincipals }
       : {}),
+    ...(opts.enrolledJoinPdps ? { enrolledJoinPdps: opts.enrolledJoinPdps } : {}),
     ...(Object.keys(lifecycleClientGrants).length > 0 ? { lifecycleClientGrants } : {}),
     ...(opts.distinctResumeGrant ? { distinctResumeGrant: true } : {}),
     ...(schedulesAdopted ? { suspensionSchedules: true } : {}),
@@ -1642,7 +1708,7 @@ export async function buildAuthorizationServer(opts: {
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
     processBootId,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
-    ...(opts.progressive ? { progressive: validateProgressiveDrawdownOptions(opts.progressive) } : {}),
+    ...(progressive ? { progressive } : {}),
   });
   // @spec async-delegation — publish the provider to the terminal subscriber now
   // that construction is complete (no lifecycle commit could have fired earlier).
@@ -1661,13 +1727,17 @@ export async function buildAuthorizationServer(opts: {
   // existed, while its creation operation is retained.
   // @spec expansion#verification-order step 4 (#1349, D516): revoke any
   // successor created through another client's committed deferral, as its
-  // retained deferral identifies it. Then attempt the durable effects (family
-  // grants) of every transition the sweeps committed before serving a
+  // retained deferral identifies it.
+  // @spec expansion#verification-order step 4 (#1372, D528): revoke any
+  // ceiling-drawdown successor another client requested, as its recorded
+  // `activation_actor` identifies it. Then attempt the durable effects
+  // (family grants) of every transition the sweeps committed before serving a
   // request: unconditionally, since the expiry clock each sweep runs first
   // can commit an `expired` transition that no revocation count reports. A
   // failed revocation throws, so the assembly is not served.
   const revokedChildren = revokeChildrenCreatedByAnotherClient(kernel, creationIdempotency);
   const successorRemediation = revokeSuccessorsExpandedByAnotherClient(kernel, expansionDeferrals);
+  const drawdownRemediation = revokeDrawdownSuccessorsRequestedByAnotherClient(kernel);
   await kernel.drainLifecycleOutbox();
   // @spec status#mission-lifecycle-endpoint ("Operations"): re-arm every
   // persisted schedule, delivering any whose deadline passed while the
@@ -1679,6 +1749,7 @@ export async function buildAuthorizationServer(opts: {
     kernel,
     deferrals,
     expansionDeferrals,
+    expansionRateLimiter,
     ...(missionApprovalDeferrals ? { missionApprovalDeferrals } : {}),
     creationIdempotency,
     issuer: opts.issuer,
@@ -1697,26 +1768,35 @@ export async function buildAuthorizationServer(opts: {
     devOrdinaryIssuance: opts.devOrdinaryIssuance === true,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
-    startupRemediation: { revokedChildren, successors: successorRemediation },
+    startupRemediation: {
+      revokedChildren,
+      successors: successorRemediation,
+      drawdownSuccessors: drawdownRemediation,
+    },
   };
 }
 
 /**
- * #1326, #1349: the operator notices a launcher logs for a build's startup
- * remediation (what it revoked from a kernel written before #1340, and the
- * committed expansions from another client it could not resolve); none when
- * it did nothing.
+ * #1326, #1349, #1372: the operator notices a launcher logs for a build's
+ * startup remediation (what it revoked from a kernel written before #1340,
+ * the committed expansions from another client it could not resolve, and the
+ * drawdown successors whose provenance it could not confirm); none when it
+ * did nothing.
  */
 export function startupRemediationNotices(
   remediation: BuiltAs["startupRemediation"],
 ): Array<{ level: "info" | "warn"; message: string; detail: Record<string, unknown> }> {
-  const { revokedChildren, successors } = remediation;
+  const { revokedChildren, successors, drawdownSuccessors } = remediation;
   return [
-    ...(revokedChildren.length + successors.revoked.length > 0
+    ...(revokedChildren.length + successors.revoked.length + drawdownSuccessors.revoked.length > 0
       ? [{
           level: "info" as const,
           message: "revoked Missions another client created before #1340",
-          detail: { revokedChildren, revokedSuccessors: successors.revoked },
+          detail: {
+            revokedChildren,
+            revokedSuccessors: successors.revoked,
+            revokedDrawdownSuccessors: drawdownSuccessors.revoked,
+          },
         }]
       : []),
     ...(successors.unresolved.length > 0
@@ -1724,6 +1804,13 @@ export function startupRemediationNotices(
           level: "warn" as const,
           message: "committed expansions from another client whose successor could not be identified",
           detail: { unresolved: successors.unresolved },
+        }]
+      : []),
+    ...(drawdownSuccessors.unresolved.length > 0
+      ? [{
+          level: "warn" as const,
+          message: "ceiling-drawdown successors from another client whose provenance could not be confirmed",
+          detail: { unresolved: drawdownSuccessors.unresolved },
         }]
       : []),
   ];

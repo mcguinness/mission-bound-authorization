@@ -34,7 +34,7 @@ import type { JWTPayload } from "jose";
  * evaluations, exhibits).
  */
 export function credentialAuthorityFrom(
-  entries: readonly Pick<AuthorityEntry, "type" | "resource" | "actions" | "constraints">[],
+  entries: readonly Pick<AuthorityEntry, "type" | "resource" | "resource_match" | "actions" | "constraints" | "resource_contract">[],
 ): readonly CredentialAuthorityEntry[] {
   return credentialEntriesFromAuthority(entries as readonly AuthorityEntry[]);
 }

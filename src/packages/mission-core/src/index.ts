@@ -64,6 +64,9 @@ export type {
 export {
   conditionCanonicalBytes,
   conditionsNoBroader,
+  DELEGATE_MATCHER_MEMBERS,
+  delegateMatcherListViolation,
+  entryDelegateMatcherViolation,
   entryWithinCeiling,
   isAuthorityEntry,
   isSubsetEntry,
@@ -72,7 +75,10 @@ export {
   narrowToCeiling,
   REFUSED_ENTRY_MEMBERS,
   refusedEntryMember,
+  resourceWithin,
   SUPPORTED_CONSTRAINT_KEYS,
+  SUPPORTED_ENTRY_MEMBERS,
+  unsupportedEntryMember,
   withoutCapabilitySources,
 } from "./authority-subset.js";
 export {
@@ -99,15 +105,19 @@ export {
   normalizeCapabilitySources,
 } from "./capability-binding.js";
 export {
+  type CollectionMemberFacts,
   type CommonConstraintIntersection,
   type CommonConstraintKey,
   type CommonConstraintTrace,
   type ConstraintFacts,
+  collectionMemberConstraintFacts,
   commonConstraintGates,
+  commonConstraintGatesOverMembers,
   commonConstraintsNoBroader,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
   isImplementedCommonConstraint,
+  MEMBER_FACT_CONSTRAINTS,
   timeWindowEndMs,
   validCommonConstraint,
 } from "./common-constraints.js";
@@ -202,17 +212,22 @@ export {
   parseMissionReferenceField,
 } from "./mission-reference.js";
 export {
+  type ArgumentDerivedContract,
+  contractCanEstablish,
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,
   establishOperationTarget,
   isAbsoluteUri,
+  isEnforceablePrefixBase,
   isOperationTarget,
   matchResource,
   type OperationContract,
   type OperationTargetRefusal,
   type OperationTargetResolution,
+  prefixAdmits,
   type ResourceMatch,
   resolveOperationTarget,
+  resourceMatchViolation,
   type ServiceLevelContract,
 } from "./operation-target.js";
 export {
@@ -226,6 +241,26 @@ export {
   type PrincipalMappingResolver,
 } from "./origin-principal.js";
 export {
+  isResourceContractRef,
+  RESOURCE_CONTRACT_MEMBERS,
+  type ResourceContractRef,
+  resourceContractDigest,
+  resourceContractOf,
+  resourceContractViolation,
+  sameResourceContract,
+} from "./resource-contract.js";
+export {
+  type DeclaredContractVersion,
+  type EntryContractConfiguration,
+  RESOURCE_CONTRACT_STATES,
+  ResourceContractConfigError,
+  type ResourceContractDeclaration,
+  ResourceContractDeclarations,
+  type ResourceContractRefusal,
+  type ResourceContractResolution,
+  type ResourceContractState,
+} from "./resource-contract-declarations.js";
+export {
   compareInstants,
   type Instant,
   instantFloorMs,
@@ -237,6 +272,7 @@ export {
   type AudienceScopeMapping,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  entryOverlapsResource,
   OIDC_SCOPE_VALUES,
   parseScopeProjectionMapping,
   projectScope,
@@ -255,6 +291,7 @@ export {
   type ScopeValueRights,
   scopeValueSafeForEntry,
   splitScope,
+  unenforcedConstraintRefusal,
 } from "./scope-projection.js";
 export { DuplicateMemberError, parseStrictJson } from "./strict-json.js";
 export {

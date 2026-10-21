@@ -1,6 +1,6 @@
 {
  "$comment": "Machine-readable inventory of the Mission-Bound Authorization family's draft-*.md files at repo root (see the `count` field below for the current total). Single source of truth for DRAFTS.md's generated catalog index, the architecture document map, each draft's role, spec maturity, verb, summary, adoption trigger, and typed reference and adoption edges; reference_stacks transcribes the architecture document's OAuth reference stacks. Validate with scripts/check-family-manifest.mjs.",
- "generated_note": "Hand-curated; re-derive `role`, `spec_maturity`, and `group` from each draft's front matter and Status section when drafts are added, renamed, or reclassified. `role` (core, adapter-binding, companion, or guide) is architectural: core is the binding-neutral substrate kernel; adapter-binding is any draft publishing a Mission Substrate Statement or Assessment capability table (scripts/check-substrate-statements.mjs's REGISTRY); guide is every category:info document; companion is everything else. `spec_maturity` (candidate, experimental, sketch, or not_applicable) is a five-criteria gate resolved against structured evidence in candidate-gate.json (scripts/generate-drafts-index.mjs's validateCandidateGate()), not a raw coverage percentage and not inferred from a Conformance heading: an attested, commit-verified complete requirement inventory for the claimed interface; no open decide issue scoped to that interface without a recorded resolved_in_tree resolution; a named interoperability/conformance floor; examples/vectors or a recorded waiver; disclosed unstable external normative dependencies. `category` (front matter's std/exp/info) is the document's intended standards category (requested RFC category, never WG adoption, approval, or publication state) and needs no separate axis. Implementation/conformance coverage is derived from conformance-manifest.json per spec at generation time (scripts/generate-drafts-index.mjs's family-status block) and is never hand-written here. `verbs`, `summary`, and `pull_when` are authorial here: `verbs` draws on the architecture document's verb spine, and DRAFTS.md's index block is generated from these fields by scripts/generate-drafts-index.mjs and validated against them, not the other way round. `requires` is re-derived from each draft's front-matter normative references (drift-checked in CI), `references` from its full in-family reference set, and `reference_stacks` transcribes the architecture document's four cumulative stacks.",
+ "generated_note": "Hand-curated; re-derive `role`, `spec_maturity`, and `group` from each draft's front matter and Status section when drafts are added, renamed, or reclassified. `role` (core, adapter-binding, companion, or guide) is architectural: core is the binding-neutral substrate kernel; adapter-binding is any draft publishing a Mission Substrate Statement or Assessment capability list (scripts/check-substrate-statements.mjs's REGISTRY); guide is every category:info document; companion is everything else. `spec_maturity` (candidate, experimental, sketch, or not_applicable) is a five-criteria gate resolved against structured evidence in candidate-gate.json (scripts/generate-drafts-index.mjs's validateCandidateGate()), not a raw coverage percentage and not inferred from a Conformance heading: an attested, commit-verified complete requirement inventory for the claimed interface; no open decide issue scoped to that interface without a recorded resolved_in_tree resolution; a named interoperability/conformance floor; examples/vectors or a recorded waiver; disclosed unstable external normative dependencies. `category` (front matter's std/exp/info) is the document's intended standards category (requested RFC category, never WG adoption, approval, or publication state) and needs no separate axis. Implementation/conformance coverage is derived from conformance-manifest.json per spec at generation time (scripts/generate-drafts-index.mjs's family-status block) and is never hand-written here. `verbs`, `summary`, and `pull_when` are authorial here: `verbs` draws on the architecture document's verb spine, and DRAFTS.md's index block is generated from these fields by scripts/generate-drafts-index.mjs and validated against them, not the other way round. `requires` is re-derived from each draft's front-matter normative references (drift-checked in CI), `references` from its full in-family reference set, and `reference_stacks` transcribes the architecture document's four cumulative stacks.",
  "known_non_family_refs": "draft-mcguinness-mission-architecture.md's Mission Document Map also names oauth-id-continuation-assertion. That is an adjacent, non-family draft (no draft-*.md file in this repo) and is intentionally absent from drafts[] below; do not add a phantom manifest entry for it.",
  "verbs": [
   "propose",
@@ -1240,6 +1240,7 @@
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-discharge",
+    "draft-mcguinness-oauth-mission-resource-access",
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-transaction-authorization"
    ]
@@ -1820,6 +1821,7 @@
    "adoption_alias": "mission-continuation",
    "normative_references": [
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain",
     "draft-mcguinness-oauth-mission-expansion"
    ],
    "adoption_requires": [
@@ -1863,7 +1865,8 @@
    "summary": "Lets a single Mission be honored by Authorization Servers in other trust domains: the originating issuer projects audience-scoped authority through a short-lived, sender-constrained cross-domain grant, and the Resource AS mints its own local Mission-bound tokens preserving the `mission` claim.",
    "pull_when": "A Mission from one trust domain must be honored by an AS in another (also the floor's conditional dependency).",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-resource-access"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
@@ -1875,6 +1878,7 @@
     "draft-mcguinness-mission-runtime-evidence",
     "draft-mcguinness-mission-substrate",
     "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-containment",
     "draft-mcguinness-oauth-mission-continuation",
     "draft-mcguinness-oauth-mission-cross-org-delegation",
@@ -2204,15 +2208,29 @@
    "summary": "Defines mission_resource_access, split from the OAuth binding: resource exact/prefix matching, the action namespace and wildcard families, Common Constraints, per-entry delegation policy, and the subset/intersection algebra, plus this type's scope-projection safety conditions and machine-readable transformation-capability declaration.",
    "pull_when": "The OAuth binding's supported authorization_details types include mission_resource_access, or you need its concrete subset/delegation/projection semantics.",
    "normative_references": [
-    "draft-mcguinness-oauth-mission"
+    "draft-mcguinness-mission-runtime",
+    "draft-mcguinness-oauth-mission",
+    "draft-mcguinness-oauth-mission-cross-domain"
    ],
    "adoption_requires": [
     "draft-mcguinness-oauth-mission"
    ],
    "references": [
+    "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-metering",
+    "draft-mcguinness-mission-runtime",
     "draft-mcguinness-oauth-mission",
-    "draft-mcguinness-oauth-mission-cross-domain"
+    "draft-mcguinness-oauth-mission-cross-domain",
+    "draft-mcguinness-oauth-mission-transaction-authorization"
+   ],
+   "requires_when": [
+    {
+     "when": "the deployment supports the resource_contract member",
+     "requires": [
+      "draft-mcguinness-mission-runtime"
+     ]
+    }
    ]
   },
   {
@@ -2448,6 +2466,7 @@
     "draft-mcguinness-mission-audit",
     "draft-mcguinness-mission-authority-server",
     "draft-mcguinness-mission-authzen",
+    "draft-mcguinness-mission-capability-binding",
     "draft-mcguinness-mission-metering",
     "draft-mcguinness-mission-runtime",
     "draft-mcguinness-mission-security-model",

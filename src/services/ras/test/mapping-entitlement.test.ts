@@ -113,9 +113,24 @@ beforeAll(async () => {
   clientJkt = await calculateJwkThumbprint(await exportJWK(clientKeys.publicKey));
 });
 
+/**
+ * @spec resource-access#resource-access-type (#1266): this harness's
+ * deployment policy, the keys its destination resource enforces. The RAS
+ * drops whole a constrained entry for a resource it has no such knowledge
+ * of, so a harness whose grants carry `max_amount` declares it here.
+ */
+const HARNESS_CONSTRAINTS_SUPPORTED: Readonly<Record<string, readonly string[]>> = {
+  [AUDIENCE]: ["max_amount", "vendors"],
+};
+
 async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizationServer> {
+  return new ResourceAuthorizationServer(await rasConfig(config));
+}
+
+/** The harness configuration, with `config` applied over it. */
+async function rasConfig(config: Partial<RasConfig> = {}): Promise<RasConfig> {
   const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-token", alg: "ES256" };
-  return new ResourceAuthorizationServer({
+  return {
     localCeiling: DEFAULT_CEILING,
     localPolicyVersion: "test-local-policy-1",
     issuer: RAS_ISS,
@@ -127,8 +142,9 @@ async function ras(config: Partial<RasConfig> = {}): Promise<ResourceAuthorizati
     mapping: basePolicy(),
     entitlement: { resolve: async () => ({ entitled: true, observed_at: new Date().toISOString() }) },
     entitlementStalenessBoundSeconds: 300,
+    resourceConstraintsSupported: HARNESS_CONSTRAINTS_SUPPORTED,
     ...config,
-  });
+  };
 }
 
 describe("RAS grant client_id match (@spec cross-domain#validation-at-resource-as, #1166, D510; ID-JAG -04 Section 4.4.1)", () => {
@@ -250,6 +266,21 @@ describe("RAS local ceiling (@spec cross-domain#validation-at-resource-as, #762)
     const server = await ras();
     for (const locations of [[AUDIENCE], [], null, "", { uri: AUDIENCE }]) {
       for (const authority of [[{ ...delegated, locations }], [DEFAULT_CEILING[1], { ...delegated, locations }]]) {
+        await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({
+          code: "invalid_grant",
+          message: "local policy check failed",
+        });
+      }
+    }
+  });
+
+  // @spec mission#subset (#1399, D538): the same presence rule refuses a
+  // signed grant whose entry carries any member outside the supported set,
+  // which the local ceiling's comparison cannot decide.
+  it("a signed grant whose entry carries an unsupported member is refused, minting no local token", async () => {
+    const server = await ras();
+    for (const invoice_ids of [["INV-7"], []]) {
+      for (const authority of [[{ ...delegated, invoice_ids }], [DEFAULT_CEILING[1], { ...delegated, invoice_ids }]]) {
         await expect(server.redeem(await mintGrant({ authorizationDetails: authority }), clientJkt)).rejects.toMatchObject({
           code: "invalid_grant",
           message: "local policy check failed",
@@ -698,10 +729,89 @@ describe("RAS emits only the constraints keys the destination resource enforces 
     constraints: { max_amount: { amount: "10.00", currency: "USD" } },
   };
 
-  it("drops whole an entry carrying a key the resource does not list, keeps listed keys intact, and leaves an unlisted resource as narrowed", async () => {
+  const otherOpen: AuthorityEntry = {
+    type: "mission_resource_access", resource: "https://other.example.test/mcp", actions: ["reports.read"],
+  };
+
+  it("drops whole an entry carrying a key the resource does not list, and keeps listed keys intact", async () => {
     const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: ["vendors"] } });
-    const result = await server.redeem(await mintGrant({ authorizationDetails: [windowed, vendorBound, otherCapped] }), clientJkt);
-    expect(details(result.access_token)).toEqual([vendorBound, otherCapped]);
+    const result = await server.redeem(await mintGrant({ authorizationDetails: [windowed, vendorBound] }), clientJkt);
+    expect(details(result.access_token)).toEqual([vendorBound]);
+  });
+
+  it("drops whole a constrained entry for a resource it has no enforcement knowledge of, and keeps an unconstrained one", async () => {
+    const grantDetails = [vendorBound, otherCapped, otherOpen];
+    // Knowledge for another resource only: that resource's listed key survives.
+    const listedElsewhere = await ras({ resourceConstraintsSupported: { [AUDIENCE]: ["vendors", "max_amount"] } });
+    const listed = await listedElsewhere.redeem(await mintGrant({ authorizationDetails: grantDetails }), clientJkt);
+    expect(details(listed.access_token)).toEqual([vendorBound, otherOpen]);
+    // No knowledge configured at all: no key survives, the unconstrained entry does.
+    const { resourceConstraintsSupported: _declared, ...withoutKnowledge } = await rasConfig();
+    const none = new ResourceAuthorizationServer(withoutKnowledge);
+    const unlisted = await none.redeem(await mintGrant({ authorizationDetails: grantDetails }), clientJkt);
+    expect(details(unlisted.access_token)).toEqual([otherOpen]);
+  });
+
+  it("an empty key list admits only a resource's unconstrained entries (boundary)", async () => {
+    const server = await ras({ resourceConstraintsSupported: { [AUDIENCE]: [], "https://other.example.test/mcp": [] } });
+    const result = await server.redeem(
+      await mintGrant({ authorizationDetails: [vendorBound, otherCapped, otherOpen, DEFAULT_CEILING[0]] }),
+      clientJkt,
+    );
+    expect(details(result.access_token)).toEqual([otherOpen, DEFAULT_CEILING[0]]);
+  });
+
+  describe("an entry is checked against every listed resource whose tree overlaps it (@spec resource-access#resource-matching, #1276)", () => {
+    const ORIGIN = "https://saas.example.test/";
+    const ADMIN = `${AUDIENCE}/admin`;
+    const SIBLING = "https://saas.example.test/mcp-other";
+    /** A destination ceiling over the whole origin, so only the key filter narrows. */
+    const ORIGIN_CEILING: AuthorityEntry[] = [
+      { type: "mission_resource_access", resource: ORIGIN, resource_match: "prefix", actions: ["invoices.read"] },
+    ];
+    const at = (resource: string, constraints: Record<string, unknown>, prefix = false): AuthorityEntry =>
+      ({
+        type: "mission_resource_access",
+        resource,
+        ...(prefix ? { resource_match: "prefix" } : {}),
+        actions: ["invoices.read"],
+        constraints,
+      }) as AuthorityEntry;
+    const VENDORS = { vendors: ["acme"] };
+    const WINDOW = { time_window: { not_after: FAR_FUTURE } };
+    const mint = async (supported: Record<string, string[]>, entries: AuthorityEntry[]) => {
+      const server = await ras({ localCeiling: ORIGIN_CEILING, resourceConstraintsSupported: supported });
+      return details((await server.redeem(await mintGrant({ authorizationDetails: entries }), clientJkt)).access_token);
+    };
+
+    it("checks a finer exact entry and a prefix entry within a listed resource against that resource's keys", async () => {
+      const kept = [at(`${AUDIENCE}/invoices/inv-1`, VENDORS), at(`${AUDIENCE}/invoices`, VENDORS, true)];
+      const dropped = [at(`${AUDIENCE}/invoices/inv-2`, WINDOW), at(`${AUDIENCE}/archive`, WINDOW, true)];
+      expect(await mint({ [AUDIENCE]: ["vendors"] }, [...kept, ...dropped])).toEqual(kept);
+    });
+
+    it("checks a prefix entry whose base contains listed resources against each one's keys", async () => {
+      const supported = { [AUDIENCE]: ["vendors"], [ADMIN]: ["vendors", "time_window"] };
+      const vendors = at(ORIGIN, VENDORS, true);
+      // Both listed resources lie within the base: the key must be listed for each.
+      expect(await mint(supported, [vendors, at(ORIGIN, WINDOW, true)])).toEqual([vendors]);
+    });
+
+    it("checks an entry overlapping two listed resources against both lists", async () => {
+      const supported = { [AUDIENCE]: ["vendors", "time_window"], [ADMIN]: ["vendors"] };
+      const vendors = at(`${ADMIN}/users`, VENDORS);
+      // Within both the audience's tree and the admin tree: admin lacks time_window.
+      expect(await mint(supported, [vendors, at(`${ADMIN}/users`, WINDOW)])).toEqual([vendors]);
+    });
+
+    it("does not pair a listed resource with a sibling outside its segment boundary (boundary)", async () => {
+      const open = at(SIBLING, {});
+      const { constraints: _none, ...openEntry } = open;
+      // The sibling overlaps no listed resource, so it is known to be enforced nowhere.
+      expect(await mint({ [AUDIENCE]: ["vendors"] }, [at(SIBLING, VENDORS), openEntry as AuthorityEntry])).toEqual([
+        openEntry,
+      ]);
+    });
   });
 
   it("refuses when no entry survives, without consuming the grant", async () => {

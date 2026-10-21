@@ -31,8 +31,10 @@ import {
 import Provider, { errors, type Configuration, type KoaContextWithOIDC, type ResourceServer } from "oidc-provider";
 import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
 import {
+  type ActivationPolicyRef,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
   type MissionAccessProfile,
   projectScope,
@@ -301,8 +303,10 @@ import {
   DeferralError,
   type DeferralStore,
   type DeferredToken,
+  EXPANSION_DEFERRAL_PREFIX,
   type ExpansionDeferralStore,
 } from "../kernel/deferred.js";
+import type { ExpansionRateLimiter } from "../kernel/expansion.js";
 import {
   type ChildDenialReason,
   childMissionClaim,
@@ -316,10 +320,29 @@ import {
 } from "./transaction-authorization.js";
 export type { TxnArs } from "./transaction-authorization.js";
 import { successorMissionClaim } from "../kernel/expansion.js";
-import { ceilingConsentOf, type ProgressiveDrawdownOptions } from "../kernel/progressive.js";
+import {
+  type CeilingConsent,
+  ceilingAdjudicationLine,
+  ceilingConsentOf,
+  consentedCeilingEntries,
+  consentsOffer,
+  type ProgressiveDrawdownOptions,
+} from "../kernel/progressive.js";
+import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
+import {
+  committedPerChildMaximum,
+  establishedLimitLines,
+  NO_FINITE_MAXIMUM,
+  progressiveInheritanceLine,
+  STANDING_CONSENT_LIMIT_MEMBER,
+  standingConsentLines,
+  standingConsentMaximumOf,
+  SUBTREE_AGGREGATE_STATEMENT,
+} from "../kernel/standing-consent-limit.js";
 import { ID_JAG_TOKEN_TYPE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
+  malformedMatcherInRequest,
   refusedMemberInRequest,
   validateMissionResourceAccessSchema,
 } from "../kernel/authorization-details-metadata.js";
@@ -391,8 +414,10 @@ import {
 import { DISPATCH_HANDOFF_TYP, handleDispatchHandoffRedemption } from "./dispatch-handoff.js";
 import type { CrossOrgOptions } from "./cross-org-grant.js";
 import {
+  cancelExpansionDeferralOnRevocation,
   type ContinuationReplay,
   handleTokenExchangeGrant,
+  pollDeferredExpansion,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
   verifyTokenEndpointDpop,
@@ -435,6 +460,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
+import { pushedRequestIntake, takeParIntake } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -541,6 +567,16 @@ export interface AdapterOptions {
    */
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
+   * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
+   * enforcement scope, the deployment configuration the MAS holds, keyed by
+   * the service principal's `principal_id`, each naming the enforcement
+   * scopes (the Status request's `audience`) it is enrolled for. A Status
+   * response to an enrolled principal for one of its scopes discloses the
+   * Mission's `subject` and `client_id`; every other response omits both.
+   * Absent (the default), no caller is enrolled.
+   */
+  enrolledJoinPdps?: Readonly<Record<string, readonly string[]>>;
+  /**
    * @spec status#lifecycle-authorization: the deployment-defined grants bound
    * to a client that authenticates to the Mission Lifecycle endpoint by
    * private-key JWT, keyed by `client_id`: `mission_lifecycle` for `revoke`,
@@ -637,6 +673,11 @@ export interface AdapterOptions {
    * widening exchange replies invalid_request.
    */
   expansionDeferrals?: ExpansionDeferralStore;
+  /**
+   * @spec expansion#policy-probing (#1177): the per-predecessor, per-client
+   * bound on expansion requests. Unset, expansion requests are unbounded.
+   */
+  expansionRateLimiter?: ExpansionRateLimiter;
   /**
    * @spec deferred-approval#deferred-approval: the Deferred Mission Approval
    * store, served where the opt-in `deferred-approval` capability is on (the
@@ -736,7 +777,7 @@ export interface AdapterOptions {
    */
   issuerEvidence?: IssuerEvidenceStore;
   /**
-   * @spec expansion#creation-request-id — the durable creation-idempotency
+   * @spec expansion#creation-idempotency — the durable creation-idempotency
    * store (child creation + expansion + async-delegation). Lives over the KERNEL database so the
    * reservation commits atomically with Mission creation. Defaulted by
    * buildProvider when unset (instances over the same kernel share the table).
@@ -884,7 +925,7 @@ export function accountFinder(knownSubjects: ReadonlySet<string>) {
 
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
-  // @spec expansion#creation-request-id — idempotency is NOT optional wiring:
+  // @spec expansion#creation-idempotency — idempotency is NOT optional wiring:
   // default the store over the kernel database (any instance over the same
   // kernel sees the same table, so a caller-supplied store is equivalent).
   opts.creationIdempotency ??= new CreationIdempotencyStore(kernel);
@@ -921,9 +962,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (missionApproval && !enabled("token-revocation")) {
     throw new Error("the deferred-approval capability needs token-revocation (the deferred substrate's cancellation)");
   }
+  // @spec expansion#completion-modes (#1177): a deferred expansion is polled
+  // on the deferred grant and cancelled at the revocation endpoint, which the
+  // substrate requires (DTR -00 Section 7.2), as for Deferred Mission Approval.
+  const expansionDeferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
+  if (expansionDeferrals && !enabled("token-revocation")) {
+    throw new Error("the expansion capability's deferred completion needs token-revocation (the deferred substrate's cancellation)");
+  }
   const grantEnabled = new Map<string, boolean>([
-    // The deferred grant polls an AROP deferral and a Mission approval deferral.
-    [DEFERRED_GRANT_TYPE, enabled("deferred") || missionApproval !== undefined],
+    // The deferred grant polls an AROP deferral, a Mission approval deferral
+    // and an expansion deferral.
+    [DEFERRED_GRANT_TYPE, enabled("deferred") || missionApproval !== undefined || expansionDeferrals !== undefined],
     // The RFC 7523 grant redeems a child grant and a Dispatch Handoff grant.
     [CHILD_JWT_BEARER_GRANT_TYPE, enabled("child-delegation") || enabled("templates")],
     [MISSION_DISPATCH_GRANT_TYPE, enabled("templates")],
@@ -1568,6 +1617,32 @@ export function buildProvider(opts: AdapterOptions): Provider {
     });
   }
 
+  /**
+   * @spec mission#submission-processing (#1411): checkRar's checks of a
+   * pushed Mission submission's `authorization_details` (lib/shared/
+   * check_rar.js 9.10.0), run as step 3 of the Submission Processing Order,
+   * after the envelope and the Intent. The PAR intake (par-intake.ts) kept
+   * the proposal from the provider's own checkRar, which runs before the
+   * `extraParams` validators. An empty array is no proposal, as there.
+   */
+  function checkPushedRar(ctx: unknown, params: Record<string, unknown>, client: { authorizationDetailsTypes?: string[] } | undefined): void {
+    const responseType = typeof params.response_type === "string" ? params.response_type.split(" ") : undefined;
+    if (responseType?.includes("code") === false || responseType?.includes("token") || params.response_type === "none") {
+      throw new errors.InvalidRequest("authorization_details parameter is not supported for this response_type");
+    }
+    let details: unknown;
+    try {
+      details = JSON.parse(String(params.authorization_details));
+    } catch {
+      throw new errors.InvalidRequest("could not parse the authorization_details parameter JSON");
+    }
+    if (Array.isArray(details) && details.length === 0) {
+      params.authorization_details = undefined;
+      return;
+    }
+    checkRequestedRar(ctx, params.authorization_details, client);
+  }
+
   const configuration: Configuration = {
     clients: clients as never,
     jwks: opts.jwks as never,
@@ -1650,7 +1725,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
             // Mission's derived Authority Set, never this input). An entry of an
             // unadvertised type is already refused by oidc-provider's own
             // checkRar (no `types` config entry -> invalid_authorization_details),
-            // which is the D60 advertised-type rule.
+            // which is the D60 advertised-type rule (for a pushed Mission
+            // submission, checkPushedRar applies the same checks after the
+            // Intent, #1411).
             // @types/oidc-provider (9.5) has no richAuthorizationRequests
             // types; parameters typed to the runtime 9.10 contract
             // (checkRar: validate(ctx, detail, client)).
@@ -1658,17 +1735,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
               const oidc = (ctx as unknown as {
                 oidc: { params: Record<string, unknown>; route?: string };
               }).oidc;
-              // @spec mission#downgrade-by-omission — the AS-side anti-downgrade
-              // hook: a client registered Mission-governed (mission_governed on
-              // its registration) MUST NOT obtain ungoverned tokens by stripping
-              // the Intent, so its bare authorization_details AUTHORIZATION
-              // request (no mission_intent) is rejected. The spec deliberately
-              // pins no error code for this rejection (mirroring the AAuth
-              // missionless-request rule, #459); this implementation chooses
-              // invalid_request. Scoped to the authorization-request routes:
-              // this same hook also runs at the token endpoint, where
+              // @spec mission#authority-proposal, mission#downgrade-by-omission —
+              // the AS-side anti-downgrade hook: a client registered
+              // Mission-governed (mission_governed on its registration) MUST NOT
+              // obtain ungoverned tokens by stripping the Intent, so its
+              // authorization request carrying authorization_details but no
+              // mission_intent is refused invalid_request, the code Authority
+              // Proposal names. Scoped to the authorization-request routes (PAR,
+              // the authorization endpoint and its resume), as that rule is
+              // (D585): this same hook also runs at the token endpoint, where
               // authorization_details is an RFC 9396 subset request under an
-              // already-Mission-bound grant, not a bare request.
+              // existing Mission-bound grant and needs no mission_intent.
               const governed = (client as unknown as { mission_governed?: unknown })
                 .mission_governed === true;
               const authorizationRoute =
@@ -1762,10 +1839,29 @@ export function buildProvider(opts: AdapterOptions): Provider {
           if (!intake) throw new errors.InvalidRequest("device authorization request not recognized");
           if (intake.proposal !== undefined) params.authorization_details = intake.proposal;
         }
-        if (value === undefined) return;
+        // @spec mission#submission-processing (#1411): the PAR intake lifted
+        // the proposal, so the envelope and the Intent (steps 1 and 2) are
+        // validated before it (step 3), and the evidence entry rules wait
+        // for the evidence step (step 6). A lifted proposal is always restored and
+        // checked, even where the provider reads no `mission_intent`.
+        const lifted =
+          (ctx as { oidc: { route?: string } }).oidc.route === "pushed_authorization_request"
+            ? takeParIntake((ctx as { req: IncomingMessage }).req)
+            : undefined;
+        if (value === undefined) {
+          if (lifted) {
+            params.authorization_details = lifted.proposal;
+            checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
+          }
+          return;
+        }
         try {
-          const submission = kernel.validateSubmission(String(value));
+          const submission = kernel.validateSubmission(String(value), undefined, { deferEvidenceEntries: true });
           const { intent } = submission;
+          if (lifted) {
+            params.authorization_details = lifted.proposal;
+            checkPushedRar(ctx, params, oidc.client as { authorizationDetailsTypes?: string[] } | undefined);
+          }
           // @spec mission#authority-proposal — the intake cross-check that needs
           // the parsed Intent: each proposed entry's resource MUST be among the
           // Intent's resources (invalid_request), the array strict-parses
@@ -2154,6 +2250,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // intake, before the provider parses the request (Provider#use splices it
   // ahead of the route dispatcher).
   if (enabled("device-authorization")) provider.use(deviceAuthorizationIntake);
+  // @spec mission#submission-processing (#1411): the PAR intake, before the
+  // provider's own RAR check (par-intake.ts).
+  provider.use(pushedRequestIntake);
 
   // @spec DTR (draft-gerber-oauth-deferred-token-response-00): the deferred
   // grant on the REAL /token endpoint, for an AROP deferral (capability
@@ -2164,10 +2263,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   // `deferred_authorization` (AROP initiation) are declared so the token
   // endpoint does not strip them from ctx.oidc.params.
   const arop = opts.deferrals && enabled("deferred") ? opts.deferrals : undefined;
-  if (grantEnabled.get(DEFERRED_GRANT_TYPE) && (arop || missionApproval)) {
+  if (grantEnabled.get(DEFERRED_GRANT_TYPE) && (arop || missionApproval || expansionDeferrals)) {
     provider.registerGrantType(
       DEFERRED_GRANT_TYPE,
-      (ctx) => handleDeferredGrant(opts, arop, missionApproval, provider, ctx),
+      (ctx) => handleDeferredGrant(opts, arop, missionApproval, expansionDeferrals, provider, ctx),
       // `scope` (@spec mission#scope-projection) is read on the redeeming request.
       new Set(["deferral_code", "deferred_authorization", "scope"]),
     );
@@ -2179,6 +2278,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (missionApproval) {
     registerDeferredAuthorizationCodeGrant(provider, opts, missionApproval, new DeferredAuthorizationCodes(missionApproval));
     provider.use(cancelOnRevocation(missionApproval));
+  }
+  if (expansionDeferrals) {
+    provider.use(cancelExpansionDeferralOnRevocation(expansionDeferrals));
   }
 
   // @spec child-delegation#child-client-identity — the RFC 7523 JWT-bearer
@@ -2263,13 +2365,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
         "mission_intent",
         "child_actor",
         "parent",
-        // @spec expansion#creation-request-id — the non-authoritative
+        // @spec expansion#submission — the non-authoritative
         // `predecessor` cross-check (mirrors `parent`) and the REQUIRED
         // `creation_request_id`; each MUST be declared here or
         // stripGrantIrrelevantParams removes it.
         "predecessor",
         "creation_request_id",
+        // Refused on the exchange: a deferred expansion is polled on the
+        // deferred grant (#1177).
         "deferral_code",
+        // @spec expansion#completion-modes (#1177): the deferred token
+        // response's opt-in.
+        "completion_mode",
         // @spec child-delegation#carryover-commit — the carryover result
         // retrieval mode of the child-creation completion surface (no new
         // endpoint and no new metadata member).
@@ -2530,10 +2637,18 @@ async function handleDeferredGrant(
   opts: AdapterOptions,
   deferrals: DeferralStore | undefined,
   missionApproval: MissionApprovalDeferralStore | undefined,
+  expansionDeferrals: ExpansionDeferralStore | undefined,
   provider: Provider,
   ctx: KoaContextWithOIDC,
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
+
+  // @spec expansion#completion-modes (#1177): a deferred expansion's poll.
+  if (typeof params.deferral_code === "string" && params.deferral_code.startsWith(EXPANSION_DEFERRAL_PREFIX)) {
+    if (!expansionDeferrals) throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+    await pollDeferredExpansion(opts, provider, ctx, params.deferral_code);
+    return;
+  }
 
   if (typeof params.deferral_code === "string" && params.deferral_code.startsWith(MISSION_APPROVAL_DEFERRAL_PREFIX)) {
     if (!missionApproval) throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
@@ -2628,6 +2743,12 @@ async function handleDeferredGrant(
     // is refused here, before any deferral opens.
     const refusedMember = refusedMemberInRequest(intent.requested);
     if (refusedMember) throw new InvalidAuthorizationDetails(refusedMember);
+    // @spec resource-access#matching-allowed-delegates (#1373): the deferred
+    // token carries the requested entries as submitted, and the subset check
+    // reads a delegate matcher's `sub` and `sub_profile` only, so a matcher
+    // carrying another member is refused before any deferral opens.
+    const malformedMatcher = malformedMatcherInRequest(intent.requested);
+    if (malformedMatcher) throw new InvalidAuthorizationDetails(malformedMatcher);
     // @spec DTR -00 Section 10.1 (#1348): the deferral is bound to this
     // request's key, which every poll must prove. Required here because the
     // poll requires it.
@@ -2964,6 +3085,19 @@ export function resourcesForAudiences(
   return out;
 }
 
+/**
+ * @spec mission#caller-authorization-and-minimization, resource-access#resource-matching
+ * (#1440): whether introspection discloses `entry` to a caller authorized for
+ * `resources`: the entry's resource tree overlaps one of them, through the
+ * shared matcher ({@link entryOverlapsResource}), as at token emission. A
+ * finer or `prefix` entry the caller's resource serves is disclosed, and a
+ * sibling sharing its characters is not.
+ */
+function disclosedFor(resources: ReadonlySet<string>, entry: AuthorityEntry): boolean {
+  for (const resource of resources) if (entryOverlapsResource(entry, resource)) return true;
+  return false;
+}
+
 /** The capability that enables each lifecycle-endpoint operation. */
 const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability>> = {
   revoke: "lifecycle-revoke",
@@ -3080,6 +3214,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    */
   const mayReadStatus = (principal: ServiceTokenPrincipal): boolean =>
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
+
+  /**
+   * @spec authority-server#join-disclosure (#818): whether the authenticated
+   * caller is a PDP enrolled for the requested enforcement scope, read from
+   * the deployment's enrollment configuration (`enrolledJoinPdps`). Both
+   * halves decide it: an enrolled principal asking for a scope it is not
+   * enrolled for, or naming no `audience` at all, is any other caller. An own
+   * property lookup, so no inherited name resolves an enrollment.
+   */
+  const enrolledJoinPdps = opts.enrolledJoinPdps ?? {};
+  const joinDisclosureFor = (principal: ServiceTokenPrincipal, audience: string | undefined): boolean =>
+    audience !== undefined &&
+    Object.hasOwn(enrolledJoinPdps, principal.principal_id) &&
+    (enrolledJoinPdps[principal.principal_id] ?? []).includes(audience);
 
   /**
    * @spec status#lifecycle-authorization: the authorization this deployment
@@ -3272,6 +3420,33 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
         return;
       }
+      // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
+      // progressive#derivation-limits (#1119, D327): the established limit,
+      // and for each entry whose policy-created children this approval
+      // consents to, the subtree figures and the per-child rule, computed by
+      // the same reader the decision and child creation use
+      // (committedPerChildMaximum). The figures are a view, not bound to the
+      // decision: the decision re-derives and refuses an approval whose
+      // per-child figure cannot be disclosed, and child creation re-verifies
+      // the committed policy.
+      const derivation = approvalDerivationRendering({
+        limit: kernel.resolveDerivationLimit(intent.requested_derivation_limit),
+        deploymentCeiling: kernel.resolveDerivationLimit(undefined),
+        authority,
+        held: (ref) => verifiedActivationPolicy(opts.issuer, kernel.activationPolicies(), ref),
+        asyncDelegation: opts.familyStore !== undefined,
+        progressive: opts.progressive !== undefined,
+      });
+      // @spec progressive#progressive-authorization (#1017): the ceiling this
+      // deployment's approval surface offers, rendered for the Approver; the
+      // decision consents only exactly this offer. A device approval offers
+      // none (#1256).
+      const ceilingOffer =
+        !deviceJti && opts.progressive?.ceilingOffer
+          ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
+          : undefined;
+      // The decision is bound to this rendering, never to an offer computed afresh.
+      retainRenderedOffer(provider, interactionMatch[1] as string, ceilingOffer, details.exp);
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.body = renderApprovalPage(
@@ -3288,6 +3463,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
               subject: deviceSubject,
             }
           : undefined,
+        derivation,
+        ceilingOffer,
       );
       return;
     }
@@ -3376,14 +3553,19 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
+      const statusAudience = str(ctx.query.audience);
       try {
         // A caller without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
-          ...optional("audience", str(ctx.query.audience)),
+          ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
           requester: principal.principal_id,
+          // @spec authority-server#join-disclosure (#818): set only for an
+          // enrolled PDP's own enforcement scope; every other request leaves
+          // the option out, so its response is unchanged.
+          ...(joinDisclosureFor(principal, statusAudience) ? { joinDisclosure: true } : {}),
         });
         ctx.status = 200;
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
@@ -4168,7 +4350,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // fragment's record-entry origin for discharge_selectors.
         const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
-        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const returned = narrowed.filter((e) => disclosedFor(resourceSet, e.entry));
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
         ctx.body = {
@@ -4306,7 +4488,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // it held authority it was never issued.
         const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
-        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const returned = narrowed.filter((e) => disclosedFor(resourceSet, e.entry));
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
 
@@ -4395,11 +4577,25 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...kernel.authoritySourceOptions(),
           ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
         });
+        // @spec mission-template#template-consent, derivation-limits#approval-rendering
+        // (#1119): the disclosure a human template-consent page would render,
+        // returned by this stand-in: the per-instance derivation-limit rule and
+        // maximum the committed Dispatch Policy states (consent refused a
+        // malformed one), beside max_active and the dispatch rate.
+        const heldPolicy = opts.dispatchPolicies?.[template.dispatch_policy.id];
+        const maximum = (heldPolicy && standingConsentMaximumOf(heldPolicy)) || NO_FINITE_MAXIMUM;
         ctx.status = 201;
         ctx.body = {
           template_id: template.id,
           template_version: template.template_version,
           template_hash: template.template_hash,
+          disclosure: {
+            max_active: template.max_active,
+            dispatch_rate: { limit: template.rate_per_min, window_s: 60 },
+            derivation_limit: standingConsentLines(maximum, "dispatched instance", {
+              asyncDelegation: opts.familyStore !== undefined,
+            }),
+          },
         };
       } catch (e) {
         if (e instanceof IntentError) throw intentErrorToOidc(e);
@@ -4523,14 +4719,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (enabled("device-authorization")) meta.mission_device_authorization_supported = true;
       // DTR -00 (Client Opt-In Signaling): an AS that publishes metadata and
       // supports deferred token responses says so. Advertised where Deferred
-      // Mission Approval is served; the AROP deferral is initiated by its own
-      // grant request and never opted into with `completion_mode`.
-      if (deferredCodes) {
-        meta.deferred_token_response_supported = true;
-        // DTR -00 Section 7.4 (Discovery): an AS that supports deferral
-        // lists the deferral-code token type its revocation endpoint accepts
-        // (the cancellation), so a client can rely on it. The revocation
-        // endpoint is served wherever Deferred Mission Approval is.
+      // Mission Approval or a deferred expansion (#1177) is served; the AROP
+      // deferral is initiated by its own grant request and never opted into
+      // with `completion_mode`.
+      const expansionDeferred = enabled("expansion") && opts.expansionDeferrals !== undefined;
+      if (deferredCodes || expansionDeferred) meta.deferred_token_response_supported = true;
+      // DTR -00 Section 7.4 (Discovery): an AS that supports deferral lists
+      // the deferral-code token type its revocation endpoint accepts (the
+      // cancellation), so a client can rely on it. The revocation endpoint is
+      // served wherever Deferred Mission Approval or a deferred expansion is.
+      if (deferredCodes || expansionDeferred) {
         const listed = Array.isArray(meta.revocation_endpoint_token_type_values_supported)
           ? (meta.revocation_endpoint_token_type_values_supported as unknown[])
           : [];
@@ -4724,7 +4922,7 @@ async function handleMissionDispatchGrant(
     }
   }
 
-  // @spec expansion#creation-lookup-order, mission-template#dispatch —
+  // @spec expansion#creation-revalidation, mission-template#dispatch —
   // possession verification precedes the Dispatch idempotency lookup, and the
   // verified DPoP key is the fingerprint's `cnf` and the issued token's binding.
   const proofJws = ctx.get("DPoP");
@@ -4779,7 +4977,7 @@ async function handleMissionDispatchGrant(
     return false;
   };
 
-  // @spec expansion#creation-lookup-order, mission#intent-submission-evidence —
+  // @spec expansion#creation-revalidation, mission#intent-submission-evidence —
   // the completed-operation recovery lookup runs after possession verification
   // and BEFORE evidence re-verification and the gates.
   let record: MissionRecord | undefined;
@@ -5214,21 +5412,79 @@ async function decide(
     return;
   }
 
+  // @spec progressive#progressive-authorization: the authority ceiling and
+  // drawdown policy the Approver consented on this approval surface, read only
+  // where the deployment selects Progressive authorization. Its entries and
+  // its drawdown policy are validated here, before any write: a malformed
+  // ceiling, or a drawdown policy this issuer does not hold at that version,
+  // refuses `invalid_request`.
+  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
+  let ceilingEntries: AuthorityEntry[] = [];
+  if (ceiling) {
+    try {
+      ceilingEntries = consentedCeilingEntries(ceiling);
+      opts.kernel.assertDrawdownPolicyHeld(ceiling);
+    } catch (e) {
+      if (e instanceof IntentError) {
+        await finish({ error: e.code, error_description: e.message });
+        return;
+      }
+      throw e;
+    }
+  }
+  // @spec progressive#progressive-authorization (#1017): the consent disclosure
+  // renders the ceiling, so the decision consents only exactly the ceiling and
+  // drawdown policy this interaction's approval page rendered, as retained at
+  // that rendering. With no rendering there is nothing to consent.
+  if (ceiling) {
+    const offered = !deviceJti ? renderedOffer(provider, details.uid) : undefined;
+    if (!consentsOffer(ceiling, offered)) {
+      await finish({
+        error: "invalid_request",
+        error_description: "the decision consents a ceiling the approval page did not render",
+      });
+      return;
+    }
+  }
+
   // @spec mission#approval-authentication (#826, D425): the published
   // approval-authentication floor over the complete derived Authority Set,
   // after derivation and before any Mission, Grant or code exists. Both it and
   // the client's requested strength (checked above) must hold: an absent or
   // weaker request never relaxes the floor. The achieved context is the
   // approval surface's, never the request's.
+  // @spec progressive#progressive-authorization (#1255): a consented ceiling
+  // is classified with the derived set. A drawdown later grants its authority
+  // under this consent's `consent_principal` and `approved_at`, with no
+  // Approver authenticating, so the consent itself meets the floor for
+  // everything the ceiling admits.
   const floor = evaluateApprovalFloor(
     opts.approvalFloor,
-    authority,
+    [...authority, ...ceilingEntries],
     { acr: principal.acr, auth_time: principal.auth_time },
     { interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
   );
   if (floor.outcome === "refused") {
     await finish({ error: "access_denied", error_description: floor.reason });
     return;
+  }
+
+  // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+  // (#1119): an approval consents to each delegable entry's policy-created
+  // children only with that entry's per-child rule and maximum disclosed. While
+  // one cannot be disclosed (its committed policy is not held at its digest, or
+  // states a malformed maximum), the approval is refused, before anything is
+  // written, so restoring the policy later enables no child grant the Approver
+  // never saw; a fresh approval discloses it. A retry of a committed decision
+  // recovers it instead.
+  if (!opts.kernel.findByApprovalEvent(`apev_${details.uid}`)) {
+    const undisclosed = undisclosedChildGrant(authority, (ref) =>
+      verifiedActivationPolicy(opts.issuer, opts.kernel.activationPolicies(), ref),
+    );
+    if (undisclosed) {
+      await finish({ error: "access_denied", error_description: undisclosed });
+      return;
+    }
   }
 
   // @spec mission#scope-projection, mission#error-mapping — the requested
@@ -5269,10 +5525,12 @@ async function decide(
   //
   // @spec mission#approval-event (step 7) (#916) — the order of writes. The
   // approval is prepared first, so every refusal (above, and in
-  // `prepareApproval`) happens before anything is written, except that
-  // the progressive ceiling consent, established at the commit's creation
-  // instant, refuses after the grant save (an inert grant a retry
-  // overwrites). The provider grant
+  // `prepareApproval`) happens before anything is written; a consented
+  // ceiling's entries, its drawdown policy and their floor are checked above.
+  // The commit revalidates the prepared authority source and mints the
+  // drawdown policy reference again at its creation instant, so a source or
+  // policy change after these checks refuses after the grant save (an inert
+  // grant a retry overwrites). The provider grant
   // is saved next, under an identity derived from this interaction, and the
   // record then commits already bound to it. A failure before that commit
   // leaves an inert grant (no code, no Mission, no index entry) that a retry
@@ -5283,10 +5541,6 @@ async function decide(
   // another.
   const approvalEventId = `apev_${details.uid}`;
   const grantId = approvalGrantId(details.uid);
-  // @spec progressive#progressive-authorization: the authority ceiling and
-  // drawdown policy the Approver consented on this approval surface, read only
-  // where the deployment selects Progressive authorization.
-  const ceiling = opts.progressive ? ceilingConsentOf(body) : undefined;
   const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
@@ -5521,6 +5775,129 @@ function carriesPerActionLimit(authority: readonly AuthorityEntry[]): boolean {
   return authority.some((entry) => entry.constraints?.max_amount !== undefined);
 }
 
+/**
+ * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
+ * progressive#derivation-limits (#1119) — the derivation disclosures an
+ * approval renders, as plain lines.
+ */
+interface ApprovalDerivationRendering {
+  /** The Mission's established limit (not only the requested one). */
+  established: string[];
+  /** One block per entry whose policy-created children this approval consents to. */
+  children: Array<{ label: string; lines: string[] }>;
+  /** The inheritance a ceiling consent discloses, where the deployment offers one. */
+  progressive?: string;
+}
+
+export function approvalDerivationRendering(input: {
+  limit: number | null;
+  deploymentCeiling: number | null;
+  authority: readonly AuthorityEntry[];
+  held: Parameters<typeof committedPerChildMaximum>[1];
+  asyncDelegation: boolean;
+  progressive: boolean;
+}): ApprovalDerivationRendering {
+  const children: ApprovalDerivationRendering["children"] = [];
+  for (const entry of input.authority) {
+    const grant = entry.delegation?.children as
+      | { max_children?: number; max_child_depth?: number; child_creation_policy?: ActivationPolicyRef }
+      | undefined;
+    if (!grant) continue;
+    const committed = committedPerChildMaximum(grant, input.held);
+    const perChild =
+      committed.source === "policy"
+        ? standingConsentLines(committed.maximum, "child Mission", { asyncDelegation: input.asyncDelegation })
+        : committed.source === "deployment"
+          ? standingConsentLines(
+              input.deploymentCeiling === null ? NO_FINITE_MAXIMUM : { finite: input.deploymentCeiling },
+              "child Mission",
+              { asyncDelegation: input.asyncDelegation },
+            )
+          : [
+              undisclosableReason(committed),
+            ];
+    children.push({
+      label: `${entry.resource}: ${entry.actions.join(", ")}`,
+      lines: [
+        grant.max_children === undefined
+          ? "Concurrent children: no limit is set on concurrently non-terminal child Missions."
+          : `Concurrent children: at most ${grant.max_children} concurrently non-terminal child Missions (a limit on children at one time, not on children created over the Mission's lifetime).`,
+        `Child depth: at most ${grant.max_child_depth ?? 1}${grant.max_child_depth === undefined ? " (the default)" : ""}.`,
+        ...perChild,
+        SUBTREE_AGGREGATE_STATEMENT,
+      ],
+    });
+  }
+  return {
+    established: establishedLimitLines(input.limit, { asyncDelegation: input.asyncDelegation }),
+    children,
+    ...(input.progressive ? { progressive: progressiveInheritanceLine(input.limit) } : {}),
+  };
+}
+
+/**
+ * @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering
+ * (#1119): why a delegable entry's per-child figure cannot be disclosed, or
+ * undefined when it can. An approval cannot consent to a child grant whose
+ * rule and maximum it could not show, so the decision refuses while any is
+ * undisclosable; once the policy is held again, a fresh approval discloses it.
+ */
+function undisclosableReason(committed: ReturnType<typeof committedPerChildMaximum>): string {
+  return committed.source === "unheld"
+    ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} version ${committed.policy.version} is not one this issuer holds at its committed digest. This approval is refused until it can be shown.`
+    : committed.source === "unusable"
+      ? `The per-child derivation limit cannot be shown: child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}. This approval is refused until it states a usable one.`
+      : "";
+}
+
+/** The first delegable entry whose per-child figure cannot be disclosed, with the reason, or undefined. */
+function undisclosedChildGrant(
+  authority: readonly AuthorityEntry[],
+  held: Parameters<typeof committedPerChildMaximum>[1],
+): string | undefined {
+  for (const entry of authority) {
+    const grant = entry.delegation?.children as { child_creation_policy?: ActivationPolicyRef } | undefined;
+    if (!grant) continue;
+    const committed = committedPerChildMaximum(grant, held);
+    if (committed.source === "unheld" || committed.source === "unusable") {
+      return `${entry.resource}: ${undisclosableReason(committed)}`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * @spec progressive#progressive-authorization (#1017): the ceiling offer each
+ * approval page rendered, by interaction, until the interaction expires. A
+ * later rendering of the same interaction replaces it; one that offers none
+ * withdraws it.
+ */
+const renderedCeilingOffers = new WeakMap<Provider, Map<string, { offer: CeilingConsent; expiresAt: number }>>();
+
+function retainRenderedOffer(provider: Provider, uid: string, offer: CeilingConsent | undefined, exp: number | undefined): void {
+  let byUid = renderedCeilingOffers.get(provider);
+  if (!byUid) {
+    byUid = new Map();
+    renderedCeilingOffers.set(provider, byUid);
+  }
+  const now = Date.now();
+  for (const [key, held] of byUid) if (held.expiresAt <= now) byUid.delete(key);
+  if (!offer) {
+    byUid.delete(uid);
+    return;
+  }
+  byUid.set(uid, { offer, expiresAt: typeof exp === "number" ? exp * 1000 : now + 3_600_000 });
+}
+
+function renderedOffer(provider: Provider, uid: string): CeilingConsent | undefined {
+  const held = renderedCeilingOffers.get(provider)?.get(uid);
+  return held && held.expiresAt > Date.now() ? held.offer : undefined;
+}
+
+function renderLines(lines: readonly string[], cls: string): string {
+  return `<ul class="${cls}">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
@@ -5530,6 +5907,9 @@ function renderApprovalPage(
   authoritySource?: AuthoritySource,
   /** @spec device-authorization#approval: the verification user agent's additions. */
   device?: { userCode: string; client: DeviceClientView; subject: string },
+  derivation?: ApprovalDerivationRendering,
+  /** @spec progressive#progressive-authorization: the ceiling the approval surface offers. */
+  ceiling?: CeilingConsent,
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -5586,6 +5966,33 @@ function renderApprovalPage(
     ? `<p class="per-action-limits">${escapeHtml(PER_ACTION_LIMIT_NOTICE)}</p>
 `
     : "";
+  // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
+  // progressive#derivation-limits (#1119): rendered beside the derived set.
+  const derivationSection = derivation
+    ? `<h2>Derivation limit</h2>${renderLines(derivation.established, "derivation-limit")}
+${
+  derivation.children.length
+    ? `<h2>Child Missions created by policy under this approval (no approval of their own)</h2>
+${derivation.children
+  .map((c) => `<h3>${escapeHtml(c.label)}</h3>${renderLines(c.lines, "child-subtree")}`)
+  .join("\n")}
+`
+    : ""
+}`
+    : "";
+  // @spec progressive#progressive-authorization (#1017): the offered ceiling
+  // itself and the fact that in-ceiling expansion is policy-adjudicated; with
+  // no offer, only the derivation inheritance a ceiling consent would carry.
+  const inheritance = derivation?.progressive
+    ? `<p class="progressive-inheritance">${escapeHtml(derivation.progressive)}</p>\n`
+    : "";
+  const ceilingSection = ceiling
+    ? `<h2>Authority ceiling</h2><pre class="authority-ceiling">${escapeHtml(JSON.stringify(ceiling.authority_ceiling, null, 2))}</pre>
+<p class="ceiling-adjudication">${escapeHtml(ceilingAdjudicationLine(ceiling))}</p>
+${inheritance}`
+    : inheritance
+      ? `<h2>Authority ceiling</h2>${inheritance}`
+      : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
 ${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
@@ -5593,7 +6000,7 @@ ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
 <h2>Derived authority (what approval grants)</h2><pre>${escapeHtml(JSON.stringify(authority, null, 2))}</pre>
-${limitNotice}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
+${limitNotice}${derivationSection}${ceilingSection}<form method="post" action="/interaction/${uid}/decide" enctype="application/json">
 ${deviceConfirmations}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;
 }

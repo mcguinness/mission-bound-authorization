@@ -1,13 +1,16 @@
 import type { ActivationPolicyRef } from "./anchors.js";
 import type { JsonValue } from "./canonicalize.js";
 import type { CapabilitySourceBinding } from "./capability-binding.js";
+import type { ResourceContractRef } from "./resource-contract.js";
 
 /**
  * @spec attenuation#root-mapping, child-delegation#fanout — a delegate matcher:
  * the actor (or actor class) a delegation right may be conferred on. Matched by
  * `sub` (exact) or `sub_profile` (class membership). Shared shape between the
  * core's `allowed_delegates` and the child-delegation companion's
- * `allowed_child_actors`.
+ * `allowed_child_actors`. It carries one or both of these members and no
+ * other; every admitting boundary refuses any other shape (#1373,
+ * `delegateMatcherListViolation`).
  */
 export interface DelegateMatcher {
   sub?: string;
@@ -65,6 +68,14 @@ export interface TerminalWhenCondition {
 export interface AuthorityEntry {
   type: "mission_resource_access";
   resource: string;
+  /**
+   * @spec resource-access#resource-access-type (#1276): `exact` (the default,
+   * and the reading when absent) or `prefix`. A derived entry carries
+   * `prefix` when its resource set is a prefix set, and omits the member
+   * otherwise. Containment between two entries' resource sets is
+   * `resourceWithin` (authority-subset.ts).
+   */
+  resource_match?: "exact" | "prefix";
   actions: string[];
   /**
    * @spec capability-binding#capability-source-binding — the capability-source
@@ -86,6 +97,15 @@ export interface AuthorityEntry {
    * sets no precedent here).
    */
   capability_sources?: CapabilitySourceBinding[];
+  /**
+   * @spec resource-access#resource-contract (#249, D553): the resource
+   * contract the entry was approved under, `id`, `version` and `digest`. The
+   * authorization server assembles it from trusted configuration before
+   * approval, so `authority_hash` commits it, and "Every derivation,
+   * narrowing, and delegation of the entry preserves it exactly": removing,
+   * replacing or adding it is never narrowing (`isSubsetEntry` step 4).
+   */
+  resource_contract?: ResourceContractRef;
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];

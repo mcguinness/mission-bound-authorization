@@ -502,7 +502,7 @@ Mission's feed; a row registers nothing on its own.
 | Lifecycle transition | Signals SET as issued, as the signals profile fixes; else {{transition-object}} (JCS) | `application/secevent+jwt`, else `application/mission-lifecycle-transition+json` | `secevent+jwt`, else none | `issuer` |
 | Derivation record | {{derivation-record}} (JCS) | `application/mission-derivation-record+json` | none | `issuer` |
 | Consent evidence | complete retained object, `evidence_envelope` included (JCS) | `application/mission-consent-evidence+json` | `mission-consent-evidence+jws` | `issuer` |
-| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `application/mission-approval-governance+jws` | `issuer` |
+| Approval governance | complete record including `envelope` (JCS), the record-digest preimage | `application/mission-approval-governance+json` | `mission-approval-governance+jws` | `issuer` |
 | Decision evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-decision-evidence+json` | `application/mission-runtime-evidence+jws` | PDP key |
 | Execution evidence | complete object, `evidence_envelope` included (JCS) | `application/mission-execution-evidence+json` | `application/mission-runtime-evidence+jws` | PEP key |
 | Refusal Record | complete object, `evidence_envelope` included (JCS) | `application/mission-refusal-record+json` | `application/mission-runtime-evidence+jws` | PEP key |
@@ -572,7 +572,9 @@ signature envelope a type's retained form carries, none where the
 type is retained unsigned. Where the defining profile pairs that
 `typ` with a protected `cty`, as the runtime evidence types and the
 Approval Governance Record do, the `cty` is the row's
-`payload-preimage-content-type`, and a verifier checks the pair. It
+`payload-preimage-content-type` (for the Approval Governance Record,
+its `application/` prefix retained or omitted, as that profile
+permits), and a verifier checks the pair. It
 is the per-type mapping named in
 {{evidence-base}}, checked when verifying the operational signature,
 never in place of `payload-preimage-content-type`. Harness and Egress
@@ -1359,7 +1361,7 @@ the Mission Issuer. Protected header, in CBOR extended diagnostic notation
 The payload is the SHA-256 digest of the JCS canonical bytes of the
 retained Consent Evidence object, `evidence_envelope` included
 ({{evidence-types}}), carried inline as the raw digest whose
-base64url form is `ABgvgPAXUukhkxer0K6MzkH6XEL8VBc2WRwjXvt5Wa4`, not that
+base64url form is `TSzomEHSsEM5B7TDB-3Kl-v2it40P3Wyb7xJiE45iRU`, not that
 display string. The Transparency Service appends the statement
 and returns a Receipt, a COSE_Sign1 with an inclusion proof in its
 unprotected header, which the Mission Issuer keeps with the evidence as a
@@ -1645,6 +1647,11 @@ rather than registering a new identifier.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The evidence-type table shows the Approval Governance Record's
+  operational `typ` with `application/` omitted, as Mission Approval
+  Governance emits it; that record's `cty` may omit the prefix too
+  (#1436).
 
 - The Lifecycle Transition Object records a terminated Mission as
   `state` `terminated` with a `termination` object, and `prior_state`

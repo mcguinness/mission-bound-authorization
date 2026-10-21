@@ -35,7 +35,7 @@
 import { type Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { openStore } from "@mission/store";
-import { decodeJwt } from "jose";
+import { createRemoteJWKSet, decodeJwt } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   type AuthorityEntry,
@@ -50,6 +50,7 @@ import {
   DischargeNotFoundError,
   DischargeSelectorStore,
   entryDigest,
+  ExpansionDeferralStore,
   GateError,
   isSubsetEntry,
   type LifecycleCommit,
@@ -61,6 +62,7 @@ import {
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { verifyStatusResponse } from "./discharge-consumer.helper.js";
 
 const ISS = "https://as.discharge.test";
 const RES = "https://payments.test/mcp";
@@ -1191,6 +1193,59 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await (await lifecycle(record.id, body)).text()).toBe(firstJws);
   });
 
+  it("replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)", async () => {
+    const record = approveOnAs();
+    const body = dischargeBody(record);
+    const first = await lifecycle(record.id, body);
+    expect(first.status).toBe(200);
+    const [headerB64, payloadB64] = (await first.text()).split(".") as [string, string];
+    const enc = (v: unknown) => Buffer.from(JSON.stringify(v), "utf8").toString("base64url");
+    const current = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8")) as Record<string, unknown>;
+    const { new_version: newVersion, ...result } = current.discharge_result as Record<string, unknown>;
+    expect(newVersion).toBe(2);
+    // The envelope the AS signed for this exchange before the migration: the
+    // same header and observation, its Discharge Result naming the
+    // after-commit version `current_version`. It is the response retained
+    // under this nonce, as the store keeps it.
+    const legacyResult = { ...result, current_version: newVersion };
+    const signingInput = `${headerB64}.${enc({ ...current, discharge_result: legacyResult })}`;
+    const legacyJws = `${signingInput}.${as.kernel.statusSigner().sign(signingInput).toString("base64url")}`;
+    const retained = as.kernel.db
+      .prepare("UPDATE lifecycle_responses SET body = ? WHERE mission_id = ? AND nonce = ? AND state = 'final'")
+      .run(legacyJws, record.id, body.nonce);
+    expect(retained.changes).toBe(1);
+
+    // A retransmission is answered with those exact bytes: never re-signed,
+    // never rewritten into the current member name, and nothing re-executed.
+    const retransmit = await lifecycle(record.id, body);
+    expect(retransmit.status).toBe(200);
+    const replayed = await retransmit.text();
+    expect(replayed).toBe(legacyJws);
+    expect(as.kernel.get(record.id)?.version).toBe(2);
+
+    // The bytes verify under the AS's published key, by the Status consumer
+    // procedure, with `current_version` as signed.
+    const meta = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+    const opts = {
+      keys: createRemoteJWKSet(new URL(`${ISSUER}/jwks`)),
+      algs: meta.mission_status_signing_alg_values_supported as string[],
+      issuer: ISSUER,
+      audience: "svc:console",
+      nonce: body.nonce as string,
+      missionId: record.id,
+      now: Math.floor(Date.now() / 1000),
+    };
+    const verified = await verifyStatusResponse(replayed, opts);
+    expect(verified.discharge_result).toEqual({ ...result, prior_version: 1, current_version: 2 });
+    expect(verified.discharge_result).not.toHaveProperty("new_version");
+    // Normalizing first breaks the signature: the same payload rewritten to
+    // `new_version` under the retained signature does not verify.
+    const signature = replayed.split(".")[2];
+    await expect(
+      verifyStatusResponse(`${headerB64}.${enc({ ...current, discharge_result: { ...result, new_version: 2 } })}.${signature}`, opts),
+    ).rejects.toMatchObject({ check: "signature" });
+  });
+
   it("replays the event under a NEW nonce as a fresh envelope carrying the original versions", async () => {
     const record = approveOnAs();
     const body = dischargeBody(record, {
@@ -1902,5 +1957,152 @@ describe("discharge: a refused discharge keeps the expiry it discovered (#844)",
     expect(res.status).toBeGreaterThanOrEqual(500);
     expect(await res.text()).not.toContain("not_found");
     expect(eventRows(record.id)).toBe(0);
+  });
+});
+
+describe("a discharge during an expansion's deferred window (@spec expansion#reconciliation check 3, #1177)", () => {
+  /** Both actions sit below the approval-authentication floor, so the Approver needs no login here. */
+  const FLOOR = {
+    policy_id: "discharge-expansion-test",
+    deployment_scope: "this test's kernel",
+    floors: [
+      {
+        id: "high-risk-authority",
+        applies_to: ["irreversible_action" as const],
+        approval_surface: "browser" as const,
+        accepted_acr: ["mfa"],
+        max_authentication_age_seconds: 300,
+      },
+    ],
+    classification: [
+      {
+        type: "mission_resource_access",
+        resource: RES,
+        actions: {
+          "payments:invoice.read": "consequential_read" as const,
+          "payments:journal.write": "consequential_read" as const,
+        },
+      },
+    ],
+  };
+
+  /** Open a deferred expansion of `predecessor` carrying `entries` (both of {@link proposal} by default), and approve it. */
+  function openApproved(
+    kernel: MissionKernel,
+    predecessor: MissionRecord,
+    n: number,
+    entries: AuthorityEntry[] = proposal(),
+  ): { store: ExpansionDeferralStore; code: string } {
+    const store = new ExpansionDeferralStore(kernel, () => NOW, undefined, FLOOR);
+    const pending = store.open({
+      predecessorId: predecessor.id,
+      intent: intent("Reconcile Q3 payables and post adjustments"),
+      proposedAuthority: entries,
+      clientId: "ap-agent",
+      jkt: "jkt-discharge-expansion",
+      creationRequestId: `crid-discharge-expansion-${n}`,
+    });
+    store.approve(pending.deferral_code, {
+      approver: { iss: ISS, sub: "bob" },
+      approvalEventId: `xapev-discharge-expansion-${n}`,
+      approvedUntil: EXPIRES_AT,
+    });
+    return { store, code: pending.deferral_code };
+  }
+
+  const dischargeWrite = (kernel: MissionKernel, record: MissionRecord, eventId: string, vendor?: string) => {
+    const s = vendor === undefined ? selectorsFor(record) : vendorSelectors(record, vendor);
+    kernel.discharge(record.id, {
+      authority: "svc:close-management",
+      entry_digest: s.entry_digest,
+      condition_digest: s.condition_digest,
+      event_type: s.event_type,
+      event_id: eventId,
+    });
+  };
+
+  /** A write entry for one vendor, discharged when the Q3 close is finalized. */
+  const vendorWrite = (vendors?: string[]): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource: RES,
+    actions: ["payments:journal.write"],
+    constraints: {
+      ...(vendors ? { vendors } : {}),
+      terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: CLOSE_POLICY }],
+    },
+  });
+  const READ_ENTRY: AuthorityEntry = { type: "mission_resource_access", resource: RES, actions: ["payments:invoice.read"] };
+  /** Two write entries that share their action and differ only in vendor. */
+  const twoVendors = (): AuthorityEntry[] => [READ_ENTRY, vendorWrite(["acme"]), vendorWrite(["globex"])];
+
+  /** The selectors of the write entry for `vendor`. */
+  function vendorSelectors(record: MissionRecord, vendor: string) {
+    const entry = record.authority_set.find(
+      (e) => e.actions.includes("payments:journal.write") && e.constraints?.vendors?.includes(vendor),
+    );
+    if (!entry) throw new Error(`no write entry for ${vendor}`);
+    const condition = entry.constraints?.terminal_when?.[0];
+    if (!condition) throw new Error("entry carries no terminal_when");
+    return {
+      entry_digest: entryDigest(record.issuer, entry),
+      condition_digest: conditionDigest(condition),
+      event_type: condition.event_type,
+    };
+  }
+
+  it("refuses the completion when a same-action entry with other constraints is discharged after adjudication, though another was discharged before", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel, twoVendors());
+    expect(predecessor.authority_set.filter((e) => e.actions.includes("payments:journal.write"))).toHaveLength(2);
+    dischargeWrite(kernel, predecessor, "close-acme-before", "acme");
+    const { store, code } = openApproved(kernel, predecessor, 3, twoVendors());
+    dischargeWrite(kernel, predecessor, "close-globex-after", "globex");
+    const missionCountBefore = kernel.allMissions().length;
+    expect(store.redeem(code)).toEqual({ error: "access_denied", status: "authority_restricted_since_approval" });
+    expect(kernel.allMissions().length).toBe(missionCountBefore);
+    expect(kernel.get(predecessor.id)?.termination).toBeUndefined();
+  });
+
+  it("completes when the successor carries only an entry whose constraints are disjoint from the one discharged after adjudication", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel, twoVendors());
+    const { store, code } = openApproved(kernel, predecessor, 4, [READ_ENTRY, vendorWrite(["acme"])]);
+    dischargeWrite(kernel, predecessor, "close-globex-disjoint", "globex");
+    const out = store.redeem(code);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.successor.authority_set.find((e) => e.actions.includes("payments:journal.write"))?.constraints?.vendors).toEqual(["acme"]);
+  });
+
+  it("refuses the completion when the successor's entry is broader than, and so overlaps, the entry discharged after adjudication", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel, twoVendors());
+    const { store, code } = openApproved(kernel, predecessor, 5, [READ_ENTRY, vendorWrite()]);
+    dischargeWrite(kernel, predecessor, "close-globex-broader", "globex");
+    expect(store.redeem(code)).toEqual({ error: "access_denied", status: "authority_restricted_since_approval" });
+  });
+
+  it("refuses the completion with access_denied and authority_restricted_since_approval when the successor carries an entry discharged after adjudication", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel);
+    const { store, code } = openApproved(kernel, predecessor, 1);
+    dischargeWrite(kernel, predecessor, "close-after-adjudication");
+    const missionCountBefore = kernel.allMissions().length;
+    expect(store.redeem(code)).toEqual({ error: "access_denied", status: "authority_restricted_since_approval" });
+    expect(kernel.allMissions().length).toBe(missionCountBefore);
+    expect(kernel.get(predecessor.id)?.state).toBe("active");
+    expect(kernel.get(predecessor.id)?.termination).toBeUndefined();
+  });
+
+  it("completes when the entry was discharged before adjudication: the approval restores it", () => {
+    const { kernel } = makeKernel();
+    const predecessor = approve(kernel);
+    dischargeWrite(kernel, predecessor, "close-before-adjudication");
+    const { store, code } = openApproved(kernel, predecessor, 2);
+    const out = store.redeem(code);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.successor.authority_set.some((e) => e.actions.includes("payments:journal.write"))).toBe(true);
+    expect(kernel.get(predecessor.id)?.termination?.reason).toBe("superseded");
   });
 });

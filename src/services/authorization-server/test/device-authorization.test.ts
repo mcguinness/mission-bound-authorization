@@ -489,6 +489,43 @@ describe("Mission Device Authorization request (@spec device-authorization#reque
     expect(repeated.body.device_code).toBeUndefined();
   });
 
+  // @spec mission#submission-processing (#1411): the earliest failing step's
+  // error, on this carrier as at PAR.
+  it("refuses a submission failing two checks with the earliest step's error, as PAR does, issuing no device_code", async () => {
+    const other = "http://localhost:4999/elsewhere";
+    const cases: { name: string; intent: unknown; proposal: unknown; error: string }[] = [
+      {
+        name: "Intent failing validation with a malformed proposal",
+        intent: { intent: { ...INTENT, goal: 17 } },
+        proposal: [{ ...READ[0], actions: 17 }],
+        error: "invalid_request",
+      },
+      {
+        name: "resource outside target_resources with an unsupported evidence type",
+        intent: { intent: INTENT, evidence: [{ type: "urn:example:unknown" }] },
+        proposal: [{ ...READ[0], resource: other }],
+        error: "invalid_request",
+      },
+      {
+        name: "resource outside target_resources with evidence failing verification",
+        intent: { intent: INTENT, evidence: [{ type: EVIDENCE_TYPE, assertion: "fail" }] },
+        proposal: [{ ...READ[0], resource: other }],
+        error: "invalid_request",
+      },
+    ];
+    for (const c of cases) {
+      const missionIntent = JSON.stringify(c.intent);
+      const proposal = JSON.stringify(c.proposal);
+      const atPar = await push(missionIntent, proposal);
+      expect(atPar.status, `${c.name} at PAR: ${JSON.stringify(atPar.body)}`).toBe(400);
+      expect(atPar.body.error, `${c.name} at PAR`).toBe(c.error);
+      const res = await deviceAuthorize(PUBLIC, { mission_intent: missionIntent, authorization_details: proposal });
+      expect(res.status, `${c.name}: ${JSON.stringify(res.body)}`).toBe(400);
+      expect(res.body.error, c.name).toBe(c.error);
+      expect(res.body.device_code, c.name).toBeUndefined();
+    }
+  });
+
   // @spec resource-access#entry-validation (#1278, D457): the provider's RAR
   // check never runs at this endpoint, so every `locations` value, including
   // `null`, `""` and a malformed one, reaches the shared proposal validator.
@@ -501,6 +538,23 @@ describe("Mission Device Authorization request (@spec device-authorization#reque
       expect(res.status, `${JSON.stringify(locations)}: ${JSON.stringify(res.body)}`).toBe(400);
       expect(res.body.error).toBe("invalid_authorization_details");
       expect(res.body.error_description).toMatch(/locations must be absent/);
+      expect(res.body.device_code).toBeUndefined();
+      expect(res.body.user_code).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
+  // @spec mission#subset (#1399, D538): an unsupported top-level member
+  // reaches the shared proposal validator, which refuses it by presence.
+  it("refuses a proposal entry carrying an unsupported member, whatever its value, with invalid_authorization_details, issuing no device_code", async () => {
+    const missionIntent = JSON.stringify({ intent: INTENT });
+    for (const invoice_ids of [["INV-7"], [], null, ""]) {
+      const before = as.kernel.allMissions().length;
+      const proposal = JSON.stringify([{ ...READ[0], invoice_ids }]);
+      const res = await deviceAuthorize(PUBLIC, { mission_intent: missionIntent, authorization_details: proposal });
+      expect(res.status, `${JSON.stringify(invoice_ids)}: ${JSON.stringify(res.body)}`).toBe(400);
+      expect(res.body.error).toBe("invalid_authorization_details");
+      expect(res.body.error_description).toMatch(/invoice_ids is not a supported member/);
       expect(res.body.device_code).toBeUndefined();
       expect(res.body.user_code).toBeUndefined();
       expect(as.kernel.allMissions().length).toBe(before);

@@ -21,9 +21,12 @@ import {
   isAuthorityEntry,
   parseScopeProjectionMapping,
   parseStrictJson,
+  ResourceContractDeclarations,
   refusedEntryMember,
+  resourceMatchViolation,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
+  unsupportedEntryMember,
 } from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
 
@@ -482,12 +485,45 @@ export function templatePaymentsResource(statement: unknown, from: string, to: s
       }
     }
   }
+  // @spec runtime#resource-contract (#249): a contract declaration names the
+  // resource it serves; it follows the override like the mediated resources.
+  // The contract documents name their targets symbolically, so their digests
+  // never depend on the deployment's URI.
+  const extensions = stmt.extensions as Record<string, unknown> | undefined;
+  const contracts = Array.isArray(extensions?.resource_contracts)
+    ? (extensions.resource_contracts as unknown[]).map((d) =>
+        d !== null && typeof d === "object" && !Array.isArray(d)
+          ? { ...d, resource: remap((d as { resource?: unknown }).resource) }
+          : d,
+      )
+    : undefined;
   return {
     ...stmt,
     mediated_scope: { ...scope, resources: remap(scope.resources) },
     ...(boundaries !== undefined ? { enforcement_boundaries: boundaries } : {}),
+    ...(contracts !== undefined
+      ? { extensions: { ...extensions, resource_contracts: contracts } }
+      : {}),
   };
 }
+
+/**
+ * @spec runtime#resource-contract, resource-access#resource-contract (#249,
+ * D553): the contract versions the payments resource declares in its
+ * Enforcement Scope Statement (`extensions.resource_contracts`), validated at
+ * load, digests recomputed over the declared documents. The one trusted
+ * source the authorization server (approval-time assembly), the PDP and the
+ * PEP (resolution) and the Transaction Authorization Server read.
+ */
+export const RESOURCE_CONTRACTS: ResourceContractDeclarations = (() => {
+  const extensions = asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement")
+    .extensions as Record<string, unknown> | undefined;
+  try {
+    return new ResourceContractDeclarations(extensions?.resource_contracts ?? []);
+  } catch (e) {
+    throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
+  }
+})();
 const runtimeStateSource = asObject(
   "enforcement-scope.json",
   asObject("enforcement-scope.json", RUNTIME_SCOPE_CONFIG, "statement").state_source,
@@ -993,11 +1029,12 @@ interface LoadedPolicy {
 }
 
 /**
- * @spec resource-access#resource-matching (#1264, D446): this deployment
- * implements `exact` resource matching only. An entry naming any other
- * `resource_match` (`prefix`, or an unknown value) is refused at load rather
- * than rebuilt without the member, which would silently change its matching
- * semantics: narrower for a ceiling entry, wider for a containment removal.
+ * @spec resource-access#resource-matching (#1264, D446, #1276, #1440): a
+ * containment removal names an approved entry's own `resource`, and the
+ * kernel's containment paths pair removals with entries by that string. A
+ * removal naming any other `resource_match` (`prefix`, or an unknown value)
+ * is therefore refused at load rather than rebuilt without the member, which
+ * would silently widen it.
  */
 function rejectUnsupportedResourceMatch(
   file: string,
@@ -1007,9 +1044,33 @@ function rejectUnsupportedResourceMatch(
   if (e.resource_match !== undefined && e.resource_match !== "exact") {
     throw new ConfigError(
       file,
-      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment implements exact resource matching only`,
+      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment's containment removals are exact only`,
     );
   }
+}
+
+/**
+ * @spec resource-access#resource-access-type, resource-access#subset (#1276,
+ * #1440): a ceiling entry's `resource_match`, kept as written. Derivation, the
+ * subset rule, governed removal and the approval floor's classification all
+ * pair a ceiling entry with other resources through the shared matcher, so
+ * both values Resource Access defines load, `prefix` only where no containment
+ * rule is configured ({@link rejectPrefixCeilingsUnderContainment}). An
+ * unrecognized value, and a `prefix` entry whose `resource` carries a query or
+ * names no `//` authority, are refused at load naming the entry
+ * ({@link resourceMatchViolation}).
+ */
+function ceilingResourceMatch(
+  file: string,
+  e: Record<string, unknown>,
+  resource: string,
+  ctx: string,
+): Pick<AuthorityEntry, "resource_match"> {
+  const violation = resourceMatchViolation({ resource, resource_match: e.resource_match });
+  if (violation !== undefined) throw new ConfigError(file, `${ctx} ${violation}`);
+  return e.resource_match === undefined
+    ? {}
+    : { resource_match: e.resource_match as "exact" | "prefix" };
 }
 
 /**
@@ -1024,6 +1085,15 @@ function rejectRefusedMember(file: string, e: Record<string, unknown>, ctx: stri
     throw new ConfigError(
       file,
       `${ctx} carries ${member}, which the mission_resource_access type does not use`,
+    );
+  }
+  // @spec mission#subset (#1399, D538): likewise any member outside the
+  // supported set, which the member-by-member rebuild below would drop.
+  const unsupported = unsupportedEntryMember(e);
+  if (unsupported !== undefined) {
+    throw new ConfigError(
+      file,
+      `${ctx} carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
     );
   }
 }
@@ -1046,14 +1116,15 @@ function wellFormedResource(file: string, e: Record<string, unknown>, ctx: strin
 
 export function parseCeilingEntry(file: string, raw: unknown, ctx: string): AuthorityEntry {
   const e = asObject(file, raw, ctx);
-  rejectUnsupportedResourceMatch(file, e, ctx);
   const type = reqString(file, e, "type", ctx);
   if (type !== "mission_resource_access")
     throw new ConfigError(file, `${ctx} has unsupported authority type`);
   rejectRefusedMember(file, e, ctx);
+  const resource = wellFormedResource(file, e, ctx);
   const entry: AuthorityEntry = {
     type,
-    resource: wellFormedResource(file, e, ctx),
+    resource,
+    ...ceilingResourceMatch(file, e, resource, ctx),
     actions: reqStringArray(file, e, "actions", ctx),
     ...(e.constraints !== undefined
       ? {
@@ -1427,11 +1498,123 @@ export interface MasJoinPolicy {
    * bound 1 from the credential rather than from client policy.
    */
   scope_actions: Record<string, string[]>;
+  /**
+   * @spec authority-server#mapping-contract (#818): the mapping contract this
+   * deployment's join applies, documented. With `scope_actions` (its scope
+   * mapping, the credential-authority adapter) and `delegates` (its delegate
+   * policy), it states every member the section lists. Absent, the file
+   * declares no contract, and a composition that would mount a join route
+   * refuses to start.
+   */
+  mapping_contract?: MasJoinMappingContract;
 }
 
-function loadMasJoin(): MasJoinPolicy {
+/**
+ * @spec authority-server#mapping-contract (#818): the shared demo join's
+ * declared contract. Each mapping member names the one behavior this join
+ * implements, so the declaration cannot claim one it does not:
+ *
+ * - `subject_mapping: "identity"`: the credential's authenticated subject,
+ *   qualified by its issuer, is compared with the Mission's `subject` by
+ *   byte equality on (`iss`, `sub`); the authorization server that issues the
+ *   credential is the Mission Issuer, so the namespaces are one.
+ * - `client_mapping: "identity"`: the credential's client identifier is
+ *   compared with the Mission's `client_id`, or names a delegate in
+ *   `delegates`.
+ * - `delegate_entry_rule: "client_id_matchers"`: only an entry with a
+ *   `delegation` member is delegable; its `allowed_delegates`, where
+ *   present, admits a delegate whose client identifier an exact `sub`
+ *   matcher names (a profile matcher admits none), and its `max_depth` is
+ *   evaluated against the deployment's actor records.
+ * - `instance`: client-instance identity is neither supported nor required.
+ * - `audit: "decision_evidence"`: each join decision is recorded in the
+ *   PDP's signed Decision Evidence (the acting subject and client, the
+ *   joined-view commitment `join_view_id`, or the `mission_binding_failed`
+ *   denial); the identity mapping resolves nothing beyond that comparison.
+ *   A join request refused before any decision is recorded in the PEP's
+ *   signed Refusal Record instead.
+ * - `failure: "mission_binding_failed"`.
+ */
+export interface MasJoinMappingContract {
+  contract_id: string;
+  /** Bumped with any change to this file's mapping, so the change is detectable. */
+  version: number;
+  subject_mapping: "identity";
+  client_mapping: "identity";
+  delegate_entry_rule: "client_id_matchers";
+  instance: { supported: false; required: false };
+  audit: "decision_evidence";
+  failure: "mission_binding_failed";
+}
+
+const MAS_JOIN_MEMBERS = new Set([
+  "governed_resources",
+  "delegates",
+  "scope_actions",
+  "mapping_contract",
+]);
+const MAS_JOIN_CONTRACT_MEMBERS = new Set([
+  "contract_id",
+  "version",
+  "subject_mapping",
+  "client_mapping",
+  "delegate_entry_rule",
+  "instance",
+  "audit",
+  "failure",
+]);
+
+/** One closed-vocabulary member: the value this join implements, or a refusal naming it. */
+function fixedMember<T extends string>(
+  file: string,
+  o: Record<string, unknown>,
+  key: string,
+  value: T,
+  ctx: string,
+): T {
+  if (o[key] !== value)
+    throw new ConfigError(
+      file,
+      `${ctx}.${key} must be "${value}", the only ${key} this join implements`,
+    );
+  return value;
+}
+
+function parseMasJoinContract(file: string, raw: unknown): MasJoinMappingContract {
+  const ctx = "mas_join.mapping_contract";
+  const o = asObject(file, raw, ctx);
+  onlyMembers(file, o, MAS_JOIN_CONTRACT_MEMBERS, ctx);
+  for (const key of MAS_JOIN_CONTRACT_MEMBERS) {
+    if (!Object.hasOwn(o, key)) throw new ConfigError(file, `${ctx} is missing ${key}`);
+  }
+  const version = reqNumber(file, o, "version", ctx);
+  if (!Number.isInteger(version) || version < 1)
+    throw new ConfigError(file, `${ctx}.version must be a positive integer`);
+  const instance = asObject(file, o.instance, `${ctx}.instance`);
+  onlyMembers(file, instance, new Set(["supported", "required"]), `${ctx}.instance`);
+  if (instance.supported !== false || instance.required !== false) {
+    throw new ConfigError(
+      file,
+      `${ctx}.instance must be { "supported": false, "required": false }: this join establishes no client instance`,
+    );
+  }
+  return {
+    contract_id: reqString(file, o, "contract_id", ctx),
+    version,
+    subject_mapping: fixedMember(file, o, "subject_mapping", "identity", ctx),
+    client_mapping: fixedMember(file, o, "client_mapping", "identity", ctx),
+    delegate_entry_rule: fixedMember(file, o, "delegate_entry_rule", "client_id_matchers", ctx),
+    instance: { supported: false, required: false },
+    audit: fixedMember(file, o, "audit", "decision_evidence", ctx),
+    failure: fixedMember(file, o, "failure", "mission_binding_failed", ctx),
+  };
+}
+
+/** Validate a parsed `config/mas-join.json`: closed members, and a strict mapping contract where one is declared. */
+export function parseMasJoinPolicy(raw: unknown): MasJoinPolicy {
   const file = "mas-join.json";
-  const root = asObject(file, readJson(file), "mas_join");
+  const root = asObject(file, raw, "mas_join");
+  onlyMembers(file, root, MAS_JOIN_MEMBERS, "mas_join");
   const delegatesRaw = asObject(file, root.delegates, "mas_join.delegates");
   const delegates: Record<string, { max_depth: number }> = {};
   for (const [clientId, raw] of Object.entries(delegatesRaw)) {
@@ -1456,7 +1639,14 @@ function loadMasJoin(): MasJoinPolicy {
     governed_resources: reqStringArray(file, root, "governed_resources", "mas_join"),
     delegates,
     scope_actions,
+    ...(root.mapping_contract !== undefined
+      ? { mapping_contract: parseMasJoinContract(file, root.mapping_contract) }
+      : {}),
   };
+}
+
+function loadMasJoin(): MasJoinPolicy {
+  return parseMasJoinPolicy(readJson("mas-join.json"));
 }
 
 const MAS_JOIN_RAW = loadMasJoin();
@@ -1833,14 +2023,15 @@ export interface GovernedPolicy {
 function loadCeilingEntries(file: string, raw: unknown, ctx: string): CeilingEntry[] {
   return asArray(file, raw, ctx).map((item, i) => {
     const e = asObject(file, item, `${ctx}[${i}]`);
-    rejectUnsupportedResourceMatch(file, e, `${ctx}[${i}]`);
     const type = reqString(file, e, "type", `${ctx}[${i}]`);
     if (type !== "mission_resource_access")
       throw new ConfigError(file, `${ctx}[${i}] has unsupported authority type`);
     rejectRefusedMember(file, e, `${ctx}[${i}]`);
+    const resource = wellFormedResource(file, e, `${ctx}[${i}]`);
     const entry: CeilingEntry = {
       type,
-      resource: wellFormedResource(file, e, `${ctx}[${i}]`),
+      resource,
+      ...ceilingResourceMatch(file, e, resource, `${ctx}[${i}]`),
       actions: reqStringArray(file, e, "actions", `${ctx}[${i}]`),
     };
     if (e.constraints !== undefined) {
@@ -2036,6 +2227,46 @@ export const AUTHORITY_SOURCES: AuthoritySourceCatalogSeed = (() => {
     })),
   };
 })();
+
+/**
+ * @spec containment#overlay, resource-access#resource-matching (#1440): the
+ * kernel's containment paths pair a removal with an approved entry by that
+ * entry's exact `resource`, so a rule naming a service misses a finer entry
+ * approved beneath a `prefix` ceiling. Until containment pairs through the
+ * shared matcher (the follow-up to #1440), a deployment that configures any
+ * containment rule keeps every authorization-server ceiling entry `exact`: a
+ * `prefix` entry in policy.json, governed-policy.json or
+ * authority-sources.json refuses at load, naming the entry. With no
+ * containment rule configured, `prefix` ceilings load.
+ */
+function rejectPrefixCeilingsUnderContainment(): void {
+  if (CONTAINMENT_POLICY.rules.length === 0) return;
+  type Site = [file: string, ctx: string, entries: readonly CeilingEntry[]];
+  const ceilings: Site[] = [
+    ["policy.json", "policy.ceiling", POLICY.ceiling],
+    ...GOVERNED_POLICIES.map(
+      (p, i): Site => ["governed-policy.json", `governed-policy[${i}].ceiling`, p.ceiling],
+    ),
+    ...AUTHORITY_SOURCES.entries.map(
+      (s, i): Site => [
+        "authority-sources.json",
+        `authority-sources.sources[${i}].ceiling`,
+        s.ceiling,
+      ],
+    ),
+  ];
+  for (const [file, ctx, entries] of ceilings) {
+    entries.forEach((e, j) => {
+      if (e.resource_match === "prefix") {
+        throw new ConfigError(
+          file,
+          `${ctx}[${j}] has resource_match "prefix", but containment.json configures containment rules, which pair a removal with an approved entry by its exact resource and would miss an entry approved beneath a prefix ceiling (the follow-up to #1440); configure no containment rule, or keep every ceiling entry exact`,
+        );
+      }
+    });
+  }
+}
+rejectPrefixCeilingsUnderContainment();
 
 /**
  * @spec mission#caller-authorization-and-minimization — one registered RFC 7662
@@ -2280,6 +2511,129 @@ export function loadApprovalFloor(
 
 /** The validated shipped approval-authentication floor (@see loadApprovalFloor). */
 export const APPROVAL_FLOOR: ApprovalFloorPolicy = loadApprovalFloor();
+
+/** One drawdown policy the Progressive section publishes: its identity and what its snapshot states. */
+export interface PublishedDrawdownPolicy {
+  id: string;
+  version: string;
+  max_added_actions: number;
+  ceiling_review_cadence_s: number;
+  retire_undrawn_actions?: string[];
+}
+
+/**
+ * @spec progressive#drawdown-bounds, progressive#fresh-approval,
+ * progressive#ceiling-review (#1017): the Progressive section of the Mission
+ * Deployment Profile.
+ */
+export interface ProgressiveProfile {
+  chain_rate_bound: { max_drawdowns: number; window_seconds: number };
+  action_classes: Record<string, ApprovalFloorActionClass>;
+  external_communication_actions: string[];
+  beyond_ceiling: "fresh_approval" | "refuse";
+  drawdown_policies: PublishedDrawdownPolicy[];
+}
+
+const PROGRESSIVE_MEMBERS = new Set([
+  "chain_rate_bound",
+  "action_classes",
+  "external_communication_actions",
+  "beyond_ceiling",
+  "drawdown_policies",
+]);
+const PUBLISHED_POLICY_MEMBERS = new Set([
+  "id",
+  "version",
+  "max_added_actions",
+  "ceiling_review_cadence_s",
+  "retire_undrawn_actions",
+]);
+
+/**
+ * Load `progressive.json`, refusing an unknown member, an unknown action
+ * class, a non-positive bound or cadence, a duplicate policy identity and a
+ * malformed retirement list.
+ */
+export function loadProgressiveProfile(
+  raw: unknown = readJson("progressive.json"),
+): ProgressiveProfile {
+  const file = "progressive.json";
+  const root = asObject(file, raw, "progressive");
+  onlyMembers(file, root, PROGRESSIVE_MEMBERS, "progressive");
+  const positive = (v: unknown, ctx: string): number => {
+    if (!Number.isSafeInteger(v) || (v as number) <= 0)
+      throw new ConfigError(file, `${ctx} must be a positive integer`);
+    return v as number;
+  };
+  const rate = asObject(file, root.chain_rate_bound, "chain_rate_bound");
+  onlyMembers(file, rate, new Set(["max_drawdowns", "window_seconds"]), "chain_rate_bound");
+  const classes = asObject(file, root.action_classes, "action_classes");
+  const actionClasses: Record<string, ApprovalFloorActionClass> = {};
+  for (const [action, cls] of Object.entries(classes)) {
+    if (
+      typeof cls !== "string" ||
+      !(APPROVAL_FLOOR_ACTION_CLASSES as readonly string[]).includes(cls)
+    ) {
+      throw new ConfigError(file, `action_classes["${action}"] has unknown class ${String(cls)}`);
+    }
+    actionClasses[action] = cls as ApprovalFloorActionClass;
+  }
+  const external = root.external_communication_actions;
+  if (!Array.isArray(external) || !external.every((a) => typeof a === "string")) {
+    throw new ConfigError(
+      file,
+      "external_communication_actions must be an array of action identifiers",
+    );
+  }
+  if (root.beyond_ceiling !== "fresh_approval" && root.beyond_ceiling !== "refuse") {
+    throw new ConfigError(file, "beyond_ceiling must be fresh_approval or refuse");
+  }
+  if (!Array.isArray(root.drawdown_policies) || root.drawdown_policies.length === 0) {
+    throw new ConfigError(file, "drawdown_policies must be a non-empty array");
+  }
+  const seen = new Set<string>();
+  const policies = root.drawdown_policies.map((p, i) => {
+    const o = asObject(file, p, `drawdown_policies[${i}]`);
+    onlyMembers(file, o, PUBLISHED_POLICY_MEMBERS, `drawdown_policies[${i}]`);
+    const id = reqString(file, o, "id", `drawdown_policies[${i}]`);
+    const version = reqString(file, o, "version", `drawdown_policies[${i}]`);
+    if (seen.has(id)) throw new ConfigError(file, `drawdown_policies has a second policy ${id}`);
+    seen.add(id);
+    const retire = o.retire_undrawn_actions;
+    if (
+      retire !== undefined &&
+      (!Array.isArray(retire) || !retire.every((a) => typeof a === "string"))
+    ) {
+      throw new ConfigError(
+        file,
+        `drawdown_policies[${i}].retire_undrawn_actions must be an array of action identifiers`,
+      );
+    }
+    return {
+      id,
+      version,
+      max_added_actions: positive(o.max_added_actions, `drawdown_policies[${i}].max_added_actions`),
+      ceiling_review_cadence_s: positive(
+        o.ceiling_review_cadence_s,
+        `drawdown_policies[${i}].ceiling_review_cadence_s`,
+      ),
+      ...(retire !== undefined ? { retire_undrawn_actions: retire as string[] } : {}),
+    };
+  });
+  return {
+    chain_rate_bound: {
+      max_drawdowns: positive(rate.max_drawdowns, "chain_rate_bound.max_drawdowns"),
+      window_seconds: positive(rate.window_seconds, "chain_rate_bound.window_seconds"),
+    },
+    action_classes: actionClasses,
+    external_communication_actions: external as string[],
+    beyond_ceiling: root.beyond_ceiling,
+    drawdown_policies: policies,
+  };
+}
+
+/** The validated Progressive section of the Mission Deployment Profile (@see loadProgressiveProfile). */
+export const PROGRESSIVE_PROFILE: ProgressiveProfile = loadProgressiveProfile();
 
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {

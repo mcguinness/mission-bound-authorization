@@ -66,11 +66,32 @@ export {
   parseStateObservation,
   type ParsedStateObservation,
   STATE_OBSERVATION_MODES,
+  verifyMissionStatusResponse,
   verifyStateAssertion,
+  type VerifiedMissionStatus,
 } from "./state-observation.js";
+export {
+  declaredStatusKeys,
+  MISSION_STATUS_SKEW_SECONDS,
+  MISSION_STATUS_STATES,
+  type MissionStatusFailure,
+  type MissionStatusResolution,
+  MissionStatusResolver,
+  type MissionStatusResolverOptions,
+  type ResolvedMission,
+  type ResolveOptions,
+  type StatusMissionView,
+  type UnresolvedMission,
+} from "./mission-status-resolver.js";
 export { PAYMENTS_RELATIONS, relationForAction, stalenessBound } from "./policy.js";
-export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
+export { RUNTIME_POSTURE, RUNTIME_CLASSES, LEASE_REQUIRED_CLASSES, executionCapabilitiesFor, executionLeaseMaxSeconds, loadRuntimePosture, PostureConfigError, postureStalenessBound, reversibleWriteKeyControl, reversibleWritePermitMaxSeconds, stateSourcePlacement, type RuntimePosture, type StalenessBound, type StateSourcePlacement } from "./runtime-posture.js";
 export { executionLeaseMs, permitDeadline, type PermitCeiling, type PermitDeadline, type PermitDeadlineInput } from "./permit-deadline.js";
+export {
+  createDurationLeaseLedger,
+  type DurationActivity,
+  type DurationLeaseDomain,
+  type LeaseContinuity,
+} from "./duration-lease.js";
 export {
   type ClaimChannel,
   claimChannelFor,
@@ -153,6 +174,7 @@ export { channelDeadlineMs, createDecisionChannel } from "./decision-channel.js"
 export {
   claimsWithinScope,
   evidenceDeclarationFindings,
+  executionCapabilityFindings,
   resourceDispositions,
   retentionWindowSeconds,
   REVERSIBLE_WRITE_CLASS,
@@ -161,6 +183,11 @@ export {
   reversibleWriteRetentionSeconds,
   validateEnforcementScopeStatement,
   PRIOR_PROCESS_OUTCOMES,
+  DURABLE_IDEMPOTENCY_HOLDERS,
+  EXECUTION_ASSERTIONS,
+  UNKNOWN_OUTCOME_RECOVERIES,
+  type DurableIdempotencyDeclaration,
+  type ExecutionCapabilityDeclaration,
   type EvidenceDeclarationContext,
   type PerimeterDisposition,
   type ExcludedPathDisposition,

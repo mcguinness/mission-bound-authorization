@@ -163,10 +163,12 @@ async function continueAs(
   handle: string,
   who: "ap-agent" | Delegate,
   extra: Record<string, string> = {},
+  /** Present this assertion instead of a fresh one (the replay cases). */
+  presented?: string,
 ): Promise<Response> {
   const [authKey, dpop] = who === "ap-agent" ? [agentKey, agentDpop] : [clients[who].auth.privateKey, clients[who].dpop];
   const jkt = await calculateJwkThumbprint(await exportJWK(dpop.publicKey));
-  const subjectToken = await mintICA(handle, who, jkt);
+  const subjectToken = presented ?? (await mintICA(handle, who, jkt));
   const send = async (proofExtra: Record<string, unknown> = {}) =>
     fetch(`${ISSUER}/token`, {
       method: "POST",
@@ -292,11 +294,17 @@ describe("delegate eligibility with retained provenance at the ICA continuation 
     });
 
     it("policy and list both permit: the delegate is issued the entry, its approved list intact", async () => {
-      const { root } = approve(proposal());
+      const { missionId, root } = approve(proposal());
       permitted.add("svc-c");
       const { details } = await granted(await continueAs(root, "svc-c"));
       expect(details.map((d) => d.resource)).toEqual([INHERIT]);
-      expect(details[0]?.delegation).toMatchObject({ max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] });
+      // @spec cross-domain#conveyed-delegation (#1374): the approved entry keeps
+      // its list; the grant's conveyed copy of a policy-origin entry omits it.
+      expect(as.kernel.get(missionId)?.authority_set[0]?.delegation).toMatchObject({
+        max_depth: 2,
+        allowed_delegates: [{ sub: "svc-c" }],
+      });
+      expect(details[0]).not.toHaveProperty("delegation");
     });
 
     it("both permit only within the accounted depth bound: depth 2 above max_depth 1 is refused", async () => {
@@ -318,15 +326,16 @@ describe("delegate eligibility with retained provenance at the ICA continuation 
     expect(reason).toMatch(/Mission delegation depth 1/);
   });
 
-  it("a list requested at a later exchange restricts the issued grant but admits nobody the policy denies at the next", async () => {
+  it("a later exchange is decided against the approved entry, not the grant's conveyed copy: the next hop is admitted only while the policy permits", async () => {
     const { root } = approve([entry(INHERIT, [READ])]);
     permitted.add("svc-b");
-    // svc-b requests the entry narrowed by a list naming svc-c.
-    const narrowed = JSON.stringify([entry(INHERIT, [READ], { max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] })]);
-    const hB = await granted(await continueAs(root, "svc-b", { authorization_details: narrowed }));
-    expect(hB.details[0]?.delegation).toEqual({ max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] });
-    // svc-c continuing svc-b's hop (depth 2): the policy denies svc-c, whatever
-    // the grant svc-b received lists.
+    // svc-b's grant conveys the policy-origin entry without `delegation`
+    // (@spec cross-domain#conveyed-delegation, #1374).
+    const hB = await granted(await continueAs(root, "svc-b"));
+    expect(hB.details[0]).not.toHaveProperty("delegation");
+    // svc-c continuing svc-b's hop (depth 2) is decided against the approved
+    // entry and the current policy, whatever the grant svc-b received carries:
+    // the policy denies svc-c, then permits it.
     await refused(await continueAs(hB.hop, "svc-c"));
     permitted.add("svc-c");
     await granted(await continueAs(hB.hop, "svc-c"));
@@ -384,6 +393,31 @@ describe("delegate eligibility with retained provenance at the ICA continuation 
     expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
   });
 
+  it("a committed matcher carrying another member permits nothing (#1373): a record holding one, from before intake refused it, does not admit the delegate it names", async () => {
+    const clean = approve([entry(INHERIT, [READ], { max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] })]);
+    const planted = approve([entry(INHERIT, [READ], { max_depth: 2, allowed_delegates: [{ sub: "svc-c" }] })]);
+    // Intake and derivation now refuse `org`, so the record is written as one
+    // committed before that refusal would hold it.
+    const record = as.kernel.get(planted.missionId);
+    const withOrg = record?.authority_set.map((e) => ({
+      ...e,
+      delegation: { ...e.delegation, allowed_delegates: [{ sub: "svc-c", org: "A" }] },
+    }));
+    as.kernel.db
+      .prepare("UPDATE missions SET authority_set_json = ? WHERE id = ?")
+      .run(JSON.stringify(withOrg), planted.missionId);
+    expect(as.kernel.get(planted.missionId)?.authority_set[0]?.delegation?.allowed_delegates).toEqual([
+      { sub: "svc-c", org: "A" },
+    ]);
+    permitted.add("svc-c");
+    const before = sideEffects(planted.missionId);
+    await refused(await continueAs(planted.root, "svc-c"));
+    expect(sideEffects(planted.missionId)).toEqual(before);
+    // Control: the same Mission without the member admits svc-c.
+    const { details } = await granted(await continueAs(clean.root, "svc-c"));
+    expect(details.map((d) => d.resource)).toEqual([INHERIT]);
+  });
+
   it("a Child Mission's proposal list over a policy-deferring parent entry only restricts: the policy still decides at the child's exchange", async () => {
     const { missionId: parentId } = approve([entry(INHERIT, [READ])]);
     const { child } = createChildMission(as.kernel, {
@@ -401,5 +435,66 @@ describe("delegate eligibility with retained provenance at the ICA continuation 
     await refused(await continueAs(childRoot, "svc-c"));
     permitted.add("svc-c");
     await granted(await continueAs(childRoot, "svc-c"));
+  });
+});
+
+/**
+ * @spec cross-domain#conveyed-delegation, continuation#transport-ica (#1374):
+ * the continuation ID-JAG is a cross-domain grant, so its conveyed copy of a
+ * policy-origin entry omits `delegation`. The delegation gate still decides
+ * the current hop against the approved entry, and the transport's own depth
+ * accounting and actor attribution are unchanged: no projection reset applies.
+ */
+describe("the continuation grant's conveyed delegation (@spec cross-domain#conveyed-delegation, continuation#transport-ica, #1374)", () => {
+  const reserved = (missionId: string): number =>
+    (
+      as.kernel.db
+        .prepare("SELECT COUNT(*) AS n FROM derivation_reservations WHERE mission_id = ? AND state = 'reserved'")
+        .get(missionId) as { n: number }
+    ).n;
+
+  it("a policy-origin entry the installed policy admits at depth 1 is issued without `delegation`; act still names svc-b over ap-agent, and the next delegate is counted at depth 2", async () => {
+    const { missionId, root } = approve([entry(INHERIT, [READ], { max_depth: 1 })]);
+    expect(as.kernel.get(missionId)?.eligibility_provenance).toEqual(["policy"]);
+    const before = structuredClone(as.kernel.get(missionId));
+    permitted.add("svc-b").add("svc-c");
+    const res = await continueAs(root, "svc-b");
+    const body = (await res.clone().json()) as { access_token?: string };
+    const hB = await granted(res);
+    expect(hB.details).toEqual([{ type: "mission_resource_access", resource: INHERIT, actions: [READ] }]);
+    const act = decodeJwt(body.access_token as string).act as { sub: string; act?: { sub: string; act?: unknown } };
+    expect(act.sub).toBe("svc-b");
+    expect(act.act?.sub).toBe("ap-agent");
+    expect(act.act?.act).toBeUndefined();
+    // The approved record and its commitment are unchanged.
+    expect(as.kernel.get(missionId)?.authority_set).toEqual(before?.authority_set);
+    expect(as.kernel.get(missionId)?.authority_hash).toBe(before?.authority_hash);
+    // Depth is the transport's own count from the approved agent: svc-c atop
+    // svc-b is depth 2, above max_depth 1, although the policy permits svc-c.
+    const reason = await refused(await continueAs(hB.hop, "svc-c"));
+    expect(reason).toMatch(/Mission delegation depth 2/);
+    // svc-b continuing its own hop merges and stays at depth 1.
+    await granted(await continueAs(hB.hop, "svc-b"));
+  });
+
+  it("a request that keeps the omitted `delegation` is refused invalid_authorization_details before any derivation is reserved: no hop, no derivation, no reservation, the assertion unconsumed", async () => {
+    const { missionId, root } = approve([entry(INHERIT, [READ])]);
+    permitted.add("svc-b");
+    const assertion = await mintICA(root, "svc-b", clients["svc-b"].jkt);
+    const before = sideEffects(missionId);
+    const reservedBefore = reserved(missionId);
+    const keep = JSON.stringify([entry(INHERIT, [READ], { max_depth: 2 })]);
+    const res = await continueAs(root, "svc-b", { authorization_details: keep }, assertion);
+    const body = (await res.json()) as { error?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body).not.toHaveProperty("access_token");
+    // Refused before the gate: no hop, no counted derivation, no reservation left.
+    expect(sideEffects(missionId)).toEqual(before);
+    expect(reserved(missionId)).toBe(reservedBefore);
+    // The assertion was not consumed: presented again under a conforming request, it is issued.
+    const conforming = JSON.stringify([entry(INHERIT, [READ])]);
+    const again = await granted(await continueAs(root, "svc-b", { authorization_details: conforming }, assertion));
+    expect(again.details).toEqual([{ type: "mission_resource_access", resource: INHERIT, actions: [READ] }]);
   });
 });

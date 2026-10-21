@@ -23,7 +23,8 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
+import { prefixAdmits } from "@mission/core";
+import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 import { ResourceAuthorizationServer } from "@mission/ras";
 import {
   calculateJwkThumbprint,
@@ -37,6 +38,11 @@ import {
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
+import {
+  UNSUPPORTED_MEMBER_DESCRIPTION,
+  withStoredUnsupportedMember,
+  withUnsupportedMember,
+} from "./unknown-member.helper.js";
 import { TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import {
   AuthorityNarrowedToEmptyError,
@@ -67,9 +73,23 @@ const RAS_AUD = "https://ras.ledgercloud.test"; // the target Resource AS (audie
 const RESOURCE_B = "https://api.ledgercloud.test/v1"; // a second resource the same RAS serves, never approved
 const RESOURCE_C = TOPOLOGY.resources.saas; // a third resource the same RAS serves, in the ceiling
 const READ_C = { type: "mission_resource_access", resource: RESOURCE_C, actions: ["ledger:vendor.read"] };
+/** The payments read every lineage holds, as approved. */
+const READ_ENTRY = {
+  type: "mission_resource_access",
+  resource: RESOURCE,
+  actions: ["payments:invoice.read"],
+  constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+};
 const MISSION_EXP = "2027-01-01T00:00:00Z";
 const JWT_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:jwt";
 const RESOURCE_TO_AS = (r: string) => (r === RESOURCE || r === RESOURCE_B || r === RESOURCE_C ? RAS_AUD : ISSUER);
+/**
+ * @spec resource-access#resource-access-type (#1266): the redeeming RAS's
+ * deployment policy, the keys the resource it serves enforces. The base
+ * entry carries `max_amount` and `vendors`; without this knowledge the RAS
+ * would drop it whole.
+ */
+const RAS_CONSTRAINTS_SUPPORTED = { [RESOURCE]: ["max_amount", "vendors"] };
 
 // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): every RAS
 // redemption in this file is a CONTINUATION ID-JAG (identity_continuation_handle
@@ -598,6 +618,7 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
       localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
+      resourceConstraintsSupported: RAS_CONSTRAINTS_SUPPORTED,
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
@@ -1110,6 +1131,44 @@ describe("RFC 8693 token exchange: ICA subject token -> continuation ID-JAG (@sp
     }
     expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
     expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  // @spec mission#subset (#1399, D538): the issued grant carries the requested
+  // subset projected, which rebuilds each entry, so a requested entry carrying
+  // a top-level member outside the supported set is refused by the schema
+  // check rather than issued without it.
+  it("(h2b) a requested entry carrying an unsupported top-level member -> invalid_authorization_details naming it, with no hop and no derivation", async () => {
+    const { missionId, handle } = newLineage("apev-h2b");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    const requested = [withUnsupportedMember(READ_ENTRY)];
+    const res = await tokenExchange({ subjectToken: await mintICA(handle), extra: { authorization_details: JSON.stringify(requested) } });
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toBe(UNSUPPORTED_MEMBER_DESCRIPTION);
+    expect(body.access_token).toBeUndefined();
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+  });
+
+  // The ceiling side: the Mission's own approved entry carries the member, so
+  // projection drops the pairing and a clean request is refused rather than
+  // issued without the member.
+  it("(h2c) a request against a Mission whose approved entry carries an unsupported top-level member -> invalid_authorization_details, with no hop and no derivation", async () => {
+    const { missionId, handle } = newLineage("apev-h2c");
+    const hops = as.continuationStore.handlesForMission(missionId).length;
+    const extra = { authorization_details: JSON.stringify([READ_ENTRY]) };
+    const subjectToken = await mintICA(handle);
+    const res = await withStoredUnsupportedMember(as.kernel.db, missionId, () => tokenExchange({ subjectToken, extra }));
+    const body = (await res.json()) as { error?: string; error_description?: string; access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.access_token).toBeUndefined();
+    expect(as.continuationStore.handlesForMission(missionId)).toHaveLength(hops);
+    expect(as.kernel.get(missionId)?.derivation_count).toBe(0);
+    // Positive control: against the stored set as approved, the same request is issued.
+    const ok = await tokenExchange({ subjectToken: await mintICA(handle), extra });
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
   });
 
   it("(h3) malformed or repeated authorization_details -> invalid_request (ICA -02 5.5.3 rule 1)", async () => {
@@ -1697,6 +1756,7 @@ describe("continuation lifecycle invariants (@spec id-continuation-assertion)", 
       localPolicyVersion: DERIVATION_POLICY.policy_version,
       issuer: RAS_AUD,
       trustedIssuers: { [ISSUER]: { keys: [asContinuationPub as never] } },
+      resourceConstraintsSupported: RAS_CONSTRAINTS_SUPPORTED,
       signKey: rasKeys.privateKey,
       signKid: "ras-token",
       registeredClients: { [agentJkt]: TOPOLOGY.rasLocalClientId },
@@ -1860,5 +1920,74 @@ describe("continuation hop-count limit (@spec id-continuation-assertion)", () =>
         buildAuthorizationServer({ issuer: "http://localhost:14479", continuationHopLimit }),
       ).rejects.toThrow(/continuationHopLimit/);
     }
+  });
+});
+
+/**
+ * @spec id-continuation-assertion, resource-access#resource-matching (#1440):
+ * each requested resource is authorized, and the grant carries the entries
+ * for it, by the overlap of an entry's resource tree with it through the
+ * shared matcher. A deployment whose payments read ceiling entry is `prefix`
+ * and whose Resource AS serves the payments service's whole tree lets a
+ * Mission hold an entry finer than the requested resource.
+ */
+describe("continuation pairs entries with requested resources through the shared matcher (@spec id-continuation-assertion, resource-access#resource-matching, #1440)", () => {
+  const PORT4 = 14482;
+  const ISSUER4 = `http://localhost:${PORT4}`;
+  const ACT4 = { iss: ISSUER4, sub: "ap-agent" };
+  const INV1 = `${RESOURCE}/invoices/inv-1`;
+  const PREFIX_CEILING = DERIVATION_POLICY.ceiling.map((e, i) => (i === 0 ? { ...e, resource_match: "prefix" as const } : e));
+  let as4: BuiltAs;
+  let server4: Server;
+  let target4: Target;
+
+  beforeAll(async () => {
+    const caiPub = { ...(await exportJWK(caiKeys.publicKey)), kid: "cai-key", alg: "ES256", use: "sig" };
+    as4 = await buildAuthorizationServer({
+      issuer: ISSUER4,
+      allowHeadlessAdjudication: true,
+      continuationAssertionIssuers: [{ iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER4, RAS_AUD] }],
+      resourceToAs: (r: string) => (prefixAdmits(RESOURCE, r) ? RAS_AUD : ISSUER4),
+      derivationPolicy: { ...DERIVATION_POLICY, ceiling: PREFIX_CEILING },
+      authoritySources: {
+        ...AUTHORITY_SOURCES,
+        entries: AUTHORITY_SOURCES.entries.map((e) => (e.id === "acme-people" ? { ...e, ceiling: PREFIX_CEILING } : e)),
+      },
+    } as never);
+    server4 = as4.provider.listen(PORT4);
+    target4 = { issuer: ISSUER4, clientKey: (await importJWK(as4.agentClientJwk as never, "ES256")) as CryptoKey };
+  });
+
+  afterAll(() => {
+    server4?.close();
+  });
+
+  it("an entry finer than the requested resource authorizes it and the grant carries it; a resource the audience serves that no entry overlaps is not authorized", async () => {
+    const mission = as4.kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Read one Acme invoice", target_resources: [RESOURCE, INV1], expires_at: MISSION_EXP }),
+      ),
+      proposedAuthority: [{ ...READ_ENTRY, resource: INV1 }],
+      subject: { iss: ISSUER4, sub: "alice" },
+      approver: { iss: ISSUER4, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: "apev-1440-continuation",
+    });
+    expect(mission.authority_set.map((e) => e.resource)).toEqual([INV1]);
+    const handle = as4.continuationStore.handlesForMission(mission.id)[0] as string;
+    const res = await tokenExchange({ subjectToken: await mintICA(handle, { aud: ISSUER4, act: ACT4 }), resource: RESOURCE }, target4);
+    const body = (await res.json()) as { access_token?: string; error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const details = decodeJwt(body.access_token as string).authorization_details as Array<Record<string, unknown>>;
+    expect(details.map((e) => e.resource)).toEqual([INV1]);
+
+    const refused = await tokenExchange(
+      { subjectToken: await mintICA(handle, { aud: ISSUER4, act: ACT4 }), resource: `${RESOURCE}/vendors` },
+      target4,
+    );
+    const refusal = (await refused.json()) as { error?: string; error_description?: string };
+    expect(refused.status, JSON.stringify(refusal)).toBe(400);
+    expect(refusal.error).toBe("invalid_target");
+    expect(refusal.error_description).toMatch(/not authorized by the Mission/);
   });
 });

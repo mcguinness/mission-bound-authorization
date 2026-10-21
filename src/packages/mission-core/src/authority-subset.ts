@@ -11,6 +11,8 @@ import {
   validCommonConstraint,
 } from "./common-constraints.js";
 import { compareAmounts, isValidAmount } from "./decimal-amount.js";
+import { isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
+import { resourceContractViolation, sameResourceContract } from "./resource-contract.js";
 
 /**
  * Provenance is compared between issuer-derived lineage sets, not config
@@ -30,12 +32,30 @@ export function isSubsetSetIgnoringCapabilitySources(
   return isSubsetSet(withoutCapabilitySources(candidate), withoutCapabilitySources(granted));
 }
 
-/** Assertion, never a narrowing operation: every action must fit one config entry. */
+/**
+ * @spec resource-access#resource-contract (#249, D553): "The reference is
+ * assembled from configuration, not narrowed: a policy ceiling a proposal is
+ * narrowed against need not carry one, and step 4 of {{subset}} applies to
+ * entries derived from an approved entry." A ceiling comparison sets the
+ * member aside on both sides; the caller keeps the entry's own reference.
+ */
+function withoutResourceContract(entries: readonly AuthorityEntry[]): AuthorityEntry[] {
+  return entries.map(({ resource_contract: _assembled, ...authority }) => authority);
+}
+
+/**
+ * Assertion, never a narrowing operation: every action must fit one config
+ * entry. A configured ceiling carries no contract reference to compare
+ * ({@link withoutResourceContract}).
+ */
 export function entryWithinCeiling(
   entry: AuthorityEntry,
   ceiling: readonly AuthorityEntry[],
 ): boolean {
-  return isSubsetSet(withoutCapabilitySources([entry]), [...ceiling]);
+  return isSubsetSet(
+    withoutResourceContract(withoutCapabilitySources([entry])),
+    withoutResourceContract(ceiling),
+  );
 }
 
 /**
@@ -69,9 +89,9 @@ export const SUPPORTED_CONSTRAINT_KEYS: readonly string[] = Object.freeze([
  * refused. This is the SINGLE declaration every boundary that admits an
  * entry of this type consults (PAR and the other proposal intakes, the typed
  * config loaders, and derivation), so none admits the member and then drops
- * it in a member-by-member rebuild. Refused by name only: the entry's top
- * level stays open to a member another specification defines for this type,
- * such as `capability_sources`.
+ * it in a member-by-member rebuild. Refused by name, so it keeps its own
+ * refusal; every other member outside {@link SUPPORTED_ENTRY_MEMBERS} is
+ * refused by {@link unsupportedEntryMember} at the same boundaries.
  */
 export const REFUSED_ENTRY_MEMBERS = ["locations"] as const;
 
@@ -89,15 +109,125 @@ export function refusedEntryMember(entry: unknown): string | undefined {
 }
 
 /**
+ * @spec mission#subset, resource-access#entry-validation (#1399, D538): the
+ * top-level members a `mission_resource_access` entry may carry: the members
+ * the type defines (`type`, `resource`, `resource_match`, `actions`,
+ * `constraints`, `delegation`, and `resource_contract`, #249) and
+ * `capability_sources`, which Capability Binding defines for the type. This
+ * is the SINGLE declaration of that set.
+ * Every boundary that consults {@link refusedEntryMember} also consults
+ * {@link unsupportedEntryMember}, so none admits another member and then drops
+ * it in a member-by-member rebuild, erasing a restriction it may express:
+ * where the comparison cannot decide a member, the posture is conservative
+ * refusal. Nested members are each structure's own rule (closed `constraints`
+ * keys, delegate matchers); this set is the top level only.
+ */
+export const SUPPORTED_ENTRY_MEMBERS: readonly string[] = Object.freeze([
+  "type",
+  "resource",
+  "resource_match",
+  "actions",
+  "constraints",
+  "delegation",
+  "capability_sources",
+  // @spec resource-access#resource-contract (#249, D553): admitted with its
+  // shape ({@link isAuthorityEntry}) and compared by subset step 4
+  // ({@link isSubsetEntry}), so no boundary drops it.
+  "resource_contract",
+]);
+
+/**
+ * The first member `entry` carries outside {@link SUPPORTED_ENTRY_MEMBERS},
+ * or undefined. Decided by property presence, never by value. A boundary
+ * applies {@link refusedEntryMember} first, so `locations` keeps its own
+ * refusal, and maps a hit here to its own error, exactly as for a refused
+ * member.
+ */
+export function unsupportedEntryMember(entry: unknown): string | undefined {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return undefined;
+  return Object.keys(entry).find((member) => !SUPPORTED_ENTRY_MEMBERS.includes(member));
+}
+
+/**
+ * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+ * (#1373): the members a delegate matcher carries, in
+ * `delegation.allowed_delegates` and `delegation.children.allowed_child_actors`
+ * alike. This is the SINGLE matcher rule every boundary that admits an entry
+ * consults: the proposal intakes' schema check, the typed config loaders and
+ * the foreign-grant validator (through {@link isAuthorityEntry}), derivation,
+ * and the requested-authority exchanges and template consent (through
+ * {@link entryDelegateMatcherViolation}). A member outside this set cannot be
+ * interpreted, and a member-by-member rebuild would drop it and widen the
+ * eligibility the entry commits, so it is refused rather than admitted.
+ */
+export const DELEGATE_MATCHER_MEMBERS: readonly string[] = Object.freeze(["sub", "sub_profile"]);
+
+/**
+ * The violation for the delegate-matcher list `value` at `path`, or
+ * undefined. A matcher is refused when it is not an object, carries a member
+ * outside {@link DELEGATE_MATCHER_MEMBERS}, carries neither member, or
+ * carries one that is not a non-empty string. The caller maps a violation to
+ * its boundary's own error.
+ */
+export function delegateMatcherListViolation(value: unknown, path: string): string | undefined {
+  if (!Array.isArray(value)) return `${path} must be an array`;
+  for (const m of value) {
+    if (m === null || typeof m !== "object" || Array.isArray(m)) {
+      return `${path} entries must be objects`;
+    }
+    const matcher = m as Record<string, unknown>;
+    const unknown = Object.keys(matcher).find((k) => !DELEGATE_MATCHER_MEMBERS.includes(k));
+    if (unknown !== undefined) return `${path} entries carry no member '${unknown}'`;
+    if (matcher.sub === undefined && matcher.sub_profile === undefined) {
+      return `${path} entries must carry sub or sub_profile`;
+    }
+    for (const member of DELEGATE_MATCHER_MEMBERS) {
+      const v = matcher[member];
+      if (v === undefined) continue;
+      if (typeof v !== "string") return `${path}.${member} must be a string`;
+      if (v.length === 0) return `${path}.${member} must not be empty`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * {@link delegateMatcherListViolation} over the two matcher lists `entry`
+ * carries, `delegation.allowed_delegates` then
+ * `delegation.children.allowed_child_actors`, or undefined. Each list is read
+ * where its parent is an object; the parent's own shape is left to the
+ * boundary's other checks. For a boundary that holds a whole entry, not a
+ * list: the requested-authority exchanges and template consent.
+ */
+export function entryDelegateMatcherViolation(entry: unknown): string | undefined {
+  const delegation = asJsonObject(asJsonObject(entry as JsonValue)?.delegation);
+  if (!delegation) return undefined;
+  const children = asJsonObject(delegation.children);
+  return (
+    (delegation.allowed_delegates !== undefined
+      ? delegateMatcherListViolation(delegation.allowed_delegates, "delegation.allowed_delegates")
+      : undefined) ??
+    (children?.allowed_child_actors !== undefined
+      ? delegateMatcherListViolation(
+          children.allowed_child_actors,
+          "delegation.children.allowed_child_actors",
+        )
+      : undefined)
+  );
+}
+
+/**
  * Validate the subset engine's supported input before a foreign grant can use
- * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member is unsupported,
- * decided by presence: a destination redeeming a signed grant from a
- * configurable trusted issuer refuses it rather than minting it into a local
- * token, so it never reaches a resource (#1278).
+ * it. An entry carrying a {@link REFUSED_ENTRY_MEMBERS} member, or any member
+ * outside {@link SUPPORTED_ENTRY_MEMBERS}, is unsupported, decided by
+ * presence: a destination redeeming a signed grant from a configurable
+ * trusted issuer refuses it rather than minting it into a local token, so it
+ * never reaches a resource (#1278, #1399).
  */
 export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   if (refusedEntryMember(value) !== undefined) return false;
+  if (unsupportedEntryMember(value) !== undefined) return false;
   const e = value as Record<string, unknown>;
   const strings = (v: unknown): v is string[] =>
     Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.length > 0);
@@ -108,6 +238,26 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
     !strings(e.actions)
   )
     return false;
+  // @spec resource-access#resource-access-type, resource-access#entry-validation
+  // (#1276): `resource_match` is one of the two values Resource Access
+  // defines, and a `prefix` entry's `resource` is a base the shared matcher
+  // can enforce (no query, a `//` authority).
+  if (
+    e.resource_match !== undefined &&
+    e.resource_match !== "exact" &&
+    e.resource_match !== "prefix"
+  )
+    return false;
+  if (e.resource_match === "prefix" && !isEnforceablePrefixBase(e.resource)) return false;
+  // @spec resource-access#entry-validation (#249): "its `resource_contract`
+  // is not an object with exactly the members `id`, `version`, and `digest`,
+  // or one of them does not have the form {{resource-access-type}} gives it".
+  if (
+    e.resource_contract !== undefined &&
+    resourceContractViolation(e.resource_contract) !== undefined
+  ) {
+    return false;
+  }
   if (e.constraints !== undefined) {
     if (!e.constraints || typeof e.constraints !== "object" || Array.isArray(e.constraints))
       return false;
@@ -157,19 +307,7 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       return false;
     if (Object.keys(d).some((k) => !["max_depth", "allowed_delegates", "children"].includes(k)))
       return false;
-    const matchers = (v: unknown) =>
-      Array.isArray(v) &&
-      v.every(
-        (m) =>
-          m &&
-          typeof m === "object" &&
-          !Array.isArray(m) &&
-          Object.keys(m).every((k) => k === "sub" || k === "sub_profile") &&
-          (m.sub !== undefined || m.sub_profile !== undefined) &&
-          (m.sub === undefined || (typeof m.sub === "string" && m.sub.length > 0)) &&
-          (m.sub_profile === undefined ||
-            (typeof m.sub_profile === "string" && m.sub_profile.length > 0)),
-      );
+    const matchers = (v: unknown) => delegateMatcherListViolation(v, "matchers") === undefined;
     if (d.allowed_delegates !== undefined && !matchers(d.allowed_delegates)) return false;
     if (d.children !== undefined) {
       const c = d.children as Record<string, unknown> | null;
@@ -316,10 +454,69 @@ export function conditionsNoBroader(
   });
 }
 
-/** @spec mission#subset — entry-wise subset test (resource byte-exact). */
+/**
+ * @spec resource-access#subset step 1 (#1276): whether `candidate`'s resource
+ * set is contained in `reference`'s, under the matcher of Resource Matching:
+ *
+ * - "an `exact` A under an `exact` B: A.`resource` equals B.`resource`
+ *   literally";
+ * - "an `exact` A under a `prefix` B: B's prefix matcher admits A.`resource`
+ *   as a target";
+ * - "a `prefix` A under a `prefix` B: B's prefix matcher admits A's
+ *   normalized base"; and
+ * - "a `prefix` A under an `exact` B: never contained".
+ *
+ * The prefix comparison is {@link prefixAdmits}, the resource servers' own
+ * ("the same matcher, over the same URI forms"), so every target A admits is
+ * also admitted by B. An absent `resource_match` is `exact`; any other value,
+ * or a `prefix` base the matcher cannot enforce, on either side, is never
+ * contained (conservative refusal). Resource containment alone never
+ * establishes authority containment.
+ */
+export function resourceWithin(
+  candidate: { readonly resource: unknown; readonly resource_match?: unknown },
+  reference: { readonly resource: unknown; readonly resource_match?: unknown },
+): boolean {
+  const a = candidate.resource_match === undefined ? "exact" : candidate.resource_match;
+  const b = reference.resource_match === undefined ? "exact" : reference.resource_match;
+  if (typeof candidate.resource !== "string" || typeof reference.resource !== "string")
+    return false;
+  if (b === "exact") return a === "exact" && candidate.resource === reference.resource;
+  if (b !== "prefix" || !isEnforceablePrefixBase(reference.resource)) return false;
+  if (a === "exact") return prefixAdmits(reference.resource, candidate.resource);
+  if (a !== "prefix" || !isEnforceablePrefixBase(candidate.resource)) return false;
+  return prefixAdmits(reference.resource, candidate.resource);
+}
+
+/** @spec mission#subset: entry-wise subset test (resource under {@link resourceWithin}). */
 export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
+  // @spec mission#subset (#1399, D538): a top-level member outside the
+  // supported set cannot be compared. An entry byte-identical to its
+  // reference under the canonical form is a subset of it and carries the
+  // member unchanged; any other comparison involving one is refused, so a
+  // reference's restriction in such a member is never treated as absent by
+  // an exchange that issues the candidate without projecting it.
+  if (
+    unsupportedEntryMember(candidate) !== undefined ||
+    unsupportedEntryMember(granted) !== undefined
+  ) {
+    try {
+      return (
+        canonicalize(candidate as unknown as JsonValue) ===
+        canonicalize(granted as unknown as JsonValue)
+      );
+    } catch {
+      return false;
+    }
+  }
   if (candidate.type !== granted.type) return false;
-  if (candidate.resource !== granted.resource) return false;
+  if (!resourceWithin(candidate, granted)) return false;
+  // @spec resource-access#subset step 4 (#249, D553): "A carries
+  // `resource_contract` exactly when B does, and then with `id`, `version`,
+  // and `digest` each equal to B's. Removing, replacing, or adding a
+  // reference is never narrowing." Exact equality, absent only against
+  // absent; a malformed value on either side equals nothing.
+  if (!sameResourceContract(candidate.resource_contract, granted.resource_contract)) return false;
   if (!candidate.actions.every((a) => granted.actions.includes(a))) return false;
   const gCap = granted.constraints?.max_amount;
   const cCap = candidate.constraints?.max_amount;

@@ -41,6 +41,7 @@ import { DEFAULT_CONTINUATION_HOP_LIMIT, newContinuationHandle } from "../kernel
 import {
   ID_JAG_TOKEN_TYPE,
   AuthorityNarrowedToEmptyError,
+  conveyedCopy,
   DestinationClientUnresolvedError,
   issueCrossDomainGrant,
   RequestedAuthorityExceededError,
@@ -48,6 +49,7 @@ import {
 } from "../kernel/cross-domain.js";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import {
+  malformedMatcherInRequest,
   refusedMemberInRequest,
   SUPPORTED_AUTHORIZATION_DETAILS_TYPES,
   validateMissionResourceAccessSchema,
@@ -60,6 +62,7 @@ import {
 } from "../kernel/derive.js";
 import {
   DPOP_PROOF_REPLAY_WINDOW_S,
+  entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
   projectScope,
   splitScope,
@@ -73,7 +76,16 @@ import {
   isValidCreationRequestId,
   normalizedScope,
 } from "../kernel/creation-idempotency.js";
-import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
+import {
+  DEFERRAL_EXPIRES_IN,
+  DEFERRAL_INTERVAL,
+  DEFERRED_GRANT_TYPE,
+  EXPANSION_DEFERRAL_PREFIX,
+  ExpansionDeferralError,
+  type ExpansionDeferralStore,
+} from "../kernel/deferred.js";
+import { requestsDeferral } from "./deferred-mission-approval.js";
+import { reconciliationStatusFor } from "../kernel/expansion.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import {
   ChildDelegationError,
@@ -261,12 +273,15 @@ function isMissionClient(ctx: KoaContextWithOIDC, mission: MissionRecord | undef
  * the issued ID-JAG carries the values "that express the granted authority").
  * With no `resource`, every entry the delegate may carry. The rule-7
  * pre-check and the post-gate filter in issueCrossDomainGrant apply this same
- * function to the gate's result.
+ * function to the gate's result. An entry is for a requested resource when
+ * its resource tree overlaps it, through the shared matcher, as at token
+ * emission (resource-access#resource-matching, #1440).
  */
 export function continuationResourceFilter(
   resources: readonly string[],
 ): (entries: AuthorityEntry[]) => AuthorityEntry[] {
-  return (entries) => (resources.length === 0 ? entries : entries.filter((e) => resources.includes(e.resource)));
+  return (entries) =>
+    resources.length === 0 ? entries : entries.filter((e) => resources.some((r) => entryOverlapsResource(e, r)));
 }
 
 /** @spec RFC 9449 Section 4.3 — the proof's clock-skew allowance, one value for every verifier (`@mission/core`). */
@@ -793,17 +808,22 @@ export async function handleTokenExchangeGrant(
   // audience-scoped effective entry names is "not permitted by the chain
   // authorization" (ICA -02 5.5.6: invalid_target), as a token-endpoint
   // `resource` outside the Authority Set is at core issuance
-  // (mission#error-mapping). Membership is the exact `resource` equality the
-  // kernel's audience-scoped projections use, over the entries this delegate
-  // may carry.
-  if (effective.length > 0 && resources.some((r) => !delegable.some((e) => e.resource === r))) {
+  // (mission#error-mapping). Membership is the overlap pairing the kernel's
+  // audience-scoped projections use, through the shared matcher, over the
+  // entries this delegate may carry (#1440).
+  if (effective.length > 0 && resources.some((r) => !delegable.some((e) => entryOverlapsResource(e, r)))) {
     txError(ctx, 400, "invalid_target", "requested resource is not authorized by the Mission");
     return;
   }
   // The grant's authority: the entries this delegate may carry, narrowed to
-  // the requested resources (continuationResourceFilter).
+  // the requested resources (continuationResourceFilter), as the grant would
+  // convey them. @spec cross-domain#conveyed-delegation (#1374): the same
+  // conveyed-copy rule the mint applies after the gate (conveyedCopy), so a
+  // request that keeps an omitted `delegation` is refused here, before any
+  // derivation is reserved or counted, like every other requested-authority
+  // refusal at this exchange.
   const resourceFilter = continuationResourceFilter(resources);
-  const grantable = resourceFilter(delegable);
+  const grantable = conveyedCopy(record, audienceCandidates, resourceFilter(delegable));
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the grant's authority:
   // the Mission's Effective Authority Set for this audience, as this delegate
@@ -979,7 +999,7 @@ export async function handleTokenExchangeGrant(
  *
  * @spec continuation#transport-async — retry safety (#485): the exchange REQUIRES
  * `creation_request_id` (the COMMON idempotency primitives adopted from
- * expansion#creation-request-id; family delivery/recovery defined by the
+ * expansion#creation-idempotency; family delivery/recovery defined by the
  * continuation profile itself). The reservation is acquired BEFORE any side
  * effect, the family-created transition commits atomically with the single
  * gateDerivation, and a revalidated retry recovers the operation
@@ -1142,7 +1162,7 @@ export async function handleAsyncDelegationExchange(
   }
 
   // @spec continuation#transport-async — REQUIRED creation_request_id on the
-  // delegation-family-creating exchange, adopting expansion#creation-request-id
+  // delegation-family-creating exchange, adopting expansion#creation-idempotency
   // by reference (missing -> invalid_request).
   const creationRequestId = readCreationRequestId(params);
 
@@ -1177,6 +1197,14 @@ export async function handleAsyncDelegationExchange(
       txError(ctx, 400, "invalid_authorization_details", refusedMember);
       return;
     }
+    // @spec resource-access#matching-allowed-delegates (#1373): confinement
+    // rebuilds each delegate matcher from `sub` and `sub_profile`, so a
+    // requested matcher carrying another member is refused at the same point.
+    const malformedMatcher = malformedMatcherInRequest(requested);
+    if (malformedMatcher) {
+      txError(ctx, 400, "invalid_authorization_details", malformedMatcher);
+      return;
+    }
     requestedSubset = requested as AuthorityEntry[];
   }
 
@@ -1201,7 +1229,7 @@ export async function handleAsyncDelegationExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order (adopted) — the lookup runs AFTER
+  // @spec expansion#creation-revalidation (adopted) — the lookup runs AFTER
   // client authentication and possession (the acting-key re-binding) but BEFORE
   // the Mission lifecycle gate and the derivation gate below: the retry worth
   // recovering is exactly the one whose first attempt consumed the single
@@ -1842,7 +1870,7 @@ async function carryActingAgent(
   dpopJwk: JWK,
   jkt: string,
   actorError: "invalid_request" | "invalid_grant",
-): Promise<{ iss: string; sub: string } | null> {
+): Promise<{ iss: string; sub: string; actorTokenSubject?: { iss: string; sub: string } } | null> {
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const acting = { iss: opts.issuer, sub: client.clientId };
   const actorTokenRaw = (ctx.oidc.params as Record<string, unknown>).actor_token;
@@ -1851,17 +1879,24 @@ async function carryActingAgent(
     txError(ctx, 400, "invalid_request", "actor_token must be a JWT");
     return null;
   }
+  let actorTokenSubject: { iss: string; sub: string } | undefined;
   try {
     const { payload } = await jwtVerify(actorTokenRaw, dpopJwk, { algorithms: ["ES256"] });
     if ((payload.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
       txError(ctx, 400, actorError, "actor_token is not sender-constrained to the presenter key");
       return null;
     }
+    if (typeof payload.iss === "string" && typeof payload.sub === "string") {
+      actorTokenSubject = { iss: payload.iss, sub: payload.sub };
+    }
   } catch {
     txError(ctx, 400, actorError, "actor_token verification failed");
     return null;
   }
-  return acting; // carried, not restructured (#433).
+  // Carried, not restructured (#433): the acting agent stays the client. The
+  // verified actor_token's subject is reported for the creation fingerprint
+  // (@spec expansion#creation-fingerprint `actor`, #1177).
+  return actorTokenSubject ? { ...acting, actorTokenSubject } : acting;
 }
 
 /** Seconds until an ISO instant, floored at 1 (absolute-lifetime clamp). */
@@ -1960,7 +1995,7 @@ async function mintMissionAccessToken(
  * invalid_request), mapped onto the exchange's error surface.
  */
 /**
- * @spec expansion#creation-request-id (child-delegation cites it) — read the
+ * @spec expansion#submission (child-delegation cites it) — read the
  * REQUIRED `creation_request_id`: the client-generated identifier of ONE
  * Mission-creation operation across all completion modes. Missing or malformed
  * -> invalid_request. Syntax: bounded ASCII (max 255 octets); opaque to the AS
@@ -2223,7 +2258,10 @@ export async function handleChildCreationExchange(
     client: client.clientId,
     source: parent.id,
     cnf: { jkt: resolved.jkt },
-    actor: acting,
+    // @spec expansion#creation-fingerprint (#1177): `actor` is the verified
+    // actor_token's iss and sub, absent where client authentication alone
+    // identifies the acting agent.
+    ...(acting.actorTokenSubject ? { actor: acting.actorTokenSubject } : {}),
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
     // @spec mission#intent-submission-evidence — presented evidence is part of
@@ -2248,7 +2286,7 @@ export async function handleChildCreationExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // @spec expansion#creation-revalidation — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the parent
   // lifecycle gate (inside createChildMission): the recoverable retry is exactly
   // the one whose source Mission changed state when the first attempt succeeded.
@@ -2534,7 +2572,8 @@ async function recoverChildCreation(
  * predecessor's own effective Authority Set) is REFUSED — nothing to expand;
  * ordinary token derivation already serves it. There is no synchronous exchange
  * completion: an expansion response must never ambiguously be a non-successor (#486).
- * A poll (deferral_code, no subject_token) completes a deferred expansion.
+ * The deferred grant's poll ({@link pollDeferredExpansion}) completes a
+ * deferred expansion.
  */
 export async function handleExpansionExchange(
   opts: AdapterOptions,
@@ -2543,13 +2582,11 @@ export async function handleExpansionExchange(
 ): Promise<void> {
   const params = ctx.oidc.params as Record<string, unknown>;
 
-  // Deferred completion (poll): a deferral_code, no subject_token. Possession and
-  // the predecessor binding were RECORDED at request time (@spec deferred-window
-  // check (b): the subject_token's expiry does NOT gate this completion).
-  const deferralCode = params.deferral_code;
-  if (typeof deferralCode === "string" && deferralCode) {
-    await pollDeferredExpansion(opts, provider, ctx, deferralCode);
-    return;
+  // @spec expansion#completion-modes (#1177): the client polls a deferred
+  // expansion with the deferred token response's deferred grant type, so a
+  // token exchange carrying a deferral_code is refused.
+  if (params.deferral_code !== undefined) {
+    throw new errors.InvalidRequest(`a deferred expansion is polled with the ${DEFERRED_GRANT_TYPE} grant type`);
   }
   // @spec mission#scope-projection — the successor's token is issued on the
   // deferral_code poll, which is where a requested `scope` narrows it; on the
@@ -2571,7 +2608,14 @@ export async function handleExpansionExchange(
   const resolved = await verifySubjectPossession(opts, ctx, {
     subjectError: "invalid_request",
     afterParse: () => {
-      refuseChildActorWithPredecessor(params);
+      // @spec expansion#submission (#1177): requested_token_type selects the
+      // operation, and an expansion exchange carries no child_actor, with or
+      // without a `predecessor` cross-check.
+      if (params.child_actor !== undefined) {
+        throw new errors.InvalidRequest(
+          "child_actor is not accepted on an expansion exchange: requested_token_type access_token selects expansion",
+        );
+      }
       creationRequestId = readCreationRequestId(params);
     },
   });
@@ -2585,6 +2629,20 @@ export async function handleExpansionExchange(
   // operation is never recovered, and with no Mission state disclosed.
   if (!isMissionClient(ctx, resolved.record)) {
     txError(ctx, 400, "invalid_request", "the acting client is not authorized to request expansion of this predecessor");
+    return;
+  }
+  // @spec expansion#policy-probing (#1177): every request the authorized
+  // client presents for this predecessor counts toward the bound, whatever it
+  // would answer (a recovery and a refusal included). Beyond it the request
+  // is refused like Deferred Mission Approval's queue bound, with HTTP 429 as
+  // the MAS answers its own rate limit.
+  const admitted = opts.expansionRateLimiter?.admit(
+    resolved.record.id,
+    (ctx.oidc.client as NonNullable<typeof ctx.oidc.client>).clientId,
+  );
+  if (admitted && !admitted.ok) {
+    txError(ctx, 429, "temporarily_unavailable", "expansion requests for this predecessor exceed the rate limit");
+    ctx.set("Retry-After", String(admitted.retryAfterS));
     return;
   }
 
@@ -2638,7 +2696,10 @@ export async function handleExpansionExchange(
     client: client.clientId,
     source: resolved.record.id,
     cnf: { jkt: resolved.jkt },
-    actor: acting,
+    // @spec expansion#creation-fingerprint (#1177): `actor` is the verified
+    // actor_token's iss and sub, absent where client authentication alone
+    // identifies the acting agent.
+    ...(acting.actorTokenSubject ? { actor: acting.actorTokenSubject } : {}),
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
     // @spec mission#intent-submission-evidence — presented evidence is part of
@@ -2654,7 +2715,7 @@ export async function handleExpansionExchange(
     throw new errors.InvalidRequest("creation idempotency is not configured");
   }
 
-  // @spec expansion#creation-lookup-order — the idempotency lookup runs AFTER
+  // @spec expansion#creation-revalidation — the idempotency lookup runs AFTER
   // client authentication and possession verification but BEFORE the
   // predecessor lifecycle gate below: the recoverable retry is exactly the one
   // whose predecessor was terminated `superseded` when the first attempt succeeded;
@@ -2693,13 +2754,16 @@ export async function handleExpansionExchange(
     // own client.
     if (isMissionClient(ctx, active)) {
       refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
+      // @spec expansion#predecessor-active (#1177): with the reconciliation
+      // status the attribution rule selects.
+      (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(active);
     } else {
       txError(ctx, 400, "invalid_request", "predecessor mission is not active");
     }
     return;
   }
 
-  // Step 5: widening check. @spec expansion#nothing-to-expand — a NON-WIDENING
+  // Step 7: widening check. @spec expansion#verification-order — a NON-WIDENING
   // request (the derived requested authority is a subset of the predecessor's
   // own effective Authority Set) is REFUSED: there is nothing to expand, and
   // ordinary token derivation already serves it (an expansion response must
@@ -2717,11 +2781,14 @@ export async function handleExpansionExchange(
 
   // @spec progressive#in-ceiling-expansion: where the deployment selects
   // Progressive authorization and the predecessor carries a consented ceiling,
-  // the ceiling adjudicates first. Out of ceiling refuses; a drawdown its
-  // policy authorizes completes here; any other in-ceiling request falls back
-  // to the fresh approval below.
+  // the ceiling adjudicates first. A drawdown its policy authorizes completes
+  // here; any other request, out-of-ceiling ones included, falls back to the
+  // fresh approval below, unless the deployment refuses beyond-ceiling ones.
+  // @spec progressive#ceiling-review (#1017): why a drawdown request fell
+  // back, recorded on the deferral for the chain's review disclosure.
+  let drawdownFallback: string | undefined;
   if (opts.progressive && active.authority_ceiling) {
-    const handled = await completeCeilingDrawdown(opts, provider, ctx, {
+    const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
       requested,
       intent,
@@ -2731,7 +2798,17 @@ export async function handleExpansionExchange(
       fingerprint,
       jkt: resolved.jkt,
     });
-    if (handled) return;
+    if (outcome === true) return;
+    if (typeof outcome === "string") drawdownFallback = outcome;
+  }
+
+  // @spec expansion#completion-modes (#1177): the deferred response goes only
+  // to an exchange whose completion_mode includes `deferred`. This AS offers
+  // no interactive completion, so any other exchange is refused before a
+  // deferral is opened or an operation is reserved.
+  if (!requestsDeferral(params.completion_mode)) {
+    txError(ctx, 400, "invalid_request", "this expansion needs asynchronous approval: include deferred in completion_mode");
+    return;
   }
 
   // Widening: a FRESH approval is required. Complete via the DTR deferred path.
@@ -2751,6 +2828,7 @@ export async function handleExpansionExchange(
       clientId: acting.sub,
       jkt: resolved.jkt,
       creationRequestId,
+      ...(drawdownFallback ? { drawdownFallback } : {}),
     });
   } catch (e) {
     if (e instanceof ExpansionDeferralError) {
@@ -2769,7 +2847,7 @@ export async function handleExpansionExchange(
     }
     throw e;
   }
-  // @spec expansion#creation-request-id — reserve the operation at deferred
+  // @spec expansion#creation-idempotency — reserve the operation at deferred
   // INITIATION (state `reserved`; the deferral handle is the recorded delivery
   // continuation). A repetition of the same (client, creation_request_id)
   // returns the SAME deferral, never a second ceremony. A concurrent duplicate
@@ -2807,16 +2885,24 @@ export async function handleExpansionExchange(
 }
 
 /**
- * @spec expansion — poll/complete a deferred expansion. Re-establishes KEY
- * possession at completion (the poller's DPoP key MUST equal the key recorded at
- * request time; @spec deferred-window check (b) re-verifies the KEY, never the
- * expired subject_token) and requires the poller to be the acting client that
- * opened the deferral. redeem() runs deferred-window check (a) (predecessor STATE +
- * containment-version delta) and CREATES the successor on approval; this handler
- * mints the successor's first token and supersedes the predecessor on that first
- * redemption.
+ * @spec expansion#completion-modes — poll/complete a deferred expansion on the
+ * deferred token response's deferred grant (#1177), which routes an
+ * expansion deferral code here. Re-establishes KEY possession at completion
+ * (the poller's DPoP key MUST equal the key recorded at request time; @spec
+ * deferred-window check (b) re-verifies the KEY, never the expired
+ * subject_token) and requires the poller to be the acting client that opened
+ * the deferral. The checks run in the order AROP's (#1355) do, so no refusal
+ * tells a code apart (DTR -00 Sections 5.5.1, 5.6 and 10.1, #1357): the DPoP
+ * proof is validated first, alike for every code; then a code issued to
+ * another client, or a deferral whose recorded client is not the
+ * predecessor's, is answered as an unknown one whatever key the proof uses;
+ * only then does a proof under another key get invalid_dpop_proof. redeem()
+ * runs deferred-window check (a)
+ * (predecessor STATE + restriction since adjudication) and CREATES the successor on
+ * approval; this handler mints the successor's first token and supersedes the
+ * predecessor on that first redemption.
  */
-async function pollDeferredExpansion(
+export async function pollDeferredExpansion(
   opts: AdapterOptions,
   provider: Provider,
   ctx: KoaContextWithOIDC,
@@ -2827,40 +2913,42 @@ async function pollDeferredExpansion(
     throw new errors.InvalidRequest("deferred expansion approval is not configured");
   }
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
-  const recordedClient = store.recordedClientId(deferralCode);
-  if (recordedClient !== undefined && recordedClient !== client.clientId) {
-    txError(ctx, 400, "invalid_grant", "deferral was not opened by the polling client");
-    return;
-  }
-  // KEY possession at completion (only the KEY, never the expired subject_token).
+  // The proof first, alike for every code (#1357): a missing or invalid proof
+  // is refused before the code is looked up, so the refusal says nothing
+  // about it. @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof,
+  // through the shared token-endpoint verifier (iat window and jti replay
+  // included).
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
-  // shared token-endpoint verifier (iat window and jti replay included).
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
     refuseTokenEndpointProof(ctx, verified);
     return;
   }
-  const { jkt } = verified.proof;
-  const recordedJkt = store.recordedJkt(deferralCode);
-  if (recordedJkt !== undefined && recordedJkt !== jkt) {
-    txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
-    return;
+  const recordedClient = store.recordedClientId(deferralCode);
+  if (recordedClient !== undefined && recordedClient !== client.clientId) {
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
   }
   // @spec expansion#verification-order step 4 (#1326): the poll runs no
   // initiation check, and deferrals persist, so a deferral another client
   // opened (before the initiation check existed) is refused here, before
   // redeem creates a successor or supersedes the predecessor. Decided from the
   // recorded predecessor, never the subject_token, which the poll does not
-  // carry and which may have expired.
+  // carry and which may have expired. Answered as an unknown code and before
+  // the key binding (#1357), so the refusal discloses nothing.
   const recordedPredecessorId = store.recordedPredecessorId(deferralCode);
   const recordedPredecessor = recordedPredecessorId !== undefined ? opts.kernel.get(recordedPredecessorId) : undefined;
   if (recordedPredecessor !== undefined && !isMissionClient(ctx, recordedPredecessor)) {
-    txError(ctx, 400, "invalid_grant", "deferral was not opened by the predecessor's client");
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+  }
+  // KEY possession at completion (only the KEY, never the expired subject_token).
+  const { jkt } = verified.proof;
+  const recordedJkt = store.recordedJkt(deferralCode);
+  if (recordedJkt !== undefined && recordedJkt !== jkt) {
+    refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
     return;
   }
 
@@ -2890,6 +2978,13 @@ async function pollDeferredExpansion(
       case "expired_token":
         throw new errors.ExpiredToken();
       case "access_denied":
+        // @spec expansion#reconciliation (#1177): a completion refused by a
+        // reconciliation check answers access_denied with its status.
+        if ("status" in r && r.status) {
+          txError(ctx, 400, "access_denied", "the deferred expansion was refused at completion");
+          (ctx.body as Record<string, unknown>).mission_expansion_status = r.status;
+          return;
+        }
         throw new errors.AccessDenied();
       default:
         throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
@@ -2926,7 +3021,7 @@ async function pollDeferredExpansion(
     }));
   }
   if (minted) {
-    // @spec expansion#creation-request-id — attach the delivery artifact to the
+    // @spec expansion#creation-idempotency — attach the delivery artifact to the
     // completed operation (redeem() already marked it completed atomically with
     // successor creation): an initiation retry returns this token while it is
     // valid, and re-mints for the SAME successor once it expires.
@@ -2945,7 +3040,7 @@ async function pollDeferredExpansion(
 }
 
 /**
- * @spec progressive#in-ceiling-expansion, expansion#creation-request-id: the
+ * @spec progressive#in-ceiling-expansion, expansion#creation-idempotency: the
  * policy-adjudicated in-ceiling drawdown. Returns false when the request falls
  * back to a fresh human approval; otherwise it has answered the exchange.
  *
@@ -2971,7 +3066,7 @@ async function completeCeilingDrawdown(
     fingerprint: string;
     jkt: string;
   },
-): Promise<boolean> {
+): Promise<boolean | string> {
   const progressive = opts.progressive;
   const idem = opts.creationIdempotency;
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
@@ -2990,13 +3085,21 @@ async function completeCeilingDrawdown(
     isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
   });
   if (adjudication.outcome === "out_of_ceiling") {
-    // Set on ctx directly: err_out would strip mission_denial_reason.
+    // @spec progressive#ceiling-test (#1413): never adjudicated by policy; by
+    // default it falls back to the fresh approval below, whose response carries
+    // no denial reason (#1415).
+    if (progressive.beyondCeiling !== "refuse") return "beyond_ceiling";
+    // The deployment's policy refuses it instead. `out_of_ceiling` is a MAY on
+    // that refusal, which this reference carries. Set on ctx directly: err_out
+    // would strip mission_denial_reason.
+    // @spec progressive#ceiling-review (#1017): recorded for the review disclosure.
+    opts.expansionDeferrals?.recordOutOfCeilingRefusal(predecessor.id);
     ctx.status = 400;
     ctx.body = { error: "invalid_request", mission_denial_reason: "out_of_ceiling" };
     ctx.set("cache-control", "no-store");
     return true;
   }
-  if (adjudication.outcome === "fresh_approval") return false;
+  if (adjudication.outcome === "fresh_approval") return adjudication.reason;
   const reservation: CreationReservation = {
     clientId: client.clientId,
     creationRequestId: d.creationRequestId,
@@ -3015,6 +3118,10 @@ async function completeCeilingDrawdown(
         ...(d.submissionEvidence?.length ? { submissionEvidence: d.submissionEvidence } : {}),
         activationActor: { iss: opts.issuer, sub: client.clientId },
         policy: { ref: adjudication.ref, snapshot: adjudication.snapshot },
+        restrictionsAtAdjudication: {
+          containment: predecessor.containment?.containment_version ?? 0,
+          discharge: predecessor.discharged?.length ?? 0,
+        },
       });
       return { missionId: created.id, value: created };
     });
@@ -3030,7 +3137,22 @@ async function completeCeilingDrawdown(
       // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
       // Derivation Limits refuses a derivation; nothing was created.
       if (e.code === "derivations_exhausted") throw new MissionGrantError(e.message, "derivations_exhausted");
+      // @spec expansion#reconciliation: the compare-and-set at activation
+      // failed on the predecessor's state, so the token-exchange completion
+      // answers invalid_request with the reconciliation status, to the
+      // Mission's own client, as the request-time check does.
+      const observed = opts.kernel.get(d.predecessorId);
+      if (e.code === "predecessor_not_active" && observed && isMissionClient(ctx, observed)) {
+        const current = opts.kernel.applyExpiry(observed);
+        refuseInactiveMission(ctx, current, `predecessor mission is ${current.state}`);
+        (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(current);
+        return true;
+      }
       txError(ctx, 400, "invalid_request", e.message);
+      // @spec expansion#reconciliation check 3: authority restricted since adjudication.
+      if (e.code === "authority_restricted_since_approval" && observed && isMissionClient(ctx, observed)) {
+        (ctx.body as Record<string, unknown>).mission_expansion_status = e.code;
+      }
       return true;
     }
     if (e instanceof IntentError) throw intentErrorToOidc(e);
@@ -3060,7 +3182,7 @@ async function completeCeilingDrawdown(
 }
 
 /**
- * @spec expansion#creation-request-id — recover a repeated expansion
+ * @spec expansion#creation-idempotency — recover a repeated expansion
  * initiation. Same contract as {@link recoverChildCreation}: fingerprint match
  * + proof of the RECORDED confirmation key are REQUIRED (a matching identifier
  * never bypasses possession); recovery is DELIVERY, never re-creation.
@@ -3093,6 +3215,15 @@ async function recoverExpansion(
   }
   if (presenterJkt !== op.cnfJkt) {
     txError(ctx, 400, "invalid_grant", "possession proof does not match the recorded confirmation key");
+    return;
+  }
+  // @spec expansion#creation-revalidation (#1177): an operation recorded in
+  // the deferred mode is recovered only for a retry that opts in again.
+  if (
+    op.delivery?.mode === "deferred" &&
+    !requestsDeferral((ctx.oidc.params as Record<string, unknown>).completion_mode)
+  ) {
+    txError(ctx, 400, "invalid_request", "a retry of a deferred expansion must include deferred in completion_mode");
     return;
   }
   if (op.state === "failed") {
@@ -3175,4 +3306,22 @@ async function recoverExpansion(
       });
     }
   }
+}
+
+/**
+ * DTR -00 Section 7.2 (#1177): an expansion deferral code is cancelled at the
+ * RFC 7009 revocation endpoint, as a Mission approval's is. The endpoint
+ * answers 200 whatever the token, so a code that is unknown, another
+ * client's, or already finished is left unchanged.
+ */
+export function cancelExpansionDeferralOnRevocation(store: ExpansionDeferralStore) {
+  return async (ctx: KoaContextWithOIDC, next: () => Promise<void>): Promise<void> => {
+    await next();
+    if (ctx.oidc?.route !== "revocation" || ctx.status !== 200) return;
+    const token = (ctx.oidc.params as Record<string, unknown> | undefined)?.token;
+    const clientId = ctx.oidc.client?.clientId;
+    if (typeof token === "string" && token.startsWith(EXPANSION_DEFERRAL_PREFIX) && clientId) {
+      store.cancel(token, clientId);
+    }
+  };
 }

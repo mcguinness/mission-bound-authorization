@@ -26,11 +26,13 @@ import {
   authorityHash,
   canonicalize,
   computeAnchor,
+  entryDelegateMatcherViolation,
   intentHash,
   type JsonValue,
   MISSION_TEMPLATE_TYP,
   proposalHash,
   refusedEntryMember,
+  unsupportedEntryMember,
 } from "@mission/core";
 import {
   assertApproverMayActivate,
@@ -57,6 +59,11 @@ import type { RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import {
+  STANDING_CONSENT_LIMIT_MEMBER,
+  standingConsentMaximumOf,
+  withinStandingConsentMaximum,
+} from "./standing-consent-limit.js";
 import {
   type MissionTemplate,
   type TemplateCreate,
@@ -239,6 +246,34 @@ export function createTemplate(
     if (member !== undefined) {
       throw new TemplateError(`ceiling[${i}] carries ${member}, which the mission_resource_access type does not use`);
     }
+    // @spec mission#subset (#1399, D538): likewise any member outside the
+    // supported set, which dispatch derivation would otherwise drop.
+    const unsupported = unsupportedEntryMember(entry);
+    if (unsupported !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
+      );
+    }
+    // @spec resource-access#resource-contract (#249, D553): template consent
+    // does not assemble or validate a contract reference against
+    // configuration, so this surface takes the conformance alternative: "An
+    // authorization server that does not implement this section refuses a
+    // proposed or carried entry that carries `resource_contract` ... and never
+    // drops the member."
+    if (entry.resource_contract !== undefined) {
+      throw new TemplateError(
+        `ceiling[${i}] carries resource_contract, which template consent does not assemble from configuration; refusing rather than dropping it`,
+      );
+    }
+  });
+  // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
+  // (#1373): a template ceiling entry whose `allowed_delegates` or
+  // `allowed_child_actors` carries a malformed delegate matcher is refused at
+  // consent, naming the entry, rather than stored and refused only when a
+  // dispatch derives from it.
+  input.ceiling.forEach((entry, i) => {
+    const violation = entryDelegateMatcherViolation(entry);
+    if (violation !== undefined) throw new TemplateError(`ceiling[${i}] ${violation}`);
   });
   if (input.per_instance_lifetime_s <= 0 || !Number.isFinite(input.per_instance_lifetime_s)) {
     throw new TemplateError("per_instance_lifetime_s must be a positive number of seconds");
@@ -299,6 +334,16 @@ export function createTemplate(
   if (!dispatch_policy) {
     throw new TemplateError(
       `dispatch_policy ${input.dispatch_policy.id} version ${input.dispatch_policy.version} is not a Dispatch Policy this issuer holds`,
+    );
+  }
+  // @spec mission-template#template-consent, derivation-limits#effective-limit
+  // (#1119, D327): the Dispatch Policy states the per-instance derivation-limit
+  // maximum the consent commits under `template_hash`. A malformed statement
+  // is refused here, at consent, never discovered at a dispatch.
+  const heldDispatchPolicy = options.dispatchPolicies?.[input.dispatch_policy.id];
+  if (heldDispatchPolicy && standingConsentMaximumOf(heldDispatchPolicy) === undefined) {
+    throw new TemplateError(
+      `dispatch_policy ${input.dispatch_policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}: an integer of at least 1, or null`,
     );
   }
   const templateBody = {
@@ -650,6 +695,15 @@ export function dispatchFromTemplate(
       `template ${template.id} dispatch policy ${template.dispatch_policy.id} no longer matches its committed digest`,
     );
   }
+  // #1119: consent refuses a malformed maximum, so a verified snapshot states
+  // a usable one; a template consented before that check is re-consented.
+  const dispatchMaximum = standingConsentMaximumOf(dispatchPolicy);
+  if (!dispatchMaximum) {
+    throw new DispatchError(
+      "dispatch_policy_changed",
+      `template ${template.id} dispatch policy ${template.dispatch_policy.id} states no usable ${STANDING_CONSENT_LIMIT_MEMBER}; re-consent the template`,
+    );
+  }
   // @spec mission-template#the-mission-template — the Mission Issuer selects
   // the instance's Agent under the Dispatch Policy, never from Dispatcher
   // input. It is committed below as the instance's `client_id`; a retried
@@ -869,8 +923,15 @@ export function dispatchFromTemplate(
     version: 1,
     // @spec mission#derivation-issuance-policy — the dispatched instance's
     // own requested ceiling, clamped by this deployment's policy ceiling
-    // exactly like an ordinary Mission approval.
-    derivation_limit: kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+    // exactly like an ordinary Mission approval. @spec
+    // mission-template#dispatch, derivation-limits#effective-limit (#1119,
+    // D327): established afresh for this instance, never above the maximum
+    // the committed Dispatch Policy states, and never absent where it is
+    // finite, whatever the deployment's ceiling has since become.
+    derivation_limit: withinStandingConsentMaximum(
+      kernel.resolveDerivationLimit(input.intent.requested_derivation_limit),
+      dispatchMaximum,
+    ),
     derivation_count: 0,
     grant_id: null,
     status_list_idx: null,

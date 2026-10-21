@@ -53,6 +53,7 @@ import {
   revokeSuccessorsExpandedByAnotherClient,
   SourceUnavailableError,
 } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { GateError } from "../src/kernel/kernel.js";
 import {
   BARE_REFUSAL_MEMBERS,
@@ -64,6 +65,13 @@ import {
   type SubjectTokenCase,
   UNHELD_KEY_CNF,
 } from "./subject-possession.helper.js";
+import {
+  delegationWithMatcher,
+  MATCHER_LIST_CASES,
+  MATCHER_REPRODUCTION,
+  type MatcherList,
+  WELL_FORMED_MATCHER,
+} from "./malformed-matcher.helper.js";
 
 const PORT = 14480;
 const ISSUER = `http://localhost:${PORT}`;
@@ -671,6 +679,75 @@ describe("async-delegation issuance (@spec async-delegation)", () => {
       expect(body.refresh_token).toBeUndefined();
       expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
       expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+    }
+  });
+
+  // @spec mission#subset (#1399, D538): confinement projects each requested
+  // entry, which rebuilds it, so a requested entry carrying an unsupported
+  // member is refused rather than confined with the member dropped.
+  it("confinement: a requested entry carrying an unsupported member is refused invalid_authorization_details, opening no family and counting no derivation", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    for (const invoice_ids of [["INV-7"], []]) {
+      // The handle request is itself a counted derivation, so it is taken first.
+      const handle = await delegationHandle(baseAccessToken);
+      const countBefore = as.kernel.get(missionId)?.derivation_count;
+      const requested = confinedAuthority().map((e) => ({ ...e, invoice_ids }));
+      const res = await asyncDelegate(handle, { rawSubject: true, authorizationDetails: requested });
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        access_token?: string;
+        refresh_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/invoice_ids is not a supported member/);
+      expect(body.access_token).toBeUndefined();
+      expect(body.refresh_token).toBeUndefined();
+      expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+    }
+  });
+
+  // @spec resource-access#matching-allowed-delegates (#1373): confinement
+  // rebuilds each delegate matcher from `sub` and `sub_profile`, so a
+  // requested matcher carrying another member is refused rather than confined
+  // without it.
+  it("confinement: a requested entry whose delegate matcher carries an unrecognized member is refused invalid_authorization_details, opening no family and counting no derivation", async () => {
+    const { missionId, baseAccessToken } = await issueBaseMission();
+    const requestWith = (matcher: Readonly<Record<string, string>>, list: MatcherList) =>
+      confinedAuthority().map((e) => ({ ...e, delegation: delegationWithMatcher(matcher, list) }));
+    for (const [list, description] of MATCHER_LIST_CASES) {
+      // The handle request is itself a counted derivation, so it is taken first.
+      const handle = await delegationHandle(baseAccessToken);
+      const countBefore = as.kernel.get(missionId)?.derivation_count;
+      const res = await asyncDelegate(handle, {
+        rawSubject: true,
+        authorizationDetails: requestWith(MATCHER_REPRODUCTION, list),
+      });
+      const body = (await res.json()) as {
+        error?: string;
+        error_description?: string;
+        access_token?: string;
+        refresh_token?: string;
+      };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe(description);
+      expect(body.access_token).toBeUndefined();
+      expect(body.refresh_token).toBeUndefined();
+      expect(as.delegationFamilyStore.familiesForMission(missionId)).toEqual([]);
+      expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
+    }
+    // Positive control: with a well-formed matcher, the same request opens a family.
+    for (const [list] of MATCHER_LIST_CASES) {
+      const handle = await delegationHandle(baseAccessToken);
+      const res = await asyncDelegate(handle, {
+        rawSubject: true,
+        authorizationDetails: requestWith(WELL_FORMED_MATCHER, list),
+      });
+      const body = (await res.json()) as { access_token?: string };
+      expect(res.status, JSON.stringify(body)).toBe(200);
     }
   });
 });
@@ -2242,6 +2319,7 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
       }),
       authorization_details: JSON.stringify(fullAuthority()),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     expect(opened.status, JSON.stringify(ob)).toBe(400);
@@ -2254,8 +2332,7 @@ describe("async-delegation family fallback preserves lineage (@spec child-delega
       approvedUntil: FAR_EXP,
     });
     const poll = await codeTokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: ob.deferral_code as string,
     });
     const pb = (await poll.json()) as { access_token?: string };
@@ -2890,6 +2967,7 @@ describe("a fully contained family is refused after rotation, within the owner's
       }),
       authorization_details: JSON.stringify(fullAuthority()),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const ob = (await opened.json()) as { error?: string; deferral_code?: string };
     expect(opened.status, JSON.stringify(ob)).toBe(400);
@@ -2901,8 +2979,7 @@ describe("a fully contained family is refused after rotation, within the owner's
       approvedUntil: FAR_EXP,
     });
     const polled = await codeTokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: ob.deferral_code as string,
     });
     const pb = (await polled.json()) as { access_token?: string; mission_id?: string; authorization_details?: unknown };
@@ -3219,6 +3296,7 @@ describe("successor remediation (@spec expansion#verification-order step 4, #134
       }),
       authorization_details: JSON.stringify(fullAuthority()),
       creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
     });
     const { deferral_code: deferralCode } = (await opened.json()) as { deferral_code: string };
     as.expansionDeferrals.approve(deferralCode, {
@@ -3228,8 +3306,7 @@ describe("successor remediation (@spec expansion#verification-order step 4, #134
       approvedUntil: FAR_EXP,
     });
     const poll = await codeTokenRequest({
-      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-      requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      grant_type: DEFERRED_GRANT_TYPE,
       deferral_code: deferralCode,
     });
     const polled = (await poll.json()) as { access_token: string; mission_id: string };

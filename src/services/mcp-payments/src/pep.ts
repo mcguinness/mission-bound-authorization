@@ -14,7 +14,10 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type CollectionMemberFacts,
+  type ConstraintFacts,
   type CredentialAuthorityEntry,
+  collectionMemberConstraintFacts,
   coveringCredentialEntries,
   credentialEntriesFromAuthority,
   entryMatchesTarget,
@@ -23,12 +26,18 @@ import {
   idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
+  MEMBER_FACT_CONSTRAINTS,
   type OperationContract,
   type OperationTargetResolution,
   type PropagatedMissionReference,
+  type ResourceContractDeclarations,
+  type ResourceContractRef,
+  resourceContractOf,
+  sameResourceContract,
   TXN_AUTHORIZATION_REQUIRED,
   type TxnMissionClaim,
 } from "@mission/core";
+import { RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { getTracer } from "@mission/telemetry";
 import {
   type AudienceContext,
@@ -70,6 +79,7 @@ import {
   buildListEffectiveParams,
   type EffectiveParams,
   type ListEffectiveParams,
+  listMembers,
   parameterDigest,
 } from "./effective-params.js";
 import type {
@@ -84,6 +94,7 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
+import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 
 export const CANONICAL_RESOURCE = process.env.MCP_PAYMENTS_RESOURCE ?? "http://localhost:4403/mcp";
 
@@ -131,6 +142,15 @@ export const BOUNDARY_UNPROVISIONED = "boundary_unprovisioned";
 export const BOUNDARY_CUTOVER_ERROR = "kill_switch";
 /** The tool-id base for this server's capabilities (@spec runtime-evidence#evidence-extensions `capability_source.tool_id`). */
 export const TOOL_BASE = "mcp://payments.demo/tools";
+
+/**
+ * @spec runtime#resource-contract (#249, D553): the version of the payments
+ * Operation Profile {@link TOOL_ACTIONS} implements, the `operation_profile`
+ * a contract document names. A contract version naming it performs under the
+ * live Operation Profile; one naming another performs under that retained
+ * profile (`PepDeps.retainedOperationProfiles`), or not at all.
+ */
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v13";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -331,17 +351,21 @@ export interface ActionMapping {
   /**
    * @spec resource-access#resource-matching (#1276, D447, D457): this
    * operation's documented, trusted operation contract: how the PEP
-   * establishes its target before any authority is matched. The payments
-   * contract is service-level: every payments tool acts on the service
-   * {@link CANONICAL_RESOURCE} names, and actions and constraints determine
-   * the permitted operations within it
-   * (`src/docs/operation-profile-payments-v1.md`).
+   * establishes its target before any authority is matched. The shipped
+   * payments contract is service-level: every payments tool acts on the
+   * service {@link CANONICAL_RESOURCE} names, and actions and constraints
+   * determine the permitted operations within it
+   * (`src/docs/operation-profile-payments-v1.md`). An invoice-scoped tool may
+   * instead declare the argument-derived {@link PAYMENTS_INVOICE_CONTRACT},
+   * whose target is the invoice its validated `invoice_id` names.
    *
    * Absent means no contract: the operation is refused before any decision
    * request, never matched against the protected resource's metadata
-   * identifier or the token's audience by default. A finer contract form is
-   * unsupported and refuses too, and declarations naming different targets
-   * are ambiguous and refuse. Never read from an agent argument.
+   * identifier or the token's audience by default. An unsupported contract
+   * form, an argument-derived contract whose argument is missing, malformed
+   * or a list, and declarations naming different targets all refuse. The
+   * contract itself is never read from an agent argument, and an argument the
+   * contract does not name never contributes to the target.
    */
   target?: OperationContract | readonly OperationContract[];
   needsInvoice: boolean;
@@ -427,6 +451,32 @@ export function recipientParams(
  */
 const PAYMENTS_SERVICE_CONTRACT: OperationContract = Object.freeze({ service: CANONICAL_RESOURCE });
 
+/**
+ * @spec resource-access#resource-matching, authzen#context-operation-target
+ * (#1276, D447, D457): the argument-derived invoice contract, a finer
+ * contract an invoice-scoped tool may declare in place of the service-level
+ * one. The operation's target is the invoice its validated `invoice_id`
+ * names, `<canonical resource URI>/invoices/<invoice_id>`, with the
+ * identifier percent-encoded as one path segment (RFC 6570 simple
+ * expansion), so an `exact` entry naming that URI covers that invoice alone
+ * and an entry naming the service identifier does not cover it. The PEP
+ * derives it from the intake-validated arguments only, never from an entry,
+ * the token's audience or an argument the template does not name, and
+ * re-derives it from the live profile before every release.
+ *
+ * No shipped `TOOL_ACTIONS` row declares it: under the `exact` matcher a
+ * deployment that declares it for a tool needs entries naming the invoice
+ * URIs, so the shipped profile keeps the service-level contract and its
+ * decision bytes. Declared here, beside {@link PAYMENTS_SERVICE_CONTRACT},
+ * for a deployment's Operation Profile (`PepDeps.operationProfile`) to
+ * select, and registered with a remote PDP as an operation contract
+ * (`AuthorizedPep.operationContracts`) so consistency check 11 admits the
+ * targets it establishes.
+ */
+export const PAYMENTS_INVOICE_CONTRACT: OperationContract = Object.freeze({
+  template: `${CANONICAL_RESOURCE}/invoices/{invoice_id}`,
+});
+
 const TOOL_ACTIONS: Record<string, ActionMapping> = {
   list_invoices: { action: "payments:invoice.list", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: false, bindsVendorScope: true },
   get_invoice: { action: "payments:invoice.read", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
@@ -484,6 +534,36 @@ function deriveVendorScope(
 }
 
 /**
+ * @spec resource-access#initial-common-constraints (#1266): whether any entry
+ * a bound `list_invoices` read could rely on (a Mission or credential entry
+ * naming the target and the action) carries a bound whose input is a member
+ * fact. Only then does the read evaluate, carry and bind its members: a read
+ * no such bound narrows keeps its decision bytes.
+ */
+function readsMemberFacts(
+  entries: ReadonlyArray<{ resource: string; resource_match?: unknown; actions: readonly string[]; constraints?: unknown }>,
+  target: string,
+  action: string,
+): boolean {
+  return entries.some(
+    (e) =>
+      entryMatchesTarget(e, target) &&
+      e.actions.includes(action) &&
+      MEMBER_FACT_CONSTRAINTS.some((key) => (e.constraints as Record<string, unknown> | undefined)?.[key] !== undefined),
+  );
+}
+
+/**
+ * The members of a collection read as the facts the Common Constraints read.
+ * A member that does not read (unreachable for members this PEP built) makes
+ * the whole list establish no member fact.
+ */
+function memberConstraintFacts(members: readonly CollectionMemberFacts[]): ConstraintFacts[] {
+  const facts = members.map(collectionMemberConstraintFacts);
+  return facts.every((f): f is ConstraintFacts => f !== undefined) ? facts : [];
+}
+
+/**
  * @spec authzen#response-context, runtime#decision-output: the permit's
  * decision CONDITIONS live NESTED inside `decision.context.conditions`
  * (never as flat top-level members): the declarative constraints on RELYING
@@ -513,6 +593,10 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
   "parameter_digest",
   "valid_until",
   "use_limit",
+  // @spec authzen#response-context `resource_contract` (#249, D553): this PEP
+  // recognizes and enforces the contract condition (the `resource_contract`
+  // row of PERMIT_USE_CHECKS), so a permit carrying it is usable here.
+  "resource_contract",
   // @spec runtime#compound-actions, authzen#response-context `action_phase` —
   // this PEP recognizes and ENFORCES the phase condition (Pep.verifyPermitAtUse
   // compares it against the crossing's own Operation Profile phase at use).
@@ -548,7 +632,12 @@ interface PermitUseCheck {
   name: string;
   failure: (
     attempt: ExecutionAttempt,
-    ctx: { now: Date; profile: ActionMapping | undefined; boundary: BoundaryEstablishment },
+    ctx: {
+      now: Date;
+      profile: ActionMapping | undefined;
+      boundary: BoundaryEstablishment;
+      contracts: ResourceContractDeclarations;
+    },
   ) => string | undefined;
 }
 
@@ -569,6 +658,37 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
       boundary.ok && boundary.boundary === attempt.audience && boundary.version === attempt.boundaryVersion
         ? undefined
         : BOUNDARY_CUTOVER_ERROR,
+  },
+  {
+    // @spec runtime#resource-contract rule 5, authzen#response-context
+    // `resource_contract` (#249, D553): "Immediately before releasing the
+    // effect, in the same step as the `parameter_digest` recomputation ...,
+    // the executing PEP MUST resolve the permit's reference against the
+    // resource's current declarations, and MUST refuse before any effect
+    // unless it resolves to the contract the permit was decided under." At
+    // every use the permit's condition must resolve and equal the contract
+    // this PEP is about to perform under; "A missing condition where a
+    // contract applies, an unresolvable reference, or an unequal one is
+    // Execution Evidence `suppressed` / `resource_contract_unresolvable`, not
+    // a PDP denial." It runs ahead of the phase and target rows, so a
+    // contract failure is never reported as `phase_mismatch` or
+    // `target_drift`. The declarations are in memory, so the comparison is
+    // synchronous, as this table requires.
+    name: "resource_contract",
+    failure: (attempt, { contracts, now }) => {
+      const bound = attempt.permitResourceContract;
+      const performing = attempt.performedContract;
+      if (bound === undefined && performing === undefined) {
+        // No contract was decided on; one the resource has since come to
+        // require for the operation cannot be met by this permit.
+        return contracts.requiresReference(attempt.operationTarget, attempt.action)
+          ? "resource_contract_unresolvable"
+          : undefined;
+      }
+      if (!sameResourceContract(bound, performing)) return "resource_contract_unresolvable";
+      const resolved = contracts.resolve(bound, { target: attempt.operationTarget, action: attempt.action, now });
+      return resolved.ok ? undefined : "resource_contract_unresolvable";
+    },
   },
   {
     // @spec runtime#compound-actions — "The executing PEP MUST compare the
@@ -600,9 +720,11 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // execute the operation on the target it matched: matching a different
     // target never authorizes the execution." The target is re-established
     // from the LIVE Operation Profile at every use, exactly as the phase is,
-    // and compared with the target the permit was decided on. A contract that
-    // moved, or that no longer establishes one target, refuses: a permit is
-    // never carried to another target, cacheable reads included.
+    // and, for an argument-derived contract, from the arguments the operation
+    // executes with; it is compared with the target the permit was decided
+    // on. A contract that moved, or that no longer establishes one target,
+    // refuses: a permit is never carried to another target, cacheable reads
+    // included.
     //
     // `target_drift` is the closed set's value for a bound decision input
     // that "differs or cannot be established at use"; the Runtime Evidence
@@ -611,7 +733,7 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
     // item, not a new value).
     name: "operation_target",
     failure: (attempt, { profile }) => {
-      const current = establishOperationTarget(profile?.target);
+      const current = establishOperationTarget(profile?.target, attempt.operationArguments);
       return current.ok && current.target === attempt.operationTarget ? undefined : "target_drift";
     },
   },
@@ -699,10 +821,37 @@ export interface PepDeps {
    * a same-id different-issuer request rather than the wrong Mission.
    */
   loadView: (ref: MissionReference) => LoadedView | undefined;
+  /**
+   * @spec authority-server#mission-join rule 2 (#818, D560): a remote Mission
+   * view source, read once at the start of each enforcement; `loadView` then
+   * answers from that read (view-source.ts). Absent, the in-process loader
+   * is the only read, unchanged.
+   */
+  viewSource?: MissionViewSource;
   instanceEpoch: string;
   now?: () => Date;
   /** Trusted catalog serving this executor, never a caller-supplied digest. */
   capabilityCatalog?: CapabilityCatalog;
+  /**
+   * @spec runtime#resource-contract, authzen#context-resource-contract
+   * (#249, D553): the contract versions this resource declares, resolved on
+   * EVERY lookup so a declaration change between a decision and its use is
+   * observed, never cached. Defaults to the Enforcement Scope Statement's
+   * (`RESOURCE_CONTRACTS`). The PEP establishes the reference it presents
+   * from the applicable entry, "resolved against its own trusted contract
+   * declarations", and re-resolves the permit's at every use.
+   */
+  resourceContracts?: () => ResourceContractDeclarations;
+  /**
+   * @spec runtime#resource-contract rule 3 (#249): the Operation Profiles of
+   * contract versions this resource still performs, keyed by the
+   * `operation_profile` their documents name. "The PEP MUST normalize the
+   * operation's parameters, and perform the operation, under the resolved
+   * contract, never under another version the resource serves." A version
+   * naming {@link PAYMENTS_PROFILE_VERSION} performs under the live profile;
+   * one naming a profile absent here is not performed at all.
+   */
+  retainedOperationProfiles?: () => Readonly<Record<string, Record<string, ActionMapping>>>;
   /**
    * @spec runtime#compound-actions — the trusted Operation Profile this PEP
    * derives each crossing's action and phase from, resolved on EVERY lookup
@@ -930,6 +1079,12 @@ export interface ActionApprovalInput {
   approved_until?: string;
   parameter_digest: string;
   state?: string;
+  /**
+   * @spec authzen#context-approval (#249): the approved Resource the approval
+   * binds, carried to the PDP, whose `properties.resource_contract` must equal
+   * the request's.
+   */
+  resource?: { properties?: { resource_contract?: unknown } };
 }
 
 export interface EnforceResult {
@@ -1084,6 +1239,33 @@ export interface ExecutionAttempt {
    * before every release.
    */
   operationTarget: string;
+  /**
+   * @spec resource-access#resource-matching, authzen#permit-binding-split
+   * (#1276, D457): the validated arguments the operation executes with, as
+   * this PEP derived {@link operationTarget} from them (a frozen copy). The
+   * `operation_target` use check derives the target again from the live
+   * contract and these arguments, so an argument-derived target is held to
+   * the arguments of the execution, not only to the contract.
+   */
+  operationArguments: Readonly<Record<string, unknown>>;
+  /**
+   * @spec runtime#resource-contract (#249, D553): the contract this PEP
+   * performs the operation under, exactly as it sent it in
+   * `resource.properties.resource_contract`; absent where no contract applies.
+   */
+  performedContract?: ResourceContractRef;
+  /**
+   * @spec authzen#response-context `resource_contract`: the permit's condition
+   * EXACTLY as the verified decision carried it, unnarrowed, so a missing or
+   * malformed value stays distinguishable at the comparison.
+   */
+  permitResourceContract?: unknown;
+  /**
+   * The Operation Profile version {@link performedContract} names, whose
+   * crossing the phase and target rows re-derive at every use; absent for the
+   * live profile.
+   */
+  operationProfile?: string;
   action: string;
   /**
    * The tool whose crossing this attempt is about to make. The PEP re-derives
@@ -1168,6 +1350,7 @@ export type PepRefusalDiagnostic =
   | "mission_reference_conflict"
   | "state_unavailable"
   | "capability_source_unresolvable"
+  | "resource_contract_unresolvable"
   | "decision_evidence_unverifiable"
   | "channel_failure"
   | "pdp_unreachable"
@@ -1222,6 +1405,10 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   mission_reference_conflict: "mission_reference_conflict",
   state_unavailable: "state_unavailable",
   capability_source_unresolvable: "capability_source_unresolvable",
+  // @spec runtime-evidence#pre-decision-refusal, runtime#resource-contract
+  // (#249): "A PEP that finds before requesting a decision that the reference
+  // does not resolve refuses there, with a pre-decision Refusal Record."
+  resource_contract_unresolvable: "resource_contract_unresolvable",
   decision_evidence_unverifiable: "decision_evidence_unverifiable",
   channel_failure: "channel_failure",
   pdp_unreachable: "pdp_unreachable",
@@ -1343,6 +1530,8 @@ type TargetObject = {
     issued_at?: string;
     tenant?: string;
     data_classification?: string;
+    /** @spec resource-access#initial-common-constraints (#1266): a collection read's members, each with its own facts. */
+    members?: CollectionMemberFacts[];
   };
 };
 
@@ -1419,6 +1608,104 @@ export class Pep {
     return (this.deps.operationProfile?.() ?? TOOL_ACTIONS)[tool];
   }
 
+  /** @spec runtime#resource-contract (#249): this resource's declared contract versions, read now. */
+  contracts(): ResourceContractDeclarations {
+    return this.deps.resourceContracts?.() ?? RESOURCE_CONTRACTS;
+  }
+
+  /**
+   * @spec runtime#resource-contract rule 3 (#249): `tool`'s crossing under
+   * the Operation Profile version `profile` names: the live profile for
+   * {@link PAYMENTS_PROFILE_VERSION} or none, a retained one otherwise, and
+   * nothing for a profile this resource no longer holds.
+   */
+  toolActionUnder(tool: string, profile: string | undefined): ActionMapping | undefined {
+    if (profile === undefined || profile === PAYMENTS_PROFILE_VERSION) return this.toolAction(tool);
+    return this.deps.retainedOperationProfiles?.()[profile]?.[tool];
+  }
+
+  /**
+   * @spec authzen#context-resource-contract, runtime#resource-contract (#249,
+   * D553): the contract this PEP performs `tool` under, with the crossing and
+   * operation target that contract's Operation Profile establishes. "The PEP
+   * establishes the reference from the applicable entry's reference,
+   * resolved against its own trusted contract declarations, and never from a
+   * value the caller asserts."
+   *
+   * The applicable entries are the presented credential's entries naming the
+   * action. Each distinct reference they carry (absence included) is tried:
+   * its version's Operation Profile establishes the target, the reference
+   * must resolve there (absence must not be required there), and an entry
+   * carrying it must cover that target. A reference that does not resolve,
+   * or absence where a reference is required, is refused before the decision
+   * request when no other applicable entry applies; there is no fallback to
+   * another version. With several applicable, a current contract is
+   * preferred, then any contract, then none. No applicable entry at all
+   * leaves the live crossing, and the credential bound refuses as before.
+   */
+  private selectContract(
+    tool: string,
+    listed: ActionMapping,
+    listedTarget: string,
+    args: Readonly<Record<string, unknown>>,
+    entries: readonly CredentialAuthorityEntry[],
+  ):
+    | { ok: true; mapping: ActionMapping; target: string; contract?: ResourceContractRef; profile?: string }
+    | { ok: false } {
+    const contracts = this.contracts();
+    const now = this.now();
+    const naming = entries.filter((e) => e.actions.includes(listed.action));
+    const options: Array<ResourceContractRef | undefined> = [];
+    for (const e of naming) {
+      if (!options.some((o) => sameResourceContract(o, e.resource_contract))) options.push(e.resource_contract);
+    }
+    const usable: Array<{ mapping: ActionMapping; target: string; contract?: ResourceContractRef; profile?: string; rank: number }> = [];
+    let unresolved = false;
+    for (const contract of options) {
+      const profile = contract === undefined ? undefined : contracts.versionOf(contract)?.version.operation_profile;
+      const mapping = contract === undefined ? listed : profile === undefined ? undefined : this.toolActionUnder(tool, profile);
+      if (!mapping || mapping.action !== listed.action) {
+        unresolved = true;
+        continue;
+      }
+      const established = establishOperationTarget(mapping.target, args);
+      if (!established.ok) {
+        unresolved = true;
+        continue;
+      }
+      const target = established.target;
+      let rank = 0;
+      if (contract === undefined) {
+        if (contracts.requiresReference(target, listed.action)) {
+          unresolved = true;
+          continue;
+        }
+      } else {
+        const resolved = contracts.resolve(contract, { target, action: listed.action, now });
+        if (!resolved.ok) {
+          unresolved = true;
+          continue;
+        }
+        rank = resolved.version.state === "current" ? 2 : 1;
+      }
+      if (!naming.some((e) => sameResourceContract(e.resource_contract, contract) && entryMatchesTarget(e, target))) continue;
+      usable.push({
+        mapping,
+        target,
+        ...(contract !== undefined ? { contract } : {}),
+        ...(profile !== undefined && profile !== PAYMENTS_PROFILE_VERSION ? { profile } : {}),
+        rank,
+      });
+    }
+    const best = usable.sort((a, b) => b.rank - a.rank)[0];
+    if (best) {
+      const { rank: _rank, ...chosen } = best;
+      return { ok: true, ...chosen };
+    }
+    if (unresolved) return { ok: false };
+    return { ok: true, mapping: listed, target: listedTarget };
+  }
+
   /** Whether the current Operation Profile has a tool for `action` that addresses recipients (#1266). */
   private reachesRecipients(action: string): boolean {
     const profile = this.deps.operationProfile?.() ?? TOOL_ACTIONS;
@@ -1426,14 +1713,18 @@ export class Pep {
   }
 
   /**
-   * @spec resource-access#resource-matching (#1276, D447, D457): the
-   * operation target this surface establishes for `tool`, from the trusted
-   * contract its LIVE Operation Profile declares, independently of any
-   * presented entry, the token's audience, and the caller's arguments. A
-   * missing, unsupported or ambiguous contract establishes none.
+   * @spec resource-access#resource-matching, authzen#context-operation-target
+   * (#1276, D447, D457): the operation target this surface establishes for
+   * `tool`, from the trusted contract its LIVE Operation Profile declares
+   * and, for an argument-derived contract, the one validated argument that
+   * contract names; independently of any presented entry, the token's
+   * audience, and every other argument (an agent-supplied `operation_target`
+   * or `resource` argument is never read). A missing, unsupported or
+   * ambiguous contract, or a missing, malformed or list-valued argument,
+   * establishes none.
    */
-  operationTargetFor(tool: string): OperationTargetResolution {
-    return establishOperationTarget(this.toolAction(tool)?.target);
+  operationTargetFor(tool: string, args: Readonly<Record<string, unknown>>): OperationTargetResolution {
+    return establishOperationTarget(this.toolAction(tool)?.target, args);
   }
 
   /** The permit `conditions` members this PEP recognizes (@spec authzen#response-context). */
@@ -1520,11 +1811,18 @@ export class Pep {
     // input, binding and record of this request uses this one value. A
     // boundary that cannot be established refuses with no Refusal Record:
     // the record REQUIRES an `audience`, and none is invented.
-    const mapping = this.toolAction(tool);
-    const establishedBoundary = await this.requestBoundary(token, mapping?.action ?? tool);
+    const listed = this.toolAction(tool);
+    const establishedBoundary = await this.requestBoundary(token, listed?.action ?? tool);
     if (!establishedBoundary.ok) return { permitted: false, refusal_reason: establishedBoundary.refusal_reason };
     const { boundary, version: boundaryVersion } = establishedBoundary;
-    if (!mapping) return await this.refuse(boundary, token, "unknown_tool", tool);
+    if (!listed) return await this.refuse(boundary, token, "unknown_tool", tool);
+    // @spec runtime#resource-contract rule 3 (#249): the crossing under the
+    // live profile until the contract is established below, then under the
+    // resolved contract's.
+    let mapping: ActionMapping = listed;
+    // #818 (D560): the one remote view read, where the deployment has a
+    // remote source; acted on only at a view miss below.
+    const prepared = await prepareRequestView(this.deps.viewSource, token.mission, signals?.missionReference);
 
     let view: MissionView;
     let observation: MissionStateObservation;
@@ -1574,7 +1872,7 @@ export class Pep {
       }
 
       const loaded = this.deps.loadView({ id: token.mission.id, issuer: token.mission.issuer });
-      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action);
+      if (!loaded) return await this.refuse(boundary, token, viewMissRefusal(prepared), mapping.action);
 
       // @spec authority-server#reference-verification — the locally loaded
       // Mission view is the PEP's own binding source; a credential whose
@@ -1609,7 +1907,7 @@ export class Pep {
       }
 
       const loaded = this.deps.loadView({ id: propagated.id, issuer: propagated.issuer });
-      if (!loaded) return await this.refuse(boundary, token, "unknown_mission", mapping.action, undefined, propagated.id);
+      if (!loaded) return await this.refuse(boundary, token, viewMissRefusal(prepared), mapping.action, undefined, propagated.id);
 
       // Rule 8, bound 1: the acting credential's OWN authority, resolved by a
       // PEP-side deployment hook over TokenFacts (@spec
@@ -1674,7 +1972,7 @@ export class Pep {
         ? joinMapping.clientFor({ iss: token.credential?.issuer ?? "", clientId: token.clientId }, this.now())
         : token.clientId;
       delegateDepth =
-        depthClientId === undefined
+        depthClientId === undefined || loaded.view.client_id === undefined
           ? undefined
           : this.deps.masJoin.resolveDelegateDepth?.(
               { id: propagated.id, issuer: propagated.issuer },
@@ -1705,14 +2003,33 @@ export class Pep {
 
     // @spec resource-access#resource-matching (#1276, D447, D457): "Before
     // matching authority, the resource server establishes the operation's
-    // target". From the tool's trusted contract only: never an entry, the
-    // token's audience, or an argument (an agent-supplied `operation_target`
-    // or `resource` argument is never read). No one target, no operation:
-    // refused before any decision request, with no fallback to this
-    // resource's metadata identifier.
-    const established = this.operationTargetFor(tool);
+    // target". From the tool's trusted contract and, where that contract is
+    // argument-derived, the one validated argument it names: never an entry,
+    // the token's audience, or any other argument (an agent-supplied
+    // `operation_target` or `resource` argument is never read). No one
+    // target, no operation: refused before any decision request, with no
+    // fallback to this resource's metadata identifier.
+    const established = this.operationTargetFor(tool, args);
     if (!established.ok) return await this.refuse(boundary, token, "operation_target_unresolvable", mapping.action, view);
-    const operationTarget = established.target;
+    // @spec authzen#context-resource-contract, runtime#resource-contract
+    // (#249, D553): the contract this operation is performed under, from the
+    // presented credential's applicable entry resolved against this
+    // resource's own declarations, never from an argument. "A PEP that finds
+    // before requesting a decision that the reference does not resolve
+    // refuses there, with a pre-decision Refusal Record." The operation is
+    // then normalized, and performed, under that contract's Operation
+    // Profile.
+    const selected = this.selectContract(
+      tool,
+      listed,
+      established.target,
+      args,
+      (token.mission !== undefined ? token.credentialAuthority : carriedAuthority) ?? [],
+    );
+    if (!selected.ok) return await this.refuse(boundary, token, "resource_contract_unresolvable", mapping.action, view);
+    mapping = selected.mapping;
+    const operationTarget = selected.target;
+    const performedContract = selected.contract;
 
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
@@ -1721,6 +2038,8 @@ export class Pep {
     let amount: { amount: string; currency: string } | undefined;
     let resourceObj: TargetObject = { type: "server", id: CANONICAL_RESOURCE };
     let listVendorScope: string[] | undefined;
+    /** A bound list read's members, when a bound it could rely on reads a member fact (#1266). */
+    let listMemberFacts: CollectionMemberFacts[] | undefined;
     let targetVendorId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
@@ -1822,7 +2141,24 @@ export class Pep {
         if (requestedVendorId === undefined) return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view);
       }
       const scope = deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds());
-      listEffective = buildListEffectiveParams({ action: mapping.action, resource: operationTarget, ...scope });
+      // @spec resource-access#initial-common-constraints (#1266): a bound that
+      // reads a member fact (issuance, tenant, classification) is evaluated
+      // for every invoice the read returns, with that invoice's own facts.
+      // The members ride the decision request and bind into the digest, so a
+      // member added, removed or changed before release is a mismatch.
+      const reliedOn = [
+        ...view.authority_set,
+        ...((token.mission !== undefined ? token.credentialAuthority : carriedAuthority) ?? []),
+      ];
+      if (readsMemberFacts(reliedOn, operationTarget, mapping.action)) {
+        listMemberFacts = listMembers(this.deps.payments, scope.vendor_scope, requestedVendorId);
+      }
+      listEffective = buildListEffectiveParams({
+        action: mapping.action,
+        resource: operationTarget,
+        ...scope,
+        ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+      });
       listDigest = parameterDigest(listEffective);
       // The RESULT-SET filter (server.ts's execute()) is a SEPARATE,
       // additional authorization-enforcement control, not the binding itself:
@@ -1833,7 +2169,14 @@ export class Pep {
         // A named vendor_id binds through the SAME vendor-constraint check
         // every invoice-scoped action here uses (out-of-scope -> denied
         // out_of_authority at the FGA step below, same as get_invoice).
-        resourceObj = { type: "vendor", id: requestedVendorId, properties: { vendor_id: requestedVendorId } };
+        resourceObj = {
+          type: "vendor",
+          id: requestedVendorId,
+          properties: {
+            vendor_id: requestedVendorId,
+            ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+          },
+        };
       } else {
         // Bulk form: bind the RESULT SET to the normalized scope, the
         // entry's own allowlist (never the unconstrained store) or, for an
@@ -1861,7 +2204,11 @@ export class Pep {
         resourceObj = {
           type: "vendor",
           id: representative,
-          properties: { vendor_id: representative, vendor_ids: scope.vendor_scope },
+          properties: {
+            vendor_id: representative,
+            vendor_ids: scope.vendor_scope,
+            ...(listMemberFacts !== undefined ? { members: listMemberFacts } : {}),
+          },
         };
       }
     }
@@ -1893,6 +2240,9 @@ export class Pep {
           ? ((resourceObj.properties?.vendor_ids as readonly string[] | undefined) ?? [resourceObj.id])
           : []) as readonly string[],
       ...(amount ? { amount } : {}),
+      // @spec resource-access#resource-contract (#249): an entry carrying a
+      // reference covers the operation only performed under exactly it.
+      ...(performedContract !== undefined ? { resourceContract: performedContract } : {}),
       // @spec resource-access#rs-enforcement (#1266): the facts the
       // implemented Common Constraints read, as this PEP established them
       // above (the same values the decision request carries).
@@ -1911,6 +2261,9 @@ export class Pep {
         ...(recipients ? { recipients } : {}),
         tool,
       },
+      // @spec resource-access#initial-common-constraints (#1266): a bound list
+      // read's members, each evaluated with its own facts.
+      ...(listMemberFacts !== undefined ? { constraintMembers: memberConstraintFacts(listMemberFacts) } : {}),
     };
     if (token.mission !== undefined) {
       const covered =
@@ -1964,7 +2317,14 @@ export class Pep {
       // target, never against the audience or `type`/`id`.
       resource: {
         ...resourceObj,
-        properties: { ...resourceObj.properties, audience: boundary, operation_target: operationTarget },
+        properties: {
+          ...resourceObj.properties,
+          audience: boundary,
+          operation_target: operationTarget,
+          // @spec authzen#context-resource-contract (#249): REQUIRED where a
+          // contract applies: the one this PEP will perform under.
+          ...(performedContract !== undefined ? { resource_contract: performedContract } : {}),
+        },
       },
       // @spec authzen#parameter-digest `idempotency_key` (#917): forwarded
       // exactly as the caller supplied it, distinct from `parameter_digest`.
@@ -2267,9 +2627,13 @@ export class Pep {
       // that is the family's monotonic trust ratchet (@spec containment);
       // handing back "here's how to ask again" for a deliberately narrowed
       // capability would contradict restore-only-via-Expansion.
+      // #818 slice 4b review: and only where absence from this view means
+      // never granted (view-source.ts); an effective projection that cannot
+      // prove the committed set gets the refusal with no hint.
       if (
         decision.context.denial_reason === "out_of_authority" &&
-        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action))
+        !view.authority_set.some((e) => entryMatchesTarget(e, operationTarget) && e.actions.includes(mapping.action)) &&
+        absenceMeansNeverGranted(this.deps.viewSource, view)
       ) {
         result.insufficient_authorization = buildInsufficientAuthorization([
           { type: "mission_resource_access", resource: operationTarget, actions: [mapping.action] },
@@ -2301,6 +2665,12 @@ export class Pep {
       audience: boundary,
       ...(permitVersion !== undefined ? { boundaryVersion: permitVersion } : {}),
       operationTarget,
+      operationArguments: Object.freeze({ ...args }),
+      ...(performedContract !== undefined ? { performedContract } : {}),
+      ...(conditionsOf(decision)?.resource_contract !== undefined
+        ? { permitResourceContract: conditionsOf(decision)?.resource_contract }
+        : {}),
+      ...(selected.profile !== undefined ? { operationProfile: selected.profile } : {}),
       action: mapping.action,
       tool,
       // @spec authzen#response-context — the permit's own bound conditions,
@@ -2360,17 +2730,16 @@ export class Pep {
             id: missionAnchor.id,
             issuer: missionAnchor.issuer,
           });
+          // #818 (D560): a remote source's read has lapsed; no observation.
+          if (!loaded && this.deps.viewSource) return undefined;
           const entry = loaded?.view.authority_set.find(
             (e) => entryMatchesTarget(e, listEffective.resource) && e.actions.includes(listEffective.action),
           );
           const requestedVendorId =
             listEffective.vendor_scope_source === "requested" ? listEffective.vendor_scope[0] : undefined;
-          const fresh = buildListEffectiveParams({
-            action: listEffective.action,
-            resource: listEffective.resource,
-            ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
-          });
-          return parameterDigest(fresh);
+          return parameterDigest(
+            this.freshListParams(listEffective, deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds())),
+          );
         }
         return undefined;
       },
@@ -2610,8 +2979,11 @@ export class Pep {
       const now = this.now();
       const error = check.failure(attempt, {
         now,
-        profile: this.toolAction(attempt.tool),
+        // @spec runtime#resource-contract rule 3 (#249): the crossing under
+        // the contract the attempt performs under, re-read at each use.
+        profile: this.toolActionUnder(attempt.tool, attempt.operationProfile),
         boundary: this.boundaryContext.establish(now),
+        contracts: this.contracts(),
       });
       if (error !== undefined) return error;
     }
@@ -2691,22 +3063,51 @@ export class Pep {
       id: attempt.mission.id,
       issuer: attempt.mission.issuer,
     });
+    // #818 (D560): with a remote view source, a read that has lapsed leaves
+    // the scope's Mission binding unestablishable at use (@spec
+    // authzen#failure-condition-coverage `target_drift`), never recomputed
+    // from no view at all.
+    if (!loaded && this.deps.viewSource) {
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
+    }
     const entry = loaded?.view.authority_set.find(
       (e) => entryMatchesTarget(e, effective.resource) && e.actions.includes(effective.action),
     );
     const requestedVendorId =
       effective.vendor_scope_source === "requested" ? effective.vendor_scope[0] : undefined;
-    const fresh = buildListEffectiveParams({
-      action: effective.action,
-      resource: effective.resource,
-      ...deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
-    });
+    const fresh = this.freshListParams(
+      effective,
+      deriveVendorScope(entry, requestedVendorId, this.deps.payments.invoiceVendorIds()),
+    );
     const freshDigest = parameterDigest(fresh);
     if (freshDigest !== expectedDigest) {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
     return { ok: true, effectiveParameterDigest: freshDigest };
+  }
+
+  /**
+   * @spec runtime#read-binding, resource-access#initial-common-constraints
+   * (#1266): a bound list read's normal form recomputed from current state,
+   * over `scope` as just re-derived. The members are recomputed from the
+   * store exactly when the decided form bound them, so a member added,
+   * removed or changed since the decision changes the digest.
+   */
+  private freshListParams(
+    decided: ListEffectiveParams,
+    scope: { vendor_scope: string[]; vendor_scope_source: "requested" | "entry" | "all" },
+  ): ListEffectiveParams {
+    const requestedVendorId = decided.vendor_scope_source === "requested" ? decided.vendor_scope[0] : undefined;
+    return buildListEffectiveParams({
+      action: decided.action,
+      resource: decided.resource,
+      ...scope,
+      ...(decided.members !== undefined
+        ? { members: listMembers(this.deps.payments, scope.vendor_scope, requestedVendorId) }
+        : {}),
+    });
   }
 
   /**

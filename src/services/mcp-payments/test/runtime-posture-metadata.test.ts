@@ -124,13 +124,22 @@ describe("runtime posture publication on the resource metadata surface", () => {
       });
     } finally { await listener.close(); }
 
-    /** The shipped statement, edited: its reversible-write declarations are [schedule, cancel, class default]. */
-    const edited = (edit: (decls: Array<Record<string, unknown>>, scope: { pep_locations: string[] }) => void) => {
+    /**
+     * The shipped statement, edited: its reversible-write declarations are
+     * [schedule, cancel, class default], and its execution capabilities start
+     * with the schedule's (#817), which an edit keeps consistent so the loader
+     * does not refuse the statement before the server's own check runs.
+     */
+    const edited = (
+      edit: (decls: Array<Record<string, unknown>>, scope: { pep_locations: string[] }) => void,
+      editCapabilities?: (caps: Array<Record<string, unknown>>) => void,
+    ) => {
       const s = structuredClone(RUNTIME_POSTURE) as unknown as {
         mediated_scope: { pep_locations: string[] };
-        extensions: { reversible_write_idempotency: Array<Record<string, unknown>> };
+        extensions: { reversible_write_idempotency: Array<Record<string, unknown>>; execution_capabilities: Array<Record<string, unknown>> };
       };
       edit(s.extensions.reversible_write_idempotency, s.mediated_scope);
+      editCapabilities?.(s.extensions.execution_capabilities);
       return s;
     };
     // Uncovered: without the class default the hold has no control.
@@ -156,7 +165,14 @@ describe("runtime posture publication on the resource metadata surface", () => {
       serve({ statement: edited((d) => void d.splice(2, 1, { ...d[0], mediated_class_or_scope: "consequential_write" })) }),
     ).toThrow("hold_transfer is served on the unkeyed write path, which does not enforce validity_window_plus_idempotency_key");
     expect(() =>
-      serve({ statement: edited((d) => void d.splice(0, 1, { ...d[2], mediated_class_or_scope: "payments:payment.schedule" })) }),
+      serve({
+        statement: edited(
+          (d) => void d.splice(0, 1, { ...d[2], mediated_class_or_scope: "payments:payment.schedule" }),
+          (caps) => {
+            if (caps[0]) caps[0].durable_idempotency = "none";
+          },
+        ),
+      }),
     ).toThrow("schedule_payment is served on the keyed write path, which does not enforce single_use_decision_identifier");
     store.close();
   });

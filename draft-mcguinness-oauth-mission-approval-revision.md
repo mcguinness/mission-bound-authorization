@@ -31,7 +31,7 @@ normative:
   RFC6749:
   RFC9126:
   RFC9396:
-  I-D.draft-gerber-oauth-deferred-token-response:
+  I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -122,7 +122,7 @@ profile") moves the issuance profile's approval event
 ({{I-D.draft-mcguinness-oauth-mission}}) to an asynchronous review
 surface: the client submits a proposed Mission, receives the deferred
 substrate's pending response
-({{I-D.draft-gerber-oauth-deferred-token-response}}), and polls until
+({{I-D.draft-ietf-oauth-deferred-token-response}}), and polls until
 the approval resolves. When a reviewer will grant only a narrowed subset
 of the proposal, that profile resolves to `access_denied` and the client
 submits a fresh, narrower Mission Intent.
@@ -156,7 +156,7 @@ substrate's ordinary pending responses ({{revision-required}}).
 
 Like the deferred approval profile, this document tracks the
 in-progress deferred substrate
-({{I-D.draft-gerber-oauth-deferred-token-response}}) and will track it
+({{I-D.draft-ietf-oauth-deferred-token-response}}) and will track it
 as it evolves.
 
 # Relationship to the Deferred Approval Profile {#profile-relationship}
@@ -164,7 +164,7 @@ as it evolves.
 This document depends normatively on the deferred approval profile
 {{I-D.draft-mcguinness-oauth-mission-approval}}, on the issuance
 profile {{I-D.draft-mcguinness-oauth-mission}}, and on the deferred
-substrate {{I-D.draft-gerber-oauth-deferred-token-response}}, and is
+substrate {{I-D.draft-ietf-oauth-deferred-token-response}}, and is
 not implementable alone. It reuses, without restating:
 
 - the deferred approval profile's sequencing of the approval event and
@@ -204,7 +204,7 @@ This profile extends the deferred approval profile's state machine
 
 Client cancellation under the deferred substrate moves a `pending` or
 `revision_required` approval to `cancelled`
-({{I-D.draft-gerber-oauth-deferred-token-response}}). `approved`,
+({{I-D.draft-ietf-oauth-deferred-token-response}}). `approved`,
 `denied`, `expired`, and `cancelled` are the terminal states. Resolving
 a deferred approval and replacing its proposed Mission with a revision
 are atomic with respect to each other: a concurrent approval of a
@@ -316,7 +316,7 @@ it revises to drive that narrowing.
 
 The `mission_revision_handle` is not a token, grant, or continuation
 handle. It is sender-constrained to the same key as the `deferral_code`
-({{I-D.draft-gerber-oauth-deferred-token-response}}). Like the
+({{I-D.draft-ietf-oauth-deferred-token-response}}). Like the
 `deferral_code`, the `mission_revision_handle` is pending-request state,
 not a grant ({{I-D.draft-mcguinness-oauth-mission-approval}}).
 
@@ -344,7 +344,7 @@ Mission Issuer:
    client MUST demonstrate possession of the same key that constrains
    the `deferral_code` under the deferred substrate's
    sender-constraint rules
-   ({{I-D.draft-gerber-oauth-deferred-token-response}}). The client
+   ({{I-D.draft-ietf-oauth-deferred-token-response}}). The client
    demonstrates possession by presenting a DPoP proof on the PAR
    request keyed to that key or, where the deferred approval is bound
    by client authentication, by authenticating with the same
@@ -583,7 +583,7 @@ over that object as that profile computes it:
   "disclosure": {
     "uri": "https://as.example.com/consent-evidence/disc_7nR3w",
     "consent_rendering_hash":
-      "sha-256:zfzbAIawIpHyTut1FbyCQLqR0s_jbr-l7rbAUIje5L8"
+      "sha-256:3pgTrle6nKWp7a5UKN4DDiRcVGXYJzWyf8wb9Sbh8lI"
   },
   "evidence_envelope": {
     "format": "jws-compact",
@@ -717,7 +717,7 @@ history under the same controls as other approval-event records.
 
 This document registers one value in the OAuth Completion Mode Values
 registry established by the deferred substrate
-({{I-D.draft-gerber-oauth-deferred-token-response}}):
+({{I-D.draft-ietf-oauth-deferred-token-response}}):
 
 - `mission_revisable`: Change Controller IETF; Reference this document,
   {{revisable}}.

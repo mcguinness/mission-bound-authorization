@@ -1,12 +1,50 @@
-# payments-runtime-profile-v9
+# payments-runtime-profile-v13
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v9`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v13`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v13** (#249, D553): adds optional resource contract enforcement. The
+  payments resource contract (Resource contract, below) is declared in the
+  Enforcement Scope Statement's `extensions.resource_contracts`. An entry
+  that carries `resource_contract` is enforced under exactly the contract it
+  references: the decision request gains
+  `resource.properties.resource_contract`, a permit gains
+  `conditions.resource_contract`, and a reference that does not resolve is
+  refused before the decision request (`resource_contract_unresolvable`) or
+  suppressed at use. The shipped declaration requires a reference for no
+  operation, so an entry without one keeps its decision bytes from v12.
+  Making a reference mandatory, and migrating approvals that carry none,
+  are separate work (#249).
+
+- **v12** (#1266): a `list_invoices` read evaluates each invoice it
+  returns against the issuance, tenant and classification bounds, with
+  that invoice's own facts, instead of refusing for want of a single
+  object. When an entry the read could rely on carries one of those
+  bounds, the decision request gains `resource.properties.members` and
+  the list form gains `members`, so `parameter_digest` binds each member's
+  facts. One member outside a bound, or without the fact, refuses the
+  whole read. `mission_constraints_supported` also names
+  `requires_action_approval` and `terminal_when`, which the resource
+  enforces through its PDP. Every other read's decision bytes are
+  unchanged from v11.
+
+- **v11** (#1276): the PDP and the PEP match a `prefix` entry, in the
+  Mission and in the credential, with the Resource Access matcher: after
+  the one URI normalization, at a path-segment boundary, the target's
+  query excluded from the path comparison only. A v10 component refused
+  every `prefix` entry. Decision bytes for `exact` entries are unchanged
+  from v10.
+- **v10** (#817): declares each operation's execution capabilities
+  (below), published as the Enforcement Scope Statement's
+  `extensions.execution_capabilities`. No operation asserts exactly-once
+  execution or the enforced Evaluation-Context Binding property, and the
+  loader refuses a statement that asserts either without the capability
+  it rests on. Decision bytes are unchanged from v9.
 
 - **v9** (#853, D487): the canonical resource URI is the enforcement
   boundary identifier the Enforcement Scope Statement declares for
@@ -112,19 +150,31 @@ Matching). Actions and constraints determine the permitted operations
 within that service. Each `TOOL_ACTIONS` row declares the contract
 (`target: { service: <canonical resource URI> }`); it is never assumed.
 
-- The PEP establishes the target from that declaration alone, before any
+- The PEP establishes the target from that declaration, before any
   decision request: never from an entry, the token's audience, or an
-  argument. A tool with no declaration, a finer contract form (one deriving
-  the target from arguments, which this profile does not support), or
-  declarations naming different targets is refused
+  argument the contract does not name. Every shipped tool declares the
+  service-level contract. A deployment's Operation Profile may instead
+  declare the argument-derived invoice contract for an invoice-scoped tool
+  (`PAYMENTS_INVOICE_CONTRACT`,
+  `{ template: "<canonical resource URI>/invoices/{invoice_id}" }`), whose
+  target is the invoice the validated `invoice_id` names, percent-encoded
+  as one path segment; the PEP derives it again from the executing
+  arguments before every release. A tool with no declaration, an
+  unsupported contract form, a missing, list-valued or malformed argument,
+  or declarations naming different targets is refused
   `operation_target_unresolvable` (`target_unresolvable`) before any
   decision request.
 - The decision request carries the target as
   `resource.properties.operation_target`. The PDP matches the credential's
   and the Mission's entries against it with the Resource Access matcher:
-  literal `exact` only; a `prefix` entry or an unrecognized
-  `resource_match` provides no authority, and a credential carrying one is
-  refused. `audience` is the boundary identifier, the token-validation
+  `exact` is literal; `prefix` normalizes both URIs (scheme and host case,
+  default port, percent-encoding case, unreserved octets, dot-segments)
+  and admits the base and each target beneath it at a path-segment
+  boundary, so `<canonical resource URI>/invoices` covers
+  `.../invoices/inv-1` but not `.../invoices-archive/inv-1`. An
+  unrecognized `resource_match`, or a `prefix` entry whose `resource`
+  carries a query or names no `//` authority, provides no authority, and a
+  credential carrying one is refused. `audience` is the boundary identifier, the token-validation
   and decision-channel scope input, and an audience alias never rewrites
   an entry or the target; `resource.type` and `resource.id` stay
   Resource-policy object identity.
@@ -134,6 +184,82 @@ within that service. Each `TOOL_ACTIONS` row declares the contract
 - Before every release the PEP re-establishes the target from the live
   profile; a target that moved or can no longer be established suppresses
   the permit with `target_drift` and no effect.
+
+## Resource contract
+
+The payments resource adopts resource contracts (Runtime, Resource Contract;
+Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
+Statement's `extensions.resource_contracts`: one contract, `id`
+`https://payments.example/contracts/payments`, served for the canonical
+resource URI under `resource_match: prefix` (so a finer target beneath the
+service, such as an argument-derived invoice target, is covered), with one
+version, `2026-10-20`, in state `current`.
+
+- **Contract material.** The version's document assembles, for each tool:
+  its action identifier and phase, its minimum action class, its
+  operation-target rule (`service`), the parameter form whose fields enter
+  `parameter_digest` (the invoice form, the list form, or none), whether it
+  takes an idempotency key, and its catalog capability (`tool_id` and the
+  extracted-definition `source_digest`). It names, per constraint key, the
+  fact the resource reads, and the Operation Profile version it assembles,
+  `operation_profile: payments-runtime-profile-v13`. It overrides none of
+  those definitions. Resource policy, Mission state, entitlements,
+  revocation and resolved resource facts are not contract material.
+- **Digest and immutability.** The version's `digest` is `sha-256:` and the
+  unpadded base64url SHA-256 of the JCS serialization of the document. The
+  statement's loader recomputes it and refuses a declaration whose document
+  does not hash to it, so a changed document is never served under an
+  unchanged reference. A change to any listed material is published as a new
+  version; a test pins the shipped document against `TOOL_ACTIONS` and the
+  served catalog.
+- **States.** A version is `current`, `superseded` (with a declared
+  `retained_until`, after which it no longer resolves) or `retired` (it
+  resolves for nothing; its digest may be kept). At most one version is
+  current.
+- **Optional enforcement.** `requires_reference` is empty: the shipped
+  deployment enforces a reference an entry carries and requires one for no
+  operation, so an approval that committed none keeps working and never
+  gains one. Mandatory adoption is not shipped: listing operations there
+  makes a reference required for them (the Authorization Server then
+  records the current reference at approval, and the PEP refuses an entry
+  without one), and moving the payments deployment to it, with a migration
+  for unpinned approvals, is separate work (#249).
+- **Approval.** The Authorization Server reads the same declaration. A
+  proposed `resource_contract` that is not the current reference for the
+  entry's `resource`, or whose version does not define every action the
+  entry lists, is refused `invalid_authorization_details` at PAR intake and
+  at approval. `authority_hash` commits the reference, derivation and
+  projection preserve it exactly, and template consent refuses an entry
+  carrying one.
+- **Decision request.** The PEP establishes the reference from the presented
+  credential's entries that name the action, never from an argument, and
+  resolves it against its own declaration for the operation's target. One
+  that does not resolve (unknown, retired, a changed digest, superseded past
+  its retention), and none where a reference is required, is refused before
+  any decision request with a Refusal Record whose `denial_reason` is
+  `resource_contract_unresolvable`. The request carries the reference it will
+  perform under as `resource.properties.resource_contract`, and a credential
+  entry carrying a reference covers the operation only under exactly it.
+- **Retained versions.** A superseded version is performed under the
+  Operation Profile its document names (`PepDeps.retainedOperationProfiles`):
+  the operation target and the effective parameters, so `parameter_digest`,
+  follow that profile, never the current one.
+- **Decision.** The PDP resolves the reference under its own declaration and
+  denies `resource_contract_drift` unless it resolves and equals an applicable
+  Mission entry's and a credential entry's. An action-bound approval binds
+  the reference through its approved Resource (the PDP-signed denial binding,
+  or the challenged operation on the transaction-token path), and one bound
+  to another reference is denied `out_of_scope`. A permit carries
+  `conditions.resource_contract`.
+- **Use.** Before every release the PEP re-resolves the permit's reference
+  against its current declaration and compares it with the contract it
+  performs under. A difference, an unresolvable reference, or a missing
+  condition suppresses the effect with Execution Evidence `suppressed` /
+  `resource_contract_unresolvable`, ahead of the phase and target checks.
+- **Transaction authorization.** The Transaction Authorization Server reads
+  the Operation Profile version from the challenged entry's reference, which
+  must resolve at admission and again at completion, or records the
+  resource's current version at admission; never from the entry's `type`.
 
 ## Money
 
@@ -169,7 +295,8 @@ merely because the mapped action's own schema declares one.
 
 The resource enforces these Mission Resource Access Common Constraints
 (#1266), and `mission_constraints_supported` names exactly them beside
-`max_amount` and `vendors`. Each is evaluated through the shared
+`max_amount`, `vendors`, `requires_action_approval` and `terminal_when`.
+Each is evaluated through the shared
 semantics in `packages/mission-core/src/common-constraints.ts`, on the
 matched Mission entry (the PDP) and on the credential's own entries (the
 PEP before any decision, and the PDP), against facts the PEP reads from
@@ -181,11 +308,11 @@ and the PDP refuses a matched entry that carries one.
 
 | Key | Authoritative fact | Decision request member | Targets without the fact |
 |---|---|---|---|
-| `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive | `resource.properties.issued_at` | `list_invoices` and `lookup_vendor` (no single invoice), and an invoice with no `issued_at`: refused |
-| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string | `resource.properties.tenant` | `list_invoices` (no single owner), and a vendor record naming no tenant: refused |
+| `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive; for `list_invoices`, each invoice returned | `resource.properties.issued_at`; for `list_invoices`, each member's `issued_at` in `resource.properties.members` | `lookup_vendor` (a vendor record has no issuance instant), an invoice with no `issued_at`, and a `list_invoices` read with such a member or with no member: refused |
+| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string; for `list_invoices`, each invoice returned | `resource.properties.tenant`; for `list_invoices`, each member's `tenant` in `resource.properties.members` | a vendor record naming no tenant, and a `list_invoices` read with a member whose vendor names none or with no member: refused |
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
 | `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
-| `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named | `resource.properties.data_classification` | `list_invoices` and `lookup_vendor` (no single labeled record), and an invoice with no label: refused |
+| `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named; for `list_invoices`, each invoice returned | `resource.properties.data_classification`; for `list_invoices`, each member's `data_classification` in `resource.properties.members` | `lookup_vendor` (a vendor record has no label), an invoice with no label, and a `list_invoices` read with such a member or with no member: refused |
 | `allowed_tools` | the tool this PEP dispatched the operation to, from its Operation Profile (`TOOL_ACTIONS`), compared as an exact string; the phases of `payments:payment.execute` are distinct tools | `action.properties.tool` (on every decision request) | none: every operation has a dispatched tool |
 
 `time_window` is also enforced after the decision: the PDP caps the
@@ -312,9 +439,21 @@ digested as above.
 - A bulk form with an empty `vendor_scope` names a placeholder vendor
   object instead. An entry's empty allowlist refuses it, and no stored
   entitlement names it, so the deployment's Resource policy refuses it.
+- When a Mission or credential entry naming the target and the action
+  carries `resource_issued_after`, `resource_issued_before`, `tenant` or
+  `data_classification`, the list form gains `members`: every invoice the
+  read returns, sorted by `id`, each with its record's `issued_at` and
+  `classification` (as `data_classification`) and its vendor's `tenant`,
+  where the records hold them. The decision request carries the same list
+  as `resource.properties.members`, and the PEP's credential bound and the
+  PDP evaluate those bounds for each member with its own facts. A member
+  outside a bound or without the fact refuses the whole read with
+  `parameter_violation`, as an empty `members` does under such a bound; no
+  response carries the members that pass.
 - Before release the PEP recomputes the list form from the current Mission
   and store; a difference is `parameter_mismatch`. Execution returns only
-  invoices whose vendor is in `vendor_scope`.
+  invoices whose vendor is in `vendor_scope` and, when the form carries
+  `members`, only those invoices.
 
 ## Resource policy
 
@@ -468,6 +607,57 @@ Residuals:
 - Freshness at decision time (D33): `payments:payment.execute` requires
   the introspection immediate check; `payments:remittance.send` uses
   permit-within-bound; reads ride the Status List cache.
+
+## Execution capabilities (#817)
+
+The Operation Profile's execution capabilities (runtime Execution
+Capabilities) for each operation with an effect, stated even where the
+answer is no. The Enforcement Scope Statement publishes them as
+`extensions.execution_capabilities`, one entry per operation and phase
+with its class. `loadRuntimePosture` refuses at load an entry that leaves
+an item unstated, names an idempotency holder the statement does not
+declare, or asserts a claim or a recovery no declared capability supports.
+The reads (`list_invoices`, `get_invoice`, `lookup_vendor`,
+`check_transfer`) release no effect and declare none.
+
+| Tool | Idempotency held by | Outcome lookup | Commit point | Unknown outcome |
+|---|---|---|---|---|
+| `schedule_payment` | PEP reservation | reservation row | the local transaction | lookup |
+| `cancel_scheduled_payment` | PEP reservation | reservation row | the local transaction | lookup |
+| `hold_transfer` | none | none | the response | held |
+| `execute_wire_transfer` | PDP claim | ledger entry | ledger acceptance | lookup |
+| `send_remittance_email` | PDP claim | outbox entry | outbox acceptance | lookup |
+
+- **Durable idempotency.** The wire and the notice rely on the PDP's
+  claim over (idempotency scope, `idempotency_key`) under the horizon
+  their `transaction_assurance` declaration publishes (604800 s); the
+  schedule writes rely on the PEP's reservation under its P7D retention
+  (Idempotency keys, above). A deliberately new operation carries a new
+  `idempotency_key`. The connectors' operation key omits it, so a new
+  identical wire or notice is refused `operation_already_claimed`, a new
+  wire for a settled invoice `already_settled`, a second schedule
+  `schedule_exists`, and a cancel with nothing left to cancel
+  `schedule_not_found`. The connectors also deduplicate on the operation
+  key, in memory only, so no resource holds durable idempotency of its
+  own and no operation asserts exactly-once execution.
+- **Conditional effect.** None. No operation carries a precondition to
+  its resource, so none can assert the enforced Evaluation-Context Binding
+  property; the reference claims that extension nowhere (#773).
+- **Outcome lookup.** The connectors answer, by the permit's
+  `evaluation_id`, whether a wire or a notice committed, and the declared
+  reconciler reads that answer. They hold it in memory, so a prior
+  process's effect is out of reach and its claim closes indeterminate
+  (`prior_process_outcomes`). A schedule write resolves from its
+  reservation row, committed with the schedule in one local transaction.
+  The simulated hold records nothing, and its unknown outcome is held.
+- **Cancellation.** Before the commit point, an expired execution lease or
+  a failed reverification suppresses a wire or a notice; nothing stops
+  either after it. `cancel_scheduled_payment` withdraws a schedule after
+  its commit as its own operation under its own Decision.
+- **Compensation.** None. A refund or a correcting notice would be a new
+  operation under its own authority (runtime compound actions).
+- **Claims.** Every entry asserts none. Recovery never executes an effect
+  again: no operation declares `resource_retransmission`.
 
 ## Evidence fields
 

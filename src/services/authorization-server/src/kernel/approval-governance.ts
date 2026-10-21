@@ -21,12 +21,34 @@ import { createHash, type KeyObject, verify } from "node:crypto";
 import type { ActivationPolicyRef } from "@mission/core";
 import { canonicalize, type JsonValue } from "@mission/core";
 import type { Database } from "@mission/store";
-import type { ApprovalBasisGovernedPolicy, MissionRecord } from "./types.js";
+import type { ApprovalBasis, ApprovalBasisGovernedPolicy, MissionRecord } from "./types.js";
 
-/** @spec approval-governance#envelope: the JWS protected `typ`. */
-export const AGR_JWS_TYP = "application/mission-approval-governance+jws";
-/** @spec approval-governance#envelope: the JWS protected `cty`. */
-export const AGR_JWS_CTY = "application/mission-approval-governance+json";
+/**
+ * @spec approval-governance#envelope: the JWS protected `typ` the issuer
+ * emits: the registered media type with `application/` omitted (Section 4.1.9
+ * of RFC 7515).
+ */
+export const AGR_JWS_TYP = "mission-approval-governance+jws";
+/** @spec approval-governance#envelope: the JWS protected `cty` the issuer emits (Section 4.1.10 of RFC 7515). */
+export const AGR_JWS_CTY = "mission-approval-governance+json";
+/** The registered media types the emitted `typ` and `cty` abbreviate. */
+const AGR_MEDIA_TYPE_JWS = "application/mission-approval-governance+jws";
+const AGR_MEDIA_TYPE_JSON = "application/mission-approval-governance+json";
+
+/**
+ * @spec approval-governance#envelope: whether a protected `typ` or `cty`
+ * names a registered media type, compared as Sections 4.1.9 and 4.1.10 of
+ * RFC 7515 direct: a value with no `/` reads as if `application/` were
+ * prepended, and type and subtype names compare case-insensitively. The
+ * Approval Governance media types define no parameter, so a value carrying
+ * one does not match. Only the comparison normalizes; nothing signed is
+ * rewritten.
+ */
+export function jwsMediaTypeMatches(value: unknown, mediaType: string): boolean {
+  if (typeof value !== "string" || value.length === 0) return false;
+  const full = value.includes("/") ? value : `application/${value}`;
+  return full.toLowerCase() === mediaType.toLowerCase();
+}
 /** @spec approval-governance#envelope: the one `format` this document defines. */
 export const AGR_ENVELOPE_FORMAT = "jws-compact";
 
@@ -43,9 +65,42 @@ export interface AgrAssertion {
   kind: "human" | "service" | "policy";
   decision: "approve" | "deny";
   decided_at: string;
-  /** The provenance under which this principal was authorized to decide. */
+  /**
+   * The provenance under which this principal was authorized to decide: a
+   * {@link HumanAuthority}, {@link PolicyAuthority} or {@link ServiceAuthority}
+   * by `kind` ({@link assertAssertionAuthority}).
+   */
   authority: Record<string, JsonValue>;
   reason?: string;
+}
+
+/** @spec approval-governance#assertion-authority: a `human` assertion's `authority`. */
+export interface HumanAuthority {
+  /** RFC 3339: when the principal authenticated for this decision. */
+  auth_time: string;
+  /** REQUIRED when the issuer possesses it at the approval event. */
+  acr?: string;
+  /** REQUIRED when the issuer possesses them at the approval event. */
+  amr?: string[];
+}
+
+/** @spec approval-governance#assertion-authority: a `policy` assertion's `authority`. */
+export interface PolicyAuthority {
+  policy_id: string;
+  version: string;
+  /** RFC 3339: the human approval of this exact version, from retained, authenticated governance state. */
+  approved_at: string;
+  /** Corroborated from the same state, never the asserting party's word; equals the assertion's `principal`. */
+  approved_by?: AgrPrincipal;
+}
+
+/** @spec approval-governance#assertion-authority: a `service` assertion's `authority`. */
+export interface ServiceAuthority {
+  logic_id: string;
+  logic_version: string;
+  /** REQUIRED where a model produced the decision, with `model_version`. */
+  model_id?: string;
+  model_version?: string;
 }
 
 /** @spec approval-governance#record: every member except the integrity `envelope`. */
@@ -103,7 +158,7 @@ export function approvalGovernanceRecordDigest(record: ApprovalGovernanceRecord)
 /**
  * @spec approval-governance#envelope: the verifier's steps, in order, refusing
  * on any failure: resolve the signing key from the protected `kid`; verify the
- * signature and the exact protected `typ`/`cty`; recompute the JCS canonical
+ * signature and the protected `typ`/`cty` as media types (either form); recompute the JCS canonical
  * bytes of the record with `envelope` removed; require byte-for-byte equality
  * with the decoded payload; validate the mission binding against the Mission
  * record the record is retained with. An unsupported `format` is refused, never
@@ -133,7 +188,7 @@ export function verifyApprovalGovernanceRecord(
   if (header.alg !== "ES256") throw new ApprovalGovernanceError("unsupported alg");
   const signed = verify("sha256", Buffer.from(`${h}.${p}`, "utf8"), { key, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url"));
   if (!signed) throw new ApprovalGovernanceError("signature does not verify");
-  if (header.typ !== AGR_JWS_TYP || header.cty !== AGR_JWS_CTY) {
+  if (!jwsMediaTypeMatches(header.typ, AGR_MEDIA_TYPE_JWS) || !jwsMediaTypeMatches(header.cty, AGR_MEDIA_TYPE_JSON)) {
     throw new ApprovalGovernanceError("protected typ and cty are not the Approval Governance pair");
   }
   // Steps 3 and 4: the payload is exactly the canonical record minus envelope.
@@ -164,15 +219,124 @@ export function assertMissionBinding(record: UnsignedApprovalGovernanceRecord, m
 
 const samePrincipal = (a: AgrPrincipal, b: AgrPrincipal): boolean => a.iss === b.iss && a.sub === b.sub;
 
+/** Strict RFC 3339 date-time shape, checked before `Date.parse` (the lifecycle endpoint's rule). */
+const RFC3339_DATE_TIME = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$/;
+const isInstant = (v: unknown): boolean =>
+  typeof v === "string" && RFC3339_DATE_TIME.test(v) && !Number.isNaN(Date.parse(v));
+const isText = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+/**
+ * @spec approval-governance#assertion-authority: an assertion's `authority` is
+ * the typed object its `kind` fixes. human: `auth_time` (RFC 3339), with `acr`
+ * (a string) and `amr` (an array of strings) where present. policy:
+ * `policy_id`, `version` and `approved_at` (RFC 3339), and an `approved_by`
+ * that, where present, equals the assertion's `principal` (corroborated
+ * provenance, never the asserting party's word). service: `logic_id` and
+ * `logic_version`, with `model_version` wherever `model_id` (a model produced
+ * the decision). A record carrying any other shape does not commit.
+ */
+export function assertAssertionAuthority(a: AgrAssertion): void {
+  const fail = (why: string): never => {
+    throw new ApprovalGovernanceError(`assertion ${a.assertion_id} authority: ${why}`);
+  };
+  const au = a.authority as Record<string, unknown> | null;
+  if (au === null || typeof au !== "object" || Array.isArray(au)) fail("is not an object");
+  const m = au as Record<string, unknown>;
+  switch (a.kind) {
+    case "human":
+      if (!isInstant(m.auth_time)) fail("auth_time is not an RFC 3339 timestamp");
+      if (m.acr !== undefined && !isText(m.acr)) fail("acr is not a string");
+      if (m.amr !== undefined && !(Array.isArray(m.amr) && m.amr.every(isText))) fail("amr is not an array of strings");
+      break;
+    case "policy": {
+      if (!isText(m.policy_id) || !isText(m.version)) fail("policy_id and version are required strings");
+      if (!isInstant(m.approved_at)) fail("approved_at is not an RFC 3339 timestamp");
+      const by = m.approved_by as AgrPrincipal | undefined;
+      if (by !== undefined && !(by !== null && typeof by === "object" && samePrincipal(by, a.principal))) {
+        fail("approved_by is not the assertion's principal");
+      }
+      break;
+    }
+    case "service":
+      if (!isText(m.logic_id) || !isText(m.logic_version)) fail("logic_id and logic_version are required strings");
+      if (m.model_id !== undefined && !(isText(m.model_id) && isText(m.model_version))) {
+        fail("model_id and model_version are required together");
+      }
+      if (m.model_version !== undefined && !isText(m.model_version)) fail("model_version is not a string");
+      break;
+    default:
+      fail(`kind ${String((a as { kind: unknown }).kind)} is not human, policy or service`);
+  }
+}
+
+/**
+ * @spec approval-governance#accountable-assertion: the accountable-approver
+ * rule for the Mission's approval basis. Under `direct`, EXACTLY ONE `human`
+ * assertion of `consent_principal` approves; under `governed_policy`, EXACTLY
+ * ONE `policy` assertion of `consent_principal` that names the deciding policy
+ * approves; any other named standing-consent basis satisfies the rule through
+ * its authenticated `approval_basis`, so no assertion is required (and none is
+ * fabricated). A `service` assertion never satisfies the rule. Returns the
+ * accountable assertion, or undefined where the basis has none; a record that
+ * fails the rule does not commit.
+ */
+export function assertAccountableApprover(
+  record: UnsignedApprovalGovernanceRecord,
+  basis: ApprovalBasis,
+): AgrAssertion | undefined {
+  const approvesAs = (a: AgrAssertion, kind: "human" | "policy"): boolean =>
+    a.kind === kind && a.decision === "approve" && samePrincipal(a.principal, basis.consent_principal);
+  let kind: "human" | "policy";
+  let matching: AgrAssertion[];
+  switch (basis.type) {
+    case "direct":
+      kind = "human";
+      matching = record.assertions.filter((a) => approvesAs(a, kind));
+      break;
+    case "governed_policy": {
+      kind = "policy";
+      const deciding = basis.activation.policy;
+      matching = record.assertions.filter(
+        (a) => approvesAs(a, kind) && a.authority.policy_id === deciding.id && a.authority.version === deciding.version,
+      );
+      break;
+    }
+    default:
+      return undefined;
+  }
+  if (matching.length !== 1) {
+    throw new ApprovalGovernanceError(
+      `${basis.type} record: exactly one approve assertion of kind ${kind} must match consent_principal`,
+    );
+  }
+  return matching[0];
+}
+
+/**
+ * @spec approval-governance#record-members: `evaluation.contributing` lists
+ * the assertions the evaluation counted toward the rule the approval
+ * satisfied. Every entry names an assertion the record carries, and a `deny`
+ * assertion is never among them: a blocking denial leaves no committed record,
+ * and one that did not block is recorded but not counted.
+ */
+export function assertContributing(record: UnsignedApprovalGovernanceRecord): void {
+  const byId = new Map(record.assertions.map((a) => [a.assertion_id, a]));
+  for (const id of record.evaluation.contributing) {
+    const a = byId.get(id);
+    if (!a) throw new ApprovalGovernanceError(`evaluation counts an assertion the record does not carry: ${id}`);
+    if (a.decision === "deny") throw new ApprovalGovernanceError(`evaluation counts deny assertion ${id} as contributing`);
+  }
+}
+
 /**
  * @spec approval-governance#assertion-requirements,
- * approval-governance#governed-policy-record: the accountable-approver rule
- * under `governed_policy`: EXACTLY ONE assertion matches
- * `approval_basis.consent_principal` with an `approve` decision, and it is a
- * `policy` assertion whose `authority` names the deciding policy's `id` and
- * `version` with `approved_at` equal to `approval_basis.approved_at`. The
+ * approval-governance#governed-policy-record: the record under
+ * `governed_policy`. Its accountable assertion
+ * ({@link assertAccountableApprover}) is the one `policy` assertion of
+ * `approval_basis.consent_principal` that names the deciding policy's `id` and
+ * `version`, with `approved_at` equal to `approval_basis.approved_at`. The
  * record's `approval_policy` is the consented root, the evaluation approved,
- * and it relies on the accountable assertion. A record failing any of these
+ * and it counts the accountable assertion. A record failing any of these
  * does not commit.
  */
 export function assertGovernedPolicyRecord(
@@ -184,32 +348,31 @@ export function assertGovernedPolicyRecord(
   };
   const ids = record.assertions.map((a) => a.assertion_id);
   if (new Set(ids).size !== ids.length) fail("assertion_id values are not unique");
+  for (const x of record.assertions) {
+    try {
+      assertAssertionAuthority(x);
+    } catch (e) {
+      fail((e as Error).message);
+    }
+  }
   if (record.approval_policy.digest !== basis.root_commitment) {
     fail("approval_policy.digest is not the consented root's commitment");
   }
   if (record.evaluation.decision !== "approved") fail("evaluation did not approve");
-  if (!record.evaluation.contributing.every((id) => ids.includes(id))) {
-    fail("evaluation relies on an assertion the record does not carry");
+  try {
+    assertContributing(record);
+  } catch (e) {
+    fail((e as Error).message);
   }
-  const accountable = record.assertions.filter(
-    (a) => samePrincipal(a.principal, basis.consent_principal) && a.decision === "approve",
-  );
-  if (accountable.length !== 1) fail("exactly one approve assertion must match consent_principal");
-  const [a] = accountable as [AgrAssertion];
-  if (a.kind !== "policy") fail("the accountable assertion is not a policy assertion");
-  if (
-    a.authority.policy_id !== basis.adjudication.policy.id ||
-    a.authority.version !== basis.adjudication.policy.version ||
-    a.authority.policy_id !== basis.activation.policy.id ||
-    a.authority.version !== basis.activation.policy.version
-  ) {
+  const a = assertAccountableApprover(record, basis) as AgrAssertion;
+  if (a.authority.policy_id !== basis.adjudication.policy.id || a.authority.version !== basis.adjudication.policy.version) {
     fail("the accountable assertion does not name the deciding policy");
   }
   if (a.authority.approved_at !== basis.approved_at) {
     fail("the accountable assertion's approved_at is not approval_basis.approved_at");
   }
   if (!record.evaluation.contributing.includes(a.assertion_id)) {
-    fail("the evaluation does not rely on the accountable assertion");
+    fail("the evaluation does not count the accountable assertion");
   }
 }
 

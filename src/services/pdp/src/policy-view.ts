@@ -14,6 +14,7 @@ import {
   type CapabilitySourceBinding,
   computeAnchor,
   type JsonValue,
+  type ResourceContractRef,
   type TerminalWhenCondition,
 } from "@mission/core";
 import type { TupleKey } from "@openfga/sdk";
@@ -47,6 +48,14 @@ export interface AuthorityEntry {
    * `capability_drift` denial reason are a separate change.
    */
   capability_sources?: CapabilitySourceBinding[];
+  /**
+   * @spec resource-access#resource-contract (#249, D553): the contract the
+   * entry was approved under, materialized exactly as the kernel committed
+   * it (it rides inside `authority_hash`, so the shared `@mission/core`
+   * type). The decision requires it to resolve and to equal the request's
+   * `resource.properties.resource_contract` (evaluate.ts step 5').
+   */
+  resource_contract?: ResourceContractRef;
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];
@@ -141,9 +150,14 @@ export interface MissionView {
    * and client identifier. Not a `policyViewId` input (below): the join
    * compares these against the credential outside the pinned commitment, so
    * adding them here does not perturb an existing pinned hash.
+   *
+   * Optional (#818): a view read from a Mission Status response carries them
+   * only where the issuer's Join Disclosure released them to this PDP. A
+   * join against a view without both fails `mission_binding_failed`
+   * (`resolveBaselineJoin`); a Mission-bound decision never reads them.
    */
-  subject: { iss: string; sub: string };
-  client_id: string;
+  subject?: { iss: string; sub: string };
+  client_id?: string;
   /**
    * The containment DELTA (what was removed), not a filtered authority set:
    * carrying the delta lets the PDP distinguish never-approved

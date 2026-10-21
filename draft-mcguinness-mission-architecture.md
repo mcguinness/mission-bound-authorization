@@ -778,8 +778,7 @@ these additions safe: a consumer treats every state other than the
 exact value `active`, including one it does not recognize, as
 non-active, so an unrecognized state fails safe, and a reason it does
 not recognize still leaves the Mission terminated (the OAuth
-binding's Mission Lifecycle and Gating and Mission Termination
-sections).
+binding's Mission Lifecycle and Mission Termination sections).
 
 AAuth has its own counterparts to the OAuth commitment and lifecycle.
 Its exact-byte `s256` commits the private approved mission blob. The
@@ -1778,9 +1777,10 @@ Owner:
 
 Projection preserves authority across the boundary rather than narrowing
 it to a sub-actor, which makes it a distinct verb from Delegate.
-Downstream revocation latency is the local token lifetime plus, where
-the Resource AS checks no Mission state when it mints from the
-projection grant, that grant's remaining lifetime ({{validity-model}}).
+Downstream revocation latency is bounded by the projection grant's
+remaining lifetime: a local token minted from the grant expires no
+later than the grant, and the grant establishes no renewal authority
+at the Resource AS ({{validity-model}}).
 
 ## Continue
 
@@ -1894,8 +1894,8 @@ not baseline AAuth Mission Context properties.
 **Only `active` permits**:
 : Issuance, refresh, and every new positive governance decision require
   the exact state `active`; every other state, including an unrecognized
-  one, fails safe (the OAuth binding's Mission Lifecycle and Gating
-  section). A state-aware consumer relies only while it observes
+  one, fails safe (the OAuth binding's Mission Lifecycle and Issuance
+  Gating sections). A state-aware consumer relies only while it observes
   `active`; a state-unaware consumer retains the bounded
   materialized-credential residual ({{validity-model}}). In AAuth, only
   PS operations are structurally gated; agent identity and
@@ -3989,8 +3989,8 @@ Lifecycle-Gated Authorization capability):
    permits reliance, and lost state never fails open).
 
 For the OAuth binding, the same coverage includes (the OAuth
-binding's Mission Lifecycle and Gating and grant-binding rules,
-{{I-D.draft-mcguinness-oauth-mission}}):
+binding's Issuance Gating and Binding the Mission to the Grant
+sections, {{I-D.draft-mcguinness-oauth-mission}}):
 
 1. refresh while the Mission is active succeeds within policy and
    is refused after a terminal transition; and
@@ -4318,6 +4318,12 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Project verb bounds downstream revocation latency by the
+  projection grant's remaining lifetime, matching Cross-Domain
+  Projection: a local token expires no later than the grant, and the
+  grant establishes no renewal authority at the Resource AS (#1180).
+  No profile's requirements change.
 
 - The Standing-Agent Pattern states its two paths: a charter whose
   policy-approved Child Missions go to distinct worker clients, and

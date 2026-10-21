@@ -338,6 +338,18 @@
       ]
     },
     {
+      "name": "governed-policy-activation",
+      "label": "baseline-q3/variant/governed-policy-activation",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_UDgovqrOTIZyJgTEp0DjopwF2gRseSfT"
+      },
+      "differs_by": "Activated under `governed_policy`: Alice approved the policy `q3-close-agent` version 3 at 2026-10-30T16:00:00Z, and the policy activates the client's proposal of the baseline task at 08:00:00 with no fresh human decision.",
+      "drafts": [
+        "approval-governance"
+      ]
+    },
+    {
       "name": "metered-consumption",
       "label": "baseline-q3/variant/metered-consumption",
       "mission": {
@@ -431,6 +443,18 @@
       "differs_by": "A deferred, revised approval: the Approver refuses `journal-entries.write`, so the Mission holds only the invoice-read entry.",
       "drafts": [
         "approval-revision"
+      ]
+    },
+    {
+      "name": "ceiling-drawdown",
+      "label": "baseline-q3/variant/ceiling-drawdown",
+      "mission": {
+        "issuer": "https://as.example.com",
+        "id": "msn_pasG9An7Ivj9cOdd3RqWWonuaLAbDHtM"
+      },
+      "differs_by": "Holds only the invoice-read entry, with Alice's consent to an authority ceiling (the baseline's two entries plus `invoices.write`) under drawdown policy `q3-reconcile-drawdown` version 1. A policy-adjudicated drawdown at 09:15:00 adds the journal-write entry and supersedes it with `msn_uG1kkHwXSlzUs4OKztGGk5FOmBnkpTOb`, whose request at 09:18:00 for a 2,000 USD cap falls back to a fresh human approval.",
+      "drafts": [
+        "progressive"
       ]
     }
   ]

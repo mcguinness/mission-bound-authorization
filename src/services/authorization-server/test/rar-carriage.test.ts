@@ -326,8 +326,7 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     });
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
-    // The spec deliberately pins no error code for this rejection (mirrors the
-    // AAuth missionless-request rule); this implementation chose invalid_request.
+    // Authority Proposal names invalid_request for this rejection.
     expect(body.error).toBe("invalid_request");
   });
 
@@ -386,23 +385,42 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
     expect(((await res.json()) as { error: string }).error).toBe("invalid_request");
   });
 
-  // @spec resource-access#resource-matching (#1264, D446): this authorization
-  // server implements exact matching only, so a `prefix` entry is refused at
-  // intake, before any interaction or Mission, never rebuilt as an exact one.
-  it("refuses a proposal entry naming resource_match prefix before any interaction, creating no Mission", async () => {
-    const before = as.kernel.allMissions().length;
-    const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
-      login_hint: "alice",
-      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
-      authorization_details: JSON.stringify([
-        { type: "mission_resource_access", resource: RESOURCE, resource_match: "prefix", actions: ["payments:invoice.read"] },
-      ]),
-    });
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { error: string; error_description?: string };
-    expect(body.error).toBe("invalid_authorization_details");
-    expect(body.error_description).toMatch(/resource_match "prefix"/);
-    expect(as.kernel.allMissions().length).toBe(before);
+  // @spec resource-access#entry-validation, resource-access#resource-access-type
+  // (#1276): "A `resource` value under `prefix` MUST NOT carry a query or
+  // fragment component; the authorization server refuses such an entry with
+  // the `invalid_authorization_details` error code." A well-formed `prefix`
+  // entry is admitted at intake, and an unrecognized value is refused.
+  it("refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted", async () => {
+    const QUERIED = `${RESOURCE}?tenant=a`;
+    const variants: Array<[string, Record<string, unknown>, RegExp]> = [
+      ["query", { resource: QUERIED, resource_match: "prefix" }, /carries a query component/],
+      ["fragment", { resource: `${RESOURCE}#invoices`, resource_match: "prefix" }, /not an RFC 3986 absolute URI/],
+      ["unrecognized", { resource: RESOURCE, resource_match: "glob" }, /resource_match "glob" is not a value Resource Access defines/],
+    ];
+    for (const [label, over, description] of variants) {
+      const before = as.kernel.allMissions().length;
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        // The queried resource is also an Intent target, so only the prefix rule refuses it.
+        mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, target_resources: [RESOURCE, QUERIED] } }),
+        authorization_details: JSON.stringify([{ type: "mission_resource_access", actions: ["payments:invoice.read"], ...over }]),
+      });
+      expect(res.status, label).toBe(400);
+      const body = (await res.json()) as { error: string; error_description?: string };
+      expect(body.error, label).toBe("invalid_authorization_details");
+      expect(body.error_description, label).toMatch(description);
+      expect(as.kernel.allMissions().length, label).toBe(before);
+    }
+    // Control: the same queried resource as an exact entry, and a prefix entry
+    // naming the Intent's target without a query, are admitted.
+    for (const over of [{ resource: QUERIED }, { resource: RESOURCE, resource_match: "prefix" }]) {
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, target_resources: [RESOURCE, QUERIED] } }),
+        authorization_details: JSON.stringify([{ type: "mission_resource_access", actions: ["payments:invoice.read"], ...over }]),
+      });
+      expect(res.status, JSON.stringify(over)).toBe(201);
+    }
   });
 
   it("accepts an explicit resource_match exact, the default (positive control for the prefix refusal)", async () => {
@@ -436,6 +454,29 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
       expect(res.status, JSON.stringify(locations)).toBe(400);
       expect(body.error).toBe("invalid_authorization_details");
       expect(body.error_description).toMatch(/locations/);
+      expect(body.request_uri).toBeUndefined();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
+  // @spec mission#subset (#1399, D538): a top-level member outside the type's
+  // own members and capability_sources is refused at intake by presence,
+  // before any interaction or Mission, never admitted and then dropped by
+  // derivation's rebuild.
+  it("refuses a proposal entry carrying an unsupported member, whatever its value, before any interaction, creating no Mission", async () => {
+    for (const invoice_ids of [["INV-7"], [], null, ""]) {
+      const before = as.kernel.allMissions().length;
+      const res = await pushPar("ap-agent", "ap-agent-auth", agentKey, {
+        login_hint: "alice",
+        mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+        authorization_details: JSON.stringify([
+          { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], invoice_ids },
+        ]),
+      });
+      const body = (await res.json()) as { error: string; error_description?: string; request_uri?: string };
+      expect(res.status, JSON.stringify(invoice_ids)).toBe(400);
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toMatch(/invoice_ids is not a supported member/);
       expect(body.request_uri).toBeUndefined();
       expect(as.kernel.allMissions().length).toBe(before);
     }

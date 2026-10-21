@@ -25,12 +25,16 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
+import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
   type ActivationPolicyRef,
   authorityHash,
+  compareAmounts,
   computeAnchor,
   intentHash,
   isSubsetSetIgnoringCapabilitySources,
+  isValidAmount,
   type JsonValue,
   proposalHash,
 } from "@mission/core";
@@ -42,6 +46,7 @@ import {
 } from "./activation-policy.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entryDigest } from "./discharge.js";
+import { restrictedSinceAdjudication } from "./expansion.js";
 import { childActorCeilingOrigin, inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { ceilingOrigin, inheritOrigins } from "./eligibility-provenance.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
@@ -98,28 +103,57 @@ export function ceilingConsentOf(decision: Record<string, unknown>): CeilingCons
   };
 }
 
+/**
+ * @spec progressive#progressive-authorization: the disclosure line that states
+ * how in-ceiling expansion is adjudicated under the offered ceiling.
+ */
+export function ceilingAdjudicationLine(offer: CeilingConsent): string {
+  return offer.drawdown_policy
+    ? `Within this ceiling, expansions of this Mission are adjudicated by drawdown policy ${offer.drawdown_policy.id} version ${offer.drawdown_policy.version}, without a further approval from you. Authority beyond the ceiling, and the classes this deployment reserves for a fresh approval, still require your approval.`
+    : "No drawdown policy is offered with this ceiling: every expansion of this Mission still requires your approval.";
+}
+
+/**
+ * @spec progressive#progressive-authorization: whether a decision consents
+ * exactly the offered ceiling and drawdown policy, member for member.
+ */
+export function consentsOffer(consent: CeilingConsent, offer: CeilingConsent | undefined): boolean {
+  if (!offer) return false;
+  const policy = (c: CeilingConsent) =>
+    c.drawdown_policy === undefined ? null : { id: c.drawdown_policy.id, version: c.drawdown_policy.version };
+  return (
+    isDeepStrictEqual(consent.authority_ceiling, offer.authority_ceiling) &&
+    isDeepStrictEqual(policy(consent), policy(offer))
+  );
+}
+
 /** The ceiling members a Mission record carries. */
 export interface MissionCeiling {
   authority_ceiling: AuthorityEntry[];
   drawdown_policy?: ActivationPolicyRef;
   ceiling_hash: string;
+  /** The latest explicitly consented ceiling's `ceiling_hash` (#1468); absent on records stored before it. */
+  ceiling_consent_hash?: string;
   ceiling_consented_at: string;
+  /**
+   * @spec progressive#ceiling-drawdown-basis, progressive#ceiling-reconsent
+   * (#1413): the Approver who consented this ceiling, the `consent_principal`
+   * of every drawdown under it. Kept with the ceiling because a
+   * human-approved successor's own Approver need not be the ceiling's.
+   * Absent on a record stored before #1413; its `approval_basis` then names it.
+   */
+  ceiling_consent_principal?: { iss: string; sub: string };
   drawdown_count: number;
 }
 
 /**
- * @spec progressive#progressive-authorization: validate a consented ceiling
- * and commit it. Each entry has an Authority Set entry's shape; the drawdown
- * policy reference is minted over the snapshot this issuer holds, and a
- * policy it does not hold at that version is refused: the approval cannot
- * commit content the issuer cannot evaluate.
+ * @spec progressive#progressive-authorization: the consented ceiling's
+ * entries, each with an Authority Set entry's shape. A malformed ceiling is
+ * refused `invalid_request`. The approval decision reads them before any
+ * write, to hold the ceiling to the approval-authentication floor
+ * (mission#approval-authentication, #1255).
  */
-export function consentCeiling(
-  iss: string,
-  registry: ActivationPolicyRegistry | undefined,
-  consent: CeilingConsent,
-  consentedAt: string,
-): MissionCeiling {
+export function consentedCeilingEntries(consent: CeilingConsent): AuthorityEntry[] {
   const entries = consent.authority_ceiling as unknown;
   if (!Array.isArray(entries) || entries.length === 0) {
     throw new IntentError("invalid_request", "authority_ceiling must be a non-empty array");
@@ -133,25 +167,108 @@ export function consentCeiling(
     }
     resources.push(resource);
   }
-  const ceiling = validateAuthorityProposal(JSON.stringify(entries), resources);
-  let drawdownPolicy: ActivationPolicyRef | undefined;
-  if (consent.drawdown_policy !== undefined) {
-    const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };
-    drawdownPolicy =
-      typeof id === "string" && typeof version === "string"
-        ? mintActivationPolicyRef(iss, registry, id, version)
-        : undefined;
-    if (!drawdownPolicy) {
-      throw new IntentError("invalid_request", "drawdown_policy names no policy this issuer holds at that version");
-    }
+  return validateAuthorityProposal(JSON.stringify(entries), resources);
+}
+
+/**
+ * @spec progressive#progressive-authorization: the consented drawdown
+ * policy's reference, minted over the snapshot this issuer holds, or
+ * undefined when the consent names none. A policy this issuer does not hold
+ * at that version is refused `invalid_request`: the approval cannot commit
+ * content the issuer cannot evaluate. The approval decision checks it before
+ * any write, with the ceiling's entries (#1255).
+ */
+export function consentedDrawdownPolicy(
+  iss: string,
+  registry: ActivationPolicyRegistry | undefined,
+  consent: CeilingConsent,
+): ActivationPolicyRef | undefined {
+  if (consent.drawdown_policy === undefined) return undefined;
+  const { id, version } = (consent.drawdown_policy ?? {}) as { id?: unknown; version?: unknown };
+  const drawdownPolicy =
+    typeof id === "string" && typeof version === "string"
+      ? mintActivationPolicyRef(iss, registry, id, version)
+      : undefined;
+  if (!drawdownPolicy) {
+    throw new IntentError("invalid_request", "drawdown_policy names no policy this issuer holds at that version");
   }
+  return drawdownPolicy;
+}
+
+/**
+ * @spec progressive#progressive-authorization: validate a consented ceiling
+ * and commit it. Each entry has an Authority Set entry's shape, and the
+ * drawdown policy reference is minted by {@link consentedDrawdownPolicy}.
+ */
+export function consentCeiling(
+  iss: string,
+  registry: ActivationPolicyRegistry | undefined,
+  consent: CeilingConsent,
+  consentedAt: string,
+  consentPrincipal?: { iss: string; sub: string },
+): MissionCeiling {
+  const ceiling = consentedCeilingEntries(consent);
+  const drawdownPolicy = consentedDrawdownPolicy(iss, registry, consent);
+  const hash = ceilingHash(iss, ceiling, drawdownPolicy);
   return {
     authority_ceiling: ceiling,
     ...(drawdownPolicy ? { drawdown_policy: drawdownPolicy } : {}),
-    ceiling_hash: ceilingHash(iss, ceiling, drawdownPolicy),
+    ceiling_hash: hash,
+    // @spec progressive#progressive-authorization (#1468): at a consent the
+    // consented and effective commitments are equal.
+    ceiling_consent_hash: hash,
     ceiling_consented_at: consentedAt,
+    ...(consentPrincipal ? { ceiling_consent_principal: consentPrincipal } : {}),
     drawdown_count: 0,
   };
+}
+
+/** A ceiling re-consented at a fresh human approval: committed, with that approval's consent instant. */
+export type ReconsentedCeiling = Omit<MissionCeiling, "drawdown_count">;
+
+/**
+ * @spec progressive#ceiling-reconsent (#1413): the ceiling members of a
+ * successor a fresh human approval creates. Approving the successor's
+ * authority and re-consenting the ceiling are separate decisions: without an
+ * explicit re-consent the predecessor's members and consent instant carry
+ * unchanged, so authority approved beyond the ceiling stays outside it; a
+ * re-consent replaces them. The chain's cumulative drawdown count continues
+ * either way, and its restrictions are read through `predecessor` links.
+ */
+export function successorCeilingMembers(
+  predecessor: MissionRecord,
+  reconsent?: ReconsentedCeiling,
+): Partial<MissionCeiling> {
+  const drawdownCount = predecessor.drawdown_count ?? 0;
+  if (reconsent) return { ...reconsent, drawdown_count: drawdownCount };
+  if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) return {};
+  return {
+    authority_ceiling: predecessor.authority_ceiling,
+    ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
+    ceiling_hash: predecessor.ceiling_hash,
+    ceiling_consent_hash: predecessor.ceiling_consent_hash ?? predecessor.ceiling_hash,
+    ceiling_consented_at: predecessor.ceiling_consented_at,
+    ceiling_consent_principal: ceilingConsentPrincipal(predecessor),
+    drawdown_count: drawdownCount,
+  };
+}
+
+/**
+ * @spec progressive#ceiling-drawdown-basis (#1468): the commitment of the
+ * ceiling a human last explicitly consented. A record stored before #1468
+ * lacks the member; its ceiling was never narrowed, so `ceiling_hash` is it.
+ */
+export function ceilingConsentHash(record: MissionRecord): string | undefined {
+  return record.ceiling_consent_hash ?? record.ceiling_hash;
+}
+
+/**
+ * @spec progressive#ceiling-drawdown-basis: the Approver who consented the
+ * record's ceiling. A record stored before #1413 lacks the member; its chain
+ * then had no human-approved successor, so its `approval_basis` names them.
+ */
+export function ceilingConsentPrincipal(record: MissionRecord): { iss: string; sub: string } {
+  return record.ceiling_consent_principal ?? record.approval_basis.consent_principal;
 }
 
 /** The stored form of a record's ceiling members, or null when it carries none. */
@@ -161,7 +278,9 @@ export function serializeCeiling(record: MissionRecord): string | null {
     authority_ceiling: record.authority_ceiling,
     ...(record.drawdown_policy ? { drawdown_policy: record.drawdown_policy } : {}),
     ceiling_hash: record.ceiling_hash,
+    ...(record.ceiling_consent_hash ? { ceiling_consent_hash: record.ceiling_consent_hash } : {}),
     ceiling_consented_at: record.ceiling_consented_at,
+    ...(record.ceiling_consent_principal ? { ceiling_consent_principal: record.ceiling_consent_principal } : {}),
     drawdown_count: record.drawdown_count ?? 0,
   };
   return JSON.stringify(stored);
@@ -213,12 +332,74 @@ export interface ProgressiveDrawdownOptions {
   actionClasses: Readonly<Record<string, RuntimeActionClass>>;
   /** Actions that satisfy the runtime profile's external-communication predicate. */
   externalCommunicationActions?: readonly string[];
+  /**
+   * @spec progressive#ceiling-test (#1413): the deployment's policy for a
+   * request outside the consented ceiling, never adjudicated by policy.
+   * `fresh_approval` (the default) takes it to an ordinary, freshly approved
+   * expansion; `refuse` refuses it, and this reference carries
+   * `out_of_ceiling` on that refusal (a MAY, #1415).
+   */
+  beyondCeiling?: "fresh_approval" | "refuse";
+  /**
+   * @spec progressive#progressive-authorization (#1017): the ceiling and
+   * drawdown policy this deployment's approval surface offers beside a
+   * Mission, or undefined when it offers none. The approval page renders the
+   * offer, and a decision may consent only exactly that offer, so the
+   * consented ceiling is always one the Approver was shown. Client input
+   * never reaches it.
+   */
+  ceilingOffer?: (request: { clientId: string; intent: MissionIntent }) => CeilingConsent | undefined;
 }
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
-/** Validate the typed deployment configuration; throws on any malformed member. */
-export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions): ProgressiveDrawdownOptions {
+/**
+ * @spec progressive#drawdown-bounds, progressive#fresh-approval,
+ * progressive#ceiling-review (#1017): the typed option and the drawdown policy
+ * snapshots a deployment's published Progressive section states, so the AS
+ * enforces exactly what the Mission Deployment Profile publishes. A snapshot's
+ * content is the policy's per-drawdown bound, review cadence and optional
+ * retirement list, in that order.
+ */
+export function progressiveFromProfile(profile: ProgressiveProfile): {
+  options: ProgressiveDrawdownOptions;
+  policies: Record<string, RegisteredActivationPolicy>;
+} {
+  const policies: Record<string, RegisteredActivationPolicy> = {};
+  for (const p of profile.drawdown_policies) {
+    policies[p.id] = {
+      version: p.version,
+      content_type: "application/json",
+      content: JSON.stringify({
+        max_added_actions: p.max_added_actions,
+        ceiling_review_cadence_s: p.ceiling_review_cadence_s,
+        ...(p.retire_undrawn_actions ? { retire_undrawn_actions: p.retire_undrawn_actions } : {}),
+      }),
+    };
+  }
+  return {
+    options: {
+      chainRateBound: {
+        maxDrawdowns: profile.chain_rate_bound.max_drawdowns,
+        windowSeconds: profile.chain_rate_bound.window_seconds,
+      },
+      actionClasses: profile.action_classes,
+      externalCommunicationActions: profile.external_communication_actions,
+      beyondCeiling: profile.beyond_ceiling,
+    },
+    policies,
+  };
+}
+
+/**
+ * Validate the typed deployment configuration; throws on any malformed member,
+ * and on a mapping that disagrees with the approval-authentication floor
+ * ({@link assertDrawdownClassesMeetApprovalFloor}).
+ */
+export function validateProgressiveDrawdownOptions(
+  o: ProgressiveDrawdownOptions,
+  approvalFloor: ApprovalFloorPolicy,
+): ProgressiveDrawdownOptions {
   if (!isPositiveInteger(o?.chainRateBound?.maxDrawdowns) || !isPositiveInteger(o.chainRateBound.windowSeconds)) {
     throw new Error("progressive chainRateBound needs positive integer maxDrawdowns and windowSeconds");
   }
@@ -233,7 +414,44 @@ export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions
   if (o.externalCommunicationActions !== undefined && !o.externalCommunicationActions.every((a) => typeof a === "string")) {
     throw new Error("progressive externalCommunicationActions must be action identifiers");
   }
+  if (o.beyondCeiling !== undefined && o.beyondCeiling !== "fresh_approval" && o.beyondCeiling !== "refuse") {
+    throw new Error("progressive beyondCeiling must be fresh_approval or refuse");
+  }
+  if (o.ceilingOffer !== undefined && typeof o.ceilingOffer !== "function") {
+    throw new Error("progressive ceilingOffer must be a function of the request");
+  }
+  assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
+}
+
+/**
+ * @spec progressive#in-ceiling-expansion, mission#approval-authentication
+ * (#1255): the drawdown's published mapping agrees with the
+ * approval-authentication floor's classification. An action the floor
+ * classifies, at any resource, in a class some floor `applies_to` must not map
+ * in `actionClasses` to a class outside the fresh-approval set, or a drawdown
+ * would grant by policy alone authority whose approval the floor guards.
+ * `actionClasses` is keyed by action alone, so one floor-invoking
+ * classification of the action is enough to refuse. An action with no
+ * `actionClasses` entry needs nothing here: its drawdown falls back
+ * (`unclassified_action`). Throws, so the deployment does not start.
+ */
+export function assertDrawdownClassesMeetApprovalFloor(
+  o: ProgressiveDrawdownOptions,
+  approvalFloor: ApprovalFloorPolicy,
+): void {
+  const invoking = new Set<string>(approvalFloor.floors.flatMap((f) => f.applies_to));
+  for (const entry of approvalFloor.classification) {
+    for (const [action, floorClass] of Object.entries(entry.actions)) {
+      if (!invoking.has(floorClass) || !Object.hasOwn(o.actionClasses, action)) continue;
+      const mapped = o.actionClasses[action] as RuntimeActionClass;
+      if (!FRESH_APPROVAL_CLASSES.has(mapped)) {
+        throw new Error(
+          `progressive actionClasses: ${action} maps to ${mapped}, which a drawdown grants by policy, but the approval-authentication floor ${approvalFloor.policy_id} classifies it ${floorClass} at ${entry.resource}, which invokes a floor`,
+        );
+      }
+    }
+  }
 }
 
 /**
@@ -247,6 +465,13 @@ export function validateProgressiveDrawdownOptions(o: ProgressiveDrawdownOptions
 export interface DrawdownPolicyRules {
   max_added_actions: number;
   ceiling_review_cadence_s: number;
+  /**
+   * @spec progressive#drawdown-successor (#1468): optional. Ceiling actions
+   * each policy-adjudicated successor retires from the ceiling it carries
+   * when it holds none of them: the policy narrows the effective ceiling,
+   * never the consent.
+   */
+  retire_undrawn_actions?: string[];
 }
 
 export function drawdownRulesOf(policy: RegisteredActivationPolicy): DrawdownPolicyRules | undefined {
@@ -258,9 +483,38 @@ export function drawdownRulesOf(policy: RegisteredActivationPolicy): DrawdownPol
     return undefined;
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
-  const { max_added_actions, ceiling_review_cadence_s } = parsed as Record<string, unknown>;
+  const { max_added_actions, ceiling_review_cadence_s, retire_undrawn_actions } = parsed as Record<string, unknown>;
   if (!isPositiveInteger(max_added_actions) || !isPositiveInteger(ceiling_review_cadence_s)) return undefined;
-  return { max_added_actions, ceiling_review_cadence_s };
+  if (retire_undrawn_actions === undefined) return { max_added_actions, ceiling_review_cadence_s };
+  if (!Array.isArray(retire_undrawn_actions) || !retire_undrawn_actions.every((a) => typeof a === "string")) {
+    return undefined;
+  }
+  return { max_added_actions, ceiling_review_cadence_s, retire_undrawn_actions: retire_undrawn_actions as string[] };
+}
+
+/**
+ * @spec progressive#drawdown-successor (#1468): the ceiling a
+ * policy-adjudicated successor carries. Each entry loses the retired actions
+ * the successor's Authority Set holds on no entry of the same type and
+ * resource; an entry left with no action leaves the ceiling. The same array
+ * when nothing is retired, so an unnarrowed ceiling keeps its hash.
+ */
+export function narrowedCeiling(
+  ceiling: AuthorityEntry[],
+  held: readonly AuthorityEntry[],
+  retire: readonly string[],
+): AuthorityEntry[] {
+  if (retire.length === 0) return ceiling;
+  const holds = (e: AuthorityEntry, action: string): boolean =>
+    held.some((h) => h.type === e.type && h.resource === e.resource && h.actions.includes(action));
+  let changed = false;
+  const out: AuthorityEntry[] = [];
+  for (const e of ceiling) {
+    const actions = e.actions.filter((a) => !retire.includes(a) || holds(e, a));
+    if (actions.length !== e.actions.length) changed = true;
+    if (actions.length > 0) out.push(actions.length === e.actions.length ? e : { ...e, actions });
+  }
+  return changed ? out : ceiling;
 }
 
 /** Why an in-ceiling drawdown falls back to a fresh human approval. */
@@ -275,6 +529,7 @@ export type DrawdownFallbackReason =
   | "cross_domain"
   | "live_children"
   | "restricted_overlap"
+  | "entire_remaining_ceiling"
   | "per_drawdown_bound"
   | "chain_rate_bound";
 
@@ -299,6 +554,57 @@ function widenedPairs(requested: readonly AuthorityEntry[], effective: readonly 
     }
   }
   return out;
+}
+
+/**
+ * @spec progressive#drawdown-bounds (#1414 review): some authority the
+ * ceiling grants is shown to lie outside the successor's set taken as a
+ * whole. A witness is a request one ceiling entry admits (one of its actions,
+ * one of its vendors or any vendor, its full `max_amount` or any amount) that
+ * no successor entry authorizes on those dimensions. Every other member is
+ * assumed covered, so authority split across successor entries on any
+ * dimension counts as held: a witness found is genuine, and one missed only
+ * falls back to a fresh human approval. No witness, the drawdown activates the
+ * entire remaining ceiling.
+ */
+export function ceilingAuthorityLeftUndrawn(
+  requested: readonly AuthorityEntry[],
+  ceiling: readonly AuthorityEntry[],
+): boolean {
+  for (const c of ceiling) {
+    const vendors = c.constraints?.vendors;
+    const vendorPoints: Array<string | undefined> = vendors?.length ? vendors : [undefined];
+    for (const action of c.actions) {
+      for (const vendor of vendorPoints) {
+        if (!requested.some((s) => authorizesPoint(s, c, action, vendor))) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether successor entry `s` authorizes the request at action `action`,
+ * vendor `vendor` (undefined: a vendor the ceiling entry leaves open) and the
+ * ceiling entry's own `max_amount` (absent: an unbounded amount).
+ */
+function authorizesPoint(
+  s: AuthorityEntry,
+  c: AuthorityEntry,
+  action: string,
+  vendor: string | undefined,
+): boolean {
+  if (s.type !== c.type || s.resource !== c.resource || !s.actions.includes(action)) return false;
+  const vendors = s.constraints?.vendors;
+  if (vendors && (vendor === undefined || !vendors.includes(vendor))) return false;
+  const sCap = s.constraints?.max_amount;
+  const cCap = c.constraints?.max_amount;
+  if (sCap) {
+    if (!cCap || sCap.currency !== cCap.currency) return false;
+    if (!isValidAmount(sCap.amount) || !isValidAmount(cCap.amount)) return false;
+    if (compareAmounts(sCap.amount, cCap.amount) < 0) return false;
+  }
+  return true;
 }
 
 /** The Missions of an expansion chain, from `missionId` back to its root. */
@@ -374,7 +680,8 @@ export function adjudicateDrawdown(
   if (!rules) return fallback("drawdown_policy_unusable");
   const nowMs = kernel.nowDate().getTime();
   // @spec progressive#ceiling-review: no policy adjudication for a chain whose
-  // most recent human approval of the ceiling is older than the cadence.
+  // ceiling consent, the initial consent or the latest re-consent, is older
+  // than the cadence.
   const consentedAt = Date.parse(predecessor.ceiling_consented_at ?? "");
   if (!Number.isFinite(consentedAt) || nowMs - consentedAt > rules.ceiling_review_cadence_s * 1000) {
     return fallback("ceiling_review_overdue");
@@ -396,6 +703,9 @@ export function adjudicateDrawdown(
   const chain = chainOf(kernel, predecessor.id);
   const restrictions = chainRestrictions(chain);
   if (requested.some((e) => restrictions.some((r) => overlaps(e, r)))) return fallback("restricted_overlap");
+  // @spec progressive#drawdown-bounds: never the entire remaining ceiling by
+  // policy; the final increment takes a fresh human approval.
+  if (!ceilingAuthorityLeftUndrawn(requested, ceiling)) return fallback("entire_remaining_ceiling");
   if (widened.length > rules.max_added_actions) return fallback("per_drawdown_bound");
   const windowStart = nowMs - options.chainRateBound.windowSeconds * 1000;
   const recent = chain.filter(
@@ -408,7 +718,7 @@ export function adjudicateDrawdown(
 /** A drawdown refused at its activating commit; nothing is created or superseded. */
 export class DrawdownRefusal extends Error {
   constructor(
-    readonly code: "derivations_exhausted" | "predecessor_not_active",
+    readonly code: "derivations_exhausted" | "predecessor_not_active" | "authority_restricted_since_approval",
     message: string,
   ) {
     super(message);
@@ -426,6 +736,8 @@ export interface CeilingDrawdownInput {
   activationActor: { iss: string; sub: string };
   /** The policy and the held snapshot {@link adjudicateDrawdown} verified. */
   policy: { ref: ActivationPolicyRef; snapshot: RegisteredActivationPolicy };
+  /** The predecessor's containment version and discharge-latch count as adjudicated. */
+  restrictionsAtAdjudication: { containment: number; discharge: number };
 }
 
 /**
@@ -461,6 +773,15 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   );
   if (!isSubsetSetIgnoringCapabilitySources(authoritySet, predecessor.authority_ceiling)) {
     throw new Error("ceiling drawdown successor is not within the consented ceiling");
+  }
+  // @spec expansion#reconciliation check 3, progressive#in-ceiling-expansion:
+  // in this atomic step, the successor's complete Authority Set overlaps no
+  // restriction of the predecessor that came after adjudication.
+  if (restrictedSinceAdjudication(predecessor, authoritySet, input.restrictionsAtAdjudication)) {
+    throw new DrawdownRefusal(
+      "authority_restricted_since_approval",
+      "the successor's authority came under a restriction of the predecessor after adjudication",
+    );
   }
   // @spec resource-access#delegate-eligibility: the drawdown keeps its own
   // derivation's origins and every obligation of the consented ceiling entries
@@ -510,12 +831,32 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   const approvalEventId = `cdd_${randomBytes(16).toString("base64url")}`;
   const approvalBasis: ApprovalBasis = {
     type: "ceiling_drawdown",
-    consent_principal: predecessor.approval_basis.consent_principal,
+    // @spec progressive#ceiling-drawdown-basis: the Approver who consented the
+    // ceiling, which after a human-approved successor need not be the
+    // predecessor's own Approver (#1413).
+    consent_principal: ceilingConsentPrincipal(predecessor),
     activation: { policy_id: input.policy.ref.id, policy_version: input.policy.ref.version },
     activation_actor: input.activationActor,
-    root_commitment: predecessor.ceiling_hash,
+    // @spec progressive#ceiling-drawdown-basis (#1438): the decision mechanism,
+    // the drawdown policy this adjudication evaluated.
+    adjudication: { kind: "policy", policy: { id: input.policy.ref.id, version: input.policy.ref.version } },
+    // @spec progressive#ceiling-drawdown-basis (#1468): the latest explicitly
+    // human-consented ceiling, never a hash a policy narrowing recomputed.
+    root_commitment: ceilingConsentHash(predecessor) as string,
     approved_at: predecessor.ceiling_consented_at,
   };
+  // @spec progressive#drawdown-successor (#1468): the policy may narrow the
+  // ceiling the successor carries, under a recomputed `ceiling_hash`; the
+  // consent commitment, its instant and its Approver carry unchanged.
+  const carried = narrowedCeiling(
+    predecessor.authority_ceiling,
+    authoritySet,
+    drawdownRulesOf(input.policy.snapshot)?.retire_undrawn_actions ?? [],
+  );
+  const carriedHash =
+    carried === predecessor.authority_ceiling
+      ? predecessor.ceiling_hash
+      : ceilingHash(predecessor.issuer, carried, predecessor.drawdown_policy);
   const id = newMissionId();
   const record: MissionRecord = {
     id,
@@ -544,11 +885,14 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
     grant_id: null,
     status_list_idx: null,
     predecessor: predecessor.id,
-    // @spec progressive#in-ceiling-expansion: carried unchanged, under the same `ceiling_hash`.
-    authority_ceiling: predecessor.authority_ceiling,
+    // @spec progressive#drawdown-successor: carried unchanged under the same
+    // `ceiling_hash`, or narrowed under a recomputed one.
+    authority_ceiling: carried,
     ...(predecessor.drawdown_policy ? { drawdown_policy: predecessor.drawdown_policy } : {}),
-    ceiling_hash: predecessor.ceiling_hash,
+    ceiling_hash: carriedHash,
+    ceiling_consent_hash: ceilingConsentHash(predecessor) as string,
     ceiling_consented_at: predecessor.ceiling_consented_at,
+    ceiling_consent_principal: ceilingConsentPrincipal(predecessor),
     // @spec progressive#audit-linkage: the chain's cumulative drawdown count.
     drawdown_count: (predecessor.drawdown_count ?? 0) + 1,
   };

@@ -35,9 +35,18 @@
  *  - An EMPTY matcher (`{}`, carrying neither `sub` nor `sub_profile`) asserts no
  *    eligibility and therefore matches nothing: a malformed config entry must not
  *    silently become allow-all.
+ *
+ * Intake, configuration load and derivation refuse a matcher carrying any
+ * member other than `sub` and `sub_profile`, carrying neither, or carrying an
+ * empty or non-string value (#1373, `delegateMatcherListViolation` in
+ * `@mission/core`). A record committed before those refusals can still hold
+ * one, so this predicate applies the same rule: such a matcher permits
+ * nothing, and the rest of its list still decides. A member this predicate
+ * cannot read is never dropped into a broader match.
  */
 
 import { parseSubProfile } from "@mission/actor-chain";
+import { delegateMatcherListViolation } from "@mission/core";
 import type { DelegateMatcher } from "./types.js";
 
 /** The actor being tested for delegation/child-creation eligibility. */
@@ -74,6 +83,9 @@ export function delegatePermitted(
   const asserted = new Set(parseSubProfile(candidate.assertedProfile));
   return matchers.some((m) => {
     if (m === null || typeof m !== "object" || Array.isArray(m)) return false;
+    // A malformed matcher (another member, neither member, or an empty or
+    // non-string value) permits nothing: the one matcher rule (#1373).
+    if (delegateMatcherListViolation([m], "allowed") !== undefined) return false;
     const hasSub = typeof m.sub === "string" && m.sub.length > 0;
     const hasProfile = typeof m.sub_profile === "string" && m.sub_profile.length > 0;
     // An empty matcher asserts no eligibility (never allow-all).

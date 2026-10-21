@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
+  delegateMatcherListViolation,
   entryWithinCeiling,
   isAuthorityEntry,
+  isSubsetEntry,
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
   narrowToCeiling,
+  resourceWithin,
+  SUPPORTED_ENTRY_MEMBERS,
+  unsupportedEntryMember,
 } from "../src/index.js";
 
 const entry: AuthorityEntry = {
@@ -89,6 +94,44 @@ describe("shared authority ceiling (#762)", () => {
       expect(narrowToCeiling([candidate as AuthorityEntry], [entry])).toEqual([]);
       expect(narrowToCeiling([entry], [candidate as AuthorityEntry])).toEqual([]);
     }
+  });
+});
+
+describe("the shared delegate-matcher rule (@spec resource-access#matching-allowed-delegates, #1373)", () => {
+  const MALFORMED: ReadonlyArray<readonly [unknown, string]> = [
+    [{ sub_profile: "ai_agent", org: "A" }, "m entries carry no member 'org'"],
+    [{}, "m entries must carry sub or sub_profile"],
+    [{ sub: "" }, "m.sub must not be empty"],
+    [{ sub_profile: "" }, "m.sub_profile must not be empty"],
+    [{ sub: 7 }, "m.sub must be a string"],
+    [{ sub: "actor", sub_profile: ["ai_agent"] }, "m.sub_profile must be a string"],
+    [null, "m entries must be objects"],
+  ];
+  const VALID = [
+    { sub: "actor" },
+    { sub_profile: "ai_agent" },
+    { sub: "actor", sub_profile: "ai_agent" },
+    { sub_profile: "ai_agent client_instance" },
+  ];
+  const lists = (matchers: unknown[]) => [
+    { ...entry, delegation: { max_depth: 1, allowed_delegates: matchers } },
+    { ...entry, delegation: { max_depth: 1, children: { allowed_child_actors: matchers } } },
+  ];
+
+  it("names each malformed matcher, and isAuthorityEntry refuses it in either list", () => {
+    for (const [matcher, violation] of MALFORMED) {
+      expect(delegateMatcherListViolation([{ sub: "actor" }, matcher], "m")).toBe(violation);
+      for (const candidate of lists([matcher])) {
+        expect(isAuthorityEntry(candidate), violation).toBe(false);
+      }
+    }
+    expect(delegateMatcherListViolation({ sub: "actor" }, "m")).toBe("m must be an array");
+  });
+
+  it("admits sub, sub_profile, both, and a multi-value sub_profile in either list", () => {
+    expect(delegateMatcherListViolation(VALID, "m")).toBeUndefined();
+    expect(delegateMatcherListViolation([], "m")).toBeUndefined();
+    for (const candidate of lists(VALID)) expect(isAuthorityEntry(candidate)).toBe(true);
   });
 });
 
@@ -201,5 +244,104 @@ describe("a foreign entry carrying locations is unsupported (@spec resource-acce
     expect(isAuthorityEntry(entry)).toBe(true);
     expect(isAuthorityEntry(bound)).toBe(true);
     expect(narrowToCeiling([bound], [entry])[0]).toBe(bound);
+  });
+});
+
+describe("a foreign entry carrying an unsupported member is unsupported (@spec mission#subset, #1399)", () => {
+  // A restriction-shaped member no specification defines for this type:
+  // dropped by a member-by-member rebuild, it would widen the entry.
+  const carrying = { ...entry, invoice_ids: ["INV-7"] } as AuthorityEntry;
+
+  it("SUPPORTED_ENTRY_MEMBERS is the type's own members, resource_contract included, and capability_sources", () => {
+    expect([...SUPPORTED_ENTRY_MEMBERS].sort()).toEqual([
+      "actions",
+      "capability_sources",
+      "constraints",
+      "delegation",
+      "resource",
+      "resource_contract",
+      "resource_match",
+      "type",
+    ]);
+  });
+
+  it("unsupportedEntryMember names a member outside the set by presence, whatever its value, and nothing for a supported entry", () => {
+    for (const value of [["INV-7"], [], null, "", { id: "INV-7" }]) {
+      expect(unsupportedEntryMember({ ...entry, invoice_ids: value })).toBe("invoice_ids");
+    }
+    expect(unsupportedEntryMember({ ...entry, locations: [] })).toBe("locations");
+    expect(unsupportedEntryMember(entry)).toBeUndefined();
+    expect(
+      unsupportedEntryMember({
+        ...entry,
+        resource_match: "exact",
+        capability_sources: [binding],
+        delegation: { max_depth: 1 },
+      }),
+    ).toBeUndefined();
+  });
+
+  it("isAuthorityEntry refuses an entry carrying an unsupported member", () => {
+    expect(isAuthorityEntry(carrying)).toBe(false);
+  });
+
+  it("isSubsetEntry refuses a comparison involving an unsupported member, except a byte-identical pair (the equal-entry clause)", () => {
+    expect(isSubsetEntry(carrying, entry)).toBe(false);
+    expect(isSubsetEntry(entry, carrying)).toBe(false);
+    expect(isSubsetEntry({ ...carrying, actions: ["read"] }, carrying)).toBe(false);
+    expect(isSubsetSet([entry], [carrying])).toBe(false);
+    expect(isSubsetEntry(carrying, { ...carrying })).toBe(true);
+    expect(isSubsetEntry(entry, entry)).toBe(true);
+  });
+
+  it("narrowToCeiling retains no entry carrying an unsupported member, on either operand", () => {
+    expect(narrowToCeiling([carrying], [entry])).toEqual([]);
+    expect(narrowToCeiling([{ ...carrying, actions: ["read"] }], [entry])).toEqual([]);
+    expect(narrowToCeiling([entry], [carrying])).toEqual([]);
+  });
+});
+
+describe("resource containment under resource_match (@spec resource-access#subset, #1276)", () => {
+  const ORDERS = "https://api.example/orders";
+  const at = (resource: string, resource_match?: "exact" | "prefix"): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource,
+    ...(resource_match ? { resource_match } : {}),
+    actions: ["orders.read"],
+  });
+
+  it("resourceWithin applies the four resource_match pairings with the resource servers' prefix comparison", () => {
+    expect(resourceWithin(at(ORDERS), at(ORDERS, "exact"))).toBe(true);
+    expect(resourceWithin(at(`${ORDERS}/1`), at(ORDERS, "prefix"))).toBe(true);
+    expect(resourceWithin(at("https://API.EXAMPLE:443/orders/1"), at(ORDERS, "prefix"))).toBe(true);
+    expect(resourceWithin(at(`${ORDERS}x/1`), at(ORDERS, "prefix"))).toBe(false);
+    expect(resourceWithin(at(`${ORDERS}/2026`, "prefix"), at(ORDERS, "prefix"))).toBe(true);
+    expect(resourceWithin(at(ORDERS, "prefix"), at(`${ORDERS}/`, "prefix"))).toBe(false);
+    expect(resourceWithin(at(ORDERS, "prefix"), at(ORDERS))).toBe(false);
+    expect(resourceWithin(at(ORDERS, "prefix"), at(`${ORDERS}/2026`, "prefix"))).toBe(false);
+  });
+
+  it("isSubsetEntry never lets a prefix candidate pass under an exact reference naming the same resource", () => {
+    expect(isSubsetEntry(at(ORDERS, "prefix"), at(ORDERS))).toBe(false);
+    expect(isSubsetEntry(at(`${ORDERS}/1`), at(ORDERS, "prefix"))).toBe(true);
+    expect(narrowToCeiling([at(ORDERS, "prefix")], [at(ORDERS)])).toEqual([]);
+    expect(narrowToCeiling([at(`${ORDERS}/1`)], [at(ORDERS, "prefix")])).toEqual([
+      at(`${ORDERS}/1`),
+    ]);
+  });
+
+  it("an unrecognized resource_match, or a prefix base the matcher cannot enforce, is never contained and is not a supported entry", () => {
+    for (const odd of [
+      { ...at(ORDERS), resource_match: "glob" },
+      { ...at(ORDERS), resource_match: null },
+      at(`${ORDERS}?tenant=a`, "prefix"),
+      at("urn:example:orders", "prefix"),
+    ] as AuthorityEntry[]) {
+      expect(isAuthorityEntry(odd), JSON.stringify(odd)).toBe(false);
+      expect(isSubsetEntry(odd, odd), JSON.stringify(odd)).toBe(false);
+      expect(isSubsetEntry(at(ORDERS), odd), JSON.stringify(odd)).toBe(false);
+    }
+    expect(isAuthorityEntry(at(ORDERS, "prefix"))).toBe(true);
+    expect(isAuthorityEntry(at(ORDERS, "exact"))).toBe(true);
   });
 });

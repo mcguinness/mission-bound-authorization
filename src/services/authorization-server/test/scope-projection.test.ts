@@ -37,6 +37,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { ApprovalSessionStore, type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
+import { DEFERRED_GRANT_TYPE } from "../src/kernel/deferred.js";
 import { browserApprovalHeaders, floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
@@ -166,9 +167,10 @@ const SESSIONS = new ApprovalSessionStore();
  */
 async function authorize(
   proposal: AuthorityEntry[] | undefined,
-  opts: { resource?: string; scope?: string } = {},
+  opts: { resource?: string; scope?: string; targetResources?: string[] } = {},
 ): Promise<{ par: { status: number; body: Json }; code?: string; error?: string; description?: string }> {
   const resource = opts.resource ?? PLAIN;
+  const targetResources = opts.targetResources ?? [resource];
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(PKCE_VERIFIER)),
   ).toString("base64url");
@@ -185,7 +187,7 @@ async function authorize(
       code_challenge_method: "S256",
       login_hint: "alice",
       mission_intent: JSON.stringify({
-        intent: { goal: "Publish the quarterly reports", target_resources: [resource], expires_at: "2027-01-01T00:00:00Z" },
+        intent: { goal: "Publish the quarterly reports", target_resources: targetResources, expires_at: "2027-01-01T00:00:00Z" },
       }),
       ...(proposal ? { authorization_details: JSON.stringify(proposal) } : {}),
       client_assertion: await clientAssertion(),
@@ -448,6 +450,107 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
   });
 });
 
+/**
+ * @spec resource-access#resource-access-type (#1266): "the authorization
+ * server SHOULD emit for a given `resource` only `constraints` keys that the
+ * resource server serving it is known to understand and enforce". The
+ * mapping's `mission_constraints_supported` is that knowledge; a key it
+ * cannot vouch for refuses the issuance, never dropped from the entry.
+ */
+describe("the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type)", () => {
+  const SAAS = TOPOLOGY.resources.saas;
+  const SHIPPED_PAYMENTS = structuredClone(SCOPE_PROJECTION.audiences[PAYMENTS]);
+  /** Replace the payments audience's mapping entry for one case. */
+  async function withPayments(value: unknown, run: () => Promise<void>): Promise<void> {
+    const audiences = MAPPING.audiences as Record<string, unknown>;
+    audiences[PAYMENTS] = value;
+    try {
+      await run();
+    } finally {
+      audiences[PAYMENTS] = structuredClone(SHIPPED_PAYMENTS);
+    }
+  }
+  const paymentsRead = (constraints: Json): AuthorityEntry =>
+    ({ type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:invoice.read"], constraints }) as AuthorityEntry;
+  const TENANTED = { vendors: ["acme"], tenant: "payments-demo" };
+  const withoutTenant = () => ({
+    version: "2026-10-20.test",
+    mission_aware: true,
+    mode: "authorization_details",
+    mission_constraints_supported: ["max_amount", "vendors"],
+  });
+
+  it("emits an entry whose every key the audience's mission_constraints_supported names, unchanged", async () => {
+    const keys = await newKeys();
+    const code = await approve([paymentsRead(TENANTED)], PAYMENTS);
+    const res = await redeem(code, keys, PAYMENTS);
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    const details = decodeJwt(res.body.access_token as string).authorization_details as Json[];
+    expect(details.map((e) => e.constraints)).toEqual([TENANTED]);
+  });
+
+  it("refuses invalid_target, issuing no token, when an entry for the audience carries a key the audience is not known to enforce", async () => {
+    const keys = await newKeys();
+    const code = await approve([paymentsRead(TENANTED)], PAYMENTS);
+    await withPayments(withoutTenant(), async () => {
+      const refused = await redeem(code, keys, PAYMENTS);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/not known to enforce the constraints key tenant/);
+      expect(refused.body.access_token).toBeUndefined();
+    });
+  });
+
+  it("a refresh re-checks against the current mapping: an audience whose key list no longer names a carried key refuses, and an audience with no list is known to enforce no key (boundary)", async () => {
+    const keys = await newKeys();
+    const first = await redeem(await approve([paymentsRead(TENANTED)], PAYMENTS), keys, PAYMENTS);
+    expect(first.status, JSON.stringify(first.body)).toBe(200);
+    const rt = first.body.refresh_token as string;
+    await withPayments(withoutTenant(), async () => {
+      const refused = await refresh(rt, keys);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+    });
+    const { mission_constraints_supported: _keys, ...noList } = withoutTenant();
+    await withPayments(noList, async () => {
+      const refused = await refresh(rt, keys);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/not known to enforce the constraints key vendors/);
+    });
+    const after = await refresh(rt, keys);
+    expect(after.status, JSON.stringify(after.body)).toBe(200);
+  });
+
+  it("checks an entry against the audience it is issued for: an entry for another resource rides in this token, and a token issued for that resource refuses it (boundary)", async () => {
+    // SaaS is known to enforce only vendors; payments enforces tenant.
+    const saasRead = {
+      type: "mission_resource_access",
+      resource: SAAS,
+      actions: ["ledger:vendor.read"],
+      constraints: { vendors: ["acme"], tenant: "ledger-demo" },
+    } as AuthorityEntry;
+    const proposal = [paymentsRead(TENANTED), saasRead];
+    const targetResources = [PAYMENTS, SAAS];
+
+    const forPayments = await authorize(proposal, { resource: PAYMENTS, targetResources });
+    expect(forPayments.code, JSON.stringify(forPayments)).toBeTruthy();
+    const keys = await newKeys();
+    const payments = await redeem(forPayments.code as string, keys, PAYMENTS);
+    expect(payments.status, JSON.stringify(payments.body)).toBe(200);
+    const carried = decodeJwt(payments.body.access_token as string).authorization_details as Json[];
+    expect(carried.find((e) => e.resource === SAAS)?.constraints).toEqual(saasRead.constraints);
+
+    const forSaas = await authorize(proposal, { resource: SAAS, targetResources });
+    expect(forSaas.code, JSON.stringify(forSaas)).toBeTruthy();
+    const saas = await redeem(forSaas.code as string, await newKeys(), SAAS);
+    expect(saas.status).toBe(400);
+    expect(saas.body.error).toBe("invalid_target");
+    expect(saas.body.error_description).toMatch(/not known to enforce the constraints key tenant/);
+    expect(saas.body.access_token).toBeUndefined();
+  });
+});
+
 describe("scope projection on derived tokens (@spec mission#scope-projection)", () => {
   it("refresh re-projects against the current mapping: a version bump alone still projects, a mapping that no longer proves the value refuses invalid_target, and an audience removed from the mapping fails closed", async () => {
     const first = await issue([entry([READ, WRITE])]);
@@ -623,6 +726,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
             mission_intent: submission("Publish and retire the quarterly reports"),
             authorization_details: JSON.stringify([entry([READ, WRITE, DELETE])]),
             creation_request_id: crypto.randomUUID(),
+            completion_mode: "deferred",
           },
           keys,
         );
@@ -635,8 +739,7 @@ describe("scope projection on the dispatch and expansion-successor mints (@spec 
         });
         const polled = await token(
           {
-            grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
-            requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+            grant_type: DEFERRED_GRANT_TYPE,
             deferral_code: opened.body.deferral_code as string,
           },
           keys,

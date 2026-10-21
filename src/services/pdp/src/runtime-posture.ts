@@ -2,7 +2,10 @@ import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data"
 import { enforcementBoundaryFindings } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
+  type ExecutionCapabilityDeclaration,
   evidenceDeclarationFindings,
+  executionCapabilityFindings,
+  resourceContractFindings,
   reversibleWriteDeclarationFor,
   validateEnforcementScopeStatement,
 } from "./enforcement-scope.js";
@@ -110,6 +113,16 @@ export function loadRuntimePosture(
   // load, before any request reaches a PEP.
   const boundaries = enforcementBoundaryFindings(input);
   if (boundaries.length) throw new PostureConfigError(JSON.stringify(boundaries));
+  // @spec runtime#execution-capabilities (#817): an operation's execution
+  // capabilities state every item, name a durable-idempotency holder this
+  // statement resolves, and admit only the claims and the unknown-outcome
+  // recovery a declared capability supports. An unsupported claim is refused
+  // here, at load, as an undeclared action class is below.
+  const capabilities = executionCapabilityFindings(input);
+  if (capabilities.length) throw new PostureConfigError(JSON.stringify(capabilities));
+  // @spec runtime#resource-contract (#249): the declared contract versions.
+  const contracts = resourceContractFindings(input);
+  if (contracts.length) throw new PostureConfigError(JSON.stringify(contracts));
   const state = (input as EnforcementScopeStatement).state_source as unknown as Record<string, unknown>;
   const fail = (why: string): never => { throw new PostureConfigError(why); };
   if (state.pdp_unavailability_posture !== "deny") fail("only deny is implemented; bounded permit reuse is not available");
@@ -189,6 +202,23 @@ export function executionLeaseMaxSeconds(posture: RuntimePosture, actionClass: s
   if (actionClass === undefined) return undefined;
   return posture.extensions?.transaction_assurance?.find((d) => d.mediated_class_or_scope === actionClass)
     ?.execution_lease_max_seconds;
+}
+
+/**
+ * @spec runtime#execution-capabilities (#817): the execution capabilities the
+ * statement declares for one operation and phase, or `undefined` when it
+ * declares none. The loader has already refused a declaration whose claims
+ * or recovery rest on no declared capability, so a reader of this value never
+ * meets an unsupported `exactly_once` or `evaluation_context_enforced`.
+ *
+ * Read from the same statement object the resource metadata publishes.
+ */
+export function executionCapabilitiesFor(
+  posture: RuntimePosture,
+  action: string,
+  phase?: string,
+): ExecutionCapabilityDeclaration | undefined {
+  return posture.extensions?.execution_capabilities?.find((d) => d.operation === action && d.phase === phase);
 }
 
 /**

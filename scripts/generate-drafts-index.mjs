@@ -96,11 +96,11 @@ export const GROUP_SECTION_TITLES = {
 };
 
 // The family's peer bindings, in the README's display order: every manifest
-// slug that has published a Mission Substrate Statement capability table
-// (check-substrate-statements.mjs's REGISTRY). Publishing that table is what
+// slug that has published a Mission Substrate Statement capability list
+// (check-substrate-statements.mjs's REGISTRY). Publishing that list is what
 // "binding" means architecturally, and that file's own tripwires already fail
-// CI the moment a table appears anywhere in the corpus without a matching
-// registry entry, so this derived list cannot go stale the way a second,
+// CI the moment a capability entry appears anywhere in the corpus without a
+// matching registry entry, so this derived list cannot go stale the way a second,
 // independent hardcoded list could.
 export const BINDING_SLUGS = SUBSTRATE_STATEMENT_REGISTRY.map((e) => e.slug);
 

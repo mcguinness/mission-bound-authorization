@@ -314,8 +314,8 @@ JWS Compact Serialization {{RFC7515}} applies.
 
 This section is OPTIONAL. The issuance profile's stateless baseline
 needs no dedicated status surface
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle and
-Gating"); a deployment that does not stand up this operation, and a
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"); a
+deployment that does not stand up this operation, and a
 consumer that does not use it, are unaffected.
 
 The dedicated Mission Status operation is the canonical status surface
@@ -544,7 +544,7 @@ Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 Pragma: no-cache
 
-eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 ~~~
 
 Decoded JWS header:
@@ -552,7 +552,7 @@ Decoded JWS header:
 ~~~ json
 {
   "alg": "ES256",
-  "kid": "sa-key-2026-q3",
+  "kid": "as-key-2026-q3",
   "typ": "mission-status-response+jwt"
 }
 ~~~
@@ -625,8 +625,8 @@ The members are:
   - `state`: REQUIRED. The current Mission lifecycle state. The
     authoritative
     state space is the issuance profile's
-    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-    and Gating"): `active` and `terminated`, this profile's `suspended`
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+    Lifecycle"): `active` and `terminated`, this profile's `suspended`
     when the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
     is deployed, and any further state a companion profile defines and
     the deployment runs. A consumer applies the issuance profile's
@@ -835,7 +835,7 @@ Cache-Control: no-store
   "error": "not_found",
   "error_description":
     "Mission reference is not found or not visible.",
-  "nonce": "nonce_K9pV4nT2sR7mB1xQ"
+  "nonce": "nonce_zsPy4APqVNO96xAT"
 }
 ~~~
 
@@ -970,7 +970,7 @@ recommendations of {{RFC9325}}.
 
 Adopting this endpoint extends the issuance profile's lifecycle state
 space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle and Gating") with one additional state, `suspended` (a
+Lifecycle") with one additional state, `suspended` (a
 paused Mission that derives no tokens until resumed), and one
 termination reason, `completed` (the Mission completed
 successfully).
@@ -1151,7 +1151,7 @@ expiry governs: the Mission is `terminated` with reason `expired` at
 
 This profile owns the extension of the issuance profile's lifecycle
 state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle and Gating"). The table below is the authoritative view of
+Lifecycle"). The table below is the authoritative view of
 that space: every state, every transition, the source of the event
 that drives it, and the termination reason a transition to
 `terminated` records.
@@ -1335,7 +1335,7 @@ HTTP/1.1 200 OK
 Content-Type: application/mission-status-response+jwt
 Cache-Control: no-store
 
-eyJhbGciOiJFUzI1NiIsImtpZCI6InNhLWtleS0yMDI2LXEzIi...
+eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 ~~~
 
 Decoded JWS payload:

@@ -67,6 +67,13 @@ const REGISTRY: DispatchPolicies = {
   "names-unlisted": selecting("names-unlisted", "intruder"),
   "route-extractor": selecting("route-extractor", "subagent-invoice-extractor"),
   route: selecting("route", "subagent-invoice-extractor"),
+  // @spec mission-template#dispatch, derivation-limits#effective-limit (#1119):
+  // Dispatch Policies stating the per-instance derivation-limit maximum.
+  "limit-3": snapshotOf("limit-3", JSON.stringify({ id: "limit-3", derivation_limit_ceiling: 3 })),
+  "limit-null": snapshotOf("limit-null", JSON.stringify({ id: "limit-null", derivation_limit_ceiling: null })),
+  "limit-zero": snapshotOf("limit-zero", JSON.stringify({ id: "limit-zero", derivation_limit_ceiling: 0 })),
+  "limit-fraction": snapshotOf("limit-fraction", JSON.stringify({ id: "limit-fraction", derivation_limit_ceiling: 2.5 })),
+  "limit-string": snapshotOf("limit-string", JSON.stringify({ id: "limit-string", derivation_limit_ceiling: "3" })),
 };
 const policyRef = (id: string) => ({ id, version: "1" });
 
@@ -778,5 +785,75 @@ describe("approval_event_id per Dispatch reservation (@spec mission-template#dis
     // Nothing new committed, and the unchanged retry still recovers.
     expect(kernel.allMissions().length).toBe(committed);
     expect(dispatch(t.id, { dispatchEventId: "evt-fp", presenterJkt: "jkt-1" }).mission.id).toBe(first.id);
+  });
+});
+
+describe("per-instance derivation limit under the committed Dispatch Policy (@spec mission-template#dispatch, derivation-limits#effective-limit, #1119)", () => {
+  /** An Intent requesting `limit` (or none). */
+  const limitIntent = (limit?: number) =>
+    kernel.validateIntent(
+      JSON.stringify({
+        goal: "reconcile Acme",
+        target_resources: [RESOURCE],
+        expires_at: "2027-01-01T00:00:00Z",
+        ...(limit === undefined ? {} : { requested_derivation_limit: limit }),
+      }),
+    );
+  /** A kernel like the suite's, with the given deployment ceiling. */
+  const kernelWithCeiling = (ceiling: number | null) =>
+    new MissionKernel({
+      issuer: ISS,
+      policy: { ...DERIVATION_POLICY, derivation_limit_ceiling: ceiling } as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["worker", "intruder", "subagent-invoice-extractor", "orchestrator"], ["human-approver", "bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+    });
+  const dispatchOn = (k: MissionKernel, templateId: string, limit?: number) =>
+    dispatchFromTemplate(k, store, {
+      templateId,
+      dispatchEventId: `dsp-${dspSeq++}`,
+      dispatcher: "orchestrator",
+      intent: limitIntent(limit),
+      subject: { iss: ISS, sub: "alice" },
+      policyVersion: POLICY_VERSION,
+      dispatchPolicies: REGISTRY,
+    }).mission;
+
+  it("an instance with no requested limit records the committed maximum; a larger request is capped at it and a smaller one stands, each instance counting its own", () => {
+    const t = mkTemplate({ dispatch_policy: policyRef("limit-3"), max_active: 5, rate_per_min: 10 });
+    const unrequested = dispatchOn(kernel, t.id);
+    expect(unrequested.derivation_limit).toBe(3);
+    expect(dispatchOn(kernel, t.id, 10).derivation_limit).toBe(3);
+    const smaller = dispatchOn(kernel, t.id, 2);
+    expect(smaller.derivation_limit).toBe(2);
+    expect(unrequested.derivation_count).toBe(0);
+    expect(smaller.derivation_count).toBe(0);
+  });
+
+  it("a deployment ceiling raised above the maximum after consent does not lift an instance above it, and a stricter one narrows it", () => {
+    const t = mkTemplate({ dispatch_policy: policyRef("limit-3"), max_active: 5, rate_per_min: 10 });
+    const raised = kernelWithCeiling(100);
+    expect(dispatchOn(raised, t.id).derivation_limit).toBe(3);
+    expect(dispatchOn(raised, t.id, 50).derivation_limit).toBe(3);
+    expect(dispatchOn(kernelWithCeiling(2), t.id).derivation_limit).toBe(2);
+  });
+
+  it("a Dispatch Policy stating null, or stating no maximum, guarantees no finite maximum (positive control)", () => {
+    for (const id of ["limit-null", "test-policy"]) {
+      const t = mkTemplate({ dispatch_policy: policyRef(id) });
+      expect(dispatchOn(kernel, t.id).derivation_limit, id).toBeNull();
+      expect(dispatchOn(kernel, t.id, 7).derivation_limit, id).toBe(7);
+    }
+  });
+
+  it("consent refuses a Dispatch Policy stating a malformed maximum, naming the member, and stores no template", () => {
+    for (const id of ["limit-zero", "limit-fraction", "limit-string"]) {
+      const approval_event_id = `tmpl-ev-limit-${id}`;
+      expect(() => mkTemplate({ dispatch_policy: policyRef(id), approval_event_id }), id).toThrow(
+        /states a malformed derivation_limit_ceiling/,
+      );
+      expect(store.getByApprovalEvent(approval_event_id), id).toBeUndefined();
+    }
   });
 });

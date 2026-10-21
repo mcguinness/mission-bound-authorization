@@ -98,7 +98,7 @@ informative:
         name: Karl McGuinness
     date: 2026
   RFC8126:
-  I-D.draft-gerber-oauth-deferred-token-response:
+  I-D.draft-ietf-oauth-deferred-token-response:
   I-D.draft-mcguinness-oauth-client-instance-id:
   I-D.draft-mcguinness-mission-authority-server:
     title: "Mission Authority Server"
@@ -528,9 +528,9 @@ The child-creation token exchange carries:
   `invalid_request`.
 
 The parent redeems this token exchange at the token endpoint under the
-child-creation grant type ({{grant-type}}). The presence of
-`child_actor` marks the exchange as a child creation; an exchange
-carrying both `child_actor` and the expansion profile's `predecessor`
+child-creation grant type ({{grant-type}}). Its JWT
+`requested_token_type` marks the exchange as a child creation, which
+carries `child_actor`; an exchange carrying both `child_actor` and the expansion profile's `predecessor`
 cross-check ({{I-D.draft-mcguinness-oauth-mission-expansion}}) MUST be
 refused with `invalid_request`, since the operations do not combine.
 
@@ -654,7 +654,7 @@ Deferred:
 : When a deployment requires a fresh approval for child creation and
   approval is asynchronous, the Mission Issuer returns the deferred
   token response of the family's Mission Deferred Approval substrate
-  ({{I-D.draft-gerber-oauth-deferred-token-response}}, profiled for
+  ({{I-D.draft-ietf-oauth-deferred-token-response}}, profiled for
   Missions by {{I-D.draft-mcguinness-oauth-mission-approval}}):
   `authorization_pending` with a polling `interval`. The Approver acts
   asynchronously; the requester polls; the poll resolves to the child
@@ -824,7 +824,7 @@ exchange is refused with `invalid_request`
 ({{Section 2.2.2 of RFC8693}}); a required DPoP proof that is missing,
 or a DPoP proof that fails its own validation, with `invalid_dpop_proof`
 ({{Section 5 of RFC9449}}); and any other failure with
-`invalid_request`, `invalid_grant`, or `invalid_token` as appropriate.
+`invalid_request` or `invalid_grant` as appropriate.
 An authorization server that requires a DPoP nonce answers a proof
 lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce`
 header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`. The child
@@ -1591,8 +1591,8 @@ Authority Set the strict-subset check ran against
 is not that commitment. The expansion profile's child-cascade consent
 notice is where this cost can be surfaced to the Approver, at the same
 consent event that approves the successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
-deferred window").
+({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Child
+Missions of the Predecessor").
 
 Cascade under this profile is issuer-committed. The Mission Issuer
 MUST implement the `immediate` cascade mode and record the mode on the
@@ -2091,7 +2091,7 @@ Example:
     "id": "msn_9KwP2rT6vX1nL4qY8sB3zC7mF5jD",
     "issuer": "https://as.example.com",
     "authority_hash":
-      "sha-256:hQ2vJ4kE5pNQl3KvZ4mP5x0wRr6tY2nD9bM7sX1cF8g"
+      "sha-256:5TEV3V5Ej6aOjuCIytX7jc1YWyWEF-nN_6ILcAbW3-M"
   },
   "child_actor": {
     "sub": "subagent-invoice-extractor",
@@ -2101,7 +2101,7 @@ Example:
     "result": "strict_subset"
   },
   "fanout": {
-    "active_children": 2,
+    "active_children": 1,
     "max_children": 5
   },
   "cascade_mode": "immediate",
@@ -2434,6 +2434,10 @@ apply unchanged.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Request Processing drops `invalid_token` from the token-endpoint
+  refusals: it is a resource server code that the token endpoint does
+  not define.
 
 - Child Actor Eligibility: an absent `allowed_child_actors` defers the
   child actor to the authorization server's child-creation policy and

@@ -33,6 +33,7 @@ import {
   delegatedRoutingRefusal,
   isSubsetSetIgnoringCapabilitySources,
   type ScopeProjectionMapping,
+  unenforcedConstraintRefusal,
 } from "@mission/core";
 import { GateError, type MissionKernel } from "../kernel/kernel.js";
 import {
@@ -148,6 +149,12 @@ export interface FreshDecisionInput {
   action: string;
   /** The operation's `authorization_details` `type` as pinned at admission. */
   operationType: string;
+  /**
+   * @spec txn-authorization#resource-challenge (#249): the Operation Profile
+   * version the workflow recorded at admission, which its operation is read
+   * under at completion.
+   */
+  profileVersion: string;
   clientId: string;
   /**
    * The DESTINATION-LOCAL subject: the `subject_token`'s own `sub`, in this
@@ -490,21 +497,24 @@ async function admit(
 
   // @spec txn-authorization#resource-challenge — the operation, read through
   // the Challenge-Issuing Resource's OWN Operation Profile. The profile
-  // validates the complete entry and names the action; an unrecognized
-  // (resource, type) pair is an operation this TAS cannot read, and `reason` is
-  // display text that never becomes authorization input.
+  // validates the complete entry and names the action; an entry no profile of
+  // the resource reads is an operation this TAS cannot read, and `reason` is
+  // display text that never becomes authorization input. (#249, D553) The
+  // entry's fixed `type` does not version the profile: a carried
+  // `resource_contract` reference names the version and must resolve, and
+  // otherwise the resource's current version is recorded with the workflow.
   const operationType = typeof requested[0]?.type === "string" ? (requested[0].type as string) : "";
-  const profile = txn.operationProfiles.forAdmission(challenge.iss, operationType);
-  if (!profile) {
-    fail(ctx, 400, "invalid_grant", "no Operation Profile governs this operation type");
-    return;
-  }
-  const resolved = profile.resolve(challenge.authorization_details[0] as JsonValue, { resource: challenge.iss });
+  const resolved = txn.operationProfiles.admit(
+    challenge.iss,
+    challenge.authorization_details[0] as JsonValue,
+    deps.now(),
+  );
   if (!resolved.ok) {
-    fail(ctx, 400, "invalid_grant", `operation rejected by its Operation Profile (${resolved.reason})`);
+    fail(ctx, 400, "invalid_grant", resolved.reason);
     return;
   }
   const action = resolved.operation.action;
+  const profileVersion = resolved.version;
 
   const record = deps.kernel.get(missionId);
   if (!record) {
@@ -589,6 +599,15 @@ async function admit(
       return;
     }
   }
+  // @spec resource-access#resource-access-type (#1266): the transaction token
+  // is issued for the Challenge-Issuing Resource alone, so its entries carry
+  // only `constraints` keys the mapping knows that resource enforces, before
+  // the workflow is admitted or an approval opened.
+  const unenforced = unenforcedConstraintRefusal(deps.scopeProjection, [challenge.iss], requested);
+  if (unenforced) {
+    fail(ctx, 400, "invalid_target", unenforced);
+    return;
+  }
 
   const nowS = Math.floor(deps.now().getTime() / 1000);
 
@@ -608,6 +627,7 @@ async function admit(
     // Pinned: a superseded Operation Profile version stays recognized for as
     // long as this workflow references it (the registry RETAINS it).
     operationType,
+    profileVersion,
     // @spec txn-authorization#two-phase-expiry — the workflow's own
     // deployment-declared lifetime, NOT the challenge's remaining window.
     expiresAtS: nowS + txn.workflowLifetimeSeconds,
@@ -742,6 +762,7 @@ async function poll(
     resource: wf.challenge.iss,
     action: wf.action,
     operationType: wf.operationType,
+    profileVersion: before.profileVersion,
     clientId: wf.clientId,
     subject: wf.subject,
     ...(wf.challenge.mission.subject ? { originPrincipal: wf.challenge.mission.subject } : {}),
@@ -835,6 +856,8 @@ interface CompletionPass {
   permitted: AuthorityEntry[];
   /** The token's exp, computed from THIS pass's clock and Mission state. */
   exp: number;
+  /** The Operation Profile version the operation was read under at completion (#249). */
+  profileVersion: string;
 }
 
 /**
@@ -871,11 +894,22 @@ async function completionChecks(
   // version stops NEW challenges naming it; it never revises the basis of a
   // workflow already admitted under it. A version the deployment no longer
   // retains at all is an operation this TAS can no longer read, and refuses.
-  const pinnedProfile = txn.operationProfiles.forPinned(wf.challenge.iss, wf.operationType);
-  const pinnedOperation = pinnedProfile?.resolve(wf.challenge.authorization_details[0] as JsonValue, {
-    resource: wf.challenge.iss,
-  });
-  if (!pinnedOperation?.ok || pinnedOperation.operation.action !== wf.action) {
+  // @spec txn-authorization#resource-challenge (#249): an entry carrying a
+  // `resource_contract` reference is resolved again here, and one that no
+  // longer resolves (retired, changed, or past its retention) refuses. A
+  // workflow admitted before the store recorded versions (no
+  // `profileVersion`) completes only under the binding the deployment
+  // declares for its `(iss, type)`, never under today's version; with none,
+  // its original binding is unknowable and the refusal is terminal.
+  const entry = wf.challenge.authorization_details[0] as JsonValue;
+  const pinnedOperation =
+    wf.profileVersion === undefined
+      ? txn.operationProfiles.completeLegacy(wf.challenge.iss, wf.operationType, entry)
+      : txn.operationProfiles.complete(wf.challenge.iss, wf.profileVersion, entry, deps.now());
+  if (!pinnedOperation.ok || pinnedOperation.operation.action !== wf.action) {
+    if (!pinnedOperation.ok && "terminal" in pinnedOperation && pinnedOperation.terminal) {
+      workflows.setState(wf.id, "denied");
+    }
     return {
       ok: false,
       error: "access_denied",
@@ -987,7 +1021,7 @@ async function completionChecks(
   if (exp <= nowS) {
     return { ok: false, error: "access_denied", description: "no lifetime remains for a transaction token" };
   }
-  return { ok: true, nowS, approval, permitted, exp };
+  return { ok: true, nowS, approval, permitted, exp, profileVersion: pinnedOperation.version };
 }
 
 /**

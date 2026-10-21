@@ -609,8 +609,8 @@ template's anchor are never merged.
 
 A Mission Template has its own lifecycle, distinct from the Mission
 lifecycle of the Missions it dispatches
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle
-and Gating"). A template is in one of three states:
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Lifecycle"). A
+template is in one of three states:
 
 - `active`: the template dispatches, subject to its bounds and review
   cadence;
@@ -1045,7 +1045,7 @@ source. A dispatch-specific parameter affecting derivation, approval,
 output, or side effects extends the fingerprint the same way an
 extension parameter would under the expansion profile's own rule
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
-operation fingerprint").
+Operation Fingerprint").
 
 The reservation, its `(client, dispatch_event_id)` uniqueness, and
 the fingerprint-comparison outcomes on a repeated presentation are
@@ -1054,7 +1054,7 @@ completed, recover it; same fingerprint and reserved or pending,
 return the same in-progress result; different fingerprint, refuse
 with `invalid_request`
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "The
-durable reservation"). The reservation and the dispatched Mission's
+Durable Reservation"). The reservation and the dispatched Mission's
 identifier MUST be committed atomically with instance derivation and
 `max_active`/`dispatch_rate` accounting. Evidence emission is not
 part of that same atomic commit: the Mission Issuer atomically
@@ -1081,7 +1081,7 @@ the retry exactly as a fresh Dispatch: current `allowed_dispatchers`
 membership, possession of `cnf`, and current template applicability
 all apply, since no Mission yet exists for the retry to recover
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section
-"Revalidation and lookup order").
+"Revalidation and Lookup Order").
 
 Recovery is delivery of the already-dispatched Mission, never a
 second instantiation and never a second count against `max_active` or
@@ -1092,10 +1092,10 @@ still-`active` instance, an ordinary delivery event that repeats no
 creation accounting, exactly as the expansion profile's recovery
 defines for an expired delivery credential
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Recovery
-is delivery"). Tombstone retention follows the expansion profile's
+Is Delivery"). Tombstone retention follows the expansion profile's
 rule, against the deployment's published retry horizon
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}, Section "Tombstone
-retention"). This makes retry safe at machine speed and keeps
+Retention"). This makes retry safe at machine speed and keeps
 `max_active` and `dispatch_rate` accounting exact.
 
 ## The template lineage member {#template-member}

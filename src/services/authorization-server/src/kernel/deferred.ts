@@ -31,8 +31,22 @@ import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
 import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
-import { createExpansion } from "./expansion.js";
+import {
+  createExpansion,
+  type ReconciliationStatus,
+  reconciliationStatusFor,
+  restrictedSinceAdjudication,
+} from "./expansion.js";
+import { conditionDigest, entryDigest, terminalWhenOf } from "./discharge.js";
 import { IntentError } from "./intent.js";
+import {
+  type CeilingConsent,
+  ceilingAdjudicationLine,
+  consentCeiling,
+  consentedCeilingEntries,
+  consentsOffer,
+  type ReconsentedCeiling,
+} from "./progressive.js";
 import type { MissionKernel } from "./kernel.js";
 import type {
   AuthorityEntry,
@@ -40,9 +54,13 @@ import type {
   MissionClaim,
   MissionIntent,
   MissionRecord,
+  TerminalWhenCondition,
 } from "./types.js";
 
 export const DEFERRED_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:deferred";
+
+/** The prefix of an expansion deferral code; the deferred grant routes on it. */
+export const EXPANSION_DEFERRAL_PREFIX = "xdfr_";
 
 const SCHEMA = `
 CREATE TABLE deferrals (
@@ -137,7 +155,7 @@ export class DeferralStore {
         "requested authority exceeds the active Mission; use Expansion to widen",
       );
     }
-    // @spec expansion#creation-request-id (deferred mode, shared rule) — the
+    // @spec expansion#creation-idempotency (deferred mode, shared rule) — the
     // dedup key is CLIENT-SCOPED: the same semantic request from two different
     // clients MUST open two deferrals (per-client scoping prevents cross-client
     // interference and replay). The previous {m, r} key omitted the client.
@@ -285,6 +303,10 @@ CREATE TABLE IF NOT EXISTS expansion_deferrals (
   created_at INTEGER NOT NULL,
   last_polled_at INTEGER
 ) STRICT;
+CREATE TABLE IF NOT EXISTS progressive_refusals (
+  mission_id TEXT NOT NULL,
+  refused_at INTEGER NOT NULL
+) STRICT;
 `;
 
 /**
@@ -308,8 +330,24 @@ function migrateExpansionDeferrals(db: Database): void {
     "carryover_plan_json",
     "carryover_manifest_json",
     "carryover_manifest_hash",
+    // @spec progressive#ceiling-reconsent (#1413): the committed re-consent.
+    "ceiling_reconsent_json",
+    // @spec expansion#reconciliation (#1177): the reconciliation status a
+    // refused completion recorded, repeated on every later poll of the deferral.
+    "refusal_status",
+    // @spec progressive#ceiling-review (#1017): why a drawdown request came to
+    // a human, the guard exception a review disclosure lists.
+    "drawdown_fallback_reason",
+    // @spec progressive#ceiling-reconsent (#1480 review): the re-consent offer
+    // the disclosure rendered, the only one an approval may consent.
+    "reconsent_offer_json",
   ]) {
     if (!columns.has(column)) db.exec(`ALTER TABLE expansion_deferrals ADD COLUMN ${column} TEXT`);
+  }
+  // @spec expansion#reconciliation check 3 (#1177): the predecessor's
+  // discharge-latch count at initiation, beside `pred_containment_version`.
+  if (!columns.has("pred_discharge_count")) {
+    db.exec("ALTER TABLE expansion_deferrals ADD COLUMN pred_discharge_count INTEGER");
   }
 }
 
@@ -325,6 +363,43 @@ export interface ApplyCarryoverOutcome {
   evidence: CarryoverEvidence;
   evidenceJws: string;
   replacements: MissionRecord[];
+}
+
+/**
+ * @spec progressive#fresh-approval, progressive#ceiling-reconsent,
+ * progressive#ceiling-review (#1017): what a deferred expansion's consent
+ * disclosure renders. The approval surface renders it; the store builds it
+ * from the chain's records, so it shows what the Mission Issuer holds.
+ */
+export interface ExpansionDisclosure {
+  predecessor: string;
+  /** Why a drawdown request of a ceiling chain came to a human, when it did. */
+  drawdown_fallback?: string;
+  /** The chain's outstanding restrictions, which no approval or re-consent clears. */
+  restrictions: {
+    /** Each contained capability, with the event class that caused its containment. */
+    contained: Array<{ resource: string; actions?: string[]; event_class: string; mission: string }>;
+    /** Each discharged entry, with the condition that discharged it. */
+    discharged: Array<{
+      entry: AuthorityEntry;
+      condition: TerminalWhenCondition | { event_type: string };
+      discharged_at: string;
+      mission: string;
+    }>;
+  };
+  /** Present where the chain carries a ceiling. */
+  ceiling?: {
+    /** The ceiling and policy a re-consent at this approval would consent, rendered as at the initial approval. */
+    reconsent_offer?: { authority_ceiling: AuthorityEntry[]; drawdown_policy?: { id: string; version: string }; adjudication: string };
+    /** The chain's record since the latest ceiling consent: the initial one or the latest re-consent. */
+    review: {
+      since: string;
+      policy_adjudicated_drawdowns: { count: number; per_hour: number };
+      escalations: Array<{ at: string; reason: string }>;
+      out_of_ceiling_refusals: Array<{ at: string }>;
+      discharged: ExpansionDisclosure["restrictions"]["discharged"];
+    };
+  };
 }
 
 /** The Approver's async adjudication payload for a deferred expansion. */
@@ -343,6 +418,14 @@ export interface ExpansionApproval {
    * floor; without it such an approval refuses.
    */
   authentication?: { surface: "browser"; acr: string; auth_time: number };
+  /**
+   * @spec progressive#ceiling-reconsent (#1413) — a ceiling and drawdown
+   * policy the Approver explicitly re-consents at this approval, separately
+   * from approving the successor's authority. Absent, the chain's ceiling
+   * members carry unchanged. Only a chain that carries a ceiling can
+   * re-consent one.
+   */
+  ceiling?: CeilingConsent;
 }
 
 /**
@@ -405,26 +488,36 @@ export class ExpansionDeferralError extends Error {
 }
 
 /**
+ * @spec expansion#reconciliation check 3 (#1177): raised inside the
+ * completion transaction, rolling it back, when the successor carries
+ * authority restricted since adjudication.
+ */
+class RestrictedSinceApprovalError extends Error {}
+
+/**
  * @spec expansion — the DTR deferred-completion store for Mission Expansion.
  * Mirrors {@link DeferralStore}'s poll/interval/expiry shape, but its redemption
  * CREATES a successor Mission (widening) rather than issuing an AROP subset. It
  * records, AT REQUEST TIME, the predecessor binding, the acting client, the
- * possession key (`jkt`), and a snapshot of the predecessor containment version.
+ * possession key (`jkt`), and a snapshot of the predecessor's containment
+ * version and discharge-latch count.
  *
  * Deferred-window checks (@spec expansion#deferred-window):
  *  (a) predecessor STATE is re-verified AT REDEMPTION (completion): a predecessor
- *      terminated, superseded, or NEWLY CONTAINED during the deferred window fails
- *      completion (a deferred approval MUST NOT become a containment bypass). A
- *      predecessor that was ALREADY contained at request time stays expandable
- *      (containment#restoration): the check is on whether containment ADVANCED
- *      during the window (version delta), not on the presence of an overlay.
+ *      terminated or superseded during the deferred window fails completion, and
+ *      so does a successor carrying authority the predecessor's containment or
+ *      discharge restricted after the snapshot (@spec expansion#reconciliation
+ *      check 3; a deferred approval MUST NOT become a containment bypass). A
+ *      restriction already present at request time stays restorable
+ *      (containment#restoration): the check is on what came after the
+ *      snapshot, not on the presence of an overlay.
  *  (b) the `subject_token` is deliberately NOT stored and NOT re-verified here:
  *      its expiry MUST NOT gate completion. Possession was evaluated and RECORDED
  *      (the `jkt`) at request time; re-verification is of Mission STATE only.
  */
 export class ExpansionDeferralStore {
   readonly db: Database;
-  /** @spec expansion#creation-request-id — completion marks the reservation
+  /** @spec expansion#creation-idempotency — completion marks the reservation
    *  completed ATOMICALLY with successor creation. Instances over the same
    *  kernel share the table, so this internal instance needs no wiring. */
   private readonly creationIdempotency: CreationIdempotencyStore;
@@ -449,6 +542,12 @@ export class ExpansionDeferralStore {
      * approval-authentication floor every expansion approval meets.
      */
     private readonly approvalFloor: ApprovalFloorPolicy = APPROVAL_FLOOR,
+    /**
+     * @spec progressive#ceiling-reconsent (#1017): the ceiling and drawdown
+     * policy the deployment's approval surface offers for a re-consent, the
+     * same offer as at the initial approval. A re-consent consents only it.
+     */
+    private readonly ceilingOffer?: (request: { clientId: string; intent: MissionIntent }) => CeilingConsent | undefined,
   ) {
     // @spec control-plane#serialization — retiring this row and activating
     // its successor must share the kernel transaction, not two databases.
@@ -486,8 +585,8 @@ export class ExpansionDeferralStore {
 
   /**
    * Open a deferred expansion. The predecessor MUST be active at request time.
-   * Records the possession `jkt` and the predecessor containment-version snapshot
-   * (deferred-window check (a) baseline). Idempotent for the same (predecessor,
+   * Records the possession `jkt` and the predecessor's containment-version and
+   * discharge-latch snapshot (deferred-window check (a) baseline). Idempotent for the same (predecessor,
    * intent, client): returns the existing pending handle.
    */
   open(input: {
@@ -504,7 +603,7 @@ export class ExpansionDeferralStore {
     clientId: string;
     jkt: string;
     /**
-     * @spec expansion#creation-request-id — the REQUIRED creation identifier
+     * @spec expansion#submission — the REQUIRED creation identifier
      * (the wire handler always passes it; optional here so kernel-level unit
      * use stays valid). Part of the dedup key: distinct identifiers are
      * distinct creation operations and open distinct deferrals.
@@ -519,12 +618,21 @@ export class ExpansionDeferralStore {
      * to the same facts modulo `verified_at`).
      */
     submissionEvidence?: IntentSubmissionEvidenceFact[];
+    /**
+     * @spec progressive#ceiling-review (#1017): why a drawdown request of a
+     * ceiling chain fell back to this fresh approval (a guard exception, or a
+     * request beyond the ceiling).
+     */
+    drawdownFallback?: string;
   }): DeferralPending {
     const predecessor = this.kernel.get(input.predecessorId);
     if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
       throw new ExpansionDeferralError("predecessor_not_active", "predecessor mission is not active");
     }
     const snapshotCv = predecessor.containment?.containment_version ?? 0;
+    // @spec expansion#reconciliation check 3 (#1177): the adjudication
+    // snapshot of the predecessor's discharge latches.
+    const snapshotDischarges = predecessor.discharged?.length ?? 0;
     const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
     // Client-scoped (the `c` member AND the explicit column predicate below):
     // the same widening request from two different clients opens two deferrals.
@@ -542,7 +650,7 @@ export class ExpansionDeferralStore {
         "SELECT deferral_code FROM expansion_deferrals WHERE state = 'authorization_pending' AND intent_json = ? AND client_id = ?",
       )
       .get(key, input.clientId) as { deferral_code: string } | undefined;
-    const code = existing?.deferral_code ?? `xdfr_${randomBytes(18).toString("base64url")}`;
+    const code = existing?.deferral_code ?? `${EXPANSION_DEFERRAL_PREFIX}${randomBytes(18).toString("base64url")}`;
     if (!existing) {
       // @spec child-delegation#carryover-manifest — PREPARATION: render the
       // plan read-only and RESERVE the proposed successor and replacement
@@ -569,7 +677,7 @@ export class ExpansionDeferralStore {
       }
       this.db
         .prepare(
-          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, submission_evidence_json, carryover_plan_id, carryover_plan_json, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO expansion_deferrals (deferral_code, state, predecessor_id, intent_json, client_id, jkt, creation_request_id, pred_containment_version, pred_discharge_count, submission_evidence_json, carryover_plan_id, carryover_plan_json, drawdown_fallback_reason, created_at) VALUES (?, 'authorization_pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .run(
           code,
@@ -579,9 +687,11 @@ export class ExpansionDeferralStore {
           input.jkt,
           input.creationRequestId ?? null,
           snapshotCv,
+          snapshotDischarges,
           input.submissionEvidence?.length ? JSON.stringify(input.submissionEvidence) : null,
           plan?.plan_id ?? null,
           plan ? JSON.stringify(plan) : null,
+          input.drawdownFallback ?? null,
           this.now().getTime(),
         );
     }
@@ -603,19 +713,52 @@ export class ExpansionDeferralStore {
     // forward, leaving every entry's actions unchanged), and every action is
     // classified. A refusal records nothing and leaves the deferral pending.
     const pending = this.db
-      .prepare("SELECT intent_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'")
-      .get(deferralCode) as { intent_json: string } | undefined;
+      .prepare(
+        "SELECT intent_json, predecessor_id, reconsent_offer_json FROM expansion_deferrals WHERE deferral_code = ? AND state = 'authorization_pending'",
+      )
+      .get(deferralCode) as { intent_json: string; predecessor_id: string; reconsent_offer_json: string | null } | undefined;
+    let reconsent: ReconsentedCeiling | undefined;
     if (pending) {
       const recorded = JSON.parse(pending.intent_json) as { i: MissionIntent; pr?: AuthorityEntry[] };
       const successor = this.kernel.derive(recorded.i, recorded.pr?.length ? recorded.pr : undefined);
+      // @spec progressive#ceiling-reconsent (#1413): a re-consent is a
+      // ceiling consent, so its entries are validated here and classified with
+      // the successor's authority, as at the initial approval (#1255).
+      const predecessor = this.kernel.get(pending.predecessor_id);
+      const ceilingEntries = approval.ceiling ? consentedCeilingEntries(approval.ceiling) : [];
+      if (approval.ceiling && !predecessor?.authority_ceiling) {
+        throw new IntentError("invalid_request", "the expansion chain carries no ceiling to re-consent");
+      }
+      // @spec progressive#ceiling-reconsent (#1017): the disclosure renders the
+      // re-consented ceiling and policy as at the initial approval, so a
+      // re-consent consents only exactly the offer the disclosure rendered, as
+      // retained when it rendered, never an offer computed afresh.
+      const rendered = pending.reconsent_offer_json
+        ? (JSON.parse(pending.reconsent_offer_json) as CeilingConsent)
+        : undefined;
+      if (approval.ceiling && !consentsOffer(approval.ceiling, rendered)) {
+        throw new IntentError("invalid_request", "the approval re-consents a ceiling its disclosure did not render");
+      }
       const authentication = approval.authentication;
       const floor = evaluateApprovalFloor(
         this.approvalFloor,
-        successor,
+        [...successor, ...ceilingEntries],
         authentication ? { acr: authentication.acr, auth_time: authentication.auth_time } : {},
         { interactive: authentication?.surface === "browser", nowSeconds: Math.floor(this.now().getTime() / 1000) },
       );
       if (floor.outcome === "refused") throw new ApprovalFloorRefusedError(floor.reason);
+      if (approval.ceiling && predecessor) {
+        // Committed at this decision: the policy digest over the snapshot held
+        // now, and this decision's instant as the ceiling consent instant.
+        const { drawdown_count: _count, ...committed } = consentCeiling(
+          predecessor.issuer,
+          this.kernel.activationPolicies(),
+          approval.ceiling,
+          this.now().toISOString(),
+          approval.approver,
+        );
+        reconsent = committed;
+      }
     }
     // @spec child-delegation#carryover-manifest — the approval event COMMITS
     // the exact manifest: the deterministic per-child approval identifiers
@@ -635,7 +778,7 @@ export class ExpansionDeferralStore {
     }
     this.db
       .prepare(
-        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        "UPDATE expansion_deferrals SET state = 'approved', approver_json = ?, approval_event_id = ?, approved_until = ?, carryover_manifest_json = ?, carryover_manifest_hash = ?, ceiling_reconsent_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
       )
       .run(
         JSON.stringify(approval.approver),
@@ -643,8 +786,123 @@ export class ExpansionDeferralStore {
         approval.approvedUntil,
         manifestJson,
         manifestHash,
+        reconsent ? JSON.stringify(reconsent) : null,
         deferralCode,
       );
+  }
+
+  /**
+   * @spec progressive#ceiling-review (#1017): record a drawdown request the
+   * deployment refused `out_of_ceiling`, for the chain's review disclosure.
+   */
+  recordOutOfCeilingRefusal(missionId: string): void {
+    this.db
+      .prepare("INSERT INTO progressive_refusals (mission_id, refused_at) VALUES (?, ?)")
+      .run(missionId, this.now().getTime());
+  }
+
+  /**
+   * @spec progressive#fresh-approval, progressive#ceiling-reconsent,
+   * progressive#ceiling-review, expansion#completion-modes (#1017): the
+   * consent disclosure of a deferred expansion, or undefined for an unknown
+   * code. It names every outstanding containment restriction of the chain with
+   * its event class and every discharged entry with its condition, and, where
+   * the chain carries a ceiling, the re-consent offer and the chain's record
+   * since the latest ceiling consent.
+   */
+  disclosure(deferralCode: string): ExpansionDisclosure | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT predecessor_id, intent_json, client_id, drawdown_fallback_reason FROM expansion_deferrals WHERE deferral_code = ?",
+      )
+      .get(deferralCode) as
+      | { predecessor_id: string; intent_json: string; client_id: string; drawdown_fallback_reason: string | null }
+      | undefined;
+    if (!row) return undefined;
+    const chain: MissionRecord[] = [];
+    const seen = new Set<string>();
+    for (let next: string | undefined = row.predecessor_id; next && !seen.has(next); ) {
+      seen.add(next);
+      const m = this.kernel.get(next);
+      if (!m) break;
+      chain.push(m);
+      next = m.predecessor;
+    }
+    const contained = chain.flatMap((m) =>
+      (m.containment?.events ?? []).flatMap((event) =>
+        event.removed.map((r) => ({ ...r, event_class: event.type, mission: m.id })),
+      ),
+    );
+    const discharged: ExpansionDisclosure["restrictions"]["discharged"] = [];
+    for (const m of chain) {
+      for (const latch of m.discharged ?? []) {
+        const entry = m.authority_set.find((e) => entryDigest(m.issuer, e) === latch.entry_digest);
+        if (!entry) continue;
+        const condition =
+          terminalWhenOf(entry)?.find((c) => conditionDigest(c) === latch.condition_digest) ?? {
+            event_type: latch.event_type,
+          };
+        discharged.push({ entry, condition, discharged_at: latch.discharged_at, mission: m.id });
+      }
+    }
+    const disclosure: ExpansionDisclosure = {
+      predecessor: row.predecessor_id,
+      ...(row.drawdown_fallback_reason ? { drawdown_fallback: row.drawdown_fallback_reason } : {}),
+      restrictions: { contained, discharged },
+    };
+    const predecessor = chain[0];
+    if (predecessor?.authority_ceiling && predecessor.ceiling_consented_at) {
+      const since = predecessor.ceiling_consented_at;
+      const sinceMs = Date.parse(since);
+      const ids = JSON.stringify(chain.map((m) => m.id));
+      const drawdowns = chain.filter(
+        (m) => m.approval_basis.type === "ceiling_drawdown" && Date.parse(m.created_at) > sinceMs,
+      ).length;
+      const hours = Math.max((this.now().getTime() - sinceMs) / 3_600_000, 1 / 3600);
+      const escalations = (
+        this.db
+          .prepare(
+            "SELECT created_at, drawdown_fallback_reason FROM expansion_deferrals WHERE predecessor_id IN (SELECT value FROM json_each(?)) AND drawdown_fallback_reason IS NOT NULL AND created_at > ? ORDER BY created_at",
+          )
+          .all(ids, sinceMs) as Array<{ created_at: number; drawdown_fallback_reason: string }>
+      ).map((e) => ({ at: new Date(e.created_at).toISOString(), reason: e.drawdown_fallback_reason }));
+      const refusals = (
+        this.db
+          .prepare(
+            "SELECT refused_at FROM progressive_refusals WHERE mission_id IN (SELECT value FROM json_each(?)) AND refused_at > ? ORDER BY refused_at",
+          )
+          .all(ids, sinceMs) as Array<{ refused_at: number }>
+      ).map((r) => ({ at: new Date(r.refused_at).toISOString() }));
+      const recorded = JSON.parse(row.intent_json) as { i: MissionIntent };
+      const offer = this.ceilingOffer?.({ clientId: row.client_id, intent: recorded.i });
+      // @spec progressive#ceiling-reconsent (#1480 review): retained as
+      // rendered; an approval re-consents only this. A rendering with no offer
+      // withdraws an earlier one.
+      this.db
+        .prepare(
+          "UPDATE expansion_deferrals SET reconsent_offer_json = ? WHERE deferral_code = ? AND state = 'authorization_pending'",
+        )
+        .run(offer ? JSON.stringify(offer) : null, deferralCode);
+      disclosure.ceiling = {
+        ...(offer
+          ? {
+              reconsent_offer: {
+                authority_ceiling: offer.authority_ceiling,
+                ...(offer.drawdown_policy ? { drawdown_policy: offer.drawdown_policy } : {}),
+                adjudication: ceilingAdjudicationLine(offer),
+              },
+            }
+          : {}),
+        review: {
+          since,
+          policy_adjudicated_drawdowns: { count: drawdowns, per_hour: Math.round((drawdowns / hours) * 1000) / 1000 },
+          escalations,
+          out_of_ceiling_refusals: refusals,
+          discharged: discharged.filter((d) => Date.parse(d.discharged_at) > sinceMs),
+        },
+      };
+    }
+    return disclosure;
   }
 
   deny(deferralCode: string): void {
@@ -655,6 +913,42 @@ export class ExpansionDeferralStore {
     // identifiers stay HELD: never handed to another plan, never re-drawn as a
     // fresh identifier, and the cancelled plan can never complete.
     this.cancelCarryoverPlan(deferralCode);
+  }
+
+  /**
+   * DTR -00 Section 7.2 (#1177): cancel a deferral at the revocation endpoint.
+   * Only the client the deferral was issued to cancels it, and only within its
+   * `expires_in`. A pending or approved deferral that has not completed is
+   * refused, so its next poll answers `access_denied`. A completion that
+   * committed but was never released to the token adapter is treated as
+   * redeemed and then cancelled: no later poll delivers its token. Anything
+   * else is left unchanged. Returns whether the deferral was cancelled.
+   */
+  cancel(deferralCode: string, clientId: string): boolean {
+    const row = this.db
+      .prepare("SELECT client_id, state, redeemed, completion_released, created_at FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(deferralCode) as
+      | { client_id: string; state: string; redeemed: number; completion_released: number | null; created_at: number }
+      | undefined;
+    if (!row || row.client_id !== clientId) return false;
+    if (this.now().getTime() > row.created_at + DEFERRAL_EXPIRES_IN * 1000) return false;
+    if (row.redeemed === 0) {
+      const cancelled =
+        this.db
+          .prepare(
+            "UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ? AND redeemed = 0 AND state IN ('authorization_pending', 'approved')",
+          )
+          .run(deferralCode).changes === 1;
+      if (cancelled) this.cancelCarryoverPlan(deferralCode);
+      return cancelled;
+    }
+    return (
+      this.db
+        .prepare(
+          "UPDATE expansion_deferrals SET state = 'access_denied', completion_released = 1 WHERE deferral_code = ? AND redeemed = 1 AND completion_released IS NOT 1",
+        )
+        .run(deferralCode).changes === 1
+    );
   }
 
   /** Mark a denied or abandoned deferral's carryover reservations cancelled. */
@@ -729,7 +1023,7 @@ export class ExpansionDeferralStore {
     | DeferralPending
     | DeferralSlowDown
     | { error: "expired_token" }
-    | { error: "access_denied" }
+    | { error: "access_denied"; status?: ReconciliationStatus }
     | { error: "invalid_grant" }
     | ExpansionDeferredResult {
     const row = this.db
@@ -823,29 +1117,34 @@ export class ExpansionDeferralStore {
         interval: DEFERRAL_INTERVAL,
       };
     }
-    if (row.state === "access_denied") return { error: "access_denied" };
+    // @spec expansion#reconciliation (#1177): a refused deferral answers
+    // `access_denied` with the reconciliation status it recorded, if any, on
+    // every later poll. An Approver's denial records none.
+    if (row.state === "access_denied") {
+      return {
+        error: "access_denied",
+        ...(typeof row.refusal_status === "string" && row.refusal_status
+          ? { status: row.refusal_status as ReconciliationStatus }
+          : {}),
+      };
+    }
     if (row.redeemed === 1) return { error: "invalid_grant" };
+    // Record a refusal: `access_denied`, the deferred substrate's outcome for a
+    // request that resolved with an error (DTR -00 Section 5.5.1 step 4), with
+    // the reconciliation status when a reconciliation check failed.
+    const refuse = (status?: ReconciliationStatus): { error: "access_denied"; status?: ReconciliationStatus } => {
+      this.db
+        .prepare("UPDATE expansion_deferrals SET state = 'access_denied', refusal_status = ? WHERE deferral_code = ?")
+        .run(status ?? null, deferralCode);
+      return { error: "access_denied", ...(status ? { status } : {}) };
+    };
 
     // @spec expansion#deferred-window check (a): re-verify predecessor STATE at
     // completion. A predecessor terminated/superseded during the window fails.
     const predecessor = this.kernel.get(row.predecessor_id as string);
-    if (!predecessor || this.kernel.applyExpiry(predecessor).state !== "active") {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
-    }
-    // @spec expansion#deferred-window check (a): containment that ADVANCED during
-    // the window fails completion (the deferred approval MUST NOT bypass a
-    // containment applied after the request). A predecessor already contained at
-    // request time still expands (containment#restoration) because the version is
-    // unchanged.
-    const currentCv = predecessor.containment?.containment_version ?? 0;
-    if (currentCv !== (row.pred_containment_version as number)) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+    const observedPredecessor = predecessor ? this.kernel.applyExpiry(predecessor) : undefined;
+    if (!observedPredecessor || observedPredecessor.state !== "active") {
+      return refuse(reconciliationStatusFor(observedPredecessor));
     }
 
     const recorded = JSON.parse(row.intent_json as string) as {
@@ -854,7 +1153,7 @@ export class ExpansionDeferralStore {
     };
     const intent = recorded.i;
     const approver = JSON.parse(row.approver_json as string) as { iss: string; sub: string };
-    // @spec expansion#creation-request-id — the successor INSERT and the
+    // @spec expansion#creation-idempotency — the successor INSERT and the
     // idempotency-reservation completion commit in ONE kernel-db transaction
     // (createExpansion's insertRecord nests as a savepoint), so a lost response
     // after this commit is recovered by an initiation retry finding the
@@ -884,8 +1183,13 @@ export class ExpansionDeferralStore {
     let txOut:
       | { successor: MissionRecord; predecessorId: string; carryover?: ApplyCarryoverOutcome }
       | undefined;
+    // The in-transaction re-check refuses by returning undefined: the
+    // predecessor stopped being effectively active between check and commit.
+    let predecessorRefused = false;
+    let restricted = false;
     try {
       txOut = this.redeemInTransaction(row, intent, recorded, approver, submissionEvidence, creationRequestId);
+      predecessorRefused = txOut === undefined;
     } catch (e) {
       // @spec child-delegation#carryover-commit — a carryover refusal rolls the
       // WHOLE completion back: no partial successor, no surviving replacement
@@ -896,15 +1200,20 @@ export class ExpansionDeferralStore {
         txOut = undefined;
       } else if (e instanceof IntentError) {
         txOut = undefined;
+      } else if (e instanceof RestrictedSinceApprovalError) {
+        restricted = true;
+        txOut = undefined;
       } else {
         throw e;
       }
     }
     if (!txOut) {
-      this.db
-        .prepare("UPDATE expansion_deferrals SET state = 'access_denied' WHERE deferral_code = ?")
-        .run(deferralCode);
-      return { error: "access_denied" };
+      if (restricted) return refuse("authority_restricted_since_approval");
+      // An expiry or carryover refusal is not a reconciliation failure and
+      // carries no status (@spec expansion#successor-expiry).
+      if (!predecessorRefused) return refuse();
+      const now = this.kernel.get(row.predecessor_id as string);
+      return refuse(reconciliationStatusFor(now ? this.kernel.observe(now) : undefined));
     }
     this.kernel.publishPendingCommits();
     this.db.prepare("UPDATE expansion_deferrals SET completion_released = 1 WHERE deferral_code = ?").run(deferralCode);
@@ -961,7 +1270,23 @@ export class ExpansionDeferralStore {
         approvedUntil: row.approved_until as string,
         ...(submissionEvidence?.length ? { submissionEvidence } : {}),
         ...(batch ? { successorId: batch.manifest.successor.mission_id } : {}),
+        ...(row.ceiling_reconsent_json
+          ? { ceilingReconsent: JSON.parse(row.ceiling_reconsent_json as string) as ReconsentedCeiling }
+          : {}),
       });
+      // @spec expansion#reconciliation check 3 (#1177), in the activation
+      // transaction and before any carryover work: the successor's complete
+      // Authority Set, carried authority included, overlaps no restriction of
+      // the predecessor that came after adjudication, the initiation snapshot.
+      // A deferral opened before this snapshot existed counts every latch.
+      if (
+        restrictedSinceAdjudication(predNow, res.successor.authority_set, {
+          containment: row.pred_containment_version as number,
+          discharge: (row.pred_discharge_count as number | null) ?? 0,
+        })
+      ) {
+        throw new RestrictedSinceApprovalError();
+      }
       if (creationRequestId) {
         this.creationIdempotency.completeInCallerTx(
           row.client_id as string,

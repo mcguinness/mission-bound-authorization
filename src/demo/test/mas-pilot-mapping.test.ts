@@ -8,8 +8,9 @@
  * scope mapping, and the audit record of every mapping decision.
  */
 
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { loadMasPilotConfig } from "../src/mas-pilot/config.js";
+import { loadMasPilotConfig, parseMasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import {
   MappingContractCache,
   type MappingContractDocument,
@@ -223,5 +224,103 @@ describe("mapping contract cache: the scope mapping (@spec authority-server#miss
     expect(current.credentialAuthority({ issuer: "https://other-estate.test", scope: "invoices.read", resource: RESOURCE, now })).toBeUndefined();
     expect(current.credentialAuthority({ issuer: ESTATE, scope: "invoices.read", resource: "https://other.test/mcp", now })).toBeUndefined();
     expect(current.credentialAuthority({ issuer: ESTATE, scope: undefined, resource: RESOURCE, now })).toBeUndefined();
+  });
+});
+
+describe("pilot configuration: the estate's development Resource-policy grants (@spec runtime#input-resource-policy, #818 slice 2)", () => {
+  const raw = () =>
+    JSON.parse(readFileSync(new URL("../../config/mas-pilot.json", import.meta.url), "utf8")) as Record<string, unknown>;
+  const withPolicy = (resourcePolicy: unknown) => ({ ...raw(), resource_policy: resourcePolicy });
+  const tenants = [{ tenant: "t", vendors: ["acme"], members: [{ sub: "u-1001" }] }];
+
+  it("loads the shipped grants: every entitled principal is a tenant member, subjects as readers, clients with authorized_client", () => {
+    const policy = loadMasPilotConfig().resource_policy;
+    const members = new Set(policy.tenants.flatMap((t) => t.members.map((m) => JSON.stringify(m))));
+    expect(policy.entitlements.length).toBeGreaterThan(0);
+    for (const e of policy.entitlements) {
+      const who = "sub" in e ? { sub: e.sub } : { client: e.client };
+      expect(members.has(JSON.stringify(who)), JSON.stringify(e)).toBe(true);
+      expect(e.relation).toBe("sub" in e ? "authorized_reader" : "authorized_client");
+    }
+  });
+
+  it("refuses a client holding a subject relation and a subject holding authorized_client", () => {
+    const clientAsReader = withPolicy({ tenants, entitlements: [{ client: "estate-ap-bot-7f3", relation: "authorized_reader", vendor: "acme" }] });
+    const subjectAsClient = withPolicy({ tenants, entitlements: [{ sub: "u-1001", relation: "authorized_client", vendor: "acme" }] });
+    expect(() => parseMasPilotConfig(clientAsReader)).toThrow(/authorized_client for a client/);
+    expect(() => parseMasPilotConfig(subjectAsClient)).toThrow(/authorized_reader or authorized_payer for a subject/);
+  });
+
+  it("loads the shipped separated MAS: its PDP enrolled for the payments enforcement scope, the state source placed with the PDP (#818 slice 4b)", () => {
+    const separated = loadMasPilotConfig().separated_mas;
+    expect(separated.state_source.placement).toBe("pdp");
+    expect(separated.enrolled_pdps).toContainEqual({ principal_id: separated.pdp_principal_id, enforcement_scopes: [RESOURCE] });
+  });
+
+  it("refuses a separated MAS whose state source is placed anywhere but the PDP, a non-positive bound, or an unknown member (#818 slice 4b)", () => {
+    const separated = raw().separated_mas as Record<string, unknown> & { state_source: Record<string, unknown> };
+    const withSeparated = (over: Record<string, unknown>) => ({ ...raw(), separated_mas: { ...separated, ...over } });
+    expect(() => parseMasPilotConfig(withSeparated({ state_source: { ...separated.state_source, placement: "pep" } }))).toThrow(
+      /placement must be "pdp"/,
+    );
+    expect(() => parseMasPilotConfig(withSeparated({ state_source: { ...separated.state_source, timeout_ms: 0 } }))).toThrow(
+      /timeout_ms must be a positive integer/,
+    );
+    expect(() => parseMasPilotConfig(withSeparated({ extra: true }))).toThrow(/unknown member extra/);
+  });
+
+  it("refuses a member or an entitlement naming both a subject and a client", () => {
+    const bothMember = withPolicy({ tenants: [{ tenant: "t", vendors: ["acme"], members: [{ sub: "u-1001", client: "x" }] }], entitlements: [] });
+    const bothEntitlement = withPolicy({ tenants, entitlements: [{ sub: "u-1001", client: "x", relation: "authorized_reader", vendor: "acme" }] });
+    expect(() => parseMasPilotConfig(bothMember)).toThrow(/sub or client|unknown member/);
+    expect(() => parseMasPilotConfig(bothEntitlement)).toThrow(/sub or client|unknown member/);
+  });
+});
+
+describe("pilot configuration: relocating the Mission issuer (#818 slice 5B, #1466 review)", () => {
+  const shippedRaw = () => readFileSync(new URL("../../config/mas-pilot.json", import.meta.url), "utf8");
+  const NEW = "http://127.0.0.1:14834";
+
+  /** The configuration with only the Mission-issuer fields set to `url`: what a relocation must produce. */
+  function expectedAt(config: ReturnType<typeof parseMasPilotConfig>, url: string) {
+    const contract = config.mapping_contract as MappingContractDocument;
+    return {
+      ...config,
+      mission_issuer: url,
+      mapping_contract: { ...contract, mission_issuer: url, subjects: contract.subjects.map((r) => ({ ...r, to: { ...r.to, iss: url } })) },
+      routes: config.routes.map((r) => (r.admits === "mission-bound" ? { ...r, issuer: url } : r)),
+    };
+  }
+
+  it("moves only the Mission-issuer fields when the old issuer is a prefix of the estate issuer, leaving estate URLs and identities intact", () => {
+    // The owner's reproduction: a Mission issuer that is a string prefix of the estate issuer.
+    const config = parseMasPilotConfig(JSON.parse(shippedRaw().replaceAll("https://mas.pilot.invalid", "http://127.0.0.1")));
+    expect(config.mission_issuer).toBe("http://127.0.0.1");
+    expect(config.estate.issuer).toBe("http://127.0.0.1:14818");
+    const relocated = relocateMissionIssuer(config, NEW);
+    expect(relocated).toEqual(expectedAt(config, NEW));
+    expect(relocated.estate.issuer).toBe("http://127.0.0.1:14818");
+    const contract = relocated.mapping_contract as MappingContractDocument;
+    expect(contract.subjects.map((r) => r.from.iss)).toEqual(contract.subjects.map(() => "http://127.0.0.1:14818"));
+    expect(contract.clients.map((r) => r.from.iss)).toEqual(contract.clients.map(() => "http://127.0.0.1:14818"));
+    expect(Object.keys(contract.scopes.issuers)).toEqual(["http://127.0.0.1:14818"]);
+    expect(relocated.routes.find((r) => r.route === "gateway")?.issuer).toBe("http://127.0.0.1:14818");
+    expect(JSON.stringify(relocated)).not.toContain(`${NEW}:`);
+    expect(parseMappingContract(relocated.mapping_contract).mission_issuer).toBe(NEW);
+  });
+
+  it("moves the shipped configuration's Mission issuer in its four fields and nowhere else, and the contract still loads", () => {
+    const config = loadMasPilotConfig();
+    const relocated = relocateMissionIssuer(config, NEW);
+    expect(relocated).toEqual(expectedAt(config, NEW));
+    const contract = parseMappingContract(relocated.mapping_contract);
+    expect(contract.mission_issuer).toBe(NEW);
+    expect(contract.subjects.every((r) => r.to.iss === NEW)).toBe(true);
+    expect(relocated.routes.find((r) => r.admits === "mission-bound")?.issuer).toBe(NEW);
+  });
+
+  it("returns the configuration unchanged when it already names the URL", () => {
+    const config = loadMasPilotConfig();
+    expect(relocateMissionIssuer(config, config.mission_issuer)).toBe(config);
   });
 });
