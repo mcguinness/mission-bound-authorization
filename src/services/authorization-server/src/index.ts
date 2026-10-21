@@ -736,8 +736,11 @@ function publicJwkOf(jwk: JWK): Record<string, unknown> {
 }
 
 /**
- * @spec status#lifecycle-authorization: a dedicated client of the Mission
- * Lifecycle endpoint ({@link buildAuthorizationServer}'s `lifecycleClients`).
+ * @spec status#lifecycle-authorization, status#mission-status-authentication:
+ * a dedicated client of the Mission Lifecycle endpoint, or of the Mission
+ * Status endpoint, which authenticates its clients the same way: a client
+ * holding `mission_status` reads Mission Status there (#1407)
+ * ({@link buildAuthorizationServer}'s `lifecycleClients`).
  */
 export interface LifecycleClientRegistration {
   client_id: string;
@@ -1106,7 +1109,9 @@ export async function buildAuthorizationServer(opts: {
   serviceTokenPrincipals?: Record<string, ServiceTokenPrincipal>;
   /**
    * @spec authority-server#join-disclosure (#818): the PDPs enrolled for each
-   * enforcement scope, keyed by service principal, each naming the Status
+   * enforcement scope, keyed by the authenticated caller's identifier (a
+   * Mission Status endpoint client's `client_id`, or a service principal at
+   * the development route; #1407), each naming the Status
    * `audience` values it is enrolled for. Deployment configuration the MAS
    * holds; absent (the default), no caller is enrolled and no Status response
    * discloses the Mission's `subject` or `client_id`.

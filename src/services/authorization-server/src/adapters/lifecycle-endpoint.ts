@@ -18,6 +18,23 @@ import { DPOP_PROOF_REPLAY_WINDOW_S, type DpopProofReplay } from "./dpop-replay.
 export const LIFECYCLE_ENDPOINT_PATH = "/mission/lifecycle";
 
 /**
+ * @spec status#mission-status, status#as-metadata (#1407): the advertised
+ * Mission Status endpoint's path, published as `mission_status_endpoint`. Its
+ * request is this endpoint's form transport ({@link readLifecycleForm}) and
+ * its caller the same private-key-JWT client
+ * ({@link authenticateLifecycleClient}), under the same client-assertion
+ * algorithms ({@link LIFECYCLE_CLIENT_ASSERTION_ALGS}).
+ */
+export const STATUS_ENDPOINT_PATH = "/mission/status";
+
+/**
+ * @spec status#as-metadata (#1407): the methods the Mission Status endpoint
+ * accepts (`mission_status_endpoint_auth_methods_supported`): private-key JWT
+ * only, as at the Lifecycle endpoint.
+ */
+export const STATUS_ENDPOINT_AUTH_METHODS: readonly string[] = ["private_key_jwt"];
+
+/**
  * @spec status#as-metadata: the methods this endpoint accepts
  * (`mission_lifecycle_endpoint_auth_methods_supported`). Private-key JWT only:
  * the profile requires at least one of its three mechanisms, and this

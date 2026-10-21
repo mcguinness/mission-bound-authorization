@@ -469,9 +469,19 @@ export interface StatusObservationOptions {
   /**
    * @spec status#lifecycle-authorization: the envelope `sub`: the acting
    * party of a Lifecycle request, reflected in the signed response's audit
-   * surface. Absent, `sub` is the Mission's client, as before.
+   * surface. Absent, `sub` is the caller below, or the Mission's client.
    */
   actingParty?: string;
+  /**
+   * @spec status#mission-status-response (consumer check 6, "`sub` equals the
+   * requesting client's identifier") (#1407): the authenticated caller of a
+   * Mission Status read, signed as the envelope `sub`, so the response is
+   * bound to the caller that asked for it and names no other party. Both
+   * Status routes set it. A Lifecycle response's `actingParty` takes
+   * precedence; absent both, `sub` is the Mission's client (the discharge
+   * response, unchanged).
+   */
+  caller?: string;
   /**
    * @spec authority-server#join-disclosure (#818): the authenticated caller
    * is a PDP enrolled for the requested audience, so the `mission` object
@@ -4213,7 +4223,7 @@ export class MissionKernel {
       ? this.effectiveAuthoritySet(record).filter((e) => entryOverlapsResource(e, audience))
       : undefined;
     const payload: Record<string, unknown> = {
-      sub: opts.actingParty ?? record.client_id,
+      sub: opts.actingParty ?? opts.caller ?? record.client_id,
       mission: {
         ...this.missionClaim(record),
         // @spec authority-server#join-disclosure (#818): the Mission's
