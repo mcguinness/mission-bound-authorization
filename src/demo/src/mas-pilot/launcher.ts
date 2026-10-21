@@ -26,7 +26,7 @@
 
 import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
-import type { Server } from "node:http";
+import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -38,6 +38,7 @@ import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "
 import { buildPilotMas, masIssuer } from "./mas-as.js";
 import { masConsoleRoutes, type OperatorConsole, pilotConsoleRoutes, startOperatorConsole } from "./operator-console.js";
 import { composeSeparatedMasPilot } from "./separated.js";
+import { StartupCancelled, StartupScope } from "./startup.js";
 
 export type MasPilotTopology = "in-process" | "separated";
 
@@ -144,24 +145,44 @@ const SERVE_ENTRY = fileURLToPath(new URL("./mas-serve.ts", import.meta.url));
 const TSX_LOADER = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 
 /**
- * Start the MAS process with no IPC channel: its standard streams are piped
- * for its ready lines, and it takes no operator messages, so it approves
- * only through its approval surface.
+ * Start the MAS process with no IPC channel: it takes no operator messages,
+ * so it approves only through its approval surface. Its stdout and stderr
+ * are piped for its ready lines. Its stdin is a pipe this process never
+ * writes, and `MAS_PILOT_EXIT_WITH_PARENT=1` has it shut down when that pipe
+ * ends: when this process exits, however it exits, a SIGKILL included.
  */
 export function spawnMasProcess(env: NodeJS.ProcessEnv): ChildProcess {
-  return spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], { env, stdio: ["ignore", "pipe", "pipe"] });
+  return spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], {
+    env: { ...env, MAS_PILOT_EXIT_WITH_PARENT: "1" },
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 }
 
-/** Wait for the MAS process's ready line; its console line comes first when it serves one. */
-function awaitMasReady(child: ChildProcess): Promise<{ consoleUrl?: string }> {
+/**
+ * Wait for the MAS process's ready line; its console line comes first when it
+ * serves one. A cancelled startup stops waiting at once.
+ */
+function awaitMasReady(child: ChildProcess, signal: AbortSignal): Promise<{ consoleUrl?: string }> {
   let out = "";
   let err = "";
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`the MAS process did not start within 60 s${err ? `: ${err.trim()}` : ""}`)), 60_000);
+    const settle = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => {
+      settle();
+      reject(new StartupCancelled());
+    };
+    const timer = setTimeout(() => {
+      settle();
+      reject(new Error(`the MAS process did not start within 60 s${err ? `: ${err.trim()}` : ""}`));
+    }, 60_000);
+    signal.addEventListener("abort", onAbort, { once: true });
     child.stdout?.on("data", (d: Buffer) => {
       out += d.toString();
       if (out.includes("mas-pilot: ready ")) {
-        clearTimeout(timer);
+        settle();
         const consoleUrl = /mas-pilot: operator console (\S+)/.exec(out)?.[1];
         resolve(consoleUrl ? { consoleUrl } : {});
       }
@@ -170,7 +191,7 @@ function awaitMasReady(child: ChildProcess): Promise<{ consoleUrl?: string }> {
       err += d.toString();
     });
     child.once("exit", () => {
-      clearTimeout(timer);
+      settle();
       const line = err.split("\n").find((l) => l.startsWith("mas-pilot: startup failed: "));
       reject(new Error(line ? line.slice("mas-pilot: ".length) : `the MAS process exited before it was ready${err ? `: ${err.trim()}` : ""}`));
     });
@@ -178,12 +199,15 @@ function awaitMasReady(child: ChildProcess): Promise<{ consoleUrl?: string }> {
 }
 
 /** The MAS answers at `url` under the configured Mission issuer, or startup refuses naming why. */
-async function requireMasIssuer(url: string, expected: string): Promise<void> {
+async function requireMasIssuer(url: string, expected: string, startup: StartupScope): Promise<void> {
   let metadata: { issuer?: unknown };
   try {
-    const res = await fetch(`${url.replace(/\/$/, "")}/.well-known/openid-configuration`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${url.replace(/\/$/, "")}/.well-known/openid-configuration`, {
+      signal: AbortSignal.any([AbortSignal.timeout(5000), startup.signal]),
+    });
     metadata = (await res.json()) as { issuer?: unknown };
   } catch (e) {
+    startup.check();
     throw new Error(`the MAS at ${url} is unreachable: ${(e as Error).message}`);
   }
   if (metadata.issuer !== expected) {
@@ -191,51 +215,82 @@ async function requireMasIssuer(url: string, expected: string): Promise<void> {
   }
 }
 
-const stopChild = async (child: ChildProcess | undefined): Promise<void> => {
-  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+/**
+ * Stop a MAS process this launcher started: SIGTERM, then SIGKILL if it has
+ * not exited within `graceMs`. Resolves once it has exited, and reports it.
+ */
+export async function stopChild(child: ChildProcess, report: (message: string) => void = () => {}, graceMs = 5000): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return;
   const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+  let forced = false;
   child.kill("SIGTERM");
+  const timer = setTimeout(() => {
+    forced = true;
+    child.kill("SIGKILL");
+  }, graceMs);
   await exited;
-};
+  clearTimeout(timer);
+  report(`stopped the MAS process ${child.pid}${forced ? ` (SIGKILL after ${graceMs} ms)` : ""}`);
+}
 
-/** Start the pilot from `options`. A failure releases everything it opened. */
-export async function launchMasPilot(options: MasPilotLaunchOptions): Promise<MasPilotLaunch> {
+const listen = (server: Server, port: number, host: string, issuer: string): Promise<Server> =>
+  new Promise<Server>((resolve, reject) => {
+    server.once("listening", () => resolve(server));
+    server.once("error", (e) => reject(new Error(`the MAS cannot listen at ${issuer}: ${e.message}`)));
+    server.listen(port, host);
+  });
+
+const closeServer = (server: Server): Promise<void> =>
+  new Promise<void>((resolve) => {
+    if (!server.listening) return resolve();
+    server.closeAllConnections();
+    server.close(() => resolve());
+  });
+
+/** How a caller controls a launch. */
+export interface MasPilotLaunchControl {
+  /**
+   * The launch's cleanup scope. A caller that holds it can cancel startup at
+   * any point (`cancel()`), which releases everything acquired so far without
+   * waiting for a blocked step; the launch then rejects with
+   * `StartupCancelled`. Absent, the launch makes its own.
+   */
+  startup?: StartupScope;
+  /** Progress lines: the MAS process started, ready, and stopped. */
+  onProgress?: (message: string) => void;
+}
+
+/**
+ * Start the pilot from `options`. Every resource is registered in the
+ * launch's scope as it is acquired; a failure, or a cancellation, releases
+ * them all, last first, the MAS process included.
+ */
+export async function launchMasPilot(options: MasPilotLaunchOptions, control: MasPilotLaunchControl = {}): Promise<MasPilotLaunch> {
   const { config } = options;
   const token = crypto.randomUUID();
   const issuer = masIssuer(config);
-  const opened: (() => Promise<void>)[] = [];
-  const release = async () => {
-    for (const close of opened.splice(0).reverse()) await close();
-  };
+  const scope = control.startup ?? new StartupScope();
+  const progress = control.onProgress ?? (() => {});
   try {
     let pilot: MasPilotParts;
     let masProcess: ChildProcess | undefined;
     let masConsole: string | undefined;
     let pilotConsole: OperatorConsole;
-    const common = { openfga: options.openfga, resourcePolicyStore: options.resourcePolicyStore, config };
+    const common = { openfga: options.openfga, resourcePolicyStore: options.resourcePolicyStore, config, startup: scope };
     if (options.topology === "in-process") {
       if (options.kernelStore) mkdirSync(dirname(options.kernelStore.file), { recursive: true });
-      const mas = await buildPilotMas(config, {
-        ...(options.signingKeys ? { signingKeys: options.signingKeys } : {}),
-        ...(options.kernelStore ? { kernelStore: options.kernelStore } : {}),
-      });
-      opened.push(async () => mas.built.kernel.close());
-      const server: Server = mas.built.provider.listen(config.separated_mas.port, config.separated_mas.host);
-      await new Promise<void>((resolve, reject) => {
-        server.once("listening", () => resolve());
-        server.once("error", (e) => reject(new Error(`the MAS cannot listen at ${issuer}: ${e.message}`)));
-      });
-      opened.push(
-        () =>
-          new Promise<void>((resolve) => {
-            server.closeAllConnections();
-            server.close(() => resolve());
-          }),
+      const mas = await scope.acquire(
+        buildPilotMas(config, {
+          ...(options.signingKeys ? { signingKeys: options.signingKeys } : {}),
+          ...(options.kernelStore ? { kernelStore: options.kernelStore } : {}),
+        }),
+        (m) => m.built.kernel.close(),
       );
-      const composed = await composeMasPilot({ ...common, kernel: mas.built.kernel });
-      opened.push(composed.close);
-      pilot = composed;
-      pilotConsole = await startOperatorConsole([masConsoleRoutes(mas), pilotConsoleRoutes(pilot)], { port: 0, token });
+      await scope.acquire(listen(createServer(mas.built.provider.callback()), config.separated_mas.port, config.separated_mas.host, issuer), closeServer);
+      pilot = await scope.step(composeMasPilot({ ...common, kernel: mas.built.kernel }));
+      pilotConsole = await scope.acquire(startOperatorConsole([masConsoleRoutes(mas), pilotConsoleRoutes(pilot)], { port: 0, token }), (c) =>
+        c.close(),
+      );
     } else {
       let masUrl = issuer;
       let pdpToken: string;
@@ -252,18 +307,19 @@ export async function launchMasPilot(options: MasPilotLaunchOptions): Promise<Ma
           MAS_PILOT_OPERATOR_TOKEN: token,
           MAS_PILOT_OPERATOR_CONSOLE_PORT: "0",
         });
+        scope.check();
         const child = spawnMasProcess(env);
         masProcess = child;
-        opened.push(() => stopChild(child));
-        masConsole = (await awaitMasReady(child)).consoleUrl;
+        // Registered as it is spawned: from here on, a failure or a signal stops it.
+        scope.register(() => stopChild(child, progress));
+        progress(`started the MAS process ${child.pid}`);
+        masConsole = (await awaitMasReady(child, scope.signal)).consoleUrl;
+        progress(`the MAS process ${child.pid} is ready at ${issuer}${masConsole ? `, its operator console at ${masConsole}` : ""}`);
       }
-      await requireMasIssuer(masUrl, config.mission_issuer);
-      const composed = await composeSeparatedMasPilot({ ...common, mas: { url: masUrl, pdpToken } });
-      opened.push(composed.close);
-      pilot = composed;
-      pilotConsole = await startOperatorConsole([pilotConsoleRoutes(pilot)], { port: 0, token });
+      await scope.step(requireMasIssuer(masUrl, config.mission_issuer, scope));
+      pilot = await scope.step(composeSeparatedMasPilot({ ...common, mas: { url: masUrl, pdpToken } }));
+      pilotConsole = await scope.acquire(startOperatorConsole([pilotConsoleRoutes(pilot)], { port: 0, token }), (c) => c.close());
     }
-    opened.push(pilotConsole.close);
     const consoles = { ...(masConsole ? { mas: masConsole } : {}), pilot: pilotConsole.url, token };
     const keyEnv = options.masKeyEnv ?? {};
     const masKeys = options.mas
@@ -271,7 +327,6 @@ export async function launchMasPilot(options: MasPilotLaunchOptions): Promise<Ma
       : `${keyEnv.MISSION_KEY_RING ? `key ring ${keyEnv.MISSION_KEY_RING}` : "ephemeral, generated at this boot"}; kernel ${
           keyEnv.MISSION_KERNEL_STORE ? `store ${keyEnv.MISSION_KERNEL_STORE}` : "in memory, lost at shutdown"
         }`;
-    let closing: Promise<void> | undefined;
     return {
       pilot,
       ...(masProcess ? { masProcess } : {}),
@@ -290,10 +345,11 @@ export async function launchMasPilot(options: MasPilotLaunchOptions): Promise<Ma
         `  console bearer     ${token}`,
         "  ready. Ctrl-C to stop.",
       ],
-      close: () => (closing ??= release()),
+      close: () => scope.release(),
     };
   } catch (e) {
-    await release();
+    // A startup that fails releases what it acquired, the MAS process included.
+    await scope.release().catch(() => {});
     throw e;
   }
 }

@@ -24,6 +24,14 @@
  *   slice 5B): serve the operator console's MAS half (`operator-console.ts`)
  *   on that loopback port (0: ephemeral) behind that bearer, and print its
  *   address. Both or neither.
+ * - `MAS_PILOT_EXIT_WITH_PARENT=1` (#818 slice 5B review): shut down when
+ *   stdin ends, which is when the process that started it with a stdin pipe
+ *   exits, however it exits. The launcher sets it (`spawnMasProcess`); a
+ *   process started any other way ignores stdin.
+ *
+ * SIGINT, SIGTERM, SIGHUP and, with the variable above, the end of stdin
+ * close whatever has started so far, at any point, startup included, and
+ * exit 0.
  *
  * Started with an IPC channel (the tests' `mas-process.ts`), it also takes two
  * operator messages that are test harness, not a protocol surface: `approve`
@@ -34,6 +42,7 @@
  */
 
 import { mkdirSync } from "node:fs";
+import { createServer, type Server } from "node:http";
 import { dirname } from "node:path";
 import { kernelStoreFromEnv, signingKeysFromEnv, validateMissionIntent } from "@mission/authorization-server";
 import { loadMasPilotConfig, relocateMissionIssuer } from "./config.js";
@@ -58,7 +67,33 @@ if ((consoleToken === undefined) !== (consolePort === undefined)) {
 
 let offsetMs = 0;
 const now = () => new Date(Date.now() + offsetMs);
-let mas: PilotMas;
+let mas: PilotMas | undefined;
+let server: Server | undefined;
+let operatorConsole: OperatorConsole | undefined;
+
+// Installed before any startup work, so a stop at any point closes what has
+// started (#818 slice 5B review).
+let closing = false;
+const shutdown = (): void => {
+  if (closing) return;
+  closing = true;
+  void (async () => {
+    await operatorConsole?.close();
+    if (server?.listening) {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server?.close(() => resolve()));
+    }
+    mas?.built.kernel.close();
+    process.exit(0);
+  })();
+};
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(signal, shutdown);
+if (process.env.MAS_PILOT_EXIT_WITH_PARENT === "1") {
+  process.stdin.on("end", shutdown);
+  process.stdin.on("close", shutdown);
+  process.stdin.resume();
+}
+
 try {
   const kernelStore = kernelStoreFromEnv(process.env);
   if (kernelStore) mkdirSync(dirname(kernelStore.file), { recursive: true });
@@ -71,21 +106,23 @@ try {
 } catch (e) {
   fail(e instanceof Error ? e.message : String(e));
 }
-const server = mas.built.provider.listen(separated.port, separated.host);
+const built = mas;
+const listening = createServer(built.built.provider.callback());
+server = listening;
 await new Promise<void>((resolve) => {
-  server.once("listening", () => resolve());
-  server.once("error", (e) => fail(`${mas.issuer} cannot listen: ${e.message}`));
+  listening.once("listening", () => resolve());
+  listening.once("error", (e) => fail(`${built.issuer} cannot listen: ${e.message}`));
+  listening.listen(separated.port, separated.host);
 });
-let operatorConsole: OperatorConsole | undefined;
 if (consoleToken !== undefined && consolePort !== undefined) {
   try {
-    operatorConsole = await startOperatorConsole([masConsoleRoutes(mas)], { port: Number(consolePort), token: consoleToken });
+    operatorConsole = await startOperatorConsole([masConsoleRoutes(built)], { port: Number(consolePort), token: consoleToken });
   } catch (e) {
     fail(`the operator console cannot listen: ${e instanceof Error ? e.message : String(e)}`);
   }
   console.log(`mas-pilot: operator console ${operatorConsole.url}`);
 }
-console.log(`mas-pilot: ready ${mas.issuer}`);
+console.log(`mas-pilot: ready ${built.issuer}`);
 
 interface OperatorMessage {
   id: number;
@@ -106,28 +143,12 @@ if (process.send) {
       }
       const input = msg.input as NonNullable<OperatorMessage["input"]>;
       const { intent, ...rest } = input;
-      const record = mas.built.kernel.approve({ ...rest, intent: validateMissionIntent(intent) } as Parameters<
-        typeof mas.built.kernel.approve
+      const record = built.built.kernel.approve({ ...rest, intent: validateMissionIntent(intent) } as Parameters<
+        typeof built.built.kernel.approve
       >[0]);
       process.send?.({ id: msg.id, ok: true, missionId: record.id });
     } catch (e) {
       process.send?.({ id: msg.id, ok: false, error: e instanceof Error ? e.message : String(e) });
     }
-  });
-}
-
-let closing = false;
-for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
-  process.on(signal, () => {
-    if (closing) return;
-    closing = true;
-    void (async () => {
-      await operatorConsole?.close();
-      server.closeAllConnections();
-      server.close(() => {
-        mas.built.kernel.close();
-        process.exit(0);
-      });
-    })();
   });
 }
