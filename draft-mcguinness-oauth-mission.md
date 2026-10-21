@@ -2997,8 +2997,7 @@ the codes):
    `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation
    challenge where
    {{I-D.draft-ietf-oauth-rar-metadata-remediation}} is deployed
-   ({{remediation-grains}}). More authority requires a new approval,
-   or an expansion where that companion is deployed.
+   ({{remediation-grains}}).
 4. **Unenforceable constraint.** An applicable entry carries a
    type-defined member or constraint the resource server cannot
    enforce, and the request fails closed under the same base error as
@@ -3047,9 +3046,7 @@ row names a type specification, it is the one for
 
 A denial can carry independent remediation grains: separate
 remediation mechanisms, each naming a next step without granting
-anything. This document's own grain is
-`mission_denial` ({{rs-denials}}): which path a denial leads
-into. The three remediation grains are:
+anything. The three remediation grains are:
 
 `mission_denial`:
 : - Carriage: `WWW-Authenticate` attribute
@@ -3089,11 +3086,9 @@ an expansion where that companion is deployed ({{rs-enforcement}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
 
-A third grain routes the same denial into a governed access request
-rather than a fresh derivation: the AuthZEN Access Request and
-Approval Profile's requestable denial over {{AuthZEN.ARAP}}, adopted
-by the Mission AuthZEN Profile
-({{I-D.draft-mcguinness-mission-authzen}}).
+A third grain, the requestable denial
+({{I-D.draft-mcguinness-mission-authzen}}), routes the same denial
+into a governed access request rather than a fresh derivation.
 
 The three grains compose: a deployment can offer any subset, and none
 widens authority beyond what {{authorization-derivation}} derives
