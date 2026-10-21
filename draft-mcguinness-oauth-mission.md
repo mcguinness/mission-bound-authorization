@@ -103,16 +103,16 @@ informative:
     date: 2026
   FAPI.GrantManagement:
     title: "Grant Management for OAuth 2.0"
-    target: https://openid.net/specs/fapi-grant-management-01.html
+    target: https://openid.net/specs/oauth-v2-grant-management.html
     author:
       - org: OpenID Foundation
-    date: 2022
+    date: 2023
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
     author:
       - org: OpenID Foundation
-    date: 2025
+    date: 2026
   OpenID.Core:
     title: "OpenID Connect Core 1.0 incorporating errata set 2"
     target: https://openid.net/specs/openid-connect-core-1_0.html
