@@ -90,7 +90,10 @@ export function operationIdentity(req: EvaluationRequest): string {
  * `resource` is carried whole, so the operation target
  * (`resource.properties.operation_target`, #1276, D457) is part of the
  * binding and of the cache key below: a changed target is never a reuse of a
- * permit, cacheable reads included.
+ * permit, cacheable reads included. So is the resource contract reference
+ * (@spec authzen#context-resource-contract, #249): "The reference is part of
+ * the authorization binding and the cache key, so a permit is never reused
+ * under another contract."
  */
 export function authorizationBinding(req: EvaluationRequest, view: MissionView, modelId: string): JsonValue {
   const { mission_state_observation: observation, ...rest } = req.context;

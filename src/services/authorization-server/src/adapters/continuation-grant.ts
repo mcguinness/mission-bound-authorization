@@ -2891,9 +2891,13 @@ export async function handleExpansionExchange(
  * (the poller's DPoP key MUST equal the key recorded at request time; @spec
  * deferred-window check (b) re-verifies the KEY, never the expired
  * subject_token) and requires the poller to be the acting client that opened
- * the deferral. A code issued to another client is answered as an unknown
- * one, and a proof under another key with invalid_dpop_proof (DTR -00
- * Sections 5.5.1 and 10.1). redeem() runs deferred-window check (a)
+ * the deferral. The checks run in the order AROP's (#1355) do, so no refusal
+ * tells a code apart (DTR -00 Sections 5.5.1, 5.6 and 10.1, #1357): the DPoP
+ * proof is validated first, alike for every code; then a code issued to
+ * another client, or a deferral whose recorded client is not the
+ * predecessor's, is answered as an unknown one whatever key the proof uses;
+ * only then does a proof under another key get invalid_dpop_proof. redeem()
+ * runs deferred-window check (a)
  * (predecessor STATE + restriction since adjudication) and CREATES the successor on
  * approval; this handler mints the successor's first token and supersedes the
  * predecessor on that first redemption.
@@ -2909,39 +2913,42 @@ export async function pollDeferredExpansion(
     throw new errors.InvalidRequest("deferred expansion approval is not configured");
   }
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
-  const recordedClient = store.recordedClientId(deferralCode);
-  if (recordedClient !== undefined && recordedClient !== client.clientId) {
-    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
-  }
-  // KEY possession at completion (only the KEY, never the expired subject_token).
+  // The proof first, alike for every code (#1357): a missing or invalid proof
+  // is refused before the code is looked up, so the refusal says nothing
+  // about it. @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof,
+  // through the shared token-endpoint verifier (iat window and jti replay
+  // included).
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
     txError(ctx, 400, "invalid_dpop_proof", "DPoP proof JWT required");
     return;
   }
-  // @spec RFC 9449 Section 4.3 (#1173): a complete, fresh proof, through the
-  // shared token-endpoint verifier (iat window and jti replay included).
   const verified = await verifyTokenEndpointDpop(opts, proofJws);
   if (!verified.ok) {
     refuseTokenEndpointProof(ctx, verified);
     return;
   }
-  const { jkt } = verified.proof;
-  const recordedJkt = store.recordedJkt(deferralCode);
-  if (recordedJkt !== undefined && recordedJkt !== jkt) {
-    refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
-    return;
+  const recordedClient = store.recordedClientId(deferralCode);
+  if (recordedClient !== undefined && recordedClient !== client.clientId) {
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
   }
   // @spec expansion#verification-order step 4 (#1326): the poll runs no
   // initiation check, and deferrals persist, so a deferral another client
   // opened (before the initiation check existed) is refused here, before
   // redeem creates a successor or supersedes the predecessor. Decided from the
   // recorded predecessor, never the subject_token, which the poll does not
-  // carry and which may have expired.
+  // carry and which may have expired. Answered as an unknown code and before
+  // the key binding (#1357), so the refusal discloses nothing.
   const recordedPredecessorId = store.recordedPredecessorId(deferralCode);
   const recordedPredecessor = recordedPredecessorId !== undefined ? opts.kernel.get(recordedPredecessorId) : undefined;
   if (recordedPredecessor !== undefined && !isMissionClient(ctx, recordedPredecessor)) {
-    txError(ctx, 400, "invalid_grant", "deferral was not opened by the predecessor's client");
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+  }
+  // KEY possession at completion (only the KEY, never the expired subject_token).
+  const { jkt } = verified.proof;
+  const recordedJkt = store.recordedJkt(deferralCode);
+  if (recordedJkt !== undefined && recordedJkt !== jkt) {
+    refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
     return;
   }
 
