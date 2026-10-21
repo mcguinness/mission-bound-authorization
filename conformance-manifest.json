@@ -51554,7 +51554,7 @@
    "id": "core.error-mapping.token-exchange-dpop-nonce",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "an authorization server that requires a DPoP nonce answers a proof lacking its current nonce with `use_dpop_nonce` and a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`",
+   "text": "a DPoP proof lacking the current DPoP nonce, where the authorization server requires one | `use_dpop_nonce` with a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -51576,7 +51576,7 @@
    "id": "core.error-mapping.token-exchange-dpop-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation, is `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not an unproven sender constraint",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation | `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not `invalid_request` for an unproven sender constraint",
    "role": "AS",
    "strength": "stated",
    "applicability": {
