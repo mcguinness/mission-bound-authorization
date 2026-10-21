@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b061c0f2683237b71835a269571860967f30d42c",
-    "content_sha256": "7d08c59c6bd6de75ff71a998ddc1b20431b0f434e22fb910620fa5163b395271"
+    "revision": "6999792007c8c770b4219112121add30e2a6a5a1",
+    "content_sha256": "00b97bba6a23d3e0e61603980c1edc309b454278cf417dc9ab77b701a3840b5a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -5750,7 +5750,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, while the draft's envelope anchor names the AS issuer as `iss`; whether the governed policy format may name another `iss` is an owner decision recorded on #1503."
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625)."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-producer",
