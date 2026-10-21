@@ -2061,7 +2061,7 @@ The `adjudication.governance_record` member ({{mission-record}})
 marks an approval such a record backs, and {{role-mapping}} shows how
 each scenario assigns the three `approval_basis` roles.
 
-# Mission Lifecycle and Gating {#lifecycle}
+# Mission Lifecycle {#lifecycle}
 
 A Mission is in one of two states:
 
