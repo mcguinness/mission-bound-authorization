@@ -2478,6 +2478,105 @@ export function loadApprovalFloor(
 /** The validated shipped approval-authentication floor (@see loadApprovalFloor). */
 export const APPROVAL_FLOOR: ApprovalFloorPolicy = loadApprovalFloor();
 
+/** One drawdown policy the Progressive section publishes: its identity and what its snapshot states. */
+export interface PublishedDrawdownPolicy {
+  id: string;
+  version: string;
+  max_added_actions: number;
+  ceiling_review_cadence_s: number;
+  retire_undrawn_actions?: string[];
+}
+
+/**
+ * @spec progressive#drawdown-bounds, progressive#fresh-approval,
+ * progressive#ceiling-review (#1017): the Progressive section of the Mission
+ * Deployment Profile.
+ */
+export interface ProgressiveProfile {
+  chain_rate_bound: { max_drawdowns: number; window_seconds: number };
+  action_classes: Record<string, ApprovalFloorActionClass>;
+  external_communication_actions: string[];
+  beyond_ceiling: "fresh_approval" | "refuse";
+  drawdown_policies: PublishedDrawdownPolicy[];
+}
+
+const PROGRESSIVE_MEMBERS = new Set([
+  "chain_rate_bound",
+  "action_classes",
+  "external_communication_actions",
+  "beyond_ceiling",
+  "drawdown_policies",
+]);
+const PUBLISHED_POLICY_MEMBERS = new Set(["id", "version", "max_added_actions", "ceiling_review_cadence_s", "retire_undrawn_actions"]);
+
+/**
+ * Load `progressive.json`, refusing an unknown member, an unknown action
+ * class, a non-positive bound or cadence, a duplicate policy identity and a
+ * malformed retirement list.
+ */
+export function loadProgressiveProfile(raw: unknown = readJson("progressive.json")): ProgressiveProfile {
+  const file = "progressive.json";
+  const root = asObject(file, raw, "progressive");
+  onlyMembers(file, root, PROGRESSIVE_MEMBERS, "progressive");
+  const positive = (v: unknown, ctx: string): number => {
+    if (!Number.isSafeInteger(v) || (v as number) <= 0) throw new ConfigError(file, `${ctx} must be a positive integer`);
+    return v as number;
+  };
+  const rate = asObject(file, root.chain_rate_bound, "chain_rate_bound");
+  onlyMembers(file, rate, new Set(["max_drawdowns", "window_seconds"]), "chain_rate_bound");
+  const classes = asObject(file, root.action_classes, "action_classes");
+  const actionClasses: Record<string, ApprovalFloorActionClass> = {};
+  for (const [action, cls] of Object.entries(classes)) {
+    if (typeof cls !== "string" || !(APPROVAL_FLOOR_ACTION_CLASSES as readonly string[]).includes(cls)) {
+      throw new ConfigError(file, `action_classes["${action}"] has unknown class ${String(cls)}`);
+    }
+    actionClasses[action] = cls as ApprovalFloorActionClass;
+  }
+  const external = root.external_communication_actions;
+  if (!Array.isArray(external) || !external.every((a) => typeof a === "string")) {
+    throw new ConfigError(file, "external_communication_actions must be an array of action identifiers");
+  }
+  if (root.beyond_ceiling !== "fresh_approval" && root.beyond_ceiling !== "refuse") {
+    throw new ConfigError(file, "beyond_ceiling must be fresh_approval or refuse");
+  }
+  if (!Array.isArray(root.drawdown_policies) || root.drawdown_policies.length === 0) {
+    throw new ConfigError(file, "drawdown_policies must be a non-empty array");
+  }
+  const seen = new Set<string>();
+  const policies = root.drawdown_policies.map((p, i) => {
+    const o = asObject(file, p, `drawdown_policies[${i}]`);
+    onlyMembers(file, o, PUBLISHED_POLICY_MEMBERS, `drawdown_policies[${i}]`);
+    const id = reqString(file, o, "id", `drawdown_policies[${i}]`);
+    const version = reqString(file, o, "version", `drawdown_policies[${i}]`);
+    if (seen.has(id)) throw new ConfigError(file, `drawdown_policies has a second policy ${id}`);
+    seen.add(id);
+    const retire = o.retire_undrawn_actions;
+    if (retire !== undefined && (!Array.isArray(retire) || !retire.every((a) => typeof a === "string"))) {
+      throw new ConfigError(file, `drawdown_policies[${i}].retire_undrawn_actions must be an array of action identifiers`);
+    }
+    return {
+      id,
+      version,
+      max_added_actions: positive(o.max_added_actions, `drawdown_policies[${i}].max_added_actions`),
+      ceiling_review_cadence_s: positive(o.ceiling_review_cadence_s, `drawdown_policies[${i}].ceiling_review_cadence_s`),
+      ...(retire !== undefined ? { retire_undrawn_actions: retire as string[] } : {}),
+    };
+  });
+  return {
+    chain_rate_bound: {
+      max_drawdowns: positive(rate.max_drawdowns, "chain_rate_bound.max_drawdowns"),
+      window_seconds: positive(rate.window_seconds, "chain_rate_bound.window_seconds"),
+    },
+    action_classes: actionClasses,
+    external_communication_actions: external as string[],
+    beyond_ceiling: root.beyond_ceiling,
+    drawdown_policies: policies,
+  };
+}
+
+/** The validated Progressive section of the Mission Deployment Profile (@see loadProgressiveProfile). */
+export const PROGRESSIVE_PROFILE: ProgressiveProfile = loadProgressiveProfile();
+
 /** Build a confidential client (private_key_jwt) from a seed: fresh key per boot (D25). */
 async function buildSeededClient(client: ClientSeed): Promise<SeededClient> {
   const { publicKey, privateKey } = await generateKeyPair(client.key.alg, { extractable: true });
