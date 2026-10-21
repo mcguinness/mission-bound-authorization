@@ -2115,8 +2115,9 @@ const AUTHORITY_SOURCE_TYPES = ["user_delegated", "service_owned", "organization
 
 /**
  * Load + validate config/authority-sources.json. FAIL CLOSED on the
- * discriminator (@spec mission#lifecycle forward compatibility): an
- * unrecognized `type` is refused at load, never widened, and `activators` is
+ * discriminator (@spec mission#mission-record: an AS never approves a Mission
+ * whose authority source it does not recognize): an unrecognized `type` is
+ * refused at load, never widened, and `activators` is
  * REQUIRED and non-empty, so gate 2 has no vacuous form. `ceiling` accepts the
  * literal string "deployment" to mean the deployment's own derivation ceiling
  * (the user-delegated case, where the source's authority is the deployment's);
