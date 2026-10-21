@@ -4226,7 +4226,15 @@ The following subsections define the record's members.
   anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
   covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
-  itself covers it under that profile's own anchor. Its disclosure
+  itself covers it under that profile's own anchor. Two optional
+  profiles commit it ({{consent-binding}}). Mission Audit
+  Transparency's approval-event registration
+  ({{I-D.draft-mcguinness-mission-audit}}) covers the record at
+  creation except its `state` and `termination`. Approval Governance's
+  Approval Context Commitment
+  ({{I-D.draft-mcguinness-mission-approval-governance}}) covers a
+  closed manifest of creation facts that includes `approval_basis`.
+  Its disclosure
   through introspection follows
   {{caller-authorization-and-minimization}}. It is not carried on the
   baseline `mission` claim ({{mission-claim}}), and it MUST NOT be
@@ -5084,6 +5092,17 @@ the wire; an AS that does not implement it can record equivalent
 evidence out of band. Such a commitment binds the structured disclosure
 the AS records, not the presentation itself; it narrows this gap for
 audit but does not close it.
+
+The anchors do not commit the approval basis either: who consented,
+who activated the Mission, and under which basis ({{mission-record}}).
+The record's immutability protects it, and only the AS enforces that.
+A deployment that needs the approval basis checkable outside the AS
+can register the approval event under Mission Audit Transparency
+{{I-D.draft-mcguinness-mission-audit}}, whose registration covers the
+record at creation except its `state` and `termination`, or carry the
+Approval Context Commitment of
+{{I-D.draft-mcguinness-mission-approval-governance}}, whose closed
+manifest includes the approval basis, in a signed artifact.
 
 ### Downgrade by Omission {#downgrade-by-omission}
 
@@ -7291,8 +7310,10 @@ issuer-checked Mission resolution (#725); third-party data subjects
 a `mission` claim only from an issuer it trusts for Mission-bound
 authorization, with `mission.issuer` equal to `iss` outside an
 adopted cross-domain profile; the approval rendering identifies the
-receiving client from information the AS trusts; and a refresh
-request beyond its grant is refused, never trimmed (#1503).
+receiving client from information the AS trusts; a refresh request
+beyond its grant is refused, never trimmed (#1503); and the approval
+basis named as outside the integrity anchors, with the profiles that
+commit it (#1518).
 
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
