@@ -120,7 +120,11 @@ const POLICIES: Record<string, RegisteredActivationPolicy> = {
 };
 
 /** The Mission Deployment Profile's published bounds and action-class mapping (config/progressive.json). */
-const PROGRESSIVE: ProgressiveDrawdownOptions = PUBLISHED.options;
+const PROGRESSIVE: ProgressiveDrawdownOptions = {
+  ...PUBLISHED.options,
+  // The approval surface offers the ceiling a case sets (issueMission: the one its decision consents).
+  ceilingOffer: () => currentOffer,
+};
 
 /** A completion condition and the issuer-held mapping that authorizes its discharge. */
 const CLOSE = { event_type: "accounting-period-closed", discharge_authority: "close-management-2026-q3" };
@@ -228,9 +232,13 @@ function storeCookies(res: Response, jar: Map<string, string>): void {
 /** What the Approver consents on the approval surface beside the Mission. */
 type CeilingDecision = { authority_ceiling: AuthorityEntry[]; drawdown_policy?: { id: string; version: string } };
 
+/** The ceiling and drawdown policy the approval surface offers and renders (the deployment's ceilingOffer). */
+let currentOffer: CeilingDecision | undefined;
+
 /**
  * PAR, approval (the decision carries the consented ceiling), code, token: an
- * ACTIVE Mission and its DPoP-bound access token.
+ * ACTIVE Mission and its DPoP-bound access token. The approval page offers the
+ * ceiling the decision consents unless `offer` names another.
  */
 async function issueMission(
   actions: string[],
@@ -244,6 +252,7 @@ async function issueMission(
     parExtra?: Record<string, string>;
   } = {},
 ): Promise<{ missionId: string; accessToken: string }> {
+  currentOffer = ceiling;
   const client = opts.client ?? ap;
   const issuer = opts.issuer ?? ISSUER;
   const jar = new Map<string, string>();
@@ -277,6 +286,9 @@ async function issueMission(
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
+  // The Approver sees the approval page, which retains the ceiling it offers (#1017).
+  const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+  expect(page.status).toBe(200);
   res = await fetch(`${issuer}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
@@ -431,43 +443,43 @@ afterAll(() => {
   for (const s of servers) s.close();
 });
 
-describe("the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119)", () => {
-  /** PAR -> /auth -> GET the approval page at `issuer`, the Intent carrying `intentExtra`. */
-  async function approvalPage(issuer: string, client: Client, intentExtra: Record<string, unknown> = {}): Promise<string> {
-    const jar = new Map<string, string>();
-    const verifier = `progressive-page-verifier-0123456789-0123456789-${verifierSeq++}`;
-    const challenge = Buffer.from(
-      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
-    ).toString("base64url");
-    const par = await fetch(`${issuer}/request`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: client.id,
-        response_type: "code",
-        redirect_uri: REDIRECT_URI,
-        resource: RESOURCE,
-        code_challenge: challenge,
-        code_challenge_method: "S256",
-        login_hint: "alice",
-        mission_intent: intentJson("Pay Acme invoices", intentExtra),
-        authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
-        client_assertion: await clientAssertion(client, issuer),
-        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-      }).toString(),
-    });
-    const parBody = (await par.json()) as { request_uri: string };
-    expect(par.status, JSON.stringify(parBody)).toBe(201);
-    const res = await fetch(`${issuer}/auth?${new URLSearchParams({ client_id: client.id, request_uri: parBody.request_uri })}`, {
-      redirect: "manual",
-    });
-    storeCookies(res, jar);
-    const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-    const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
-    expect(page.status).toBe(200);
-    return page.text();
-  }
+/** PAR -> /auth -> GET the approval page at `issuer`, the Intent carrying `intentExtra`. */
+async function approvalPage(issuer: string, client: Client, intentExtra: Record<string, unknown> = {}): Promise<string> {
+  const jar = new Map<string, string>();
+  const verifier = `progressive-page-verifier-0123456789-0123456789-${verifierSeq++}`;
+  const challenge = Buffer.from(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+  ).toString("base64url");
+  const par = await fetch(`${issuer}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: client.id,
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      resource: RESOURCE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      login_hint: "alice",
+      mission_intent: intentJson("Pay Acme invoices", intentExtra),
+      authorization_details: JSON.stringify(authority(["payments:invoice.read"])),
+      client_assertion: await clientAssertion(client, issuer),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+  const parBody = (await par.json()) as { request_uri: string };
+  expect(par.status, JSON.stringify(parBody)).toBe(201);
+  const res = await fetch(`${issuer}/auth?${new URLSearchParams({ client_id: client.id, request_uri: parBody.request_uri })}`, {
+    redirect: "manual",
+  });
+  storeCookies(res, jar);
+  const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+  const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+  expect(page.status).toBe(200);
+  return page.text();
+}
 
+describe("the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119)", () => {
   it("states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered", async () => {
     expect(await approvalPage(ISSUER, ap, { requested_derivation_limit: 4 })).toContain(
       "If you also consent to an authority ceiling, the successors its drawdown policy creates carry this Mission's derivation count forward and never exceed its derivation limit of 4.",
@@ -1649,5 +1661,96 @@ describe("the Mission Deployment Profile publishes what the drawdown enforces (@
       expect(() => loadProgressiveProfile(broken)).toThrowError(/config:progressive.json/);
     }
     expect(loadProgressiveProfile(valid)).toEqual(PROGRESSIVE_PROFILE);
+  });
+});
+
+describe("the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017)", () => {
+  it("the approval page renders the offered ceiling and that in-ceiling expansion is adjudicated by its drawdown policy", async () => {
+    currentOffer = ceilingOf("drawdown-std", READ_CEILING);
+    const page = await approvalPage(ISSUER, ap);
+    expect(page).toContain(`<pre class="authority-ceiling">${JSON.stringify(READ_CEILING, null, 2)}</pre>`);
+    expect(page).toContain(
+      "Within this ceiling, expansions of this Mission are adjudicated by drawdown policy drawdown-std version 1, without a further approval from you.",
+    );
+    // An offer without a drawdown policy says so.
+    currentOffer = { authority_ceiling: READ_CEILING };
+    expect(await approvalPage(ISSUER, ap)).toContain("No drawdown policy is offered with this ceiling");
+    // No offer, no ceiling rendered.
+    currentOffer = undefined;
+    expect(await approvalPage(ISSUER, ap)).not.toContain('class="authority-ceiling"');
+  });
+
+  /** PAR, /auth, render the page under `shown`, then decide `decided` under whatever the offer has become: the final redirect. */
+  async function renderThenDecide(shown: CeilingDecision, decided: CeilingDecision, offerAtDecision?: CeilingDecision): Promise<URL> {
+    currentOffer = shown;
+    const jar = new Map<string, string>();
+    const par = await fetch(`${ISSUER}/request`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: ap.id,
+        response_type: "code",
+        redirect_uri: REDIRECT_URI,
+        resource: RESOURCE,
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        code_challenge_method: "S256",
+        login_hint: "alice",
+        mission_intent: intentJson("Pay Acme invoices"),
+        authorization_details: JSON.stringify(authority(READ)),
+        client_assertion: await clientAssertion(ap, ISSUER),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+    const parBody = (await par.json()) as { request_uri: string };
+    expect(par.status, JSON.stringify(parBody)).toBe(201);
+    let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: ap.id, request_uri: parBody.request_uri })}`, {
+      redirect: "manual",
+    });
+    storeCookies(res, jar);
+    const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+    expect(page.status).toBe(200);
+    if (offerAtDecision) currentOffer = offerAtDecision;
+    res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        ...floorApprovalHeaders(approvalSessions.get(ISSUER) as ApprovalSessionStore, uid, cookieHeader(jar)),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ decision: "approve", ...decided }),
+    });
+    storeCookies(res, jar);
+    let location = res.headers.get("location") as string;
+    while (location?.startsWith(ISSUER)) {
+      res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
+      storeCookies(res, jar);
+      location = res.headers.get("location") as string;
+    }
+    return new URL(location);
+  }
+
+  it("a decision consenting a ceiling or drawdown policy the approval page did not render is refused invalid_request: no Mission", async () => {
+    for (const decided of [ceilingOf("drawdown-std", FULL_CEILING), ceilingOf("drawdown-wide", READ_CEILING)]) {
+      const before = as.kernel.allMissions().length;
+      const outcome = (await renderThenDecide(ceilingOf("drawdown-std", READ_CEILING), decided)).searchParams;
+      expect(outcome.get("error")).toBe("invalid_request");
+      expect(outcome.get("code")).toBeNull();
+      expect(as.kernel.allMissions().length).toBe(before);
+    }
+  });
+
+  it("the decision is bound to the offer the page rendered, not to an offer computed at the decision", async () => {
+    const narrow = ceilingOf("drawdown-std", READ_CEILING);
+    const wide = ceilingOf("drawdown-std", FULL_CEILING);
+    // The offer widens after the page rendered the narrow one: consenting the wide ceiling is refused.
+    const before = as.kernel.allMissions().length;
+    const refused = (await renderThenDecide(narrow, wide, wide)).searchParams;
+    expect(refused.get("error")).toBe("invalid_request");
+    expect(as.kernel.allMissions().length).toBe(before);
+    // Consenting what the page rendered succeeds, whatever the offer has become.
+    const granted = (await renderThenDecide(narrow, narrow, wide)).searchParams;
+    expect(granted.get("error")).toBeNull();
+    expect(granted.get("code")).not.toBeNull();
   });
 });

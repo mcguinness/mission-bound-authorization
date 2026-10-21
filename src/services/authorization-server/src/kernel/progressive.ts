@@ -25,6 +25,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
   type ActivationPolicyRef,
@@ -100,6 +101,30 @@ export function ceilingConsentOf(decision: Record<string, unknown>): CeilingCons
       ? { drawdown_policy: decision.drawdown_policy as { id: string; version: string } }
       : {}),
   };
+}
+
+/**
+ * @spec progressive#progressive-authorization: the disclosure line that states
+ * how in-ceiling expansion is adjudicated under the offered ceiling.
+ */
+export function ceilingAdjudicationLine(offer: CeilingConsent): string {
+  return offer.drawdown_policy
+    ? `Within this ceiling, expansions of this Mission are adjudicated by drawdown policy ${offer.drawdown_policy.id} version ${offer.drawdown_policy.version}, without a further approval from you. Authority beyond the ceiling, and the classes this deployment reserves for a fresh approval, still require your approval.`
+    : "No drawdown policy is offered with this ceiling: every expansion of this Mission still requires your approval.";
+}
+
+/**
+ * @spec progressive#progressive-authorization: whether a decision consents
+ * exactly the offered ceiling and drawdown policy, member for member.
+ */
+export function consentsOffer(consent: CeilingConsent, offer: CeilingConsent | undefined): boolean {
+  if (!offer) return false;
+  const policy = (c: CeilingConsent) =>
+    c.drawdown_policy === undefined ? null : { id: c.drawdown_policy.id, version: c.drawdown_policy.version };
+  return (
+    isDeepStrictEqual(consent.authority_ceiling, offer.authority_ceiling) &&
+    isDeepStrictEqual(policy(consent), policy(offer))
+  );
 }
 
 /** The ceiling members a Mission record carries. */
@@ -315,6 +340,15 @@ export interface ProgressiveDrawdownOptions {
    * `out_of_ceiling` on that refusal (a MAY, #1415).
    */
   beyondCeiling?: "fresh_approval" | "refuse";
+  /**
+   * @spec progressive#progressive-authorization (#1017): the ceiling and
+   * drawdown policy this deployment's approval surface offers beside a
+   * Mission, or undefined when it offers none. The approval page renders the
+   * offer, and a decision may consent only exactly that offer, so the
+   * consented ceiling is always one the Approver was shown. Client input
+   * never reaches it.
+   */
+  ceilingOffer?: (request: { clientId: string; intent: MissionIntent }) => CeilingConsent | undefined;
 }
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
@@ -382,6 +416,9 @@ export function validateProgressiveDrawdownOptions(
   }
   if (o.beyondCeiling !== undefined && o.beyondCeiling !== "fresh_approval" && o.beyondCeiling !== "refuse") {
     throw new Error("progressive beyondCeiling must be fresh_approval or refuse");
+  }
+  if (o.ceilingOffer !== undefined && typeof o.ceilingOffer !== "function") {
+    throw new Error("progressive ceilingOffer must be a function of the request");
   }
   assertDrawdownClassesMeetApprovalFloor(o, approvalFloor);
   return o;
