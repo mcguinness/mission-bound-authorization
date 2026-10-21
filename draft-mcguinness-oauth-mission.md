@@ -350,7 +350,7 @@ issued under the Mission carries a subset of the approved authority
 and a "mission" claim, and every issuance is gated on the Mission's
 lifecycle state. Revoking a Mission stops further issuance; it does
 not recall tokens already issued, which a resource server that
-validates them locally honors until they expire.
+validates them only locally honors until they expire.
 
 Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
@@ -754,8 +754,9 @@ Derivation:
 : One issuance operation the issuer AS performs for a single request
   ({{issuance-gating}}): the initial authorization-code exchange, a
   refresh, a Token Exchange, or a cross-domain grant issuance.
-  Distinct from Authority Set derivation, which section titles and
-  the phrase "derivation policy" also call derivation.
+  Distinct from Authority Set derivation, which some section titles
+  and fixed phrases, such as "derivation policy", also call
+  derivation.
 
 Mission:
 : The durable authorization object that binds a disclosed task (its
@@ -2484,9 +2485,10 @@ with `scope`; the AS narrows the Authority Set under {{subset}} to the
 requested resource(s) and sets `aud` accordingly.
 {: #token-audience}
 
-Three identifiers stay distinct. An entry's `resource` names the
-protected resource its authority covers, and a resource server matches
-each request's operation target against it under the entry's type (for
+Three identifiers stay distinct. An entry's `resource`, where its type
+defines one, names the protected resource its authority covers, and a
+resource server matches each request's operation target against it
+under the entry's type (for
 `mission_resource_access`,
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}). A token
 request's `resource` parameter ({{RFC8707}}) selects the audience the
@@ -3979,8 +3981,8 @@ The following subsections define the record's members.
   its accountable assertion
   ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
-  `approval_basis` is provenance: no integrity anchor (`intent_hash`,
-  `authority_hash` or `proposal_hash`) covers it
+  `approval_basis` is provenance: none of the record's integrity
+  anchors (`intent_hash`, `authority_hash` or `proposal_hash`) covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
   itself covers it under that profile's own anchor. Its disclosure
   through introspection follows
@@ -4422,8 +4424,8 @@ to computing an anchor and to comparing committed values:
 
 This document's default prefixed construction commits to bytes in
 three ways, and a specification defining a prefixed commitment
-classifies it as one of these species, the three forms a commitment
-can take:
+classifies it as one of these species, the three forms a prefixed
+commitment can take:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
@@ -5042,7 +5044,7 @@ dependency on it.
 
 This document governs Authority Set derivation and the issuance of
 authority: it bounds what authority a Mission yields, binds it to the
-Approver's consent, and gates derivation on Mission state. It does not
+Approver's consent, and gates every issuance on Mission state. It does not
 evaluate individual runtime actions. In particular, it does not:
 
 - evaluate a request's parameters against the Mission at the point of
