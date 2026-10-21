@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ab8ef095146cb5b536722b7cbf06f167146b237a",
-    "content_sha256": "9da8c3a5e0c788c9b7275f1130f0cd53c84fe946d32a3b1d993eed5cc107eac7"
+    "revision": "fee4d758f2b4438117fecbf3cc360ba1cf271f6b",
+    "content_sha256": "a405edcf02d5acfed2fab4471ca151e335f63755b0d52fff10643fce4d7c3221"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -103,8 +103,8 @@
     "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
    },
    "draft-mcguinness-mission-capability-binding.md": {
-    "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
-    "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
+    "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
+    "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
     "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
@@ -1845,6 +1845,204 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "capability-binding.approval.resolve-before-rendering",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "resolve each catalog-sourced action's binding from a catalog or configuration the validating server trusts, together with the candidate Authority Set, before the approval rendering, so the Approver consents to the concrete bindings",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-identity",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "the tool or operation identity",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-what-each-action-authorizes",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "what invoking it authorizes, in terms the Approver can act on",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-source-and-publisher",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "its source, and its publisher where the validating server has established one, or otherwise that the publisher is unknown or that the named publisher is the source's own claim",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-drift-refusal",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "that a later change to the capability's definition is refused",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.raw-metadata-insufficient",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "A digest or URI alone does not satisfy item 2. The validating server retains the exact machine binding, and renders catalog-supplied text, such as a tool's description, as inert content",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.revalidate-at-decision",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "at the approval decision, revalidate each binding against the current source before the Mission is created, treating a changed binding as a change to the derived Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.commit-consented-bindings",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "commit exactly the bindings of the candidate the Approver consented to; resolving the current source for revalidation does not authorize substituting a different binding without fresh consent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.unrelated-edit-not-a-change",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "A catalog edit that changes neither is not a binding change; it still requires fresh consent where it changes another input that Changes Before the Decision covers",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
   },
   {
    "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
