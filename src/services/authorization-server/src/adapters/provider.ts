@@ -460,7 +460,7 @@ import {
   takeDeviceIntake,
   type DeviceClientView,
 } from "./device-authorization.js";
-import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectPayload } from "./par-intake.js";
+import { pushedRequestIntake, requestObjectIntake, takeParIntake, takeRequestObjectIntake } from "./par-intake.js";
 import type { MissionApprovalDeferralStore } from "../kernel/mission-approval-deferral.js";
 import {
   cancelOnRevocation,
@@ -1715,7 +1715,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
       // with invalid_request_object. requireSignedRequestObject stays off, so
       // the form-encoded carriage stays available. The hook (par-intake.ts)
       // keeps the device authorization endpoint refusing a Request Object.
-      requestObjects: { enabled: true, requireSignedRequestObject: false, assertJwtClaimsAndHeader: requestObjectIntake },
+      // @spec mission#submission-processing (#1512): the hook runs before
+      // the provider's RAR check, so it validates a carried Submission
+      // envelope and its Intent (steps 1 and 2) before a proposal inside the
+      // object is checked (step 3); evidence entries wait for their step.
+      requestObjects: {
+        enabled: true,
+        requireSignedRequestObject: false,
+        assertJwtClaimsAndHeader: requestObjectIntake((submission) => {
+          try {
+            kernel.validateSubmission(submission, undefined, { deferEvidenceEntries: true });
+          } catch (e) {
+            if (e instanceof IntentError) throw intentErrorToOidc(e);
+            throw e;
+          }
+        }),
+      },
       richAuthorizationRequests: {
         enabled: true,
         ack: "experimental-01",
@@ -1864,26 +1879,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
             : undefined;
         // @spec mission#submission-via-par (#1503): inside a client-signed
         // Request Object the claim's value is the Submission envelope itself,
-        // a JSON object, read from the strictly parsed payload (the provider
-        // keeps only `String(value)`); a string or any other value is refused
-        // invalid_request. The envelope's serialization replaces the
+        // a JSON object, which the Request Object hook read from the strictly
+        // parsed payload (the provider keeps only `String(value)`) and
+        // refused unless it is one. The envelope's serialization replaces the
         // parameter, at PAR and again where the authorization endpoint reads
         // the pushed object, so the envelope is validated, and its
         // intent_hash computed, exactly as a form value's, and the approval
         // reads it from the interaction as it reads a form value. A form
         // value is that serialization already.
-        const requestObject = takeRequestObjectPayload((ctx as { req: IncomingMessage }).req);
-        let submitted = value;
-        if (requestObject !== undefined) {
-          const claim = Object.hasOwn(requestObject, "mission_intent") ? requestObject.mission_intent : undefined;
-          if (claim !== undefined && (claim === null || typeof claim !== "object" || Array.isArray(claim))) {
-            throw new errors.InvalidRequest(
-              "mission_intent in a Request Object must be a JSON object, the Submission envelope itself, not its serialization",
-            );
-          }
-          submitted = claim === undefined ? undefined : JSON.stringify(claim);
-          params.mission_intent = submitted;
-        }
+        const requestObject = takeRequestObjectIntake((ctx as { req: IncomingMessage }).req);
+        const submitted = requestObject !== undefined ? requestObject.submission : value;
+        if (requestObject !== undefined) params.mission_intent = submitted;
         if (submitted === undefined) {
           if (lifted) {
             params.authorization_details = lifted.proposal;

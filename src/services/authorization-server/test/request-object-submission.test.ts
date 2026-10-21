@@ -13,7 +13,7 @@
 import { type Server } from "node:http";
 import { intentHash } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
-import { CompactSign, importJWK, SignJWT, UnsecuredJWT, type CryptoKey } from "jose";
+import { CompactSign, exportJWK, generateKeyPair, importJWK, SignJWT, UnsecuredJWT, type CryptoKey } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
 import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
@@ -134,19 +134,25 @@ async function pushRequestObject(
   return push({ request, ...outside });
 }
 
-/** Redeem the request_uri, render the approval, approve it, and return the Mission Record. */
+/**
+ * Redeem the request_uri, render the approval and approve it; returns the
+ * Mission Record and the authorization code the redirect carries.
+ */
 async function approve(requestUri: string) {
   const cookies = new Map<string, string>();
   const cookieHeader = () => [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+  const keep = (res: Response) => {
+    for (const line of res.headers.getSetCookie()) {
+      const [pair] = line.split(";");
+      const eq = (pair as string).indexOf("=");
+      cookies.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
+    }
+  };
   let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: CLIENT, request_uri: requestUri })}`, {
     redirect: "manual",
   });
-  for (const line of res.headers.getSetCookie()) {
-    const [pair] = line.split(";");
-    const eq = (pair as string).indexOf("=");
-    cookies.set((pair as string).slice(0, eq), (pair as string).slice(eq + 1));
-  }
-  const location = res.headers.get("location") ?? "";
+  keep(res);
+  let location = res.headers.get("location") ?? "";
   expect(location, await res.text()).toMatch(/\/interaction\/[^/]+$/);
   const uid = location.split("/interaction/")[1] as string;
   const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
@@ -160,9 +166,48 @@ async function approve(requestUri: string) {
     body: JSON.stringify({ decision: "approve" }),
   });
   expect(res.status, await res.clone().text()).toBe(303);
+  keep(res);
   const record = as.kernel.findByApprovalEvent(`apev_${uid}`);
   expect(record).toBeDefined();
-  return record;
+  location = res.headers.get("location") ?? "";
+  while (location.startsWith(ISSUER)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+    keep(res);
+    location = res.headers.get("location") ?? "";
+  }
+  return { record, code: new URL(location).searchParams.get("code") };
+}
+
+/** Redeem an authorization code at the token endpoint, under a DPoP proof. */
+async function redeem(code: string): Promise<{ status: number; body: Record<string, unknown> }> {
+  const dpopKeys = await generateKeyPair("ES256", { extractable: true });
+  const dpopPub = await exportJWK(dpopKeys.publicKey);
+  const htu = `${ISSUER}/token`;
+  const send = async (extra: Record<string, unknown> = {}): Promise<Response> =>
+    fetch(htu, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        dpop: await new SignJWT({ htu, htm: "POST", ...extra })
+          .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: dpopPub })
+          .setIssuedAt()
+          .setJti(crypto.randomUUID())
+          .sign(dpopKeys.privateKey),
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: REDIRECT_URI,
+        code_verifier: PKCE_VERIFIER,
+        resource: RESOURCE,
+        client_assertion: await clientAssertion(),
+        client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return { status: res.status, body: (await res.json()) as Record<string, unknown> };
 }
 
 describe("Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503)", () => {
@@ -171,8 +216,8 @@ describe("Submission envelope inside a Request Object pushed through PAR (@spec 
     expect(jar.status, JSON.stringify(jar.body)).toBe(201);
     const form = await pushForm(JSON.stringify(ENVELOPE));
     expect(form.status, JSON.stringify(form.body)).toBe(201);
-    const fromRequestObject = await approve(jar.body.request_uri as string);
-    const fromForm = await approve(form.body.request_uri as string);
+    const fromRequestObject = (await approve(jar.body.request_uri as string)).record;
+    const fromForm = (await approve(form.body.request_uri as string)).record;
     expect(fromRequestObject?.id).not.toBe(fromForm?.id);
     expect(fromRequestObject?.intent_hash).toBe(fromForm?.intent_hash);
     expect(fromRequestObject?.intent_hash).toBe(intentHash(ISSUER, INTENT as never));
@@ -254,5 +299,83 @@ describe("Submission envelope as the form parameter of a push (@spec mission#sub
       expect(res.body.error).toBe("invalid_request");
       expect(res.body.error_description).toContain("mission_intent must be valid JSON");
     }
+  });
+});
+
+const READ = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }];
+const MISSING_RESOURCE = [{ type: "mission_resource_access", actions: ["payments:invoice.read"] }];
+const UNSUPPORTED_TYPE = [{ type: "urn:example:unsupported", resource: RESOURCE }];
+const MALFORMED_ENVELOPES: [label: string, envelope: unknown][] = [
+  ["unknown envelope member", { intent: INTENT, note: "x" }],
+  ["intent not an object", { intent: 17 }],
+];
+
+/** A push whose Request Object carries this mission_intent claim and, when given, this proposal. */
+async function pushCarrying(missionIntent: unknown, proposal?: unknown) {
+  return pushRequestObject(
+    await signedRequestObject({
+      mission_intent: missionIntent,
+      ...(proposal === undefined ? {} : { authorization_details: proposal }),
+    }),
+  );
+}
+
+/** Each case is refused with the expected error code. */
+async function expectRefused(cases: [label: string, missionIntent: unknown, proposal: unknown, error: string][]) {
+  for (const [label, missionIntent, proposal, error] of cases) {
+    const res = await pushCarrying(missionIntent, proposal);
+    expect(res.status, `${label}: ${JSON.stringify(res.body)}`).toBe(400);
+    expect(res.body.error, `${label}: ${JSON.stringify(res.body)}`).toBe(error);
+  }
+}
+
+describe("Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512)", () => {
+  it("refuses a malformed Submission envelope alone with invalid_request", async () => {
+    await expectRefused(MALFORMED_ENVELOPES.map(([label, envelope]) => [label, envelope, READ, "invalid_request"]));
+  });
+
+  it("refuses a malformed proposal alone, beside a valid envelope, with invalid_authorization_details", async () => {
+    await expectRefused([
+      ["proposal entry missing its resource", ENVELOPE, MISSING_RESOURCE, "invalid_authorization_details"],
+      ["proposal entry of an unsupported type", ENVELOPE, UNSUPPORTED_TYPE, "invalid_authorization_details"],
+    ]);
+  });
+
+  it("a malformed Submission envelope together with a malformed proposal is refused at step 1, with invalid_request", async () => {
+    await expectRefused([
+      ...MALFORMED_ENVELOPES.flatMap(([label, envelope]): [string, unknown, unknown, string][] => [
+        [`${label} and a proposal entry missing its resource`, envelope, MISSING_RESOURCE, "invalid_request"],
+        [`${label} and a proposal entry of an unsupported type`, envelope, UNSUPPORTED_TYPE, "invalid_request"],
+      ]),
+      ["a string claim and a proposal entry missing its resource", JSON.stringify(ENVELOPE), MISSING_RESOURCE, "invalid_request"],
+    ]);
+  });
+
+  it("an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request", async () => {
+    const invalidIntent = { intent: { ...INTENT, goal: 17 } };
+    await expectRefused([
+      ["invalid Intent only", invalidIntent, READ, "invalid_request"],
+      ["invalid Intent and a proposal entry missing its resource", invalidIntent, MISSING_RESOURCE, "invalid_request"],
+      ["invalid Intent and a proposal entry of an unsupported type", invalidIntent, UNSUPPORTED_TYPE, "invalid_request"],
+    ]);
+  });
+
+  it("accepts a valid envelope with a valid proposal through PAR, approval, code redemption and token issuance", async () => {
+    const par = await pushCarrying(ENVELOPE, READ);
+    expect(par.status, JSON.stringify(par.body)).toBe(201);
+    const { record, code } = await approve(par.body.request_uri as string);
+    expect(record?.proposed_authority).toEqual(READ);
+    expect(code, "the approval redirect carries a code").toBeTruthy();
+    const token = await redeem(code as string);
+    expect(token.status, JSON.stringify(token.body)).toBe(200);
+    expect(token.body.access_token).toBeTruthy();
+    expect(token.body.mission_id).toBe(record?.id);
+    const granted = token.body.authorization_details as { type: string; resource: string; actions: string[] }[];
+    expect(granted.length).toBeGreaterThan(0);
+    for (const entry of granted) {
+      expect(entry.type).toBe("mission_resource_access");
+      expect(entry.resource).toBe(RESOURCE);
+    }
+    expect(granted.flatMap((e) => e.actions)).toContain("payments:invoice.read");
   });
 });

@@ -33,9 +33,15 @@
  * it after client authentication. The provider also reads a Request Object's
  * claims with JSON.parse and turns an object claim into `String(value)`
  * (lib/actions/authorization/process_request_object.js), so the hook
- * re-parses the signed payload strictly, refusing duplicate member names, and
- * keeps it for the `mission_intent` validator, which reads the claim's own
- * JSON value from it.
+ * re-parses the signed payload strictly, refusing duplicate member names,
+ * reads the claim's own JSON value from it, and keeps that value's
+ * serialization for the `mission_intent` validator.
+ *
+ * @spec mission#submission-processing (#1512): the provider's RAR check runs
+ * on a proposal inside a Request Object before the `extraParams` validators,
+ * and the intake cannot lift it, since the object is signed. The hook runs
+ * before that check, so it validates the Submission envelope and the Intent
+ * (steps 1 and 2) there; the validator repeats them and runs the later steps.
  */
 
 import type { IncomingMessage } from "node:http";
@@ -66,8 +72,13 @@ const intakes = new WeakMap<IncomingMessage, ParIntake>();
 /** Pushed requests that carried a `mission_intent` beside a Request Object. */
 const outsideRequestObject = new WeakSet<IncomingMessage>();
 
-/** The strictly parsed payload of this request's client-signed Request Object. */
-const requestObjects = new WeakMap<IncomingMessage, Record<string, JsonValue>>();
+/** What the hook read from this request's client-signed Request Object. */
+interface RequestObjectIntake {
+  /** The serialization of the `mission_intent` claim's value; undefined when the object carries none. */
+  submission: string | undefined;
+}
+
+const requestObjects = new WeakMap<IncomingMessage, RequestObjectIntake>();
 
 /** One value of the parameter, present as the provider reads it; undefined otherwise. */
 function single(v: string | string[] | undefined): string | undefined {
@@ -115,8 +126,9 @@ export function takeParIntake(req: IncomingMessage): ParIntake | undefined {
  * `features.requestObjects.assertJwtClaimsAndHeader` hook (9.10.0), run
  * inside its Request Object processing after client authentication, after the
  * algorithm and `iss`, `aud`, `exp` and `client_id` checks, and before the
- * signature is verified. It replaces the provider's default hook, whose
- * required-claim checks serve FAPI profiles and CIBA, neither enabled here.
+ * signature is verified and the RAR check runs. It replaces the provider's
+ * default hook, whose required-claim checks serve FAPI profiles and CIBA,
+ * neither enabled here.
  *
  * - A Request Object is accepted only at PAR, and read again from the pushed
  *   request at the authorization endpoint; any other route, such as the
@@ -128,42 +140,68 @@ export function takeParIntake(req: IncomingMessage): ParIntake | undefined {
  *   anywhere in it is refused `invalid_request`, as a duplicate in a form
  *   value of `mission_intent` is. The provider's own pushed request object
  *   for a form push (`alg` none, built after the form passed this intake)
- *   carries the form's values and is not kept.
+ *   carries the form's values and is not read.
+ * - A `mission_intent` claim must be a JSON object, the Submission envelope
+ *   itself ({@link requestObjectSubmission}), and `validateSubmission` checks
+ *   the envelope and the Intent before the RAR check (#1512). These checks
+ *   only refuse; the validator acts on the value once the signature is
+ *   verified.
  */
-export function requestObjectIntake(ctx: KoaContextWithOIDC, _claims: unknown, header: Record<string, unknown>): void {
-  const route = ctx.oidc.route;
-  if (route !== "pushed_authorization_request" && route !== "authorization") {
-    throw new errors.RequestNotSupported();
-  }
-  if (route === "pushed_authorization_request" && outsideRequestObject.has(ctx.req)) {
-    outsideRequestObject.delete(ctx.req);
-    throw new errors.InvalidRequest("mission_intent must not be submitted outside the Request Object");
-  }
-  if (header.alg === "none") return;
-  const jws = (ctx.oidc.params as { request?: unknown } | undefined)?.request;
-  const segment = typeof jws === "string" ? jws.split(".")[1] : undefined;
-  let payload: JsonValue;
-  try {
-    payload = parseStrictJson(Buffer.from(segment ?? "", "base64url").toString("utf8"));
-  } catch (e) {
-    if (e instanceof DuplicateMemberError) {
-      throw new errors.InvalidRequest(`Request Object payload: ${e.message}`);
+export function requestObjectIntake(validateSubmission: (submission: string) => void) {
+  return (ctx: KoaContextWithOIDC, _claims: unknown, header: Record<string, unknown>): void => {
+    const route = ctx.oidc.route;
+    if (route !== "pushed_authorization_request" && route !== "authorization") {
+      throw new errors.RequestNotSupported();
     }
-    throw new errors.InvalidRequestObject("could not parse Request Object");
-  }
-  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
-    throw new errors.InvalidRequestObject("could not parse Request Object");
-  }
-  requestObjects.set(ctx.req, payload);
+    if (route === "pushed_authorization_request" && outsideRequestObject.has(ctx.req)) {
+      outsideRequestObject.delete(ctx.req);
+      throw new errors.InvalidRequest("mission_intent must not be submitted outside the Request Object");
+    }
+    if (header.alg === "none") return;
+    const jws = (ctx.oidc.params as { request?: unknown } | undefined)?.request;
+    const segment = typeof jws === "string" ? jws.split(".")[1] : undefined;
+    let payload: JsonValue;
+    try {
+      payload = parseStrictJson(Buffer.from(segment ?? "", "base64url").toString("utf8"));
+    } catch (e) {
+      if (e instanceof DuplicateMemberError) {
+        throw new errors.InvalidRequest(`Request Object payload: ${e.message}`);
+      }
+      throw new errors.InvalidRequestObject("could not parse Request Object");
+    }
+    if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new errors.InvalidRequestObject("could not parse Request Object");
+    }
+    const submission = requestObjectSubmission(payload);
+    if (submission !== undefined) validateSubmission(submission);
+    requestObjects.set(ctx.req, { submission });
+  };
 }
 
 /**
- * The strictly parsed payload of this request's client-signed Request Object,
+ * @spec mission#submission-via-par (#1503): the Submission envelope a Request
+ * Object carries, as the serialization a form value carries; undefined when
+ * the object has no `mission_intent` claim. A claim whose value is not a JSON
+ * object is refused `invalid_request`.
+ */
+function requestObjectSubmission(payload: Record<string, JsonValue>): string | undefined {
+  if (!Object.hasOwn(payload, "mission_intent")) return undefined;
+  const claim = payload.mission_intent;
+  if (claim === null || typeof claim !== "object" || Array.isArray(claim)) {
+    throw new errors.InvalidRequest(
+      "mission_intent in a Request Object must be a JSON object, the Submission envelope itself, not its serialization",
+    );
+  }
+  return JSON.stringify(claim);
+}
+
+/**
+ * What the hook read from this request's client-signed Request Object,
  * removed once read; undefined for a request that carried none, including a
  * form push redeemed at the authorization endpoint.
  */
-export function takeRequestObjectPayload(req: IncomingMessage): Record<string, JsonValue> | undefined {
-  const payload = requestObjects.get(req);
+export function takeRequestObjectIntake(req: IncomingMessage): RequestObjectIntake | undefined {
+  const intake = requestObjects.get(req);
   requestObjects.delete(req);
-  return payload;
+  return intake;
 }
