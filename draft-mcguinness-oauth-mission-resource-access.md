@@ -45,12 +45,13 @@ normative:
       ISO: "4217:2015"
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
     author:
       -
         ins: K. McGuinness
         name: Karl McGuinness
-    date: 2026
+    date: 2026-10-21
+    seriesinfo:
+      Internet-Draft: draft-mcguinness-oauth-mission-01
 
 informative:
   RFC6750:
