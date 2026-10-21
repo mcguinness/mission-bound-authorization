@@ -7,7 +7,7 @@ refusal with its evidence record. What the pilot is, and what each of its
 properties rests on, is [mas-pilot-deployment.md](mas-pilot-deployment.md);
 this document covers running it.
 
-Every statement here is true of the reference implementation at `2e78f19e`
+Every statement here is true of the reference implementation at `b421cc0f`
 (paths relative to `src/`). The launcher tests are
 `demo/test/mas-pilot-launcher.test.ts` (§7); its smoke tests need a live
 OpenFGA and are skipped without one, and its startup refusals always run.
@@ -256,6 +256,25 @@ the launcher started, and exits 0 (`demo/src/mas-pilot/launcher-serve.ts`).
 Estate credentials do not survive a restart: the reference estate's key and
 token store exist only for one boot.
 
+Stopping the launcher at any point, startup included, stops the MAS process
+and frees the ports. The launcher handles the three signals from its first
+line. Everything a launch acquires is registered in its cleanup scope as it
+is acquired (`StartupScope`, `demo/src/mas-pilot/startup.ts`): the MAS
+process from the moment it is spawned, then each listener and store,
+including those the composition opens. A signal during startup runs that
+stack at once, whatever startup is waiting on (a Resource-policy store that
+never answers, a MAS process not yet ready), prints
+`mas-pilot: stopped the MAS process <pid>`, and exits with the signal's
+status: 130, 143 or 129. A startup that fails releases the same stack before
+it prints its `startup failed` line. The MAS process is stopped with SIGTERM,
+then SIGKILL if it has not exited within 5 s.
+
+The MAS process also shuts itself down when the launcher dies without
+cleaning up, a SIGKILL for example: the launcher spawns it with a stdin
+pipe it never writes and `MAS_PILOT_EXIT_WITH_PARENT=1`, and the MAS shuts
+down when that pipe ends (`mas-serve.ts`). A MAS started by hand (§3.7)
+does not set the variable and ignores stdin.
+
 ## 4. How approval runs
 
 `POST /missions` on the MAS console runs the reference authorization
@@ -348,10 +367,14 @@ stops and starts". Do not rotate the MAS's keys while the pilot runs.
 - Separated, a revocation or containment is seen within the signed
   `fresh_until` of the last read (§3.5).
 - MAS key rotation is not supported (§5).
-- The signal handling in `launcher-serve.ts` and `scripts/mas-pilot.mjs`
-  ran by hand for this walkthrough; the tests call `launchMasPilot` and
-  `close()` directly. The OpenFGA connection and signing-key refusals are
-  the launcher's checks, not exercised by its tests.
+- After startup, a signal's shutdown ran by hand for this walkthrough; the
+  smoke tests call `close()` directly. During startup it is tested on the
+  real entry points (§7). The OpenFGA connection and signing-key refusals
+  are the launcher's checks, not exercised by its tests.
+- A SIGKILL of the `scripts/mas-pilot.mjs` wrapper itself leaves the
+  launcher process it started running, as for every `run-demo-ts`
+  wrapper; a SIGKILL of the launcher process does not orphan the MAS
+  process (§3.8).
 
 ## 7. Witnesses
 
@@ -375,3 +398,22 @@ The smoke tests bind the MAS and estate on `127.0.0.1:14858` and `14859`
 (in process), `14864` and `14865` (rotation), `14860` and `14861`
 (separated) and `14868` and `14869` (attach); the refusals use `14862` and
 `14863`. Consoles, gateways and resource routes bind ephemeral ports.
+
+`demo/test/mas-pilot-launcher-shutdown.test.ts` runs the entry points as
+processes, `scripts/mas-pilot.mjs` and `launcher-serve.ts`, with the
+Resource-policy store pointed at a stub that accepts a connection and never
+answers. It needs no OpenFGA:
+
+- `` stopping the MAS pilot launcher during startup stops its MAS process and frees every port (#818 slice 5B review) > SIGTERM to `pnpm mas-pilot:separated` while startup waits on a Resource-policy store that never answers: the launcher stops its MAS process and exits 143; the MAS, its console and the estate refuse connections ``;
+- `… > SIGINT to the launcher itself, blocked the same way: exit 130, its MAS process stopped and its port free`;
+- `… > SIGTERM while the MAS process is still starting, before it is ready: the launcher stops it and exits 143`;
+- `… > SIGHUP to the in-process launcher while it waits on the store: exit 129, the MAS and estate ports free`;
+- `… > a startup that fails after the MAS process is up (the store refuses) stops the MAS process before the launch rejects, and leaves no port open`;
+- `the MAS process outlives no launcher (#818 slice 5B review) > SIGKILL of the launcher, which runs no cleanup: the MAS process shuts down when its stdin pipe ends`;
+- `… > a MAS process started without MAS_PILOT_EXIT_WITH_PARENT ignores the end of its stdin`;
+- `… > stopChild escalates to SIGKILL for a MAS process that ignores SIGTERM`;
+- `the launch's cleanup scope (#818 slice 5B review) > cancel releases everything registered, last first, at once, while a step waits on something that never answers; the step throws StartupCancelled`,
+  and the cases for a resource that arrives after cancellation and a
+  registration after release.
+
+These bind `127.0.0.1:14876` to `14889`.
