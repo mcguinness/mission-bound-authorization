@@ -1830,6 +1830,15 @@ The same procedure continues from step 5:
 The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
+The Mission Record is what approval leaves behind: the approved
+content and its commitments (the approved Mission Intent, the
+Authority Set, and the integrity anchors over them); the accountable
+principals (the Subject, the approved agent's `client_id`, and the
+`approval_basis` naming who consented and how); the authority source;
+the issuer's provenance (the policy version and the approval event's
+identifier); and the Mission's expiry and lifecycle state.
+{{mission-record}} defines each member and when it is present.
+
 ## Subject Establishment {#subject-establishment}
 
 These rules apply at step 2 of the direct approval steps
