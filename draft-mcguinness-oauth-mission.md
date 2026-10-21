@@ -4811,9 +4811,10 @@ particular, it MUST NOT advertise
 the machine-checkable form of that claim.
 
 The Mission Binding Properties vector of
-{{I-D.draft-mcguinness-mission-architecture}} names this discharge as
-its `credential-mission-bound` property, informatively; these gates
-remain authoritative for conformance to this document regardless.
+{{I-D.draft-mcguinness-mission-architecture}} names what these gates
+supply as its `credential-mission-bound` property, informatively;
+these gates remain authoritative for conformance to this document
+regardless.
 
 This document publishes a Mapping Assessment of how the surfaces
 above realize the Mission Substrate contract's kernel and
