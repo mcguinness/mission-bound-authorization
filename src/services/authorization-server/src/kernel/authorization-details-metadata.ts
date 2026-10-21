@@ -299,8 +299,8 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   }
   // @spec resource-access#resource-access-type, resource-access#entry-validation
   // (#1276): `exact` or `prefix`, and "A `resource` value under `prefix` MUST
-  // NOT carry a query or fragment component; the authorization server
-  // refuses such an entry with the `invalid_authorization_details` error
+  // NOT carry a query or fragment component; the authorization server MUST
+  // refuse such an entry with the `invalid_authorization_details` error
   // code." The shared rule also refuses a `prefix` base with no `//`
   // authority, where the matcher draws no boundary. Refused at intake, never
   // admitted and then rebuilt as an exact entry.
