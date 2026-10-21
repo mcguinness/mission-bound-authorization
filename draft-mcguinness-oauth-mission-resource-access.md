@@ -908,11 +908,10 @@ the subset rule of {{subset}} is reproducible.
 ## Resource Server Enforcement {#rs-enforcement}
 
 {{I-D.draft-mcguinness-oauth-mission}} requires a resource server to
-enforce each applicable `authorization_details` entry according to that
-entry's own type specification, and to fail closed on an entry whose
-type it does not implement or cannot fully evaluate. This section is
-that specification for a `mission_resource_access` entry. A resource
-server:
+enforce each applicable `authorization_details` entry under its type's
+specification, and to fail closed on an entry whose type it does not
+implement or cannot fully evaluate. This section is that specification
+for this type. A resource server:
 
 - MUST enforce an entry whose `resource` matches the operation target
   under the entry's `resource_match` ({{resource-matching}}), permitting
@@ -935,13 +934,12 @@ server:
 **Failing closed.** An entry the resource server cannot fully enforce
 provides no authority: one with an unrecognized `resource_match` value,
 a member the resource server does not recognize or whose obligations it
-cannot fulfill, or a `constraints` key the resource server does not
-understand or cannot enforce. The resource server then authorizes the
-request only through another applicable entry that it can fully enforce
-and that covers the whole request on its own: the entry's `resource`
-matches the target, the action is among its `actions`, and every key in
-its `constraints` is satisfied ({{common-constraints}}). The resource
-server:
+cannot fulfill, or a `constraints` key it does not understand or cannot
+enforce. The resource server then authorizes the request only through
+another applicable entry that it can fully enforce and that covers the
+whole request on its own: its `resource` matches the target, its
+`actions` include the action, and every key in its `constraints` is
+satisfied ({{common-constraints}}). The resource server:
 
 - MUST NOT combine parts of several entries to authorize one request, or
   borrow authority from an entry it cannot fully enforce; and
@@ -950,9 +948,9 @@ server:
   ({{Section 3.1 of RFC6750}}), or with the deployment's usual
   insufficient-authority error.
 
-A failure of token-wide validation, such as of the token's signature,
-audience, or sender constraint ({{I-D.draft-mcguinness-oauth-mission}}),
-rejects the token whatever its entries carry.
+A token-wide validation failure, such as of signature, audience, or
+sender constraint ({{I-D.draft-mcguinness-oauth-mission}}), rejects the
+token whatever its entries carry.
 
 **Entry members.** Each member of an entry has a resource-server role
 or none:
@@ -987,17 +985,17 @@ resource metadata ({{RFC9728}}):
   Constraints and deployment-defined names, that the resource
   understands and enforces ({{rs-enforcement}}). It lets the
   authorization server discover which keys it can emit for the resource
-  ({{resource-access-type}}), and lets a client predict a fail-closed
-  constraint mismatch before making a request. When absent, that
-  knowledge is established out of band.
+  ({{resource-access-type}}), and a client predict a fail-closed
+  constraint mismatch before a request. When absent, that knowledge is
+  established out of band.
 
 ## Resource Contracts {#resource-contract}
 
 An entry's `actions` and `constraints` carry meaning only at the
 resource that defines them ({{resource-access-type}}), and the resource
-can change that meaning while action names and parameter values stay
-the same. The `resource_contract` member fixes, at approval, the
-version of that meaning the entry was approved under.
+can change that meaning while the names and values stay the same. The
+`resource_contract` member fixes the version of that meaning the entry
+was approved under.
 
 A **resource contract** is a JSON document, identified by an `id` and a
 `version`, whose bytes never change for that pair. It fixes the
@@ -1008,13 +1006,13 @@ each operation it covers and the members of each action family it
 defines. That section also defines the version states and how a
 reference resolves. This section depends on those rules normatively;
 the dependency binds only a deployment that supports
-`resource_contract`. The contract assembles those definitions and overrides none of them: a Common
-Constraint keeps the semantics its definition gives it
-({{common-constraints}}). A resource that changes any of that material
-publishes a new version with its own `digest`. The resource publishes
-its contracts and their references through its operation contract
-documentation or other deployment documentation; this document defines
-no metadata member or endpoint for them.
+`resource_contract`. The contract assembles those definitions and
+overrides none of them: a Common Constraint keeps the semantics its
+definition gives it ({{common-constraints}}). A resource that changes
+any of that material publishes a new version with its own `digest`.
+The resource publishes its contracts and references in its operation
+contract or other deployment documentation; this document defines no
+metadata member or endpoint for them.
 
 The following entry references version `2026-10-01` of a payments
 contract:
@@ -1035,9 +1033,8 @@ contract:
 **Approval.** The authorization server assembles the reference from
 trusted resource or deployment configuration, which states whether an
 entry's `resource` requires a reference and which contract version is
-current for it. A `resource_contract` a client proposes is a proposal,
-never an authoritative declaration. Before approval, the authorization
-server:
+current for it. A client-proposed `resource_contract` is never
+authoritative. Before approval, the authorization server:
 
 - MUST refuse, with the `invalid_authorization_details` error code, a
   proposed entry whose `resource_contract` does not equal, member for
@@ -1061,11 +1058,10 @@ code, and never drops the member.
 
 **Preservation.** The reference is part of the entry, so
 `authority_hash` commits it ({{I-D.draft-mcguinness-oauth-mission}}).
-Every derivation, narrowing, and delegation of the entry preserves it
-exactly ({{subset}}), and scope projection never drops it
+Every derivation, narrowing, and delegation preserves it exactly
+({{subset}}), and scope projection never drops it
 ({{scope-projection}}). An entry approved without a reference gains one
-only through a new approval of an entry that carries it; a derivation
-never attaches the current contract to it.
+only through a new approval of an entry that carries it.
 
 **Enforcement.** A resource server MUST NOT treat an entry carrying
 `resource_contract` as authorizing an operation unless it performs that
@@ -1075,27 +1071,25 @@ server's operation contract requires a reference for an operation, an
 applicable entry without one provides no authority for it. In both
 cases the entry is one the resource server cannot fully enforce
 ({{rs-enforcement}}). The reference fixes meaning, not state: it
-supplies no observation of the resource, and it exempts no operation
-from the resource's other authorization checks. Which versions a
-resource still performs, and for which entries, follows the version
-states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that
-does not resolve there authorizes nothing.
+supplies no observation of the resource and exempts no operation from
+the resource's other authorization checks. Which versions a resource
+still performs, and for which entries, follows the version states of
+{{I-D.draft-mcguinness-mission-runtime}}: a reference that does not
+resolve there authorizes nothing.
 
 ## Delegate Eligibility {#delegate-eligibility}
 
 {{I-D.draft-mcguinness-oauth-mission}} gates a delegated token's carried
 entries on the entry type's own delegation policy, evaluated at the
 delegation depth `d` of the token being issued. That document's
-Delegation Constraints section defines `d` and how the authorization
-server establishes it from its own accounting, including the
-self-exchange and cross-domain rules; the `act` claim attributes the
-chain and is not the authoritative count. For a
-`mission_resource_access` entry, the authorization server includes it in
-a delegated token issued at delegation depth `d` only if all of the
-following hold:
+Delegation Constraints section defines `d`, which the authorization
+server establishes from its own accounting, not from the `act` claim.
+The authorization server includes a `mission_resource_access` entry in
+a delegated token issued at depth `d` only if all of the following
+hold:
 
 1. the entry carries a `delegation` member (otherwise it is
-   non-delegable, which is the default);
+   non-delegable, the default);
 2. `d` is less than or equal to the entry's `delegation.max_depth`; and
 3. the delegate is permitted by `delegation.allowed_delegates` or, when
    that member is absent, by the authorization server's
@@ -1103,20 +1097,19 @@ following hold:
    apply at every exchange: an absent list of delegate matchers is a
    decision deferred to policy, never a blanket grant of eligibility.
 
-An entry failing any of these narrows out of the delegated token,
-consistent with the subset rule ({{subset}}). Surviving entries are
-carried with their `delegation` member intact, so the next hop is
-evaluated the same way.
+An entry failing any of these narrows out of the delegated token
+({{subset}}). Surviving entries keep their `delegation` member intact,
+so the next hop is evaluated the same way.
 
 A cross-domain grant separates two stages. Eligibility for the grant
 itself is decided as above, against the approved entry in the Mission
 Record. The copy the grant conveys keeps `delegation` only as
-{{I-D.draft-mcguinness-oauth-mission-cross-domain}} allows, and an
-omitted member ends onward delegation from that copy. Neither stage
-lets an entry without `delegation` in the Mission Record appear in a
-delegated token. The dependency on that profile, here and in the
-absent-member exception of {{resource-access-type}}, binds only an
-authorization server that issues cross-domain grants.
+{{I-D.draft-mcguinness-oauth-mission-cross-domain}} allows; a copy
+without it delegates no further. Neither stage lets an entry without
+`delegation` in the Mission Record appear in a delegated token. The
+dependency on that profile, here and in the absent-member exception of
+{{resource-access-type}}, binds only an authorization server that
+issues cross-domain grants.
 
 **Inherited eligibility.** A derived entry's `allowed_delegates`
 restricts eligibility; it never replaces an obligation the derivation
@@ -1124,30 +1117,25 @@ inherits. An entry derived from a reference entry that has no
 `allowed_delegates` inherits the authorization server's policy
 decision, and so does every entry derived from it: a delegate is
 permitted only when the policy permits it and, where the entry carries
-a list, the list permits it too. When policy permits Bob and denies
-Carol, an entry whose list names Carol still cannot admit Carol.
+a list, the list permits it too.
 
-The obligation holds from the initial derivation. An approved entry
-derived from a ceiling entry without `allowed_delegates` inherits the
-policy decision even when the approved proposal added a list, so the
-approved entry's own members do not reveal the obligation. The
-authorization server therefore records, when it derives the Authority
-Set, which approved entries inherit the policy decision, and retains
-that provenance with the Mission. It evaluates every later exchange
-against the approved entry in the Mission Record
+An approved entry derived from a ceiling entry without
+`allowed_delegates` inherits the policy decision even when the approved
+proposal added a list, so the approved entry's own members do not
+reveal the obligation. The authorization server therefore records, when
+it derives the Authority Set, which approved entries inherit the policy
+decision, and retains that provenance with the Mission. It evaluates
+every later exchange against the approved entry in the Mission Record
 ({{I-D.draft-mcguinness-oauth-mission}}) and that provenance, never
 against a presented token alone. Where it cannot resolve either, the
 entry narrows out of the delegated token. A cross-domain grant conveys
-no such provenance; {{I-D.draft-mcguinness-oauth-mission-cross-domain}}
-specifies how its conveyed copy treats `delegation`.
+no such provenance.
 
 ### Matching `allowed_delegates` {#matching-allowed-delegates}
 
 Each `allowed_delegates` value is a delegate matcher: an object modeled
-on the actor object of the `may_act` claim ({{Section 4.4 of RFC8693}}).
-Where `may_act` names a single party eligible to act on a token,
-`allowed_delegates` is a per-entry list of such matchers, generalized to
-actor-type classes:
+on the actor object of the `may_act` claim ({{Section 4.4 of RFC8693}}),
+generalized from a single party to actor-type classes:
 
 - A `{ "sub": ... }` matcher permits a specific delegate by client
   identifier.
@@ -1170,10 +1158,10 @@ otherwise a client could claim any actor type to bypass the constraint.
 
 A `{ "sub": ... }` matcher is a client identifier in the issuing
 authorization server's namespace and is not portable across a trust
-domain. How an authorization server in another trust domain (a "Resource
-AS") evaluates conveyed delegate matchers, failing closed and narrowing
-out any `sub` matcher it cannot resolve, is specified by
-{{I-D.draft-mcguinness-oauth-mission-cross-domain}}.
+domain. {{I-D.draft-mcguinness-oauth-mission-cross-domain}} specifies
+how an authorization server in another trust domain evaluates conveyed
+delegate matchers, failing closed and narrowing out any `sub` matcher
+it cannot resolve.
 
 ## Scope Projection {#scope-projection}
 
