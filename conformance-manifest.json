@@ -37259,7 +37259,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the approval at which a ceiling is consented renders the ceiling and states that in-ceiling expansion is policy-adjudicated",
-    "local": "The deployment's ceilingOffer names the ceiling and drawdown policy its approval surface offers; the approval page renders that ceiling and a line stating that in-ceiling expansion is adjudicated by the named policy without a further approval (or that no policy is offered), and a decision consents only exactly that offer, so every consented ceiling was rendered. A device approval offers none (#1256)."
+    "local": "The deployment's ceilingOffer names the ceiling and drawdown policy its approval surface offers; the approval page renders that ceiling and a line stating that in-ceiling expansion is adjudicated by the named policy without a further approval (or that no policy is offered), and retains the rendered offer against the interaction. A decision consents only exactly that retained offer, so every consented ceiling was rendered, even if the offer changes afterwards. A device approval offers none (#1256)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -37275,9 +37275,15 @@
      "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > a decision consenting a ceiling or drawdown policy the approval page did not render is refused invalid_request: no Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the ceiling consent disclosure (@spec progressive#progressive-authorization, #1017) > the decision is bound to the offer the page rendered, not to an offer computed at the decision",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Not implemented: the reference approval page renders no ceiling, because the Approver's decision posts the consented ceiling with no rendering of it and the page never receives it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it. Proved by omitting the ceiling section, by not binding the decision to the offer, and by binding the ceiling without the drawdown policy."
+   "notes": "Not implemented: the reference approval page renders no ceiling, because the Approver's decision posts the consented ceiling with no rendering of it and the page never receives it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it. Proved by omitting the ceiling section, by not binding the decision to the offer, and by binding the ceiling without the drawdown policy. The binding to the rendered offer is proved by computing the offer afresh at the decision."
   },
   {
    "id": "progressive.ceiling.client-input-not-consent",
