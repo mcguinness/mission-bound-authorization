@@ -3167,7 +3167,7 @@ exchange rows of the third table.
 | PAR: a proposed entry, valid for its type, whose `resource` is not among the Intent's `target_resources` ({{authority-proposal}}) | `invalid_request` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | PAR or authorization request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
-| Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: none unless a defined extension applies |
+| Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: for a configured-mapping refusal, a safe `error_description` can say whether no mapping matched or policy narrowed the candidates to nothing; otherwise none unless a defined extension applies |
 {: title="PAR and authorization endpoint failures"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -7318,11 +7318,11 @@ commit it (#1518).
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501, #1526), with the issuance rules
-gathered
-under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
-retitled "Mission Lifecycle", resource classification named
-"Mission-governed resource" (#1503), and
-one Standing-Consent Bases section; subsections, tables and IANA
+gathered under Mission-Bound Access Tokens, "Mission Lifecycle and
+Gating" retitled "Mission Lifecycle", resource classification named
+"Mission-governed resource" (#1503), and one Standing-Consent Bases
+section; the error-table detail for a configured-mapping refusal
+aligned with Derivation Modes (#1495); subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
 Assessment, moved from the substrate (#708).
