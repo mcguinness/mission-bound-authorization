@@ -350,7 +350,8 @@ access token issued under the Mission carries a subset of the approved
 authority and a "mission" claim, and every issuance is gated on the
 Mission's lifecycle state. Revoking a Mission stops further issuance;
 it does not recall tokens already issued, which a resource server
-that enforces from the token alone honors until they expire.
+that enforces from the token alone can continue to honor until they
+expire.
 
 Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
@@ -6147,7 +6148,7 @@ only where that companion is deployed.
 | 08:20:00, 08:30:00 | The Mission is suspended, then resumed | Mission Status |
 | 08:50:00 | The agent refreshes for a read-only token that expires at 08:55:00 | this document |
 | 08:53:20 | The Mission is revoked and `terminated`; later refreshes are refused, and introspection reports the read-only token inactive | this document |
-| 08:53:20 | A receiver learns of the revocation from a Security Event Token | Mission Signals |
+| After revocation; delivery time unspecified | A receiver learns of the revocation from a Security Event Token | Mission Signals |
 | 08:55:00 | The read-only token expires; a resource server enforcing from the token alone stops honoring it | this document |
 {: title="End-to-end example timeline"}
 
