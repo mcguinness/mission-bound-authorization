@@ -391,6 +391,9 @@ An A-label is as {{Section 2.3.2.1 of RFC5890}} defines it. Letter case
 does not make a `recipient_domain` invalid; values compare
 case-insensitively ({{value-space-comparison}}).
 
+The refusal of a `delegation` member that no implemented specification
+defines is specified with `delegation` ({{resource-access-type}}).
+
 The following values are valid and carry a defined meaning:
 
 - A `max_depth` of 0 admits the entry into no delegated token, since a
