@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T00:03:26Z
-Source repository commit: e84c8dd0009b06f2a70b7c5f70856ae8d5f42ad8
+Generated: 2026-10-21T00:44:45Z
+Source repository commit: f99fecf0c2d4277e833519336df1b7ead44911af
 Member count: 7
 
 Reading order:
@@ -8528,13 +8528,25 @@ Table of Contents
       MUST NOT issue a token for that resource outside a Mission, except
       under documented policy exceptions.
 
-   *  If a client registered as Mission-governed sends an
-      authorization_details request that carries no mission_intent, the
-      AS MUST reject the request with the invalid_request error code, so
-      the client cannot drop the Intent from a request that still
-      carries authorization_details.  A request carrying neither is an
-      ordinary request that this rule does not reach; designation is
-      what keeps a resource's tokens inside a Mission.
+   *  If a client registered as Mission-governed sends an authorization
+      request, through PAR or at the authorization endpoint, that
+      carries authorization_details but no mission_intent, the AS MUST
+      reject the request with the invalid_request error code, so the
+      client cannot drop the Intent from a request that still carries
+      authorization_details.  The rule applies to that request until it
+      completes, including when the AS resumes it after an interaction.
+      A request carrying neither is an ordinary request that this rule
+      does not reach; designation is what keeps a resource's tokens
+      inside a Mission.
+
+   A token request under an existing Mission-bound grant, such as a
+   narrowing refresh, a self-exchange (Section 12.3) or an exchange for
+   a delegation designation (Section 12.1), needs no mission_intent
+   under the second rule.  This exception opens no Mission submission
+   carriage, and every other check still applies to the request:
+   Issuance Gating (Section 7.2), the subset rule (Section 5.4), the
+   first rule above, and the grant's binding to its Mission, client and
+   sender.
 
    The following is an example of an authority proposal submitted
    alongside the example Intent of Section 4.  Derivation narrows
@@ -9116,6 +9128,11 @@ Table of Contents
        *  When the client submitted an authority proposal (Section 4.3),
           the rendering MUST distinguish the entries the client proposed
           from any narrowing or restructuring the AS applied.
+
+       *  Mission Capability Binding
+          ([I-D.draft-mcguinness-mission-capability-binding]) states
+          what the rendering presents about the source binding of a
+          catalog-sourced action.
 
    6.  *Compute the integrity anchors* (Section 14.1): authority_hash
        over the consented Authority Set, intent_hash over the approved
@@ -10478,12 +10495,6 @@ Table of Contents
    | (Section 4.4), or a required    |                                 |
    | evidence type absent            |                                 |
    +---------------------------------+---------------------------------+
-   | Request from a client           | invalid_request                 |
-   | registered as Mission-          | (Section 4.1.2.1 of [RFC6749],  |
-   | governed:                       | Section 5.2 of [RFC6749]).      |
-   | authorization_details without   | Detail: safe error_description  |
-   | mission_intent (Section 4.3)    |                                 |
-   +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: invalid, unknown, or   | [RFC8707]).  Detail: safe       |
    | malformed actual RFC 8707       | error_description               |
@@ -10563,6 +10574,12 @@ Table of Contents
    | is not among the Intent's         | error_description             |
    | target_resources                  |                               |
    | (Section 4.3)                     |                               |
+   +-----------------------------------+-------------------------------+
+   | PAR or authorization request      | invalid_request               |
+   | from a client registered as       | (Section 4.1.2.1 of           |
+   | Mission-governed:                 | [RFC6749], Section 5.2 of     |
+   | authorization_details without     | [RFC6749]).  Detail: safe     |
+   | mission_intent (Section 4.3)      | error_description             |
    +-----------------------------------+-------------------------------+
    | Authorization request: scope      | invalid_scope                 |
    | includes openid and the           | (Section 4.1.2.1 of           |
@@ -12496,8 +12513,8 @@ Table of Contents
    Mission-governed.  Rules on three sides address this downgrade:
 
    *  *Issuance.* The rules of Section 4.3 keep such a resource's tokens
-      inside a Mission and refuse such a client's authorization_details
-      request that omits the Intent.
+      inside a Mission and refuse such a client's authorization request
+      that carries authorization_details but omits the Intent.
 
    *  *Client.* A client holding a Mission Intent does not fall back to
       an ordinary request where Mission support is not established, and
@@ -13589,6 +13606,11 @@ Table of Contents
               AuthZEN Profile", 2026, <https://mcguinness.github.io/
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
+
+   [I-D.draft-mcguinness-mission-capability-binding]
+              McGuinness, K., "Mission Capability Binding", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-capability-binding.html>.
 
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
@@ -15056,6 +15078,18 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Direct Approval Steps (#1447, D584): the rendering rules point to
+      Mission Capability Binding for what the approval presents about a
+      catalog-sourced action's source binding.
+
+   *  Authority Proposal (#1448, D585): the Mission-governed client rule
+      reaches an authorization request, through PAR or at the
+      authorization endpoint, including a resumed one.  A token request
+      under an existing Mission-bound grant needs no mission_intent
+      under it, and every other check still applies.  Its Error and
+      Challenge Mapping row moves to the PAR and authorization endpoint
+      table.
 
    *  Submission processing (#1411, D559): Submission Processing Order
       validates an authority proposal's type, schema, and
