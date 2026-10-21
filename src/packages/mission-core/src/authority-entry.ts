@@ -171,19 +171,22 @@ export interface AuthorityEntry {
    * @spec attenuation#delegation, child-delegation#fanout — per-entry delegation
    * policy (the S-15 core extension). A GRANT, not a restriction: an entry with
    * no `delegation` is non-delegable, and derivation NEVER lets an untrusted
-   * proposal introduce it (the compromised-shaper property, see derive.ts). The
-   * open index carries companion members (the child-delegation `children` object)
-   * unchanged; a later profile narrows them strongly. `max_depth` bounds offline
-   * attenuation-chain / delegation depth; `allowed_delegates` restricts who may
-   * receive the right (a restriction, narrowed like `constraints.vendors`).
+   * proposal introduce it (the compromised-shaper property, see derive.ts).
+   * `max_depth` bounds offline attenuation-chain / delegation depth;
+   * `allowed_delegates` restricts who may receive the right (a restriction,
+   * narrowed like `constraints.vendors`). The open index types the one
+   * companion member this implementation supports, the child-delegation
+   * `children` object; any member outside SUPPORTED_DELEGATION_MEMBERS is
+   * refused at every boundary, never carried unchanged
+   * (@spec resource-access#resource-access-type, D634).
    */
   delegation?: {
     max_depth: number;
     allowed_delegates?: DelegateMatcher[];
   } & {
-    // Open index so companion members (the child-delegation `children` object)
-    // ride unchanged. Expressed as an intersection so the named members above
-    // keep their precise types under `exactOptionalPropertyTypes`.
+    // Open index for the supported companion member (the child-delegation
+    // `children` object). Expressed as an intersection so the named members
+    // above keep their precise types under `exactOptionalPropertyTypes`.
     [k: string]: JsonValue | undefined;
   };
 }

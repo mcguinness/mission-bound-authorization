@@ -26,6 +26,7 @@ import {
   resourceMatchViolation,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
+  unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
 import { exportJWK, generateKeyPair } from "jose";
@@ -1094,6 +1095,16 @@ function rejectRefusedMember(file: string, e: Record<string, unknown>, ctx: stri
     throw new ConfigError(
       file,
       `${ctx} carries ${unsupported}, which is not a supported member of the mission_resource_access type`,
+    );
+  }
+  // @spec resource-access#resource-access-type (D634): likewise a `delegation`
+  // member this authorization server does not implement, named here rather
+  // than left to isAuthorityEntry's generic refusal.
+  const delegationMember = unsupportedDelegationMember(e);
+  if (delegationMember !== undefined) {
+    throw new ConfigError(
+      file,
+      `${ctx} carries ${delegationMember}, which is not a supported delegation member`,
     );
   }
 }

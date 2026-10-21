@@ -149,6 +149,62 @@ export function unsupportedEntryMember(entry: unknown): string | undefined {
 }
 
 /**
+ * @spec resource-access#resource-access-type (D634): the `delegation` members
+ * this authorization server supports. Resource Access defines `max_depth` and
+ * `allowed_delegates`; Child Delegation, which this implementation
+ * implements, defines `children` (child-delegation#fanout). "The
+ * authorization server MUST refuse an entry whose `delegation` carries a
+ * member other than `max_depth` and `allowed_delegates` with the
+ * `invalid_authorization_details` error code, unless a companion profile it
+ * implements defines that member's processing." It cannot fulfill the
+ * processing obligations of any other member, so an entry carrying one is
+ * refused, never carried unchanged, rebuilt without it, or narrowed out. This
+ * is the SINGLE declaration every boundary consults through
+ * {@link unsupportedDelegationMember}: the proposal and requested-authority
+ * intakes, template consent, the typed config loaders and the foreign-grant
+ * validator ({@link isAuthorityEntry}), derivation, the subset rule
+ * ({@link isSubsetEntry}) and projection.
+ */
+export const SUPPORTED_DELEGATION_MEMBERS: readonly string[] = Object.freeze([
+  "max_depth",
+  "allowed_delegates",
+  "children",
+]);
+
+/**
+ * @spec child-delegation#fanout (D634): the members of the `children` grant
+ * Child Delegation defines. A member outside this set inside `children` is
+ * equally one whose processing this implementation cannot fulfill, so the
+ * same boundaries refuse it.
+ */
+export const SUPPORTED_CHILDREN_MEMBERS: readonly string[] = Object.freeze([
+  "max_children",
+  "max_child_depth",
+  "allowed_child_actors",
+  "child_creation_policy",
+]);
+
+/**
+ * The path of the first unsupported member `entry`'s `delegation` carries
+ * (`delegation.<member>`, or `delegation.children.<member>` inside the
+ * `children` grant), or undefined. Decided by property presence, never by
+ * value. Each object is read only where it is an object; its own shape is
+ * left to the boundary's other checks. The caller maps a hit to its
+ * boundary's own error (`invalid_authorization_details` on a protocol
+ * surface, the loader's configuration error at load).
+ */
+export function unsupportedDelegationMember(entry: unknown): string | undefined {
+  const delegation = asJsonObject(asJsonObject(entry as JsonValue)?.delegation);
+  if (!delegation) return undefined;
+  const member = Object.keys(delegation).find((m) => !SUPPORTED_DELEGATION_MEMBERS.includes(m));
+  if (member !== undefined) return `delegation.${member}`;
+  const children = asJsonObject(delegation.children);
+  if (!children) return undefined;
+  const child = Object.keys(children).find((m) => !SUPPORTED_CHILDREN_MEMBERS.includes(m));
+  return child === undefined ? undefined : `delegation.children.${child}`;
+}
+
+/**
  * @spec resource-access#matching-allowed-delegates, child-delegation#fanout
  * (#1373): the members a delegate matcher carries, in
  * `delegation.allowed_delegates` and `delegation.children.allowed_child_actors`
@@ -293,8 +349,9 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
         return false;
     }
   }
-  // Delegate narrowing retains known structures; unknown controls cannot be
-  // interpreted as permission by this ceiling implementation.
+  // @spec resource-access#resource-access-type (D634): a `delegation` or
+  // `children` member outside the supported sets is refused
+  // ({@link unsupportedDelegationMember}); its processing cannot be fulfilled.
   if (e.delegation !== undefined) {
     const d = e.delegation as Record<string, unknown> | null;
     if (
@@ -305,27 +362,12 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
       (d.max_depth as number) < 0
     )
       return false;
-    if (Object.keys(d).some((k) => !["max_depth", "allowed_delegates", "children"].includes(k)))
-      return false;
+    if (unsupportedDelegationMember(e) !== undefined) return false;
     const matchers = (v: unknown) => delegateMatcherListViolation(v, "matchers") === undefined;
     if (d.allowed_delegates !== undefined && !matchers(d.allowed_delegates)) return false;
     if (d.children !== undefined) {
       const c = d.children as Record<string, unknown> | null;
-      if (
-        !c ||
-        typeof c !== "object" ||
-        Array.isArray(c) ||
-        Object.keys(c).some(
-          (k) =>
-            ![
-              "max_children",
-              "max_child_depth",
-              "allowed_child_actors",
-              "child_creation_policy",
-            ].includes(k),
-        )
-      )
-        return false;
+      if (!c || typeof c !== "object" || Array.isArray(c)) return false;
       for (const k of ["max_children", "max_child_depth"])
         if (c[k] !== undefined && (!Number.isInteger(c[k]) || (c[k] as number) < 0)) return false;
       if (c.allowed_child_actors !== undefined && !matchers(c.allowed_child_actors)) return false;
@@ -490,6 +532,16 @@ export function resourceWithin(
 
 /** @spec mission#subset: entry-wise subset test (resource under {@link resourceWithin}). */
 export function isSubsetEntry(candidate: AuthorityEntry, granted: AuthorityEntry): boolean {
+  // @spec resource-access#resource-access-type (D634): an entry whose
+  // `delegation` carries an unsupported member is refused, on either side and
+  // even byte-identical: unlike an unsupported top-level member below, the
+  // authorization server cannot carry it unchanged.
+  if (
+    unsupportedDelegationMember(candidate) !== undefined ||
+    unsupportedDelegationMember(granted) !== undefined
+  ) {
+    return false;
+  }
   // @spec mission#subset (#1399, D538): a top-level member outside the
   // supported set cannot be compared. An entry byte-identical to its
   // reference under the canonical form is a subset of it and carries the

@@ -75,8 +75,8 @@
     "content_sha256": "8da741109331b2ecd0a9b4a076f2148385036d5ea502601ebcb10ff87d212d91"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "9e2cb1905066a1104a05847b724fdaf8c540132c",
-    "content_sha256": "a01f82f96a9b8b2e8ed9be095fca98964ead3ddaae4ea383f55affcfad9c42ae"
+    "revision": "1a88277d0a413c340c7032870829042db18d9c3d",
+    "content_sha256": "c234f025d012fd84a051ebee50d69d107d31b93d4e1206242f091666dcd3a977"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -47176,9 +47176,15 @@
      "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards delegation, a member a companion profile adds inside it included, and still enforces the entry's other members",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards a delegation member the authorization server would refuse as unsupported, and still enforces the entry's other members (D634)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor."
+   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor. D634: a second witness carries a delegation member the authorization server refuses as unsupported; the resource server still disregards it and enforces the entry's other members. Proved by mutation: removing `delegation` from the disregarded members fails it."
   },
   {
    "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
@@ -48167,6 +48173,91 @@
     }
    ],
    "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the non-delegable witness; applying the omission before the gate fails the admitted witnesses."
+  },
+  {
+   "id": "resource-access.type.delegation-unsupported-member-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "The authorization server MUST refuse an entry whose `delegation` carries a member other than `max_depth` and `allowed_delegates` with the `invalid_authorization_details` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses, with invalid_authorization_details, an entry whose delegation carries a member that neither Resource Access nor a companion profile it implements defines: a proposal carrying one is refused at PAR with no request_uri, a derivation from a ceiling entry carrying one is refused before approval with no Mission created, and no entry is derived or projected from one",
+    "local": "the reference also refuses a member inside Child Delegation's children grant that Child Delegation does not define, at the same boundaries; template consent refuses either with invalid_request, the admin plane's error, and the config loaders refuse either at load"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > refuses an entry whose delegation carries a member no specification it implements defines, whatever its value, with invalid_authorization_details and no request_uri",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > the approval rendering over a ceiling entry carrying one refuses invalid_authorization_details, and no Mission is created",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > deriveAuthoritySet refuses a ceiling entry or a submitted proposal entry carrying one, whatever its value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > the subset rule refuses either side carrying one, a byte-identical pair included",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > projection yields no fragment for a candidate carrying one, rather than one rebuilt without it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D634, a compatibility change: before it the reference admitted such a member at PAR and carried one from a ceiling entry into the derived entry. PAR refuses the proposal before any interaction; the approval rendering refuses a derivation from a programmatic ceiling entry carrying one (the config loaders refuse it at load), creating no Mission; deriveAuthoritySet refuses it on either operand; the subset rule refuses either side, a byte-identical pair included; projection yields no fragment for the pairing. Proved red-green: each witness fails against the pre-D634 implementation (PAR returns 201, the rendering returns the approval page with 200, deriveAuthoritySet derives, isSubsetEntry returns true for the byte-identical pair, projection issues a fragment), restoring only that seam's file where the path allows (derive.ts for the rendering, derivation and projection witnesses; authorization-details-metadata.ts for PAR), and passes at the change."
+  },
+  {
+   "id": "resource-access.type.delegation-companion-member-admitted",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "unless a companion profile it implements defines that member's processing",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegation member that a companion profile the AS implements defines is admitted and carried into the approved entry, no broader than the parent entry's",
+    "local": "the reference implements Child Delegation, whose children grant is that member; a proposal's children narrows the shipped ceiling's and inherits the members it omits"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > admits the children grant Child Delegation defines, and the approved Mission's entry carries it, narrowed by the ceiling",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D634. A PAR proposal whose delegation carries Child Delegation's children is admitted, approved, and the Mission's entry carries children narrowed by the shipped ceiling. Proved by mutation: refusing children at the PAR intake fails the admission (400), and dropping children in narrowDelegation fails the carriage."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",

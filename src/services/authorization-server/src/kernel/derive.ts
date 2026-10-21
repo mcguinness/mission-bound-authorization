@@ -24,6 +24,7 @@ import {
   resourceWithin,
   sameResourceContract,
   SUPPORTED_CONSTRAINT_KEYS,
+  unsupportedDelegationMember,
   unsupportedEntryMember,
 } from "@mission/core";
 export { isSubsetEntry, isSubsetSet } from "@mission/core";
@@ -120,6 +121,12 @@ function derivedResource(
  * @spec mission#subset (#1399, D538): the same holds for any member outside
  * the supported set ({@link unsupportedEntryMember}): `intersect` would drop
  * it and erase a restriction it may express, so it is refused here too.
+ *
+ * @spec resource-access#resource-access-type (D634): and for a `delegation`
+ * member this authorization server does not implement
+ * ({@link unsupportedDelegationMember}), whose processing obligations it
+ * cannot fulfill: derivation from, or of, an entry carrying one is refused,
+ * never carried unchanged from the ceiling.
  */
 function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
   for (const entry of entries) {
@@ -135,6 +142,13 @@ function assertNoRefusedMembers(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry carries ${unsupported}, which is not a supported member of the mission_resource_access type; refusing rather than silently dropping it`,
+      );
+    }
+    const delegationMember = unsupportedDelegationMember(entry);
+    if (delegationMember !== undefined) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry carries ${delegationMember}, which is not a supported delegation member; refusing rather than carrying it unchanged`,
       );
     }
   }
@@ -653,19 +667,16 @@ function minAmount(
 //     proposal volunteering a narrower delegate list is safe) — NOT the grant
 //     flip. `children` is itself a GRANT (its PRESENCE is the child-creation
 //     on-switch, {{child-delegation#fanout}}), so it takes the SAME flip one
-//     level down. Unrecognized companion members are carried from the CEILING,
-//     never the proposal: the derivation cannot evaluate semantics it does not
-//     recognize, so a proposal-sourced unknown member would break the
-//     untrusted-proposal property.
+//     level down.
+// A member outside SUPPORTED_DELEGATION_MEMBERS (inside `children`,
+// SUPPORTED_CHILDREN_MEMBERS) never reaches these functions: derivation
+// refuses it first (assertNoRefusedMembers,
+// @spec resource-access#resource-access-type, D634), so each rebuilds the
+// supported members only.
 // ---------------------------------------------------------------------------
 
 type Delegation = NonNullable<AuthorityEntry["delegation"]>;
 type JsonObject = { [k: string]: JsonValue };
-
-/** View a delegation/children object as an open JSON record (all-JSON at runtime). */
-function jsonRec(v: object): { [k: string]: JsonValue | undefined } {
-  return v as unknown as { [k: string]: JsonValue | undefined };
-}
 
 function asJsonObject(v: JsonValue | undefined): JsonObject | undefined {
   return v !== null && typeof v === "object" && !Array.isArray(v) ? (v as JsonObject) : undefined;
@@ -749,11 +760,11 @@ function narrowChildren(
   if (!ceiling) return undefined; // GRANT flip: no children on-switch in the ceiling
   if (!proposal) return structuredClone(ceiling); // inherit the ceiling's children
   const out: JsonObject = {};
-  // Unrecognized members carried from the CEILING (never the proposal).
-  for (const k of Object.keys(ceiling)) {
-    if (k === "max_children" || k === "max_child_depth" || k === "allowed_child_actors") continue;
-    const v = ceiling[k];
-    if (v !== undefined) out[k] = structuredClone(v);
+  // @spec child-delegation#fanout, mission#standing-consent-bases: the
+  // ceiling's `child_creation_policy` reference is carried, never taken from
+  // the proposal.
+  if (ceiling.child_creation_policy !== undefined) {
+    out.child_creation_policy = structuredClone(ceiling.child_creation_policy);
   }
   const maxChildren = minNum(asNum(proposal.max_children), asNum(ceiling.max_children));
   if (maxChildren !== undefined) out.max_children = maxChildren;
@@ -774,13 +785,6 @@ function narrowDelegation(
   if (!ceiling) return undefined; // GRANT flip (see block comment above)
   if (!proposal) return structuredClone(ceiling); // inherit unchanged
   const out: Delegation = { max_depth: Math.min(proposal.max_depth, ceiling.max_depth) };
-  // Unrecognized companion members carried from the CEILING, never the proposal.
-  const ceilRec = jsonRec(ceiling);
-  for (const k of Object.keys(ceiling)) {
-    if (k === "max_depth" || k === "allowed_delegates" || k === "children") continue;
-    const v = ceilRec[k];
-    if (v !== undefined) out[k] = structuredClone(v);
-  }
   const delegates = narrowMatchers(proposal.allowed_delegates, ceiling.allowed_delegates);
   if (delegates) out.allowed_delegates = delegates;
   const children = narrowChildren(asJsonObject(proposal.children), asJsonObject(ceiling.children));
@@ -831,13 +835,11 @@ function intersectMatchers(
 /**
  * `children` is a GRANT nested inside `delegation`: the intersection carries it
  * only where BOTH sides do (omitting is a subset of both, {@link
- * isSubsetEntry}'s childrenNoBroader), and an unrecognized member on either
- * side drops it rather than being carried unevaluated.
+ * isSubsetEntry}'s childrenNoBroader). A pairing either side of which carries
+ * an unsupported member yields no fragment ({@link intersectForProjection}).
  */
 function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
   if (!a || !b) return undefined;
-  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"]);
-  if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
   const out: JsonObject = {};
   // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
   // `child_creation_policy` reference is compared for identity, never
@@ -869,16 +871,14 @@ function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined)
  * it, which {@link isSubsetEntry} accepts against both). `max_depth` takes the
  * min; `allowed_delegates` is a restriction, so it takes the intersection of
  * the present lists (an empty one means "delegable to nobody", never a void
- * entry); an unrecognized companion member on either side drops delegation
- * entirely, since a member this code cannot evaluate must not ride through.
+ * entry). A pairing either side of which carries an unsupported member yields
+ * no fragment ({@link intersectForProjection}), so none reaches here.
  */
 function intersectDelegation(
   a: AuthorityEntry["delegation"],
   b: AuthorityEntry["delegation"],
 ): AuthorityEntry["delegation"] | undefined {
   if (!a || !b) return undefined;
-  const known = new Set(["max_depth", "allowed_delegates", "children"]);
-  if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
   const out: Delegation = { max_depth: Math.min(a.max_depth, b.max_depth) };
   const delegates = intersectMatchers(a.allowed_delegates, b.allowed_delegates);
   if (delegates) out.allowed_delegates = delegates;
@@ -940,6 +940,12 @@ function intersectForProjection(
   // may express. Drop the fragment, as for an unprojectable constraint key.
   if (unsupportedEntryMember(candidate) !== undefined) return null;
   if (unsupportedEntryMember(effective) !== undefined) return null;
+  // @spec resource-access#resource-access-type (D634): likewise a `delegation`
+  // member this authorization server does not implement, on either side. The
+  // pairing yields no fragment, rather than one rebuilt without the member or
+  // without `delegation`.
+  if (unsupportedDelegationMember(candidate) !== undefined) return null;
+  if (unsupportedDelegationMember(effective) !== undefined) return null;
   // @spec resource-access#subset step 4 (#249, D553): "A carries
   // `resource_contract` exactly when B does": a pairing whose sides differ in
   // the reference, or where one side has none, yields no fragment, since no
