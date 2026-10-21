@@ -7227,8 +7227,9 @@ issuer-checked Mission resolution (#725); third-party data subjects
 
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
-#1472, #1479, #1483, #1490), with issuance under Mission-Bound Access
-Tokens, Mission Lifecycle and Gating retitled Mission Lifecycle, and
+#1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
+under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
+retitled "Mission Lifecycle", and
 one Standing-Consent Bases section; subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
@@ -7239,8 +7240,8 @@ draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
-6750 and RFC 9700 are normative, and the OAuth Actor Profile
-informative.
+6750, RFC 9700 and Client Instance ID are normative, and the OAuth
+Actor Profile informative.
 
 -00
 
