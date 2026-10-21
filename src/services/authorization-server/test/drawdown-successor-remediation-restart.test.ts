@@ -82,6 +82,10 @@ function seeding(as: BuiltAs) {
         proposedAuthority: reads(["payments:invoice.read", "payments:invoice.list"]),
         activationActor: requester,
         policy: { ref: pred.drawdown_policy as never, snapshot: POLICY },
+        restrictionsAtAdjudication: {
+          containment: pred.containment?.containment_version ?? 0,
+          discharge: pred.discharged?.length ?? 0,
+        },
       }),
     ).id;
   };
