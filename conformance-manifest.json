@@ -1416,7 +1416,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an authenticated Mission Status caller without the mission_status read authorization (or a deployment-defined equivalent grant) is refused with the endpoint's not-found response, indistinguishable from an unknown Mission; a caller carrying it is served",
-    "local": "this deployment's direct-client equivalent grant is the mission_status scope registered on the authenticated service principal; the shipped dev principal carries it"
+    "local": "this deployment's direct-client equivalent grant is the mission_status grant bound to the authenticated client at the Mission Status endpoint (lifecycleClientGrants, #1407), or the mission_status scope on a service principal at the development route; the shipped dev principal carries it"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -1426,9 +1426,15 @@
      "name": "the Mission Status read authorization (@spec status#mission-status-authentication) > refuses an authenticated caller without mission_status with the indistinguishable not-found body, and serves one that holds it",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > answers a client without the mission_status grant and an unknown Mission with one not-found body, echoing the nonce",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface."
+   "notes": "GET /missions/:id/status requires mayReadStatus (the status capability enabled and MISSION_STATUS_SCOPE on the authenticated service principal), the same predicate that decides a forwarded discharge's response shape (status.discharge.receipt-aud-nonce). The test shows a principal holding the lifecycle and discharge grants but not mission_status gets exactly the not-found body an unknown Mission gets (nonce echoed), while a principal holding only mission_status, and the shipped dev principal, get the signed Status response. Capability and surface follow the neighbouring Mission Status operation row status.caching.freshness-cap: the model has no dedicated Status-operation capability or surface. #1407: the advertised endpoint answers a client without the grant with the unknown Mission's not-found body."
   },
   {
    "id": "runtime.operational.ride-through-declared",
@@ -13045,6 +13051,47 @@
    "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
   },
   {
+   "id": "status.request.form-post",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "The request is an HTTPS POST with an `application/x-www-form-urlencoded` body containing:",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the Mission Status operation is served as a POST whose form body carries `mission_id`, `audience` and `nonce`; a body of another media type, or a repeated member, is refused invalid_request",
+    "local": "POST /mission/status; TLS is the deployment's (as status.lifecycle.tls). The development GET /missions/{id}/status is not advertised; its callers in src are tests. The reference consumer (MissionStatusResolver) sends the form POST"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > answers the profile's form POST with a signed Mission Status Response: the requested Mission and audience, the request's nonce, and sub the authenticated client",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a malformed request invalid_request, echoing a well-formed nonce and never a malformed one",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a verified answer (@spec authority-server#mission-join rule 2) > reads the Mission at the issuer's Status endpoint as the profile's form POST, authenticated by private-key JWT, audience-scoped and nonce-bound, and builds the view",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1407 (as #1191 did for the Lifecycle endpoint). Proved by defects that drop the form members the route reads."
+  },
+  {
    "id": "status.response.served-audience-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
@@ -13066,6 +13113,83 @@
    "notes": "The reference Status endpoint has no consuming-Authorization-Server caller class or per-audience caller configuration, and no issuance-grant redemption path exists in src. Added with #963 decision D1; todo until a consuming-AS caller exists."
   },
   {
+   "id": "status.response.sub-requesting-client",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`sub` equals the requesting client's identifier",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Status response's envelope `sub` is the authenticated requesting client's identifier, for every caller, so a response is bound to its caller and names no other party there",
+    "local": "both Status routes sign the authenticated caller: the advertised endpoint's client_id, the development GET route's service principal. The Lifecycle response keeps its acting party (status.lifecycle.acting-party-reflected) and the discharge response the Mission's client"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > answers the profile's form POST with a signed Mission Status Response: the requested Mission and audience, the request's nonce, and sub the authenticated client",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > signs the authenticated service principal as sub on the development GET route too",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1407: the producer side of consumer check 6 and of Mission Status Response Replay's caller binding. Proved by defects that sign the Mission's client as sub again, on the endpoint and on the development route."
+  },
+  {
+   "id": "status.response.consumer-sub-check",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "`sub` equals the requesting client's identifier",
+   "facet": "consumer check 6",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Mission Status response whose `sub` is not its own client identifier, though the response verifies",
+    "local": "the PDP's MissionStatusResolver (services/pdp) is the reference consumer: it refuses another caller's sub as unverifiable, including an answer the reference AS signed for another client that a relay obtained with its own credential. A PEP-carried assertion's sub is not checked by the PDP, which did not request it (checks 6 and 7 are the requester's)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response signed for another caller: its sub is not this PDP's client identifier (consumer check 6)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-resolver-as.test.ts",
+     "name": "the remote resolver against the reference authorization server (@spec authority-server#mission-join rule 2) > refuses an answer the server signed for another client, as a relay that swaps in its own credential obtains (consumer check 6)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1407. Proved by a defect that drops the resolver's sub comparison."
+  },
+  {
    "id": "status.auth.client-assertion-issuer-aud",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
@@ -13080,7 +13204,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a private-key-JWT request to the Status or Lifecycle endpoint whose assertion `aud` is anything but the AS's issuer identifier as its sole value (the endpoint URL, the token endpoint, or an array adding either) is refused as an authentication failure",
-    "local": "the Lifecycle endpoint, the reference's one private-key-JWT surface, refuses the endpoint URL, the token endpoint, the issuer with a trailing slash, and an array adding either to the issuer, and accepts the issuer identifier as a string or as a one-element array; the Status operation accepts no client assertion"
+    "local": "the Lifecycle endpoint, the reference's one private-key-JWT surface, refuses the endpoint URL, the token endpoint, the issuer with a trailing slash, and an array adding either to the issuer, and accepts the issuer identifier as a string or as a one-element array; the Mission Status endpoint, which shares that authentication, refuses an assertion audienced to its own URL (#1407)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13090,9 +13214,15 @@
      "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > refuses a client assertion whose aud is anything but the issuer identifier as its sole value",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "Status interface audit (#705); #1191 (D416)."
+   "notes": "Status interface audit (#705); #1191 (D416). #1407: the advertised Mission Status endpoint."
   },
   {
    "id": "status.auth.client-assertion-typ",
@@ -13138,10 +13268,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the Status and Lifecycle endpoints each authenticate a request by mTLS, a sender-constrained access token or private-key JWT",
-    "local": "the Lifecycle endpoint accepts private-key JWT; the Status operation still accepts only the service-token stand-in"
+    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept private-key JWT (#1407); the Status operation's development GET route keeps the service-token stand-in and is not advertised"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
@@ -13154,9 +13284,15 @@
      "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > accepts an assertion typed client-authentication+jwt, an untyped one and a generic JWT, and refuses one explicitly typed as another kind of JWT",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > answers the profile's form POST with a signed Mission Status Response: the requested Mission and audience, the request's nonce, and sub the authenticated client",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
   },
   {
    "id": "status.auth.unauthenticated-refused",
@@ -13173,19 +13309,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a request carrying no credential, or only a client secret (Basic or POST), or a mechanism the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
-    "local": "witnessed on the Lifecycle endpoint (400 invalid_client, no access-token scheme accepted); the Status operation authenticates the service-token stand-in, not one of the three"
+    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts no access-token scheme, so a request with no credential, a client secret, Basic or an access token is 400 invalid_client; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
      "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > refuses a request with no credential, a client secret, Basic or an access token invalid_client (HTTP 400) with no challenge",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
   },
   {
    "id": "status.auth.advertised-assertion-algs",
@@ -13400,10 +13542,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a state-only Mission Status Response carries `aud` equal to the authenticated client's `client_id`",
-    "local": "witnessed on the Lifecycle endpoint; the Status operation's state-only `aud` is its service-token principal, the stand-in for a client_id"
+    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407), where a read naming no audience carries aud and sub equal to the client's client_id; the development GET route's state-only aud is its service principal"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
@@ -13422,9 +13564,15 @@
      "name": "revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191) > answers revoke with the signed state-only Mission Status Response: aud the client's client_id, the request's nonce, and every required member",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > answers a read naming no audience state-only: aud is the client's client_id and no authorization_details",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
   },
   {
    "id": "status.response.state-only-no-authority",
@@ -13495,6 +13643,93 @@
     }
    ],
    "notes": "Status interface audit (#705); #1191 (D416)."
+  },
+  {
+   "id": "status.metadata.status-endpoint",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "The URL of the dedicated Mission Status operation ({{mission-status}}). Present when the AS supports it.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS serving the Mission Status operation advertises its URL as `mission_status_endpoint`, and one not serving it does not",
+    "local": "`${issuer}/mission/status`, advertised exactly where the status capability is enabled"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint discovery (@spec status#as-metadata, #1407) > advertises the endpoint, its private_key_jwt method and assertion algorithms where the Status operation is served, and none of them where it is not",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1407. Proved by a defect that advertises it unconditionally."
+  },
+  {
+   "id": "status.metadata.status-auth-methods",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "Present, and SHOULD be advertised, when the AS serves the Mission Status endpoint.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a deployment serving the Mission Status endpoint advertises `mission_status_endpoint_auth_methods_supported` naming exactly the methods it accepts",
+    "local": "[\"private_key_jwt\"]"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint discovery (@spec status#as-metadata, #1407) > advertises the endpoint, its private_key_jwt method and assertion algorithms where the Status operation is served, and none of them where it is not",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1407."
+  },
+  {
+   "id": "status.metadata.status-assertion-algs",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "values the AS accepts for the `private_key_jwt` client-assertion JWT ({{mission-status-authentication}}) at the Mission Status endpoint.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the Mission Status endpoint lists `private_key_jwt`, `mission_status_endpoint_auth_signing_alg_values_supported` names the algorithms it accepts, never `none`",
+    "local": "[\"ES256\"], the Lifecycle endpoint's verification set (LIFECYCLE_CLIENT_ASSERTION_ALGS), whose refusal of an unadvertised algorithm is witnessed there"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint discovery (@spec status#as-metadata, #1407) > advertises the endpoint, its private_key_jwt method and assertion algorithms where the Status operation is served, and none of them where it is not",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1407."
   },
   {
    "id": "status.metadata.lifecycle-auth-methods",
@@ -13624,10 +13859,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "every Status and Lifecycle error body carries `error` and `error_description`, and echoes `nonce` exactly when the request carried a well-formed one",
-    "local": "witnessed on the Lifecycle endpoint for every error it emits (invalid_request, invalid_client, not_found, conflict, stale_version, unavailable), each with error_description and the request's well-formed nonce, and for a malformed nonce, which is not echoed; the Status operation's not_found echo is not pinned"
+    "local": "witnessed on the Lifecycle endpoint for every error it emits (invalid_request, invalid_client, not_found, conflict, stale_version, unavailable), each with error_description and the request's well-formed nonce, and for a malformed nonce, which is not echoed; the Mission Status endpoint's invalid_request, invalid_client and not_found bodies each carry error_description and echo a well-formed nonce, never a malformed one (#1407)"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
@@ -13676,9 +13911,27 @@
      "name": "Mission Lifecycle endpoint retries (@spec status#idempotency, control-plane#serialization, #1191) > replays a same-nonce retry byte for byte under a regenerated client assertion, and refuses the same nonce with different members",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a malformed request invalid_request, echoing a well-formed nonce and never a malformed one",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > answers a client without the mission_status grant and an unknown Mission with one not-found body, echoing the nonce",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "Status interface audit (#705); #1191 (D416)."
+   "notes": "Status interface audit (#705); #1191 (D416). #1407: the advertised Mission Status endpoint."
   },
   {
    "id": "status.auth.challenge-token-scheme",
@@ -13758,7 +14011,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a failed direct client authentication (mTLS or private_key_jwt) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
-    "local": "the Lifecycle endpoint accepts private_key_jwt and no access-token scheme: a failed assertion (audience, type, exp, jti, signature, algorithm, registration) and a request with no credential, a client secret, Basic or an access token are each 400 invalid_client with no WWW-Authenticate; the Status operation has no direct client authentication"
+    "local": "the Lifecycle endpoint accepts private_key_jwt and no access-token scheme: a failed assertion (audience, type, exp, jti, signature, algorithm, registration) and a request with no credential, a client secret, Basic or an access token are each 400 invalid_client with no WWW-Authenticate; the Mission Status endpoint authenticates the same way and refuses the same way (#1407)"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13780,9 +14033,15 @@
      "name": "Mission Lifecycle endpoint transport and client authentication (@spec status#mission-status-authentication, status#mission-status-auth-failures, #1191) > refuses an assertion without exp or jti, one living past the replay window, a replayed jti, a foreign signature and an unregistered client",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1191 (D416)."
+   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
@@ -15763,7 +16022,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a joined decision is taken on the Mission as the MAS's signed Mission Status response reports it, read by the PDP over HTTP with no handle on the MAS's store: the Decision Evidence's policy_view_id commits the state version and authority_hash a direct Status read of the same Mission returns, and the Subject and client the join compares are the ones the MAS's Join Disclosure released (a PDP the MAS has not enrolled reads neither, and its join fails); with the MAS unreachable the PDP establishes no state, and once the MAS is back the same read verifies and permits",
-    "local": "the separated MAS pilot (src/demo/src/mas-pilot/separated.ts, D560): the MAS is the reference authorization server in its own process (mas-serve.ts); the PDP reads it through MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts), configured from the MAS's published metadata and status key, as the enrolled principal of config/mas-pilot.json separated_mas, under pdp placement. The in-process pilot, the shared demo and the AS-native target read Missions in process (D293) and are not cited here."
+    "local": "the separated MAS pilot (src/demo/src/mas-pilot/separated.ts, D560): the MAS is the reference authorization server in its own process (mas-serve.ts); the PDP reads it through MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts), configured from the MAS's published metadata and status key, as the enrolled client separated_mas.pdp_client_id of config/mas-pilot.json, a private-key-JWT client of the advertised mission_status_endpoint (#1407), under pdp placement. The in-process pilot, the shared demo and the AS-native target read Missions in process (D293) and are not cited here."
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -15805,7 +16064,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the PDP's state is its own read of the MAS: a revocation at the MAS is relied on as active only until the signed fresh_until of the earlier read and then denies mission_inactive; with the MAS unreachable a decision that must read it denies stale_state, never permits on the earlier read; and a commit-phase decision on a high-consequence class reads the MAS at decision time, so a Mission revoked after an earlier permitted crossing denies mission_inactive although that crossing's read is still within its window. No effect is committed on any refusal",
-    "local": "the separated MAS pilot (src/demo/src/mas-pilot/separated.ts, D560): the MAS is the reference authorization server in its own process (mas-serve.ts); the PDP reads it through MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts), configured from the MAS's published metadata and status key, as the enrolled principal of config/mas-pilot.json separated_mas, under pdp placement. The in-process pilot, the shared demo and the AS-native target read Missions in process (D293) and are not cited here. The active mechanism is a fresh read for every commit-phase decision (fresh: true)."
+    "local": "the separated MAS pilot (src/demo/src/mas-pilot/separated.ts, D560): the MAS is the reference authorization server in its own process (mas-serve.ts); the PDP reads it through MissionStatusResolver (src/services/pdp/src/mission-status-resolver.ts), configured from the MAS's published metadata and status key, as the enrolled client separated_mas.pdp_client_id of config/mas-pilot.json, a private-key-JWT client of the advertised mission_status_endpoint (#1407), under pdp placement. The in-process pilot, the shared demo and the AS-native target read Missions in process (D293) and are not cited here. The active mechanism is a fresh read for every commit-phase decision (fresh: true)."
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -53369,9 +53628,15 @@
      "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > discloses subject, client_id and each entry's recorded delegation to a PDP enrolled for the requested enforcement scope",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a service principal its enrolledJoinPdps configuration enrolls for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id."
+   "notes": "#818 slice 4: the reference authorization server's Mission Status operation, serving as the MAS, discloses mission.subject (iss, sub) and mission.client_id to a caller its enrolledJoinPdps configuration enrolls (a client at the advertised Mission Status endpoint, #1407, or a service principal at the development route) for the requested audience, and every audience-scoped entry keeps its recorded delegation member. The test asserts each clause over HTTP and that the two members are the whole difference from another caller's response; proved by a defect that never discloses (assertion fails) and one that drops client_id."
   },
   {
    "id": "mas.join-disclosure.not-to-others",
@@ -53388,10 +53653,11 @@
    "surface": "verification",
    "assertion": "privacy",
    "observation": {
-    "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id"
+    "normative": "a Mission Status response to a caller not enrolled as a joining PDP carries neither mission.subject nor mission.client_id",
+    "local": "enrollment is keyed by the authenticated caller: a client's client_id at the advertised Mission Status endpoint, or a service principal at the development route (#1407); every Status response's envelope sub is that caller"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
@@ -53401,12 +53667,18 @@
     },
     {
      "file": "src/services/authorization-server/test/status-join-disclosure.test.ts",
-     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the response the kernel's default observation signs, byte for byte",
+     "name": "Join Disclosure on Mission Status (@spec authority-server#join-disclosure) > serves a caller not enrolled the observation the kernel signs for that caller without Join Disclosure, byte for byte",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint request and response (@spec status#mission-status-request, status#mission-status-response, #1407) > binds sub to each caller: two clients read their own identifiers, and the Mission's client reaches only the client enrolled for Join Disclosure",
      "level": "endpoint",
      "surface": "verification"
     }
    ],
-   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the kernel's default observation. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. Partial: the reference response's envelope sub names the Mission's client_id for every caller, so a caller not enrolled still learns the client the mission object withholds, contrary to Join Disclosure's 'sub still identifies the requesting caller' and Status consumer check 6. Tested once the envelope sub names the requesting caller (#1407)."
+   "notes": "#818 slice 4: a Status response to a caller the enrolledJoinPdps configuration does not enroll for the requested audience (enrolled for nothing, enrolled for another scope, naming no audience, or an inherited Object.prototype principal name) carries neither mission.subject nor mission.client_id, and its signing input is byte-identical to the observation the kernel signs for that caller without Join Disclosure. Proved by defects that always disclose, ignore the audience, ignore the principal, and drop the own-property lookup. #1407: the envelope sub names each caller, so a client not enrolled reads the Mission's client neither in mission nor in sub (two clients read at the advertised endpoint); proved by a defect that signs the Mission's client as sub again."
   },
   {
    "id": "mas.join-inputs.pep-carries-member",
