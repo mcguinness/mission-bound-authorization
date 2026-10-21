@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T21:14:08Z
-Source repository commit: d4bc2ddae70d455871fad1d2b8197686a585b18f
+Generated: 2026-10-21T22:34:10Z
+Source repository commit: 4f7769e26ec9f777aee786c0cab0eb594c33924d
 Member count: 9
 
 Reading order:
@@ -8458,7 +8458,11 @@ Table of Contents
           body; or
 
       2.  a mission_intent claim inside a signed Request Object
-          ([RFC9101]) that is itself pushed through PAR.
+          ([RFC9101]) that is itself pushed through PAR.  The claim's
+          value is the Submission envelope itself, a JSON object, not
+          its serialization; the AS MUST reject with invalid_request a
+          claim whose value is a string or any other value that is not a
+          JSON object.
 
       The AS MUST reject with invalid_request a mission_intent presented
       on a front-channel authorization request that does not use a PAR-
@@ -10362,6 +10366,19 @@ Table of Contents
        prevents in Section 20.1.2, and the metadata that advertises the
        requirement in Section 18.
 
+   6.  MUST accept a mission claim only from an issuer it explicitly
+       trusts to issue Mission-bound authorization for the resource;
+       trusting the issuer's ordinary access tokens is not enough.  It
+       MUST require mission.issuer to equal the token's iss, unless a
+       cross-domain profile it has adopted
+       ([I-D.draft-mcguinness-oauth-mission-cross-domain]) explicitly
+       establishes the permitted relationship between the two.  It MUST
+       reject a token that fails either check with the invalid_token
+       error code.  For an opaque token, the issuer is the AS whose
+       introspection response or issuer-local resolution the resource
+       server relies on, and the same checks apply to that response's
+       mission member (Section 11.4).
+
    A resource server can also:
 
    *  require that a token carry an act chain and record it, while
@@ -11831,15 +11848,18 @@ Table of Contents
       approval_basis is provenance: none of the record's integrity
       anchors, such as intent_hash, authority_hash or proposal_hash,
       covers it (Section 15.1); a profile that commits the Mission
-      Record itself covers it under that profile's own anchor, as
-      Mission Audit Transparency's approval-event registration
-      ([I-D.draft-mcguinness-mission-audit]) and Approval Governance's
+      Record itself covers it under that profile's own anchor.  Two
+      optional profiles commit it (Section 20.1.1).  Mission Audit
+      Transparency's approval-event registration
+      ([I-D.draft-mcguinness-mission-audit]) covers the record at
+      creation except its state and termination.  Approval Governance's
       Approval Context Commitment
-      ([I-D.draft-mcguinness-mission-approval-governance]) do
-      (Section 20.1.1).  Its disclosure through introspection follows
-      Section 11.1.  It is not carried on the baseline mission claim
-      (Section 8.8), and it MUST NOT be relied on to grant or widen
-      authority wherever it does appear.
+      ([I-D.draft-mcguinness-mission-approval-governance]) covers a
+      closed manifest of creation facts that includes approval_basis.
+      Its disclosure through introspection follows Section 11.1.  It is
+      not carried on the baseline mission claim (Section 8.8), and it
+      MUST NOT be relied on to grant or widen authority wherever it does
+      appear.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
       the approval draws on (Section 6.7), established at the approval
@@ -11847,13 +11867,24 @@ Table of Contents
       Members:
 
       type:  REQUIRED.  A string: user_delegated, service_owned, or
-         organizational, subject to the forward-compatibility rule of
-         Section 7.
+         organizational.  An unrecognized value is handled under the
+         same rule as an unrecognized approval_basis.type
+         (Section 14.3): it is preserved unchanged as opaque provenance
+         and does not by itself invalidate or deactivate the Mission,
+         and only an operation that itself requires recognized source
+         semantics refuses (for example, applying the source's authority
+         ceiling or its governed policy).  An AS MUST NOT approve a
+         Mission whose authority source it does not recognize.
 
       policy:  REQUIRED for organizational, absent otherwise.  An object
          with id, version, and digest: the stable reference to, and
          commitment over, the governed organizational policy the Mission
-         draws on.
+         draws on. digest is a prefixed commitment (Section 15.3) whose
+         exact committed input and construction the policy's format
+         specifies: its species and, for an envelope anchor, its typ,
+         iss, and value.  The party that produces the reference computes
+         digest; a consumer holding the policy can reproduce it, and one
+         that does not compares it as an opaque value.
 
       authority_source is provenance like approval_basis: recorded
       alongside it, folded into neither intent_hash nor authority_hash,
@@ -12068,6 +12099,15 @@ Table of Contents
    committed object from being transplanted across authorization
    servers.  The sha-256: prefix is the algorithm-agility mechanism
    (Section 15.3).
+
+   The anchors this section lists, and the Authority Set entry
+   commitment below, bind the AS issuer.  The digest of an
+   authority_source.policy reference (Section 14.3) is not one of them:
+   it uses the issuer the policy's format defines, for a governed
+   organizational policy its governing authority.  That binding keeps
+   the policy's commitment from being transplanted across policy
+   authorities, and the same policy commits identically at every AS that
+   records it.
 
    intent_hash and authority_hash are independent commitments to
    independent objects.  That the approved task bounds the derived
@@ -12684,9 +12724,10 @@ Table of Contents
    deployment that needs the approval basis checkable outside the AS can
    register the approval event under Mission Audit Transparency
    [I-D.draft-mcguinness-mission-audit], whose registration covers the
-   whole record at creation, or carry the Approval Context Commitment of
-   [I-D.draft-mcguinness-mission-approval-governance] in a signed
-   artifact.
+   record at creation except its state and termination, or carry the
+   Approval Context Commitment of
+   [I-D.draft-mcguinness-mission-approval-governance], whose closed
+   manifest includes the approval basis, in a signed artifact.
 
 20.1.2.  Downgrade by Omission
 
