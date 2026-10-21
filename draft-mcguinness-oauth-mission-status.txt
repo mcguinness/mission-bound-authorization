@@ -241,9 +241,9 @@ Table of Contents
 
    This section is OPTIONAL.  The issuance profile's stateless baseline
    needs no dedicated status surface
-   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Lifecycle and
-   Gating"); a deployment that does not stand up this operation, and a
-   consumer that does not use it, are unaffected.
+   ([I-D.draft-mcguinness-oauth-mission], Section "Revocation"); a
+   deployment that does not stand up this operation, and a consumer that
+   does not use it, are unaffected.
 
    The dedicated Mission Status operation is the canonical status
    surface the issuance profile defers.  Unlike token introspection
@@ -541,10 +541,10 @@ Table of Contents
       -  state: REQUIRED.  The current Mission lifecycle state.  The
          authoritative state space is the issuance profile's
          ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-         Lifecycle and Gating"): active and terminated, this profile's
-         suspended when the Mission Lifecycle endpoint (Section 5) is
-         deployed, and any further state a companion profile defines and
-         the deployment runs.  A consumer applies the issuance profile's
+         Lifecycle"): active and terminated, this profile's suspended
+         when the Mission Lifecycle endpoint (Section 5) is deployed,
+         and any further state a companion profile defines and the
+         deployment runs.  A consumer applies the issuance profile's
          forward-compatibility rule: only active permits reliance, and
          every other value, recognized or not, is non-active.  This
          profile's reliance behavior does not depend on recognizing a
@@ -930,11 +930,11 @@ Table of Contents
 
    Adopting this endpoint extends the issuance profile's lifecycle state
    space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-   Lifecycle and Gating") with one additional state, suspended (a paused
-   Mission that derives no tokens until resumed), and one termination
-   reason, completed (the Mission completed successfully).  Issuance
-   gating treats any state other than active as non-deriving, exactly as
-   the issuance profile gates on active.
+   Lifecycle") with one additional state, suspended (a paused Mission
+   that derives no tokens until resumed), and one termination reason,
+   completed (the Mission completed successfully).  Issuance gating
+   treats any state other than active as non-deriving, exactly as the
+   issuance profile gates on active.
 
    A transition to suspended, or to terminated with reason completed,
    gates new derivation only.  Tokens already derived under the Mission
@@ -1114,9 +1114,9 @@ Table of Contents
 
    This profile owns the extension of the issuance profile's lifecycle
    state space ([I-D.draft-mcguinness-oauth-mission], Section "Mission
-   Lifecycle and Gating").  The table below is the authoritative view of
-   that space: every state, every transition, the source of the event
-   that drives it, and the termination reason a transition to terminated
+   Lifecycle").  The table below is the authoritative view of that
+   space: every state, every transition, the source of the event that
+   drives it, and the termination reason a transition to terminated
    records.
 
    Event sources are the lifecycle endpoint (an operation of Section 5),
