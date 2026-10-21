@@ -4790,10 +4790,10 @@ a safe scope projection for it ({{scope-projection}}). A Mission
 Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class, and neither removes a surface:
-the Mission Issuer still implements every surface {{conformance-roles}}
-lists, the evidence refusal rules included when it supports no
-evidence type, and the deployment still provides the authenticated
-revocation means of {{revocation}}.
+the Mission Issuer still implements every surface its role lists
+({{conformance-roles}}), the evidence dispatch and refusal rules
+included even when it supports no evidence type, and the deployment
+still provides the authenticated revocation means of {{revocation}}.
 
 ## Conformance Roles {#conformance-roles}
 
@@ -7094,10 +7094,11 @@ Cross-Domain:
 
 -01
 
-- Editorial (#1479): Conformance says that no minimal starting point
-  removes a Mission Issuer surface, the evidence refusal rules
-  included, or the deployment's revocation means; Intent Submission
-  Evidence says its rules apply when the AS supports no evidence type.
+- Editorial (#1479): Conformance says that neither starting point
+  removes a Mission Issuer surface, the evidence dispatch and refusal
+  rules included, or the deployment's revocation means; Intent
+  Submission Evidence says its rules apply when the AS supports no
+  evidence type.
 
 - Editorial (#1472): a reader pass that changes no requirement. The
   abstract leads with the object OAuth lacks, and its agent-identity
