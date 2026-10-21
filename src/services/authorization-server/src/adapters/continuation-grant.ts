@@ -2886,9 +2886,11 @@ export async function handleExpansionExchange(
  * (the poller's DPoP key MUST equal the key recorded at request time; @spec
  * deferred-window check (b) re-verifies the KEY, never the expired
  * subject_token) and requires the poller to be the acting client that opened
- * the deferral. A code issued to another client is answered as an unknown
- * one, and a proof under another key with invalid_dpop_proof (DTR -00
- * Sections 5.5.1 and 10.1). redeem() runs deferred-window check (a)
+ * the deferral. A code issued to another client, or a deferral whose recorded
+ * client is not the predecessor's, is answered as an unknown one whatever key
+ * the poll uses; only then does a proof under another key get
+ * invalid_dpop_proof (DTR -00 Sections 5.5.1, 5.6 and 10.1, #1357, as #1355
+ * did for the AROP deferral). redeem() runs deferred-window check (a)
  * (predecessor STATE + restriction since adjudication) and CREATES the successor on
  * approval; this handler mints the successor's first token and supersedes the
  * predecessor on that first redemption.
@@ -2908,6 +2910,18 @@ export async function pollDeferredExpansion(
   if (recordedClient !== undefined && recordedClient !== client.clientId) {
     throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
   }
+  // @spec expansion#verification-order step 4 (#1326): the poll runs no
+  // initiation check, and deferrals persist, so a deferral another client
+  // opened (before the initiation check existed) is refused here, before
+  // redeem creates a successor or supersedes the predecessor. Decided from the
+  // recorded predecessor, never the subject_token, which the poll does not
+  // carry and which may have expired. Answered as an unknown code and before
+  // the key check (#1357), so the refusal discloses nothing.
+  const recordedPredecessorId = store.recordedPredecessorId(deferralCode);
+  const recordedPredecessor = recordedPredecessorId !== undefined ? opts.kernel.get(recordedPredecessorId) : undefined;
+  if (recordedPredecessor !== undefined && !isMissionClient(ctx, recordedPredecessor)) {
+    throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
+  }
   // KEY possession at completion (only the KEY, never the expired subject_token).
   const proofJws = ctx.get("DPoP");
   if (!proofJws) {
@@ -2925,18 +2939,6 @@ export async function pollDeferredExpansion(
   const recordedJkt = store.recordedJkt(deferralCode);
   if (recordedJkt !== undefined && recordedJkt !== jkt) {
     refuseTokenEndpointProof(ctx, { description: "DPoP proof key is not the key bound to this deferral_code" });
-    return;
-  }
-  // @spec expansion#verification-order step 4 (#1326): the poll runs no
-  // initiation check, and deferrals persist, so a deferral another client
-  // opened (before the initiation check existed) is refused here, before
-  // redeem creates a successor or supersedes the predecessor. Decided from the
-  // recorded predecessor, never the subject_token, which the poll does not
-  // carry and which may have expired.
-  const recordedPredecessorId = store.recordedPredecessorId(deferralCode);
-  const recordedPredecessor = recordedPredecessorId !== undefined ? opts.kernel.get(recordedPredecessorId) : undefined;
-  if (recordedPredecessor !== undefined && !isMissionClient(ctx, recordedPredecessor)) {
-    txError(ctx, 400, "invalid_grant", "deferral was not opened by the predecessor's client");
     return;
   }
 

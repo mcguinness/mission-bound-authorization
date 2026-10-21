@@ -1354,19 +1354,34 @@ describe("expansion acting-agent authorization (@spec expansion#verification-ord
     });
     approveDeferral(seeded.deferral_code);
     const missionsBefore = as.kernel.allMissions().length;
-    const poll = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
-      grant_type: DEFERRED_GRANT_TYPE,
-      deferral_code: seeded.deferral_code,
-    });
-    const body = (await poll.json()) as Refusal;
-    expect(poll.status, JSON.stringify(body)).toBe(400);
+    const pollAs = async (dpop: DpopKeys, code: string) => {
+      const res = await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, dpop, {
+        grant_type: DEFERRED_GRANT_TYPE,
+        deferral_code: code,
+      });
+      return { status: res.status, ...((await res.json()) as Refusal) };
+    };
+    const body = await pollAs(carryDpop, seeded.deferral_code);
+    expect(body.status, JSON.stringify(body)).toBe(400);
     expect(body.error).toBe("invalid_grant");
+    // DTR -00 Section 5.6 (#1357): answered exactly as an unknown code, and
+    // before the key check, so a poll under another key gets the same answer
+    // rather than invalid_dpop_proof.
+    const unknown = await pollAs(carryDpop, `xdfr_${"A".repeat(24)}`);
+    expect(body).toEqual(unknown);
+    expect(await pollAs(dpopKeys, seeded.deferral_code)).toEqual(unknown);
+    // The predecessor's own client did not open this deferral either: under
+    // its own key, which is not the deferral's, it gets its unknown-code
+    // answer, never invalid_dpop_proof (DTR -00 Section 5.5.1 step 2 first).
+    const asJson = async (res: Response) => ({ status: res.status, ...((await res.json()) as Refusal) });
+    expect(await asJson(await pollExpansion(seeded.deferral_code))).toEqual(
+      await asJson(await pollExpansion(`xdfr_${"B".repeat(24)}`)),
+    );
     // Refused before redeem: a late mint refusal would also be invalid_grant,
     // after the successor existed and the predecessor was superseded.
     expect(as.kernel.get(pred.missionId)?.state).toBe("active");
     expect(as.kernel.get(pred.missionId)?.termination).toBeUndefined();
     expect(as.kernel.allMissions().length).toBe(missionsBefore);
-    expect(body.error_description).toContain("predecessor's client");
     expect(body.access_token).toBeUndefined();
 
     const opened = await expandViaExchange(pred.accessToken, "Own client widening", widen);
@@ -2122,6 +2137,15 @@ describe("the deferred token response substrate for expansion (@spec expansion#c
       }),
     );
     expect(otherClient).toEqual(unknown);
+    // The client check precedes the key check (#1357): another client under
+    // another key still gets the unknown code's answer.
+    const otherClientOtherKey = await read(
+      await requestAs(CARRY_ACTOR, `${CARRY_ACTOR}-auth`, carryActorKey, carryDpop, {
+        grant_type: DEFERRED_GRANT_TYPE,
+        deferral_code: code,
+      }),
+    );
+    expect(otherClientOtherKey).toEqual(unknown);
     expect(as.kernel.get(pred.missionId)?.state).toBe("active");
     const polled = await read(await pollExpansion(code));
     expect(polled.status, JSON.stringify(polled)).toBe(200);
