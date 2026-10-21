@@ -1055,7 +1055,11 @@ Submission is governed by the following rules:
   1. the form-encoded `mission_intent` parameter of the PAR request
      body; or
   2. a `mission_intent` claim inside a signed Request Object
-     ({{RFC9101}}) that is itself pushed through PAR.
+     ({{RFC9101}}) that is itself pushed through PAR. The claim's
+     value is the Submission envelope itself, a JSON object, not its
+     serialization; the AS MUST reject with `invalid_request` a claim
+     whose value is a string or any other value that is not a JSON
+     object.
 
   The AS MUST reject with `invalid_request` a `mission_intent` presented
   on a front-channel authorization request that does not use a
