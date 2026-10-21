@@ -9445,7 +9445,7 @@
   {
    "id": "core.delegation.designation-only-subject-token",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "delegation",
+   "anchor": "delegated-exchange",
    "text": "The AS MUST refuse any other `subject_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}); an access token issued for resource access is never sufficient",
    "role": "AS",
    "strength": "MUST",
@@ -9480,7 +9480,7 @@
   {
    "id": "core.delegation.redemption-evaluated-afresh",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "delegation",
+   "anchor": "delegated-exchange",
    "text": "The AS MUST evaluate every redemption of a designation afresh, as a derivation of its own",
    "role": "AS",
    "strength": "MUST",
@@ -51667,7 +51667,7 @@
    "id": "core.error-mapping.token-exchange-dpop-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation | `invalid_dpop_proof` ({{Section 5 of RFC9449}}), not `invalid_request` for an unproven sender constraint",
+   "text": "a required DPoP proof that is missing, or a DPoP proof that fails its own validation | `invalid_dpop_proof` ({{Section 5 of RFC9449}}): the failure is not an unproven sender constraint, so the row above does not apply",
    "role": "AS",
    "strength": "stated",
    "applicability": {
