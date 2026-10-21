@@ -6796,7 +6796,15 @@ its accountable assertion
 anchors, such as <code>intent_hash</code>, <code>authority_hash</code> or <code>proposal_hash</code>,
 covers it
 (<a href="#integrity-anchors" class="auto internal xref">Section 15.1</a>); a profile that commits the Mission Record
-itself covers it under that profile's own anchor. Its disclosure
+itself covers it under that profile's own anchor. Two optional
+profiles commit it (<a href="#consent-binding" class="auto internal xref">Section 20.1.1</a>). Mission Audit
+Transparency's approval-event registration
+(<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) covers the record at
+creation except its <code>state</code> and <code>termination</code>. Approval Governance's
+Approval Context Commitment
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>) covers a
+closed manifest of creation facts that includes <code>approval_basis</code>.
+Its disclosure
 through introspection follows
 <a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>. It is not carried on the
 baseline <code>mission</code> claim (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>), and it <span class="bcp14">MUST NOT</span> be
@@ -7843,6 +7851,16 @@ the wire; an AS that does not implement it can record equivalent
 evidence out of band. Such a commitment binds the structured disclosure
 the AS records, not the presentation itself; it narrows this gap for
 audit but does not close it.<a href="#section-20.1.1-7" class="pilcrow">¶</a></p>
+<p id="section-20.1.1-8">The anchors do not commit the approval basis either: who consented,
+who activated the Mission, and under which basis (<a href="#mission-record" class="auto internal xref">Section 14</a>).
+The record's immutability protects it, and only the AS enforces that.
+A deployment that needs the approval basis checkable outside the AS
+can register the approval event under Mission Audit Transparency
+<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>, whose registration covers the
+record at creation except its <code>state</code> and <code>termination</code>, or carry the
+Approval Context Commitment of
+<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>, whose closed
+manifest includes the approval basis, in a signed artifact.<a href="#section-20.1.1-8" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="downgrade-by-omission">
@@ -11050,7 +11068,13 @@ Intent member <code>proposed_authority</code> to the <code>authorization_details
 parameter, committed by the new <code>proposal_hash</code>.<a href="#appendix-G-4.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-G-4.2">
-          <p id="appendix-G-4.2.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
+          <p id="appendix-G-4.2.1">Inside a signed Request Object pushed through PAR, the
+<code>mission_intent</code> claim is the Submission envelope as a JSON object,
+not its serialization; any other value is refused with
+<code>invalid_request</code> (#1503).<a href="#appendix-G-4.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-G-4.3">
+          <p id="appendix-G-4.3.1">Intent members, with no aliases (#636, #706, #117): <code>resources</code> is
 renamed <code>target_resources</code> and <code>constraints</code> <code>task_bounds</code>;
 <code>controls</code> is removed, its <code>acr</code> replaced by the <code>acr_values</code> and
 <code>max_age</code> parameters and its <code>max_derivations</code> by Derivation Limits'
@@ -11058,34 +11082,34 @@ renamed <code>target_resources</code> and <code>constraints</code> <code>task_bo
 earlier Missions keep their recorded Intent. <code>goal_lang</code> is new
 (#534). The top level admits only defined members, a Mission Intent
 Members registry assigns short names, and test vectors are
-regenerated.<a href="#appendix-G-4.2.1" class="pilcrow">¶</a></p>
+regenerated.<a href="#appendix-G-4.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-G-4.3">
-          <p id="appendix-G-4.3.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
+        <li class="compact" id="appendix-G-4.4">
+          <p id="appendix-G-4.4.1">The baseline <code>mission</code> claim carries <code>id</code>, <code>issuer</code>, and an optional
 <code>expires_at</code>; <code>authority_hash</code> leaves the claim, and introspection
 can disclose it (#702). The Mission Record replaces <code>approver</code> with
 <code>approval_basis.consent_principal</code> (#705) and adds <code>approval_basis</code>,
 <code>authority_source</code> (#316), <code>termination</code>, <code>proposed_authority</code>,
-<code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-G-4.3.1" class="pilcrow">¶</a></p>
+<code>proposal_hash</code>, and <code>submission_evidence</code>.<a href="#appendix-G-4.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-G-4.4">
-          <p id="appendix-G-4.4.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
+        <li class="compact" id="appendix-G-4.5">
+          <p id="appendix-G-4.5.1">The lifecycle states are <code>active</code> and <code>terminated</code>; the -00 states
 <code>revoked</code> and <code>expired</code> become termination reasons, and a consumer
 can read a legacy state that way during a transition (#705). New
 registries hold lifecycle states, any further one non-terminal
-(#170), and termination reasons.<a href="#appendix-G-4.4.1" class="pilcrow">¶</a></p>
+(#170), and termination reasons.<a href="#appendix-G-4.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-G-4.5">
-          <p id="appendix-G-4.5.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
+        <li class="compact" id="appendix-G-4.6">
+          <p id="appendix-G-4.6.1">The token endpoint adds <code>mission_expires_at</code>, the effective expiry,
 which can precede the requested <code>intent.expires_at</code>, and the
 <code>mission_error</code> diagnostic; <code>mission_id</code> is recommended.
 Authorization details type metadata can declare
 <code>mission_transformation_capabilities</code>, and entry commitments use
 <code>mission-authority-entry</code>. Resource server challenges add
-<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-G-4.5.1" class="pilcrow">¶</a></p>
+<code>mission_denial</code> and use RFC 9470 <code>insufficient_user_authentication</code>.<a href="#appendix-G-4.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="compact" id="appendix-G-4.6">
-          <p id="appendix-G-4.6.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
+        <li class="compact" id="appendix-G-4.7">
+          <p id="appendix-G-4.7.1">A Token Exchange refuses an inactive Mission (#1154) and an invalid,
 unproven, or unacceptable subject or actor token (#1178) with
 <code>invalid_request</code>, unless its profile assigns a code; other grants
 keep <code>invalid_grant</code>, and DPoP proof failures use
@@ -11093,21 +11117,21 @@ keep <code>invalid_grant</code>, and DPoP proof failures use
 <code>invalid_authorization_details</code> where no <code>authorization_details</code> was
 submitted; <code>invalid_target</code> covers scope-projection and routing
 failures; and <code>invalid_scope</code> covers an ungrantable <code>scope</code> and an
-<code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-G-4.6.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="compact" id="appendix-G-4.7">
-          <p id="appendix-G-4.7.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
-a designation, which only the holder of a sender-constrained token
-obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-G-4.7.1" class="pilcrow">¶</a></p>
+<code>openid</code> request whose Approver is not the Subject (#826).<a href="#appendix-G-4.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="compact" id="appendix-G-4.8">
-          <p id="appendix-G-4.8.1">Instance context no longer identifies the instance through <code>act.sub</code>
+          <p id="appendix-G-4.8.1">Delegation by designation (#1268): the delegate's <code>subject_token</code> is
+a designation, which only the holder of a sender-constrained token
+obtains, by Token Exchange naming the delegate as <code>audience</code>.<a href="#appendix-G-4.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="compact" id="appendix-G-4.9">
+          <p id="appendix-G-4.9.1">Instance context no longer identifies the instance through <code>act.sub</code>
 or <code>act.cnf</code>: the delegate's actor identity is established
 separately, the top-level <code>cnf</code> binds the presenting key, and a
 deployment can convey optional <code>client_instance</code> context under
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>. The
 instance-delegate matcher example uses the <code>ai_agent</code> actor type
-instead of the retired <code>client_instance</code> actor type.<a href="#appendix-G-4.8.1" class="pilcrow">¶</a></p>
+instead of the retired <code>client_instance</code> actor type.<a href="#appendix-G-4.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-5"><strong>Model changes.</strong> Approval separates <code>consent_principal</code>,
@@ -11125,7 +11149,11 @@ failing step's error, and completes Authority Set derivation before
 the rendering (#1411); the Mission-governed client rule reaches only
 authorization requests (#1448); delegation policy crosses a
 cross-domain projection where that profile's provenance rule keeps it
-(#1374).<a href="#appendix-G-5" class="pilcrow">¶</a></p>
+(#1374). An unrecognized <code>authority_source.type</code> stays opaque
+provenance and does not deactivate the Mission, though no Mission is
+approved from a source the AS does not recognize, and an
+<code>authority_source.policy</code> digest follows the construction and issuer
+its policy format defines (#1503).<a href="#appendix-G-5" class="pilcrow">¶</a></p>
 <p id="appendix-G-6"><strong>Moved to companions.</strong> Resource Access (the <code>mission_resource_access</code>
 type, Common Constraints, tool modeling, and
 <code>mission_constraints_supported</code>; #637, #645, #698); Intent Submission
@@ -11139,12 +11167,20 @@ results for another Subject (#826); task credentials that are
 Mission-bound or covered by a trusted enforcement path (#1205);
 refresh tokens bound per client type (#1204);
 issuer-checked Mission resolution (#725); third-party data subjects
-(#344); key retention to the audit horizon.<a href="#appendix-G-7" class="pilcrow">¶</a></p>
+(#344); key retention to the audit horizon; a resource server accepts
+a <code>mission</code> claim only from an issuer it trusts for Mission-bound
+authorization, with <code>mission.issuer</code> equal to <code>iss</code> outside an
+adopted cross-domain profile; the approval rendering identifies the
+receiving client from information the AS trusts; a refresh request
+beyond its grant is refused, never trimmed (#1503); and the approval
+basis named as outside the integrity anchors, with the profiles that
+commit it (#1518).<a href="#appendix-G-7" class="pilcrow">¶</a></p>
 <p id="appendix-G-8"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
 under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
-retitled "Mission Lifecycle", and
+retitled "Mission Lifecycle", resource classification named
+"Mission-governed resource" (#1503), and
 one Standing-Consent Bases section; subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping

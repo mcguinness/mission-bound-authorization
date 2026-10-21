@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T22:23:31Z
-Source repository commit: 1507b0cbed94c77df2e98b980c588153837d6b31
+Generated: 2026-10-21T22:54:43Z
+Source repository commit: 9c0b9c0d584a5a491d52745562e32076b0523e12
 Member count: 7
 
 Reading order:
@@ -509,6 +509,15 @@ Table of Contents
    Approval, Integrity Anchors, and Canonicalization Rules sections).
    The record is immutable except for its state and, written once when
    the Mission terminates, its termination (the Mission Record section).
+
+   The anchors do not cover the approval basis, which records who
+   consented, who activated the Mission, and under which basis.  Only
+   the Mission Issuer enforces the record's immutability.  Where a
+   deployment needs the approval basis checkable outside the Mission
+   Issuer, Mission Audit Transparency's approval-event registration
+   ([I-D.draft-mcguinness-mission-audit]) and Approval Governance's
+   Approval Context Commitment
+   ([I-D.draft-mcguinness-mission-approval-governance]) commit it.
 
    In the OAuth binding the lifecycle states are active and terminated,
    and only active permits issuance or a new positive governance
@@ -5537,6 +5546,12 @@ Appendix G.  Mission Document Map
 Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The integrity-anchor description says the anchors do not cover the
+      approval basis, and names Mission Audit Transparency's approval-
+      event registration and Approval Governance's Approval Context
+      Commitment as where a deployment commits it.  No requirement
+      changed.
 
    *  The Project verb bounds downstream revocation latency by the
       projection grant's remaining lifetime, matching Cross-Domain
@@ -11846,10 +11861,17 @@ Table of Contents
       approval_basis is provenance: none of the record's integrity
       anchors, such as intent_hash, authority_hash or proposal_hash,
       covers it (Section 15.1); a profile that commits the Mission
-      Record itself covers it under that profile's own anchor.  Its
-      disclosure through introspection follows Section 11.1.  It is not
-      carried on the baseline mission claim (Section 8.8), and it MUST
-      NOT be relied on to grant or widen authority wherever it does
+      Record itself covers it under that profile's own anchor.  Two
+      optional profiles commit it (Section 20.1.1).  Mission Audit
+      Transparency's approval-event registration
+      ([I-D.draft-mcguinness-mission-audit]) covers the record at
+      creation except its state and termination.  Approval Governance's
+      Approval Context Commitment
+      ([I-D.draft-mcguinness-mission-approval-governance]) covers a
+      closed manifest of creation facts that includes approval_basis.
+      Its disclosure through introspection follows Section 11.1.  It is
+      not carried on the baseline mission claim (Section 8.8), and it
+      MUST NOT be relied on to grant or widen authority wherever it does
       appear.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
@@ -12708,6 +12730,17 @@ Table of Contents
    evidence out of band.  Such a commitment binds the structured
    disclosure the AS records, not the presentation itself; it narrows
    this gap for audit but does not close it.
+
+   The anchors do not commit the approval basis either: who consented,
+   who activated the Mission, and under which basis (Section 14).  The
+   record's immutability protects it, and only the AS enforces that.  A
+   deployment that needs the approval basis checkable outside the AS can
+   register the approval event under Mission Audit Transparency
+   [I-D.draft-mcguinness-mission-audit], whose registration covers the
+   record at creation except its state and termination, or carry the
+   Approval Context Commitment of
+   [I-D.draft-mcguinness-mission-approval-governance], whose closed
+   manifest includes the approval basis, in a signed artifact.
 
 20.1.2.  Downgrade by Omission
 
@@ -15373,6 +15406,10 @@ Appendix G.  Document History
       companion (#1202).  The authority proposal moves from the removed
       Intent member proposed_authority to the authorization_details
       parameter, committed by the new proposal_hash.
+   *  Inside a signed Request Object pushed through PAR, the
+      mission_intent claim is the Submission envelope as a JSON object,
+      not its serialization; any other value is refused with
+      invalid_request (#1503).
    *  Intent members, with no aliases (#636, #706, #117): resources is
       renamed target_resources and constraints task_bounds; controls is
       removed, its acr replaced by the acr_values and max_age parameters
@@ -15434,7 +15471,11 @@ Appendix G.  Document History
    completes Authority Set derivation before the rendering (#1411); the
    Mission-governed client rule reaches only authorization requests
    (#1448); delegation policy crosses a cross-domain projection where
-   that profile's provenance rule keeps it (#1374).
+   that profile's provenance rule keeps it (#1374).  An unrecognized
+   authority_source.type stays opaque provenance and does not deactivate
+   the Mission, though no Mission is approved from a source the AS does
+   not recognize, and an authority_source.policy digest follows the
+   construction and issuer its policy format defines (#1503).
 
    *Moved to companions.* Resource Access (the mission_resource_access
    type, Common Constraints, tool modeling, and
@@ -15450,13 +15491,21 @@ Appendix G.  Document History
    Mission-bound or covered by a trusted enforcement path (#1205);
    refresh tokens bound per client type (#1204); issuer-checked Mission
    resolution (#725); third-party data subjects (#344); key retention to
-   the audit horizon.
+   the audit horizon; a resource server accepts a mission claim only
+   from an issuer it trusts for Mission-bound authorization, with
+   mission.issuer equal to iss outside an adopted cross-domain profile;
+   the approval rendering identifies the receiving client from
+   information the AS trusts; a refresh request beyond its grant is
+   refused, never trimmed (#1503); and the approval basis named as
+   outside the integrity anchors, with the profiles that commit it
+   (#1518).
 
    *Editorial and structure.* The reading path (#910, #1379);
    readability, placement and consolidation passes (#876, #1409, #1447,
    #1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
    under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
-   retitled "Mission Lifecycle", and one Standing-Consent Bases section;
+   retitled "Mission Lifecycle", resource classification named "Mission-
+   governed resource" (#1503), and one Standing-Consent Bases section;
    subsections, tables and IANA templates fitted to the text rendering
    (#1380, #1382, #1401, #1404, #1410, #1418); canonical-Mission
    examples (#1176); and the Mapping Assessment, moved from the
