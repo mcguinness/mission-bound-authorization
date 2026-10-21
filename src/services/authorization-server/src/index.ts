@@ -156,6 +156,8 @@ export {
   CONTAINMENT_EVIDENCE_MEDIA_TYPE,
   type ContainmentEvidence,
   type ContainmentPolicy,
+  type ContainmentSelector,
+  ContainmentSelectorError,
   UnknownProtectedEventError,
 } from "./kernel/containment.js";
 export {

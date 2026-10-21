@@ -153,6 +153,10 @@
    "draft-mcguinness-mission-discovery.md": {
     "revision": "1c6c3a3af40acf3df68c68969ab72c7134b8aee9",
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
+   },
+   "draft-mcguinness-oauth-mission-containment.md": {
+    "revision": "2d2661e6dec64f5f9b19dd98aa3a53a88d2f86c8",
+    "content_sha256": "fc7d4be6f965ba06cf03eec757cb44bcf9325d15d6879242cd2a623c0e0093ec"
    }
   }
  },
@@ -21341,6 +21345,18 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > entry-level containment (no actions member) denies ALL the entry's actions",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "the in-process Mission view resolves containment onto approved entries (@spec containment#selector-matching, #1463) > a prefix selector over a finer approved entry reaches the PDP as that entry's own removal, which denies authority_contained",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "review: same-resource entries under different modes > the PDP retains the union of removals for the matched prefix entry",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ]
   },
@@ -38232,12 +38248,24 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration) > a restriction is a selector compared by resource-set overlap: a broader prefix selector naming another resource string still makes restoring the authority fall back (@spec containment#selector-matching, #1463)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness)."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -45385,7 +45413,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): the authorization server booted over a configuration whose payments read ceiling entry is prefix derives an exact proposal beneath it as the proposal's own exact resource, the approval floor classifies it, and the issued token carries it; a sibling outside the boundary derives nothing. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05; pairing ceilings by equal resource string fails both derivation witnesses; an exact candidate compared to a prefix reference by string equality, or approval-floor classification by string equality, fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): the authorization server booted over a configuration whose payments read ceiling entry is prefix derives an exact proposal beneath it as the proposal's own exact resource, the approval floor classifies it, and the issued token carries it; a sibling outside the boundary derives nothing. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05; pairing ceilings by equal resource string fails both derivation witnesses; an exact candidate compared to a prefix reference by string equality, or approval-floor classification by string equality, fails the endpoint witness. The endpoint configuration keeps the shipped containment rules beside the prefix ceiling: containment pairs a removal with every approved entry whose resource set overlaps it (#1463), so the ceiling loaders no longer refuse a prefix ceiling entry beside a containment rule."
   },
   {
    "id": "resource-access.subset.prefix-under-prefix",
@@ -45434,7 +45462,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): under a configured prefix ceiling the authorization server derives a narrower prefix proposal as a prefix entry keeping its own base, and the issued token carries it. Mutations: coalescing a trailing-slash base fails sub-res-07; dropping prefix from the derived entry fails the derivation witness; comparing a prefix candidate's base to a prefix reference by string equality fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): under a configured prefix ceiling the authorization server derives a narrower prefix proposal as a prefix entry keeping its own base, and the issued token carries it. Mutations: coalescing a trailing-slash base fails sub-res-07; dropping prefix from the derived entry fails the derivation witness; comparing a prefix candidate's base to a prefix reference by string equality fails the endpoint witness. The endpoint configuration keeps the shipped containment rules beside the prefix ceiling: containment pairs a removal with every approved entry whose resource set overlaps it (#1463), so the ceiling loaders no longer refuse a prefix ceiling entry beside a containment rule."
   },
   {
    "id": "resource-access.subset.prefix-under-exact-never",
@@ -45483,7 +45511,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): through the authorization server, a prefix proposal over an exact ceiling entry naming its base narrows to that exact entry, and a refresh requesting the prefix entry against the exact grant is refused invalid_authorization_details while the exact entry is issued. Mutation: comparing an exact reference's string alone fails sub-res-08, both kernel witnesses and the endpoint witness, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): through the authorization server, a prefix proposal over an exact ceiling entry naming its base narrows to that exact entry, and a refresh requesting the prefix entry against the exact grant is refused invalid_authorization_details while the exact entry is issued. Mutation: comparing an exact reference's string alone fails sub-res-08, both kernel witnesses and the endpoint witness, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry. The endpoint configuration keeps the shipped containment rules beside the prefix ceiling: containment pairs a removal with every approved entry whose resource set overlaps it (#1463), so the ceiling loaders no longer refuse a prefix ceiling entry beside a containment rule."
   },
   {
    "id": "resource-access.subset.false-equivalent-absent",
@@ -52523,6 +52551,351 @@
    "notes": "#705 (D359); #1162 review P2."
   },
   {
+   "id": "child-delegation.child-state.containment-propagation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "when a parent Authority Set entry is contained, the Mission Issuer MUST propagate the containment to every child entry justified by it, so a Child Mission does not keep deriving contained authority while the parent stays `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A contain transition on a parent narrows every existing non-terminal child entry justified by a contained parent entry, transitively, without changing any child's lifecycle state; a child holding no such entry is untouched."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "containment propagates entry-wise to existing children (@spec child-delegation#child-state, issue #412) > a contained parent entry narrows a justified child's effective set; a non-contained action and the parent's own state are unaffected",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "containment propagates entry-wise to existing children (@spec child-delegation#child-state, issue #412) > is transitive: a grandchild justified through the child also narrows",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a fine selector over the parent's broad prefix entry reaches an existing child's sibling entry justified by it",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a broad prefix selector reaches an existing child's finer entry",
+     "level": "unit",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "Containment profile composed (#412). #1463: under prefix entries, \"justified by it\" reaches a child entry within a contained parent entry, so the removals are widened onto the parent's approved entries before each child is narrowed."
+  },
+  {
+   "id": "containment.selector-matching.exact-default-prefix-declared",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "An `exact` selector never applies to the resources beneath its `resource`; a containment meant for a service and everything beneath it declares `prefix`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A contained-capability entry with no resource_match is exact: it removes nothing from an approved entry finer than its resource, while the same resource declared prefix removes the selected actions from that finer entry.",
+    "local": "The containment policy loader keeps a declared prefix and reads an absent resource_match as exact; the shipped contain-external-comms-on-taint-v1 rule is service-wide and declares prefix."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > an exact selector is never a subtree selector: an exact service root leaves a finer entry untouched",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "config loaders admit or refuse resource_match at load (#1264, #1440) > the containment loader keeps a removal's declared prefix and reads an absent resource_match as exact (@spec containment#selector-matching, #1463)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463, D606. Mutations: a raw string-prefix comparison in selectorOverlapsEntry fails the kernel witness (the exact service root reaches the finer entry); string-equality pairing in effectiveEntriesWithOrigin fails the endpoint witness (the declared prefix selector reaches nothing); dropping the loader's resource_match fails the loader witness."
+  },
+  {
+   "id": "containment.selector-matching.overlap-applies",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "The Mission Issuer MUST apply each contained-capability entry to every approved Authority Set entry whose resource set overlaps the entry's own, whether the selector is broader or finer than that approved entry.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After a contain transition, every approved entry whose resource set overlaps a contained-capability entry's, broader or finer, is narrowed in the Effective Authority Set every later derivation draws on; an approved entry whose resource set is disjoint from it, including a sibling sharing a path's characters but not a path-segment boundary, is untouched.",
+    "local": "Witnessed through the lifecycle endpoint (a declared prefix selector over an entry approved beneath a configured prefix ceiling, observed in the next refresh token) and through the kernel's contain transition (both directions, siblings and segment boundaries, and the shipped rule over a finer remittance entry)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > a broad prefix selector contains a finer entry approved beneath a prefix ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > a fine selector over a broad prefix entry removes the selected action across the whole entry (conservative over-containment)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > disjoint siblings and path-segment boundaries are untouched",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > the shipped contain-external-comms-on-taint-v1 rule reaches a remittance entry approved beneath a prefix ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463, D606. The matcher is selectorOverlapsEntry (mission-core containment-selector.ts): resourceWithin in both directions, not the audience helper entryOverlapsResource. Mutations: dropping the entry-within-selector direction fails the broad-selector witness; dropping the selector-within-entry direction fails the fine-selector witness; a raw string-prefix comparison fails the sibling witness; string-equality pairing fails the endpoint witness; removing the shipped rule's prefix fails the shipped-rule witness."
+  },
+  {
+   "id": "containment.selector-matching.undecidable-refused",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "The Mission Issuer MUST NOT admit to the overlay a contained-capability entry it cannot compare, such as one with an unrecognized `resource_match`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A contain transition naming a contained-capability entry the Mission Issuer cannot compare commits nothing: no overlay, no state-version increment.",
+    "local": "The lifecycle contain operation answers 400 invalid_request; the kernel's contain transition throws ContainmentSelectorError; the containment policy loader refuses the rule at load, naming the entry. Refused: an unrecognized resource_match, a prefix base with a query or no // authority, an empty actions list, and an unknown member."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > refuses a selector the matcher cannot decide with invalid_request, committing nothing",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > refuses a selector the matcher cannot decide before anything commits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "config loaders admit or refuse resource_match at load (#1264, #1440) > the containment loader refuses a removal the matcher cannot decide, naming the entry (@spec containment#selector-matching, #1463)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463. Mutations: removing the endpoint check fails the endpoint witness (the kernel's refusal then surfaces as 503); removing the kernel check fails the kernel witness; removing the loader check fails the loader witness. The error code is this implementation's choice, not pinned by the draft."
+  },
+  {
+   "id": "containment.selector-matching.action-removal",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "A selector with `actions` removes those actions from each approved entry it applies to, and a selector with no `actions` member removes each such entry whole.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An overlapping selector with actions leaves the approved entry's other actions derivable; one with no actions member removes the entry, and a Mission left with no effective authority refuses derivation as contained."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > removes only the selected actions from an overlapping entry, and the whole entry for a selector with no actions",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1463. Mutation: treating every removal as whole fails the kernel witness."
+  },
+  {
+   "id": "containment.selector-matching.union",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "When more than one selector applies to an approved entry, the removals form a union: the entry loses every action any of them selects, and is removed whole when any of them has no `actions` member.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every selector that overlaps an approved entry contributes to its removal, never only the first match, and selectors sharing a resource string under different resource_match values apply independently, never merged into one."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > multiple overlapping selectors form a union: every overlapping selector contributes, never only the first",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > selectors naming one resource string under different modes stay separate in the overlay and select different resource sets",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "review: same-resource entries under different modes > the PDP retains the union of removals for the matched prefix entry",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1463, D606. Mutations: returning at the first overlapping selector fails the union witness; keying the overlay merge on resource alone fails the mode witness. The PDP-view witness: an exact and a prefix entry naming one resource string keep separate per-entry unions in the delta the in-process view hands the PDP (mutation: keying the merge on resource alone fails it)."
+  },
+  {
+   "id": "containment.selector-matching.conservative-over-containment",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "A selector finer than an approved entry, such as an `exact` selector for one invoice under a `prefix` entry for the invoice service, therefore removes the selected actions from the whole approved entry, including resources the selector does not name.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A fine selector under a broad prefix entry removes the selected actions from the whole prefix entry, so they are not derivable for a sibling resource the selector does not name.",
+    "local": "The overlay keeps the selector as written; the over-containment lives in the effective-set computation and in the per-entry resolution the in-process PDP view reads (containedEntryRemovals)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > a fine selector over a broad prefix entry removes the selected action across the whole entry (conservative over-containment)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > resolves the overlay onto the approved entries for a consumer that pairs by an entry's own resource",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: conservative removal survives expansion > a fine selector removing an action from a broad predecessor restricts a sibling successor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463, D606. Mutation: dropping the selector-within-entry direction of the overlap fails the witness. #1500 review: what over-containment removes returns only through restoration; expansion reconciliation and the progressive drawdown compare successor authority against the removals as they land on the predecessor's approved entries."
+  },
+  {
+   "id": "containment.selector-matching.child-propagation",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "Propagation to an existing Child Mission ({{derivation-gating}}) applies the same removal: a child entry justified by an approved entry a selector applies to loses what that approved entry lost.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A contain transition on a parent narrows an existing child's entry justified by a parent entry the selector applies to, including a sibling resource under a broad parent entry a fine selector over-contained, and a broad selector reaches a child's finer entry; a child no selector reaches is untouched.",
+    "local": "The kernel widens the removals onto the parent's approved entries (containmentAtEntries) before filtering each child's entries by overlap."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a fine selector over the parent's broad prefix entry reaches an existing child's sibling entry justified by it",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a broad prefix selector reaches an existing child's finer entry",
+     "level": "unit",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#1463, D606. Mutations: propagating the selectors unwidened fails the sibling witness; filtering a child's entries by string equality fails the finer-entry witness."
+  },
+  {
    "id": "child-delegation.child-state.parent-terminated-immediate-parent",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "child-state",
@@ -56703,9 +57076,33 @@
      "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a containment committed after adjudication and before the activating commit fails the completion: the successor restores no contained capability",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > a removal after adjudication restricts a successor entry its selector overlaps under another resource string, and no disjoint sibling",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > a removal naming authority already contained at adjudication restricts nothing new, judged by resource set",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: conservative removal survives expansion > a fine selector removing an action from a broad predecessor restricts a sibling successor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > resolves the snapshot onto the approved entries too: an entry that had already lost the action at adjudication restricts nothing new",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option)."
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option). #1463: check 3 compares restrictions by resource-set overlap (restrictedSinceAdjudication), witnessed at unit level; a removal restricts nothing new where it, or the successor entry, lies within a snapshot removal selecting the same action. #1500 review: check 3 also resolves the removals onto the predecessor's approved entries, at the snapshot and now, so a successor cannot restore what conservative over-containment removed from a broad entry (mutation: dropping the resolved comparison fails the sibling witness; resolving only the current removals fails the snapshot witness)."
   },
   {
    "id": "expansion.predecessor-active.refused-invalid-request",

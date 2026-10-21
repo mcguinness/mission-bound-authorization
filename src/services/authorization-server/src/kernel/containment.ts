@@ -14,7 +14,24 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { canonicalize, type JsonValue } from "@mission/core";
+import {
+  canonicalize,
+  containmentAtEntries,
+  containmentRemovalFor,
+  type ContainmentSelector,
+  containmentSelectorViolation,
+  type JsonValue,
+  mergeContainmentSelectors,
+  selectorOverlapsEntry,
+} from "@mission/core";
+
+export {
+  containmentAtEntries,
+  containmentRemovalFor,
+  type ContainmentSelector,
+  mergeContainmentSelectors,
+  selectorOverlapsEntry,
+};
 
 /** The Containment Evidence media type; canonical bytes are the JCS form. */
 export const CONTAINMENT_EVIDENCE_MEDIA_TYPE = "application/mission-containment-evidence+json";
@@ -33,7 +50,8 @@ export interface ContainmentPolicy {
   rules: Array<{
     rule_id: string;
     event_type: string;
-    remove: Array<{ resource: string; actions?: string[] }>;
+    /** Selectors (@spec containment#selector-matching): `exact` by default, `prefix` only by declaration. */
+    remove: ContainmentSelector[];
   }>;
 }
 
@@ -44,6 +62,23 @@ export interface ContainmentPolicy {
  * CLOSED: nothing is committed. The wire PR maps this to a recorded rejection.
  */
 export class UnknownProtectedEventError extends Error {}
+
+/**
+ * @spec containment#selector-matching (#1463, D606): thrown by {@link
+ * MissionKernel.contain} for a removal the matcher cannot decide (an
+ * unrecognized `resource_match`, a `prefix` base Resource Access refuses, an
+ * empty `actions` list, an unknown member). Such a selector would contain
+ * nothing, so the transition is refused and nothing commits.
+ */
+export class ContainmentSelectorError extends Error {}
+
+/** Refuse a `remove` list holding any selector {@link containmentSelectorViolation} rejects, naming it by position. */
+export function assertContainmentSelectors(remove: readonly unknown[]): void {
+  remove.forEach((selector, i) => {
+    const violation = containmentSelectorViolation(selector);
+    if (violation !== undefined) throw new ContainmentSelectorError(`remove[${i}]: ${violation}`);
+  });
+}
 
 /** The Containment Evidence record for one contain transition. */
 export interface ContainmentEvidence {
@@ -60,8 +95,8 @@ export interface ContainmentEvidence {
   /** Containment overlay version before/after (0 = no prior containment). */
   prior_containment_version: number;
   new_containment_version: number;
-  /** What this event removed (an entry with no `actions` removes the whole resource). */
-  removed: Array<{ resource: string; actions?: string[] }>;
+  /** What this event added to the overlay: selectors, each removing its `actions` or, with none, whole entries. */
+  removed: ContainmentSelector[];
   created_at: string;
 }
 
