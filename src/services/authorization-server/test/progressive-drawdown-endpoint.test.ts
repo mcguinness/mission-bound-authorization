@@ -471,6 +471,7 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
       consent_principal: predecessor.approval_basis.consent_principal,
       activation: { policy_id: "drawdown-std", policy_version: "1" },
       activation_actor: { iss: ISSUER, sub: "ap-agent" },
+      adjudication: { kind: "policy", policy: { id: "drawdown-std", version: "1" } },
       root_commitment: predecessor.ceiling_hash,
       approved_at: predecessor.created_at,
     });
@@ -576,6 +577,31 @@ describe("approval_event_id per drawdown reservation (@spec progressive#in-ceili
     expect(as.kernel.get(retry.mission_id)?.approval_event_id).toBe(eventId);
     expect(as.kernel.allMissions().length).toBe(before);
     expect(activatingCommits(first.mission_id)).toHaveLength(1);
+    // @spec progressive#audit-linkage (#1438): the recovery counts nothing again.
+    expect(as.kernel.get(first.mission_id)?.drawdown_count).toBe(1);
+  });
+
+  it("drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated", async () => {
+    const root = await issueMission(READ, ceilingOf("drawdown-wide"));
+    const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
+    expect(rootRecord.drawdown_count).toBe(0);
+    const first = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const second = await drawdown(first.access_token, crypto.randomUUID(), [...READ_LIST, "payments:payment.schedule"]);
+    const a = as.kernel.get(first.mission_id) as MissionRecord;
+    const b = as.kernel.get(second.mission_id) as MissionRecord;
+    expect([a.drawdown_count, b.drawdown_count]).toEqual([1, 2]);
+    for (const s of [a, b]) {
+      const basis = s.approval_basis as { activation: { policy_id: string; policy_version: string }; adjudication?: unknown };
+      expect(basis.adjudication).toEqual({ kind: "policy", policy: { id: "drawdown-wide", version: "1" } });
+      expect(basis.adjudication).toEqual({
+        kind: "policy",
+        policy: { id: basis.activation.policy_id, version: basis.activation.policy_version },
+      });
+      expect([rootRecord.drawdown_policy?.id, rootRecord.drawdown_policy?.version]).toEqual(["drawdown-wide", "1"]);
+    }
+    // A request that falls back commits nothing and counts nothing.
+    await openFreshApproval(b.id, second.access_token, [...READ_LIST, "payments:payment.execute"]);
+    expect((as.kernel.get(b.id) as MissionRecord).drawdown_count).toBe(2);
   });
 
   it("concurrent identical drawdowns create one successor, and every response names it", async () => {
@@ -873,6 +899,19 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
       "payments:payment.schedule",
       "payments:payment.schedule.cancel",
     ]);
+  });
+
+  it("an overdue chain's fresh human approval without a re-consent is not a review: the ceiling consent stays overdue and policy adjudication unavailable", async () => {
+    // A one-second review cadence, lapsed before the chain's next widening.
+    const root = await issueMission(READ, ceilingOf("drawdown-short"));
+    const rootRecord = as.kernel.get(root.missionId) as MissionRecord;
+    await new Promise((r) => setTimeout(r, 1100));
+    // The overdue cadence sends the widening to a human, who approves only the successor.
+    const approved = await approveAndPoll(await openFreshApproval(root.missionId, root.accessToken, READ_LIST), ALICE);
+    const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
+    expect(s1.ceiling_consented_at).toBe(rootRecord.ceiling_consented_at);
+    // Eligible on every other guard, the next widening still falls back.
+    await openFreshApproval(s1.id, approved.access_token, [...READ_LIST, "payments:payment.schedule"]);
   });
 });
 

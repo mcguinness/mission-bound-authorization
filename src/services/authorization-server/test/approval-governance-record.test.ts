@@ -13,6 +13,7 @@ import {
   approvalGovernanceRecordDigest,
   assertAccountableApprover,
   assertAssertionAuthority,
+  assertContributing,
   assertGovernedPolicyRecord,
   type AuthorityEntry,
   MissionKernel,
@@ -388,6 +389,36 @@ describe("assertion authority by kind (@spec approval-governance#assertion-autho
     expect(() => assertGovernedPolicyRecord(withBy(accountable.principal), mission.approval_basis as never)).not.toThrow();
     expect(() => assertGovernedPolicyRecord(withBy({ iss: ISS, sub: "mallory" }), mission.approval_basis as never)).toThrow(
       /governed_policy record: assertion ast_policy authority: approved_by/,
+    );
+  });
+});
+
+describe("evaluation contributing (@spec approval-governance#record-members)", () => {
+  const BOB = { iss: "https://idp.test", sub: "bob" };
+  const CAROL = { iss: "https://idp.test", sub: "carol" };
+  const coApproval = (contributing: string[]): UnsignedApprovalGovernanceRecord => ({
+    ...recordWith([humanBy("ast_1"), humanBy("ast_2", BOB), humanBy("ast_3", CAROL, "deny")]),
+    evaluation: { decision: "approved", evaluated_at: "2026-07-01T00:00:00.000Z", contributing },
+  });
+
+  it("lists the counted assertions; a recorded denial that did not block the approval is not contributing", () => {
+    expect(() => assertContributing(coApproval(["ast_1", "ast_2"]))).not.toThrow();
+    expect(() => assertContributing(coApproval(["ast_1", "ast_2", "ast_3"]))).toThrow(/deny assertion ast_3/);
+    expect(() => assertContributing(coApproval(["ast_1", "ast_9"]))).toThrow(/does not carry: ast_9/);
+  });
+
+  it("is enforced at the governed_policy commit gate", () => {
+    if (mission.approval_basis.type !== "governed_policy") throw new Error("basis");
+    const { envelope: _e, ...unsigned } = record;
+    const veto = humanBy("ast_veto", CAROL, "deny");
+    const withDenial = (contributing: string[]): UnsignedApprovalGovernanceRecord => ({
+      ...unsigned,
+      assertions: [...unsigned.assertions, veto],
+      evaluation: { ...unsigned.evaluation, contributing },
+    });
+    expect(() => assertGovernedPolicyRecord(withDenial(["ast_policy"]), mission.approval_basis as never)).not.toThrow();
+    expect(() => assertGovernedPolicyRecord(withDenial(["ast_policy", "ast_veto"]), mission.approval_basis as never)).toThrow(
+      /governed_policy record: evaluation counts deny assertion ast_veto/,
     );
   });
 });

@@ -30,7 +30,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -394,6 +394,13 @@ export async function composeStack(opts: {
    */
   masGovernedResources?: readonly string[];
   /**
+   * @spec authority-server#mission-join, authority-server#mapping-contract
+   * (#557, #818): this deployment's MAS join policy and its declared mapping
+   * contract. Defaults to the shipped `config/mas-join.json`; a policy that
+   * declares no contract cannot mount a join route.
+   */
+  masJoinPolicy?: MasJoinPolicy;
+  /**
    * @spec discharge#discharge-authority (#1144): the policy resolving a
    * `terminal_when` condition's `discharge_authority`, given to the AS and the
    * kernel. The shipped demo registers none, so its Missions carry no
@@ -404,14 +411,23 @@ export async function composeStack(opts: {
 }): Promise<DemoStack> {
   const approverLogin = recordApproverLogin({ sub: "bob", acr: "mfa" });
   const asNative = opts.target === "as-native";
+  const masJoin = opts.masJoinPolicy ?? MAS_JOIN;
   const masGovernedResources =
     opts.masGovernedResources ??
-    (asNative ? MAS_JOIN.governed_resources.filter((r) => r !== CANONICAL_RESOURCE) : MAS_JOIN.governed_resources);
+    (asNative ? masJoin.governed_resources.filter((r) => r !== CANONICAL_RESOURCE) : masJoin.governed_resources);
   // D315: the as-native target excludes the MAS route (#818 owns it), so a
   // configuration that would still mount it on the payments resource fails
   // startup here, before anything connects or listens.
   if (asNative && masGovernedResources.includes(CANONICAL_RESOURCE)) {
     throw new Error(`the as-native target mounts no MAS join route, but ${CANONICAL_RESOURCE} is configured governed (D315)`);
+  }
+  // @spec authority-server#mapping-contract (#818): "Every deployment
+  // documents the mapping contract its joins apply", so a composition that
+  // would mount a join route without a declared one fails startup here too.
+  if (masGovernedResources.includes(CANONICAL_RESOURCE) && masJoin.mapping_contract === undefined) {
+    throw new Error(
+      `${CANONICAL_RESOURCE} is configured governed, but config/mas-join.json declares no mapping contract for its join (authority-server#mapping-contract)`,
+    );
   }
   const mode = opts.pdpMode ?? process.env.MISSION_PDP_MODE ?? "co-resident";
   if (mode !== "co-resident" && mode !== "remote") throw new Error("MISSION_PDP_MODE must be co-resident or remote");
@@ -1105,7 +1121,7 @@ export async function composeStack(opts: {
   const resolveOrdinaryAuthority = (token: TokenFacts): PdpAuthorityEntry[] | undefined => {
     if (token.mission || !token.scope) return undefined;
     const actions = [
-      ...new Set(token.scope.split(/\s+/).flatMap((value) => MAS_JOIN.scope_actions[value] ?? [])),
+      ...new Set(token.scope.split(/\s+/).flatMap((value) => masJoin.scope_actions[value] ?? [])),
     ];
     if (actions.length === 0) return undefined;
     return [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions }];
@@ -1116,7 +1132,7 @@ export async function composeStack(opts: {
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {
-      delegates: Object.fromEntries(Object.entries(MAS_JOIN.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
+      delegates: Object.fromEntries(Object.entries(masJoin.delegates).map(([id, d]) => [id, { maxDepth: d.max_depth }])),
     },
   };
   // D28: the PEP owns redemption. Its store's epoch is the requester epoch
@@ -1195,7 +1211,7 @@ export async function composeStack(opts: {
     masJoin: {
       delegatePolicy: {
         delegates: Object.fromEntries(
-          Object.entries(MAS_JOIN.delegates).map(([clientId, d]) => [clientId, { maxDepth: d.max_depth }]),
+          Object.entries(masJoin.delegates).map(([clientId, d]) => [clientId, { maxDepth: d.max_depth }]),
         ),
       },
       resolveOrdinaryAuthority,
