@@ -1,5 +1,5 @@
 /**
- * @spec mission-template#template-consent — the human consent to a Mission
+ * @spec mission-template#template-consent: the human consent to a Mission
  * Template. An administrator proposes the template body; the Approver reads
  * its consent disclosure and approves or denies it. Approval creates the
  * template with the authenticated Approver as its approver of record; the

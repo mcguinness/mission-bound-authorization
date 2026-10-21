@@ -211,8 +211,8 @@ function assertDispatchersAndRecipients(input: TemplateProposalBody): void {
 }
 
 /**
- * @spec mission-template#the-mission-template, mission-template#template-consent
- * — the checks on a template body that need no approver, refused at a
+ * @spec mission-template#the-mission-template, mission-template#template-consent:
+ * the checks on a template body that need no approver, refused at a
  * proposal and again at consent: the same body is refused at both.
  */
 export function assertTemplateBody(input: TemplateProposalBody): void {
@@ -281,7 +281,7 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
 }
 
 /**
- * @spec mission#standing-consent-bases — the consented template commits the
+ * @spec mission#standing-consent-bases: the consented template commits the
  * Dispatch Policy's content: the issuer mints the reference from the snapshot
  * it holds for that id and version, and refuses a policy it does not hold.
  */
