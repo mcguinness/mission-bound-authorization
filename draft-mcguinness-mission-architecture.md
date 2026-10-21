@@ -4328,6 +4328,12 @@ with no `suspended` state and its own termination reasons, served by
 
 \[\[ To be removed from the final specification ]]
 
+- The integrity-anchor description says the anchors do not cover the
+  approval basis, and names Mission Audit Transparency's
+  approval-event registration and Approval Governance's Approval
+  Context Commitment as where a deployment commits it. No requirement
+  changed.
+
 - The Project verb bounds downstream revocation latency by the
   projection grant's remaining lifetime, matching Cross-Domain
   Projection: a local token expires no later than the grant, and the
