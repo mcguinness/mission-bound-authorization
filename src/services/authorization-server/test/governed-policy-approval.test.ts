@@ -8,6 +8,7 @@ import {
   AGR_JWS_CTY,
   AGR_JWS_TYP,
   type ApprovalGovernanceRecord,
+  approvalGovernanceRecordDigest,
   assertGovernedPolicyRecord,
   type AuthorityEntry,
   type AuthoritySourceCatalog,
@@ -25,10 +26,12 @@ import {
   mintActivationPolicyRef,
   parseGovernedPolicyRoot,
   previewGovernedActivation,
+  recheckApprovalGovernanceRecord,
   recheckGovernedActivation,
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
   type RegisteredActivationPolicy,
+  signApprovalGovernanceRecord,
   type UnsignedApprovalGovernanceRecord,
   validateMissionIntent,
   verifyApprovalGovernanceRecord,
@@ -914,6 +917,269 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
     expect(outcome(() => activate(kernel, "gpc_none"))).toBe("consent_unavailable");
     nothingCommitted(kernel);
     expect(activationRows(kernel)).toBe(0);
+  });
+});
+
+describe("re-checking an evaluation (@spec approval-governance#re-check)", () => {
+  const MODEL = { id: "risk-model", version: "3" };
+  const recheck = (kernel: MissionKernel, missionId: string) =>
+    recheckApprovalGovernanceRecord(kernel, missionId, { resolveKey: resolveKey(kernel) });
+
+  /** Re-sign the committed record with `edit` applied: a record that verifies but says something else. */
+  const resign = (kernel: MissionKernel, missionId: string, edit: (r: UnsignedApprovalGovernanceRecord) => void) => {
+    const { envelope: _drop, ...unsigned } = kernel.governanceRecords.forMission(missionId) as ApprovalGovernanceRecord;
+    const copy = structuredClone(unsigned);
+    edit(copy);
+    const signed = signApprovalGovernanceRecord(copy, kernel.statusSigner());
+    kernel.db
+      .prepare("UPDATE approval_governance_records SET record_json = ?, record_digest = ? WHERE mission_id = ?")
+      .run(JSON.stringify(signed), approvalGovernanceRecordDigest(signed), missionId);
+  };
+
+  const evaluatorKernel = () => {
+    const registry: Record<string, RegisteredActivationPolicy> = {
+      [EVAL_ID]: { version: "e1", content_type: "application/json", content: JSON.stringify({ max_entries: 3 }) },
+    };
+    const kernel = makeKernel({ doc: evaluatorRoot(mintActivationPolicyRef(ISS, registry, EVAL_ID, "e1")), activationPolicies: registry });
+    return { kernel, mission: activate(kernel, consent(kernel).consent_id).mission };
+  };
+
+  /** A Mission one model output narrowed from the set it evaluated. */
+  const narrowedByModel = () => {
+    const kernel = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }) });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-r", intent: intent(), clientId: "svc-agent" });
+    const output: RecordedModelOutput = {
+      model: MODEL,
+      approval_event_id: view.approval_event_id,
+      intent_hash: view.intent_hash,
+      authority_hash: view.authority_hash,
+      verdict: "no_objection",
+      remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }],
+    };
+    return { kernel, mission: activate(kernel, c.consent_id, { approvalEventId: "ape-r", modelOutputs: [output] }).mission };
+  };
+
+  it("re-checks a committed record from retained evidence, whether the root, its evaluator, or the root with a narrowing model output decided", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    clockMs = T0 + 60_000;
+    expect(recheck(kernel, activate(kernel, c.consent_id).mission.id)).toEqual({ rechecked: true });
+    const byEval = evaluatorKernel();
+    expect(recheck(byEval.kernel, byEval.mission.id)).toEqual({ rechecked: true });
+    const byModel = narrowedByModel();
+    expect(byModel.mission.authority_set.flatMap((e) => e.actions)).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    expect(recheck(byModel.kernel, byModel.mission.id)).toEqual({ rechecked: true });
+    // No committed record, nothing to re-check.
+    expect(recheck(kernel, "mis_none")).toEqual({ rechecked: false, step: 1, reason: "no committed record" });
+  });
+
+  it("step 1: refuses a record that does not verify, or is not bound to the Mission it is retained with", () => {
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    expect(recheckApprovalGovernanceRecord(kernel, mission.id, { resolveKey: () => undefined })).toMatchObject({ rechecked: false, step: 1 });
+    resign(kernel, mission.id, (r) => {
+      r.mission.intent_hash = "sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU";
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 1 });
+    kernel.db
+      .prepare("UPDATE approval_governance_records SET record_json = json_set(record_json, '$.evaluation.evaluated_at', ?)")
+      .run(iso(T0 + 1));
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 1, reason: "record differs from its signed payload" });
+  });
+
+  it("step 2: refuses when the retained root snapshot is missing or does not reproduce approval_policy.digest", () => {
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    kernel.db
+      .prepare("UPDATE governed_policy_roots SET content = ?")
+      .run(Buffer.from(JSON.stringify(rootDoc({ rules: { max_entries: 99 } })), "utf8"));
+    expect(recheck(kernel, mission.id)).toEqual({
+      rechecked: false,
+      step: 2,
+      reason: "the retained root snapshot does not reproduce approval_policy.digest",
+    });
+    const gone = makeKernel();
+    const g = activate(gone, consent(gone).consent_id).mission;
+    gone.db.prepare("DELETE FROM governed_policy_roots").run();
+    expect(recheck(gone, g.id)).toEqual({ rechecked: false, step: 2, reason: "the root snapshot the record names is not retained" });
+  });
+
+  it("step 3: refuses an evaluator snapshot that is missing or does not verify, and a recorded deciding policy the root does not name", () => {
+    const missing = evaluatorKernel();
+    missing.kernel.db.prepare("DELETE FROM activation_policy_snapshots").run();
+    expect(recheck(missing.kernel, missing.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the retained evaluator snapshot does not verify",
+    });
+    const byEval = evaluatorKernel();
+    byEval.kernel.db.prepare("UPDATE activation_policy_snapshots SET content = ?").run(Buffer.from(JSON.stringify({ max_entries: 9 }), "utf8"));
+    expect(recheck(byEval.kernel, byEval.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the retained evaluator snapshot does not verify",
+    });
+    const renamed = evaluatorKernel();
+    renamed.kernel.db.prepare("UPDATE governed_policy_activations SET deciding_json = json_set(deciding_json, '$.version', 'e2')").run();
+    expect(recheck(renamed.kernel, renamed.mission.id)).toEqual({
+      rechecked: false,
+      step: 3,
+      reason: "the recorded deciding policy is not the evaluator the root commits",
+    });
+    const kernel = makeKernel();
+    const { mission } = activate(kernel, consent(kernel).consent_id);
+    kernel.db
+      .prepare("UPDATE governed_policy_activations SET deciding_json = json_set(deciding_json, '$.digest', ?)")
+      .run(activationPolicyDigest(ISS, held(rootDoc())));
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 3, reason: "the recorded deciding policy is not the root" });
+  });
+
+  it("step 4: refuses missing inputs, an input not bound to this event, Intent and evaluated set, and a contributing service assertion matching no input", () => {
+    const noInputs = narrowedByModel();
+    noInputs.kernel.db.prepare("DELETE FROM governed_policy_activations").run();
+    expect(recheck(noInputs.kernel, noInputs.mission.id)).toEqual({ rechecked: false, step: 4, reason: "no recorded inputs to replay" });
+    // The inputs as a whole carry the event and Intent, with no model output to carry them.
+    const unbound = { rechecked: false, step: 4, reason: "the recorded inputs are not bound to this approval event and Intent" };
+    const otherActivation = makeKernel();
+    const oa = activate(otherActivation, consent(otherActivation).consent_id).mission;
+    otherActivation.db.prepare("UPDATE governed_policy_activations SET approval_event_id = 'ape-other'").run();
+    expect(recheck(otherActivation, oa.id)).toEqual(unbound);
+    const otherIntent = makeKernel();
+    const oi = activate(otherIntent, consent(otherIntent).consent_id).mission;
+    otherIntent.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.intent_hash', ?)")
+      .run("sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
+    expect(recheck(otherIntent, oi.id)).toEqual(unbound);
+    const rebound = narrowedByModel();
+    rebound.kernel.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.model_outputs[0].intent_hash', ?)")
+      .run("sha-256:47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
+    expect(recheck(rebound.kernel, rebound.mission.id)).toMatchObject({ rechecked: false, step: 4 });
+    const otherEvent = narrowedByModel();
+    otherEvent.kernel.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.model_outputs[0].approval_event_id', 'ape-other')")
+      .run();
+    expect(recheck(otherEvent.kernel, otherEvent.mission.id)).toMatchObject({ rechecked: false, step: 4 });
+    // The set recorded as evaluated is what the output is bound to.
+    const reset = narrowedByModel();
+    reset.kernel.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.authority', json(?))")
+      .run(JSON.stringify([readEntry(["payments:invoice.list", "payments:invoice.read"])]));
+    expect(recheck(reset.kernel, reset.mission.id)).toMatchObject({ rechecked: false, step: 4 });
+    const unmatched = narrowedByModel();
+    resign(unmatched.kernel, unmatched.mission.id, (r) => {
+      const svc = r.assertions.find((a) => a.kind === "service") as { authority: { model_version: string } };
+      svc.authority.model_version = "4";
+    });
+    expect(recheck(unmatched.kernel, unmatched.mission.id)).toEqual({
+      rechecked: false,
+      step: 4,
+      reason: "service assertion ast_model_1 matches no recorded input",
+    });
+  });
+
+  it("step 5: refuses a replay that does not approve, approves another Authority Set, or counts other than contributing", () => {
+    const denied = makeKernel({ doc: rootDoc({ rules: { max_entries: 3, require_purpose: true } }) });
+    const d = activate(denied, consent(denied).consent_id, { intent: intent({ purpose: "Quarter-end close" }) }).mission;
+    denied.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.purpose_present', json('false'))")
+      .run();
+    expect(recheck(denied, d.id)).toEqual({ rechecked: false, step: 5, reason: "the replay does not approve" });
+    const other = makeKernel();
+    const o = activate(other, consent(other).consent_id).mission;
+    other.db
+      .prepare("UPDATE governed_policy_activations SET inputs_json = json_set(inputs_json, '$.authority', json(?))")
+      .run(JSON.stringify([readEntry(["payments:invoice.read"])]));
+    expect(recheck(other, o.id)).toEqual({ rechecked: false, step: 5, reason: "the replay approves a different Authority Set" });
+    // The model output counts toward the approval; a record omitting it from contributing is not the replay's.
+    const uncounted = narrowedByModel();
+    resign(uncounted.kernel, uncounted.mission.id, (r) => {
+      r.evaluation.contributing = ["ast_policy"];
+    });
+    expect(recheck(uncounted.kernel, uncounted.mission.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "contributing is not the set the replay counts",
+    });
+    // The replay, not the record, sets what is counted: removing a counted
+    // assertion together with its contributing entry is refused.
+    const unrecorded = narrowedByModel();
+    resign(unrecorded.kernel, unrecorded.mission.id, (r) => {
+      r.assertions = r.assertions.filter((a) => a.kind !== "service");
+      r.evaluation.contributing = ["ast_policy"];
+    });
+    expect(recheck(unrecorded.kernel, unrecorded.mission.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "model output risk-model@3 has no single recorded service assertion",
+    });
+    const unaccountable = narrowedByModel();
+    resign(unaccountable.kernel, unaccountable.mission.id, (r) => {
+      r.assertions = r.assertions.filter((a) => a.kind !== "policy");
+      r.evaluation.contributing = ["ast_model_1"];
+    });
+    expect(recheck(unaccountable.kernel, unaccountable.mission.id)).toMatchObject({ rechecked: false, step: 5 });
+    const empty = makeKernel();
+    const e = activate(empty, consent(empty).consent_id).mission;
+    resign(empty, e.id, (r) => {
+      r.assertions = [];
+      r.evaluation.contributing = [];
+    });
+    expect(recheck(empty, e.id)).toMatchObject({ rechecked: false, step: 5 });
+    // The accountable approval is the consent the Mission records, not a fresher one the record claims.
+    const fresher = makeKernel();
+    const f = activate(fresher, consent(fresher).consent_id).mission;
+    resign(fresher, f.id, (r) => {
+      (r.assertions[0] as { authority: { approved_at: string } }).authority.approved_at = iso(T0 + 1000);
+    });
+    expect(recheck(fresher, f.id)).toEqual({
+      rechecked: false,
+      step: 5,
+      reason: "governed_policy record: the accountable assertion's approved_at is not approval_basis.approved_at",
+    });
+  });
+
+  it("step 6: re-applies recency at evaluated_at, including a high-risk class's committed exception", () => {
+    const kernel = makeKernel();
+    const c = consent(kernel);
+    clockMs = T0 + 60_000;
+    const { mission } = activate(kernel, c.consent_id);
+    // Older than the 30-day default ceiling at the recorded evaluation instant.
+    resign(kernel, mission.id, (r) => {
+      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
+    // Decided after the recorded evaluation instant, beyond the skew.
+    resign(kernel, mission.id, (r) => {
+      r.evaluation.evaluated_at = iso(T0 - 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 6 });
+    // Removing every assertion does not leave the aged approval unchecked.
+    resign(kernel, mission.id, (r) => {
+      r.assertions = [];
+      r.evaluation.contributing = [];
+      r.evaluation.evaluated_at = iso(T0 + 30 * 86400_000 + 1000);
+    });
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false });
+
+    const proposal = [{ ...executeEntry(), constraints: { max_amount: { amount: "100.00", currency: "USD" }, vendors: ["acme"] } }];
+    const excepted = makeKernel({
+      doc: rootDoc({
+        authority_ceiling: [readEntry(), executeEntry()],
+        recency: { ceilings: { default: 30 * 86400 }, clock_skew_s: 60, exceptions: { irreversible_action: { max_age_s: 600 } } },
+      }),
+    });
+    clockMs = T0;
+    const ce = consent(excepted);
+    clockMs = T0 + 300_000;
+    const high = activate(excepted, ce.consent_id, { proposedAuthority: proposal }).mission;
+    expect(recheck(excepted, high.id)).toEqual({ rechecked: true });
+    // Within the default ceiling but past the class exception's age.
+    resign(excepted, high.id, (r) => {
+      r.evaluation.evaluated_at = iso(T0 + 601_000);
+    });
+    expect(recheck(excepted, high.id)).toMatchObject({ rechecked: false, step: 6 });
   });
 });
 
