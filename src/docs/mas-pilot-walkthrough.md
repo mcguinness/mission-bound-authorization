@@ -7,7 +7,7 @@ refusal with its evidence record. What the pilot is, and what each of its
 properties rests on, is [mas-pilot-deployment.md](mas-pilot-deployment.md);
 this document covers running it.
 
-Every statement here is true of the reference implementation at `b421cc0f`
+Every statement here is true of the reference implementation at `0d5c76b5`
 (paths relative to `src/`). The launcher tests are
 `demo/test/mas-pilot-launcher.test.ts` (§7); its smoke tests need a live
 OpenFGA and are skipped without one, and its startup refusals always run.
@@ -74,7 +74,7 @@ In process, both consoles are the one printed URL.
 | `MISSION_KERNEL_STORE=<absolute path>` | Optional: keeps the MAS's Missions across a restart. |
 | `MAS_PILOT_CONFIG` | The configuration file (default `config/mas-pilot.json`). |
 | `OPENFGA_HTTP_URL`, `OPENFGA_PRESHARED_KEY`, `OPENFGA_CA_CERT` | The OpenFGA connection; the defaults reach the `docker compose` OpenFGA, and `scripts/mas-pilot.mjs` trusts `certs/openfga.crt` when it exists and no CA is set. |
-| `MAS_PILOT_MAS_URL`, `MAS_PILOT_PDP_TOKEN` | Separated only: use a MAS already running and the PDP credential it registered (§3.7). |
+| `MAS_PILOT_MAS_URL`, `MAS_PILOT_PDP_KEY` | Separated only: use a MAS already running, and the PDP's private key (a JWK with its `kid`) whose public half that MAS registered (§3.7). |
 
 **Startup refusals.** Each prints one `mas-pilot: startup failed: <reason>`
 line and exits 1:
@@ -87,8 +87,9 @@ line and exits 1:
   not load (`requireDeclaredMappingContract`, the compositions' own guard,
   applied before the launcher starts anything: "the MAS pilot mounts a join
   route, but declares no usable mapping contract");
-- `MAS_PILOT_MAS_URL` or `MAS_PILOT_PDP_TOKEN` in process, or one of them
-  without the other;
+- `MAS_PILOT_MAS_URL` or `MAS_PILOT_PDP_KEY` in process, one of them
+  without the other, or a `MAS_PILOT_PDP_KEY` that is not a private JWK with
+  a `kid`;
 - a MAS that is unreachable, a MAS whose metadata names another issuer
   ("answers as issuer ..., not the configured Mission issuer ..."), or a MAS
   process that fails its own startup (its reason, for example
@@ -226,11 +227,30 @@ process, `out_of_authority` separated, with the same `fresh_until` timing as
 
 ### 3.7 Attach to a MAS already running
 
-Start the MAS yourself, from `src/demo`, with a PDP credential and its own
+The PDP reads the MAS's Mission Status endpoint as the client
+`separated_mas.pdp_client_id` (`mas-pilot-pdp`), authenticating by
+private-key JWT (#1407). Generate its key where the PDP runs, from
+`src/demo`: the private half for the launcher, the public half for the MAS.
+
+```sh
+umask 077
+node --input-type=module -e "
+import { exportJWK, generateKeyPair } from 'jose';
+import { writeFileSync } from 'node:fs';
+const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
+const kid = 'mas-pilot-pdp-1';
+writeFileSync('/tmp/mas-pilot-pdp-key.json', JSON.stringify({ ...(await exportJWK(privateKey)), kid, alg: 'ES256' }));
+writeFileSync('/tmp/mas-pilot-status-clients.json', JSON.stringify([
+  { client_id: 'mas-pilot-pdp', jwks: { keys: [{ ...(await exportJWK(publicKey)), kid, alg: 'ES256', use: 'sig' }] } },
+]));
+"
+```
+
+Start the MAS yourself, from `src/demo`, with that public key and its own
 console bearer:
 
 ```sh
-MISSION_EPHEMERAL_KEYS=1 MAS_PILOT_PDP_TOKEN=<pdp credential> \
+MISSION_EPHEMERAL_KEYS=1 MAS_PILOT_STATUS_CLIENTS="$(cat /tmp/mas-pilot-status-clients.json)" \
   MAS_PILOT_OPERATOR_TOKEN=<mas console bearer> MAS_PILOT_OPERATOR_CONSOLE_PORT=14856 \
   node --import tsx src/mas-pilot/mas-serve.ts
 ```
@@ -239,11 +259,12 @@ It prints `mas-pilot: operator console http://127.0.0.1:14856` and
 `mas-pilot: ready http://127.0.0.1:14834`. Then, from `src/`:
 
 ```sh
-MAS_PILOT_MAS_URL=http://127.0.0.1:14834 MAS_PILOT_PDP_TOKEN=<pdp credential> \
+MAS_PILOT_MAS_URL=http://127.0.0.1:14834 MAS_PILOT_PDP_KEY="$(cat /tmp/mas-pilot-pdp-key.json)" \
   MAS_PILOT_DEVELOPMENT_STORE=1 pnpm mas-pilot:separated
 ```
 
-The launcher checks the MAS's metadata issuer before it composes anything.
+The launcher checks the MAS's metadata issuer before it composes anything,
+and reads Mission Status at the endpoint the MAS advertises.
 Approve, revoke and contain at the MAS's console with the MAS's bearer; the
 launcher's printed bearer covers its pilot console only. Stopping the
 launcher leaves the MAS running.
@@ -393,7 +414,8 @@ the operator console, as §3 does:
 - `… > refuses a running MAS that is unreachable or answers under another issuer, and a MAS process that fails to start, without opening the Resource-policy store`
   (with a control: a launch that reaches the store meets the stub, and its
   failure frees its ports);
-- `… > refuses a running MAS's address in process, and one of the address and the PDP credential without the other`.
+- `… > refuses a running MAS's address in process, and one of the address and the PDP credential without the other`;
+- `… > refuses a PDP key that is not a private JWK with a kid (#1407)`.
 
 The smoke tests bind the MAS and estate on `127.0.0.1:14858` and `14859`
 (in process), `14864` and `14865` (rotation), `14860` and `14861`
