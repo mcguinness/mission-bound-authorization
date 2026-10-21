@@ -7094,6 +7094,11 @@ Cross-Domain:
 
 -01
 
+- Editorial (#1479): Conformance says that no minimal starting point
+  removes a Mission Issuer surface, the evidence refusal rules
+  included, or the deployment's revocation means; Intent Submission
+  Evidence says its rules apply when the AS supports no evidence type.
+
 - Editorial (#1472): a reader pass that changes no requirement. The
   abstract leads with the object OAuth lacks, and its agent-identity
   positioning moves to Relationship to Adjacent Work. The Implementation
