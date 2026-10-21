@@ -32,6 +32,8 @@ const REFUSAL_RECORD_DIAGNOSTICS = [
   "mission_reference_conflict",
   "state_unavailable",
   "capability_source_unresolvable",
+  // #249: the resource contract the operation requires does not resolve.
+  "resource_contract_unresolvable",
   "decision_evidence_unverifiable",
   "channel_failure",
   "pdp_unreachable",

@@ -413,6 +413,10 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete opts.requester;
     delete opts.consumptionStatus;
     delete opts.refusals;
+    // @spec authzen#context-resource-contract (#249): the PDP's own contract
+    // declarations are never a request option; the default is the
+    // deployment's statement.
+    delete opts.resourceContracts;
     delete opts.durationLeases;
     if (config.evidence) opts.evidence = config.evidence;
     if (config.durationLeases) opts.durationLeases = config.durationLeases;

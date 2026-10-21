@@ -1,6 +1,7 @@
 import type { ActivationPolicyRef } from "./anchors.js";
 import type { JsonValue } from "./canonicalize.js";
 import type { CapabilitySourceBinding } from "./capability-binding.js";
+import type { ResourceContractRef } from "./resource-contract.js";
 
 /**
  * @spec attenuation#root-mapping, child-delegation#fanout — a delegate matcher:
@@ -96,6 +97,15 @@ export interface AuthorityEntry {
    * sets no precedent here).
    */
   capability_sources?: CapabilitySourceBinding[];
+  /**
+   * @spec resource-access#resource-contract (#249, D553): the resource
+   * contract the entry was approved under, `id`, `version` and `digest`. The
+   * authorization server assembles it from trusted configuration before
+   * approval, so `authority_hash` commits it, and "Every derivation,
+   * narrowing, and delegation of the entry preserves it exactly": removing,
+   * replacing or adding it is never narrowing (`isSubsetEntry` step 4).
+   */
+  resource_contract?: ResourceContractRef;
   constraints?: {
     max_amount?: { amount: string; currency: string };
     vendors?: string[];

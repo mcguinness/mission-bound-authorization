@@ -18,6 +18,7 @@ import {
   isActivationPolicyRef,
   isImplementedCommonConstraint,
   refusedEntryMember,
+  resourceContractViolation,
   resourceMatchViolation,
   SUPPORTED_CONSTRAINT_KEYS,
   type JsonValue,
@@ -202,6 +203,21 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
     // @spec capability-binding#capability-source-binding: recorded by the
     // authorization server at derivation; a proposal's value is never carried.
     capability_sources: { type: "array", items: { type: "object" } },
+    // @spec resource-access#resource-access-type, resource-access#resource-contract
+    // (#249): exactly `id` (an absolute URI), `version` (a non-empty string)
+    // and `digest` (the integrity-anchor encoded form). A proposed value is a
+    // proposal the authorization server validates against its trusted
+    // configuration before approval, never an authoritative declaration.
+    resource_contract: {
+      type: "object",
+      properties: {
+        id: { type: "string", format: "uri" },
+        version: { type: "string", minLength: 1 },
+        digest: { type: "string", pattern: "^sha-256:[A-Za-z0-9_-]{43}$" },
+      },
+      required: ["id", "version", "digest"],
+      additionalProperties: false,
+    },
   },
   required: ["type", "resource", "actions"],
   // @spec mission#subset (#1399, D538): closed to SUPPORTED_ENTRY_MEMBERS.
@@ -292,6 +308,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       !e.capability_sources.every((b) => b !== null && typeof b === "object" && !Array.isArray(b)))
   ) {
     return "capability_sources must be an array of objects";
+  }
+  // @spec resource-access#entry-validation (#249): "its `resource_contract`
+  // is not an object with exactly the members `id`, `version`, and `digest`,
+  // or one of them does not have the form {{resource-access-type}} gives it".
+  if (e.resource_contract !== undefined) {
+    const violation = resourceContractViolation(e.resource_contract);
+    if (violation !== undefined) return violation;
   }
   // @spec resource-access#entry-validation (#1376): each value matches the
   // action grammar as a whole, so an identifier the namespace cannot carry

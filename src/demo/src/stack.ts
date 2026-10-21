@@ -79,6 +79,7 @@ import {
   OutcomeReconciler,
   PaymentsStore,
   paymentsBoundaryContext,
+  PAYMENTS_PROFILE_VERSION,
   Pep,
   type PepDeps,
   type ReceiptIssuerScope,
@@ -615,9 +616,12 @@ export async function composeStack(opts: {
         // family's own `mission_resource_access` entry, so that profile governs
         // its operations; an entry naming any other type is refused at
         // admission rather than read structurally.
+        // #249: registered under the payments profile version, the one the
+        // payments contract document names, so an entry carrying its
+        // `resource_contract` reference resolves to this profile.
         operationProfiles: new OperationProfileRegistry().register(
           CANONICAL_RESOURCE,
-          missionResourceAccessProfile(),
+          missionResourceAccessProfile(PAYMENTS_PROFILE_VERSION),
         ),
         // @spec txn-authorization#challenge-redemption step 7 — the deployment's
         // entitlement and resource-policy decision, run FRESH at completion

@@ -71,6 +71,7 @@ export {
   TOOL_BASE,
   TOOL_ACTIONS,
   PAYMENTS_INVOICE_CONTRACT,
+  PAYMENTS_PROFILE_VERSION,
   type ActionMapping,
 } from "./pep.js";
 export {
