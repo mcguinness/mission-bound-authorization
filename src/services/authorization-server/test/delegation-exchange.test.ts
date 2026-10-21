@@ -156,6 +156,7 @@ const cookieHeader = (jar: Map<string, string>) => [...jar.entries()].map(([k, v
 async function baseMission(
   h: Harness,
   authority: unknown[] = [delegable()],
+  targets: string[] = [RESOURCE],
 ): Promise<{ missionId: string; accessToken: string; refreshToken: string }> {
   const jar = new Map<string, string>();
   const verifier = "delegation-exchange-verifier-0123456789-0123456789-01";
@@ -171,7 +172,7 @@ async function baseMission(
       code_challenge: challenge,
       code_challenge_method: "S256",
       login_hint: "alice",
-      mission_intent: JSON.stringify({ intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" } }),
+      mission_intent: JSON.stringify({ intent: { goal: "Read Acme invoices", target_resources: targets, expires_at: "2027-01-01T00:00:00Z" } }),
       authorization_details: JSON.stringify(authority),
       client_assertion: await assertion(h, "ap-agent"),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
@@ -1156,5 +1157,48 @@ describe("delegate eligibility with retained provenance at designation and redem
     const res = await redeem(deferring, designation.body.access_token as string);
     expect(res.status, JSON.stringify(res.body)).toBe(400);
     expect(res.body.error).toBe("invalid_target");
+  });
+});
+
+/**
+ * @spec resource-access#resource-matching (#1440): the delegated exchange
+ * carries each designated entry whose resource tree overlaps the redemption's
+ * `resource`, through the shared matcher. The deployment's payments read
+ * ceiling entry is `prefix`, so a Mission can hold an entry finer than the
+ * payments resource.
+ */
+describe("the delegated exchange pairs entries with the requested resource through the shared matcher (@spec mission#delegation, resource-access#resource-matching, #1440)", () => {
+  const INV1 = `${RESOURCE}/invoices/inv-1`;
+  const PREFIX_CEILING = DERIVATION_POLICY.ceiling.map((e, i) => (i === 0 ? { ...e, resource_match: "prefix" as const } : e));
+  let prefixed: Harness;
+  beforeAll(async () => {
+    prefixed = await harness(14875, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      derivationPolicy: { ...DERIVATION_POLICY, ceiling: PREFIX_CEILING },
+      authoritySources: {
+        ...AUTHORITY_SOURCES,
+        entries: AUTHORITY_SOURCES.entries.map((e) => (e.id === "acme-people" ? { ...e, ceiling: PREFIX_CEILING } : e)),
+      },
+    });
+  });
+  afterAll(() => {
+    prefixed?.server.close();
+  });
+
+  it("a finer entry beneath the redemption's resource is delegated, and a sibling resource outside its tree is refused invalid_target", async () => {
+    const { missionId, accessToken } = await baseMission(prefixed, [{ ...delegable(), resource: INV1 }], [RESOURCE, INV1]);
+    expect(prefixed.as.kernel.get(missionId)?.authority_set.map((e) => e.resource)).toEqual([INV1]);
+    const designation = await designate(prefixed, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const delegated = await redeem(prefixed, designation.body.access_token as string);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    const t = decodeJwt(delegated.body.access_token as string) as Body;
+    expect(t.aud).toBe(RESOURCE);
+    expect((t.authorization_details as Body[]).map((e) => e.resource)).toEqual([INV1]);
+    // A resource the entry's tree does not overlap carries nothing.
+    const sibling = await redeem(prefixed, designation.body.access_token as string, SUBAGENT, undefined, { resource: `${RESOURCE}-archive` });
+    expect(sibling.status, JSON.stringify(sibling.body)).toBe(400);
+    expect(sibling.body.error).toBe("invalid_target");
+    expect(sibling.body.error_description).toMatch(/no entry of the designation permits/);
   });
 });

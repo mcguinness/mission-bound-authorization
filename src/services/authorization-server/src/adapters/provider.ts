@@ -34,6 +34,7 @@ import {
   type ActivationPolicyRef,
   delegatedRoutingRefusal,
   earlyScopeRefusal,
+  entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
   type MissionAccessProfile,
   projectScope,
@@ -3071,6 +3072,19 @@ export function resourcesForAudiences(
   return out;
 }
 
+/**
+ * @spec mission#caller-authorization-and-minimization, resource-access#resource-matching
+ * (#1440): whether introspection discloses `entry` to a caller authorized for
+ * `resources`: the entry's resource tree overlaps one of them, through the
+ * shared matcher ({@link entryOverlapsResource}), as at token emission. A
+ * finer or `prefix` entry the caller's resource serves is disclosed, and a
+ * sibling sharing its characters is not.
+ */
+function disclosedFor(resources: ReadonlySet<string>, entry: AuthorityEntry): boolean {
+  for (const resource of resources) if (entryOverlapsResource(entry, resource)) return true;
+  return false;
+}
+
 /** The capability that enables each lifecycle-endpoint operation. */
 const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability>> = {
   revoke: "lifecycle-revoke",
@@ -4312,7 +4326,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // fragment's record-entry origin for discharge_selectors.
         const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visibleAudiences, principal.audience_resources);
-        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const returned = narrowed.filter((e) => disclosedFor(resourceSet, e.entry));
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
         ctx.body = {
@@ -4450,7 +4464,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // it held authority it was never issued.
         const narrowed = kernel.projectCredentialWithOrigin(record, credentialAuthority);
         const resourceSet = resourcesForAudiences(visible, principal.audience_resources);
-        const returned = narrowed.filter((e) => resourceSet.has(e.entry.resource));
+        const returned = narrowed.filter((e) => disclosedFor(resourceSet, e.entry));
         const authorization_details = returned.map((e) => e.entry);
         const disclosedMission = withDischargeSelectors(record, mission, returned);
 

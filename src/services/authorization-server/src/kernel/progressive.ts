@@ -551,7 +551,8 @@ export function adjudicateDrawdown(
   if (!rules) return fallback("drawdown_policy_unusable");
   const nowMs = kernel.nowDate().getTime();
   // @spec progressive#ceiling-review: no policy adjudication for a chain whose
-  // most recent human approval of the ceiling is older than the cadence.
+  // ceiling consent, the initial consent or the latest re-consent, is older
+  // than the cadence.
   const consentedAt = Date.parse(predecessor.ceiling_consented_at ?? "");
   if (!Number.isFinite(consentedAt) || nowMs - consentedAt > rules.ceiling_review_cadence_s * 1000) {
     return fallback("ceiling_review_overdue");
