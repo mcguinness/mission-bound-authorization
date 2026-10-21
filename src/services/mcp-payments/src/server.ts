@@ -738,9 +738,10 @@ export class McpPaymentsServer {
    * possession is not part of this: each transport verifies its own.
    */
   private missionBoundFactsFrom(payload: JWTPayload, typ: unknown, validated: ValidatedBoundary): MissionBoundTokenFacts {
-    // @spec authority-server#limitations (#818): an estate issuer that is not a
-    // Mission Issuer mints no Mission-bound credential, so a `mission` claim
-    // under it is refused rather than trusted.
+    // @spec authority-server#limitations (#818), mission#rs-requirements item
+    // 6 (#1503): an estate issuer that is not a Mission Issuer mints no
+    // Mission-bound credential, so a `mission` claim under it is refused
+    // rather than trusted: trusting its ordinary tokens is not enough.
     if (this.deps.ordinaryOnly) throw new Error("this route's issuer is not a Mission Issuer");
     // @spec cross-domain#mission-subject — readTxnMissionClaim (inside the
     // profile) validates the REQUIRED invariants and, when present, the
@@ -748,6 +749,10 @@ export class McpPaymentsServer {
     // `subject` is a refusal here, not a silently dropped member.
     const claims = readMissionAccessClaims(typ, payload, Math.floor(Date.now() / 1000));
     const mission = claims.mission;
+    // @spec mission#rs-requirements item 6 (#1503): this resource adopts no
+    // cross-domain profile, so the Mission's issuer is the verified `iss`.
+    // A mismatch is refused here, before any Mission lookup or decision.
+    if (mission.issuer !== payload.iss) throw new Error("token iss != mission.issuer");
     return {
       sub: claims.sub,
       clientId: claims.clientId,
@@ -1132,11 +1137,14 @@ export class McpPaymentsServer {
     htm: string,
   ): Promise<MissionBoundTokenFacts> {
     if (chain.length === 0) throw new Error("empty attenuation chain");
+    // @spec mission#rs-requirements item 6 (#1503): a root carries a `mission`
+    // claim, which an estate route's issuer is not trusted to issue.
+    if (this.deps.ordinaryOnly) throw new Error("this route's issuer is not a Mission Issuer");
 
     // Root: under the AS keys pinned to the attenuation-root role, audience-
     // scoped, the `aat+jwt` profile with its
     // typed claim set (@spec runtime-oauth#token-validation, #825), and
-    // iss == mission.issuer.
+    // iss == mission.issuer (@spec mission#rs-requirements item 6, #1503).
     const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveRootKey, {
       issuer: this.deps.issuer,
       algorithms: ["ES256"],

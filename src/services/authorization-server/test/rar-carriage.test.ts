@@ -1149,3 +1149,75 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 });
+
+// @spec mission#approval-event (step 5, #1503): the rendering identifies the
+// OAuth client that receives the authority from the AS's registration of it.
+// Clients here are the deployment's static registrations, so the registered
+// name is the AS's; text the request carries, in the Intent or in a parameter
+// this AS does not accept, changes nothing in that section.
+describe("receiving client on the approval surface (@spec mission#approval-event, #1503)", () => {
+  const HEADING = "Client receiving this authority (from this authorization server's registration)";
+
+  async function renderClient(args: {
+    clientId: string;
+    kid: string;
+    key: () => CryptoKey;
+    goal?: string;
+    extra?: Record<string, string>;
+  }): Promise<{ html: string; section: string }> {
+    const par = await pushPar(args.clientId, args.kid, args.key(), {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, ...(args.goal ? { goal: args.goal } : {}) } }),
+      authorization_details: JSON.stringify([
+        { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+      ]),
+      ...args.extra,
+    });
+    expect(par.status, await par.clone().text()).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+    const auth = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: args.clientId, request_uri })}`, {
+      redirect: "manual",
+    });
+    storeCookies(auth);
+    const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+    const html = await page.text();
+    expect(page.status, html).toBe(200);
+    const section = html.match(/<section class="receiving-client">([\s\S]*?)<\/section>/)?.[1] ?? "";
+    return { html, section };
+  }
+
+  it("names the receiving client by its registered client_id and name, labeled as the AS's registration", async () => {
+    const agent = await renderClient({ clientId: "ap-agent", kid: "ap-agent-auth", key: () => agentKey });
+    expect(agent.section).toContain(HEADING);
+    expect(agent.section).toContain('<code class="client-id">ap-agent</code>');
+    expect(agent.section).toContain('Registered name: <span class="client-name">AP Agent</span>');
+    // Each page names its own interaction's client, never a fixed one.
+    const governed = await renderClient({ clientId: "governed-agent", kid: "governed-agent-auth", key: () => governedKey });
+    expect(governed.section).toContain('<code class="client-id">governed-agent</code>');
+    expect(governed.section).toContain(
+      'Registered name: <span class="client-name">Governed Agent (Mission-governed registration)</span>',
+    );
+    expect(governed.section).not.toContain("AP Agent");
+  });
+
+  it("keeps the registered identification when the request carries a different client-supplied name", async () => {
+    // Another registered client's name, claimed in the Intent the client
+    // writes and in a `client_name` request parameter.
+    const claimed = "Ledger Reconciler";
+    const { html, section } = await renderClient({
+      clientId: "ap-agent",
+      kid: "ap-agent-auth",
+      key: () => agentKey,
+      goal: `Pay Acme invoices as ${claimed}`,
+      extra: { client_name: claimed },
+    });
+    expect(section).toContain('<code class="client-id">ap-agent</code>');
+    expect(section).toContain('Registered name: <span class="client-name">AP Agent</span>');
+    expect(section).not.toContain(claimed);
+    expect(section).not.toContain("ledger-reconciler");
+    // The claim reaches the page only as untrusted task context.
+    const intent = html.split("Intent (task context, untrusted)")[1] as string;
+    expect(intent).toContain(claimed);
+  });
+});

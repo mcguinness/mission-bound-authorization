@@ -11,14 +11,22 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { Fga } from "@mission/pdp";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CANONICAL_RESOURCE,
+  canonicalHtu,
+  createEphemeralEvidenceKeys,
+  createHttpMcpChannel,
+  createHttpMediatedClient,
   type DpopKeys,
   dpopProofFor,
+  EvidenceStore,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
   PaymentsStore,
+  Pep,
 } from "../src/index.js";
 
 const ESTATE = "https://estate.test";
@@ -147,6 +155,64 @@ describe("estate route with introspection: an opaque token (#818 slice 3)", () =
 
   it("refuses to configure introspection on a route whose issuer is a Mission Issuer", () => {
     expect(() => server({ ordinaryOnly: false })).toThrow(/ordinaryOnly/);
+  });
+});
+
+describe("estate route with introspection: a mission member is refused, never read as ordinary (@spec mission#rs-requirements, #1503)", () => {
+  it("answers an active introspection response carrying mission 401 invalid_token on the holder's open MCP session, before the PEP, while the same response without it opens the session", async () => {
+    const keys = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    const pep = new Pep({
+      decide: keys.decide,
+      payments: new PaymentsStore(),
+      evidence,
+      fga: {} as unknown as Fga,
+      modelId: "m",
+      loadView: () => undefined,
+      instanceEpoch: "epoch-1503",
+    });
+    // Every enforcement entry the read path takes; the PDP is reached only through them.
+    const entered = [vi.spyOn(pep, "toolAction"), vi.spyOn(pep, "intake"), vi.spyOn(pep, "enforce")];
+    const routed = new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep,
+      payments: new PaymentsStore(),
+      loadView: () => undefined,
+      jwks: { keys: [jwk as never] },
+      keyRoles: { accessToken: ["estate-key"], attenuationRoot: [], transactionToken: [] },
+      issuer: ESTATE,
+      ordinaryOnly: true,
+      introspection: { endpoint, clientId: "gw", clientSecret: "s", timeoutMs: 500, cacheMaxSeconds: 0 },
+    });
+    const channel = await createHttpMcpChannel(routed, { masGoverned: true });
+    try {
+      // The response without `mission` opens a session for the opaque token.
+      const { sessionId, close } = await createHttpMediatedClient(channel.url, OPAQUE, holder);
+      try {
+        expect(sessionId).toBeTruthy();
+        answer = { ...answer, mission: { id: "msn_1503_estate", issuer: ESTATE } };
+        const res = await fetch(channel.url, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            authorization: `DPoP ${OPAQUE}`,
+            dpop: await dpopProofFor(holder, canonicalHtu(channel.url), "POST", OPAQUE),
+            "mcp-session-id": sessionId as string,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_invoice", arguments: { invoice_id: "inv-1" } } }),
+        });
+        const body = await res.text();
+        expect(res.status).toBe(401);
+        expect(JSON.parse(body)).toMatchObject({ error: "invalid_token" });
+        for (const spy of entered) expect(spy).not.toHaveBeenCalled();
+        expect(evidence.all()).toHaveLength(0);
+      } finally {
+        await close();
+      }
+    } finally {
+      await channel.close();
+    }
   });
 });
 
