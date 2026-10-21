@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T04:15:26Z
-Source repository commit: eab57c2ab8f6de53273bd7becb1963f88c1c07d2
+Generated: 2026-10-21T04:31:00Z
+Source repository commit: 57db616b9f2e92d047fba0919570a870e0f26a7b
 Member count: 7
 
 Reading order:
@@ -8605,8 +8605,9 @@ Table of Contents
       policy; AS policy decides whether the verified claims are
       acceptable for this request.
 
-   Supporting an evidence type is optional: an AS that supports none
-   refuses every presented entry under these rules (Section 18).
+   Supporting an evidence type is optional, but these rules are not: an
+   AS that supports none still applies them and refuses every presented
+   entry (Section 18.1).
 
    Mission Intent Submission Evidence for OAuth 2.0
    ([I-D.draft-mcguinness-oauth-mission-submission-evidence]) specifies:
@@ -12355,7 +12356,12 @@ Table of Contents
    A scope-only resource server is served only where the AS established
    a safe scope projection for it (Section 8.5).  A Mission Issuer can
    instead start from configured-mapping mode (Section 5), which is
-   equally conforming.  Neither starting point is a conformance class.
+   equally conforming.  Neither starting point is a conformance class,
+   and neither removes a surface: the Mission Issuer still implements
+   every surface its role lists (Section 18.1), the evidence dispatch
+   and refusal rules included even when it supports no evidence type,
+   and the deployment still provides the authenticated revocation means
+   of Section 7.3.
 
 18.1.  Conformance Roles
 
@@ -15214,6 +15220,12 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Editorial (#1479): Conformance says that neither starting point
+      removes a Mission Issuer surface, the evidence dispatch and
+      refusal rules included, or the deployment's revocation means;
+      Intent Submission Evidence says its rules apply when the AS
+      supports no evidence type.
 
    *  Editorial (#1472): a reader pass that changes no requirement.  The
       abstract leads with the object OAuth lacks, and its agent-identity
