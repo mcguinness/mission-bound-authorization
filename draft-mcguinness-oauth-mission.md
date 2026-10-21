@@ -2228,6 +2228,11 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
+The subsections follow one issuance: resolving the Mission from the
+presented grant ({{grant-binding}}), the checks every issuance passes
+({{issuance-gating}}), and the token ({{token-claims}}) and its
+response ({{token-response}}).
+
 ## Binding the Mission to the Grant {#grant-binding}
 
 A Mission is independent of any OAuth grant: it is identified
