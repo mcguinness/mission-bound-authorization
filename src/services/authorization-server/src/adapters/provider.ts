@@ -3414,12 +3414,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
-      // @spec device-authorization#approval: the verification page also
-      // names the requesting client from registration data, whether the AS
+      // @spec mission#approval-event (step 5, #1503): the rendering identifies
+      // the OAuth client that receives the authority from this AS's
+      // registration of the interaction's client, the one the decision
+      // commits, never from a value the request supplies.
+      // @spec device-authorization#approval: the verification page names the
+      // same client from the same registration, with whether the AS
       // authenticated it, the Subject, and the `user_code` to confirm.
-      const deviceClient =
-        deviceSession && deviceSubject ? await provider.Client.find(String(params.client_id)) : undefined;
-      if (deviceJti && !deviceClient) {
+      const registeredClient = await provider.Client.find(String(params.client_id));
+      if (!registeredClient) {
         ctx.status = 400;
         ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
         return;
@@ -3457,13 +3460,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         interactionMatch[1] as string,
         intent,
         authority,
+        { clientId: registeredClient.clientId, clientName: registeredClient.clientName },
         proposal,
         provenance,
         authoritySource,
-        deviceSession && deviceSubject && deviceClient
+        deviceSession && deviceSubject
           ? {
               userCode: formatUserCode(deviceSession.userCode),
-              client: deviceClientView(deviceClient),
+              client: deviceClientView(registeredClient),
               subject: deviceSubject,
             }
           : undefined,
@@ -5906,10 +5910,28 @@ function renderLines(lines: readonly string[], cls: string): string {
   return `<ul class="${cls}">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
 }
 
+/**
+ * @spec mission#approval-event (step 5, #1503): the OAuth client that receives
+ * the authority, identified from this AS's registration of it: the registered
+ * `client_id` and display name. Registration here is the deployment's static
+ * client configuration (no dynamic registration), so the registered name is
+ * the AS's, never text the client supplies. Every value is inert text.
+ */
+function renderRegisteredClient(client: { clientId: string; clientName?: string | undefined }): string {
+  const name = client.clientName
+    ? `<p>Registered name: <span class="client-name">${escapeHtml(client.clientName)}</span></p>`
+    : "";
+  return `<section class="receiving-client"><h2>Client receiving this authority (from this authorization server's registration)</h2>
+<p>Client ID: <code class="client-id">${escapeHtml(client.clientId)}</code></p>${name}</section>
+`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
   authority: readonly AuthorityEntry[],
+  /** @spec mission#approval-event (step 5): the receiving client, from the AS's registration. */
+  client: { clientId: string; clientName?: string | undefined },
   proposal?: unknown,
   provenance?: unknown[],
   authoritySource?: AuthoritySource,
@@ -5963,6 +5985,10 @@ function renderApprovalPage(
 <h2>Device code</h2><p>Code: <code class="user-code">${escapeHtml(device.userCode)}</code></p>
 `
     : "";
+  // @spec mission#approval-event (step 5, #1503): every other approval page
+  // names the receiving client from the AS's registration; the device page's
+  // own client section above names it from that same registration.
+  const clientSection = device ? "" : renderRegisteredClient(client);
   const deviceConfirmations = device
     ? `<label><input type="checkbox" name="confirm_user_code" value="true" required> This code matches the code the requesting client displays.</label>
 <label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
@@ -6003,7 +6029,7 @@ ${inheritance}`
       : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-${deviceSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}
