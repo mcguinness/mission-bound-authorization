@@ -1596,13 +1596,13 @@ requirements (<a href="#resource-access-type" class="auto internal xref">Section
 when it validates a proposed or carried entry (<a href="#conformance" class="auto internal xref">Section 13</a>); a
 resource server applies them where a rule says so.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <p id="section-3.1-2">A <code>resource</code> value under <code>prefix</code> <span class="bcp14">MUST NOT</span> carry a query or fragment
-component; the authorization server refuses such an entry with the
+component; the authorization server <span class="bcp14">MUST</span> refuse such an entry with the
 <code>invalid_authorization_details</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-5" class="relref">Section 5</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>).<a href="#section-3.1-2" class="pilcrow">¶</a></p>
 <p id="section-3.1-3">This type does not use the <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> common <code>locations</code> field:
 <code>resource</code> identifies where an entry applies. The authorization server
-refuses an entry carrying <code>locations</code> with the
+<span class="bcp14">MUST</span> refuse an entry carrying <code>locations</code> with the
 <code>invalid_authorization_details</code> error code.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
-<p id="section-3.1-4">The authorization server also refuses an entry with the
+<p id="section-3.1-4">The authorization server <span class="bcp14">MUST</span> also refuse an entry with the
 <code>invalid_authorization_details</code> error code when:<a href="#section-3.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-3.1-5.1">
@@ -1615,31 +1615,35 @@ form naming a non-empty host (<span><a href="https://rfc-editor.org/rfc/rfc9110#
 <span><a href="https://rfc-editor.org/rfc/rfc9110#section-4.2.2" class="relref">Section 4.2.2</a> of [<a href="#RFC9110" class="cite xref">RFC9110</a>]</span>);<a href="#section-3.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.3">
-            <p id="section-3.1-5.3.1">its <code>actions</code> array is empty, or one of its values is neither an
-action identifier nor an action family (<a href="#resource-access-type" class="auto internal xref">Section 3</a>);<a href="#section-3.1-5.3.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-5.3.1">its <code>resource_match</code> is a value the authorization server does not
+recognize (<a href="#resource-access-type" class="auto internal xref">Section 3</a>);<a href="#section-3.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.4">
-            <p id="section-3.1-5.4.1">its <code>delegation.max_depth</code> is not a non-negative integer, so a
-negative or fractional value is refused;<a href="#section-3.1-5.4.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-5.4.1">its <code>actions</code> array is empty, or one of its values is neither an
+action identifier nor an action family (<a href="#resource-access-type" class="auto internal xref">Section 3</a>);<a href="#section-3.1-5.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.5">
-            <p id="section-3.1-5.5.1">an <code>allowed_delegates</code> matcher carries neither <code>sub</code> nor
-<code>sub_profile</code>, or carries any other member
-(<a href="#matching-allowed-delegates" class="auto internal xref">Section 9.1</a>);<a href="#section-3.1-5.5.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-5.5.1">its <code>delegation.max_depth</code> is not a non-negative integer, so a
+negative or fractional value is refused;<a href="#section-3.1-5.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.6">
-            <p id="section-3.1-5.6.1">its <code>resource_contract</code> is not an object with exactly the members
-<code>id</code>, <code>version</code>, and <code>digest</code>, or one of them does not have the form
-<a href="#resource-access-type" class="auto internal xref">Section 3</a> gives it;<a href="#section-3.1-5.6.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-5.6.1">an <code>allowed_delegates</code> matcher carries neither <code>sub</code> nor
+<code>sub_profile</code>, or carries any other member
+(<a href="#matching-allowed-delegates" class="auto internal xref">Section 9.1</a>);<a href="#section-3.1-5.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.7">
-            <p id="section-3.1-5.7.1">its <code>time_window</code> Common Constraint has a <code>not_before</code> later than its
-<code>not_after</code>, a window that admits no instant; or<a href="#section-3.1-5.7.1" class="pilcrow">¶</a></p>
+            <p id="section-3.1-5.7.1">its <code>resource_contract</code> is not an object with exactly the members
+<code>id</code>, <code>version</code>, and <code>digest</code>, or one of them does not have the form
+<a href="#resource-access-type" class="auto internal xref">Section 3</a> gives it;<a href="#section-3.1-5.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-5.8">
-            <p id="section-3.1-5.8.1">its <code>recipient_domain</code> Common Constraint is not a DNS name in ASCII
+            <p id="section-3.1-5.8.1">its <code>time_window</code> Common Constraint has a <code>not_before</code> later than its
+<code>not_after</code>, a window that admits no instant; or<a href="#section-3.1-5.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.1-5.9">
+            <p id="section-3.1-5.9.1">its <code>recipient_domain</code> Common Constraint is not a DNS name in ASCII
 form, with each internationalized label in its A-label form, or ends
-in a dot.<a href="#section-3.1-5.8.1" class="pilcrow">¶</a></p>
+in a dot.<a href="#section-3.1-5.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-3.1-6">An A-label is as <span><a href="https://rfc-editor.org/rfc/rfc5890#section-2.3.2.1" class="relref">Section 2.3.2.1</a> of [<a href="#RFC5890" class="cite xref">RFC5890</a>]</span> defines it. Letter case
@@ -1649,9 +1653,10 @@ case-insensitively (<a href="#value-space-comparison" class="auto internal xref"
 <ul class="normal">
 <li class="normal" id="section-3.1-8.1">
             <p id="section-3.1-8.1.1">A <code>max_depth</code> of 0 admits the entry into no delegated token, since a
-delegated token's delegation depth is 1 or more
-(<a href="#delegate-eligibility" class="auto internal xref">Section 9</a>). Any other <code>delegation</code> member stays
-intact; a member a companion profile defines there, such as a
+delegated token's delegation depth is 1 or more (the Delegation
+Constraints section of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). Any
+other <code>delegation</code> member stays intact; a member a companion profile
+defines there, such as a
 child-creation grant, keeps the bound that profile gives it.<a href="#section-3.1-8.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.1-8.2">
@@ -2210,14 +2215,21 @@ otherwise.<a href="#section-5-3.3.2.2.1" class="pilcrow">¶</a></p>
           <p id="section-5-3.4.1"><strong>Contract.</strong> A carries <code>resource_contract</code> exactly when B does,
 and then with <code>id</code>, <code>version</code>, and <code>digest</code> each equal to B's
 (<a href="#resource-contract" class="auto internal xref">Section 8</a>). Removing, replacing, or adding a reference
-is never narrowing.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
+is never narrowing. The one exception is approval: where B is a
+policy ceiling without a reference, A can carry the reference the
+authorization server assembles from configuration before approval
+(<a href="#resource-contract" class="auto internal xref">Section 8</a>), since a policy ceiling need not carry one.
+Derivation from an approved entry has no exception: it preserves
+the reference exactly.<a href="#section-5-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
 <p id="section-5-4">The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
 narrows A only when it has defined semantics and the resource server
-serving A.<code>resource</code> can enforce it; an unknown key in A is never
-treated as narrowing (<a href="#common-constraints" class="auto internal xref">Section 6</a>).<a href="#section-5-4" class="pilcrow">¶</a></p>
+serving A.<code>resource</code> can enforce it. When A carries a key whose
+narrowing the authorization server does not implement, the
+authorization server refuses the derivation rather than removing the
+key or omitting the entry (<a href="#common-constraints" class="auto internal xref">Section 6</a>).<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">The authorization server <span class="bcp14">MUST</span> make this resource comparison with the
 same matcher, over the same URI forms, that resource servers use to
 enforce the entries (<a href="#resource-matching" class="auto internal xref">Section 4</a>), so that whenever A's
@@ -2305,7 +2317,8 @@ candidate entry from a ceiling entry by narrowing:<a href="#section-6-7" class="
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>); or<a href="#section-6-8.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-8.2">
-          <p id="section-6-8.2.1">an Authority Set entry to a derived or delegated token
+          <p id="section-6-8.2.1">an Authority Set entry to a derived token
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) or a delegated token
 (<a href="#delegate-eligibility" class="auto internal xref">Section 9</a>).<a href="#section-6-8.2.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
@@ -2843,13 +2856,10 @@ entry with it.<a href="#section-8-6.2.1" class="pilcrow">¶</a></p>
       </ul>
 <p id="section-8-7">A superseded or retired version is never current
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), so no new approval
-references one. The reference is assembled from configuration, not
-narrowed: a policy ceiling a proposal is narrowed against need not
-carry one, and step 4 of <a href="#subset" class="auto internal xref">Section 5</a> applies to entries derived from an
-approved entry. An authorization server that does not implement this
-section refuses a proposed or carried entry that carries
+references one. An authorization server that does not implement this
+section <span class="bcp14">MUST</span> refuse a proposed or carried entry that carries
 <code>resource_contract</code>, with the <code>invalid_authorization_details</code> error
-code, and never drops the member.<a href="#section-8-7" class="pilcrow">¶</a></p>
+code, and <span class="bcp14">MUST NOT</span> drop the member.<a href="#section-8-7" class="pilcrow">¶</a></p>
 <p id="section-8-8"><strong>Preservation.</strong> The reference is part of the entry, so
 <code>authority_hash</code> commits it (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).
 Every derivation, narrowing, and delegation preserves it exactly
@@ -2923,14 +2933,14 @@ a list, the list permits it too.<a href="#section-9-5" class="pilcrow">¶</a></p
 <p id="section-9-6">An approved entry derived from a ceiling entry without
 <code>allowed_delegates</code> inherits the policy decision even when the approved
 proposal added a list, so the approved entry's own members do not
-reveal the obligation. The authorization server therefore records, when
-it derives the Authority Set, which approved entries inherit the policy
-decision, and retains that provenance with the Mission. It evaluates
-every later exchange against the approved entry in the Mission Record
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and that provenance, never
-against a presented token alone. Where it cannot resolve either, the
-entry narrows out of the delegated token. A cross-domain grant conveys
-no such provenance.<a href="#section-9-6" class="pilcrow">¶</a></p>
+reveal the obligation. The authorization server therefore <span class="bcp14">MUST</span> record,
+when it derives the Authority Set, which approved entries inherit the
+policy decision, and <span class="bcp14">MUST</span> retain that provenance with the Mission. It
+evaluates every later exchange against the approved entry in the
+Mission Record (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and that
+provenance, never against a presented token alone. Where it cannot
+resolve either, the entry narrows out of the delegated token. A
+cross-domain grant conveys no such provenance.<a href="#section-9-6" class="pilcrow">¶</a></p>
 <div id="matching-allowed-delegates">
 <section id="section-9.1">
         <h3 id="name-matching-allowed_delegates">
@@ -3087,8 +3097,8 @@ specifies, and the Common Constraint intersection rules of
 <a href="#common-constraints" class="auto internal xref">Section 6</a> are fully defined. An authorization server <span class="bcp14">MUST NOT</span> declare <code>narrowing</code> as <code>true</code> unless it implements these rules for
 every Common Constraint of <a href="#initial-common-constraints" class="auto internal xref">Section 6.1</a>. The
 declaration does not require a Common Constraint registered later; an
-authorization server fails closed on one it does not support
-(<a href="#common-constraints" class="auto internal xref">Section 6</a>).<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
+authorization server that does not support one refuses any derivation
+that carries it (<a href="#common-constraints" class="auto internal xref">Section 6</a>).<a href="#section-11-3.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-11-3.3">
@@ -3260,12 +3270,29 @@ rules (<a href="#subset" class="auto internal xref">Section 5</a>, <a href="#com
 omits <code>scope</code> or refuses issuance to a scope-only target, as that
 document requires for any type without a declared projection.<a href="#section-13-6" class="pilcrow">¶</a></p>
 <p id="section-13-7">A <strong>resource server</strong> conforms by implementing the enforcement duties of
-<a href="#rs-enforcement" class="auto internal xref">Section 7</a>: exact or prefix resource matching, action and
-action-family matching, and every carried <code>constraints</code> key, failing
-closed on a member, matching mode, or key it does not implement. A
-resource server does not implement narrowing, delegate eligibility, or
+<a href="#rs-enforcement" class="auto internal xref">Section 7</a>, failing closed on a member, matching mode, or key it
+does not implement:<a href="#section-13-7" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-13-8.1">
+          <p id="section-13-8.1.1">the operation-target duties of <a href="#resource-matching" class="auto internal xref">Section 4</a>: establishing
+the target from its operation contract, refusing an operation without
+one unambiguous target, and executing the operation on the target it
+matched;<a href="#section-13-8.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-8.2">
+          <p id="section-13-8.2.1">exact or prefix resource matching, and action and action-family
+matching;<a href="#section-13-8.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-8.3">
+          <p id="section-13-8.3.1">enforcement of every carried <code>constraints</code> key it implements; and<a href="#section-13-8.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-8.4">
+          <p id="section-13-8.4.1"><code>resource_contract</code> enforcement (<a href="#resource-contract" class="auto internal xref">Section 8</a>).<a href="#section-13-8.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-13-9">A resource server does not implement narrowing, delegate eligibility, or
 the Transformation Capabilities declaration; those are the authorization
-server's and do not bear on a resource server's conformance.<a href="#section-13-7" class="pilcrow">¶</a></p>
+server's and do not bear on a resource server's conformance.<a href="#section-13-9" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="security-considerations">
@@ -3347,10 +3374,8 @@ after the comparison, changes which characters count as separators
 and can move the boundary (<a href="#resource-matching" class="auto internal xref">Section 4</a>).<a href="#section-14.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-14.1-3">A deployment <span class="bcp14">MAY</span> agree out of band on the canonicalization profile its
-authorization server and resource servers apply; this document defines
-one rule (<a href="#resource-matching" class="auto internal xref">Section 4</a>), so no profile identifier is required
-for interoperation.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
+<p id="section-14.1-3">This document defines one rule (<a href="#resource-matching" class="auto internal xref">Section 4</a>), so
+interoperation requires no canonicalization profile identifier.<a href="#section-14.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="action-family-growth">
@@ -3379,11 +3404,37 @@ actions approves or derives literal actions rather than a family.<a href="#secti
       <h2 id="name-privacy-considerations">
 <a href="#section-15" class="section-number selfRef">15. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
       </h2>
-<p id="section-15-1">This document defines no data element beyond what
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> carries in
-<code>authorization_details</code>, and that document's Privacy Considerations
-apply unchanged. An entry's <code>resource</code>, <code>actions</code>, and <code>constraints</code>
-values are as privacy-sensitive as the Authority Set that carries them.<a href="#section-15-1" class="pilcrow">¶</a></p>
+<p id="section-15-1">The Privacy Considerations of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>
+apply to every <code>mission_resource_access</code> entry as part of the Authority
+Set that carries it. Every party that receives an entry, such as the
+client and the resource server, sees each of its members, including the
+following data elements this type adds:<a href="#section-15-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-15-2.1">
+          <p id="section-15-2.1.1"><strong>Contract identifiers and versions.</strong> A <code>resource_contract</code>
+reference names a contract and the version an entry was approved
+under. Both can identify the service a task uses, and the version can
+date the approval.<a href="#section-15-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.2">
+          <p id="section-15-2.2.1"><strong>Resource and constraint values.</strong> A <code>resource</code> value can name an
+individual record or account (<code>https://api.example/orders/123</code>), and
+<code>tenant</code>, <code>recipient_domain</code>, and <code>data_classification</code> values can
+identify an organization, the domains a task sends to, and the
+sensitivity of the data it touches.<a href="#section-15-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.3">
+          <p id="section-15-2.3.1"><strong>Delegate identifiers.</strong> An <code>allowed_delegates</code> <code>sub</code> matcher names
+a specific client. A resource server receives it with the entry
+although it can disregard <code>delegation</code> (<a href="#rs-enforcement" class="auto internal xref">Section 7</a>).<a href="#section-15-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-15-2.4">
+          <p id="section-15-2.4.1"><strong>Metadata fingerprinting.</strong> A protected resource's
+<code>mission_constraints_supported</code> metadata
+(<a href="#protected-resource-metadata" class="auto internal xref">Section 7.1</a>) is published, and the keys it lists
+can fingerprint the resource's software or policy.<a href="#section-15-2.4.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
 </section>
 </div>
 <div id="iana">
@@ -3400,9 +3451,7 @@ values are as privacy-sensitive as the Authority Set that carries them.<a href="
 (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-2" class="relref">Section 2</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), defined in <a href="#resource-access-type" class="auto internal xref">Section 3</a>.
 <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> establishes no IANA registry of such types (the
 authorization server interprets type identifiers), so this document
-requests no IANA action for it. If a registry of authorization details
-types is established in the future, this type <span class="bcp14">SHOULD</span> be registered in
-it.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
+requests no IANA action for it.<a href="#section-16.1-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="oauth-protected-resource-metadata-registration">
@@ -3435,9 +3484,10 @@ document<a href="#section-16.2-2.4.1" class="pilcrow">¶</a></p>
         <h3 id="name-common-constraints-registry">
 <a href="#section-16.3" class="section-number selfRef">16.3. </a><a href="#name-common-constraints-registry" class="section-name selfRef">Common Constraints Registry</a>
         </h3>
-<p id="section-16.3-1">This document establishes the "Mission Common Constraints" registry. The
-registration policy is Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>). The
-Designated Expert checks that a submission:<a href="#section-16.3-1" class="pilcrow">¶</a></p>
+<p id="section-16.3-1">This document establishes the "Mission Common Constraints" registry in
+the "OAuth Parameters" registry group. The registration policy is
+Specification Required (<span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>). The Designated Experts check that
+a submission:<a href="#section-16.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16.3-2.1">
             <p id="section-16.3-2.1.1">uses a name matching <code>^[A-Za-z0-9_.:-]+$</code> that is not already
@@ -3450,18 +3500,22 @@ implementations to agree on;<a href="#section-16.3-2.2.1" class="pilcrow">¶</a>
           <li class="normal" id="section-16.3-2.3">
             <p id="section-16.3-2.3.1">states a subset rule and an intersection rule, both in value-space
 terms (<a href="#value-space-comparison" class="auto internal xref">Section 6.2</a>), with the intersection of any two
-valid values never broader than either operand; and<a href="#section-16.3-2.3.1" class="pilcrow">¶</a></p>
+valid values never broader than either operand;<a href="#section-16.3-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.3-2.4">
-            <p id="section-16.3-2.4.1">states the input the constraint reads at the point of use and the
-predicate that input meets, in value-space terms, precisely enough for
-independent resource servers to agree on which operations are within
-the bound.<a href="#section-16.3-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-16.3-2.4.1">names the value, if any, that is equivalent to omitting the member;
+and<a href="#section-16.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-2.5">
+            <p id="section-16.3-2.5.1">states the input the constraint reads at the point of use and the
+predicate that input meets, in value-space terms, precisely enough
+that independent resource servers, given the same declared policy and
+authoritative inputs, agree on which operations are within the bound.<a href="#section-16.3-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-16.3-3">A specification-defined name is coordinated through this registry. Any
-other <code>constraints</code> member name is either collision-resistant or
-deployment-defined, and stays outside the registry.<a href="#section-16.3-3" class="pilcrow">¶</a></p>
+other <code>constraints</code> member name is deployment-defined and stays outside
+the registry.<a href="#section-16.3-3" class="pilcrow">¶</a></p>
 <p id="section-16.3-4">Each registration records:<a href="#section-16.3-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16.3-5.1">
@@ -3486,17 +3540,23 @@ result no broader than either operand.<a href="#section-16.3-5.4.1" class="pilcr
 within the bound.<a href="#section-16.3-5.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.3-5.7">
-            <p id="section-16.3-5.7.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
-registration.<a href="#section-16.3-5.7.1" class="pilcrow">¶</a></p>
+            <p id="section-16.3-5.7.1"><strong>Omission-Equivalent Value</strong>: the value that is equivalent to
+omitting the member (<a href="#subset" class="auto internal xref">Section 5</a>), or "none".<a href="#section-16.3-5.7.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-16.3-5.8">
-            <p id="section-16.3-5.8.1"><strong>Reference</strong>: the specification defining the key.<a href="#section-16.3-5.8.1" class="pilcrow">¶</a></p>
+            <p id="section-16.3-5.8.1"><strong>Change Controller</strong>: IETF, or the registrant for any other
+registration.<a href="#section-16.3-5.8.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-16.3-5.9">
+            <p id="section-16.3-5.9.1"><strong>Reference</strong>: the specification defining the key.<a href="#section-16.3-5.9.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-16.3-6">The registry's initial contents are the Common Constraints of
-<a href="#initial-common-constraints" class="auto internal xref">Section 6.1</a>. For each, the Change Controller is IETF
-and the Reference is <a href="#initial-common-constraints" class="auto internal xref">Section 6.1</a> of this document,
-which holds the full text the tables summarize.<a href="#section-16.3-6" class="pilcrow">¶</a></p>
+<a href="#initial-common-constraints" class="auto internal xref">Section 6.1</a>. For each, the Change Controller is IETF,
+the Reference is <a href="#initial-common-constraints" class="auto internal xref">Section 6.1</a> of this document, which
+holds the full text the tables summarize, and the Omission-Equivalent
+Value is "none", except for <code>requires_action_approval</code>, whose
+Omission-Equivalent Value is <code>false</code>.<a href="#section-16.3-6" class="pilcrow">¶</a></p>
 <span id="name-initial-mission-common-cons"></span><table class="center" id="table-5">
           <caption>
 <a href="#table-5" class="selfRef">Table 5</a>:
@@ -3801,7 +3861,8 @@ including Decimal Values; Resource Matching, with the operation
 target, the operation contract, literal <code>exact</code> matching, and
 normalized <code>prefix</code> matching; the Subset Rule; Common Constraints,
 with nine initial constraints, Value-Space Comparison, and the
-Mission Common Constraints registry; Resource Server Enforcement and
+Mission Common Constraints registry, which records each constraint's
+omission-equivalent value; Resource Server Enforcement and
 the <code>mission_constraints_supported</code> metadata member; Resource
 Contracts; Delegate Eligibility and <code>allowed_delegates</code> matching; the
 type's scope-projection safety conditions and Transformation

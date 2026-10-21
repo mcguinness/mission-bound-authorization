@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T22:46:23Z
-Source repository commit: 0c6132679c6df9cd495a6dd1602facddea523dab
+Generated: 2026-10-21T22:56:16Z
+Source repository commit: 9843625ccb77f87e9527dde0495737c0464330a4
 Member count: 7
 
 Reading order:
@@ -11861,10 +11861,17 @@ Table of Contents
       approval_basis is provenance: none of the record's integrity
       anchors, such as intent_hash, authority_hash or proposal_hash,
       covers it (Section 15.1); a profile that commits the Mission
-      Record itself covers it under that profile's own anchor.  Its
-      disclosure through introspection follows Section 11.1.  It is not
-      carried on the baseline mission claim (Section 8.8), and it MUST
-      NOT be relied on to grant or widen authority wherever it does
+      Record itself covers it under that profile's own anchor.  Two
+      optional profiles commit it (Section 20.1.1).  Mission Audit
+      Transparency's approval-event registration
+      ([I-D.draft-mcguinness-mission-audit]) covers the record at
+      creation except its state and termination.  Approval Governance's
+      Approval Context Commitment
+      ([I-D.draft-mcguinness-mission-approval-governance]) covers a
+      closed manifest of creation facts that includes approval_basis.
+      Its disclosure through introspection follows Section 11.1.  It is
+      not carried on the baseline mission claim (Section 8.8), and it
+      MUST NOT be relied on to grant or widen authority wherever it does
       appear.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
@@ -12723,6 +12730,17 @@ Table of Contents
    evidence out of band.  Such a commitment binds the structured
    disclosure the AS records, not the presentation itself; it narrows
    this gap for audit but does not close it.
+
+   The anchors do not commit the approval basis either: who consented,
+   who activated the Mission, and under which basis (Section 14).  The
+   record's immutability protects it, and only the AS enforces that.  A
+   deployment that needs the approval basis checkable outside the AS can
+   register the approval event under Mission Audit Transparency
+   [I-D.draft-mcguinness-mission-audit], whose registration covers the
+   record at creation except its state and termination, or carry the
+   Approval Context Commitment of
+   [I-D.draft-mcguinness-mission-approval-governance], whose closed
+   manifest includes the approval basis, in a signed artifact.
 
 20.1.2.  Downgrade by Omission
 
@@ -15477,8 +15495,10 @@ Appendix G.  Document History
    from an issuer it trusts for Mission-bound authorization, with
    mission.issuer equal to iss outside an adopted cross-domain profile;
    the approval rendering identifies the receiving client from
-   information the AS trusts; and a refresh request beyond its grant is
-   refused, never trimmed (#1503).
+   information the AS trusts; a refresh request beyond its grant is
+   refused, never trimmed (#1503); and the approval basis named as
+   outside the integrity anchors, with the profiles that commit it
+   (#1518).
 
    *Editorial and structure.* The reading path (#910, #1379);
    readability, placement and consolidation passes (#876, #1409, #1447,
