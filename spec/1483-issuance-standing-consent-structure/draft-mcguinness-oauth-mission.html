@@ -1942,10 +1942,10 @@ approved Authority Set.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
 </td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">Direct approval and the Mission Record (AS)</td>
-              <td class="text-left" rowspan="1" colspan="1">Every direct approval event</td>
+              <td class="text-left" rowspan="1" colspan="1">Direct approval (AS); the Mission Record (AS)</td>
+              <td class="text-left" rowspan="1" colspan="1">Every direct approval event; the Mission Record at every approval event</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#direct-approval-steps" class="auto internal xref">Section 6.2</a>
+                <a href="#direct-approval-steps" class="auto internal xref">Section 6.2</a>, <a href="#mission-record" class="auto internal xref">Section 14</a>
 </td>
             </tr>
             <tr>
@@ -1978,7 +1978,7 @@ approved Authority Set.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">Scope projection (AS)</td>
-              <td class="text-left" rowspan="1" colspan="1">Every issuance that emits <code>scope</code>; a <code>scope</code>-only target gets a safe projection or a refusal</td>
+              <td class="text-left" rowspan="1" colspan="1">Every issuance that emits <code>scope</code> or whose request names a <code>scope</code> value; a <code>scope</code>-only target gets a safe projection or a refusal</td>
               <td class="text-left" rowspan="1" colspan="1">
                 <a href="#scope-projection" class="auto internal xref">Section 8.7</a>
 </td>
@@ -1994,7 +1994,7 @@ approved Authority Set.<a href="#section-1.1-4" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">Sender constraint, delegation and cross-domain (AS, RS)</td>
               <td class="text-left" rowspan="1" colspan="1">The token presented for a designation is sender-constrained, and the designation carries no <code>cnf</code>; a delegated token is bound to the delegate's own key; across trust domains, as the cross-domain companion requires</td>
               <td class="text-left" rowspan="1" colspan="1">
-                <a href="#designation" class="auto internal xref">Section 12.1</a>, <a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>
+                <a href="#designation" class="auto internal xref">Section 12.1</a>, <a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>, <a href="#token-claims" class="auto internal xref">Section 8.3</a>
 </td>
             </tr>
             <tr>
@@ -2199,7 +2199,7 @@ undo a completed read (<a href="#revocation" class="auto internal xref">Section 
 <p id="section-2.1.1-4">An ERP that instead introspects on every request stops honoring the
 token on its next request after revocation, through the composite
 <code>active</code> result (<a href="#composite-active" class="auto internal xref">Section 11.2</a>).<a href="#section-2.1.1-4" class="pilcrow">¶</a></p>
-<p id="section-2.1.1-5">The later message examples use Appendix A's separate Q3
+<p id="section-2.1.1-5">The later message examples use the end-to-end example's separate Q3
 reconciliation Mission (<a href="#e2e-example" class="auto internal xref">Appendix A</a>), whose approved authority
 includes invoice reads and bounded journal writes. Its identifiers and
 timeline differ from this introductory example.<a href="#section-2.1.1-5" class="pilcrow">¶</a></p>
@@ -2746,8 +2746,8 @@ that never traverses a user agent, and preserves:<a href="#section-4.2-6.3.1" cl
 </li>
               <li class="normal" id="section-4.2-6.3.2.4">
                 <p id="section-4.2-6.3.2.4.1">the approval-event rules for the Mission's approval basis
-(<a href="#approval-event" class="auto internal xref">Section 6</a>, with a direct approval relocated only as
-<a href="#extensibility" class="auto internal xref">Section 16</a> permits); and<a href="#section-4.2-6.3.2.4.1" class="pilcrow">¶</a></p>
+(<a href="#approval-event" class="auto internal xref">Section 6</a>, <a href="#standing-consent-instances" class="auto internal xref">Section 13.1</a>, with a direct
+approval relocated only as <a href="#extensibility" class="auto internal xref">Section 16</a> permits); and<a href="#section-4.2-6.3.2.4.1" class="pilcrow">¶</a></p>
 </li>
               <li class="normal" id="section-4.2-6.3.2.5">
                 <p id="section-4.2-6.3.2.5.1">the grant binding (<a href="#grant-binding" class="auto internal xref">Section 8.1</a>).<a href="#section-4.2-6.3.2.5.1" class="pilcrow">¶</a></p>
@@ -3510,7 +3510,7 @@ a mix-up attack on the consent-bearing redirect leg (<span>[<a href="#RFC9700" c
         <h3 id="name-direct-approval-steps">
 <a href="#section-6.2" class="section-number selfRef">6.2. </a><a href="#name-direct-approval-steps" class="section-name selfRef">Direct Approval Steps</a>
         </h3>
-<p id="section-6.2-1">The steps fall into four phases. Steps 1 to 3 establish the Approver,
+<p id="section-6.2-1">Steps 1 to 3 establish the Approver,
 the Subject and the authority source, and check the derived Authority
 Set against that source. Step 4 establishes the effective expiry.
 Step 5 renders the derived Authority Set for consent, and
@@ -3524,9 +3524,7 @@ procedure, commit the Mission (<a href="#approval-commit" class="auto internal x
 <p id="section-6.2-3">The steps of this section define the <code>direct</code> approval basis
 (<code>approval_basis</code>, <a href="#mission-record" class="auto internal xref">Section 14</a>); a companion profile that
 relocates a direct approval keeps them unchanged (<a href="#extensibility" class="auto internal xref">Section 16</a>).<a href="#section-6.2-3" class="pilcrow">¶</a></p>
-<p id="section-6.2-4">Refusals follow <a href="#error-mapping" class="auto internal xref">Section 10</a>. A token-endpoint <code>resource</code> value
-outside the Authority Set is an invalid <code>resource</code> value in the sense
-of <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
+<p id="section-6.2-4">Refusals follow <a href="#error-mapping" class="auto internal xref">Section 10</a>.<a href="#section-6.2-4" class="pilcrow">¶</a></p>
 <div id="approval-preparation">
 <section id="section-6.2.1">
           <h4 id="name-prepare-the-approval">
@@ -3654,8 +3652,8 @@ completion error each flow defines.<a href="#section-6.2.2-2.2.1" class="pilcrow
 cryptographic digest, exactly the authority the Approver approved.<a href="#section-6.2.2-3" class="pilcrow">¶</a></p>
 <p id="section-6.2.2-4">The Mission Record is what approval leaves behind: the approved
 content and its commitments (the approved Mission Intent, the
-Authority Set, and the integrity anchors over them); the accountable
-principals (the Subject, the approved agent's <code>client_id</code>, and the
+Authority Set, and the integrity anchors over them); the principals
+(the Subject, the approved agent's <code>client_id</code>, and the
 <code>approval_basis</code> naming who consented and how); the authority source;
 the issuer's provenance (the policy version and the approval event's
 identifier); and the Mission's expiry and lifecycle state.
@@ -4174,8 +4172,9 @@ enforcement obligations.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 <p id="section-8-3">A deployment whose AS can issue neither deploys a Mission Authority
 Server (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), which
 governs ordinary tokens at the enforcement layer.<a href="#section-8-3" class="pilcrow">¶</a></p>
-<p id="section-8-4">The subsections follow one issuance: resolving the Mission from the
-presented grant (<a href="#grant-binding" class="auto internal xref">Section 8.1</a>), the checks every issuance passes
+<p id="section-8-4">The first four subsections follow one issuance: resolving the Mission
+from the presented grant (<a href="#grant-binding" class="auto internal xref">Section 8.1</a>), the checks every issuance
+passes
 (<a href="#issuance-gating" class="auto internal xref">Section 8.2</a>), and the token (<a href="#token-claims" class="auto internal xref">Section 8.3</a>) and its
 response (<a href="#token-response" class="auto internal xref">Section 8.4</a>).<a href="#section-8-4" class="pilcrow">¶</a></p>
 <div id="grant-binding">
@@ -4530,7 +4529,9 @@ with the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>r
 with <code>scope</code>; the AS narrows the Authority Set under <a href="#subset" class="auto internal xref">Section 5.4</a> to the
 requested resource(s) and sets <code>aud</code> accordingly.<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 </div>
-<p id="section-8.4-2">Three identifiers stay distinct. An entry's <code>resource</code>, where its type
+<p id="section-8.4-2">A token-endpoint <code>resource</code> value outside the Authority Set is an
+invalid <code>resource</code> value in the sense of <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
+<p id="section-8.4-3">Three identifiers stay distinct. An entry's <code>resource</code>, where its type
 defines one, names the protected resource its authority covers, and a
 resource server matches each request's operation target against it
 under the entry's type (for
@@ -4538,8 +4539,8 @@ under the entry's type (for
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). A token
 request's <code>resource</code> parameter (<span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>) selects the audience the
 client asks for. The token's <code>aud</code> names the recipients that accept
-the token.<a href="#section-8.4-2" class="pilcrow">¶</a></p>
-<p id="section-8.4-3">The AS returns the granted <code>authorization_details</code> in every token
+the token.<a href="#section-8.4-3" class="pilcrow">¶</a></p>
+<p id="section-8.4-4">The AS returns the granted <code>authorization_details</code> in every token
 response, including refresh and Token Exchange responses
 (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-7" class="relref">Section 7</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Strengthening <span><a href="https://rfc-editor.org/rfc/rfc9396#section-7" class="relref">Section 7</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>,
 the AS <span class="bcp14">MUST NOT</span> omit values from it: the response states exactly the
@@ -4547,15 +4548,15 @@ the AS <span class="bcp14">MUST NOT</span> omit values from it: the response sta
 authoritative statement of what was granted, which the client
 compares with its proposal (<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>). The
 <code>mission_id</code> response parameter carries the Mission reference beside
-it (<a href="#mission-response-parameters" class="auto internal xref">Section 8.1.4</a>).<a href="#section-8.4-3" class="pilcrow">¶</a></p>
-<p id="section-8.4-4">The following is an example of a refresh request that narrows the
+it (<a href="#mission-response-parameters" class="auto internal xref">Section 8.1.4</a>).<a href="#section-8.4-4" class="pilcrow">¶</a></p>
+<p id="section-8.4-5">The following is an example of a refresh request that narrows the
 canonical ERP Mission (the worked example of <a href="#mission-record" class="auto internal xref">Section 14</a>) to a
 read-only token with the <span>[<a href="#RFC8707" class="cite xref">RFC8707</a>]</span> <code>resource</code> parameter and the
 <code>authorization_details</code> parameter (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). The ERP
 consumes <code>authorization_details</code>, so a resource <code>scope</code> for it would
 be refused (<a href="#scope-projection" class="auto internal xref">Section 8.7</a>). Extra line breaks are for display
-purposes only:<a href="#section-8.4-4" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-8.4-5">
+purposes only:<a href="#section-8.4-5" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-8.4-6">
 <pre>
 POST /token HTTP/1.1
 Host: as.example.com
@@ -4566,11 +4567,11 @@ grant_type=refresh_token
 &amp;refresh_token=rt_4mN8qV2xP7sL1tY9zB3k
 &amp;resource=https%3A%2F%2Ferp.example.com
 &amp;authorization_details=%5B%7B%22type%22%3A%22mission_resource_acc...
-</pre><a href="#section-8.4-5" class="pilcrow">¶</a>
+</pre><a href="#section-8.4-6" class="pilcrow">¶</a>
 </div>
-<p id="section-8.4-6">The <code>authorization_details</code> value, before form encoding, requests the
-Mission's read entry alone:<a href="#section-8.4-6" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.4-7">
+<p id="section-8.4-7">The <code>authorization_details</code> value, before form encoding, requests the
+Mission's read entry alone:<a href="#section-8.4-7" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.4-8">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -4585,16 +4586,16 @@ Mission's read entry alone:<a href="#section-8.4-6" class="pilcrow">¶</a></p>
       "allowed_delegates": [{ "sub_profile": "ai_agent" }]
     } }
 ]
-</pre><a href="#section-8.4-7" class="pilcrow">¶</a>
+</pre><a href="#section-8.4-8" class="pilcrow">¶</a>
 </div>
-<p id="section-8.4-8">The issuance is a derivation, gated on the Mission being <code>active</code>
+<p id="section-8.4-9">The issuance is a derivation, gated on the Mission being <code>active</code>
 (<a href="#issuance-gating" class="auto internal xref">Section 8.2</a>). The following example shows the token response.
 It carries no <code>scope</code> member because none was requested or granted, and
 it echoes the narrowed grant and the <code>mission_id</code> reference
 (<a href="#mission-response-parameters" class="auto internal xref">Section 8.1.4</a>). The emitted entry is a subset
 (<a href="#subset" class="auto internal xref">Section 5.4</a>) of the Mission's read entry, its <code>constraints</code> carried
-intact:<a href="#section-8.4-8" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-8.4-9">
+intact:<a href="#section-8.4-9" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-8.4-10">
 <pre>
 {
   "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImF0K2p3dCJ9...",
@@ -4616,7 +4617,7 @@ intact:<a href="#section-8.4-8" class="pilcrow">¶</a></p>
       } }
   ]
 }
-</pre><a href="#section-8.4-9" class="pilcrow">¶</a>
+</pre><a href="#section-8.4-10" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -4675,9 +4676,9 @@ domain.<a href="#section-8.6-4" class="pilcrow">¶</a></p>
 <a href="#section-8.7" class="section-number selfRef">8.7. </a><a href="#name-scope-projection" class="section-name selfRef">Scope Projection</a>
         </h3>
 <p id="section-8.7-1">This section applies to every issuance that emits <code>scope</code> on a
-Mission-bound token, and to issuance for a target that consumes only
-<code>scope</code>: such a target receives a safe projection or a refusal (step 5
-below).<a href="#section-8.7-1" class="pilcrow">¶</a></p>
+Mission-bound token or whose request names a <code>scope</code> value, and to
+issuance for a target that consumes only <code>scope</code>: such a target
+receives a safe projection or a refusal (step 5 below).<a href="#section-8.7-1" class="pilcrow">¶</a></p>
 <p id="section-8.7-2">For every target audience, the AS <span class="bcp14">MUST</span> establish that the effective
 rights the target's enforcement path grants from the projected
 <code>scope</code>, together with every independently mandatory control on that
@@ -5276,7 +5277,7 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
 </td>
           </tr>
           <tr>
-            <td class="text-left" rowspan="1" colspan="1">Authorization or token request: invalid, unknown, or malformed actual RFC 8707 <code>resource</code> parameter, or a token-endpoint <code>resource</code> outside the Mission's Authority Set (<a href="#direct-approval-steps" class="auto internal xref">Section 6.2</a>)</td>
+            <td class="text-left" rowspan="1" colspan="1">Authorization or token request: invalid, unknown, or malformed actual RFC 8707 <code>resource</code> parameter, or a token-endpoint <code>resource</code> outside the Mission's Authority Set (<a href="#token-response" class="auto internal xref">Section 8.4</a>)</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_target</code> (<span><a href="https://rfc-editor.org/rfc/rfc8707#section-2" class="relref">Section 2</a> of [<a href="#RFC8707" class="cite xref">RFC8707</a>]</span>). Detail: safe <code>error_description</code>
 </td>
@@ -6279,7 +6280,8 @@ standing-consent basis. Under it, a template or policy activates
 Mission instances against an accountable human's earlier approval,
 with no fresh human approval per instance; each instance is still
 created at its own approval event (<a href="#approval-event" class="auto internal xref">Section 6</a>). The following
-<code>type</code> values are such bases:<a href="#section-13-1" class="pilcrow">¶</a></p>
+<code>approval_basis.type</code> values (<a href="#record-principal-members" class="auto internal xref">Section 14.3</a>) are such
+bases:<a href="#section-13-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-2.1">
           <p id="section-13-2.1.1"><code>template</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>):
@@ -6333,8 +6335,8 @@ request's own uncorroborated assertion.<a href="#section-13-6.2.1" class="pilcro
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-13-7">The <code>adjudication</code> member (<a href="#mission-record" class="auto internal xref">Section 14</a>), where present,
-follows the basis. Where a companion profile defining a
+<p id="section-13-7">The <code>adjudication</code> member (<a href="#record-principal-members" class="auto internal xref">Section 14.3</a>), where
+present, follows the basis. Where a companion profile defining a
 standing-consent <code>type</code> populates <code>adjudication</code>, <code>kind</code> <span class="bcp14">MUST</span> be
 <code>policy</code>, naming the identity and version of the policy or workflow
 that adjudicated the instance. A companion profile <span class="bcp14">MUST NOT</span> flatten a
@@ -7669,7 +7671,7 @@ claiming this capability preserves, across the hop:<a href="#section-19.2-2.3.1"
               <li id="section-19.2-2.3.2.3">
                 <p id="section-19.2-2.3.2.3.1">projection performed only by, or under the authorization of, the
 Mission <code>issuer</code>, gated on the Mission's <code>active</code> state
-(<a href="#lifecycle" class="auto internal xref">Section 7</a>); and<a href="#section-19.2-2.3.2.3.1" class="pilcrow">¶</a></p>
+(<a href="#lifecycle" class="auto internal xref">Section 7</a>, <a href="#issuance-gating" class="auto internal xref">Section 8.2</a>); and<a href="#section-19.2-2.3.2.3.1" class="pilcrow">¶</a></p>
 </li>
               <li id="section-19.2-2.3.2.4">
                 <p id="section-19.2-2.3.2.4.1">projected credential lifetimes capped by the Mission's
@@ -10993,7 +10995,8 @@ in Prepare the Approval (steps 1 to 5) and Commit the Mission (steps
 6 and 7), which says what approval leaves behind. The Implementation
 Map gains an applicability table in place of its conditional-duty
 list; Scope Projection opens with when it applies; the introductory
-walk says the later examples follow a separate Mission.<a href="#appendix-G-3.1.1" class="pilcrow">¶</a></p>
+walk says the later examples follow a separate Mission. The
+token-endpoint <code>resource</code> rule moves to Audience and Token Response.<a href="#appendix-G-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.2">
           <p id="appendix-G-3.2.1">Editorial (#1479): Conformance says that neither starting point
@@ -11820,7 +11823,7 @@ home (<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a> a
 submission trust rule, <a href="#introspection" class="auto internal xref">Section 11</a> for the RFC 7662
 deviation, the (since relocated) Resource Boundary Canonicalization
 section for the
-single-normalization rule, <a href="#lifecycle" class="auto internal xref">Section 7</a> for short-lifetime
+single-normalization rule, <a href="#issuance-gating" class="auto internal xref">Section 8.2</a> for short-lifetime
 guidance). The rejected <code>client_id</code>-freezing narrative compressed
 to its design rationale; spec-archaeology sentences removed in
 favor of this history; the Mission Drift consideration folded

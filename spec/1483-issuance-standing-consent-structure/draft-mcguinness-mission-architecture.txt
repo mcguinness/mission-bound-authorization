@@ -503,7 +503,7 @@ Table of Contents
    including one it does not recognize, as non-active, so an
    unrecognized state fails safe, and a reason it does not recognize
    still leaves the Mission terminated (the OAuth binding's Mission
-   Lifecycle and Gating and Mission Termination sections).
+   Lifecycle and Mission Termination sections).
 
    AAuth has its own counterparts to the OAuth commitment and lifecycle.
    Its exact-byte s256 commits the private approved mission blob.  The
@@ -1807,13 +1807,13 @@ Table of Contents
    *Only active permits*:  Issuance, refresh, and every new positive
       governance decision require the exact state active; every other
       state, including an unrecognized one, fails safe (the OAuth
-      binding's Mission Lifecycle and Gating section).  A state-aware
-      consumer relies only while it observes active; a state-unaware
-      consumer retains the bounded materialized-credential residual
-      (Section 10.4).  In AAuth, only PS operations are structurally
-      gated; agent identity and resource-managed access do not pass
-      through the PS.  In person identity access, the gate is person-
-      token issuance (Section 7.1 of
+      binding's Mission Lifecycle and Issuance Gating sections).  A
+      state-aware consumer relies only while it observes active; a
+      state-unaware consumer retains the bounded materialized-credential
+      residual (Section 10.4).  In AAuth, only PS operations are
+      structurally gated; agent identity and resource-managed access do
+      not pass through the PS.  In person identity access, the gate is
+      person-token issuance (Section 7.1 of
       [I-D.draft-hardt-oauth-aauth-protocol]).  In PS authorization and
       federated authorization access, the gate covers auth-token
       issuance and federated brokering for requests whose resource token
@@ -4932,8 +4932,8 @@ Appendix E.  Illustrative Verification Guidance
        reliance, and lost state never fails open).
 
    For the OAuth binding, the same coverage includes (the OAuth
-   binding's Mission Lifecycle and Gating and grant-binding rules,
-   [I-D.draft-mcguinness-oauth-mission]):
+   binding's Issuance Gating and Binding the Mission to the Grant
+   sections, [I-D.draft-mcguinness-oauth-mission]):
 
    1.  refresh while the Mission is active succeeds within policy and is
        refused after a terminal transition; and

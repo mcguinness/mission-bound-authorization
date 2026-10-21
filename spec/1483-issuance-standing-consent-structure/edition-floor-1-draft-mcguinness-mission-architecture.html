@@ -1830,8 +1830,7 @@ these additions safe: a consumer treats every state other than the
 exact value <code>active</code>, including one it does not recognize, as
 non-active, so an unrecognized state fails safe, and a reason it does
 not recognize still leaves the Mission terminated (the OAuth
-binding's Mission Lifecycle and Gating and Mission Termination
-sections).<a href="#section-4.1-6" class="pilcrow">¶</a></p>
+binding's Mission Lifecycle and Mission Termination sections).<a href="#section-4.1-6" class="pilcrow">¶</a></p>
 <p id="section-4.1-7">AAuth has its own counterparts to the OAuth commitment and lifecycle.
 Its exact-byte <code>s256</code> commits the private approved mission blob. The
 approving PS and <code>s256</code> are the Mission Reference, AAuth's mission
@@ -3557,8 +3556,8 @@ derive, widen, or gate authority.<a href="#section-8-4.2.1" class="pilcrow">¶</
         <dd style="margin-left: 1.5em" id="section-8-4.4">
           <p id="section-8-4.4.1">Issuance, refresh, and every new positive governance decision require
 the exact state <code>active</code>; every other state, including an unrecognized
-one, fails safe (the OAuth binding's Mission Lifecycle and Gating
-section). A state-aware consumer relies only while it observes
+one, fails safe (the OAuth binding's Mission Lifecycle and Issuance
+Gating sections). A state-aware consumer relies only while it observes
 <code>active</code>; a state-unaware consumer retains the bounded
 materialized-credential residual (<a href="#validity-model" class="auto internal xref">Section 10.4</a>). In AAuth, only
 PS operations are structurally gated; agent identity and
@@ -6917,8 +6916,8 @@ permits reliance, and lost state never fails open).<a href="#appendix-E-10.3.1" 
 </li>
       </ol>
 <p id="appendix-E-11">For the OAuth binding, the same coverage includes (the OAuth
-binding's Mission Lifecycle and Gating and grant-binding rules,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#appendix-E-11" class="pilcrow">¶</a></p>
+binding's Issuance Gating and Binding the Mission to the Grant
+sections, <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>):<a href="#appendix-E-11" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="appendix-E-12">
 <li id="appendix-E-12.1">
           <p id="appendix-E-12.1.1">refresh while the Mission is active succeeds within policy and

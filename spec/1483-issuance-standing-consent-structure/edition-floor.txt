@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T05:03:07Z
-Source repository commit: 4a9b44b5c642bc153bde93b35947e157498943ee
+Generated: 2026-10-21T05:17:58Z
+Source repository commit: d432ac6049f7bd414814c028ddade2bb0e4f6be6
 Member count: 7
 
 Reading order:
@@ -527,7 +527,7 @@ Table of Contents
    including one it does not recognize, as non-active, so an
    unrecognized state fails safe, and a reason it does not recognize
    still leaves the Mission terminated (the OAuth binding's Mission
-   Lifecycle and Gating and Mission Termination sections).
+   Lifecycle and Mission Termination sections).
 
    AAuth has its own counterparts to the OAuth commitment and lifecycle.
    Its exact-byte s256 commits the private approved mission blob.  The
@@ -1831,13 +1831,13 @@ Table of Contents
    *Only active permits*:  Issuance, refresh, and every new positive
       governance decision require the exact state active; every other
       state, including an unrecognized one, fails safe (the OAuth
-      binding's Mission Lifecycle and Gating section).  A state-aware
-      consumer relies only while it observes active; a state-unaware
-      consumer retains the bounded materialized-credential residual
-      (Section 10.4).  In AAuth, only PS operations are structurally
-      gated; agent identity and resource-managed access do not pass
-      through the PS.  In person identity access, the gate is person-
-      token issuance (Section 7.1 of
+      binding's Mission Lifecycle and Issuance Gating sections).  A
+      state-aware consumer relies only while it observes active; a
+      state-unaware consumer retains the bounded materialized-credential
+      residual (Section 10.4).  In AAuth, only PS operations are
+      structurally gated; agent identity and resource-managed access do
+      not pass through the PS.  In person identity access, the gate is
+      person-token issuance (Section 7.1 of
       [I-D.draft-hardt-oauth-aauth-protocol]).  In PS authorization and
       federated authorization access, the gate covers auth-token
       issuance and federated brokering for requests whose resource token
@@ -4956,8 +4956,8 @@ Appendix E.  Illustrative Verification Guidance
        reliance, and lost state never fails open).
 
    For the OAuth binding, the same coverage includes (the OAuth
-   binding's Mission Lifecycle and Gating and grant-binding rules,
-   [I-D.draft-mcguinness-oauth-mission]):
+   binding's Issuance Gating and Binding the Mission to the Grant
+   sections, [I-D.draft-mcguinness-oauth-mission]):
 
    1.  refresh while the Mission is active succeeds within policy and is
        refused after a terminal transition; and
@@ -7874,10 +7874,10 @@ Table of Contents
      | via PAR        | authorization request             | 4.2     |
      | (client, AS)   |                                   |         |
      +----------------+-----------------------------------+---------+
-     | Direct         | Every direct approval event       | Section |
-     | approval and   |                                   | 6.2     |
-     | the Mission    |                                   |         |
-     | Record (AS)    |                                   |         |
+     | Direct         | Every direct approval event; the  | Section |
+     | approval (AS); | Mission Record at every approval  | 6.2,    |
+     | the Mission    | event                             | Section |
+     | Record (AS)    |                                   | 14      |
      +----------------+-----------------------------------+---------+
      | Evidence       | Implemented by every AS, even one | Section |
      | dispatch and   | that supports no evidence type;   | 4.4     |
@@ -7894,9 +7894,10 @@ Table of Contents
      | Issuance       | Every derivation, refresh and     | Section |
      | gating (AS)    | Token Exchange included           | 8.2     |
      +----------------+-----------------------------------+---------+
-     | Scope          | Every issuance that emits scope;  | Section |
-     | projection     | a scope-only target gets a safe   | 8.7     |
-     | (AS)           | projection or a refusal           |         |
+     | Scope          | Every issuance that emits scope   | Section |
+     | projection     | or whose request names a scope    | 8.7     |
+     | (AS)           | value; a scope-only target gets a |         |
+     |                | safe projection or a refusal      |         |
      +----------------+-----------------------------------+---------+
      | Sender         | Recommended for the access token, | Section |
      | constraint,    | which may be a bearer token; a    | 8.3,    |
@@ -7907,9 +7908,9 @@ Table of Contents
      | Sender         | The token presented for a         | Section |
      | constraint,    | designation is sender-            | 12.1,   |
      | delegation and | constrained, and the designation  | Section |
-     | cross-domain   | carries no cnf; a delegated token | 12.2    |
-     | (AS, RS)       | is bound to the delegate's own    |         |
-     |                | key; across trust domains, as the |         |
+     | cross-domain   | carries no cnf; a delegated token | 12.2,   |
+     | (AS, RS)       | is bound to the delegate's own    | Section |
+     |                | key; across trust domains, as the | 8.3     |
      |                | cross-domain companion requires   |         |
      +----------------+-----------------------------------+---------+
      | Revocation     | An authenticated revocation by    | Section |
@@ -8084,7 +8085,7 @@ Table of Contents
    token on its next request after revocation, through the composite
    active result (Section 11.2).
 
-   The later message examples use Appendix A's separate Q3
+   The later message examples use the end-to-end example's separate Q3
    reconciliation Mission (Appendix A), whose approved authority
    includes invoice reads and bounded journal writes.  Its identifiers
    and timeline differ from this introductory example.
@@ -8483,8 +8484,8 @@ Table of Contents
       -  Authority Set derivation (Section 5);
 
       -  the approval-event rules for the Mission's approval basis
-         (Section 6, with a direct approval relocated only as Section 16
-         permits); and
+         (Section 6, Section 13.1, with a direct approval relocated only
+         as Section 16 permits); and
 
       -  the grant binding (Section 8.1).
 
@@ -9142,13 +9143,12 @@ Table of Contents
 
 6.2.  Direct Approval Steps
 
-   The steps fall into four phases.  Steps 1 to 3 establish the
-   Approver, the Subject and the authority source, and check the derived
-   Authority Set against that source.  Step 4 establishes the effective
-   expiry.  Step 5 renders the derived Authority Set for consent, and
-   Section 6.5 covers a change before the decision.  Steps 6 and 7
-   compute the integrity anchors over the approved context and create
-   the Mission atomically with the decision.
+   Steps 1 to 3 establish the Approver, the Subject and the authority
+   source, and check the derived Authority Set against that source.
+   Step 4 establishes the effective expiry.  Step 5 renders the derived
+   Authority Set for consent, and Section 6.5 covers a change before the
+   decision.  Steps 6 and 7 compute the integrity anchors over the
+   approved context and create the Mission atomically with the decision.
 
    At a direct approval event the AS MUST perform steps 1 to 7, in
    order, as one procedure: steps 1 to 5 prepare the approval
@@ -9159,9 +9159,7 @@ Table of Contents
    (approval_basis, Section 14); a companion profile that relocates a
    direct approval keeps them unchanged (Section 16).
 
-   Refusals follow Section 10.  A token-endpoint resource value outside
-   the Authority Set is an invalid resource value in the sense of
-   [RFC8707].
+   Refusals follow Section 10.
 
 6.2.1.  Prepare the Approval
 
@@ -9261,12 +9259,12 @@ Table of Contents
 
    The Mission Record is what approval leaves behind: the approved
    content and its commitments (the approved Mission Intent, the
-   Authority Set, and the integrity anchors over them); the accountable
-   principals (the Subject, the approved agent's client_id, and the
-   approval_basis naming who consented and how); the authority source;
-   the issuer's provenance (the policy version and the approval event's
-   identifier); and the Mission's expiry and lifecycle state.
-   Section 14 defines each member and when it is present.
+   Authority Set, and the integrity anchors over them); the principals
+   (the Subject, the approved agent's client_id, and the approval_basis
+   naming who consented and how); the authority source; the issuer's
+   provenance (the policy version and the approval event's identifier);
+   and the Mission's expiry and lifecycle state.  Section 14 defines
+   each member and when it is present.
 
 6.3.  Subject Establishment
 
@@ -9664,9 +9662,9 @@ Table of Contents
    Server ([I-D.draft-mcguinness-mission-authority-server]), which
    governs ordinary tokens at the enforcement layer.
 
-   The subsections follow one issuance: resolving the Mission from the
-   presented grant (Section 8.1), the checks every issuance passes
-   (Section 8.2), and the token (Section 8.3) and its response
+   The first four subsections follow one issuance: resolving the Mission
+   from the presented grant (Section 8.1), the checks every issuance
+   passes (Section 8.2), and the token (Section 8.3) and its response
    (Section 8.4).
 
 8.1.  Binding the Mission to the Grant
@@ -9980,6 +9978,9 @@ Table of Contents
    scope; the AS narrows the Authority Set under Section 5.4 to the
    requested resource(s) and sets aud accordingly.
 
+   A token-endpoint resource value outside the Authority Set is an
+   invalid resource value in the sense of [RFC8707].
+
    Three identifiers stay distinct.  An entry's resource, where its type
    defines one, names the protected resource its authority covers, and a
    resource server matches each request's operation target against it
@@ -10107,8 +10108,9 @@ Table of Contents
 8.7.  Scope Projection
 
    This section applies to every issuance that emits scope on a Mission-
-   bound token, and to issuance for a target that consumes only scope:
-   such a target receives a safe projection or a refusal (step 5 below).
+   bound token or whose request names a scope value, and to issuance for
+   a target that consumes only scope: such a target receives a safe
+   projection or a refusal (step 5 below).
 
    For every target audience, the AS MUST establish that the effective
    rights the target's enforcement path grants from the projected scope,
@@ -10604,7 +10606,7 @@ Table of Contents
    | resource parameter, or a        |                                 |
    | token-endpoint resource         |                                 |
    | outside the Mission's           |                                 |
-   | Authority Set (Section 6.2)     |                                 |
+   | Authority Set (Section 8.4)     |                                 |
    +---------------------------------+---------------------------------+
    | Authorization or token          | invalid_target (Section 2 of    |
    | request: the target's scope-    | [RFC8707]).  Detail: safe       |
@@ -11488,8 +11490,8 @@ Table of Contents
    consent basis.  Under it, a template or policy activates Mission
    instances against an accountable human's earlier approval, with no
    fresh human approval per instance; each instance is still created at
-   its own approval event (Section 6).  The following type values are
-   such bases:
+   its own approval event (Section 6).  The following
+   approval_basis.type values (Section 14.3) are such bases:
 
    *  template ([I-D.draft-mcguinness-oauth-mission-template]): bounded
       instances of a recurring task;
@@ -11534,7 +11536,7 @@ Table of Contents
       standing consent for that exact version; it MUST NOT accept the
       value as the activating request's own uncorroborated assertion.
 
-   The adjudication member (Section 14), where present, follows the
+   The adjudication member (Section 14.3), where present, follows the
    basis.  Where a companion profile defining a standing-consent type
    populates adjudication, kind MUST be policy, naming the identity and
    version of the policy or workflow that adjudicated the instance.  A
@@ -12546,7 +12548,7 @@ Table of Contents
 
       3.  projection performed only by, or under the authorization of,
           the Mission issuer, gated on the Mission's active state
-          (Section 7); and
+          (Section 7, Section 8.2); and
 
       4.  projected credential lifetimes capped by the Mission's
           expires_at (Section 8.6).
@@ -15329,7 +15331,8 @@ Appendix G.  Document History
       leaves behind.  The Implementation Map gains an applicability
       table in place of its conditional-duty list; Scope Projection
       opens with when it applies; the introductory walk says the later
-      examples follow a separate Mission.
+      examples follow a separate Mission.  The token-endpoint resource
+      rule moves to Audience and Token Response.
 
    *  Editorial (#1479): Conformance says that neither starting point
       removes a Mission Issuer surface, the evidence dispatch and
@@ -16075,7 +16078,7 @@ Appendix G.  Document History
       Section 4.2 for the submission trust rule, Section 11 for the RFC
       7662 deviation, the (since relocated) Resource Boundary
       Canonicalization section for the single-normalization rule,
-      Section 7 for short-lifetime guidance).  The rejected client_id-
+      Section 8.2 for short-lifetime guidance).  The rejected client_id-
       freezing narrative compressed to its design rationale; spec-
       archaeology sentences removed in favor of this history; the
       Mission Drift consideration folded away.  Structure: the
