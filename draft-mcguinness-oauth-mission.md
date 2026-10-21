@@ -335,22 +335,22 @@ informative:
 
 --- abstract
 
-OAuth 2.0 issues grants and access tokens but defines no standard
+OAuth 2.0 has authorization grants and access tokens but no standard
 object that binds an approved task, such as one an AI agent performs
 on a user's behalf, to the authority approved for it and governs the
 tokens later issued under that authority. This document defines that
 object for OAuth 2.0: a Mission.
 
-A client submits a Mission Intent, the task it will perform, through
-Pushed Authorization Requests. The authorization server derives Rich
-Authorization Requests authorization details from it, binds the
-approved task and that authority to the Approver's consent through
-integrity anchors, and records a durable Mission. Every access token
-issued under the Mission carries a subset of the approved authority
-and a "mission" claim, and every issuance is gated on the Mission's
-lifecycle state. Revoking a Mission stops further issuance; it does
-not recall tokens already issued, which a resource server that
-validates them only locally honors until they expire.
+A client submits a Mission Intent describing the task it will perform
+through Pushed Authorization Requests. The authorization server
+derives Rich Authorization Requests authorization details from it,
+binds the approved task and that authority to the Approver's consent
+through integrity anchors, and records a durable Mission. Every
+access token issued under the Mission carries a subset of the approved
+authority and a "mission" claim, and every issuance is gated on the
+Mission's lifecycle state. Revoking a Mission stops further issuance;
+it does not recall tokens already issued, which a resource server
+that enforces from the token alone honors until they expire.
 
 Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
@@ -652,9 +652,9 @@ All times are UTC on the same day.
    resolves and checks the Mission and returns a sender-constrained
    ERP token that expires at 12:05, with the read authority and a
    `mission` reference. The response also carries the granted
-   authority, `mission_id`, and `mission_expires_at`
-   ({{mission-response-parameters}}). The access token's five-minute
-   lifetime is distinct from the Mission's one-hour lifetime
+   authority ({{token-response}}), `mission_id`, and
+   `mission_expires_at`; the access token's five-minute lifetime is
+   distinct from the Mission's one-hour lifetime
    ({{mission-response-parameters}}).
 4. **Use.** The ERP is a Mission-aware Resource Server: it enforces
    the `mission_resource_access` entry itself, work a plain
@@ -845,7 +845,7 @@ subject principal.
 
 Dynamic delegation (the actors an agent delegates to during
 execution) is carried on derived tokens in the `act` chain
-({{delegated-exchange}}), not on the immutable Mission Record. This
+({{delegated-exchange}}), not on the Mission Record. This
 document uses only (`iss`, `sub`) pairs, not the subject identifier
 formats of {{RFC9493}}.
 
@@ -1715,13 +1715,11 @@ a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 The steps fall into four phases. Steps 1 to 3 establish the Approver,
 the Subject and the authority source, and check the derived Authority
-Set against that source; the candidate Authority Set is complete
-before the approval rendering ({{derivation-modes}}). Step 4
-establishes the effective expiry. Step 5 renders the derived Authority
-Set for consent, and {{approval-context-changes}} covers a change
-before the decision. Steps 6 and 7 compute the integrity anchors over
-the approved context and create the Mission atomically with the
-decision.
+Set against that source. Step 4 establishes the effective expiry.
+Step 5 renders the derived Authority Set for consent, and
+{{approval-context-changes}} covers a change before the decision.
+Steps 6 and 7 compute the integrity anchors over the approved context
+and create the Mission atomically with the decision.
 
 At a direct approval event the AS MUST, in order:
 
@@ -2311,7 +2309,7 @@ it; a Mission in any other state carries none. Its members are:
   this document, or a reason a companion profile registers.
 
 `terminated_at`:
-: REQUIRED, except for historical terminations described below. A
+: REQUIRED, except as {{termination-compatibility}} describes. A
   string. An RFC 3339 {{RFC3339}} date-time: the instant the
   termination took effect. For `expired`, it is the Mission's
   `expires_at`.
@@ -2331,8 +2329,8 @@ A termination carries every member its reason requires, except as
 
 ### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
 
-A termination need not carry every member its reason requires when
-it was recorded before its reason defined that member, or derived
+A termination need not carry a member its reason requires when it
+was recorded before its reason defined that member, or derived
 from such a termination: such a termination exposes only the facts
 its record retained and omits a member it has no retained value for,
 `terminated_at` included, rather than inventing one. For `expired`,
@@ -3166,10 +3164,9 @@ one of three cases, with different obligations:
   introspection is the claims carriage: an active response carries
   what the JWT would ({{introspected-consumption}}).
 - **Issuer-local resolution.** In place of introspection for an opaque
-  Mission-bound token, an AS can serve a resource server inside its
-  trusted implementation boundary that it authorizes to read the AS's
-  authoritative committed token and grant state, by a direct read of
-  that state ({{introspected-consumption}}).
+  Mission-bound token, an AS can serve a qualifying resource server by
+  a direct read of its authoritative committed token and grant state
+  ({{introspected-consumption}}).
 
 An AS MAY support OAuth 2.0 Token Introspection {{RFC7662}} for
 Mission-bound access tokens. When it does, the response for such a token
@@ -4044,7 +4041,8 @@ The following subsections define the record's members.
   ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
   `approval_basis` is provenance: none of the record's integrity
-  anchors (`intent_hash`, `authority_hash` or `proposal_hash`) covers it
+  anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
+  covers it
   ({{integrity-anchors}}); a profile that commits the Mission Record
   itself covers it under that profile's own anchor. Its disclosure
   through introspection follows
@@ -4485,9 +4483,8 @@ to computing an anchor and to comparing committed values:
 ## Commitment Mechanisms {#commitment-mechanisms}
 
 This document's default prefixed construction commits to bytes in
-three ways, and a specification defining a prefixed commitment
-classifies it as one of these species, the three forms a prefixed
-commitment can take:
+three forms, called species, and a specification defining a prefixed
+commitment classifies it as one of them:
 
 - **Envelope anchor**: the domain-separated, issuer-bound envelope of
   {{integrity-anchors}} (`intent_hash`, `proposal_hash`,
@@ -5107,8 +5104,9 @@ dependency on it.
 
 This document governs Authority Set derivation and the issuance of
 authority: it bounds what authority a Mission yields, binds it to the
-Approver's consent, and gates every issuance on Mission state. It does not
-evaluate individual runtime actions. In particular, it does not:
+Approver's consent, and gates every issuance on Mission state. It
+does not evaluate individual runtime actions. In particular, it does
+not:
 
 - evaluate a request's parameters against the Mission at the point of
   use;
@@ -5177,8 +5175,9 @@ reveals nothing.
 ### Token Theft {#token-theft}
 
 Derived tokens are sender-constrained (DPoP {{RFC9449}} or mTLS
-{{RFC8705}}) where {{mission-bound-tokens}} and {{delegation}} require
-it. A designation ({{designation}}) carries no confirmation key: like
+{{RFC8705}}) where {{mission-bound-tokens}} and
+{{delegated-exchange}} require it. A designation ({{designation}})
+carries no confirmation key: like
 an authorization code, it is bound to the client that redeems it, and
 it authorizes no resource access. A stolen token is bounded by the
 Authority Set and the Mission lifetime regardless, but sender-constraint
@@ -6082,6 +6081,9 @@ derives is a subset of the same Authority Set ({{subset}}).
 
 ## Stage 5: Suspension, Resumption, and Revocation {#stage-5-suspension-resumption-and-revocation}
 
+Suspension and resumption are Mission Status operations, shown in its
+companion variation below.
+
 At 08:50:00 the agent refreshes for the read-only token of the
 refresh example in {{token-response}}, which expires at 08:55:00.
 
@@ -6145,6 +6147,7 @@ only where that companion is deployed.
 | 08:20:00, 08:30:00 | The Mission is suspended, then resumed | Mission Status |
 | 08:50:00 | The agent refreshes for a read-only token that expires at 08:55:00 | this document |
 | 08:53:20 | The Mission is revoked and `terminated`; later refreshes are refused, and introspection reports the read-only token inactive | this document |
+| 08:53:20 | A receiver learns of the revocation from a Security Event Token | Mission Signals |
 | 08:55:00 | The read-only token expires; a resource server enforcing from the token alone stops honoring it | this document |
 {: title="End-to-end example timeline"}
 
@@ -7087,7 +7090,7 @@ Cross-Domain:
 
 - Editorial (#1472): a reader pass that changes no requirement. The
   abstract leads with the object OAuth lacks, and its agent-identity
-  positioning opens Relationship to Adjacent Work. The Implementation
+  positioning moves to Relationship to Adjacent Work. The Implementation
   Map lists each implementer's duties as entries, not table cells.
   Terminology separates a
   derivation, one issuance operation, from Authority Set derivation,
