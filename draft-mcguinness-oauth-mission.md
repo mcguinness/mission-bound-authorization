@@ -5603,7 +5603,8 @@ This document requests registration of the following in the "OAuth
 Extensions Error" registry {{RFC6749}}:
 
 - Error name: `invalid_mission_intent_evidence`
-- Error usage location: authorization endpoint, token endpoint
+- Error usage location: authorization code grant error response,
+  token error response
 - Related protocol extension: Intent Submission Evidence
   ({{intent-submission-evidence}})
 - Change controller: IETF
