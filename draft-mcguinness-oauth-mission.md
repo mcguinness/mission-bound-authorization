@@ -1745,9 +1745,7 @@ The steps of this section define the `direct` approval basis
 (`approval_basis`, {{mission-record}}); a companion profile that
 relocates a direct approval keeps them unchanged ({{extensibility}}).
 
-Refusals follow {{error-mapping}}. A token-endpoint `resource` value
-outside the Authority Set is an invalid `resource` value in the sense
-of {{RFC8707}}.
+Refusals follow {{error-mapping}}.
 
 ### Prepare the Approval {#approval-preparation}
 
@@ -2533,6 +2531,9 @@ with `scope`; the AS narrows the Authority Set under {{subset}} to the
 requested resource(s) and sets `aud` accordingly.
 {: #token-audience}
 
+A token-endpoint `resource` value outside the Authority Set is an
+invalid `resource` value in the sense of {{RFC8707}}.
+
 Three identifiers stay distinct. An entry's `resource`, where its type
 defines one, names the protected resource its authority covers, and a
 resource server matches each request's operation target against it
@@ -3131,7 +3132,7 @@ exchange rows of the third table.
 | Surface / failing input | Base OAuth error and optional detail |
 |---|---|
 | PAR, or a companion's token-endpoint submission: a presented evidence entry of an unsupported type, or failing its type's validation or verification ({{intent-submission-evidence}}), or a required evidence type absent | `invalid_mission_intent_evidence` ({{intent-submission-evidence}}). Detail: safe `error_description` |
-| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{direct-approval-steps}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
+| Authorization or token request: invalid, unknown, or malformed actual RFC 8707 `resource` parameter, or a token-endpoint `resource` outside the Mission's Authority Set ({{token-response}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or, where the AS applies {{rs-enforcement}}'s delegated-token routing rule at issuance, the delegated token's target is not known to be Mission-aware | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
