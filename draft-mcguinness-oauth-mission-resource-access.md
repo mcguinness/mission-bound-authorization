@@ -1144,7 +1144,7 @@ proposal added a list, so the approved entry's own members do not
 reveal the obligation. The authorization server therefore MUST record,
 when it derives the Authority Set, which approved entries inherit the
 policy decision, and MUST retain that provenance with the Mission. It
-evaluates every later exchange against the approved entry in the
+MUST evaluate every later exchange against the approved entry in the
 Mission Record ({{I-D.draft-mcguinness-oauth-mission}}) and that
 provenance, never against a presented token alone. Where it cannot
 resolve either, the entry narrows out of the delegated token. A
