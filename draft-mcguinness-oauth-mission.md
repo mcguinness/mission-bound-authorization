@@ -5774,9 +5774,11 @@ this document; the identity setup follows
 values are computed over the displayed objects
 ({{integrity-anchors}}).
 
-The example uses the baseline issuance path: stateless enforcement
-bounded only by token lifetime. Stage 3 notes where the optional
-runtime layer adds a point-of-use check.
+The OAuth flow of Stages 1 to 4, and the revocation in Stage 5, use
+only this document: the baseline issuance path, with enforcement from
+the token alone, bounded by token lifetime. Text marked as a
+companion variation shows what an optional companion adds to the same
+Mission, and the timeline ({{e2e-timeline}}) lists both.
 
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in the home ERP
@@ -6036,15 +6038,19 @@ token. The resource server:
 
 With enforcement from the token alone, the consequential
 `journal-entries.write` is bounded only by token lifetime and the
-carried constraints. Where the deployment runs the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}), the resource server also
-obtains a point-of-use permit against current Mission state from a
-policy decision point before executing the write. The AuthZEN
-profile's worked request ({{I-D.draft-mcguinness-mission-authzen}})
-is that check for a 423.50 USD posting at 08:14:03, made with a
-write-only token the agent obtained by refresh at 08:14:00.
+carried constraints.
 
-The end-to-end example of the Mission Cross-Domain Projection profile
+Companion variation (runtime enforcement): where the deployment runs
+the runtime profile ({{I-D.draft-mcguinness-mission-runtime}}), the
+resource server also obtains a point-of-use permit against current
+Mission state from a policy decision point before executing the
+write. The AuthZEN profile's worked request
+({{I-D.draft-mcguinness-mission-authzen}}) is that check for a 423.50
+USD posting at 08:14:03, made with a write-only token the agent
+obtained by refresh at 08:14:00.
+
+Companion variation (cross-domain): the end-to-end example of the
+Mission Cross-Domain Projection profile
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) follows a
 Mission like this one whose authority also covers a partner ERP in
 another trust domain.
@@ -6070,24 +6076,14 @@ derives is a subset of the same Authority Set ({{subset}}).
 
 ## Stage 5: Suspension, Resumption, and Revocation {#stage-5-suspension-resumption-and-revocation}
 
-The Mission is suspended at 08:20:00 and resumed at 08:30:00 (state
-versions 2 and 3) through the lifecycle operations of the Mission
-Status profile ({{I-D.draft-mcguinness-oauth-mission-status}}); the
-AS derives nothing in between ({{lifecycle}}). At 08:50:00 the agent
-refreshes for the read-only token of the refresh example in
-{{mission-bound-tokens}}, which expires at 08:55:00.
+At 08:50:00 the agent refreshes for the read-only token of the
+refresh example in {{token-response}}, which expires at 08:55:00.
 
-At 08:53:20 the agent revokes the Mission with the reason "Quarterly
-reconcile completed early", under an explicit lifecycle authorization
-the deployment grants it for this Mission
-({{I-D.draft-mcguinness-oauth-mission-status}}); its resource tokens
-and refresh token confer no such authority. The AS commits
-`terminated` with reason
-`revoked` as state version 4, and a receiver of the Mission Signals
-profile learns of it from a Security Event Token
-({{I-D.draft-mcguinness-oauth-mission-signals}}). Revocation stops the
-Mission at the issuer ({{revocation}}). A later refresh is refused
-with the `mission_error` diagnostic ({{issuance-gating}}):
+At 08:53:20 the Mission is revoked with the reason "Quarterly
+reconcile completed early", and the AS commits `terminated` with
+reason `revoked`. Revocation stops the Mission at the issuer
+({{revocation}}). A later refresh is refused with the `mission_error`
+diagnostic ({{issuance-gating}}):
 
 ~~~
 HTTP/1.1 400 Bad Request
@@ -6107,11 +6103,43 @@ termination, although the token has not expired ({{examples}},
 Revocation does not recall the token already issued. The ERP,
 enforcing from the token alone, can honor the read-only token until
 its `exp` at 08:55:00. A resource server that introspects at the
-issuer on every request stops honoring it on its next request. One
-that obtains a point-of-use permit under the runtime profile
-({{I-D.draft-mcguinness-mission-runtime}}) stops within that
-deployment's declared freshness and permit bounds, since a permit can
-rest on a state observation taken before the revocation.
+issuer on every request stops honoring it on its next request.
+
+Companion variations:
+
+- **Mission Status** ({{I-D.draft-mcguinness-oauth-mission-status}}).
+  The Mission is suspended at 08:20:00 and resumed at 08:30:00 (state
+  versions 2 and 3) through the profile's lifecycle operations, and
+  the AS derives nothing in between ({{lifecycle}}). The revocation
+  at 08:53:20 is the agent's own, under an explicit lifecycle
+  authorization the deployment grants it for this Mission; its
+  resource tokens and refresh token confer no such authority. The AS
+  commits it as state version 4.
+- **Mission Signals**
+  ({{I-D.draft-mcguinness-oauth-mission-signals}}). A receiver learns
+  of the revocation from a Security Event Token.
+- **Runtime enforcement** ({{I-D.draft-mcguinness-mission-runtime}}).
+  A resource server that obtains a point-of-use permit stops honoring
+  the token within that deployment's declared freshness and permit
+  bounds, since a permit can rest on a state observation taken before
+  the revocation.
+
+## Timeline {#e2e-timeline}
+
+All times are 2026-11-02 UTC. The rows marked with a companion occur
+only where that companion is deployed.
+
+| Time | Event | Defined by |
+| --- | --- | --- |
+| 08:00:00 | `alice` approves; the AS creates the Mission | this document |
+| 08:00:05 | The agent redeems the code; the access token expires at 08:05:05 | this document |
+| 08:14:00 | The agent refreshes for a write-only token | this document |
+| 08:14:03 | A point-of-use permit for a 423.50 USD posting | runtime profile |
+| 08:20:00, 08:30:00 | The Mission is suspended, then resumed | Mission Status |
+| 08:50:00 | The agent refreshes for a read-only token that expires at 08:55:00 | this document |
+| 08:53:20 | The Mission is revoked and `terminated`; later refreshes are refused, and introspection reports the token inactive | this document |
+| 08:55:00 | The read-only token expires; a resource server enforcing from the token alone stops honoring it | this document |
+{: title="End-to-end timeline: Mission termination and token validity"}
 
 # Design Context and Boundaries {#design-context}
 
