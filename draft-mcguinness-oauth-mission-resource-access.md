@@ -1490,11 +1490,28 @@ actions approves or derives literal actions rather than a family.
 
 # Privacy Considerations {#privacy-considerations}
 
-This document defines no data element beyond what
-{{I-D.draft-mcguinness-oauth-mission}} carries in
-`authorization_details`, and that document's Privacy Considerations
-apply unchanged. An entry's `resource`, `actions`, and `constraints`
-values are as privacy-sensitive as the Authority Set that carries them.
+The Privacy Considerations of {{I-D.draft-mcguinness-oauth-mission}}
+apply to every `mission_resource_access` entry as part of the Authority
+Set that carries it. Every party that receives an entry, such as the
+client and the resource server, sees each of its members, including the
+following data elements this type adds:
+
+- **Contract identifiers and versions.** A `resource_contract`
+  reference names a contract and the version an entry was approved
+  under. Both can identify the service a task uses, and the version can
+  date the approval.
+- **Resource and constraint values.** A `resource` value can name an
+  individual record or account (`https://api.example/orders/123`), and
+  `tenant`, `recipient_domain`, and `data_classification` values can
+  identify an organization, the domains a task sends to, and the
+  sensitivity of the data it touches.
+- **Delegate identifiers.** An `allowed_delegates` `sub` matcher names
+  a specific client. A resource server receives it with the entry
+  although it can disregard `delegation` ({{rs-enforcement}}).
+- **Metadata fingerprinting.** A protected resource's
+  `mission_constraints_supported` metadata
+  ({{protected-resource-metadata}}) is published, and the keys it lists
+  can fingerprint the resource's software or policy.
 
 # IANA Considerations {#iana}
 
