@@ -639,8 +639,10 @@ the following hold:
 The equivalence in step 3 holds for comparison only: recorded entries
 and their integrity commitments are unchanged. A key present only in A
 narrows A only when it has defined semantics and the resource server
-serving A.`resource` can enforce it; an unknown key in A is never
-treated as narrowing ({{common-constraints}}).
+serving A.`resource` can enforce it. When A carries a key whose
+narrowing the authorization server does not implement, the
+authorization server refuses the derivation rather than removing the
+key or omitting the entry ({{common-constraints}}).
 
 The authorization server MUST make this resource comparison with the
 same matcher, over the same URI forms, that resource servers use to
@@ -1261,8 +1263,8 @@ this document in full declares:
   NOT declare `narrowing` as `true` unless it implements these rules for
   every Common Constraint of {{initial-common-constraints}}. The
   declaration does not require a Common Constraint registered later; an
-  authorization server fails closed on one it does not support
-  ({{common-constraints}}).
+  authorization server that does not support one refuses any derivation
+  that carries it ({{common-constraints}}).
 
 `delegation`: `true`
 : The delegation policy of {{delegate-eligibility}} is fully defined; an
