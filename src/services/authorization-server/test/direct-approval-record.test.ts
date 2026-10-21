@@ -11,6 +11,7 @@ import {
   type AuthorityEntry,
   directApprovalRuleFrom,
   directApprovalRuleRef,
+  evaluateDirectApprovalRule,
   IntentError,
   MissionKernel,
   type MissionRecord,
@@ -250,12 +251,86 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
     }
   });
 
-  it("returns the committed Mission for a repeated approval event, with no second record", () => {
+  it("returns the committed Mission for a repeated approval event, with no second record, even once the floor would refuse a new one", () => {
     const kernel = makeKernel();
     const first = approve(kernel, { approvalEventId: "apev-once" });
+    clockMs = T0 + 600_000;
     const again = approve(kernel, { approvalEventId: "apev-once" });
     expect(again.id).toBe(first.id);
     expect(kernel.governanceRecords.count()).toBe(1);
+  });
+
+  it("classifies a ceiling consented at the approval with the Authority Set", () => {
+    const kernel = makeKernel();
+    const READ_ONLY = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
+    const carol = { approver: { iss: ISS, sub: "carol" }, proposedAuthority: READ_ONLY };
+    expect(outcome(() => approve(kernel, { ...carol, ceiling: { authority_ceiling: EXECUTE } }))).toBe("intent:access_denied");
+    expect(kernel.allMissions()).toHaveLength(0);
+    const mission = approve(kernel, carol);
+    expect(kernel.directApprovalRecords.inputs(mission.id)?.inputs).not.toHaveProperty("ceiling");
+  });
+
+  it("retains its evidence only inside the Mission's creation transaction", () => {
+    const kernel = makeKernel();
+    const inputs = { approval_event_id: "apev-x", intent_hash: "h", approver: BOB, subject: ALICE, authority: EXECUTE, authentication: AUTH };
+    expect(() => kernel.directApprovalRecords.retainInCallerTx("mis_x", ISS, RULE_REF, RULE, inputs)).toThrow(/creation transaction/);
+  });
+});
+
+describe("the direct approval rule (@spec approval-governance#approval-policy, approval-governance#assertion-validation)", () => {
+  const rule = parseDirectApprovalRule(RULE.content);
+  const inputs = (over: Record<string, unknown> = {}) => ({
+    approval_event_id: "apev-r",
+    intent_hash: "h",
+    approver: BOB,
+    subject: ALICE,
+    authority: EXECUTE,
+    authentication: AUTH,
+    ...over,
+  });
+  const at = iso(T0);
+
+  it("admits the Approver for a Subject it names, and a self-approval of read-only authority", () => {
+    expect(evaluateDirectApprovalRule(rule, inputs(), at)).toEqual({ decision: "approve" });
+    const read = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
+    expect(evaluateDirectApprovalRule(rule, inputs({ subject: { iss: ISS, sub: "carol" }, approver: { iss: ISS, sub: "carol" }, authority: read }), at)).toEqual({
+      decision: "approve",
+    });
+  });
+
+  it("denies a Subject the rule does not name, and write-bearing authority in a consented ceiling", () => {
+    const read = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
+    const DAVE = { iss: ISS, sub: "dave" };
+    // Even a read-only self-approval: Dave is no principal this rule approves for.
+    expect(evaluateDirectApprovalRule(rule, inputs({ subject: DAVE, approver: DAVE, authority: read }), at)).toEqual({
+      decision: "deny",
+      reason: "dave is not a principal this rule approves for",
+    });
+    const carol = { approver: { iss: ISS, sub: "carol" }, authority: read };
+    expect(evaluateDirectApprovalRule(rule, inputs(carol), at)).toEqual({ decision: "approve" });
+    expect(evaluateDirectApprovalRule(rule, inputs({ ...carol, ceiling: EXECUTE }), at)).toEqual({
+      decision: "deny",
+      reason: "write-bearing authority needs a distinct Approver holding write",
+    });
+  });
+
+  it("parses a snapshot strictly and refuses a malformed rule at kernel construction", () => {
+    expect(() => parseDirectApprovalRule("{}")).toThrow(/members are not/);
+    const extra = JSON.stringify({ ...JSON.parse(RULE.content), note: "x" });
+    expect(() => parseDirectApprovalRule(extra)).toThrow(/members are not/);
+    const badApprover = JSON.stringify({ ...JSON.parse(RULE.content), approvers: { bob: { approves_for: ["alice"] } } });
+    expect(() => parseDirectApprovalRule(badApprover)).toThrow(/approver bob/);
+    expect(
+      () =>
+        new MissionKernel({
+          issuer: ISS,
+          policy: DERIVATION_POLICY as never,
+          authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+          statusKey: key,
+          statusKid: "as-status",
+          directApprovalRecording: { rule: { ...RULE, content: badApprover } },
+        }),
+    ).toThrow(/direct approval rule/);
   });
 });
 
@@ -308,6 +383,10 @@ describe("the direct record commit gate (@spec approval-governance#accountable-a
         /does not count the accountable assertion/,
       ],
       ["rule", { ...unsigned, approval_policy: { ...RULE_REF, version: "other" } }, basis, /not the direct approval rule this issuer holds/],
+      ["duplicate id", { ...unsigned, assertions: [h, { ...h, principal: { iss: ISS, sub: "carol" } }] }, basis, /not unique/],
+      ["authority", { ...unsigned, assertions: [{ ...h, authority: { acr: "mfa" } }] }, basis, /auth_time/],
+      ["denied", { ...unsigned, evaluation: { ...unsigned.evaluation, decision: "denied" as never } }, basis, /did not approve/],
+      ["contributing ghost", { ...unsigned, evaluation: { ...unsigned.evaluation, contributing: ["ast_human", "ast_ghost"] } }, basis, /ast_ghost/],
       ["kind", unsigned, { ...(basis as object), adjudication: { kind: "policy", governance_record: true } }, /not adjudication.kind/],
     ];
     for (const [name, record, b, why] of variants) {
