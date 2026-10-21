@@ -522,7 +522,7 @@ approved Authority Set.
 | Authority proposal (client, AS) | Optional for the client; the AS checks one that is submitted | {{authority-proposal}} |
 | Grant binding (AS) | Every authorization code issued at approval, and the refresh-token family that follows it | {{grant-binding}} |
 | Issuance gating (AS) | Every derivation, refresh and Token Exchange included | {{issuance-gating}} |
-| Scope projection (AS) | Every issuance that emits `scope`; a `scope`-only target gets a safe projection or a refusal | {{scope-projection}} |
+| Scope projection (AS) | Every issuance that emits `scope` or whose request names a `scope` value; a `scope`-only target gets a safe projection or a refusal | {{scope-projection}} |
 | Sender constraint, primary and refresh tokens (AS) | Recommended for the access token, which may be a bearer token; a public client's refresh token is sender-constrained or rotated | {{token-claims}}, {{refresh-tokens}} |
 | Sender constraint, delegation and cross-domain (AS, RS) | The token presented for a designation is sender-constrained, and the designation carries no `cnf`; a delegated token is bound to the delegate's own key; across trust domains, as the cross-domain companion requires | {{designation}}, {{delegated-exchange}} |
 | Revocation means (deployment) | An authenticated revocation by `mission_id`, independent of any token | {{revocation}} |
@@ -2670,9 +2670,9 @@ domain.
 ## Scope Projection {#scope-projection}
 
 This section applies to every issuance that emits `scope` on a
-Mission-bound token, and to issuance for a target that consumes only
-`scope`: such a target receives a safe projection or a refusal (step 5
-below).
+Mission-bound token or whose request names a `scope` value, and to
+issuance for a target that consumes only `scope`: such a target
+receives a safe projection or a refusal (step 5 below).
 
 For every target audience, the AS MUST establish that the effective
 rights the target's enforcement path grants from the projected
