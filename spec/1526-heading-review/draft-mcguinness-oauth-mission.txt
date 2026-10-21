@@ -195,7 +195,7 @@ Table of Contents
        20.4.4.  Signing and Key Rotation
      20.5.  Composition and Residual Authority
        20.5.1.  Compromised or Over-Broad Derivation
-       20.5.2.  Authority Hash as an Identifier
+       20.5.2.  Authority Hash and Mission Identity
        20.5.3.  Composition and the Effective Ceiling
        20.5.4.  Authority Materialized Before Containment
    21. Privacy Considerations
@@ -5566,7 +5566,7 @@ Table of Contents
    than free-form inference.  The recorded policy_version makes each
    Authority Set derivation auditable by naming the policy it ran under.
 
-20.5.2.  Authority Hash as an Identifier
+20.5.2.  Authority Hash and Mission Identity
 
    authority_hash commits the approved Authority Set, not the Mission.
    Two Missions that approve byte-identical authority (a successor that
