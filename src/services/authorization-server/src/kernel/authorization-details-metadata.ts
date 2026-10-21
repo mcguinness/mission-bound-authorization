@@ -17,6 +17,7 @@ import {
   isAbsoluteUri,
   isActivationPolicyRef,
   isImplementedCommonConstraint,
+  isValidAmount,
   refusedEntryMember,
   resourceContractViolation,
   resourceMatchViolation,
@@ -119,7 +120,11 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
       properties: {
         max_amount: {
           type: "object",
-          properties: { amount: { type: "string" }, currency: { type: "string" } },
+          // @spec resource-access#decimal-values: the decimal-string grammar.
+          properties: {
+            amount: { type: "string", pattern: "^[0-9]+(\\.[0-9]{1,18})?$" },
+            currency: { type: "string" },
+          },
           required: ["amount", "currency"],
           additionalProperties: false,
         },
@@ -299,8 +304,8 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
   }
   // @spec resource-access#resource-access-type, resource-access#entry-validation
   // (#1276): `exact` or `prefix`, and "A `resource` value under `prefix` MUST
-  // NOT carry a query or fragment component; the authorization server
-  // refuses such an entry with the `invalid_authorization_details` error
+  // NOT carry a query or fragment component; the authorization server MUST
+  // refuse such an entry with the `invalid_authorization_details` error
   // code." The shared rule also refuses a `prefix` base with no `//`
   // authority, where the matcher draws no boundary. Refused at intake, never
   // admitted and then rebuilt as an exact entry.
@@ -366,6 +371,13 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
         typeof (c.max_amount as Record<string, unknown>).currency !== "string"
       ) {
         return "constraints.max_amount must be an object with string amount and currency";
+      }
+      // @spec resource-access#decimal-values: "the authorization server MUST
+      // refuse an authority proposal carrying one at submission", here rather
+      // than at derivation, and whatever the ceiling carries.
+      const amount = (c.max_amount as Record<string, unknown>).amount as string;
+      if (!isValidAmount(amount)) {
+        return `constraints.max_amount.amount ${JSON.stringify(amount)} is not a decimal string`;
       }
     }
     if (c.vendors !== undefined) {

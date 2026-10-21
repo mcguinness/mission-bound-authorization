@@ -391,6 +391,9 @@ An A-label is as {{Section 2.3.2.1 of RFC5890}} defines it. Letter case
 does not make a `recipient_domain` invalid; values compare
 case-insensitively ({{value-space-comparison}}).
 
+The refusal of a `delegation` member that no implemented specification
+defines is specified with `delegation` ({{resource-access-type}}).
+
 The following values are valid and carry a defined meaning:
 
 - A `max_depth` of 0 admits the entry into no delegated token, since a
@@ -419,8 +422,10 @@ sign (a ceiling value is never negative), a thousands separator, or a
 non-numeric token (`"NaN"`, `"Infinity"`), is malformed, and a consumer
 MUST reject it rather than attempt to parse it:
 
-- an authority proposal carrying one is refused at submission
-  ({{I-D.draft-mcguinness-oauth-mission}}); and
+- the authorization server MUST refuse an authority proposal carrying
+  one at submission ({{I-D.draft-mcguinness-oauth-mission}}) with the
+  `invalid_authorization_details` error code ({{Section 5 of RFC9396}});
+  and
 - a resource server treats a malformed decimal value the same as a
   `constraints` key it cannot enforce ({{rs-enforcement}}).
 
@@ -1142,7 +1147,7 @@ proposal added a list, so the approved entry's own members do not
 reveal the obligation. The authorization server therefore MUST record,
 when it derives the Authority Set, which approved entries inherit the
 policy decision, and MUST retain that provenance with the Mission. It
-evaluates every later exchange against the approved entry in the
+MUST evaluate every later exchange against the approved entry in the
 Mission Record ({{I-D.draft-mcguinness-oauth-mission}}) and that
 provenance, never against a presented token alone. Where it cannot
 resolve either, the entry narrows out of the delegated token. A
