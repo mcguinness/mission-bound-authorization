@@ -3591,25 +3591,31 @@ surface that renders only the <code>goal</code> or Mission Intent does not
 conform.<a href="#section-6.2.1-1.5.2.1.1" class="pilcrow">¶</a></p>
 </li>
                 <li class="normal" id="section-6.2.1-1.5.2.2">
-                  <p id="section-6.2.1-1.5.2.2.1">When the Approver is not the Subject, the rendering <span class="bcp14">MUST</span>
-identify the Subject the authority is granted for.<a href="#section-6.2.1-1.5.2.2.1" class="pilcrow">¶</a></p>
+                  <p id="section-6.2.1-1.5.2.2.1">The rendering <span class="bcp14">MUST</span> identify the OAuth client that receives the
+authority, the Agent, from client identity information the AS
+trusts, such as its own registration of the client; display text
+the client supplies does not by itself identify it.<a href="#section-6.2.1-1.5.2.2.1" class="pilcrow">¶</a></p>
 </li>
                 <li class="normal" id="section-6.2.1-1.5.2.3">
-                  <p id="section-6.2.1-1.5.2.3.1">The rendering <span class="bcp14">MUST</span> identify the authority source and, for
-<code>organizational</code>, the governed policy it draws on
-(<code>authority_source.policy</code>).<a href="#section-6.2.1-1.5.2.3.1" class="pilcrow">¶</a></p>
+                  <p id="section-6.2.1-1.5.2.3.1">When the Approver is not the Subject, the rendering <span class="bcp14">MUST</span>
+identify the Subject the authority is granted for.<a href="#section-6.2.1-1.5.2.3.1" class="pilcrow">¶</a></p>
 </li>
                 <li class="normal" id="section-6.2.1-1.5.2.4">
-                  <p id="section-6.2.1-1.5.2.4.1">When the client submitted an authority proposal
-(<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), the rendering <span class="bcp14">MUST</span> distinguish the
-entries the client proposed from any narrowing or restructuring
-the AS applied.<a href="#section-6.2.1-1.5.2.4.1" class="pilcrow">¶</a></p>
+                  <p id="section-6.2.1-1.5.2.4.1">The rendering <span class="bcp14">MUST</span> identify the authority source and, for
+<code>organizational</code>, the governed policy it draws on
+(<code>authority_source.policy</code>).<a href="#section-6.2.1-1.5.2.4.1" class="pilcrow">¶</a></p>
 </li>
                 <li class="normal" id="section-6.2.1-1.5.2.5">
-                  <p id="section-6.2.1-1.5.2.5.1">Mission Capability Binding
+                  <p id="section-6.2.1-1.5.2.5.1">When the client submitted an authority proposal
+(<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), the rendering <span class="bcp14">MUST</span> distinguish the
+entries the client proposed from any narrowing or restructuring
+the AS applied.<a href="#section-6.2.1-1.5.2.5.1" class="pilcrow">¶</a></p>
+</li>
+                <li class="normal" id="section-6.2.1-1.5.2.6">
+                  <p id="section-6.2.1-1.5.2.6.1">Mission Capability Binding
 (<span>[<a href="#I-D.draft-mcguinness-mission-capability-binding" class="cite xref">I-D.draft-mcguinness-mission-capability-binding</a>]</span>) states
 what the rendering presents about the source binding of a
-catalog-sourced action.<a href="#section-6.2.1-1.5.2.5.1" class="pilcrow">¶</a></p>
+catalog-sourced action.<a href="#section-6.2.1-1.5.2.6.1" class="pilcrow">¶</a></p>
 </li>
               </ul>
 </li>

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T21:00:38Z
-Source repository commit: 554e0ab33dbfc183290584d05bab0f8ca268359c
+Generated: 2026-10-21T21:05:04Z
+Source repository commit: 87a83ee76fa5624548bade3f7997b9db2a85ec6f
 Member count: 7
 
 Reading order:
@@ -9211,6 +9211,11 @@ Table of Contents
           derived authority reflects the goal the Approver read.  An
           approval surface that renders only the goal or Mission Intent
           does not conform.
+
+       *  The rendering MUST identify the OAuth client that receives the
+          authority, the Agent, from client identity information the AS
+          trusts, such as its own registration of the client; display
+          text the client supplies does not by itself identify it.
 
        *  When the Approver is not the Subject, the rendering MUST
           identify the Subject the authority is granted for.
