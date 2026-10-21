@@ -3082,14 +3082,8 @@ from the same proposal unremediated.
 This document reuses standard OAuth errors and challenges, selected
 by parameter ownership and processing stage. The following tables are
 the normative statement of the base OAuth error for each failure they
-list. A rule elsewhere in this document that names one of these
-codes ({{intent-members}}, {{submission-via-par}},
-{{authority-proposal}}, {{intent-submission-evidence}},
-{{authorization-derivation}}, {{approval-authentication}},
-{{grant-binding-resolution}}, {{issuance-gating}},
-{{scope-projection}}, {{rs-enforcement}}, {{delegation}},
-{{designation}}, {{self-exchange}}, {{delegation-constraints}})
-applies this mapping.
+list. Every rule elsewhere in this document that names one of these
+codes applies this mapping.
 
 An AS that performs an applicable check early, at PAR, responds with
 the same error class the check would yield at the authorization or
