@@ -14860,6 +14860,83 @@
    ]
   },
   {
+   "id": "signals.lifecycle-event.suspend-schedule-members",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "lifecycle-event",
+   "text": "present only on a transition to `suspended` under a deadline, with the values and meaning of the Status profile",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "signals.events",
+     "status.lifecycle"
+    ]
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a lifecycle-change SET for a transition to suspended under a deadline carries suspend_until and on_expiry with the recorded schedule's values; a SET for a suspend without a deadline, a resume, or the transition a passed deadline applies carries neither",
+    "local": "The reference relays the pair from the kernel commit, which carries it only on a commit that arms or replaces a schedule. A commit carrying only one member relays neither, and the schedule's committing party and the applied schedule a transition names never reach the wire."
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/suspension-schedule-relay.test.ts",
+     "name": "suspension schedule relayed by Mission Signals (@spec signals#lifecycle-event, #1002) > delivers suspend_until and on_expiry on a suspend under a deadline, with the committed values",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/suspension-schedule-relay.test.ts",
+     "name": "suspension schedule relayed by Mission Signals (@spec signals#lifecycle-event, #1002) > delivers neither member on a suspend without a deadline, a resume, or the transition a deadline applies, and never the committing party or the applied schedule",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/suspension-schedule-relay.test.ts",
+     "name": "suspension schedule relayed by Mission Signals (@spec signals#lifecycle-event, #1002) > the SET builder relays suspend_until and on_expiry only as a complete pair",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1002 (D441). Asserted on the delivered SET bytes of a real kernel wired to the emitter, with each deadline applied through the kernel's own timer delivery. Proved by dropping the relay (all three cited tests fail, the absence test on its arming events), by emitting both members as null when absent (the absence and pair tests fail), by copying the applied schedule onto the wire (the absence test alone fails), by copying the committing party onto the wire (the arming and absence tests fail), and by relaying a split pair (the pair test alone fails)."
+  },
+  {
+   "id": "signals.lifecycle-event.suspend-metadata-update",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "lifecycle-event",
+   "text": "A suspend-metadata update, a change to `suspend_until` or `on_expiry` on an already-`suspended` Mission, is emitted as a `mission.lifecycle-change` with `state` and `prior_state` both `suspended` and the updated values, incrementing `version` like any other committed change.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "all_of": [
+     "signals.events",
+     "status.lifecycle"
+    ]
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorized schedule replacement on an already-suspended Mission emits a lifecycle-change SET with state and prior_state both suspended, the updated suspend_until and on_expiry, and a version one greater than the event that armed the replaced schedule"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/suspension-schedule-relay.test.ts",
+     "name": "suspension schedule relayed by Mission Signals (@spec signals#lifecycle-event, #1002) > delivers a schedule replacement on a suspended Mission with prior_state and state both suspended, the updated values and the next version",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1002 (D441). Asserted on the delivered SET of a real kernel replacement commit. Proved by dropping the relay and by committing the replacement without its schedule members in the kernel (the test fails each time)."
+  },
+  {
    "id": "cross-org.chain.presentation-closed",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
