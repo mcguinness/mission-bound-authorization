@@ -629,7 +629,7 @@ AS refuses further issuance and refresh. A deployment can also treat
 The end-to-end example ({{e2e-example}}) walks this flow with
 concrete messages.
 
-### One Mission from Approval to Revocation {#first-mission}
+## Introductory Example {#first-mission}
 
 In the examples in this document, each service's operation contract
 identifies the service's own identifier, such as
@@ -697,6 +697,8 @@ All JSON shown in this document is non-normative and illustrative; the
 member definitions in the surrounding text are authoritative. An
 example line too long for the page is folded with the single backslash
 strategy of {{RFC8792}}.
+
+## Terminology {#terminology}
 
 Agent (Client):
 : The OAuth client acting for the Mission's Subject, identified by
@@ -2137,7 +2139,7 @@ it; a Mission in any other state carries none. Its members are:
   this document, or a reason a companion profile registers.
 
 `terminated_at`:
-: REQUIRED, except as {{termination-compatibility}} describes. A
+: REQUIRED, except as described below. A
   string. An RFC 3339 {{RFC3339}} date-time: the instant the
   termination took effect. For `expired`, it is the Mission's
   `expires_at`.
@@ -2153,9 +2155,7 @@ does not replace the reason or references of a Mission already
 terminated.
 
 A termination carries every member its reason requires, except as
-{{termination-compatibility}} describes.
-
-### Compatibility with Earlier and Unrecognized Terminations {#termination-compatibility}
+follows.
 
 A termination need not carry a member its reason requires when it
 was recorded before its reason defined that member, or derived
@@ -4655,6 +4655,8 @@ following remain stable across revisions of this document:
 - the `authorization_details` carriage and its type-agnostic subset
   discipline ({{other-types}}, {{subset}}); and
 - the `act` delegation chain ({{delegated-exchange}}).
+
+## Extension Points {#extension-points}
 
 This document's extension points are:
 
