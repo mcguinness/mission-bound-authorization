@@ -37162,6 +37162,42 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
+   "id": "progressive.ceiling.consent-hash-recorded",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-authorization",
+   "text": "The Mission Issuer also records `ceiling_consent_hash`, the `ceiling_hash` of the ceiling and drawdown policy as the Approver consented them",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at a consent or a re-consent the record's ceiling_consent_hash equals its ceiling_hash",
+    "local": "consentCeiling sets both from one hash; a re-consent's members come from the same function."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by recording no consent commitment at the consent."
+  },
+  {
    "id": "progressive.ceiling.consent-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "progressive-authorization",
@@ -37546,7 +37582,7 @@
    "id": "progressive.ceiling-reconsent.carry-unchanged",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-reconsent",
-   "text": "Without an explicit re-consent, the successor MUST carry the predecessor's `authority_ceiling`, `drawdown_policy` and `ceiling_hash` unchanged, together with the instant and the Approver of the ceiling consent they commit",
+   "text": "Without an explicit re-consent, the successor MUST carry the predecessor's `authority_ceiling`, `drawdown_policy`, `ceiling_hash` and `ceiling_consent_hash` unchanged, together with the instant and the Approver of the ceiling consent `ceiling_consent_hash` commits",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37568,9 +37604,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by dropping the carry (M2) and by reading the drawdown's consent_principal from the predecessor's basis (M4)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by dropping the carry (M2) and by reading the drawdown's consent_principal from the predecessor's basis (M4). #1468: carries ceiling_consent_hash too, proved by dropping it on a human-approved successor."
   },
   {
    "id": "progressive.ceiling-reconsent.beyond-stays-outside",
@@ -37606,7 +37648,7 @@
    "id": "progressive.ceiling-reconsent.reconsent-recorded",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-reconsent",
-   "text": "the successor MUST record the re-consented `authority_ceiling` and the selected `drawdown_policy` under a recomputed `ceiling_hash`, with the re-consent's instant and Approver as those of the ceiling consent",
+   "text": "the successor MUST record the re-consented `authority_ceiling` and the selected `drawdown_policy` under a recomputed `ceiling_hash`, record that hash as its `ceiling_consent_hash`, and record the re-consent's instant and Approver as those of the ceiling consent",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37628,9 +37670,15 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by ignoring the re-consent (M3) and by not storing it at approval (M7)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by ignoring the re-consent (M3) and by not storing it at approval (M7). #1468: the re-consent becomes the consent commitment, proved by keeping the old one."
   },
   {
    "id": "progressive.ceiling-reconsent.cadence-restarts",
@@ -37788,6 +37836,90 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by reading the predecessor's approval_basis instead (M4)."
   },
   {
+   "id": "progressive.ceiling-drawdown-basis.root-commitment-is-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "`root_commitment`: the predecessor's `ceiling_consent_hash`, the latest explicitly human-consented ceiling and drawdown policy, never a `ceiling_hash` a policy narrowing recomputed",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every policy-adjudicated drawdown's root_commitment names the latest explicitly consented ceiling, after any number of narrowings and after an intervening human approval; after a re-consent it names the re-consented one",
+    "local": "Taken from ceilingConsentHash(predecessor)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by taking the effective ceiling_hash."
+  },
+  {
+   "id": "progressive.ceiling-drawdown-basis.approved-at-is-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "the instant the Approver consented the ceiling that `root_commitment` commits, read from the Mission Issuer's retained record of that consent, never from the drawdown request",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every policy-adjudicated drawdown's approved_at is the instant of the consent its root_commitment names, unchanged by narrowings",
+    "local": "Read from the predecessor's ceiling_consented_at, which only a consent or re-consent sets."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by restarting the consent instant at a narrowing."
+  },
+  {
    "id": "progressive.in-ceiling.successor-carries-ceiling",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
@@ -37803,10 +37935,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a policy-adjudicated successor records the predecessor's authority_ceiling and drawdown_policy unchanged or narrowed, under the same ceiling_hash or, when narrowed, a recomputed one",
-    "local": "A policy-adjudicated successor carries both unchanged under the same ceiling_hash. A successor a fresh human approval creates carries the ceiling members unchanged unless the Approver re-consents (progressive.ceiling-reconsent rows). Policy narrowing is not implemented (#1468)."
+    "local": "A policy-adjudicated successor carries both unchanged under the same ceiling_hash, or, where the drawdown policy's retire_undrawn_actions retires undrawn actions, narrowed under a recomputed one. A successor a fresh human approval creates carries the ceiling members unchanged unless the Approver re-consents (progressive.ceiling-reconsent rows)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -37819,9 +37951,81 @@
      "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468: the narrowed path proved by a policy that never narrows."
+  },
+  {
+   "id": "progressive.drawdown-successor.consent-carried",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-successor",
+   "text": "The successor MUST carry `ceiling_consent_hash`, and the instant and Approver of that consent, unchanged",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy-adjudicated successor, narrowed or not, carries the predecessor's ceiling_consent_hash, ceiling consent instant and consenting Approver",
+    "local": "Carried from the predecessor in createCeilingDrawdownInCallerTx."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by taking the narrowed hash as the consent and by dropping the consenting Approver at a narrowing."
+  },
+  {
+   "id": "progressive.drawdown-successor.narrowing-not-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "drawdown-successor",
+   "text": "a narrowing is not a consent, so it resets neither the review cadence ({{ceiling-review}}) nor the cumulative drawdown count ({{audit-linkage}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a policy narrowing the review cadence stays keyed on the consent instant and the drawdown count is one more than the predecessor's",
+    "local": "A narrowing changes only authority_ceiling and ceiling_hash."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a narrowing is not a review: the cadence stays keyed on the consent instant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468, D593. Proved by restarting the cadence and by resetting the count at a narrowing."
   },
   {
    "id": "progressive.in-ceiling.policy-mismatch-falls-back",
@@ -38382,10 +38586,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "drawdown_count is unchanged by a recovered retry, by a request that falls back, and by a human-approved successor with or without a re-consent",
-    "local": "successorCeilingMembers carries the count; recovery creates nothing."
+    "local": "successorCeilingMembers carries the count; recovery creates nothing; a narrowing successor counts one more, never resetting."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
@@ -38410,15 +38614,21 @@
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent continues the chain's drawdown count and rate window",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor. D593: the policy narrowing path and its tests are #1468."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by not incrementing (M-c) and by resetting on a human-approved successor. #1468: narrowing proved by resetting the count at a narrowing."
   },
   {
    "id": "progressive.audit.ceiling-retained-in-chain",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "A deployment MUST retain the consented `authority_ceiling`, `drawdown_policy`, and `ceiling_hash` with every Mission record in the chain for the audit horizon",
+   "text": "A deployment MUST retain, with every Mission record in the chain for the audit horizon, its `authority_ceiling`, `drawdown_policy`, `ceiling_hash` and `ceiling_consent_hash`, and the consented `authority_ceiling` and `drawdown_policy` that each `ceiling_consent_hash` commits",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -38429,8 +38639,8 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Mission record in a drawdown chain holds the consented authority_ceiling, drawdown_policy and ceiling_hash for the audit horizon",
-    "local": "Every policy-adjudicated successor carries all three unchanged. A human-approved successor without a re-consent carries all three unchanged too. Retention for the audit horizon is the kernel record store's and is not witnessed here."
+    "normative": "every Mission record in a drawdown chain holds its effective ceiling members and the consent commitment, and the consented ceiling that commitment names stays retained for the audit horizon",
+    "local": "Every successor carries authority_ceiling, drawdown_policy, ceiling_hash and ceiling_consent_hash; the consented members are held on the consent-bearing record (the root or a re-consenting successor), itself a Mission record of the chain. Retention for the audit horizon is the kernel record store's and is not witnessed here."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -38450,6 +38660,12 @@
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -38695,12 +38911,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a ceiling narrowed by a policy-adjudicated drawdown keeps the narrowed consent's instant, so the review cadence does not restart",
-    "local": "The reference carries the ceiling unchanged on every policy-adjudicated successor and never narrows it by policy."
+    "local": "A narrowed successor keeps ceiling_consented_at, the cadence's anchor, so a chain whose consent ages past the cadence after a narrowing falls back."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D593: the policy narrowing path and its tests are #1468."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468) > a narrowing is not a review: the cadence stays keyed on the consent instant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). #1468: proved by restarting the consent instant at a narrowing."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",

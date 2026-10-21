@@ -725,6 +725,15 @@ export interface MissionRecord {
   /** @spec progressive#progressive-authorization: commits `authority_ceiling` and `drawdown_policy`. */
   ceiling_hash?: string;
   /**
+   * @spec progressive#progressive-authorization, progressive#ceiling-drawdown-basis
+   * (#1468): the `ceiling_hash` of the ceiling and drawdown policy a human last
+   * explicitly consented, every drawdown's `root_commitment`. Equal to
+   * `ceiling_hash` until a policy-adjudicated drawdown narrows the ceiling;
+   * only a re-consent replaces it. Absent on a record stored before #1468,
+   * whose ceiling was never narrowed, so `ceiling_hash` names that consent.
+   */
+  ceiling_consent_hash?: string;
+  /**
    * @spec progressive#in-ceiling-expansion, progressive#ceiling-review: the
    * issuer's retained record of the instant the Approver consented the
    * ceiling `ceiling_hash` commits. A drawdown's `approved_at` and the ceiling

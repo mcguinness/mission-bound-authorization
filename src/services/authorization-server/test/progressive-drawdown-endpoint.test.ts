@@ -85,6 +85,17 @@ const drawdownPolicy = (cadenceS = 2_592_000, maxAdded = 1): RegisteredActivatio
   content_type: "application/json",
   content: JSON.stringify({ max_added_actions: maxAdded, ceiling_review_cadence_s: cadenceS }),
 });
+/** A drawdown policy that retires the undrawn vendor.read and invoice.list from the ceiling it carries (#1468). */
+const NARROWED_ACTIONS = ["payments:vendor.read", "payments:invoice.list"];
+const narrowingPolicy = (cadenceS: number): RegisteredActivationPolicy => ({
+  version: "1",
+  content_type: "application/json",
+  content: JSON.stringify({
+    max_added_actions: 1,
+    ceiling_review_cadence_s: cadenceS,
+    retire_undrawn_actions: NARROWED_ACTIONS,
+  }),
+});
 const POLICIES: Record<string, RegisteredActivationPolicy> = {
   "drawdown-std": drawdownPolicy(),
   // Edited in place by the changed-policy case.
@@ -95,6 +106,10 @@ const POLICIES: Record<string, RegisteredActivationPolicy> = {
   "drawdown-wide": drawdownPolicy(2_592_000, 2),
   // Moved on to a new version by the past-cadence case.
   "drawdown-moved": drawdownPolicy(),
+  // Narrows the carried ceiling by the undrawn vendor.read and invoice.list (#1468).
+  "drawdown-narrow": narrowingPolicy(2_592_000),
+  // The same, under a two-second review cadence.
+  "drawdown-narrow-short": narrowingPolicy(2),
 };
 
 /** The Mission Deployment Profile's published bounds and action-class mapping. */
@@ -1486,5 +1501,118 @@ describe("a drawdown of floor-class authority (@spec progressive#in-ceiling-expa
       await expectFreshApproval(pred.missionId, pred.accessToken, [...READ, action]);
       expect(successorsOf(pred.missionId)).toHaveLength(0);
     }
+  });
+});
+
+describe("policy narrowing and the consent commitment (@spec progressive#drawdown-successor, progressive#ceiling-drawdown-basis, progressive#ceiling-review, #1468)", () => {
+  const ALICE = { iss: ISSUER, sub: "alice" };
+  const VENDOR = "payments:vendor.read";
+  const get = (id: string): MissionRecord => as.kernel.get(id) as MissionRecord;
+  /** FULL_CEILING without the named actions; an entry left with none leaves it. */
+  const without = (ceiling: AuthorityEntry[], drop: string[]): AuthorityEntry[] =>
+    ceiling
+      .map((e) => ({ ...e, actions: e.actions.filter((a) => !drop.includes(a)) }))
+      .filter((e) => e.actions.length > 0);
+  const hashOf = (ceiling: AuthorityEntry[], record: MissionRecord): string =>
+    computeAnchor("mission-authority-ceiling", ISSUER, {
+      authority_ceiling: ceiling,
+      drawdown_policy: record.drawdown_policy,
+    } as unknown as JsonValue);
+
+  it("successive narrowings recompute the effective ceiling_hash while root_commitment, approved_at and the consenting Approver stay the latest consent's; the count keeps counting", async () => {
+    const root = await issueMission(READ, ceilingOf("drawdown-narrow"));
+    const r0 = get(root.missionId);
+    expect(r0.ceiling_consent_hash).toBe(r0.ceiling_hash);
+    // The first drawdown holds invoice.list, so only the undrawn vendor.read retires.
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const s1 = get(d1.mission_id);
+    const narrowed1 = without(FULL_CEILING, [VENDOR]);
+    expect(s1.authority_ceiling).toEqual(narrowed1);
+    expect(s1.ceiling_hash).toBe(hashOf(narrowed1, r0));
+    expect(s1.ceiling_hash).not.toBe(r0.ceiling_hash);
+    expect(s1.ceiling_consent_hash).toBe(r0.ceiling_hash);
+    expect(s1.ceiling_consented_at).toBe(r0.ceiling_consented_at);
+    expect(s1.ceiling_consent_principal).toEqual(r0.approval_basis.consent_principal);
+    expect(s1.approval_basis).toMatchObject({ root_commitment: r0.ceiling_hash, approved_at: r0.ceiling_consented_at });
+    expect(s1.drawdown_count).toBe(1);
+    // The second drops invoice.list, which now retires too: drawn against a ceiling no human consented.
+    const d2 = await drawdown(d1.access_token, crypto.randomUUID(), [...READ, "payments:payment.schedule"]);
+    const s2 = get(d2.mission_id);
+    const narrowed2 = without(FULL_CEILING, NARROWED_ACTIONS);
+    expect(s2.authority_ceiling).toEqual(narrowed2);
+    expect(s2.ceiling_hash).toBe(hashOf(narrowed2, r0));
+    expect(s2.ceiling_hash).not.toBe(s1.ceiling_hash);
+    expect(s2.ceiling_consent_hash).toBe(r0.ceiling_hash);
+    expect(s2.approval_basis).toMatchObject({
+      root_commitment: r0.ceiling_hash,
+      approved_at: r0.ceiling_consented_at,
+      consent_principal: r0.approval_basis.consent_principal,
+    });
+    expect(s2.drawdown_count).toBe(2);
+  });
+
+  it("a narrowing is not a review: the cadence stays keyed on the consent instant", async () => {
+    // A two-second review cadence.
+    const root = await issueMission(READ, ceilingOf("drawdown-narrow-short"));
+    const r0 = get(root.missionId);
+    await new Promise((r) => setTimeout(r, 1200));
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const s1 = get(d1.mission_id);
+    expect(s1.ceiling_hash).not.toBe(r0.ceiling_hash);
+    expect(s1.ceiling_consented_at).toBe(r0.ceiling_consented_at);
+    // 2.2 s after the consent, 1 s after the narrowing: overdue, so the next widening falls back.
+    await new Promise((r) => setTimeout(r, 1000));
+    await expectFreshApproval(s1.id, d1.access_token, [...READ_LIST, "payments:payment.schedule"]);
+  });
+
+  it("a human-approved successor without a re-consent carries the narrowed ceiling and the consent commitment unchanged", async () => {
+    const root = await issueMission(READ, ceilingOf("drawdown-narrow"));
+    const r0 = get(root.missionId);
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const s1 = get(d1.mission_id);
+    // vendor.read is outside the narrowed ceiling: a fresh human approval, without a re-consent.
+    const approved = await approveAndPoll(await openFreshApproval(s1.id, d1.access_token, [...READ_LIST, VENDOR]), ALICE);
+    const h = get(approved.mission_id);
+    expect(h.authority_ceiling).toEqual(s1.authority_ceiling);
+    expect(h.ceiling_hash).toBe(s1.ceiling_hash);
+    expect(h.ceiling_consent_hash).toBe(r0.ceiling_hash);
+    expect(h.ceiling_consented_at).toBe(r0.ceiling_consented_at);
+    expect(h.ceiling_consent_principal).toEqual(r0.approval_basis.consent_principal);
+    expect(h.drawdown_count).toBe(1);
+    // The next drawdown, dropping vendor.read, still names the consent.
+    const d2 = await drawdown(approved.access_token, crypto.randomUUID(), [...READ_LIST, "payments:payment.schedule"]);
+    expect(get(d2.mission_id).approval_basis).toMatchObject({
+      root_commitment: r0.ceiling_hash,
+      approved_at: r0.ceiling_consented_at,
+      consent_principal: r0.approval_basis.consent_principal,
+    });
+  });
+
+  it("an explicit re-consent after a narrowing replaces the consent commitment and the effective ceiling and restarts the cadence; the count carries", async () => {
+    const root = await issueMission(READ, ceilingOf("drawdown-narrow"));
+    const r0 = get(root.missionId);
+    const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
+    const s1 = get(d1.mission_id);
+    const approved = await approveAndPoll(
+      await openFreshApproval(s1.id, d1.access_token, [...READ_LIST, VENDOR]),
+      ALICE,
+      ceilingOf("drawdown-std"),
+    );
+    const h = get(approved.mission_id);
+    expect(h.authority_ceiling).toEqual(FULL_CEILING);
+    expect(h.ceiling_hash).toBe(hashOf(FULL_CEILING, h));
+    expect(h.ceiling_consent_hash).toBe(h.ceiling_hash);
+    expect(h.ceiling_consent_hash).not.toBe(r0.ceiling_hash);
+    expect(Date.parse(h.ceiling_consented_at as string)).toBeGreaterThan(Date.parse(r0.ceiling_consented_at as string));
+    expect(h.ceiling_consent_principal).toEqual(ALICE);
+    expect(h.drawdown_count).toBe(1);
+    const d2 = await drawdown(approved.access_token, crypto.randomUUID(), [...READ_LIST, VENDOR, "payments:payment.schedule"]);
+    const s2 = get(d2.mission_id);
+    expect(s2.approval_basis).toMatchObject({
+      root_commitment: h.ceiling_consent_hash,
+      approved_at: h.ceiling_consented_at,
+      consent_principal: ALICE,
+    });
+    expect(s2.drawdown_count).toBe(2);
   });
 });
