@@ -3214,7 +3214,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const requireServiceToken = (ctx: KoaCtx): boolean => authenticateService(ctx) !== undefined;
 
   /**
-   * @spec mission#approval-authentication (#826, #1320) — the Approver of one
+   * @spec mission#approval-authentication (#826, #1320): the Approver of one
    * decision, keyed by what it decides (an interaction uid or a template
    * proposal id): the login this user agent established for that key, on a
    * same-origin request carrying its CSRF secret, or a trusted headless
@@ -3242,7 +3242,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     return { principal, interactive: browser !== undefined };
   };
 
-  /** @spec mission-template#template-consent — template proposals and their decisions. */
+  /** @spec mission-template#template-consent: template proposals and their decisions. */
   const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
 
   /**
@@ -4638,7 +4638,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       }
       return;
     }
-    // @spec mission-template#template-consent — the human consent to a
+    // @spec mission-template#template-consent: the human consent to a
     // Mission Template. An administrator proposes the body on the service-token
     // admin plane; the Approver reads the consent disclosure and decides. The
     // proposal id is the capability the consent URI carries.
@@ -4755,6 +4755,22 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         templateProposals.settle(id, { state: "denied" });
         ctx.status = 200;
         ctx.body = { proposal_id: id, state: "denied" };
+        return;
+      }
+      // @spec mission#approval-authentication (#826, D425): dispatch later
+      // grants authority within the Template Ceiling under this consent's
+      // `consent_principal` and `approved_at`, with no Approver authenticating,
+      // so the consent itself meets the approval-authentication floor for
+      // everything the ceiling admits, as a Progressive ceiling consent does.
+      const floor = evaluateApprovalFloor(
+        opts.approvalFloor,
+        proposal.body.ceiling,
+        { acr: principal.acr, auth_time: principal.auth_time },
+        { interactive: resolved.interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
+      );
+      if (floor.outcome === "refused") {
+        ctx.status = 403;
+        ctx.body = { error: "access_denied", error_description: floor.reason };
         return;
       }
       // @spec mission-template#template-consent, derivation-limits#approval-rendering

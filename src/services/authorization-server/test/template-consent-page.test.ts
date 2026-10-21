@@ -17,7 +17,7 @@
  */
 
 import { type Server } from "node:http";
-import { demoReconciliationTemplate, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   MACHINE_SPEED_STATEMENT,
@@ -25,7 +25,12 @@ import {
   TEMPLATE_CEILING_STATEMENT,
 } from "../src/adapters/template-consent.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
-import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import {
+  browserApprovalHeaders,
+  floorApprovalHeaders,
+  TEST_APPROVAL_PRINCIPALS,
+  trustedApprovalHeaders,
+} from "./approval-fixture.js";
 
 const PORT = 14987;
 const ISSUER = `http://localhost:${PORT}`;
@@ -150,6 +155,8 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     expect(template?.approver).toEqual({ iss: ISSUER, sub: "bob" });
     expect(template?.template_version).toBe("demo-reconciliation-1");
     expect(template?.template_hash).toBe(body.template_hash);
+    // The template commits the Dispatch Policy whose figure the page rendered.
+    expect(template?.dispatch_policy).toMatchObject({ id: "test-limit-3", version: "1", digest: expect.any(String) });
     expect(template?.authority_source.type).toBe("user_delegated");
     expect(as.templateStore.getByApprovalEvent(`apev_${id}`)?.id).toBe(body.template_id);
     // Settled: the page reports the template, and no second decision is taken.
@@ -214,6 +221,28 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
     expect((await decide(id, "approve", trustedApprovalHeaders("bob", {}, null))).status).toBe(400);
     expect((await page(id)).html).toContain("This proposal was denied.");
+  });
+
+  it("holds the consent to the approval-authentication floor for everything the Template Ceiling admits: high-risk authority is refused after a password-only login and through a headless approval service, creating no template, and approved after an mfa login (@spec mission#approval-authentication)", async () => {
+    const remit = [
+      {
+        type: "mission_resource_access",
+        resource: DERIVATION_POLICY.ceiling[0]?.resource as string,
+        actions: ["payments:invoice.read", "payments:remittance.send"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+      },
+    ];
+    const res = await propose({ ...proposalBody(), ceiling: remit });
+    const { proposal_id: id } = (await res.json()) as { proposal_id: string };
+    expect(res.status).toBe(201);
+    for (const headers of [loggedIn(id), trustedApprovalHeaders("bob", {}, null)]) {
+      const refused = await decide(id, "approve", headers);
+      expect(refused.status).toBe(403);
+      expect(((await refused.json()) as { error: string }).error).toBe("access_denied");
+    }
+    expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
+    const approved = await decide(id, "approve", floorApprovalHeaders(SESSIONS, id, "", { subject: null }));
+    expect(approved.status).toBe(201);
   });
 
   it("refuses an Approver not authorized to activate the template's authority source, creating no template", async () => {
