@@ -1255,8 +1255,9 @@ Processing is governed by the following rules:
   policy; AS policy decides whether the verified claims are acceptable
   for this request.
 
-Supporting an evidence type is optional: an AS that supports none
-refuses every presented entry under these rules ({{conformance}}).
+Supporting an evidence type is optional, but these rules are not: an
+AS that supports none still applies them and refuses every presented
+entry ({{conformance-roles}}).
 
 Mission Intent Submission Evidence for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) specifies:
@@ -4788,7 +4789,11 @@ A scope-only resource server is served only where the AS established
 a safe scope projection for it ({{scope-projection}}). A Mission
 Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
-starting point is a conformance class.
+starting point is a conformance class, and neither removes a surface:
+the Mission Issuer still implements every surface its role lists
+({{conformance-roles}}), the evidence dispatch and refusal rules
+included even when it supports no evidence type, and the deployment
+still provides the authenticated revocation means of {{revocation}}.
 
 ## Conformance Roles {#conformance-roles}
 
@@ -7088,6 +7093,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1479): Conformance says that neither starting point
+  removes a Mission Issuer surface, the evidence dispatch and refusal
+  rules included, or the deployment's revocation means; Intent
+  Submission Evidence says its rules apply when the AS supports no
+  evidence type.
 
 - Editorial (#1472): a reader pass that changes no requirement. The
   abstract leads with the object OAuth lacks, and its agent-identity
