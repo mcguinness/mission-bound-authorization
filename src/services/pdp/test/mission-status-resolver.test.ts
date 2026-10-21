@@ -6,34 +6,42 @@
  * server double: every answer the double can give that must not establish
  * Mission state is a typed failure, and nothing is cached from it. The double
  * signs with its own keys and publishes them beside a key it uses for
- * something else, the way an issuer's `jwks_uri` does.
+ * something else, the way an issuer's `jwks_uri` does. It serves the
+ * profile's form POST at one endpoint (#1407).
  */
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { type CryptoKey, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { type CryptoKey, createLocalJWKSet, decodeProtectedHeader, exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   declaredStatusKeys,
   MissionStatusResolver,
   type MissionStatusResolverOptions,
   type MissionStatusResolution,
+  privateKeyJwtClient,
   type ResolveOptions,
 } from "../src/mission-status-resolver.js";
 
 const ISSUER = "https://mas.pilot.example";
 const AUDIENCE = "https://payments.example/api";
 const MISSION = "msn_resolver_double_0001";
-const TOKEN = "pdp-status-token";
+/** The PDP's client identifier at the Status endpoint, and the `sub` a response to it carries. */
+const CLIENT_ID = "pdp-status-client";
+const CLIENT_KID = "pdp-status-client-key";
+const ENDPOINT_PATH = "/mission/status";
 const STATUS_KID = "mas-status";
 const TOKEN_KID = "mas-token";
 
-type Handler = (req: IncomingMessage, res: ServerResponse, query: URLSearchParams) => void | Promise<void>;
+/** `form`: the request's form body, the profile's request members. */
+type Handler = (req: IncomingMessage, res: ServerResponse, form: URLSearchParams) => void | Promise<void>;
 
 let server: Server;
 let base: string;
 let handler: Handler;
-const requests: Array<{ path: string; query: URLSearchParams; token: string | undefined }> = [];
+const requests: Array<{ method: string; path: string; search: string; contentType: string; form: URLSearchParams }> = [];
+let clientKey: CryptoKey;
+let clientPublic: Record<string, unknown>;
 
 let statusKey: CryptoKey;
 let tokenKey: CryptoKey;
@@ -51,6 +59,9 @@ beforeAll(async () => {
   statusKey = status.privateKey;
   tokenKey = token.privateKey;
   strangerKey = stranger.privateKey;
+  const client = await generateKeyPair("ES256", { extractable: true });
+  clientKey = client.privateKey;
+  clientPublic = { ...(await exportJWK(client.publicKey)), kid: CLIENT_KID, alg: "ES256" };
   published = {
     keys: [
       { ...(await exportJWK(status.publicKey)), kid: STATUS_KID, alg: "ES256" },
@@ -59,8 +70,19 @@ beforeAll(async () => {
   };
   server = createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://double");
-    requests.push({ path: url.pathname, query: url.searchParams, token: req.headers["x-service-token"] as string | undefined });
-    void handler(req, res, url.searchParams);
+    const chunks: Buffer[] = [];
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
+      const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+      requests.push({
+        method: req.method ?? "",
+        path: url.pathname,
+        search: url.search,
+        contentType: req.headers["content-type"] ?? "",
+        form,
+      });
+      void handler(req, res, form);
+    });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -84,7 +106,7 @@ function payload(nonce: string | null): Record<string, unknown> {
   return {
     iss: ISSUER,
     aud: AUDIENCE,
-    sub: "ap-agent",
+    sub: CLIENT_ID,
     iat,
     exp: iat + 60,
     ...(nonce !== null ? { nonce } : {}),
@@ -139,10 +161,10 @@ function respond(
 function resolver(extra: Partial<MissionStatusResolverOptions> = {}): MissionStatusResolver {
   return new MissionStatusResolver({
     issuer: ISSUER,
-    statusUrl: (id) => `${base}/missions/${id}/status`,
+    statusEndpoint: `${base}${ENDPOINT_PATH}`,
     audience: AUDIENCE,
     keys: declaredStatusKeys(published as never, [STATUS_KID]),
-    serviceToken: TOKEN,
+    client: privateKeyJwtClient({ clientId: CLIENT_ID, issuer: ISSUER, privateKey: clientKey, kid: CLIENT_KID }),
     maxStaleSeconds: 300,
     timeoutMs: 1000,
     maxResponseBytes: 16 * 1024,
@@ -173,7 +195,7 @@ async function expectRefusedUncached(
 }
 
 describe("MissionStatusResolver: a verified answer (@spec authority-server#mission-join rule 2)", () => {
-  it("reads the Mission at the issuer's Status operation as an authenticated, audience-scoped, nonce-bound request and builds the view", async () => {
+  it("reads the Mission at the issuer's Status endpoint as the profile's form POST, authenticated by private-key JWT, audience-scoped and nonce-bound, and builds the view", async () => {
     const r = resolver();
     const resolved = await r.resolve(ref);
     expect(resolved.ok).toBe(true);
@@ -200,10 +222,25 @@ describe("MissionStatusResolver: a verified answer (@spec authority-server#missi
       }),
     ]);
     const [request] = requests;
-    expect(request?.path).toBe(`/missions/${MISSION}/status`);
-    expect(request?.token).toBe(TOKEN);
-    expect(request?.query.get("audience")).toBe(AUDIENCE);
-    expect(request?.query.get("nonce")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(request).toMatchObject({ method: "POST", path: ENDPOINT_PATH, search: "", contentType: "application/x-www-form-urlencoded" });
+    expect(request?.form.get("mission_id")).toBe(MISSION);
+    expect(request?.form.get("audience")).toBe(AUDIENCE);
+    expect(request?.form.get("nonce")).toMatch(/^[0-9a-f-]{36}$/);
+    expect(request?.form.get("client_assertion_type")).toBe("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+    // @spec status#mission-status-authentication: the assertion names the
+    // client, is audienced to the issuer identifier alone, and is typed.
+    const assertion = request?.form.get("client_assertion") ?? "";
+    expect(decodeProtectedHeader(assertion).typ).toBe("client-authentication+jwt");
+    const { payload: claims } = await jwtVerify(assertion, createLocalJWKSet({ keys: [clientPublic as never] }), {
+      issuer: CLIENT_ID,
+      subject: CLIENT_ID,
+      audience: ISSUER,
+      requiredClaims: ["exp", "jti"],
+    });
+    expect(claims.aud).toBe(ISSUER);
+    // A fresh assertion per read.
+    await resolver().resolve(ref, { fresh: true });
+    expect(requests[1]?.form.get("client_assertion")).not.toBe(assertion);
   });
 
   it("reads a response with no Join Disclosure as a view with neither subject nor client_id", async () => {
@@ -224,15 +261,12 @@ describe("MissionStatusResolver: a verified answer (@spec authority-server#missi
     expect(requests.length).toBe(0);
   });
 
-  it("never lets a reference's identifier steer the request to another path at the issuer", async () => {
-    // A slash travels encoded, inside the one Mission segment, and the
-    // answer for that identifier is refused like any other Mission's.
+  it("never lets a reference's identifier steer the request to another path at the issuer: it travels as the form's mission_id", async () => {
+    // The answer for that identifier is refused like any other Mission's.
     expect(await resolver().resolve({ id: "../admin/keys", issuer: ISSUER })).toMatchObject({ ok: false, reason: "unverifiable" });
-    expect(requests.map((q) => q.path)).toEqual(["/missions/..%2Fadmin%2Fkeys/status"]);
-    // A dot segment, which encoding leaves as it is, is never requested.
-    for (const id of ["..", ".", ""]) {
-      expect(await resolver().resolve({ id, issuer: ISSUER }), JSON.stringify(id)).toMatchObject({ ok: false, reason: "not_found" });
-    }
+    expect(requests.map((q) => [q.path, q.search, q.form.get("mission_id")])).toEqual([[ENDPOINT_PATH, "", "../admin/keys"]]);
+    // An empty identifier names no Mission and is never requested.
+    expect(await resolver().resolve({ id: "", issuer: ISSUER })).toMatchObject({ ok: false, reason: "not_found" });
     expect(requests.length).toBe(1);
   });
 });
@@ -288,6 +322,13 @@ describe("MissionStatusResolver: a response that does not verify establishes not
       mission(p).id = "msn_some_other_mission";
     });
     await expectRefusedUncached(resolver(), "unverifiable");
+  });
+
+  it("refuses a response signed for another caller: its sub is not this PDP's client identifier (consumer check 6)", async () => {
+    handler = respond((p) => {
+      p.sub = "ap-agent";
+    });
+    await expectRefusedUncached(resolver(), "unverifiable", "sub");
   });
 
   it("refuses a response that does not echo this request's nonce", async () => {
@@ -400,17 +441,29 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
       };
       await expectRefusedUncached(resolver(), reason, `status ${code}`);
     }
+    // @spec status#mission-status-auth-failures: a refused client
+    // authentication is 400 invalid_client; any other 400 is no answer.
+    for (const [error, reason, detail] of [
+      ["invalid_client", "unauthorized", "invalid_client"],
+      ["invalid_request", "unavailable", "status 400 invalid_request"],
+    ] as const) {
+      handler = (_req, res) => {
+        res.writeHead(400, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error, error_description: "refused" }));
+      };
+      await expectRefusedUncached(resolver(), reason, detail);
+    }
   });
 
   it("never follows a redirect, even to an answer that would verify", async () => {
     handler = (req, res, query) => {
       if (req.url?.startsWith("/elsewhere")) return respond()(req, res, query);
-      res.writeHead(302, { location: `/elsewhere/missions/${MISSION}/status?${query.toString()}` });
+      res.writeHead(307, { location: `/elsewhere${ENDPOINT_PATH}` });
       res.end();
     };
     const refused = await resolver().resolve(ref);
-    expect(refused).toMatchObject({ ok: false, reason: "unavailable", detail: "status 302" });
-    expect(requests.map((q) => q.path)).toEqual([`/missions/${MISSION}/status`]);
+    expect(refused).toMatchObject({ ok: false, reason: "unavailable", detail: "status 307" });
+    expect(requests.map((q) => q.path)).toEqual([ENDPOINT_PATH]);
   });
 
   it("stops reading a body over the cap, its length declared or streamed", async () => {
@@ -456,7 +509,7 @@ describe("MissionStatusResolver: an answer that does not arrive establishes noth
   });
 
   it("reports a source that does not answer at all as unavailable", async () => {
-    const r = resolver({ statusUrl: () => "http://127.0.0.1:1/missions/x/status" });
+    const r = resolver({ statusEndpoint: "http://127.0.0.1:1/mission/status" });
     expect(await r.resolve(ref)).toMatchObject({ ok: false, reason: "unavailable", detail: "transport" });
   });
 });
@@ -596,7 +649,13 @@ describe("MissionStatusResolver: a synchronous peek answers only from a read sti
 
 describe("MissionStatusResolver: configuration", () => {
   it("refuses a configuration with no bound or no credential", () => {
-    for (const extra of [{ maxStaleSeconds: 0 }, { timeoutMs: Number.NaN }, { maxResponseBytes: -1 }, { serviceToken: "" }]) {
+    for (const extra of [
+      { maxStaleSeconds: 0 },
+      { timeoutMs: Number.NaN },
+      { maxResponseBytes: -1 },
+      { client: { clientId: "", assertion: async () => "" } },
+      { statusEndpoint: "not a url" },
+    ]) {
       expect(() => resolver(extra), JSON.stringify(extra)).toThrow(/MissionStatusResolver/);
     }
   });

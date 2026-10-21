@@ -16,18 +16,18 @@
  *   its own read needs: the request's `nonce` echoed, an `iat` not in the
  *   future and a `fresh_until` not already passed, a recognized `state`, and
  *   the members the view is built from.
- * - Not checked: the envelope `sub`. Status consumer check 6 has it name the
- *   requesting client, but the reference authorization server signs the
- *   Mission's own client there; requiring check 6 would refuse every response
- *   that server serves, so the resolver relies on `aud`, `nonce` and the
- *   authenticated request instead, and the divergence is reported for a ruling.
- * - Authenticated. The request carries this PDP's service credential with the
- *   `mission_status` grant, as the reference authorization server's Status
- *   route requires (`x-service-token`); that route is a `GET` with the
- *   Mission in the path and `audience` and `nonce` as query parameters.
+ * - The envelope `sub` is this PDP's own client identifier (consumer check
+ *   6): a response signed for another caller is refused (#1407).
+ * - The profile's request. An HTTPS POST to the issuer's advertised
+ *   `mission_status_endpoint` with an `application/x-www-form-urlencoded`
+ *   body carrying `mission_id`, `audience` (this PDP's enforcement scope) and
+ *   a fresh `nonce`, the PDP authenticated by private-key JWT (RFC 7523) as a
+ *   client holding the `mission_status` grant: a fresh client assertion per
+ *   read, `aud` the issuer identifier ({@link privateKeyJwtClient}). The
+ *   Mission identifier travels in the body, never in the URL.
  * - Bounded. One deadline covers connecting, the headers and the body; the
  *   body is read through a byte cap, and a redirect is never followed, so the
- *   credential never leaves for another origin.
+ *   client assertion never leaves for another origin.
  * - Fail closed. Every failure is a typed result, never a throw, and never
  *   cached: no negative entry outlives the request that met it.
  * - Relied on only within the signed bounds. Every observation `resolve`
@@ -52,8 +52,8 @@
  * then carries neither.
  */
 
-import { randomUUID } from "node:crypto";
-import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey } from "jose";
+import { type KeyObject, randomUUID } from "node:crypto";
+import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey, SignJWT } from "jose";
 import { deriveJoinDelegation, type KernelDelegationPolicy } from "./mas-join.js";
 import type { AuthorityEntry, MissionView } from "./policy-view.js";
 import { verifyMissionStatusResponse } from "./state-observation.js";
@@ -87,9 +87,10 @@ export interface ResolvedMission {
 
 /**
  * Why no state was established. `unavailable`: no usable answer arrived (a
- * transport failure, the deadline, a body over the cap, a redirect, or a
- * status other than 200, 401, 403 and 404). `unauthorized`: the issuer
- * refused this PDP's credential (401 or 403). `not_found`: the issuer's
+ * transport failure, the deadline, a body over the cap, a redirect, a status
+ * other than 200, 400, 401, 403 and 404, or a 400 other than
+ * `invalid_client`). `unauthorized`: the issuer refused this PDP's client
+ * authentication (400 `invalid_client`, or 401 or 403). `not_found`: the issuer's
  * anti-oracle not-found, or a reference naming another issuer.
  * `unverifiable`: a response arrived and did not verify or did not carry a
  * usable view. `stale`: a response verified, but the observation it carries
@@ -110,17 +111,14 @@ export type MissionStatusResolution = ResolvedMission | UnresolvedMission;
 export interface MissionStatusResolverOptions {
   /** The Mission issuer this resolver reads: the only `issuer` a reference resolves under, and the expected `iss`. */
   issuer: string;
-  /**
-   * The Status operation's URL for one Mission, given the Mission identifier
-   * already percent-encoded as one path segment.
-   */
-  statusUrl: (encodedMissionId: string) => string;
+  /** The issuer's advertised `mission_status_endpoint`. */
+  statusEndpoint: string;
   /** This PDP's enforcement scope: the request's `audience` and the response's expected `aud`. */
   audience: string;
   /** The issuer's published status-response keys, restricted to the declared ones ({@link declaredStatusKeys}). */
   keys: JWTVerifyGetKey;
-  /** This PDP's credential at the Status operation, holding the `mission_status` grant. */
-  serviceToken: string;
+  /** This PDP's client authentication at the Status endpoint, as a client holding the `mission_status` grant. */
+  client: StatusClientCredential;
   /** The issuer's advertised `mission_max_stale_seconds`. */
   maxStaleSeconds: number;
   /** The deadline for one read, connection to last body byte, milliseconds. */
@@ -147,6 +145,50 @@ export interface ResolveOptions {
  */
 export function declaredStatusKeys(jwks: JSONWebKeySet, kids: readonly string[]): JWTVerifyGetKey {
   return createLocalJWKSet({ keys: jwks.keys.filter((k) => typeof k.kid === "string" && kids.includes(k.kid)) });
+}
+
+/**
+ * @spec status#mission-status-authentication: a client of the Mission Status
+ * endpoint that authenticates by private-key JWT (RFC 7523).
+ */
+export interface StatusClientCredential {
+  /** The client identifier: the assertion's `iss` and `sub`, and the `sub` a response to it carries. */
+  clientId: string;
+  /** A fresh client assertion for one request. */
+  assertion: () => Promise<string>;
+}
+
+const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+
+/**
+ * @spec status#mission-status-authentication: a private-key-JWT client: each
+ * assertion has `iss` and `sub` the client identifier, `aud` the issuer
+ * identifier as its sole value, a fresh `jti`, an `exp` a minute away, and
+ * the JWS `typ` `client-authentication+jwt`, the explicit type the client
+ * SHOULD set.
+ */
+export function privateKeyJwtClient(opts: {
+  clientId: string;
+  issuer: string;
+  privateKey: CryptoKey | KeyObject | Uint8Array;
+  kid: string;
+  alg?: string;
+  now?: () => Date;
+}): StatusClientCredential {
+  return {
+    clientId: opts.clientId,
+    assertion: async () => {
+      const iat = Math.floor((opts.now?.() ?? new Date()).getTime() / 1000);
+      return new SignJWT({ jti: randomUUID() })
+        .setProtectedHeader({ alg: opts.alg ?? "ES256", kid: opts.kid, typ: "client-authentication+jwt" })
+        .setIssuer(opts.clientId)
+        .setSubject(opts.clientId)
+        .setAudience(opts.issuer)
+        .setIssuedAt(iat)
+        .setExpirationTime(iat + 60)
+        .sign(opts.privateKey);
+    },
+  };
 }
 
 const fail = (reason: MissionStatusFailure, detail: string): UnresolvedMission => ({ ok: false, reason, detail });
@@ -262,7 +304,8 @@ export class MissionStatusResolver {
     ] as const) {
       if (!Number.isFinite(value) || value <= 0) throw new Error(`MissionStatusResolver: ${name} must be a positive number`);
     }
-    if (!opts.serviceToken) throw new Error("MissionStatusResolver: a service credential is required");
+    if (!opts.client?.clientId) throw new Error("MissionStatusResolver: a client credential is required");
+    if (!URL.canParse(opts.statusEndpoint)) throw new Error("MissionStatusResolver: statusEndpoint must be a URL");
     this.now = opts.now ?? (() => new Date());
     this.http = opts.fetch ?? fetch;
     // @spec status#mission-status-caching: the tolerance "MUST NOT exceed the
@@ -290,8 +333,7 @@ export class MissionStatusResolver {
    */
   async resolve(ref: { id: string; issuer: string }, options: ResolveOptions = {}): Promise<MissionStatusResolution> {
     if (ref.issuer !== this.opts.issuer) return fail("not_found", "reference names another issuer");
-    // Percent-encoding leaves a dot segment as it is, and a URL resolves it.
-    if (ref.id === "" || ref.id === "." || ref.id === "..") return fail("not_found", "reference names no Mission");
+    if (ref.id === "") return fail("not_found", "reference names no Mission");
     if (options.fresh !== true) {
       const cached = this.cache.get(ref.id);
       if (cached !== undefined && this.boundPassed(cached, options.maxAgeSeconds) === undefined) {
@@ -346,18 +388,36 @@ export class MissionStatusResolver {
     const signal = AbortSignal.timeout(this.opts.timeoutMs);
     let jws: string | undefined;
     try {
-      // The identifier reaches the URL as one percent-encoded path segment,
-      // so a reference the PEP carried cannot steer this credential to
+      // @spec status#mission-status-request: the form body; the identifier a
+      // PEP carried is a member value, so it cannot steer the request to
       // another path at the issuer.
-      const url = new URL(this.opts.statusUrl(encodeURIComponent(missionId)));
-      url.searchParams.set("audience", this.opts.audience);
-      url.searchParams.set("nonce", nonce);
-      const res = await this.http(url, {
-        method: "GET",
-        headers: { "x-service-token": this.opts.serviceToken, accept: "application/mission-status-response+jwt" },
+      const body = new URLSearchParams({
+        mission_id: missionId,
+        audience: this.opts.audience,
+        nonce,
+        client_assertion_type: CLIENT_ASSERTION_TYPE,
+        client_assertion: await this.opts.client.assertion(),
+      });
+      const res = await this.http(this.opts.statusEndpoint, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/mission-status-response+jwt" },
+        body: body.toString(),
         redirect: "manual",
         signal,
       });
+      if (res.status === 400) {
+        // @spec status#mission-status-auth-failures: a refused client
+        // authentication is a 400 `invalid_client`; any other 400 is no answer.
+        const text = await readCapped(res, 4096);
+        let error: unknown;
+        try {
+          error = text === undefined ? undefined : (JSON.parse(text) as { error?: unknown }).error;
+        } catch {
+          error = undefined;
+        }
+        if (error === "invalid_client") return fail("unauthorized", "invalid_client");
+        return fail("unavailable", `status 400 ${String(error)}`);
+      }
       if (res.status !== 200) {
         await res.body?.cancel();
         if (res.status === 401 || res.status === 403) return fail("unauthorized", `status ${res.status}`);
@@ -380,8 +440,11 @@ export class MissionStatusResolver {
     );
     if (verified === undefined) return fail("unverifiable", "signature or claims");
     const { payload, mission, freshUntilMs } = verified;
-    // @spec status#mission-status-response consumer check 7: the response
-    // answers THIS request, never a replayed earlier one.
+    // @spec status#mission-status-response consumer check 6 (#1407): the
+    // response was signed for this client, not for another caller.
+    if (payload.sub !== this.opts.client.clientId) return fail("unverifiable", "sub");
+    // Consumer check 7: the response answers THIS request, never a replayed
+    // earlier one.
     if (payload.nonce !== nonce) return fail("unverifiable", "nonce");
     // Check 9's other half: an observation dated in the future is not one the
     // issuer has made yet. `iat` is present and numeric: the verifier
