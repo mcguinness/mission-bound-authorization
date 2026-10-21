@@ -1412,7 +1412,9 @@ export function recheckApprovalGovernanceRecord(
     return no(1, (e as Error).message);
   }
   // A recorded direct approval replays the direct approval rule (#1470).
-  if (mission.approval_basis.type === "direct") return recheckDirectApprovalRecord(kernel.directApprovalRecords, mission, record);
+  if (mission.approval_basis.type === "direct") {
+    return recheckDirectApprovalRecord(kernel.directApprovalRecords, kernel.sourceBindings.get(missionId), mission, record);
+  }
   const activation = kernel.governedPolicyConsents.activation(missionId);
   if (mission.approval_basis.type !== "governed_policy" || !activation) {
     return no(4, "no recorded inputs to replay");

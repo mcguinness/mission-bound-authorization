@@ -303,6 +303,14 @@ describe("the direct approval rule (@spec approval-governance#approval-policy, a
   });
   const at = iso(T0);
 
+  it("denies at an evaluation instant that is not an RFC 3339 timestamp, rather than measuring no age", () => {
+    const old = inputs({ authentication: { ...AUTH, auth_time: AUTH.auth_time - 3600 } });
+    expect(evaluateDirectApprovalRule(rule, old, at)).toMatchObject({ decision: "deny" });
+    for (const bad of ["not-a-date", "", "2026-07-01"]) {
+      expect(evaluateDirectApprovalRule(rule, inputs(), bad)).toEqual({ decision: "deny", reason: "the evaluation instant is not an RFC 3339 timestamp" });
+    }
+  });
+
   it("denies an Approver who may not activate the authority source the approval resolved", () => {
     expect(evaluateDirectApprovalRule(rule, inputs({ source_root: "another-source" }), at)).toEqual({
       decision: "deny",
@@ -348,6 +356,35 @@ describe("the direct approval rule (@spec approval-governance#approval-policy, a
     expect(() => parseDirectApprovalRule(badApprover)).toThrow(/approver bob/);
     const badActivators = JSON.stringify({ ...JSON.parse(RULE.content), activators: { [SOURCE_ROOT]: "bob" } });
     expect(() => parseDirectApprovalRule(badActivators)).toThrow(/activators maps each source/);
+    // The floor passes the approval-floor policy's own validation: an unknown
+    // action class would otherwise disable the floor for that action.
+    const withFloor = (edit: (floor: Record<string, unknown>) => void) => {
+      const content = JSON.parse(RULE.content) as { floor: Record<string, unknown> };
+      edit(content.floor);
+      return JSON.stringify(content);
+    };
+    const typo = withFloor((f) => {
+      const c = (f.classification as Array<{ actions: Record<string, string> }>).find((x) => "payments:payment.execute" in x.actions);
+      (c as { actions: Record<string, string> }).actions["payments:payment.execute"] = "irreversible_actoin";
+    });
+    expect(() => parseDirectApprovalRule(typo)).toThrow(/payments:payment.execute is not a known action class/);
+    expect(() => parseDirectApprovalRule(withFloor((f) => ((f.floors as Array<Record<string, unknown>>)[0] as Record<string, unknown>).max_authentication_age_seconds = 0))).toThrow(
+      /positive integer/,
+    );
+    expect(() => parseDirectApprovalRule(withFloor((f) => ((f.floors as Array<Record<string, unknown>>)[0] as Record<string, unknown>).applies_to = ["irreversible_actoin"]))).toThrow(
+      /known action classes/,
+    );
+    expect(
+      () =>
+        new MissionKernel({
+          issuer: ISS,
+          policy: DERIVATION_POLICY as never,
+          authoritySourceCatalog: CATALOG,
+          statusKey: key,
+          statusKid: "as-status",
+          directApprovalRecording: { rule: { ...RULE, content: typo } },
+        }),
+    ).toThrow(/not a known action class/);
     expect(
       () =>
         new MissionKernel({
@@ -479,6 +516,50 @@ describe("re-checking a direct record (@spec approval-governance#re-check)", () 
     const subject = committed();
     subject.kernel.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.subject.sub', 'bob')").run();
     expect(recheck(subject.kernel, subject.mission.id)).toEqual(parties);
+    const malformed = committed();
+    malformed.kernel.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.auth_time', 'x')").run();
+    expect(recheck(malformed.kernel, malformed.mission.id)).toEqual({ rechecked: false, step: 4, reason: "the recorded authentication is malformed" });
+  });
+
+  it("step 4: refuses inputs naming another authority source than the Mission's retained binding, even one the rule lets the Approver activate", () => {
+    const second = { ...(CATALOG.entries[0] as object), id: "second-source" };
+    const kernel = makeKernel(true, ruleFrom({ ...CATALOG, entries: [...CATALOG.entries, second] } as never));
+    clockMs = T0 + 30_000;
+    const mission = approve(kernel);
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: true });
+    kernel.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.source_root', 'second-source')").run();
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: false, step: 4, reason: "the recorded inputs do not name the Mission's authority source" });
+  });
+
+  it("step 4: refuses inputs that drop the Mission's consented ceiling, whose irreversible action the floor holds to mfa", () => {
+    const READ_ONLY = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
+    const withCeiling = () => {
+      const kernel = makeKernel();
+      clockMs = T0 + 30_000;
+      return { kernel, mission: approve(kernel, { proposedAuthority: READ_ONLY, ceiling: { authority_ceiling: EXECUTE } }) };
+    };
+    const { kernel, mission } = withCeiling();
+    expect(mission.authority_ceiling).toEqual(EXECUTE);
+    expect(kernel.directApprovalRecords.inputs(mission.id)?.inputs.ceiling).toEqual(EXECUTE);
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: true });
+    const pwd = (k: MissionKernel, id: string) => {
+      k.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.acr', 'pwd')").run();
+      resign(k, id, (r) => {
+        (r.assertions[0] as { authority: { acr: string } }).authority.acr = "pwd";
+      });
+    };
+    // With the ceiling kept, the replay holds a pwd authentication to the floor.
+    pwd(kernel, mission.id);
+    expect(recheck(kernel, mission.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/acr does not satisfy/) });
+    // With the ceiling dropped from the inputs, the binding to the Mission refuses first.
+    const dropped = withCeiling();
+    pwd(dropped.kernel, dropped.mission.id);
+    dropped.kernel.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_remove(inputs_json, '$.ceiling')").run();
+    expect(recheck(dropped.kernel, dropped.mission.id)).toEqual({
+      rechecked: false,
+      step: 4,
+      reason: "the recorded inputs do not carry the Mission's consented ceiling",
+    });
   });
 
   it("step 5: refuses a record failing the commit gate, a human assertion that is not the recorded authentication, a replay that denies or approves another set, and other contributing", () => {
@@ -505,12 +586,19 @@ describe("re-checking a direct record (@spec approval-governance#re-check)", () 
       .prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.interactive', json('false'))")
       .run();
     expect(recheck(headless.kernel, headless.mission.id)).toMatchObject({ rechecked: false, step: 5, reason: expect.stringMatching(/^the replay does not approve/) });
-    const source = committed();
-    source.kernel.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.source_root', 'another-source')").run();
-    expect(recheck(source.kernel, source.mission.id)).toEqual({
+    // An evaluation instant that is not a timestamp, beside an authentication the floor would find too old.
+    const malformedAt = committed();
+    malformedAt.kernel.db
+      .prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.auth_time', ?)")
+      .run(AUTH.auth_time - 3600);
+    resign(malformedAt.kernel, malformedAt.mission.id, (r) => {
+      (r.assertions[0] as { authority: { auth_time: string } }).authority.auth_time = iso((AUTH.auth_time - 3600) * 1000);
+      r.evaluation.evaluated_at = "not-a-date";
+    });
+    expect(recheck(malformedAt.kernel, malformedAt.mission.id)).toEqual({
       rechecked: false,
       step: 5,
-      reason: "the replay does not approve: bob may not activate the authority source another-source",
+      reason: "evaluation.evaluated_at is not an RFC 3339 timestamp",
     });
     const late = committed();
     resign(late.kernel, late.mission.id, (r) => {

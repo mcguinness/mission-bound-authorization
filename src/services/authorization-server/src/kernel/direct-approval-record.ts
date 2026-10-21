@@ -17,8 +17,8 @@
  * record by replaying the rule over them (`recheckDirectApprovalRecord`).
  */
 import { createHash } from "node:crypto";
-import { approvalPolicyDigest, authorityHash, canonicalize, type JsonValue } from "@mission/core";
-import type { ApprovalFloorPolicy } from "@mission/demo-data";
+import { approvalPolicyDigest, authorityHash, canonicalize, isRfc3339Instant, type JsonValue } from "@mission/core";
+import { type ApprovalFloorPolicy, loadApprovalFloor } from "@mission/demo-data";
 import type { Database } from "@mission/store";
 import { evaluateApprovalFloor } from "./approval-floor.js";
 import {
@@ -154,25 +154,13 @@ export function parseDirectApprovalRule(content: string | Uint8Array): DirectApp
       fail(`approver ${sub} is not {approves_for, write}`);
     }
   }
-  const floor = r.floor;
-  if (!isObject(floor) || !exactly(floor, ["policy_id", "deployment_scope", "floors", "classification"])) fail("floor is not an approval-floor policy");
-  const f = floor as Record<string, unknown>;
-  if (typeof f.policy_id !== "string" || typeof f.deployment_scope !== "string" || !Array.isArray(f.floors) || !Array.isArray(f.classification)) {
-    fail("floor members are mistyped");
-  }
-  for (const x of f.floors as unknown[]) {
-    if (
-      !isObject(x) ||
-      typeof x.id !== "string" ||
-      !isStringArray(x.applies_to) ||
-      !isStringArray(x.accepted_acr) ||
-      typeof x.max_authentication_age_seconds !== "number"
-    ) {
-      fail("a floor is mistyped");
-    }
-  }
-  for (const c of f.classification as unknown[]) {
-    if (!isObject(c) || typeof c.type !== "string" || typeof c.resource !== "string" || !isObject(c.actions)) fail("a classification is mistyped");
+  // The floor passes the approval-floor policy's own strict validation (known
+  // action classes, floor bounds, accepted acr values); its retained bytes,
+  // not the loader's output, are what the rule evaluates.
+  try {
+    loadApprovalFloor(JSON.stringify(r.floor));
+  } catch (e) {
+    fail(`floor: ${(e as Error).message}`);
   }
   return raw as unknown as DirectApprovalRule;
 }
@@ -190,6 +178,12 @@ export function evaluateDirectApprovalRule(
   inputs: DirectApprovalInputs,
   evaluatedAt: string,
 ): DirectApprovalDecision {
+  // The floor's age bound is measured at this instant; one that is not a
+  // timestamp would make every age comparison false, so it refuses.
+  const nowMs = Date.parse(evaluatedAt);
+  if (!isRfc3339Instant(evaluatedAt) || !Number.isFinite(nowMs)) {
+    return { decision: "deny", reason: "the evaluation instant is not an RFC 3339 timestamp" };
+  }
   const approver = inputs.approver.sub;
   const subject = inputs.subject.sub;
   const activators = Object.hasOwn(rule.activators, inputs.source_root) ? rule.activators[inputs.source_root] : undefined;
@@ -210,7 +204,7 @@ export function evaluateDirectApprovalRule(
     rule.floor,
     evaluated,
     { acr: inputs.authentication.acr, auth_time: inputs.authentication.auth_time },
-    { interactive: inputs.authentication.interactive, nowSeconds: Math.floor(Date.parse(evaluatedAt) / 1000) },
+    { interactive: inputs.authentication.interactive, nowSeconds: Math.floor(nowMs / 1000) },
   );
   if (floor.outcome === "refused") return { decision: "deny", reason: floor.reason };
   return { decision: "approve" };
@@ -359,12 +353,17 @@ export class DirectApprovalRecordStore {
 
 const samePrincipal = (a: { iss: string; sub: string }, b: { iss: string; sub: string }): boolean => a.iss === b.iss && a.sub === b.sub;
 
+const isAuthentication = (a: unknown): a is DirectApprovalAuthentication =>
+  isObject(a) && typeof a.acr === "string" && a.acr.length > 0 && Number.isSafeInteger(a.auth_time) && typeof a.interactive === "boolean";
+
 /**
  * @spec approval-governance#re-check: steps 2 to 6 for a verified direct
  * record. (2) the retained rule snapshot reproduces `approval_policy.digest`;
  * (3) no separate evaluator decides a direct approval; (4) the retained inputs
- * are bound to this event and Intent and name this Mission's Approver and
- * Subject; (5) the replay of the rule over the inputs at
+ * are bound to this event and Intent, name this Mission's Approver and
+ * Subject, the authority source its retained binding names and the ceiling it
+ * consented, and record a well-formed authentication; (5) `evaluated_at` is an
+ * RFC 3339 timestamp and the replay of the rule over the inputs at
  * `evaluation.evaluated_at` approves the committed Authority Set, the record
  * passes the commit gate, its human assertion carries the authentication the
  * inputs record, and `contributing` is exactly that assertion; (6)
@@ -373,6 +372,7 @@ const samePrincipal = (a: { iss: string; sub: string }, b: { iss: string; sub: s
  */
 export function recheckDirectApprovalRecord(
   store: DirectApprovalRecordStore,
+  sourceBinding: { rootId: string } | undefined,
   mission: MissionRecord,
   record: ApprovalGovernanceRecord,
 ):
@@ -404,6 +404,15 @@ export function recheckDirectApprovalRecord(
   if (!samePrincipal(inputs.approver, basis.consent_principal) || !samePrincipal(inputs.subject, mission.subject)) {
     return no(4, "the recorded inputs do not name this Mission's Approver and Subject");
   }
+  // The inputs carry what the Mission committed: the authority source its
+  // retained binding names, and the ceiling it consented.
+  if (!sourceBinding || inputs.source_root !== sourceBinding.rootId) {
+    return no(4, "the recorded inputs do not name the Mission's authority source");
+  }
+  if (canonicalize((inputs.ceiling ?? null) as JsonValue) !== canonicalize((mission.authority_ceiling ?? null) as unknown as JsonValue)) {
+    return no(4, "the recorded inputs do not carry the Mission's consented ceiling");
+  }
+  if (!isAuthentication(inputs.authentication)) return no(4, "the recorded authentication is malformed");
   let accountable: AgrAssertion;
   try {
     accountable = assertDirectApprovalRecord(record, basis, record.approval_policy);
@@ -414,6 +423,7 @@ export function recheckDirectApprovalRecord(
   if (auth.acr !== inputs.authentication.acr || auth.auth_time !== new Date(inputs.authentication.auth_time * 1000).toISOString()) {
     return no(5, "the human assertion is not the authentication the inputs record");
   }
+  if (!isRfc3339Instant(record.evaluation.evaluated_at)) return no(5, "evaluation.evaluated_at is not an RFC 3339 timestamp");
   const decision = evaluateDirectApprovalRule(rule, inputs, record.evaluation.evaluated_at);
   if (decision.decision !== "approve") return no(5, `the replay does not approve: ${decision.reason}`);
   if (authorityHash(mission.issuer, inputs.authority as never) !== mission.authority_hash) {
