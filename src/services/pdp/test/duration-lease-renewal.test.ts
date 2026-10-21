@@ -246,6 +246,18 @@ describe("a renewal passes every current check, and a failed check keeps its own
     expect(renewal.context.denial_reason).toBe("mission_inactive");
     expect(ledger.activities()).toEqual(before);
   });
+
+  it("a renewal naming a live, matching activity is denied authority_contained once containment removes the action, and continues nothing", async () => {
+    const { ledger, decide, opened } = harness();
+    const prior = await opened();
+    const before = ledger.activities();
+    const at = T0 + 10_000;
+    const contained = { containment: { version: 2, contained: [{ resource: INVOICES, actions: [READ] }] } };
+    const renewal = await decide(request(at, { prior }), at, "msn_lease_a", contained);
+    expect(renewal.decision, JSON.stringify(renewal.context)).toBe(false);
+    expect(renewal.context.denial_reason).toBe("authority_contained");
+    expect(ledger.activities()).toEqual(before);
+  });
 });
 
 /** The authenticated PEP the keyed decisions are issued to. */
