@@ -2129,7 +2129,8 @@ as follows:<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 server enforces the <code>authorization_details</code> statelessly and can check
 the <code>mission</code> claim (<a href="#rs-enforcement" class="auto internal xref">Section 9</a>), with no callback to the AS
 required.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.1-6">(5) A management revoke, or <code>expires_at</code> passing, moves the Mission
+<p id="section-2.1-6">(5) An authorized revocation (<a href="#revocation" class="auto internal xref">Section 7.2</a>), or <code>expires_at</code>
+passing, moves the Mission
 to <code>terminated</code>, with reason <code>revoked</code> or <code>expired</code>, after which the
 AS refuses further issuance and refresh. A deployment can also treat
 <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> revocation of the refresh token as revoking the Mission
@@ -4433,7 +4434,8 @@ instead; the refusal itself, and the <code>mission_error</code> member below,
 still apply.<a href="#section-8.2-5" class="pilcrow">¶</a></p>
 <p id="section-8.2-6">The error code alone does not tell a client which gate refused. On a
 refusal under this section the AS <span class="bcp14">SHOULD</span> include, alongside <code>error</code>,
-the <code>mission_error</code> token-error-response member (<a href="#iana" class="auto internal xref">Section 23</a>) with one
+the <code>mission_error</code> token-error-response member
+(<a href="#oauth-parameters-registration" class="auto internal xref">Section 23.1</a>) with one
 of the values <code>revoked</code>, <code>expired</code>, or <code>superseded</code> (where a companion
 defines supersession), the Mission's termination reason
 (<a href="#termination" class="auto internal xref">Section 7.1</a>).<a href="#section-8.2-6" class="pilcrow">¶</a></p>
@@ -4726,7 +4728,7 @@ and<a href="#section-8.7-6.5.1" class="pilcrow">¶</a></p>
           <li id="section-8.7-6.6">
             <p id="section-8.7-6.6.1">for a multi-audience token, establishes the condition
 independently for each audience; a single-audience token
-(<a href="#mission-bound-tokens" class="auto internal xref">Section 8</a>) remains preferred.<a href="#section-8.7-6.6.1" class="pilcrow">¶</a></p>
+(<a href="#token-response" class="auto internal xref">Section 8.4</a>) remains preferred.<a href="#section-8.7-6.6.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
 <p id="section-8.7-7">Unknown <code>scope</code> semantics, unknown resource server enforcement
@@ -5100,7 +5102,7 @@ constraint it does not implement.<a href="#section-9.4-4.4.1" class="pilcrow">¶
 <p id="section-9.4-5">A value the client does not recognize is treated as
 <code>insufficient_authority</code>. A resource server <span class="bcp14">SHOULD</span> include the
 attribute only in a response to a validly signed, audience-correct
-token whose holder its deployment accepts learning the distinction
+token whose holder its deployment permits to learn the distinction
 (<a href="#denial-disclosure" class="auto internal xref">Section 20.3.2</a>).<a href="#section-9.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -5213,7 +5215,8 @@ and the Authority Set contain, so a refresh-token family narrower than
 the Mission does not obtain the Mission's wider authority.<a href="#section-9.6-4" class="pilcrow">¶</a></p>
 <p id="section-9.6-5">For entries outside the Authority Set, more authority requires a new
 approval, proposed as for a new Mission (<a href="#authority-proposal" class="auto internal xref">Section 4.3</a>), or
-an expansion where that companion is deployed (<a href="#rs-enforcement" class="auto internal xref">Section 9</a>).
+an expansion where that companion is deployed
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-expansion" class="cite xref">I-D.draft-mcguinness-oauth-mission-expansion</a>]</span>).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.<a href="#section-9.6-5" class="pilcrow">¶</a></p>
 <p id="section-9.6-6">A third grain, the requestable denial of <span>[<a href="#AuthZEN.ARAP" class="cite xref">AuthZEN.ARAP</a>]</span>, profiled by
@@ -5298,7 +5301,8 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
           <tr>
             <td class="text-left" rowspan="1" colspan="1">Token endpoint (<a href="#subset" class="auto internal xref">Section 5.4</a>): the requested RAR subset exceeds the Mission's granted authority</td>
             <td class="text-left" rowspan="1" colspan="1">
-              <code>invalid_authorization_details</code> (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Detail: safe detail</td>
+              <code>invalid_authorization_details</code> (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-6" class="relref">Section 6</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>). Detail: safe <code>error_description</code>
+</td>
           </tr>
         </tbody>
       </table>
@@ -7050,7 +7054,7 @@ exactly when a proposal was submitted.<a href="#section-15.1-2.1.4.2.1" class="p
               <li class="normal" id="section-15.1-2.1.4.4">
                 <p id="section-15.1-2.1.4.4.1">For an activation policy reference's <code>digest</code>, <code>typ</code> is
 <code>mission-activation-policy</code> and <code>value</code> is the policy snapshot
-object that <a href="#standing-consent-bases" class="auto internal xref">Section 13</a> defines.<a href="#section-15.1-2.1.4.4.1" class="pilcrow">¶</a></p>
+object that <a href="#activation-policy-commitment" class="auto internal xref">Section 13.2</a> defines.<a href="#section-15.1-2.1.4.4.1" class="pilcrow">¶</a></p>
 </li>
             </ul>
 </li>
@@ -7085,7 +7089,7 @@ separation. To keep that domain separation safe without a registry, a
 new <code>typ</code> value <span class="bcp14">MUST</span> be a collision-resistant name (for example, a
 short name prefixed within a namespace the defining profile controls,
 following the Collision-Resistant Name guidance of
-<span><a href="https://rfc-editor.org/rfc/rfc7519#section-4.2" class="relref">Section 4.2</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>). <code>mission-</code> prefixed values, used by this
+<span><a href="https://rfc-editor.org/rfc/rfc7519#section-2" class="relref">Section 2</a> of [<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>). <code>mission-</code> prefixed values, used by this
 document and the profiles that extend it, form a namespace
 coordinated through this document's change controller.<a href="#section-15.1-6" class="pilcrow">¶</a></p>
 <p id="section-15.1-7">This document also defines the <strong>Authority Set entry commitment</strong>, the
@@ -7139,8 +7143,9 @@ each committed array in its recorded order wherever it emits the
 committed object; that order is part of the canonical form.<a href="#section-15.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-15.2-2.4">
-            <p id="section-15.2-2.4.1">URI-valued members are compared byte-for-byte, consistent with
-<span><a href="https://rfc-editor.org/rfc/rfc9396#section-12" class="relref">Section 12</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>, unless a member's own type definition
+            <p id="section-15.2-2.4.1">URI-valued members are compared byte-for-byte, with no
+normalization (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-12" class="relref">Section 12</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>), unless a member's own type
+definition
 specifies a normalization. Where a type defines one, as
 <code>mission_resource_access</code> does for its <code>prefix</code>-match resource
 containment test
@@ -7338,8 +7343,9 @@ issuance.<a href="#section-16-4.7.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-16-4.8">
           <p id="section-16-4.8.1"><strong>Approval-event sequencing.</strong> The approval-event steps, their
 order, and the atomicity of record creation with the approval decision
-are the model's (<a href="#direct-approval-steps" class="auto internal xref">Section 6.2</a>); the coupling of that
-decision to authorization-code issuance is this flow's. A companion
+are fixed by <a href="#direct-approval-steps" class="auto internal xref">Section 6.2</a>; the coupling of that
+decision to authorization-code issuance belongs to the direct flow.
+A companion
 profile <span class="bcp14">MAY</span> relocate the approval event relative to code issuance
 (for example, deferring the decision beyond the authorization
 response), provided the steps and their atomicity hold unchanged
@@ -8008,7 +8014,7 @@ exists.<a href="#section-20.3.2-1" class="pilcrow">¶</a></p>
 <p id="section-20.3.2-2">Introspection guards the same class of fact behind caller
 authorization (<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>), and
 <a href="#rs-enforcement" class="auto internal xref">Section 9</a> limits the attribute to a token holder that the
-deployment accepts learning the distinction. Of the two values,
+deployment permits to learn the distinction. Of the two values,
 <code>insufficient_authority</code> reveals least, and omitting the attribute
 reveals nothing.<a href="#section-20.3.2-2" class="pilcrow">¶</a></p>
 </section>
@@ -8540,7 +8546,8 @@ Extensions Error" registry <span>[<a href="#RFC6749" class="cite xref">RFC6749</
             <p id="section-23.2-2.1.1">Error name: <code>invalid_mission_intent_evidence</code><a href="#section-23.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-23.2-2.2">
-            <p id="section-23.2-2.2.1">Error usage location: authorization endpoint, token endpoint<a href="#section-23.2-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-23.2-2.2.1">Error usage location: authorization code grant error response,
+token error response<a href="#section-23.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-23.2-2.3">
             <p id="section-23.2-2.3.1">Related protocol extension: Intent Submission Evidence
@@ -8670,7 +8677,7 @@ The registration policy is Specification Required <span>[<a href="#RFC8126" clas
             <p id="section-23.7-3.1.1">a <code>Value</code> matching <code>^[a-z][a-z0-9_]*$</code> not already registered;<a href="#section-23.7-3.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-23.7-3.2">
-            <p id="section-23.7-3.2.1">a <code>Terminal</code> designation of <code>no</code> consistent with the transitions
+            <p id="section-23.7-3.2.1">a <code>Terminal</code> value of <code>no</code>, consistent with the transitions
 the registrant's specification defines (a <code>no</code> state admits a
 further transition; <code>terminated</code> is the one terminal state, and a
 further way for a Mission to end is a termination reason,
@@ -8711,8 +8718,11 @@ registration.<a href="#section-23.7-7.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-23.7-8">This document seeds the registry with the states it defines:<a href="#section-23.7-8" class="pilcrow">¶</a></p>
-<table class="center" id="table-9">
-          <caption><a href="#table-9" class="selfRef">Table 9</a></caption>
+<span id="name-mission-lifecycle-states-reg"></span><table class="center" id="table-9">
+          <caption>
+<a href="#table-9" class="selfRef">Table 9</a>:
+<a href="#name-mission-lifecycle-states-reg" class="selfRef">Mission Lifecycle States registry: initial contents</a>
+          </caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Value</th>
@@ -8798,8 +8808,11 @@ registration.<a href="#section-23.8-6.4.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-23.8-7">This document seeds the registry with the reasons it defines:<a href="#section-23.8-7" class="pilcrow">¶</a></p>
-<table class="center" id="table-10">
-          <caption><a href="#table-10" class="selfRef">Table 10</a></caption>
+<span id="name-mission-termination-reasons-"></span><table class="center" id="table-10">
+          <caption>
+<a href="#table-10" class="selfRef">Table 10</a>:
+<a href="#name-mission-termination-reasons-" class="selfRef">Mission Termination Reasons registry: initial contents</a>
+          </caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Value</th>
@@ -9112,11 +9125,11 @@ member's registration in its own IANA considerations.<a href="#section-23.9-9" c
 <dl class="references">
 <dt id="AuthZEN.ARAP">[AuthZEN.ARAP]</dt>
         <dd>
-<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Access Request and Approval Profile 1.0"</span>, <time datetime="2025" class="refDate">2025</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Access Request and Approval Profile 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="FAPI.GrantManagement">[FAPI.GrantManagement]</dt>
         <dd>
-<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"Grant Management for OAuth 2.0"</span>, <time datetime="2022" class="refDate">2022</time>, <span>&lt;<a href="https://openid.net/specs/fapi-grant-management-01.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.net/specs/fapi-grant-management-01.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
+<span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"Grant Management for OAuth 2.0"</span>, <time datetime="2023" class="refDate">2023</time>, <span>&lt;<a href="https://openid.net/specs/oauth-v2-grant-management.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.net/specs/oauth-v2-grant-management.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="I-D.draft-cecchetti-oauth-rar-cedar">[I-D.draft-cecchetti-oauth-rar-cedar]</dt>
         <dd>
@@ -9918,7 +9931,8 @@ deriving it from a natural-language instruction) is out of scope.<a href="#appen
 <a href="#appendix-B.4" class="section-number selfRef">B.4. </a><a href="#name-scope-and-future-work" class="section-name selfRef">Scope and Future Work</a>
         </h3>
 <p id="appendix-B.4-1">This document is self-contained: it binds Missions to OAuth 2.0 and
-depends only on the OAuth and JOSE specifications it cites.<a href="#appendix-B.4-1" class="pilcrow">¶</a></p>
+depends normatively only on the specifications listed as its
+normative references.<a href="#appendix-B.4-1" class="pilcrow">¶</a></p>
 <p id="appendix-B.4-2">Its reference to the OAuth Actor Profile
 (<span>[<a href="#I-D.draft-mcguinness-oauth-actor-profile" class="cite xref">I-D.draft-mcguinness-oauth-actor-profile</a>]</span>), for the <code>act</code> chain
 shape the optional Delegation capability uses, is informative and
@@ -9928,7 +9942,8 @@ depend on it.<a href="#appendix-B.4-2" class="pilcrow">¶</a></p>
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> specifies
 cross-domain projection, a single hop that lets an authorization
 server in another trust domain honor a Mission, and carries the
-identity-chaining and ID-JAG dependencies. The Cross-Domain
+identity-chaining and Identity Assertion JWT Authorization Grant
+(ID-JAG) dependencies. The Cross-Domain
 capability's conformance bar is self-contained in this document
 (<a href="#conformance" class="auto internal xref">Section 19</a>), so that companion is not a normative dependency.<a href="#appendix-B.4-3" class="pilcrow">¶</a></p>
 <p id="appendix-B.4-4">Optional companion profiles, not required to implement this
@@ -10031,7 +10046,8 @@ state from the token lifetime or optional introspection
 (<a href="#introspection" class="auto internal xref">Section 11</a>); this document defines no push-based
 notification of Mission state changes. Mission Lifecycle Signals
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>) specifies a Shared
-Signals (<span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span>) / CAEP profile for Mission lifecycle events.<a href="#appendix-B.5-2.4.1" class="pilcrow">¶</a></p>
+Signals and CAEP profile for Mission lifecycle events, delivered as
+Security Event Tokens (<span>[<a href="#RFC8935" class="cite xref">RFC8935</a>]</span>).<a href="#appendix-B.5-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="appendix-B.5-2.5">
             <p id="appendix-B.5-2.5.1"><strong>Human-in-the-loop suspension.</strong> The base lifecycle is <code>active</code> and
@@ -10063,7 +10079,8 @@ Identifier lets any party holding a token correlate a Mission's
 activity across audiences and resources. <code>authority_hash</code> is not
 part of that baseline correlation surface: it stays on the Mission
 Record and the audit and profile surfaces that carry it by
-disclosure privilege (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>), not on every token by
+disclosure privilege (<a href="#mission-claim" class="auto internal xref">Section 8.8</a>,
+<a href="#caller-authorization-and-minimization" class="auto internal xref">Section 11.1</a>), not on every token by
 default. Pairwise or unlinkable presentation of Mission-bound
 authority works against the identifier and is therefore future work
 (<a href="#mission-identifier-correlation" class="auto internal xref">Section 21.1</a>).<a href="#appendix-B.5-2.8.1" class="pilcrow">¶</a></p>
@@ -10470,8 +10487,11 @@ client intake keeps those two surfaces from disagreeing.<a href="#appendix-D.4-3
         <h3 id="name-ownership-and-operational-s">
 <a href="#appendix-D.5" class="section-number selfRef">D.5. </a><a href="#name-ownership-and-operational-s" class="section-name selfRef">Ownership and Operational Signals</a>
         </h3>
-<table class="center" id="table-13">
-          <caption><a href="#table-13" class="selfRef">Table 13</a></caption>
+<span id="name-ownership-and-operational-si"></span><table class="center" id="table-13">
+          <caption>
+<a href="#table-13" class="selfRef">Table 13</a>:
+<a href="#name-ownership-and-operational-si" class="selfRef">Ownership and operational signals</a>
+          </caption>
 <thead>
             <tr>
               <th class="text-left" rowspan="1" colspan="1">Artifact</th>
@@ -11066,8 +11086,9 @@ issuer-checked Mission resolution (#725); third-party data subjects
 (#344); key retention to the audit horizon.<a href="#appendix-G-7" class="pilcrow">¶</a></p>
 <p id="appendix-G-8"><strong>Editorial and structure.</strong> The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
-#1472, #1479, #1483, #1490), with issuance under Mission-Bound Access
-Tokens, Mission Lifecycle and Gating retitled Mission Lifecycle, and
+#1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
+under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
+retitled "Mission Lifecycle", and
 one Standing-Consent Bases section; subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
@@ -11077,8 +11098,8 @@ draft, and Client Instance ID with Client Attesters replace
 draft-klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and
 draft-mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC
 3986, and draft-mcguinness-oauth-ai-agent-instance are removed; RFC
-6750 and RFC 9700 are normative, and the OAuth Actor Profile
-informative.<a href="#appendix-G-9" class="pilcrow">¶</a></p>
+6750, RFC 9700 and Client Instance ID are normative, and the OAuth
+Actor Profile informative.<a href="#appendix-G-9" class="pilcrow">¶</a></p>
 <p id="appendix-G-10">-00<a href="#appendix-G-10" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-G-11.1">

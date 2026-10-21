@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T15:38:51Z
-Source repository commit: c96b93490e231a2785a6eed026a481b3d9c1c257
+Generated: 2026-10-21T18:33:37Z
+Source repository commit: 6a358b4207f71780c40ee4a18f0746d1c4e55903
 Member count: 9
 
 Reading order:
@@ -8023,11 +8023,11 @@ Table of Contents
    server enforces the authorization_details statelessly and can check
    the mission claim (Section 9), with no callback to the AS required.
 
-   (5) A management revoke, or expires_at passing, moves the Mission to
-   terminated, with reason revoked or expired, after which the AS
-   refuses further issuance and refresh.  A deployment can also treat
-   [RFC7009] revocation of the refresh token as revoking the Mission
-   (Section 7.2).
+   (5) An authorized revocation (Section 7.2), or expires_at passing,
+   moves the Mission to terminated, with reason revoked or expired,
+   after which the AS refuses further issuance and refresh.  A
+   deployment can also treat [RFC7009] revocation of the refresh token
+   as revoking the Mission (Section 7.2).
 
    The end-to-end example (Appendix A) walks this flow with concrete
    messages.
@@ -9894,7 +9894,7 @@ Table of Contents
 
    The error code alone does not tell a client which gate refused.  On a
    refusal under this section the AS SHOULD include, alongside error,
-   the mission_error token-error-response member (Section 23) with one
+   the mission_error token-error-response member (Section 23.1) with one
    of the values revoked, expired, or superseded (where a companion
    defines supersession), the Mission's termination reason
    (Section 7.1).
@@ -10147,7 +10147,7 @@ Table of Contents
 
    6.  for a multi-audience token, establishes the condition
        independently for each audience; a single-audience token
-       (Section 8) remains preferred.
+       (Section 8.4) remains preferred.
 
    Unknown scope semantics, unknown resource server enforcement
    behavior, or an ambiguous or stale mapping all fail closed under step
@@ -10465,7 +10465,7 @@ Table of Contents
    A value the client does not recognize is treated as
    insufficient_authority.  A resource server SHOULD include the
    attribute only in a response to a validly signed, audience-correct
-   token whose holder its deployment accepts learning the distinction
+   token whose holder its deployment permits to learn the distinction
    (Section 20.3.2).
 
 9.5.  Enforcement Responsibilities
@@ -10545,9 +10545,10 @@ Table of Contents
 
    For entries outside the Authority Set, more authority requires a new
    approval, proposed as for a new Mission (Section 4.3), or an
-   expansion where that companion is deployed (Section 9).  A client
-   holding no refresh grant that covers the entries proposes them as for
-   a new Mission.
+   expansion where that companion is deployed
+   ([I-D.draft-mcguinness-oauth-mission-expansion]).  A client holding
+   no refresh grant that covers the entries proposes them as for a new
+   Mission.
 
    A third grain, the requestable denial of [AuthZEN.ARAP], profiled by
    [I-D.draft-mcguinness-mission-authzen], routes the same denial into a
@@ -10643,7 +10644,7 @@ Table of Contents
    +---------------------------------+---------------------------------+
    | Token endpoint (Section 5.4):   | invalid_authorization_details   |
    | the requested RAR subset        | (Section 6 of [RFC9396]).       |
-   | exceeds the Mission's granted   | Detail: safe detail             |
+   | exceeds the Mission's granted   | Detail: safe error_description  |
    | authority                       |                                 |
    +---------------------------------+---------------------------------+
 
@@ -12032,7 +12033,7 @@ Table of Contents
 
        *  For an activation policy reference's digest, typ is mission-
           activation-policy and value is the policy snapshot object that
-          Section 13 defines.
+          Section 13.2 defines.
 
    2.  Canonicalize the envelope with JCS [RFC8785].
 
@@ -12063,7 +12064,7 @@ Table of Contents
    separation.  To keep that domain separation safe without a registry,
    a new typ value MUST be a collision-resistant name (for example, a
    short name prefixed within a namespace the defining profile controls,
-   following the Collision-Resistant Name guidance of Section 4.2 of
+   following the Collision-Resistant Name guidance of Section 2 of
    [RFC7519]). mission- prefixed values, used by this document and the
    profiles that extend it, form a namespace coordinated through this
    document's change controller.
@@ -12112,10 +12113,10 @@ Table of Contents
       emits the committed object; that order is part of the canonical
       form.
 
-   *  URI-valued members are compared byte-for-byte, consistent with
-      Section 12 of [RFC9396], unless a member's own type definition
-      specifies a normalization.  Where a type defines one, as
-      mission_resource_access does for its prefix-match resource
+   *  URI-valued members are compared byte-for-byte, with no
+      normalization (Section 12 of [RFC9396]), unless a member's own
+      type definition specifies a normalization.  Where a type defines
+      one, as mission_resource_access does for its prefix-match resource
       containment test
       ([I-D.draft-mcguinness-oauth-mission-resource-access]), it applies
       to that comparison alone: the default resource equality test
@@ -12281,8 +12282,8 @@ Table of Contents
 
    *  *Approval-event sequencing.* The approval-event steps, their
       order, and the atomicity of record creation with the approval
-      decision are the model's (Section 6.2); the coupling of that
-      decision to authorization-code issuance is this flow's.  A
+      decision are fixed by Section 6.2; the coupling of that decision
+      to authorization-code issuance belongs to the direct flow.  A
       companion profile MAY relocate the approval event relative to code
       issuance (for example, deferring the decision beyond the
       authorization response), provided the steps and their atomicity
@@ -12837,7 +12838,7 @@ Table of Contents
 
    Introspection guards the same class of fact behind caller
    authorization (Section 11.1), and Section 9 limits the attribute to a
-   token holder that the deployment accepts learning the distinction.
+   token holder that the deployment permits to learn the distinction.
    Of the two values, insufficient_authority reveals least, and omitting
    the attribute reveals nothing.
 
@@ -13257,7 +13258,8 @@ Table of Contents
 
    *  Error name: invalid_mission_intent_evidence
 
-   *  Error usage location: authorization endpoint, token endpoint
+   *  Error usage location: authorization code grant error response,
+      token error response
 
    *  Related protocol extension: Intent Submission Evidence
       (Section 4.4)
@@ -13337,7 +13339,7 @@ Table of Contents
 
    *  a Value matching ^[a-z][a-z0-9_]*$ not already registered;
 
-   *  a Terminal designation of no consistent with the transitions the
+   *  a Terminal value of no, consistent with the transitions the
       registrant's specification defines (a no state admits a further
       transition; terminated is the one terminal state, and a further
       way for a Mission to end is a termination reason, Section 23.8);
@@ -13389,7 +13391,7 @@ Table of Contents
    |            |          | reason.        |            | 7.1        |
    +------------+----------+----------------+------------+------------+
 
-                                 Table 9
+       Table 9: Mission Lifecycle States registry: initial contents
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations.  A Designated
@@ -13446,7 +13448,7 @@ Table of Contents
     |         | equals it.         |         |            | 7.1       |
     +---------+--------------------+---------+------------+-----------+
 
-                                  Table 10
+      Table 10: Mission Termination Reasons registry: initial contents
 
    Each further document that defines a termination reason requests that
    reason's registration in its own IANA considerations.
@@ -13680,13 +13682,13 @@ Table of Contents
 
    [AuthZEN.ARAP]
               OpenID Foundation, "OpenID AuthZEN Access Request and
-              Approval Profile 1.0", 2025,
+              Approval Profile 1.0", 2026,
               <https://openid.github.io/authzen/authzen-access-request-
               approval-profile-1_0.html>.
 
    [FAPI.GrantManagement]
-              OpenID Foundation, "Grant Management for OAuth 2.0", 2022,
-              <https://openid.net/specs/fapi-grant-management-01.html>.
+              OpenID Foundation, "Grant Management for OAuth 2.0", 2023,
+              <https://openid.net/specs/oauth-v2-grant-management.html>.
 
    [I-D.draft-cecchetti-oauth-rar-cedar]
               Cecchetti, S., "Cedar Profile for OAuth 2.0 Rich
@@ -14467,7 +14469,8 @@ B.3.  The Mission, the Plan, and Execution
 B.4.  Scope and Future Work
 
    This document is self-contained: it binds Missions to OAuth 2.0 and
-   depends only on the OAuth and JOSE specifications it cites.
+   depends normatively only on the specifications listed as its
+   normative references.
 
    Its reference to the OAuth Actor Profile
    ([I-D.draft-mcguinness-oauth-actor-profile]), for the act chain shape
@@ -14479,9 +14482,10 @@ B.4.  Scope and Future Work
    [I-D.draft-mcguinness-oauth-mission-cross-domain] specifies cross-
    domain projection, a single hop that lets an authorization server in
    another trust domain honor a Mission, and carries the identity-
-   chaining and ID-JAG dependencies.  The Cross-Domain capability's
-   conformance bar is self-contained in this document (Section 19), so
-   that companion is not a normative dependency.
+   chaining and Identity Assertion JWT Authorization Grant (ID-JAG)
+   dependencies.  The Cross-Domain capability's conformance bar is self-
+   contained in this document (Section 19), so that companion is not a
+   normative dependency.
 
    Optional companion profiles, not required to implement this document,
    specify:
@@ -14563,7 +14567,8 @@ B.5.  Non-Goals
       (Section 11); this document defines no push-based notification of
       Mission state changes.  Mission Lifecycle Signals
       ([I-D.draft-mcguinness-oauth-mission-signals]) specifies a Shared
-      Signals ([RFC8935]) / CAEP profile for Mission lifecycle events.
+      Signals and CAEP profile for Mission lifecycle events, delivered
+      as Security Event Tokens ([RFC8935]).
 
    *  *Human-in-the-loop suspension.* The base lifecycle is active and
       terminated (Section 7).  Mission Status
@@ -14591,10 +14596,10 @@ B.5.  Non-Goals
       activity across audiences and resources. authority_hash is not
       part of that baseline correlation surface: it stays on the Mission
       Record and the audit and profile surfaces that carry it by
-      disclosure privilege (Section 8.8), not on every token by default.
-      Pairwise or unlinkable presentation of Mission-bound authority
-      works against the identifier and is therefore future work
-      (Section 21.1).
+      disclosure privilege (Section 8.8, Section 11.1), not on every
+      token by default.  Pairwise or unlinkable presentation of Mission-
+      bound authority works against the identifier and is therefore
+      future work (Section 21.1).
 
 B.6.  The client_id Claim in Delegated Tokens
 
@@ -14897,7 +14902,7 @@ D.5.  Ownership and Operational Signals
    |                     | issuer policy |                            |
    +---------------------+---------------+----------------------------+
 
-                                 Table 13
+               Table 13: Ownership and operational signals
 
    Templates amortize authoring across Missions and do not bypass the
    ceilings.  The unmapped-resource rate, template-hit rate, and rule-
@@ -15393,19 +15398,21 @@ Appendix G.  Document History
 
    *Editorial and structure.* The reading path (#910, #1379);
    readability, placement and consolidation passes (#876, #1409, #1447,
-   #1472, #1479, #1483, #1490), with issuance under Mission-Bound Access
-   Tokens, Mission Lifecycle and Gating retitled Mission Lifecycle, and
-   one Standing-Consent Bases section; subsections, tables and IANA
-   templates fitted to the text rendering (#1380, #1382, #1401, #1404,
-   #1410, #1418); canonical-Mission examples (#1176); and the Mapping
-   Assessment, moved from the substrate (#708).
+   #1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
+   under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
+   retitled "Mission Lifecycle", and one Standing-Consent Bases section;
+   subsections, tables and IANA templates fitted to the text rendering
+   (#1380, #1382, #1401, #1404, #1410, #1418); canonical-Mission
+   examples (#1176); and the Mapping Assessment, moved from the
+   substrate (#708).
 
    *References.* The WIMSE AIMS draft, the RAR metadata remediation
    draft, and Client Instance ID with Client Attesters replace draft-
    klrc-aiagent-auth, draft-zehavi-oauth-rar-metadata, and draft-
    mcguinness-oauth-client-instance-assertion; MCP, ISO 4217, RFC 3986,
-   and draft-mcguinness-oauth-ai-agent-instance are removed; RFC 6750
-   and RFC 9700 are normative, and the OAuth Actor Profile informative.
+   and draft-mcguinness-oauth-ai-agent-instance are removed; RFC 6750,
+   RFC 9700 and Client Instance ID are normative, and the OAuth Actor
+   Profile informative.
 
    -00
 
