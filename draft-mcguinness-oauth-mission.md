@@ -470,14 +470,33 @@ approval, and a single resource audience, with no runtime profile,
 delegated token, or cross-domain projection; {{conformance}} states
 the complete roles and optional capabilities. The worked flow
 ({{first-mission}}) follows one Mission along this path with concrete
-times. The following table lists where each implementer reads next.
+times. Each implementer's duties on the starting path, with the
+sections that define them:
 
-| Implementer | Responsibility on the starting path | Defining sections |
-| --- | --- | --- |
-| Mission Client | Submit an Intent through PAR, optionally propose authority, complete the authorization-code flow, and read the granted authority and Mission references from the response | {{submission-via-par}}, {{authority-proposal}}, {{mission-bound-tokens}}, {{mission-response-parameters}}, {{discovery}} |
-| Mission Issuer (AS) | Validate the submission, derive bounded authority, obtain approval, commit the Mission, bind the grant to it, gate every issuance and refresh on the Mission's state, its Authority Set, its expiry, and any emitted `scope` value's projection, and terminate the Mission on an authorized revocation | {{submission-processing}}, {{authorization-derivation}}, {{direct-approval-steps}}, {{grant-binding}}, {{issuance-gating}}, {{revocation}}, {{mission-record}} |
-| Mission-aware Resource Server | Validate the credential and any sender constraint, enforce the carried authority, and apply any configured Mission requirement | {{rs-enforcement}}, {{introspected-consumption}} |
-{: title="Who implements the issuance path"}
+Mission Client:
+: Submits an Intent through PAR ({{submission-via-par}}), optionally
+  proposes authority ({{authority-proposal}}), completes the
+  authorization-code flow, and reads the granted authority and Mission
+  references from the response ({{mission-bound-tokens}},
+  {{mission-response-parameters}}, {{discovery}}).
+
+Mission Issuer (AS):
+: Its duties on the starting path:
+
+  - validate the submission and derive bounded authority
+    ({{submission-processing}}, {{authorization-derivation}});
+  - obtain approval, commit the Mission, and bind the grant to it
+    ({{direct-approval-steps}}, {{mission-record}}, {{grant-binding}});
+  - gate every issuance and refresh on the Mission's state, its
+    Authority Set, its expiry, and any emitted `scope` value's
+    projection ({{issuance-gating}}); and
+  - terminate the Mission on an authorized revocation
+    ({{revocation}}).
+
+Mission-aware Resource Server:
+: Validates the credential and any sender constraint, enforces the
+  carried authority, and applies any configured Mission requirement
+  ({{rs-enforcement}}, {{introspected-consumption}}).
 
 This document defines no `authorization_details` type
 ({{other-types}}). Each Authority Set entry is of a type the AS
