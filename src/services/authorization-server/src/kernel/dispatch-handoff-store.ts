@@ -17,11 +17,11 @@
  * reservation and is told to retry; once confirmed, it is refused.
  *
  * Its own table over its own store handle (the {@link MissionBoundGrantStore}
- * idiom). In-memory, built per boot like every AS store (D25/D27). The AS
- * signing keys are generated per boot too, so a grant minted before a restart
- * no longer verifies after it, and a restart cannot revive a consumed grant.
- * A deployment with persistent signing keys requires persistent consumption
- * records.
+ * idiom). In-memory, built per boot (D25/D27), also when the kernel is
+ * file-backed. With a key ring (#831) a grant minted before a restart still
+ * verifies after it, so redemption refuses a grant another process issued
+ * (its `jti` names the issuing process, `AdapterOptions.processBootId`), and
+ * a restart cannot revive a consumed grant.
  */
 
 import { type Database, openStore } from "@mission/store";
