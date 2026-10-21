@@ -58358,6 +58358,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.mission-substrate.only-active-rule-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "mission-substrate",
+   "text": "Both adjudication modes ({{adjudication}}) consume the Mission record's committed members and the only-`active` rule",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter submitted for a Mission that is not `active` produces no binding in either adjudication mode."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.mission-substrate.only-active-rule: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.mission-substrate.ceiling-only-draw-object",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "mission-substrate",
@@ -58446,6 +58468,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.encounter.classified-before-adjudication-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "An encounter is classified before it is adjudicated",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Each encounter is classified as a resource, a capability catalog or tool, or a foreign trust domain before an outcome is produced, and the outcome follows that class's rule."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.encounter.classified-before-adjudication: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.encounter.catalog-admission-through-issuer",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "encounter",
@@ -58466,6 +58510,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.encounter.catalog-admission-through-issuer-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "Its admission is adjudicated under this profile like any resource, through the Mission Issuer",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Admission of a newly met capability catalog or tool server runs the same adjudication as a resource, at the Mission Issuer, and yields one of the three outcomes with Discovery Evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.encounter.catalog-admission-through-issuer: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.encounter.catalog-binding-names-tool-set",
@@ -58490,6 +58556,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.encounter.catalog-binding-names-tool-set-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "the binding names the catalog and its admitted `tool_id` set",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A bound catalog encounter yields authority that names the catalog and its admitted `tool_id` set, and no tool outside that set."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.encounter.catalog-binding-names-tool-set: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.encounter.catalog-capabilities-bind-at-pdp",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "encounter",
@@ -58497,8 +58585,11 @@
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "discovery.ceiling-adjudication"
+    "kind": "capabilities",
+    "any_of": [
+     "discovery.ceiling-adjudication",
+     "discovery.contextual-adjudication"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -58534,6 +58625,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.encounter.foreign-domain-not-bound-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "This profile does not bind it",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter with a resource whose authorization server the deployment's trust does not cover never yields a `bound` outcome; it is routed or refused."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.encounter.foreign-domain-not-bound: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.encounter.foreign-domain-evidenced",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "encounter",
@@ -58556,6 +58669,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.encounter.foreign-domain-evidenced-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "The encounter is still evidenced ({{discovery-evidence}}): routed or refused, a foreign-domain encounter leaves the same record",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A routed or refused foreign-domain encounter produces a signed Discovery Evidence object with the same members as any other adjudication."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.encounter.foreign-domain-evidenced: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.encounter.registry-sourced-same-governance",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "encounter",
@@ -58576,6 +58711,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.encounter.registry-sourced-same-governance-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "An encounter sourced from a curated registry is classified and adjudicated like any other",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter whose resource came from a curated registry receives the same identity pinning, floors, and outcomes as one met by plain search; registry provenance bypasses no step."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.encounter.registry-sourced-same-governance: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.encounter.registry-scoped-ceiling-family",
@@ -58658,12 +58815,48 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
+    "normative": "Changing any member of an encounter request alone, with the issuer-verified facts held fixed, changes neither the outcome nor the authority bound.",
+    "local": "A well-formed hint confers nothing: the same encounter routes to a human with no hint and with a hint carrying a forged digest, and the recorded digest is the Mission Issuer's either way. Refusing a malformed hint is request validation, not gating (owner ruling on the #1491 review). Stage 1 binds nothing, so the authority-bound half is not yet discriminated."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > the declaration digest is the Mission Issuer's own, over the bytes it retrieved; the agent's hint is kept as its claim, and the human-approved successor records the digest",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+  },
+  {
+   "id": "discovery.encounter.request-members-inert-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "encounter",
+   "text": "no member of an encounter request derives, widens, or gates authority by itself, per the OAuth binding's inert-input rule",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
     "normative": "Changing any member of an encounter request alone, with the issuer-verified facts held fixed, changes neither the outcome nor the authority bound."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "notes": "Contextual twin of discovery.encounter.request-members-inert: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.no-binding-unpinned",
@@ -58696,6 +58889,28 @@
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
   },
   {
+   "id": "discovery.resource-identity.no-binding-unpinned-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "No binding occurs against an unpinned resource",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter whose identity the Mission Issuer has not pinned never yields a `bound` outcome."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.no-binding-unpinned: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.issuer-establishes-identity",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -58716,6 +58931,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.issuer-establishes-identity-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "The Mission Issuer MUST establish the identity of the encountered resource itself, from its own server-side retrieval",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.issuer-establishes-identity: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.no-agent-origin",
@@ -58740,6 +58977,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.no-agent-origin-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "It MUST NOT accept any of the following agent-supplied values as that identity: - an origin; - a metadata digest; - an issuer; or - a declaration digest.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.no-agent-origin: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.no-agent-metadata-digest",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -58762,6 +59021,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.no-agent-metadata-digest-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "It MUST NOT accept any of the following agent-supplied values as that identity: - an origin; - a metadata digest; - an issuer; or - a declaration digest.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.no-agent-metadata-digest: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.no-agent-issuer",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -58782,6 +59063,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.no-agent-issuer-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "It MUST NOT accept any of the following agent-supplied values as that identity: - an origin; - a metadata digest; - an issuer; or - a declaration digest.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.no-agent-issuer: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.no-agent-declaration-digest",
@@ -58818,6 +59121,28 @@
     }
    ],
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+  },
+  {
+   "id": "discovery.resource-identity.no-agent-declaration-digest-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "It MUST NOT accept any of the following agent-supplied values as that identity: - an origin; - a metadata digest; - an issuer; or - a declaration digest.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "An agent-supplied declaration digest is not pinned: adjudication and evidence carry the digest of the declaration bytes the issuer retrieved."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.no-agent-declaration-digest: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.request-object-is-hint",
@@ -58862,6 +59187,28 @@
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
   },
   {
+   "id": "discovery.resource-identity.request-object-is-hint-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "An Encountered Resource object that rides the agent's request is a hint the issuer verifies, never the pinned identity",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "An Encountered Resource object riding the agent's request, whose values the Controller's own pinning does not confirm, is not adopted as the pinned identity."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.request-object-is-hint: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.established-and-recorded",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -58882,6 +59229,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.established-and-recorded-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "Before adjudication, the identity MUST be established and recorded",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.established-and-recorded: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.tls-authenticated-origin",
@@ -58906,6 +59275,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.tls-authenticated-origin-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "The resource's origin, TLS-authenticated by the Mission Issuer's own connection at encounter, not as the agent reports it",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.tls-authenticated-origin: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.prm-retrieved-server-side",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -58926,6 +59317,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.prm-retrieved-server-side-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "Where the resource names an authorization server, the Mission Issuer MUST retrieve the OAuth 2.0 Protected Resource Metadata {{RFC9728}} server-side",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.prm-retrieved-server-side: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.prm-exact-bytes-digest",
@@ -58950,6 +59363,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.prm-exact-bytes-digest-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "digest the exact bytes it retrieved into the evidence",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.prm-exact-bytes-digest: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.no-agent-digest-reuse",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -58970,6 +59405,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.no-agent-digest-reuse-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "It MUST NOT reuse an agent-supplied digest",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.no-agent-digest-reuse: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.issuer-authorized-for-domain",
@@ -58994,6 +59451,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.issuer-authorized-for-domain-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "The Mission Issuer MUST verify that the named issuer is authorized for the resource's domain",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.issuer-authorized-for-domain: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.unverified-issuer-routes",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59014,6 +59493,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.unverified-issuer-routes-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "Where it cannot, the encounter routes to a human and never binds by policy",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.unverified-issuer-routes: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.declaration-digest-computed",
@@ -59046,6 +59547,28 @@
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
   },
   {
+   "id": "discovery.resource-identity.declaration-digest-computed-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "Where the resource publishes a self-declaration, the Mission Issuer computes its content-addressed digest at encounter from the bytes it retrieved",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The declaration digest used for an encounter equals the digest of the declaration bytes the issuer itself retrieved at encounter."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.declaration-digest-computed: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.declaration-digest-carried",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59076,6 +59599,28 @@
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
   },
   {
+   "id": "discovery.resource-identity.declaration-digest-carried-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "carries that digest through adjudication and evidence",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The declaration digest the issuer computed appears in the Discovery Evidence and in any expansion proposal or governance-record entry the encounter produces."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.declaration-digest-carried: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.non-agent-channel",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59096,6 +59641,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.non-agent-channel-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "An origin, digest, issuer, or taint state taken from the agent would let a prompt-injected agent fabricate identity or clear taint, so each MUST be established through a channel the agent does not mediate",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.non-agent-channel: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.untrustworthy-identity-route-or-refuse",
@@ -59128,6 +59695,28 @@
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
   },
   {
+   "id": "discovery.resource-identity.untrustworthy-identity-route-or-refuse-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "Where the Mission Issuer cannot obtain a trustworthy identity, it MUST route the encounter to a human or refuse",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter whose identity cannot be pinned (TLS failure, unretrievable metadata, unverifiable issuer) yields `routed_to_approval` or `refused`, never `bound`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.untrustworthy-identity-route-or-refuse: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.publisher-verification-recorded",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59148,6 +59737,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.publisher-verification-recorded-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "that verification is an additional pinned fact: it strengthens the origin association, is recorded with the identity",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Where discovery infrastructure verified the publisher before the encounter, the encounter's recorded identity includes that verification."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.publisher-verification-recorded: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.publisher-verification-disclosed",
@@ -59172,6 +59783,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.publisher-verification-disclosed-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "is rendered in any disclosure",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A routed encounter's disclosure shows the publisher verification alongside the pinned identity."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.publisher-verification-disclosed: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.one-shape",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59192,6 +59825,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.one-shape-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "The pinned identity travels as one shape, the **Encountered Resource object**, on the wire and in evidence",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The `encountered_resource` request parameter and the evidence `resource` member share the Encountered Resource object's members and encoding."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.one-shape: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.evidence-values-issuer-verified",
@@ -59216,6 +59871,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.evidence-values-issuer-verified-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "the values recorded in evidence and used for adjudication are the Mission Issuer's own verified values ({{resource-identity}}), never the agent's",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "Where the agent's hint and the issuer's retrieval differ, the evidence `resource` member and the adjudication use the issuer's values."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.evidence-values-issuer-verified: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.member-origin",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59236,6 +59913,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.member-origin-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "REQUIRED. A string containing a URI. The TLS-authenticated origin of the encountered resource",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.member-origin: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.member-resource-metadata-digest",
@@ -59260,6 +59959,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.resource-identity.member-resource-metadata-digest-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "CONDITIONAL. REQUIRED when a protected-resource metadata document was retrieved: the integrity-anchor encoded digest of its exact retrieved bytes",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.member-resource-metadata-digest: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.resource-identity.member-issuer",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "resource-identity",
@@ -59280,6 +60001,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.resource-identity.member-issuer-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "resource-identity",
+   "text": "CONDITIONAL. REQUIRED when the metadata names an authorization server: the issuer identifier it names",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.resource-identity.member-issuer: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.resource-identity.person-server-native-pinning",
@@ -59326,6 +60069,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.minimum-inputs-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "An adjudication takes, at minimum",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Each adjudication's record reflects the Mission reference, the verified Encountered Resource object, the declaration digest where one exists, the sought authority's action classes, the requesting actor, and the session's taint state."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.minimum-inputs: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.taint-from-harness",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59346,6 +60111,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.taint-from-harness-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The taint state MUST be obtained from the harness through a channel the agent does not mediate (a harness attestation, {{I-D.draft-mcguinness-mission-harness}}), never from the encounter request",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "A taint value carried in the encounter request is ignored: the evidence `tainted` member and the floors follow the harness attestation."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.taint-from-harness: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.adjudication.taint-missing-is-tainted",
@@ -59370,6 +60157,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.taint-missing-is-tainted-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The adjudicator MUST treat a missing, stale, or unverifiable taint state as tainted",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "With no harness taint report available, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.taint-missing-is-tainted: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.taint-stale-is-tainted",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59390,6 +60199,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.taint-stale-is-tainted-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The adjudicator MUST treat a missing, stale, or unverifiable taint state as tainted",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "With a stale harness taint report (one past its attested validity), an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.taint-stale-is-tainted: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.adjudication.taint-unverifiable-is-tainted",
@@ -59414,6 +60245,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.taint-unverifiable-is-tainted-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The adjudicator MUST treat a missing, stale, or unverifiable taint state as tainted",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "With a harness taint report whose attestation fails verification, an encounter that would otherwise bind routes to a human, and the evidence records `tainted` true."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.taint-unverifiable-is-tainted: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.unclassifiable-no-policy-bind",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59434,6 +60287,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.unclassifiable-no-policy-bind-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "An operation the deployment's classification cannot assign an action class MUST NOT bind by policy",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter seeking an operation with no action class under the deployment's classification yields `routed_to_approval` or `refused`, never `bound`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.unclassifiable-no-policy-bind: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.adjudication.floors-both-modes",
@@ -59478,6 +60353,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.exactly-one-outcome-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The adjudication returns exactly one of",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Each adjudication yields exactly one of bind, route to a human, or refuse, recorded as `bound`, `routed_to_approval`, or `refused`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.exactly-one-outcome: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.adjudication.ceiling-bind-subset",
@@ -59692,6 +60589,28 @@
    "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
   },
   {
+   "id": "discovery.adjudication.route-proposal-carries-identity-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The encounter becomes an expansion proposal carrying the pinned identity and declaration digest",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A routed encounter produces an expansion proposal that carries the pinned Encountered Resource object and the declaration digest."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.route-proposal-carries-identity: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.route-queue-pressure",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59736,6 +60655,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.disclosure-resource-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The disclosure renders: - the Encountered Resource object;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A routed encounter's disclosure shows the Approver the issuer-verified Encountered Resource object."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.disclosure-resource: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.disclosure-declaration-as-claim",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59756,6 +60697,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.disclosure-declaration-as-claim-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "the declaration, as the resource's claim and not as fact",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A routed encounter's disclosure presents the self-declaration labelled as the resource's own claim, not as a verified fact."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.disclosure-declaration-as-claim: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.adjudication.disclosure-taint-status",
@@ -59780,6 +60743,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.disclosure-taint-status-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "the session's taint status",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A routed encounter's disclosure shows whether the session was tainted at adjudication."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.disclosure-taint-status: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.resolution-carries-encounter-id",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59802,6 +60787,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.resolution-carries-encounter-id-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The resulting approval or expansion evidence carries the `encounter_id` ({{discovery-evidence}}), so the encounter and its human resolution correlate",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The approval or expansion evidence that resolves a routed encounter carries the same `encounter_id` as its Discovery Evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.resolution-carries-encounter-id: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.refused-recorded",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -59822,6 +60829,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.refused-recorded-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "The encounter violates a hard rule (unpinnable identity the deployment does not escalate, a prohibited class, an exhausted bound) and is recorded as refused",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An encounter refused under a hard rule produces Discovery Evidence with `outcome` `refused`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.refused-recorded: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.adjudication.no-ceiling-no-bind",
@@ -60000,6 +61029,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.adjudication.encounter-rate-bound-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "A deployment MUST additionally bound the rate of encounter adjudications per Mission across all three outcomes",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Once a Mission reaches the deployment's encounter adjudication bound, further encounters are refused, and routed and refused encounters count toward the bound as bound ones do."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.encounter-rate-bound: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.adjudication.encounter-rate-bound-published",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "adjudication",
@@ -60020,6 +61071,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.adjudication.encounter-rate-bound-published-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "adjudication",
+   "text": "It MUST publish the concrete bound in the Mission Deployment Profile",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Deployment Profile states the concrete per-Mission encounter adjudication bound the deployment enforces."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.adjudication.encounter-rate-bound-published: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.re-encounter.matching-not-new",
@@ -60088,6 +61161,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.re-encounter.readjudicate-on-declaration-change-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "re-encounter",
+   "text": "A deployment SHOULD re-adjudicate a bound resource whose declaration changed before further use in a consequential class",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Use of a bound resource in a consequential class after its declaration digest changed is preceded by a new adjudication with new Discovery Evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.re-encounter.readjudicate-on-declaration-change: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.re-encounter.changed-digest-new-encounter",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "re-encounter",
@@ -60108,6 +61203,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.re-encounter.changed-digest-new-encounter-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "re-encounter",
+   "text": "An encounter whose declaration digest differs from the recorded one is a new encounter for any authority not yet bound",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A re-encounter with a different declaration digest that seeks authority not yet bound runs a full adjudication and produces Discovery Evidence carrying the new digest."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.re-encounter.changed-digest-new-encounter: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.re-encounter.changed-digest-drift-signal",
@@ -60132,6 +61249,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.re-encounter.changed-digest-drift-signal-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "re-encounter",
+   "text": "and a drift signal for what is",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A changed declaration digest for a resource with bound authority is surfaced as a drift signal for that authority rather than silently accepted."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.re-encounter.changed-digest-drift-signal: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.re-encounter.pdp-refuses-drifted-capabilities",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "re-encounter",
@@ -60139,8 +61278,11 @@
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "discovery.ceiling-adjudication"
+    "kind": "capabilities",
+    "any_of": [
+     "discovery.ceiling-adjudication",
+     "discovery.contextual-adjudication"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -60174,6 +61316,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.re-encounter.taint-floor-only-at-binding-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "re-encounter",
+   "text": "The taint floor ({{injection-discovery}}) is applied only at binding",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "A matching re-encounter in a tainted session runs no adjudication and is not re-routed by the taint floor."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.re-encounter.taint-floor-only-at-binding: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.re-encounter.bound-authority-survives-taint",
@@ -60220,6 +61384,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.lying-resource.classes-from-deployment-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "The action classes of an encountered resource's operations are assigned by the deployment's own classification under the runtime profile ({{I-D.draft-mcguinness-mission-runtime}}), never taken from the declaration",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "A self-declaration labelling an operation read-only or reversible does not change its class: `sought_classes` and the floors follow the deployment's classification."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.classes-from-deployment: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.lying-resource.declaration-may-stricten",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "lying-resource",
@@ -60240,6 +61426,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.lying-resource.declaration-may-stricten-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "A declaration MAY make classification stricter",
+   "role": "Controller",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A declaration claiming a stricter class than the deployment assigns can raise the class the floors apply to."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.declaration-may-stricten: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.lying-resource.declaration-must-not-relax",
@@ -60264,6 +61472,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.lying-resource.declaration-must-not-relax-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "It MUST NOT relax it",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "A declaration claiming a laxer class than the deployment assigns leaves the assigned class, and the floors it triggers, unchanged."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.declaration-must-not-relax: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.lying-resource.irreversible-human-floor",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "lying-resource",
@@ -60284,6 +61514,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.lying-resource.irreversible-human-floor-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "Authority in the irreversible, external-commitment, or privileged-administration classes MUST NOT bind on any encounter by policy alone, regardless of ceiling",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter seeking irreversible-class authority yields `routed_to_approval` or `refused` even when the Controller judges it within the approved mission context."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.irreversible-human-floor: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.lying-resource.external-commitment-human-floor",
@@ -60308,6 +61560,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.lying-resource.external-commitment-human-floor-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "Authority in the irreversible, external-commitment, or privileged-administration classes MUST NOT bind on any encounter by policy alone, regardless of ceiling",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter seeking external-commitment-class authority yields `routed_to_approval` or `refused` even when the Controller judges it within the approved mission context."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.external-commitment-human-floor: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.lying-resource.privileged-administration-human-floor",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "lying-resource",
@@ -60328,6 +61602,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.lying-resource.privileged-administration-human-floor-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "Authority in the irreversible, external-commitment, or privileged-administration classes MUST NOT bind on any encounter by policy alone, regardless of ceiling",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter seeking privileged-administration-class authority yields `routed_to_approval` or `refused` even when the Controller judges it within the approved mission context."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.privileged-administration-human-floor: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.lying-resource.routed-declaration-as-claim",
@@ -60352,6 +61648,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.lying-resource.routed-declaration-as-claim-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "those bindings route to a human, with the declaration rendered as the resource's claim, not as fact",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The disclosure for a high-consequence encounter presents the declaration labelled as the resource's claim, not as a verified fact."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.routed-declaration-as-claim: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.lying-resource.declaration-digest-in-evidence",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "lying-resource",
@@ -60372,6 +61690,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.lying-resource.declaration-digest-in-evidence-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "lying-resource",
+   "text": "The declaration digest is committed in evidence precisely so a lie is attributable",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Discovery Evidence of an encounter with a self-declaration commits its digest, so the claim at binding can be compared with the resource's later behavior."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.lying-resource.declaration-digest-in-evidence: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.injection-discovery.tainted-encounter-egress-capable",
@@ -60396,6 +61736,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.injection-discovery.tainted-encounter-egress-capable-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "injection-discovery",
+   "text": "a request to a previously unknown origin is itself an egress channel, so every binding an encounter would create is egress-capable regardless of its operation class",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "In a tainted session, an encounter seeking only a non-egress class such as `data_read` is treated as egress-capable and does not bind by policy."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.injection-discovery.tainted-encounter-egress-capable: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.injection-discovery.tainted-no-policy-bind",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "injection-discovery",
@@ -60416,6 +61778,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.injection-discovery.tainted-no-policy-bind-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "injection-discovery",
+   "text": "Under taint, no encounter binds by policy: it routes to a human",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "With `tainted` true, every encounter that would otherwise bind yields `routed_to_approval`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.injection-discovery.tainted-no-policy-bind: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.injection-discovery.disclosure-states-untrusted-content",
@@ -60440,6 +61824,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.injection-discovery.disclosure-states-untrusted-content-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "injection-discovery",
+   "text": "the disclosure states that the session had ingested untrusted content",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The disclosure for an encounter routed under taint states that the session had ingested untrusted content."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.injection-discovery.disclosure-states-untrusted-content: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.injection-discovery.channel-enters-enumeration",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "injection-discovery",
@@ -60447,8 +61853,11 @@
    "role": "PRODUCER",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "discovery.ceiling-adjudication"
+    "kind": "capabilities",
+    "any_of": [
+     "discovery.ceiling-adjudication",
+     "discovery.contextual-adjudication"
+    ]
    },
    "profiles": [],
    "surface": "evidence-emission",
@@ -60469,8 +61878,11 @@
    "role": "PEP",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "discovery.ceiling-adjudication"
+    "kind": "capabilities",
+    "any_of": [
+     "discovery.ceiling-adjudication",
+     "discovery.contextual-adjudication"
+    ]
    },
    "profiles": [],
    "surface": "resource-operation",
@@ -60506,6 +61918,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.injection-discovery.metering-exclusivity-group-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "injection-discovery",
+   "text": "a deployment MAY place discovered egress-capable bindings in an exclusivity group with its sensitive-read authority",
+   "role": "Controller",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Where the deployment groups discovered egress-capable bindings with sensitive-read authority, a session that has exercised the sensitive read acquires no new egress by encounter."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.injection-discovery.metering-exclusivity-group: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.injection-discovery.external-communication-routes",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "injection-discovery",
@@ -60526,6 +61960,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.injection-discovery.external-communication-routes-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "injection-discovery",
+   "text": "an encounter binding that satisfies the external-communication predicate always routes to a human",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter whose binding would satisfy the external-communication predicate yields `routed_to_approval` in an untainted session too."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.injection-discovery.external-communication-routes: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.injection-discovery.untainted-policy-binds",
@@ -60550,6 +62006,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.injection-discovery.untainted-policy-binds-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "injection-discovery",
+   "text": "In an untainted session, policy may bind up to that floor",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "In an untainted session, a pinned encounter the Controller judges within the approved mission context, seeking only classes below the human floor, binds with outcome `bound`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.injection-discovery.untainted-policy-binds: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.every-adjudication",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60570,6 +62048,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.every-adjudication-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "Every adjudication, in all three outcomes, produces a Discovery Evidence object",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Each bound, routed, and refused adjudication produces exactly one Discovery Evidence object."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.every-adjudication: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.member-encounter-id",
@@ -60594,6 +62094,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.member-encounter-id-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. A string, unique per adjudication at this adjudicator",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries a string `encounter_id`, and two adjudications at one adjudicator never share a value."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-encounter-id: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.member-mission",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60614,6 +62136,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.member-mission-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. An object: the Mission's `id` and `issuer`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries `mission`, an object with the Mission's `id` and `issuer`."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-mission: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.member-outcome",
@@ -60638,6 +62182,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.member-outcome-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. A string: `bound`, `routed_to_approval`, or `refused`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries `outcome` with exactly one of `bound`, `routed_to_approval`, or `refused`."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-outcome: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.member-resource",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60658,6 +62224,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.member-resource-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. The Encountered Resource object of {{resource-identity}}",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries `resource`, a well-formed Encountered Resource object."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-resource: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.member-resource-declaration-digest",
@@ -60682,6 +62270,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.member-resource-declaration-digest-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "CONDITIONAL. REQUIRED when a self-declaration existed at encounter: the integrity-anchor encoded raw-octet digest of its exact retrieved bytes",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Discovery Evidence for an encounter whose resource published a self-declaration carries `resource_declaration_digest`, the integrity-anchor encoded raw-octet digest of the retrieved bytes."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-resource-declaration-digest: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.member-sought-classes",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60702,6 +62312,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.member-sought-classes-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. An array of strings: the action classes of the authority sought, under the deployment's classification",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries `sought_classes`, an array of action-class strings from the deployment's classification."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-sought-classes: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.member-ceiling-entry-digest",
@@ -60770,6 +62402,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.member-actor-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. A string: the authenticated requesting actor",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries `actor`, a string naming the authenticated requesting actor."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-actor: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.member-tainted",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60790,6 +62444,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.member-tainted-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. A boolean: the session taint state the harness reported at adjudication",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries a boolean `tainted` equal to the taint state applied at adjudication."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-tainted: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.member-adjudicated-at",
@@ -60814,6 +62490,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.member-adjudicated-at-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "REQUIRED. An RFC 3339 {{RFC3339}} date-time",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every Discovery Evidence object carries `adjudicated_at` as an RFC 3339 date-time."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.member-adjudicated-at: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.issuer-authoritative-producer",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60834,6 +62532,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.issuer-authoritative-producer-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "The Discovery Adjudicator, always the Mission Issuer ({{conventions}}), is the authoritative producer of Discovery Evidence",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Discovery Evidence is produced and signed by the Mission Issuer that adjudicated the encounter, not by the agent, the PDP, or another component."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.issuer-authoritative-producer: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.jws-alg",
@@ -60858,6 +62578,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.jws-alg-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "signs the object under the suite's evidence conventions: a JWS whose protected header carries `alg`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Discovery Evidence is emitted as a JWS whose protected header carries `alg`, and the signature verifies."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.jws-alg: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.jws-kid-resolvable",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60878,6 +62620,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.jws-kid-resolvable-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "a `kid` resolvable in the Mission Issuer's published key material",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The JWS protected header carries a `kid` that resolves to a key in the Mission Issuer's published key material."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.jws-kid-resolvable: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.jws-typ",
@@ -60902,6 +62666,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.jws-typ-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "a `typ` of `mission-discovery-evidence+json`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The JWS protected header carries `typ` `mission-discovery-evidence+json`."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.jws-typ: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence.no-adjudicator-member",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence",
@@ -60922,6 +62708,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence.no-adjudicator-member-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "The signature is what identifies the adjudicator, so the object carries no member for it",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Discovery Evidence payload has no member naming the adjudicator; the adjudicator is identified only by the signing key."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.no-adjudicator-member: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence.payload-jcs",
@@ -60946,6 +62754,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence.payload-jcs-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence",
+   "text": "The payload's canonical bytes are its JCS canonicalization {{RFC8785}}",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The JWS payload of a Discovery Evidence object is byte-identical to the JCS canonicalization of the object."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence.payload-jcs: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.discovery-evidence-canonical.canonical-bytes-jcs",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "discovery-evidence-canonical",
@@ -60966,6 +62796,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.discovery-evidence-canonical.canonical-bytes-jcs-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence-canonical",
+   "text": "A Discovery Evidence object's canonical bytes are its JCS {{RFC8785}} canonicalization",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Digests and transparency-log commitments over a Discovery Evidence object are computed over its JCS canonicalization."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence-canonical.canonical-bytes-jcs: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.discovery-evidence-canonical.type-identifier",
@@ -60990,6 +62842,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.discovery-evidence-canonical.type-identifier-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "discovery-evidence-canonical",
+   "text": "its type identifier is `application/mission-discovery-evidence+json`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Discovery Evidence served or registered as a document is labelled `application/mission-discovery-evidence+json`."
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.discovery-evidence-canonical.type-identifier: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.conformance.adjudicate-every-encounter",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "conformance",
@@ -61010,6 +62884,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.conformance.adjudicate-every-encounter-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "adjudicate every encounter of the classes it enables through {{adjudication}}, default-closed",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Every encounter of an enabled class passes through adjudication, and one that adjudication cannot bind is routed or refused, never bound by default."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.adjudicate-every-encounter: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.conformance.identity-independent-of-agent",
@@ -61034,6 +62930,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.conformance.identity-independent-of-agent-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "establishing resource identity itself and independently of the agent, with the pinning of {{resource-identity}}",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.identity-independent-of-agent: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.conformance.taint-non-agent-channel",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "conformance",
@@ -61054,6 +62972,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.conformance.taint-non-agent-channel-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "obtain the session taint state through a channel the agent does not mediate",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "The taint state applied at adjudication comes from the harness attestation, never from the agent's request."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.taint-non-agent-channel: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.conformance.untrustworthy-taint-tainted",
@@ -61078,6 +63018,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.conformance.untrustworthy-taint-tainted-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "treat an untrustworthy taint state as tainted",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A missing, stale, or unverifiable taint report leads to the tainted outcome: no bind by policy, `tainted` true in the evidence."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.untrustworthy-taint-tainted: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.conformance.route-or-refuse-unresolvable",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "conformance",
@@ -61098,6 +63060,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.conformance.route-or-refuse-unresolvable-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "route to a human or refuse any encounter it cannot pin, cannot classify, or cannot obtain a trustworthy taint state for",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.route-or-refuse-unresolvable: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.conformance.self-declaration-floor",
@@ -61122,6 +63106,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.conformance.self-declaration-floor-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "enforce both floors: no consequence classification from self-declarations, with the high-consequence human floor ({{lying-resource}})",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A self-declaration never lowers an operation's class, and irreversible, external-commitment, or privileged-administration authority never binds by policy."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.self-declaration-floor: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.conformance.taint-floor",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "conformance",
@@ -61142,6 +63148,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.conformance.taint-floor-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "no policy binding of egress-capable authority in tainted sessions ({{injection-discovery}})",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "In a tainted session no encounter binds by policy; every would-be binding routes to a human."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.taint-floor: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.conformance.bound-adjudication-rate",
@@ -61166,6 +63194,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.conformance.bound-adjudication-rate-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "bound the rate of encounter adjudications per Mission across all outcomes",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Encounter adjudications per Mission are rate bounded, with bound, routed, and refused outcomes all counted."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.bound-adjudication-rate: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.conformance.publish-rate-bound",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "conformance",
@@ -61186,6 +63236,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.conformance.publish-rate-bound-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "publish the concrete bound in the Mission Deployment Profile ({{adjudication}})",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The Mission Deployment Profile states the concrete per-Mission encounter adjudication bound."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.publish-rate-bound: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.conformance.produce-and-sign-evidence",
@@ -61210,6 +63282,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.conformance.produce-and-sign-evidence-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "produce and sign Discovery Evidence for every adjudication, foreign-domain encounters included ({{discovery-evidence}})",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every adjudication, foreign-domain encounters included, yields a signed Discovery Evidence object."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.produce-and-sign-evidence: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.conformance.enforcement-scope-statement",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "conformance",
@@ -61230,6 +63324,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.conformance.enforcement-scope-statement-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "conformance",
+   "text": "state in its Enforcement Scope Statement which encounter classes it adjudicates, the ceiling families consented for them, and the floors as published limits",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "The deployment's Enforcement Scope Statement names the encounter classes it adjudicates and both floors as published limits; a deployment adjudicating only contextually consents no ceiling family to name."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.conformance.enforcement-scope-statement: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.security-considerations.ceiling-families-narrow",
@@ -61276,6 +63392,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.security-considerations.refusals-uniform-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "security-considerations",
+   "text": "Refusals are uniform (`refused` carries no ceiling detail)",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "A `refused` outcome returned to the agent is identical whatever the cause, and reveals nothing about the approved mission context or the governance record."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.security-considerations.refusals-uniform: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.security-considerations.collapse-refused-into-routed",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "security-considerations",
@@ -61296,6 +63434,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.security-considerations.collapse-refused-into-routed-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "security-considerations",
+   "text": "a deployment MAY collapse `refused` into `routed_to_approval` so a probe sees a single non-bind outcome while a human sees the pattern",
+   "role": "Controller",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "Where configured, the agent sees `routed_to_approval` for encounters that would be refused, while the Approver queue shows the refused pattern."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.security-considerations.collapse-refused-into-routed: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   },
   {
    "id": "discovery.security-considerations.anti-oracle-encounter-endpoints",
@@ -61320,6 +63480,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.security-considerations.anti-oracle-encounter-endpoints-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "security-considerations",
+   "text": "the anti-oracle discipline of the family's status surfaces applies to any encounter-facing endpoint",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "The Controller's responses to an encounter do not distinguish what the approved mission context admits, or the adjudication cause, beyond the outcome the agent is entitled to see."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.security-considerations.anti-oracle-encounter-endpoints: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.security-considerations.outage-stops-new-bindings-only",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "security-considerations",
@@ -61342,6 +63524,28 @@
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
   },
   {
+   "id": "discovery.security-considerations.outage-stops-new-bindings-only-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "security-considerations",
+   "text": "adjudicator outage stops new bindings, never existing authority",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "governance-decision",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "While the adjudicator is unavailable, no encounter binds, and requests drawing on authority already bound continue to succeed."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.security-considerations.outage-stops-new-bindings-only: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
+  },
+  {
    "id": "discovery.privacy-considerations.restrict-evidence-access",
    "spec": "draft-mcguinness-mission-discovery.md",
    "anchor": "privacy-considerations",
@@ -61362,6 +63566,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+  },
+  {
+   "id": "discovery.privacy-considerations.restrict-evidence-access-contextual",
+   "spec": "draft-mcguinness-mission-discovery.md",
+   "anchor": "privacy-considerations",
+   "text": "A deployment minimizes by restricting Discovery Evidence access as it does other Mission evidence",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "discovery.contextual-adjudication"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "Discovery Evidence is readable only by the parties the deployment admits to other Mission evidence for that Mission."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Contextual twin of discovery.privacy-considerations.restrict-evidence-access: on the contextual path the Discovery Adjudicator is the binding's Controller (under the AAuth binding, the Person Server). The reference has no contextual adjudication."
   }
  ]
 }
