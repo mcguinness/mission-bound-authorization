@@ -2561,16 +2561,44 @@ containing an ISO 8601 duration (the <code>duration</code> rule in Appendix A of
 </dd>
           <dd class="break"></dd>
 </dl>
-<p id="section-12.1.3-4">In the ERP examples in this document, the operation contract identifies
+<p id="section-12.1.3-4">The PDP judges whether an activity has ended against the activity's
+current lease boundary, not the expiry of an earlier permit that
+leased it. The PDP <span class="bcp14">MUST</span> refuse a renewal at or after that boundary: a
+renewal never revives an ended activity.<a href="#section-12.1.3-4" class="pilcrow">¶</a></p>
+<p id="section-12.1.3-5">The PDP <span class="bcp14">MUST</span> deny <code>out_of_authority</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>) a renewal whose
+<code>prior_evaluation_id</code> names no lease the PDP issued or an ended
+activity, or that fails the match this section requires. The PDP <span class="bcp14">MUST</span>
+also apply the current authorization, lifecycle and consumption checks
+to a renewal: <code>prior_evaluation_id</code> establishes none of them, and a
+renewal that fails one keeps that check's denial.<a href="#section-12.1.3-5" class="pilcrow">¶</a></p>
+<p id="section-12.1.3-6">A renewal's permit continues the same activity and its reservation. It
+never authorizes executing the action's effect again and never resets
+the activity's consumption.<a href="#section-12.1.3-6" class="pilcrow">¶</a></p>
+<p id="section-12.1.3-7">Where the renewed action is keyed
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), the PEP <span class="bcp14">MUST</span> send a fresh
+<code>idempotency_key</code> on each logical renewal and <span class="bcp14">MUST</span> reuse it on that
+renewal's retransmissions. The idempotency claim on a renewal's key
+<span class="bcp14">MUST</span> bind the renewal's operation identity and its
+<code>prior_evaluation_id</code> together, so the key presented for another
+renewal or for the operation itself is <code>idempotency_conflict</code>, never a
+permit for an unrelated renewal. The underlying operation's
+resource-side idempotency identity is unchanged by a renewal. A
+renewal's idempotency claim settles when the PDP commits the lease
+extension, and no Execution Evidence is expected for it. A
+retransmission of a renewal whose claim has settled receives that
+renewal's permit while the permit is valid, and a different renewal
+under the key is <code>idempotency_conflict</code>.<a href="#section-12.1.3-7" class="pilcrow">¶</a></p>
+<p id="section-12.1.3-8">In the ERP examples in this document, the operation contract identifies
 <code>https://erp.example.com</code> as the operation target
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
-constraints determine the permitted operations within that service.<a href="#section-12.1.3-4" class="pilcrow">¶</a></p>
-<p id="section-12.1.3-5">A renewal repeats the evaluation-request envelope for the same
+constraints determine the permitted operations within that service.<a href="#section-12.1.3-8" class="pilcrow">¶</a></p>
+<p id="section-12.1.3-9">A renewal repeats the evaluation-request envelope for the same
 activity and adds <code>context.prior_evaluation_id</code>. Here a long-running,
 duration-metered ledger reconciliation renews its lease before the
 prior permit expires; the action is not parameter-bound, so no
-<code>parameter_digest</code> is carried:<a href="#section-12.1.3-5" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-12.1.3-6">
+<code>parameter_digest</code> is carried:<a href="#section-12.1.3-9" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-12.1.3-10">
 <pre>
 {
   "subject": {
@@ -2614,7 +2642,7 @@ prior permit expires; the action is not parameter-bound, so no
     "prior_evaluation_id": "dec_0Rt5nB8xW2qK7mJ4vS1pL9eYc"
   }
 }
-</pre><a href="#section-12.1.3-6" class="pilcrow">¶</a>
+</pre><a href="#section-12.1.3-10" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -2891,35 +2919,45 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Editorial (#1176): examples of the canonical Mission follow one
-dated history; an example line too long for the page is folded per
-RFC 8792. No requirement changes.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Duration-Lease Renewal: the PDP refuses a renewal at or after the
+activity's current lease boundary and denies <code>out_of_authority</code> a
+renewal that continues nothing; a renewal passes every current check,
+and its permit never re-executes the effect or resets consumption. A
+keyed renewal carries a fresh <code>idempotency_key</code>, claimed with the
+renewal's operation identity and <code>prior_evaluation_id</code>; its claim
+settles when the PDP commits the lease extension, and a retransmission
+receives the renewal's permit while it is valid (#1464).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Duration-Lease Renewal: the renewal example carries
-<code>resource.properties.operation_target</code> (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">Editorial (#1176): examples of the canonical Mission follow one
+dated history; an example line too long for the page is folded per
+RFC 8792. No requirement changes.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The <code>exclusive</code> selector matches a consequential action whose
-operation target equals the selector's <code>resource</code> (#1276).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.3.1">Duration-Lease Renewal: the renewal example carries
+<code>resource.properties.operation_target</code> (#1276).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Duration-Lease Renewal: the PDP also verifies that the renewal's
-operation target matches the evaluation it renews (#1276).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.4.1">The <code>exclusive</code> selector matches a consequential action whose
+operation target equals the selector's <code>resource</code> (#1276).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Settlement by Evidence State and Reservation starvation: the
-reservation lease bounds how long an unsettled reservation waits
-before reconciliation begins and never releases it; reconciliation
-returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.5.1">Duration-Lease Renewal: the PDP also verifies that the renewal's
+operation target matches the evaluation it renews (#1276).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Conformance: the consented bounds are rendered at each human
-approval, including a standing consent such as a Mission Template's
-consent (#1078).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">Settlement by Evidence State and Reservation starvation: the
+reservation lease bounds how long an unsettled reservation waits
+before reconciliation begins and never releases it; reconciliation
+returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
+          <p id="appendix-A-2.7.1">Conformance: the consented bounds are rendered at each human
+approval, including a standing consent such as a Mission Template's
+consent (#1078).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
 exclusivity group is one shared latch across the delegation (children,
 descendants, successors, carryover replacements), established
 atomically before a derived Mission issues usable authority, retained
@@ -2927,10 +2965,10 @@ while derived authority remains usable, and relaxed only by an
 explicit, scoped, disclosed approval that keeps the historical latch.
 Settlement releases a latch only when every participating action is
 affirmatively not executed. Template instances are scoped per
-instance, with that limit disclosed.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+instance, with that limit disclosed.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
 Mission is charged to every ancestor's bound or holds an escrowed
 allocation whose remainder returns only after the allocation is
 closed, a successor or carryover replacement continues its
@@ -2940,10 +2978,10 @@ per-instance bound with <code>max_active</code> and <code>dispatch_rate</code>. 
 expiry no longer releases an unsettled reservation for an
 idempotent or reversible action class (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>), and a
 metered high-consequence idempotency horizon reaches the Mission's
-<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
 <code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
 the issuance profile retires the <code>controls</code> bucket entirely
@@ -2957,16 +2995,16 @@ of <code>exclusive</code> against <a href="#promotion-criteria" class="auto inte
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
-to the issuance profile.<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+to the issuance profile.<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.10">
-          <p id="appendix-A-2.10.1">One informative cross-reference in Settlement by Evidence State
+        <li class="normal" id="appendix-A-2.11">
+          <p id="appendix-A-2.11.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
