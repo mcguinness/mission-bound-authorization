@@ -73,6 +73,12 @@ export class OperationProfileRegistry {
   private readonly current = new Map<string, OperationProfile>();
   /** Every version ever registered, including superseded ones. */
   private readonly retained = new Map<string, OperationProfile>();
+  /**
+   * The version a workflow admitted before versions were recorded resolves
+   * under, keyed by the earlier pin (the challenge's `iss` and the entry's
+   * `type`). Declared by the deployment; never inferred.
+   */
+  private readonly legacy = new Map<string, string>();
 
   /**
    * @param contracts the contract versions resources declare, whose
@@ -86,6 +92,31 @@ export class OperationProfileRegistry {
   register(iss: string, profile: OperationProfile): this {
     this.current.set(iss, profile);
     this.retained.set(key(iss, profile.version), profile);
+    return this;
+  }
+
+  /**
+   * Retain `profile` for `iss` without making it the current version: a
+   * version pending workflows may still reference, which no new challenge
+   * is admitted under.
+   */
+  retain(iss: string, profile: OperationProfile): this {
+    this.retained.set(key(iss, profile.version), profile);
+    return this;
+  }
+
+  /**
+   * @spec txn-authorization#resource-challenge (#249): the store upgrade's
+   * binding. A workflow admitted before the store recorded Operation Profile
+   * versions was pinned on the challenge's `iss` and the entry's `type`, the
+   * key the earlier registry resolved to its then-current profile. This
+   * declares the retained `version` that profile was, so such a workflow
+   * completes under the profile it was admitted under, as the TAS retention
+   * rule requires. It is declared, never inferred: without it the workflow's
+   * completion is refused, and it is never read under today's version.
+   */
+  bindLegacyType(iss: string, type: string, version: string): this {
+    this.legacy.set(key(iss, type), version);
     return this;
   }
 
@@ -133,6 +164,33 @@ export class OperationProfileRegistry {
     }
     const profile = this.retained.get(key(iss, version));
     if (!profile) return { ok: false, reason: "the Operation Profile version this workflow was admitted under is not retained" };
+    const resolved = profile.resolve(entry, { resource: iss });
+    if (!resolved.ok) return { ok: false, reason: `operation rejected by its Operation Profile (${resolved.reason})` };
+    return { ok: true, version, operation: resolved.operation };
+  }
+
+  /**
+   * The operation a workflow admitted before versions were recorded resolves
+   * to at completion: under the version {@link bindLegacyType} declares for
+   * its `(iss, type)`, which must be retained and of that type. No binding,
+   * an unretained version, or an entry carrying a `resource_contract` (the
+   * earlier registry never admitted one) refuses with `terminal`: the
+   * workflow's original binding cannot be established, so it is not read
+   * under any other version.
+   */
+  completeLegacy(iss: string, type: string, entry: JsonValue): ProfileResolution & { terminal?: true } {
+    const version = this.legacy.get(key(iss, type));
+    const profile = version === undefined ? undefined : this.retained.get(key(iss, version));
+    if (version === undefined || !profile || profile.type !== type) {
+      return {
+        ok: false,
+        terminal: true,
+        reason: "this workflow was admitted before Operation Profile versions were recorded, and no retained version is declared for its resource and type",
+      };
+    }
+    if ((entry as { resource_contract?: unknown } | null)?.resource_contract !== undefined) {
+      return { ok: false, terminal: true, reason: "a workflow admitted before versions were recorded never carried a resource_contract" };
+    }
     const resolved = profile.resolve(entry, { resource: iss });
     if (!resolved.ok) return { ok: false, reason: `operation rejected by its Operation Profile (${resolved.reason})` };
     return { ok: true, version, operation: resolved.operation };

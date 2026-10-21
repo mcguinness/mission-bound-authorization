@@ -762,7 +762,7 @@ async function poll(
     resource: wf.challenge.iss,
     action: wf.action,
     operationType: wf.operationType,
-    profileVersion: wf.profileVersion,
+    profileVersion: before.profileVersion,
     clientId: wf.clientId,
     subject: wf.subject,
     ...(wf.challenge.mission.subject ? { originPrincipal: wf.challenge.mission.subject } : {}),
@@ -856,6 +856,8 @@ interface CompletionPass {
   permitted: AuthorityEntry[];
   /** The token's exp, computed from THIS pass's clock and Mission state. */
   exp: number;
+  /** The Operation Profile version the operation was read under at completion (#249). */
+  profileVersion: string;
 }
 
 /**
@@ -894,14 +896,20 @@ async function completionChecks(
   // retains at all is an operation this TAS can no longer read, and refuses.
   // @spec txn-authorization#resource-challenge (#249): an entry carrying a
   // `resource_contract` reference is resolved again here, and one that no
-  // longer resolves (retired, changed, or past its retention) refuses.
-  const pinnedOperation = txn.operationProfiles.complete(
-    wf.challenge.iss,
-    wf.profileVersion,
-    wf.challenge.authorization_details[0] as JsonValue,
-    deps.now(),
-  );
+  // longer resolves (retired, changed, or past its retention) refuses. A
+  // workflow admitted before the store recorded versions (no
+  // `profileVersion`) completes only under the binding the deployment
+  // declares for its `(iss, type)`, never under today's version; with none,
+  // its original binding is unknowable and the refusal is terminal.
+  const entry = wf.challenge.authorization_details[0] as JsonValue;
+  const pinnedOperation =
+    wf.profileVersion === undefined
+      ? txn.operationProfiles.completeLegacy(wf.challenge.iss, wf.operationType, entry)
+      : txn.operationProfiles.complete(wf.challenge.iss, wf.profileVersion, entry, deps.now());
   if (!pinnedOperation.ok || pinnedOperation.operation.action !== wf.action) {
+    if (!pinnedOperation.ok && "terminal" in pinnedOperation && pinnedOperation.terminal) {
+      workflows.setState(wf.id, "denied");
+    }
     return {
       ok: false,
       error: "access_denied",
@@ -1013,7 +1021,7 @@ async function completionChecks(
   if (exp <= nowS) {
     return { ok: false, error: "access_denied", description: "no lifetime remains for a transaction token" };
   }
-  return { ok: true, nowS, approval, permitted, exp };
+  return { ok: true, nowS, approval, permitted, exp, profileVersion: pinnedOperation.version };
 }
 
 /**

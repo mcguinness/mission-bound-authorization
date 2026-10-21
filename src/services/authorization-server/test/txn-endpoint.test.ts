@@ -47,7 +47,11 @@ import {
   type SubjectNamespacePolicy,
   type TxnAuthorizationDeps,
 } from "../src/adapters/transaction-authorization.js";
-import type { TxnWorkflowStore } from "../src/kernel/txn-workflow-store.js";
+import { TxnWorkflowStore } from "../src/kernel/txn-workflow-store.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { openStore } from "@mission/store";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createLocalJWKSet, decodeJwt, type JWK } from "jose";
@@ -2927,5 +2931,245 @@ describe("proof and credential freshness (@spec txn-authorization#challenge-rede
       replay.fullWhen = () => true;
     }
     expect((await submitFresh(`txn_1173_after_${crypto.randomUUID()}`, await txnProof({ iat: nowS() }))).status).toBe(200);
+  });
+});
+
+/**
+ * @spec txn-authorization#resource-challenge (#249): upgrading a workflow
+ * store FILE created before the store recorded Operation Profile versions.
+ * The file is created with the earlier schema exactly (`MAIN_TXN_SCHEMA`,
+ * `txn-workflow-store.ts` at `af9d073e`), holding a pending workflow admitted
+ * under it, then reopened by this store. A new admission succeeds, the
+ * earlier workflow completes only under the binding the deployment declares
+ * for its `(iss, type)` and never under the current version, and reopening
+ * again changes nothing.
+ */
+const MAIN_TXN_SCHEMA = `
+CREATE TABLE IF NOT EXISTS txn_workflows (
+  id TEXT PRIMARY KEY,
+  challenge_iss TEXT NOT NULL,
+  challenge_jti TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  cnf_jkt TEXT NOT NULL,
+  txn TEXT NOT NULL,
+  task_id TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  operation_type TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  subject_token_iss TEXT NOT NULL,
+  subject_token_sub TEXT NOT NULL,
+  subject_policy TEXT NOT NULL,
+  subject_token_jti TEXT NOT NULL,
+  act_json TEXT,
+  parameter_digest TEXT NOT NULL,
+  challenge_json TEXT NOT NULL,
+  subject_token_exp INTEGER NOT NULL,
+  mission_exp INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  state TEXT NOT NULL,
+  issued_token TEXT,
+  issued_jti TEXT,
+  issued_exp INTEGER,
+  created_at INTEGER NOT NULL
+) STRICT;
+CREATE UNIQUE INDEX IF NOT EXISTS txn_workflows_admission
+  ON txn_workflows (challenge_iss, challenge_jti, client_id, cnf_jkt);
+CREATE TABLE IF NOT EXISTS txn_issuance_guard (
+  challenge_iss TEXT NOT NULL,
+  txn TEXT NOT NULL,
+  workflow_id TEXT NOT NULL,
+  issued_at INTEGER NOT NULL,
+  PRIMARY KEY (challenge_iss, txn)
+) STRICT;
+`;
+/** The columns the earlier schema has: every column but `profile_version`. */
+const MAIN_TXN_COLUMNS = [
+  "id", "challenge_iss", "challenge_jti", "client_id", "cnf_jkt", "txn", "task_id", "mission_id", "action",
+  "operation_type", "subject", "subject_token_iss", "subject_token_sub", "subject_policy", "subject_token_jti",
+  "act_json", "parameter_digest", "challenge_json", "subject_token_exp", "mission_exp", "expires_at", "state",
+  "issued_token", "issued_jti", "issued_exp", "created_at",
+];
+
+describe("a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249)", () => {
+  /** The version the earlier registry's `(RESOURCE, mission_resource_access)` profile was, retained. */
+  const EARLIER = "payments-before-249";
+  /** Today's current version, which an earlier workflow must never be read under. */
+  const CURRENT = "payments-current";
+  let dir: string;
+  /** A Mission of its own, so no earlier test's narrowing reaches these workflows. */
+  let m: Awaited<ReturnType<typeof freshMission>>;
+
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), "txn-store-upgrade-"));
+    m = await freshMission();
+  });
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  async function depsWith(registry: OperationProfileRegistry) {
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const decided: string[] = [];
+    return {
+      decided,
+      deps: {
+        issuer: ISSUER,
+        kernel: as.kernel,
+        clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+        publicJwks: asJwks,
+        dpopProofReplay: newDpopProofReplay(),
+        subjectTokenLive: async () => true,
+        now: () => new Date(),
+        scopeProjection: SCOPE_PROJECTION,
+        txn: {
+          challengeIssuers: new Map([
+            [RESOURCE, { jwks: createLocalJWKSet({ keys: [{ ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK] }), algs: ["ES256"] }],
+          ]) as ChallengeIssuers,
+          ars,
+          operationProfiles: registry,
+          tokenKey: txnKeys.privateKey,
+          tokenKid: "upgrade-txn",
+          workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+          maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+          freshDecision: async (input: { profileVersion: string }) => {
+            decided.push(input.profileVersion);
+            return { decision: "permit" as const };
+          },
+        },
+      } as unknown as TxnAuthorizationDeps,
+    };
+  }
+
+  /** The registry today: the current version, and the earlier one retained. */
+  const today = () =>
+    new OperationProfileRegistry()
+      .retain(RESOURCE, missionResourceAccessProfile(EARLIER))
+      .register(RESOURCE, missionResourceAccessProfile(CURRENT));
+
+  async function challengeFor(txn: string): Promise<string> {
+    return signChallenge(
+      {
+        txn,
+        authorization_details: remittanceEntry(m.missionId),
+        iss: RESOURCE,
+        aud: ISSUER,
+        reason: "action_approval_required",
+        parameter_digest: `sha-256:${txn}`,
+        mission: m.mission,
+      },
+      rsTxnKeys.privateKey,
+      "rs-txn",
+    );
+  }
+
+  /**
+   * A store file in the earlier schema holding one approved, pending workflow
+   * that schema admitted: the workflow is admitted through the endpoint, and
+   * its row is written into the earlier schema's columns, which have no
+   * `profile_version`.
+   */
+  async function earlierFileWithPendingWorkflow(name: string): Promise<{ file: string; handle: string }> {
+    const file = join(dir, `${name}.sqlite`);
+    const { deps } = await depsWith(today());
+    const admittedIn = newTxnWorkflows();
+    const txn = `txn_upgrade_${name}`;
+    const admitted = await callTransactionEndpoint(deps, admittedIn, {
+      transaction_challenge: await challengeFor(txn),
+      subject_token: m.token,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const row = admittedIn.db.prepare(`SELECT ${MAIN_TXN_COLUMNS.join(", ")} FROM txn_workflows WHERE id = ?`).get(handle) as Record<string, unknown>;
+    const earlier = openStore(MAIN_TXN_SCHEMA, { file });
+    earlier
+      .prepare(`INSERT INTO txn_workflows (${MAIN_TXN_COLUMNS.join(", ")}) VALUES (${MAIN_TXN_COLUMNS.map(() => "?").join(", ")})`)
+      .run(...MAIN_TXN_COLUMNS.map((c) => row[c]));
+    earlier.close();
+    return { file, handle };
+  }
+
+  it("reopened by this store, the file admits a new workflow, which records the version it was admitted under", async () => {
+    const { file } = await earlierFileWithPendingWorkflow("admit");
+    const store = new TxnWorkflowStore({ file });
+    try {
+      const { deps } = await depsWith(today());
+      const admitted = await callTransactionEndpoint(deps, store, {
+        transaction_challenge: await challengeFor("txn_upgrade_admit_new"),
+        subject_token: m.token,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      });
+      expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+      const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+      expect(store.get(handle)?.profileVersion).toBe(CURRENT);
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it("an earlier pending workflow keeps no recorded version, and with no binding declared for its resource and type its completion is refused terminally, never read under the current version", async () => {
+    const { file, handle } = await earlierFileWithPendingWorkflow("unbound");
+    const store = new TxnWorkflowStore({ file });
+    try {
+      expect(store.get(handle)?.profileVersion).toBeUndefined();
+      const { deps, decided } = await depsWith(today());
+      const polled = await callTransactionEndpoint(deps, store, { transaction_authorization_id: handle });
+      expect(polled.status).toBe(400);
+      expect((polled.body as { error: string }).error).toBe("access_denied");
+      expect(decided).toEqual([]);
+      expect(store.get(handle)?.state).toBe("denied");
+      // Terminal: declaring a binding afterwards does not revive it.
+      const late = await depsWith(today().bindLegacyType(RESOURCE, "mission_resource_access", EARLIER));
+      const again = await callTransactionEndpoint(late.deps, store, { transaction_authorization_id: handle });
+      expect((again.body as { error: string }).error).toBe("access_denied");
+      expect(late.decided).toEqual([]);
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it("an earlier pending workflow completes under the version declared for its resource and type, never under the current one", async () => {
+    const { file, handle } = await earlierFileWithPendingWorkflow("bound");
+    const store = new TxnWorkflowStore({ file });
+    try {
+      const { deps, decided } = await depsWith(today().bindLegacyType(RESOURCE, "mission_resource_access", EARLIER));
+      const issued = await callTransactionEndpoint(deps, store, { transaction_authorization_id: handle });
+      expect(issued.status, JSON.stringify(issued.body)).toBe(200);
+      expect((issued.body as { access_token?: string }).access_token).toBeDefined();
+      expect(decided).toEqual([EARLIER]);
+      // The row itself is never backfilled.
+      expect(store.get(handle)?.profileVersion).toBeUndefined();
+    } finally {
+      store.db.close();
+    }
+  });
+
+  it("reopening the upgraded file again changes nothing: one profile_version column, the earlier workflow still unversioned, a later one still versioned", async () => {
+    const { file, handle } = await earlierFileWithPendingWorkflow("twice");
+    let laterId: string;
+    const first = new TxnWorkflowStore({ file });
+    try {
+      const { deps } = await depsWith(today());
+      const admitted = await callTransactionEndpoint(deps, first, {
+        transaction_challenge: await challengeFor("txn_upgrade_twice_new"),
+        subject_token: m.token,
+        subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      });
+      laterId = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    } finally {
+      first.db.close();
+    }
+    const second = new TxnWorkflowStore({ file });
+    try {
+      const columns = second.db.prepare("PRAGMA table_info(txn_workflows)").all() as Array<{ name: string }>;
+      expect(columns.filter((c) => c.name === "profile_version")).toHaveLength(1);
+      expect(second.get(handle)?.profileVersion).toBeUndefined();
+      expect(second.get(laterId)?.profileVersion).toBe(CURRENT);
+    } finally {
+      second.db.close();
+    }
   });
 });
