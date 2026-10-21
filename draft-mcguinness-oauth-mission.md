@@ -823,10 +823,8 @@ This document maps principals onto native OAuth constructs:
   matching the access token `sub` model of {{RFC9068}}. The Approver
   is the accountable consent principal whose approval created the
   Mission, always equal to `approval_basis.consent_principal`. Under
-  a standing-consent basis, a policy adjudicates the activation,
-  which the basis's `adjudication` member can make explicit
-  ({{mission-record}}), while the Approver remains the human whose
-  consent roots it ({{authority-sources}}, {{multi-party-approval}}).
+  a standing-consent basis, the Approver remains the human whose
+  consent roots the Mission ({{standing-consent-bases}}).
 
 On a derived token, the `iss` claim is the AS and the `sub` claim is
 the AS-local `sub` to which the AS maps the Subject under the
