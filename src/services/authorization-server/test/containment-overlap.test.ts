@@ -229,6 +229,14 @@ describe("a selector applies to every approved entry whose resource set overlaps
     expect(kernel.get(m.id)?.version).toBe(m.version);
   });
 
+  it("the shipped contain-external-comms-on-taint-v1 rule reaches a remittance entry approved beneath a prefix ceiling", () => {
+    const service = CONTAINMENT_POLICY.rules[0]?.remove[0]?.resource as string;
+    const kernel = kernelOver(service, CONTAINMENT_POLICY);
+    const m = approve(kernel, [entry(`${service}/remittances/r-1`, [READ, SEND])]);
+    kernel.containOnEvent(m.id, { ...ev("evt-shipped"), type: "content.tainted_read" });
+    expect(effective(kernel, m.id)).toEqual([{ resource: `${service}/remittances/r-1`, actions: [READ] }]);
+  });
+
   it("resolves the overlay onto the approved entries for a consumer that pairs by an entry's own resource", () => {
     const kernel = kernelOver();
     const m = approve(kernel, [entry(INV1, [READ, SEND]), entry(`${SERVICE}/`, [READ, EXECUTE], "prefix"), entry(FILES, ["files:doc.read"])]);

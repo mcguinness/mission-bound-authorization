@@ -14,6 +14,7 @@ import {
   type ActionPhase,
   type AuthorityEntry,
   computeAnchor,
+  containmentSelectorViolation,
   DuplicateMemberError,
   GOVERNED_POLICY_TYP,
   isAbsoluteUri,
@@ -1029,33 +1030,34 @@ interface LoadedPolicy {
 }
 
 /**
- * @spec resource-access#resource-matching (#1264, D446, #1276, #1440): a
- * containment removal names an approved entry's own `resource`, and the
- * kernel's containment paths pair removals with entries by that string. A
- * removal naming any other `resource_match` (`prefix`, or an unknown value)
- * is therefore refused at load rather than rebuilt without the member, which
- * would silently widen it.
+ * @spec containment#selector-matching, resource-access#resource-matching
+ * (#1264, #1440, #1463, D606): one containment removal, a selector. Its
+ * `resource_match` is `exact` when absent and `prefix` only where the rule
+ * declares it, so an `exact` service root never becomes a subtree selector.
+ * The kernel applies a selector to every approved entry whose resource set
+ * overlaps it. A selector the matcher cannot decide (an unrecognized mode, a
+ * `prefix` base Resource Access refuses, an empty `actions` list, an unknown
+ * member) is refused at load, naming the entry, rather than rebuilt without
+ * the member, which would silently narrow what it contains.
  */
-function rejectUnsupportedResourceMatch(
-  file: string,
-  e: Record<string, unknown>,
-  ctx: string,
-): void {
-  if (e.resource_match !== undefined && e.resource_match !== "exact") {
-    throw new ConfigError(
-      file,
-      `${ctx} has resource_match ${JSON.stringify(e.resource_match)}; this deployment's containment removals are exact only`,
-    );
-  }
+function containmentRemoveEntry(file: string, raw: unknown, ctx: string): ContainmentRemoveEntry {
+  const e = asObject(file, raw, ctx);
+  const violation = containmentSelectorViolation(e);
+  if (violation !== undefined) throw new ConfigError(file, `${ctx}: ${violation}`);
+  return {
+    resource: e.resource as string,
+    ...(e.resource_match === "prefix" ? { resource_match: "prefix" as const } : {}),
+    ...(e.actions !== undefined ? { actions: [...(e.actions as string[])] } : {}),
+  };
 }
 
 /**
  * @spec resource-access#resource-access-type, resource-access#subset (#1276,
- * #1440): a ceiling entry's `resource_match`, kept as written. Derivation, the
- * subset rule, governed removal and the approval floor's classification all
- * pair a ceiling entry with other resources through the shared matcher, so
- * both values Resource Access defines load, `prefix` only where no containment
- * rule is configured ({@link rejectPrefixCeilingsUnderContainment}). An
+ * #1440, #1463): a ceiling entry's `resource_match`, kept as written.
+ * Derivation, the subset rule, governed removal, the approval floor's
+ * classification and containment all pair a ceiling entry, or an entry
+ * approved beneath it, with other resources through the shared matcher, so
+ * both values Resource Access defines load, beside containment rules too. An
  * unrecognized value, and a `prefix` entry whose `resource` carries a query or
  * names no `//` authority, are refused at load naming the entry
  * ({@link resourceMatchViolation}).
@@ -1398,6 +1400,8 @@ export const DEMO_AGENT_PROPOSAL: CeilingEntry[] = [
 
 export interface ContainmentRemoveEntry {
   resource: string;
+  /** `exact` when absent; `prefix` only by declaration (@spec containment#selector-matching). */
+  resource_match?: "exact" | "prefix";
   actions?: string[];
 }
 
@@ -1423,17 +1427,9 @@ function loadContainmentPolicy(): ContainmentPolicy {
   const root = asObject(file, readJson(file), "containment");
   const rules = asArray(file, root.rules, "containment.rules").map((raw, i) => {
     const r = asObject(file, raw, `containment.rules[${i}]`);
-    const remove = asArray(file, r.remove, `containment.rules[${i}].remove`).map((rawEntry, j) => {
-      const e = asObject(file, rawEntry, `containment.rules[${i}].remove[${j}]`);
-      rejectUnsupportedResourceMatch(file, e, `containment.rules[${i}].remove[${j}]`);
-      const entry: ContainmentRemoveEntry = {
-        resource: reqString(file, e, "resource", `containment.rules[${i}].remove[${j}]`),
-      };
-      if (e.actions !== undefined) {
-        entry.actions = reqStringArray(file, e, "actions", `containment.rules[${i}].remove[${j}]`);
-      }
-      return entry;
-    });
+    const remove = asArray(file, r.remove, `containment.rules[${i}].remove`).map((rawEntry, j) =>
+      containmentRemoveEntry(file, rawEntry, `containment.rules[${i}].remove[${j}]`),
+    );
     if (remove.length === 0) {
       throw new ConfigError(file, `containment.rules[${i}].remove must be non-empty`);
     }
@@ -1453,7 +1449,10 @@ const CONTAINMENT_POLICY_RAW = loadContainmentPolicy();
  * A protected `content.tainted_read` event removes the external-communication
  * capability (`payments:remittance.send`). Like DERIVATION_POLICY, the payments
  * resource resolves to the (possibly env-overridden) CANONICAL_RESOURCE so the
- * removal targets the same resource the Mission actually holds.
+ * removal targets the same resource the Mission actually holds. The shipped
+ * rule is service-wide, so it declares `resource_match: "prefix"` (#1463): it
+ * reaches an entry approved beneath a `prefix` ceiling as well as the service
+ * entry itself. The rewrite keeps the declared mode.
  */
 export const CONTAINMENT_POLICY: ContainmentPolicy = {
   policy_version: CONTAINMENT_POLICY_RAW.policy_version,
@@ -2227,46 +2226,6 @@ export const AUTHORITY_SOURCES: AuthoritySourceCatalogSeed = (() => {
     })),
   };
 })();
-
-/**
- * @spec containment#overlay, resource-access#resource-matching (#1440): the
- * kernel's containment paths pair a removal with an approved entry by that
- * entry's exact `resource`, so a rule naming a service misses a finer entry
- * approved beneath a `prefix` ceiling. Until containment pairs through the
- * shared matcher (the follow-up to #1440), a deployment that configures any
- * containment rule keeps every authorization-server ceiling entry `exact`: a
- * `prefix` entry in policy.json, governed-policy.json or
- * authority-sources.json refuses at load, naming the entry. With no
- * containment rule configured, `prefix` ceilings load.
- */
-function rejectPrefixCeilingsUnderContainment(): void {
-  if (CONTAINMENT_POLICY.rules.length === 0) return;
-  type Site = [file: string, ctx: string, entries: readonly CeilingEntry[]];
-  const ceilings: Site[] = [
-    ["policy.json", "policy.ceiling", POLICY.ceiling],
-    ...GOVERNED_POLICIES.map(
-      (p, i): Site => ["governed-policy.json", `governed-policy[${i}].ceiling`, p.ceiling],
-    ),
-    ...AUTHORITY_SOURCES.entries.map(
-      (s, i): Site => [
-        "authority-sources.json",
-        `authority-sources.sources[${i}].ceiling`,
-        s.ceiling,
-      ],
-    ),
-  ];
-  for (const [file, ctx, entries] of ceilings) {
-    entries.forEach((e, j) => {
-      if (e.resource_match === "prefix") {
-        throw new ConfigError(
-          file,
-          `${ctx}[${j}] has resource_match "prefix", but containment.json configures containment rules, which pair a removal with an approved entry by its exact resource and would miss an entry approved beneath a prefix ceiling (the follow-up to #1440); configure no containment rule, or keep every ceiling entry exact`,
-        );
-      }
-    });
-  }
-}
-rejectPrefixCeilingsUnderContainment();
 
 /**
  * @spec mission#caller-authorization-and-minimization — one registered RFC 7662
