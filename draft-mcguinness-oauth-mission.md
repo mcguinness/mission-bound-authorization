@@ -1706,6 +1706,14 @@ a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 ## Direct Approval Steps {#direct-approval-steps}
 
+The steps fall into four phases. Steps 1 to 3 establish the Approver,
+the Subject and the authority source. Step 4 establishes the
+effective expiry; the candidate Authority Set is complete by then
+({{derivation-modes}}). Step 5 renders it for consent, and
+{{approval-context-changes}} covers a change before the decision.
+Steps 6 and 7 compute the integrity anchors over the consented values
+and create the Mission atomically with the decision.
+
 At a direct approval event the AS MUST, in order:
 
 1. **Authenticate the Approver**, subject to the approval-authentication
