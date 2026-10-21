@@ -239,7 +239,7 @@ describe("MissionStatusResolver: a verified answer (@spec authority-server#missi
     });
     expect(claims.aud).toBe(ISSUER);
     // A fresh assertion per read.
-    await resolver().resolve(ref, { fresh: true });
+    await r.resolve(ref, { fresh: true });
     expect(requests[1]?.form.get("client_assertion")).not.toBe(assertion);
   });
 
