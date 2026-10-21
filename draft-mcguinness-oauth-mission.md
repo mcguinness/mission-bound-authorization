@@ -3127,7 +3127,7 @@ exchange rows of the third table.
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
-| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe detail |
+| Token endpoint ({{subset}}): the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -5709,6 +5709,7 @@ This document seeds the registry with the states it defines:
 |---|---|---|---|---|
 | `active` | no | The only state from which tokens are derived. | IETF | this document, {{lifecycle}} |
 | `terminated` | yes | The Mission has ended; its `termination` gives the reason. | IETF | this document, {{lifecycle}}, {{termination}} |
+{: title="Mission Lifecycle States registry: initial contents"}
 
 Each further document that defines a lifecycle state requests that
 state's registration in its own IANA considerations. A Designated
@@ -5750,6 +5751,7 @@ This document seeds the registry with the reasons it defines:
 |---|---|---|---|---|
 | `revoked` | The Subject, Approver, or policy terminated the Mission. | none | IETF | this document, {{termination}} |
 | `expired` | The Mission's `expires_at` passed; `terminated_at` equals it. | none | IETF | this document, {{termination}} |
+{: title="Mission Termination Reasons registry: initial contents"}
 
 Each further document that defines a termination reason requests
 that reason's registration in its own IANA considerations.
@@ -6693,6 +6695,7 @@ client intake keeps those two surfaces from disagreeing.
 | Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time Authority Set derivation |
 | Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
 | Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
+{: title="Ownership and operational signals"}
 
 Templates amortize authoring across Missions and do not bypass the
 ceilings. The unmapped-resource rate, template-hit rate, and
