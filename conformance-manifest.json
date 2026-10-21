@@ -58835,7 +58835,7 @@
    "assertion": "ignore",
    "observation": {
     "normative": "An `encountered_resource` request parameter whose values the issuer's own retrieval does not confirm is not adopted as the pinned identity.",
-    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, never adopted; the encountered resources come from the request's own entries. Verifying the hint against a TLS-authenticated origin arrives with identity pinning (#1469 stage 2)."
+    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused. Verifying the hint against a TLS-authenticated origin arrives with identity pinning (#1469 stage 2)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -58850,6 +58850,12 @@
      "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > an encountered_resource that is not an origin object or names no resource the request seeks, and a digest hint without one, are refused invalid_request",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
+     "level": "unit",
      "surface": "token-endpoint"
     }
    ],
