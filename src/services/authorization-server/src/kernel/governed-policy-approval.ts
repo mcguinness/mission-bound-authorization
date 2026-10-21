@@ -64,6 +64,7 @@ import {
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
 import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
+import { recheckDirectApprovalRecord } from "./direct-approval-record.js";
 import { inheritChildActorOrigins } from "./child-actor-eligibility.js";
 import { inheritOrigins, type RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
@@ -1379,7 +1380,9 @@ export type ApprovalGovernanceRecheck = { rechecked: true } | { rechecked: false
 
 /**
  * @spec approval-governance#re-check: a Relying Auditor's re-check of a
- * committed `governed_policy` record from retained evidence, in the six steps
+ * committed record from retained evidence; a recorded `direct` approval
+ * replays its direct approval rule (`recheckDirectApprovalRecord`). For a
+ * `governed_policy` record, in the six steps
  * the section gives: (1) verify the record; (2) recompute
  * `approval_policy.digest` over the retained root snapshot; (3) where the root
  * commits a separate evaluator, verify that evaluator's retained snapshot
@@ -1407,6 +1410,10 @@ export function recheckApprovalGovernanceRecord(
     verifyApprovalGovernanceRecord(record, { resolveKey: opts.resolveKey, mission });
   } catch (e) {
     return no(1, (e as Error).message);
+  }
+  // A recorded direct approval replays the direct approval rule (#1470).
+  if (mission.approval_basis.type === "direct") {
+    return recheckDirectApprovalRecord(kernel.directApprovalRecords, kernel.sourceBindings.get(missionId), mission, record);
   }
   const activation = kernel.governedPolicyConsents.activation(missionId);
   if (mission.approval_basis.type !== "governed_policy" || !activation) {

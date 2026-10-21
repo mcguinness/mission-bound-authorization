@@ -25,9 +25,9 @@ import {
 import { TOOL_ACTIONS } from "@mission/mcp-payments";
 import { importJWK, SignJWT, type CryptoKey } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
+import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, recheckApprovalGovernanceRecord } from "../src/index.js";
 import { evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
-import type { AuthorityEntry } from "../src/kernel/types.js";
+import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14791;
@@ -36,6 +36,8 @@ const PROGRESSIVE_PORT = 14793;
 const ISSUER = `http://localhost:${PORT}`;
 const OVERRIDE_ISSUER = `http://localhost:${OVERRIDE_PORT}`;
 const PROGRESSIVE_ISSUER = `http://localhost:${PROGRESSIVE_PORT}`;
+const RECORDING_PORT = 14788;
+const RECORDING_ISSUER = `http://localhost:${RECORDING_PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const PAYMENTS = DERIVATION_POLICY.ceiling[0].resource as string;
 const VERIFIER = "approval-floor-verifier-0123456789-0123456789-0123";
@@ -114,12 +116,13 @@ type Server2 = { as: BuiltAs; server: Server; sessions: ApprovalSessionStore; ke
 let shipped: Server2;
 let override: Server2;
 let progressive: Server2;
+let recording: Server2;
 
 async function start(
   issuer: string,
   port: number,
   approvalFloor?: ApprovalFloorPolicy,
-  deployment: Partial<typeof PROGRESSIVE_DEPLOYMENT> = {},
+  deployment: Partial<Parameters<typeof buildAuthorizationServer>[0]> = {},
 ): Promise<Server2> {
   const sessions = new ApprovalSessionStore();
   const as = await buildAuthorizationServer({
@@ -139,12 +142,14 @@ beforeAll(async () => {
   shipped = await start(ISSUER, PORT);
   override = await start(OVERRIDE_ISSUER, OVERRIDE_PORT, OVERRIDE_POLICY);
   progressive = await start(PROGRESSIVE_ISSUER, PROGRESSIVE_PORT, undefined, PROGRESSIVE_DEPLOYMENT);
+  recording = await start(RECORDING_ISSUER, RECORDING_PORT, undefined, { directApprovalRecording: true });
 });
 
 afterAll(() => {
   shipped?.server.close();
   override?.server.close();
   progressive?.server.close();
+  recording?.server.close();
 });
 
 afterEach(() => {
@@ -565,5 +570,48 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
 
   it("refuses a duplicated member", () => {
     expect(() => loadApprovalFloor('{"policy_id":"a","policy_id":"b"}')).toThrow(/ambiguous policy/);
+  });
+});
+
+describe("a recorded direct approval carries the approval surface's authentication (@spec approval-governance#assertion-authority, #1470)", () => {
+  const recordOf = (missionId: string) => {
+    const record = recording.as.kernel.governanceRecords.forMission(missionId);
+    if (!record) throw new Error("no record");
+    return record;
+  };
+  const resolveKey = () => recording.as.kernel.statusVerificationKey();
+
+  it("records the browser login's acr and auth_time as the Approver's human assertion, and the record re-checks", async () => {
+    const authTime = now() - 30;
+    const r = await authorize(recording, {
+      authority: REMIT,
+      approval: { browser: { sub: "bob", acr: "mfa", auth_time: authTime, subject: "alice" } },
+    });
+    expect(r.code, r.description).toBeTruthy();
+    const mission = recording.as.kernel.allMissions().at(-1) as MissionRecord;
+    expect(mission.approval_basis).toMatchObject({ type: "direct", adjudication: { kind: "human", governance_record: true } });
+    expect(recordOf(mission.id).assertions).toEqual([
+      {
+        assertion_id: "ast_human",
+        principal: { iss: RECORDING_ISSUER, sub: "bob" },
+        kind: "human",
+        decision: "approve",
+        decided_at: mission.created_at,
+        authority: { auth_time: new Date(authTime * 1000).toISOString(), acr: "mfa" },
+      },
+    ]);
+    expect(recheckApprovalGovernanceRecord(recording.as.kernel, mission.id, { resolveKey })).toEqual({ rechecked: true });
+  });
+
+  it("takes acr from the achieved authentication, never from the request's acr_values", async () => {
+    const r = await authorize(recording, {
+      scope: "openid",
+      extra: { acr_values: "password mfa" },
+      approval: { browser: { sub: "alice", acr: "mfa" } },
+    });
+    expect(r.code, r.description).toBeTruthy();
+    const mission = recording.as.kernel.allMissions().at(-1) as MissionRecord;
+    expect((recordOf(mission.id).assertions[0] as { authority: { acr: string } }).authority.acr).toBe("mfa");
+    expect(recheckApprovalGovernanceRecord(recording.as.kernel, mission.id, { resolveKey })).toEqual({ rechecked: true });
   });
 });

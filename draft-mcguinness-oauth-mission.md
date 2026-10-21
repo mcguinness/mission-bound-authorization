@@ -823,10 +823,8 @@ This document maps principals onto native OAuth constructs:
   matching the access token `sub` model of {{RFC9068}}. The Approver
   is the accountable consent principal whose approval created the
   Mission, always equal to `approval_basis.consent_principal`. Under
-  a standing-consent basis, a policy adjudicates the activation,
-  which the basis's `adjudication` member can make explicit
-  ({{mission-record}}), while the Approver remains the human whose
-  consent roots it ({{authority-sources}}, {{multi-party-approval}}).
+  a standing-consent basis, the Approver remains the human whose
+  consent roots the Mission ({{standing-consent-bases}}).
 
 On a derived token, the `iss` claim is the AS and the `sub` claim is
 the AS-local `sub` to which the AS maps the Subject under the
@@ -1411,8 +1409,7 @@ token entry that `target_resources` does not name, and a candidate
 outside every Authority Set entry fails that rule.
 
 The Mission records the policy version in force as `policy_version`
-({{mission-record}}), an opaque audit correlator; the policy itself
-is not conveyed.
+({{mission-record}}).
 
 Generative Authority Set derivation is not one of this document's
 modes. As a local-policy extension, a model's output can be a
@@ -1430,10 +1427,8 @@ the `access_denied` error code ({{error-mapping}}).
 
 When an omission or a narrowing leaves the Authority Set short of what
 was proposed ({{authority-proposal}}), Authority Set derivation is
-partial. The granted `authorization_details` in the token response
-({{token-response}}) is the authoritative statement of what was
-granted; a client compares it against its proposal, which
-`proposal_hash` commits as submitted ({{integrity-anchors}}).
+partial. The token response states what was granted
+({{token-response}}).
 
 ## The Consented Authority Set {#consented-authority-set}
 
@@ -2041,10 +2036,7 @@ Mission Intent member.
 Where a deployment records Consent Evidence, the achieved values
 belong in its `authentication_context` member
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); this
-document defines no Mission Record member for them. A derived access
-token carries authentication claims only as authentication information
-about its own Subject ({{token-authentication-lifetime}}), never
-as evidence of approval.
+document defines no Mission Record member for them.
 
 ## Single Accountable Approver {#multi-party-approval}
 
@@ -3005,8 +2997,7 @@ the codes):
    `insufficient_scope` ({{RFC6750}}), or with the RAR-remediation
    challenge where
    {{I-D.draft-ietf-oauth-rar-metadata-remediation}} is deployed
-   ({{remediation-grains}}). More authority requires a new approval,
-   or an expansion where that companion is deployed.
+   ({{remediation-grains}}).
 4. **Unenforceable constraint.** An applicable entry carries a
    type-defined member or constraint the resource server cannot
    enforce, and the request fails closed under the same base error as
@@ -3055,9 +3046,7 @@ row names a type specification, it is the one for
 
 A denial can carry independent remediation grains: separate
 remediation mechanisms, each naming a next step without granting
-anything. This document's own grain is
-`mission_denial` ({{rs-denials}}): which path a denial leads
-into. The three remediation grains are:
+anything. The three remediation grains are:
 
 `mission_denial`:
 : - Carriage: `WWW-Authenticate` attribute
@@ -3097,11 +3086,9 @@ an expansion where that companion is deployed ({{rs-enforcement}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
 
-A third grain routes the same denial into a governed access request
-rather than a fresh derivation: the AuthZEN Access Request and
-Approval Profile's requestable denial over {{AuthZEN.ARAP}}, adopted
-by the Mission AuthZEN Profile
-({{I-D.draft-mcguinness-mission-authzen}}).
+A third grain, the requestable denial of {{AuthZEN.ARAP}}, profiled by
+{{I-D.draft-mcguinness-mission-authzen}}, routes the same denial into a
+governed access request rather than a fresh derivation.
 
 The three grains compose: a deployment can offer any subset, and none
 widens authority beyond what {{authorization-derivation}} derives
@@ -3187,9 +3174,7 @@ one of three cases, with different obligations:
 - **JWT state observation.** A Mission-state-aware resource server
   holding a JWT Mission-bound token introspects it to observe the
   Mission's current state per request instead of waiting for the
-  token to expire. For the JWT carriage, introspection is a
-  state-observable overlay on the lifecycle-gated baseline
-  ({{mission-bound-tokens}}).
+  token to expire.
 - **Opaque-token consumption.** For an opaque Mission-bound token,
   introspection is the claims carriage: an active response carries
   what the JWT would ({{introspected-consumption}}).
@@ -3997,9 +3982,7 @@ Like the `mission` claim ({{mission-claim}}), the record is open
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension MUST use
-collision-resistant names. A companion profile that registers a
-termination reason defines that reason's `termination` members
-({{termination}}).
+collision-resistant names.
 
 The following subsections define the record's members.
 
@@ -4106,10 +4089,8 @@ The following subsections define the record's members.
   like `subject`. This document defines the `direct` basis in full; a
   companion profile can define a standing-consent basis
   ({{standing-consent-bases}}). The members below apply to every
-  approval basis, with the presence each one states. Their
-  direct-approval values are described here; standing-consent
-  specializations are defined in {{standing-consent-bases}}. Three of
-  these members answer the questions an approval raises: who consented
+  approval basis, with the presence each one states. Three of these
+  members answer the questions an approval raises: who consented
   (`consent_principal`), who triggered this instance
   (`activation_actor`), and what mechanism decided it
   (`adjudication`).
@@ -6430,14 +6411,12 @@ The following are out of scope for this document:
   identities themselves.
 - **Cross-audience unlinkability.** A single canonical Mission
   Identifier lets any party holding a token correlate a Mission's
-  activity across audiences and resources. That correlation is intended:
-  it lets a resource server, a cross-domain Resource AS, and an auditor
-  bind evidence to one approved Mission. `authority_hash` is not part of
-  that baseline correlation surface: it stays on the Mission Record and
-  the audit and profile surfaces that carry it by disclosure privilege
-  ({{mission-claim}}), not on every token by default. Pairwise or
-  unlinkable presentation of Mission-bound authority works against the
-  identifier and is therefore future work
+  activity across audiences and resources. `authority_hash` is not
+  part of that baseline correlation surface: it stays on the Mission
+  Record and the audit and profile surfaces that carry it by
+  disclosure privilege ({{mission-claim}}), not on every token by
+  default. Pairwise or unlinkable presentation of Mission-bound
+  authority works against the identifier and is therefore future work
   ({{mission-identifier-correlation}}).
 
 ## The `client_id` Claim in Delegated Tokens {#client-id-rebinding}
@@ -6569,9 +6548,7 @@ configured mappings, and issuance limits. Its inputs include:
 - any recorded model output.
 
 The output is the Authority Set committed by `authority_hash`, and
-`policy_version` identifies the policy used. The policy is not
-transmitted; its identifier and published Intent-to-Authority-Set
-fixtures let a partner review outcomes.
+`policy_version` identifies the policy used.
 
 Reproducing an Authority Set derivation requires the same inputs and
 the retained policy and catalog versions, not just the identifier of
@@ -7143,6 +7120,12 @@ Cross-Domain:
 \[\[ To be removed from the final specification ]]
 
 -01
+
+- Editorial (#1490), no requirement changed: a consolidation pass
+  removes duplicated explanations in Principal Model, Derivation Modes,
+  Approver Authentication Strength, Denial Responses, Remediation
+  Grains, the Introspection opening, the Mission Record, Non-Goals and
+  Derivation Policy; each removed statement remains at its home.
 
 - Editorial and structure (#1483), no requirement changed: Binding the
   Mission to the Grant and Issuance Gating open Mission-Bound Access
