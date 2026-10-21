@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T00:25:09Z
-Source repository commit: 43822e1f7586a6ce39f85180edc189ca56e45fad
+Generated: 2026-10-21T00:33:40Z
+Source repository commit: 76edc979b940bdcfe856fa3d3299551d8f3674d1
 Member count: 9
 
 Reading order:
@@ -9131,6 +9131,11 @@ Table of Contents
           the rendering MUST distinguish the entries the client proposed
           from any narrowing or restructuring the AS applied.
 
+       *  Mission Capability Binding
+          ([I-D.draft-mcguinness-mission-capability-binding]) states
+          what the rendering presents about the source binding of a
+          catalog-sourced action.
+
    6.  *Compute the integrity anchors* (Section 14.1): authority_hash
        over the consented Authority Set, intent_hash over the approved
        Mission Intent, and, when an authority proposal was submitted
@@ -13604,6 +13609,11 @@ Table of Contents
               mission-bound-authorization/draft-mcguinness-mission-
               authzen.html>.
 
+   [I-D.draft-mcguinness-mission-capability-binding]
+              McGuinness, K., "Mission Capability Binding", 2026,
+              <https://mcguinness.github.io/mission-bound-authorization/
+              draft-mcguinness-mission-capability-binding.html>.
+
    [I-D.draft-mcguinness-mission-metering]
               McGuinness, K., "Mission Consumption Metering", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
@@ -15070,6 +15080,10 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  Direct Approval Steps (#1447, D584): the rendering rules point to
+      Mission Capability Binding for what the approval presents about a
+      catalog-sourced action's source binding.
 
    *  Authority Proposal (#1448, D585): the Mission-governed client rule
       reaches an authorization request, through PAR or at the
