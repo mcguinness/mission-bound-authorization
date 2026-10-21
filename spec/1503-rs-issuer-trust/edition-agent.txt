@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T19:56:41Z
-Source repository commit: eed60898512ef782608d9d828fc14c88936f1023
+Generated: 2026-10-21T20:14:02Z
+Source repository commit: 0cd522fdb0a5a86298e0244834af24398718e28b
 Member count: 9
 
 Reading order:
@@ -20906,6 +20906,12 @@ Table of Contents
 
                 Table 6: Idempotency claim state resolution
 
+   A duration-lease renewal's claim, which the PDP settles completed
+   when it commits the lease extension, returns the renewal's permit to
+   a retransmission while that permit is valid, instead of
+   duplicate_suppressed (Duration-Lease Renewal in
+   [I-D.draft-mcguinness-mission-metering]).
+
    A different operation identity under the same key is always a
    conflict, never a new execution: an idempotency key identifies one
    intended execution of one normalized request, the same discipline
@@ -22555,6 +22561,10 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Idempotency: a duration-lease renewal's completed claim returns
+      the renewal's permit to a retransmission while that permit is
+      valid (#1464).
 
    *  Resource Contract: an authority entry can reference, at approval,
       an immutable and versioned resource contract that assembles the
@@ -28138,6 +28148,14 @@ Table of Contents
    |request would broaden|           |                                 |
    |it                   |           |                                 |
    +---------------------+-----------+---------------------------------+
+   |Duration-lease       |PDP denial |out_of_authority                 |
+   |renewal names no     |           |                                 |
+   |lease the PDP issued |           |                                 |
+   |or an ended activity,|           |                                 |
+   |or fails continuity  |           |                                 |
+   |with the evaluation  |           |                                 |
+   |it renews            |           |                                 |
+   +---------------------+-----------+---------------------------------+
    |Resource policy      |Obligation |step-up obligation               |
    |requires a stronger  |on permit  |([AUTHZEN-OBL])                  |
    |authentication       |           |                                 |
@@ -28230,7 +28248,13 @@ Table of Contents
    |operation identity   |           |                                 |
    |match a prior        |           |                                 |
    |unresolved or        |           |                                 |
-   |completed claim      |           |                                 |
+   |completed claim,     |           |                                 |
+   |except a             |           |                                 |
+   |retransmitted settled|           |                                 |
+   |duration-lease       |           |                                 |
+   |renewal, which       |           |                                 |
+   |receives its permit  |           |                                 |
+   |while valid          |           |                                 |
    +---------------------+-----------+---------------------------------+
    |Idempotency key      |PDP denial |idempotency_conflict             |
    |reused with a        |           |                                 |
@@ -29152,6 +29176,12 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Failure-condition coverage: a duration-lease renewal that names no
+      lease the PDP issued or an ended activity, or fails continuity
+      with the evaluation it renews, is denied out_of_authority; a
+      retransmission of a settled renewal receives that renewal's permit
+      while it is valid, not duplicate_suppressed (#1464).
 
    *  Runtime Denial Classification and Failure-condition coverage: a
       resource contract reference missing where required, or not
