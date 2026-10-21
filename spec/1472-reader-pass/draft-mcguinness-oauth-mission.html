@@ -7,21 +7,21 @@
 <title>Mission-Bound Authorization for OAuth 2.0</title>
 <meta content="Karl McGuinness" name="author">
 <meta content="
-       OAuth 2.0 issues grants and access tokens but defines no standard
+       OAuth 2.0 has authorization grants and access tokens but no standard
 object that binds an approved task, such as one an AI agent performs
 on a user's behalf, to the authority approved for it and governs the
 tokens later issued under that authority. This document defines that
 object for OAuth 2.0: a Mission. 
-       A client submits a Mission Intent, the task it will perform, through
-Pushed Authorization Requests. The authorization server derives Rich
-Authorization Requests authorization details from it, binds the
-approved task and that authority to the Approver's consent through
-integrity anchors, and records a durable Mission. Every access token
-issued under the Mission carries a subset of the approved authority
-and a &quot;mission&quot; claim, and every issuance is gated on the Mission's
-lifecycle state. Revoking a Mission stops further issuance; it does
-not recall tokens already issued, which a resource server that
-validates them only locally honors until they expire. 
+       A client submits a Mission Intent describing the task it will perform
+through Pushed Authorization Requests. The authorization server
+derives Rich Authorization Requests authorization details from it,
+binds the approved task and that authority to the Approver's consent
+through integrity anchors, and records a durable Mission. Every
+access token issued under the Mission carries a subset of the approved
+authority and a &quot;mission&quot; claim, and every issuance is gated on the
+Mission's lifecycle state. Revoking a Mission stops further issuance;
+it does not recall tokens already issued, which a resource server
+that enforces from the token alone honors until they expire. 
        Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
 Mission be honored across trust domains. Runtime enforcement of each
@@ -1099,21 +1099,21 @@ svg {
 <h1 id="title">Mission-Bound Authorization for OAuth 2.0</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">OAuth 2.0 issues grants and access tokens but defines no standard
+<p id="section-abstract-1">OAuth 2.0 has authorization grants and access tokens but no standard
 object that binds an approved task, such as one an AI agent performs
 on a user's behalf, to the authority approved for it and governs the
 tokens later issued under that authority. This document defines that
 object for OAuth 2.0: a Mission.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-<p id="section-abstract-2">A client submits a Mission Intent, the task it will perform, through
-Pushed Authorization Requests. The authorization server derives Rich
-Authorization Requests authorization details from it, binds the
-approved task and that authority to the Approver's consent through
-integrity anchors, and records a durable Mission. Every access token
-issued under the Mission carries a subset of the approved authority
-and a "mission" claim, and every issuance is gated on the Mission's
-lifecycle state. Revoking a Mission stops further issuance; it does
-not recall tokens already issued, which a resource server that
-validates them only locally honors until they expire.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">A client submits a Mission Intent describing the task it will perform
+through Pushed Authorization Requests. The authorization server
+derives Rich Authorization Requests authorization details from it,
+binds the approved task and that authority to the Approver's consent
+through integrity anchors, and records a durable Mission. Every
+access token issued under the Mission carries a subset of the approved
+authority and a "mission" claim, and every issuance is gated on the
+Mission's lifecycle state. Revoking a Mission stops further issuance;
+it does not recall tokens already issued, which a resource server
+that enforces from the token alone honors until they expire.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
 <p id="section-abstract-3">Optional capabilities represent delegation among agents with the
 OAuth Actor Profile and, as specified by a companion, let a single
 Mission be honored across trust domains. Runtime enforcement of each
@@ -2066,9 +2066,9 @@ records its commitments, and binds the authorization code to it
 resolves and checks the Mission and returns a sender-constrained
 ERP token that expires at 12:05, with the read authority and a
 <code>mission</code> reference. The response also carries the granted
-authority, <code>mission_id</code>, and <code>mission_expires_at</code>
-(<a href="#mission-response-parameters" class="auto internal xref">Section 6.10.4</a>). The access token's five-minute
-lifetime is distinct from the Mission's one-hour lifetime
+authority (<a href="#token-response" class="auto internal xref">Section 8.2</a>), <code>mission_id</code>, and
+<code>mission_expires_at</code>; the access token's five-minute lifetime is
+distinct from the Mission's one-hour lifetime
 (<a href="#mission-response-parameters" class="auto internal xref">Section 6.10.4</a>).<a href="#section-2.1.1-3.3.1" class="pilcrow">¶</a></p>
 </li>
             <li id="section-2.1.1-3.4">
@@ -2315,7 +2315,7 @@ never compares the external subject identity with the AS-local
 subject principal.<a href="#section-3.1-7" class="pilcrow">¶</a></p>
 <p id="section-3.1-8">Dynamic delegation (the actors an agent delegates to during
 execution) is carried on derived tokens in the <code>act</code> chain
-(<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>), not on the immutable Mission Record. This
+(<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>), not on the Mission Record. This
 document uses only (<code>iss</code>, <code>sub</code>) pairs, not the subject identifier
 formats of <span>[<a href="#RFC9493" class="cite xref">RFC9493</a>]</span>.<a href="#section-3.1-8" class="pilcrow">¶</a></p>
 </section>
@@ -3400,13 +3400,11 @@ a mix-up attack on the consent-bearing redirect leg (<span>[<a href="#RFC9700" c
         </h3>
 <p id="section-6.2-1">The steps fall into four phases. Steps 1 to 3 establish the Approver,
 the Subject and the authority source, and check the derived Authority
-Set against that source; the candidate Authority Set is complete
-before the approval rendering (<a href="#derivation-modes" class="auto internal xref">Section 5.1</a>). Step 4
-establishes the effective expiry. Step 5 renders the derived Authority
-Set for consent, and <a href="#approval-context-changes" class="auto internal xref">Section 6.6</a> covers a change
-before the decision. Steps 6 and 7 compute the integrity anchors over
-the approved context and create the Mission atomically with the
-decision.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
+Set against that source. Step 4 establishes the effective expiry.
+Step 5 renders the derived Authority Set for consent, and
+<a href="#approval-context-changes" class="auto internal xref">Section 6.6</a> covers a change before the decision.
+Steps 6 and 7 compute the integrity anchors over the approved context
+and create the Mission atomically with the decision.<a href="#section-6.2-1" class="pilcrow">¶</a></p>
 <p id="section-6.2-2">At a direct approval event the AS <span class="bcp14">MUST</span>, in order:<a href="#section-6.2-2" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-6.2-3">
 <li id="section-6.2-3.1">
@@ -4180,7 +4178,7 @@ this document, or a reason a companion profile registers.<a href="#section-7.1-2
 <dt id="section-7.1-2.3">
 <code>terminated_at</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-7.1-2.4">
-            <p id="section-7.1-2.4.1"><span class="bcp14">REQUIRED</span>, except for historical terminations described below. A
+            <p id="section-7.1-2.4.1"><span class="bcp14">REQUIRED</span>, except as <a href="#termination-compatibility" class="auto internal xref">Section 7.1.1</a> describes. A
 string. An RFC 3339 <span>[<a href="#RFC3339" class="cite xref">RFC3339</a>]</span> date-time: the instant the
 termination took effect. For <code>expired</code>, it is the Mission's
 <code>expires_at</code>.<a href="#section-7.1-2.4.1" class="pilcrow">¶</a></p>
@@ -4202,8 +4200,8 @@ terminated.<a href="#section-7.1-4" class="pilcrow">¶</a></p>
           <h4 id="name-compatibility-with-earlier-">
 <a href="#section-7.1.1" class="section-number selfRef">7.1.1. </a><a href="#name-compatibility-with-earlier-" class="section-name selfRef">Compatibility with Earlier and Unrecognized Terminations</a>
           </h4>
-<p id="section-7.1.1-1">A termination need not carry every member its reason requires when
-it was recorded before its reason defined that member, or derived
+<p id="section-7.1.1-1">A termination need not carry a member its reason requires when it
+was recorded before its reason defined that member, or derived
 from such a termination: such a termination exposes only the facts
 its record retained and omits a member it has no retained value for,
 <code>terminated_at</code> included, rather than inventing one. For <code>expired</code>,
@@ -5385,10 +5383,9 @@ what the JWT would (<a href="#introspected-consumption" class="auto internal xre
 </li>
         <li class="normal" id="section-11-2.3">
           <p id="section-11-2.3.1"><strong>Issuer-local resolution.</strong> In place of introspection for an opaque
-Mission-bound token, an AS can serve a resource server inside its
-trusted implementation boundary that it authorizes to read the AS's
-authoritative committed token and grant state, by a direct read of
-that state (<a href="#introspected-consumption" class="auto internal xref">Section 11.4</a>).<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
+Mission-bound token, an AS can serve a qualifying resource server by
+a direct read of its authoritative committed token and grant state
+(<a href="#introspected-consumption" class="auto internal xref">Section 11.4</a>).<a href="#section-11-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-11-3">An AS <span class="bcp14">MAY</span> support OAuth 2.0 Token Introspection <span>[<a href="#RFC7662" class="cite xref">RFC7662</a>]</span> for
@@ -6473,7 +6470,8 @@ a record backing a <code>direct</code> approval keeps that human decision as
 its accountable assertion
 (<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).<a href="#section-13.3-1.4.3" class="pilcrow">¶</a></p>
 <p id="section-13.3-1.4.4"><code>approval_basis</code> is provenance: none of the record's integrity
-anchors (<code>intent_hash</code>, <code>authority_hash</code> or <code>proposal_hash</code>) covers it
+anchors, such as <code>intent_hash</code>, <code>authority_hash</code> or <code>proposal_hash</code>,
+covers it
 (<a href="#integrity-anchors" class="auto internal xref">Section 14.1</a>); a profile that commits the Mission Record
 itself covers it under that profile's own anchor. Its disclosure
 through introspection follows
@@ -7021,9 +7019,8 @@ over the recorded values.<a href="#section-14.2-2.4.1" class="pilcrow">¶</a></p
 <a href="#section-14.3" class="section-number selfRef">14.3. </a><a href="#name-commitment-mechanisms" class="section-name selfRef">Commitment Mechanisms</a>
         </h3>
 <p id="section-14.3-1">This document's default prefixed construction commits to bytes in
-three ways, and a specification defining a prefixed commitment
-classifies it as one of these species, the three forms a prefixed
-commitment can take:<a href="#section-14.3-1" class="pilcrow">¶</a></p>
+three forms, called species, and a specification defining a prefixed
+commitment classifies it as one of them:<a href="#section-14.3-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-14.3-2.1">
             <p id="section-14.3-2.1.1"><strong>Envelope anchor</strong>: the domain-separated, issuer-bound envelope of
@@ -7792,8 +7789,9 @@ dependency on it.<a href="#section-19.2.2-4" class="pilcrow">¶</a></p>
           </h4>
 <p id="section-19.3.1-1">This document governs Authority Set derivation and the issuance of
 authority: it bounds what authority a Mission yields, binds it to the
-Approver's consent, and gates every issuance on Mission state. It does not
-evaluate individual runtime actions. In particular, it does not:<a href="#section-19.3.1-1" class="pilcrow">¶</a></p>
+Approver's consent, and gates every issuance on Mission state. It
+does not evaluate individual runtime actions. In particular, it does
+not:<a href="#section-19.3.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-19.3.1-2.1">
               <p id="section-19.3.1-2.1.1">evaluate a request's parameters against the Mission at the point of
@@ -7885,8 +7883,9 @@ reveals nothing.<a href="#section-19.3.2-2" class="pilcrow">¶</a></p>
 <a href="#section-19.4.1" class="section-number selfRef">19.4.1. </a><a href="#name-token-theft" class="section-name selfRef">Token Theft</a>
           </h4>
 <p id="section-19.4.1-1">Derived tokens are sender-constrained (DPoP <span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span> or mTLS
-<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) where <a href="#mission-bound-tokens" class="auto internal xref">Section 8</a> and <a href="#delegation" class="auto internal xref">Section 12</a> require
-it. A designation (<a href="#designation" class="auto internal xref">Section 12.1</a>) carries no confirmation key: like
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>) where <a href="#mission-bound-tokens" class="auto internal xref">Section 8</a> and
+<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a> require it. A designation (<a href="#designation" class="auto internal xref">Section 12.1</a>)
+carries no confirmation key: like
 an authorization code, it is bound to the client that redeems it, and
 it authorizes no resource access. A stolen token is bounded by the
 Authority Set and the Mission lifetime regardless, but sender-constraint
@@ -9513,13 +9512,15 @@ derives is a subset of the same Authority Set (<a href="#subset" class="auto int
         <h3 id="name-stage-5-suspension-resumpti">
 <a href="#appendix-A.6" class="section-number selfRef">A.6. </a><a href="#name-stage-5-suspension-resumpti" class="section-name selfRef">Stage 5: Suspension, Resumption, and Revocation</a>
         </h3>
-<p id="appendix-A.6-1">At 08:50:00 the agent refreshes for the read-only token of the
-refresh example in <a href="#token-response" class="auto internal xref">Section 8.2</a>, which expires at 08:55:00.<a href="#appendix-A.6-1" class="pilcrow">¶</a></p>
-<p id="appendix-A.6-2">At 08:53:20 the Mission is revoked, and the AS commits <code>terminated</code>
+<p id="appendix-A.6-1">Suspension and resumption are Mission Status operations, shown in its
+companion variation below.<a href="#appendix-A.6-1" class="pilcrow">¶</a></p>
+<p id="appendix-A.6-2">At 08:50:00 the agent refreshes for the read-only token of the
+refresh example in <a href="#token-response" class="auto internal xref">Section 8.2</a>, which expires at 08:55:00.<a href="#appendix-A.6-2" class="pilcrow">¶</a></p>
+<p id="appendix-A.6-3">At 08:53:20 the Mission is revoked, and the AS commits <code>terminated</code>
 with reason <code>revoked</code>. Revocation stops the Mission at the issuer
 (<a href="#revocation" class="auto internal xref">Section 7.3</a>). A later refresh is refused with the <code>mission_error</code>
-diagnostic (<a href="#issuance-gating" class="auto internal xref">Section 7.2</a>):<a href="#appendix-A.6-2" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="appendix-A.6-3">
+diagnostic (<a href="#issuance-gating" class="auto internal xref">Section 7.2</a>):<a href="#appendix-A.6-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="appendix-A.6-4">
 <pre>
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
@@ -9529,19 +9530,19 @@ Cache-Control: no-store
   "error": "invalid_grant",
   "mission_error": "revoked"
 }
-</pre><a href="#appendix-A.6-3" class="pilcrow">¶</a>
+</pre><a href="#appendix-A.6-4" class="pilcrow">¶</a>
 </div>
-<p id="appendix-A.6-4">Introspection reports the 08:50:00 token inactive with the Mission's
+<p id="appendix-A.6-5">Introspection reports the 08:50:00 token inactive with the Mission's
 termination, although the token has not expired (<a href="#examples" class="auto internal xref">Section 11.5</a>,
-<a href="#composite-active" class="auto internal xref">Section 11.2</a>).<a href="#appendix-A.6-4" class="pilcrow">¶</a></p>
-<p id="appendix-A.6-5">Revocation does not recall the token already issued. The ERP,
+<a href="#composite-active" class="auto internal xref">Section 11.2</a>).<a href="#appendix-A.6-5" class="pilcrow">¶</a></p>
+<p id="appendix-A.6-6">Revocation does not recall the token already issued. The ERP,
 enforcing from the token alone, can honor the read-only token until
 its <code>exp</code> at 08:55:00. A resource server that introspects at the
-issuer on every request stops honoring it on its next request.<a href="#appendix-A.6-5" class="pilcrow">¶</a></p>
-<p id="appendix-A.6-6">Companion variations:<a href="#appendix-A.6-6" class="pilcrow">¶</a></p>
+issuer on every request stops honoring it on its next request.<a href="#appendix-A.6-6" class="pilcrow">¶</a></p>
+<p id="appendix-A.6-7">Companion variations:<a href="#appendix-A.6-7" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-A.6-7.1">
-            <p id="appendix-A.6-7.1.1"><strong>Mission Status</strong> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).
+<li class="normal" id="appendix-A.6-8.1">
+            <p id="appendix-A.6-8.1.1"><strong>Mission Status</strong> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>).
 The Mission is created at state version 1, suspended at 08:20:00
 and resumed at 08:30:00 (state versions 2 and 3) through the
 profile's lifecycle operations, and the AS derives nothing in
@@ -9550,19 +9551,19 @@ own <code>revoke</code> operation, with the reason "Quarterly reconcile
 completed early", under an explicit lifecycle authorization the
 deployment grants it for this Mission; its resource tokens and
 refresh token confer no such authority. The AS commits it as state
-version 4.<a href="#appendix-A.6-7.1.1" class="pilcrow">¶</a></p>
+version 4.<a href="#appendix-A.6-8.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="appendix-A.6-7.2">
-            <p id="appendix-A.6-7.2.1"><strong>Mission Signals</strong>
+          <li class="normal" id="appendix-A.6-8.2">
+            <p id="appendix-A.6-8.2.1"><strong>Mission Signals</strong>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-signals" class="cite xref">I-D.draft-mcguinness-oauth-mission-signals</a>]</span>). A receiver learns
-of the revocation from a Security Event Token.<a href="#appendix-A.6-7.2.1" class="pilcrow">¶</a></p>
+of the revocation from a Security Event Token.<a href="#appendix-A.6-8.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="appendix-A.6-7.3">
-            <p id="appendix-A.6-7.3.1"><strong>Runtime enforcement</strong> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
+          <li class="normal" id="appendix-A.6-8.3">
+            <p id="appendix-A.6-8.3.1"><strong>Runtime enforcement</strong> (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).
 A resource server that obtains a point-of-use permit stops honoring
 the token within that deployment's declared freshness and permit
 bounds, since a permit can rest on a state observation taken before
-the revocation.<a href="#appendix-A.6-7.3.1" class="pilcrow">¶</a></p>
+the revocation.<a href="#appendix-A.6-8.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -9622,6 +9623,11 @@ only where that companion is deployed.<a href="#appendix-A.7-1" class="pilcrow">
               <td class="text-left" rowspan="1" colspan="1">08:53:20</td>
               <td class="text-left" rowspan="1" colspan="1">The Mission is revoked and <code>terminated</code>; later refreshes are refused, and introspection reports the read-only token inactive</td>
               <td class="text-left" rowspan="1" colspan="1">this document</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">08:53:20</td>
+              <td class="text-left" rowspan="1" colspan="1">A receiver learns of the revocation from a Security Event Token</td>
+              <td class="text-left" rowspan="1" colspan="1">Mission Signals</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">08:55:00</td>
@@ -10820,7 +10826,7 @@ audit companion is active, and Cross-Domain is not among them.<a href="#appendix
 <li class="normal" id="appendix-G-3.1">
           <p id="appendix-G-3.1.1">Editorial (#1472): a reader pass that changes no requirement. The
 abstract leads with the object OAuth lacks, and its agent-identity
-positioning opens Relationship to Adjacent Work. The Implementation
+positioning moves to Relationship to Adjacent Work. The Implementation
 Map lists each implementer's duties as entries, not table cells.
 Terminology separates a
 derivation, one issuance operation, from Authority Set derivation,

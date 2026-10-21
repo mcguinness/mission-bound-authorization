@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-21T03:35:02Z
-Source repository commit: cf7bafb5433e9da55e973f1c26bf6d029cf87fb6
+Generated: 2026-10-21T03:50:02Z
+Source repository commit: 1184d9e9016cb3930d0fe6c421488e90a52b6f41
 Member count: 7
 
 Reading order:
@@ -7473,22 +7473,22 @@ Expires: 24 April 2027
 
 Abstract
 
-   OAuth 2.0 issues grants and access tokens but defines no standard
+   OAuth 2.0 has authorization grants and access tokens but no standard
    object that binds an approved task, such as one an AI agent performs
    on a user's behalf, to the authority approved for it and governs the
    tokens later issued under that authority.  This document defines that
    object for OAuth 2.0: a Mission.
 
-   A client submits a Mission Intent, the task it will perform, through
-   Pushed Authorization Requests.  The authorization server derives Rich
-   Authorization Requests authorization details from it, binds the
-   approved task and that authority to the Approver's consent through
-   integrity anchors, and records a durable Mission.  Every access token
-   issued under the Mission carries a subset of the approved authority
-   and a "mission" claim, and every issuance is gated on the Mission's
-   lifecycle state.  Revoking a Mission stops further issuance; it does
-   not recall tokens already issued, which a resource server that
-   validates them only locally honors until they expire.
+   A client submits a Mission Intent describing the task it will perform
+   through Pushed Authorization Requests.  The authorization server
+   derives Rich Authorization Requests authorization details from it,
+   binds the approved task and that authority to the Approver's consent
+   through integrity anchors, and records a durable Mission.  Every
+   access token issued under the Mission carries a subset of the
+   approved authority and a "mission" claim, and every issuance is gated
+   on the Mission's lifecycle state.  Revoking a Mission stops further
+   issuance; it does not recall tokens already issued, which a resource
+   server that enforces from the token alone honors until they expire.
 
    Optional capabilities represent delegation among agents with the
    OAuth Actor Profile and, as specified by a companion, let a single
@@ -8000,8 +8000,8 @@ Table of Contents
        resolves and checks the Mission and returns a sender-constrained
        ERP token that expires at 12:05, with the read authority and a
        mission reference.  The response also carries the granted
-       authority, mission_id, and mission_expires_at (Section 6.10.4).
-       The access token's five-minute lifetime is distinct from the
+       authority (Section 8.2), mission_id, and mission_expires_at; the
+       access token's five-minute lifetime is distinct from the
        Mission's one-hour lifetime (Section 6.10.4).
 
    4.  *Use.* The ERP is a Mission-aware Resource Server: it enforces
@@ -8182,9 +8182,8 @@ Table of Contents
 
    Dynamic delegation (the actors an agent delegates to during
    execution) is carried on derived tokens in the act chain
-   (Section 12.2), not on the immutable Mission Record.  This document
-   uses only (iss, sub) pairs, not the subject identifier formats of
-   [RFC9493].
+   (Section 12.2), not on the Mission Record.  This document uses only
+   (iss, sub) pairs, not the subject identifier formats of [RFC9493].
 
 4.  Mission Intent
 
@@ -9077,12 +9076,11 @@ Table of Contents
 
    The steps fall into four phases.  Steps 1 to 3 establish the
    Approver, the Subject and the authority source, and check the derived
-   Authority Set against that source; the candidate Authority Set is
-   complete before the approval rendering (Section 5.1).  Step 4
-   establishes the effective expiry.  Step 5 renders the derived
-   Authority Set for consent, and Section 6.6 covers a change before the
-   decision.  Steps 6 and 7 compute the integrity anchors over the
-   approved context and create the Mission atomically with the decision.
+   Authority Set against that source.  Step 4 establishes the effective
+   expiry.  Step 5 renders the derived Authority Set for consent, and
+   Section 6.6 covers a change before the decision.  Steps 6 and 7
+   compute the integrity anchors over the approved context and create
+   the Mission atomically with the decision.
 
    At a direct approval event the AS MUST, in order:
 
@@ -9702,10 +9700,10 @@ Table of Contents
       Reasons registry (Section 22.8): revoked or expired in this
       document, or a reason a companion profile registers.
 
-   terminated_at:  REQUIRED, except for historical terminations
-      described below.  A string.  An RFC 3339 [RFC3339] date-time: the
-      instant the termination took effect.  For expired, it is the
-      Mission's expires_at.
+   terminated_at:  REQUIRED, except as Section 7.1.1 describes.  A
+      string.  An RFC 3339 [RFC3339] date-time: the instant the
+      termination took effect.  For expired, it is the Mission's
+      expires_at.
 
    A companion profile that registers a reason defines that reason's
    further members.  A profile that maintains a state version for the
@@ -9721,10 +9719,10 @@ Table of Contents
 
 7.1.1.  Compatibility with Earlier and Unrecognized Terminations
 
-   A termination need not carry every member its reason requires when it
-   was recorded before its reason defined that member, or derived from
-   such a termination: such a termination exposes only the facts its
-   record retained and omits a member it has no retained value for,
+   A termination need not carry a member its reason requires when it was
+   recorded before its reason defined that member, or derived from such
+   a termination: such a termination exposes only the facts its record
+   retained and omits a member it has no retained value for,
    terminated_at included, rather than inventing one.  For expired, the
    retained terminated_at is the Mission's expires_at; for another
    reason, a retained commit time is its terminated_at only where that
@@ -10750,10 +10748,9 @@ Table of Contents
       what the JWT would (Section 11.4).
 
    *  *Issuer-local resolution.* In place of introspection for an opaque
-      Mission-bound token, an AS can serve a resource server inside its
-      trusted implementation boundary that it authorizes to read the
-      AS's authoritative committed token and grant state, by a direct
-      read of that state (Section 11.4).
+      Mission-bound token, an AS can serve a qualifying resource server
+      by a direct read of its authoritative committed token and grant
+      state (Section 11.4).
 
    An AS MAY support OAuth 2.0 Token Introspection [RFC7662] for
    Mission-bound access tokens.  When it does, the response for such a
@@ -11610,12 +11607,13 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-approval-governance]).
 
       approval_basis is provenance: none of the record's integrity
-      anchors (intent_hash, authority_hash or proposal_hash) covers it
-      (Section 14.1); a profile that commits the Mission Record itself
-      covers it under that profile's own anchor.  Its disclosure through
-      introspection follows Section 11.1.  It is not carried on the
-      baseline mission claim (Section 8.6), and it MUST NOT be relied on
-      to grant or widen authority wherever it does appear.
+      anchors, such as intent_hash, authority_hash or proposal_hash,
+      covers it (Section 14.1); a profile that commits the Mission
+      Record itself covers it under that profile's own anchor.  Its
+      disclosure through introspection follows Section 11.1.  It is not
+      carried on the baseline mission claim (Section 8.6), and it MUST
+      NOT be relied on to grant or widen authority wherever it does
+      appear.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
       the approval draws on (Section 6.8), established at the approval
@@ -12040,9 +12038,8 @@ Table of Contents
 14.3.  Commitment Mechanisms
 
    This document's default prefixed construction commits to bytes in
-   three ways, and a specification defining a prefixed commitment
-   classifies it as one of these species, the three forms a prefixed
-   commitment can take:
+   three forms, called species, and a specification defining a prefixed
+   commitment classifies it as one of them:
 
    *  *Envelope anchor*: the domain-separated, issuer-bound envelope of
       Section 14.1 (intent_hash, proposal_hash, authority_hash, an
@@ -12757,12 +12754,12 @@ Table of Contents
 19.4.1.  Token Theft
 
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
-   [RFC8705]) where Section 8 and Section 12 require it.  A designation
-   (Section 12.1) carries no confirmation key: like an authorization
-   code, it is bound to the client that redeems it, and it authorizes no
-   resource access.  A stolen token is bounded by the Authority Set and
-   the Mission lifetime regardless, but sender-constraint prevents
-   replay by a different party.
+   [RFC8705]) where Section 8 and Section 12.2 require it.  A
+   designation (Section 12.1) carries no confirmation key: like an
+   authorization code, it is bound to the client that redeems it, and it
+   authorizes no resource access.  A stolen token is bounded by the
+   Authority Set and the Mission lifetime regardless, but sender-
+   constraint prevents replay by a different party.
 
 19.4.2.  Delegation and Chain Compromise
 
@@ -14164,6 +14161,9 @@ A.5.  Stage 4: The Resource Server Refuses
 
 A.6.  Stage 5: Suspension, Resumption, and Revocation
 
+   Suspension and resumption are Mission Status operations, shown in its
+   companion variation below.
+
    At 08:50:00 the agent refreshes for the read-only token of the
    refresh example in Section 8.2, which expires at 08:55:00.
 
@@ -14245,6 +14245,10 @@ A.7.  Timeline
       |           | terminated; later refreshes are    | document  |
       |           | refused, and introspection reports |           |
       |           | the read-only token inactive       |           |
+      +-----------+------------------------------------+-----------+
+      | 08:53:20  | A receiver learns of the           | Mission   |
+      |           | revocation from a Security Event   | Signals   |
+      |           | Token                              |           |
       +-----------+------------------------------------+-----------+
       | 08:55:00  | The read-only token expires; a     | this      |
       |           | resource server enforcing from the | document  |
@@ -15211,7 +15215,7 @@ Appendix G.  Document History
 
    *  Editorial (#1472): a reader pass that changes no requirement.  The
       abstract leads with the object OAuth lacks, and its agent-identity
-      positioning opens Relationship to Adjacent Work.  The
+      positioning moves to Relationship to Adjacent Work.  The
       Implementation Map lists each implementer's duties as entries, not
       table cells.  Terminology separates a derivation, one issuance
       operation, from Authority Set derivation, and "grain" and
