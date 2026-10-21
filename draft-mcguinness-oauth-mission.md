@@ -516,11 +516,11 @@ approved Authority Set.
 
 | Surface (role) | Applies | Defined in |
 | --- | --- | --- |
-| Mission Intent via PAR (client, AS) | Every Mission-creating authorization request | {{submission-via-par}} |
+| Mission Intent via PAR (client, AS) | Mission-creating requests on the authorization-code path; companion-defined back-channel carriage follows its profile | {{submission-via-par}} |
 | Direct approval (AS); the Mission Record (AS) | Every direct approval event; the Mission Record at every approval event | {{direct-approval-steps}}, {{mission-record}} |
 | Evidence dispatch and refusal (AS) | Implemented by every AS, even one that supports no evidence type; applied to each presented entry | {{intent-submission-evidence}} |
 | Authority proposal (client, AS) | Optional for the client; the AS checks one that is submitted | {{authority-proposal}} |
-| Grant binding (AS) | Every authorization code issued at approval, and the refresh-token family that follows it | {{grant-binding}} |
+| Grant binding (AS) | Authorization-code lineages and other profile-defined reusable grants, including their refresh-token families | {{grant-binding}} |
 | Issuance gating (AS) | Every derivation, refresh and Token Exchange included | {{issuance-gating}} |
 | Scope projection (AS) | Every issuance that emits `scope` or whose request names a `scope` value; a `scope`-only target gets a safe projection or a refusal | {{scope-projection}} |
 | Sender constraint, primary and refresh tokens (AS) | Recommended for the access token, which may be a bearer token; a public client's refresh token is sender-constrained or rotated | {{token-claims}}, {{refresh-tokens}} |
