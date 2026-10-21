@@ -523,8 +523,8 @@ Table of Contents
       given separately by mission.fresh_until below.
 
    *  mission: the mission object, the same shape as the mission claim
-      of [I-D.draft-mcguinness-oauth-mission] (Section "The Mission
-      Claim") with status members added.  It carries:
+      of [I-D.draft-mcguinness-oauth-mission] (Section "Mission Claim")
+      with status members added.  It carries:
 
       -  id, issuer: the subject Mission's identifier and issuer.
 
@@ -869,8 +869,8 @@ Table of Contents
    This projection and the dedicated Mission Status Response
    (Section 3.4) carry Mission facts in a mission object of the same
    shape: the open mission claim object of
-   [I-D.draft-mcguinness-oauth-mission] (Section "The Mission Claim")
-   with status members (state, termination, fresh_until, any companion-
+   [I-D.draft-mcguinness-oauth-mission] (Section "Mission Claim") with
+   status members (state, termination, fresh_until, any companion-
    defined extension member such as the Status List companion's
    status_list reference
    ([I-D.draft-mcguinness-oauth-mission-status-list]), and, on the

@@ -541,11 +541,11 @@ Table of Contents
       replay it within its lifetime (Section 9, [RFC7523] Section 3);
 
    *  MUST carry the mission claim
-      ([I-D.draft-mcguinness-oauth-mission], Section "The Mission
-      Claim") with id and issuer unchanged from the Mission, and the
-      audience-scoped authorization_details (Section 4.1).  This profile
-      REQUIRES authority_hash on that claim too, reintroducing it beyond
-      the issuance profile's baseline as this profile's own lineage and
+      ([I-D.draft-mcguinness-oauth-mission], Section "Mission Claim")
+      with id and issuer unchanged from the Mission, and the audience-
+      scoped authorization_details (Section 4.1).  This profile REQUIRES
+      authority_hash on that claim too, reintroducing it beyond the
+      issuance profile's baseline as this profile's own lineage and
       audit anchor for the party receiving the grant across the trust-
       domain hop; and
 
