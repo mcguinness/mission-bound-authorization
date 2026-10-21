@@ -447,6 +447,22 @@ describe("Mission Device Authorization request (@spec device-authorization#reque
     }
   });
 
+  it("refuses a signed Request Object as request_not_supported, issuing no device_code (#1503)", async () => {
+    // Request Objects are accepted at PAR only (@spec mission#submission-via-par);
+    // this one is well formed and signed with the client's registered key.
+    const request = await new SignJWT({ client_id: CONFIDENTIAL, resource: RESOURCE })
+      .setProtectedHeader({ alg: "ES256", kid: `${CONFIDENTIAL}-auth` })
+      .setIssuer(CONFIDENTIAL)
+      .setAudience(ISSUER)
+      .setIssuedAt()
+      .setExpirationTime("1m")
+      .sign(confidentialKey);
+    const res = await deviceAuthorize(CONFIDENTIAL, { request }, { omit: ["mission_intent", "authorization_details"] });
+    expect(res.status, JSON.stringify(res.body)).toBe(400);
+    expect(res.body.error).toBe("request_not_supported");
+    expect(res.body.device_code).toBeUndefined();
+  });
+
   it("validates the whole submission before issuing a device_code, refusing with the code PAR assigns", async () => {
     const other = "http://localhost:4999/elsewhere";
     const cases: { name: string; intent: unknown; proposal: unknown }[] = [

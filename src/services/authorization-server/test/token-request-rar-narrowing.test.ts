@@ -174,8 +174,12 @@ const asParam = (details: unknown): Record<string, string> =>
 const refresh = (refreshToken: string, keys: Keys, details?: unknown) =>
   token({ grant_type: "refresh_token", refresh_token: refreshToken, resource: RESOURCE, ...asParam(details) }, keys);
 
-/** An async-delegation family over the Mission's own access token: its refresh token rotates on every refresh. */
-async function family(baseAccessToken: string, keys: Keys): Promise<string> {
+/**
+ * An async-delegation family over the Mission's own access token: its refresh
+ * token rotates on every refresh. `details`, when given, confines the family's
+ * grant to those entries, which can leave it narrower than the Mission.
+ */
+async function family(baseAccessToken: string, keys: Keys, details?: unknown): Promise<string> {
   const handle = await token(delegationHandleParams(baseAccessToken, "ap-agent"), keys);
   expect(handle.status, JSON.stringify(handle.body)).toBe(200);
   const res = await token(
@@ -186,6 +190,7 @@ async function family(baseAccessToken: string, keys: Keys): Promise<string> {
       subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
       resource: RESOURCE,
       creation_request_id: crypto.randomUUID(),
+      ...asParam(details),
     },
     keys,
   );
@@ -348,6 +353,43 @@ describe("a refresh request's authorization_details beyond the grant is refused 
     }
     const again = await countingRefreshSaves(() => refresh(familyToken, m.keys, [entry([READ])]));
     expectIssued(again.result, [READ]);
+    expect(again.saved).toBe(1);
+  });
+});
+
+describe("a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503)", () => {
+  it("a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes", async () => {
+    const m = await issue();
+    const familyToken = await family(m.accessToken, m.keys, [entry([READ])]);
+    // LIST is inside the Mission: the Mission's own refresh grant issues it.
+    expectIssued(await refresh(m.refreshToken, m.keys, [entry([LIST])]), [LIST]);
+    for (const details of [[entry([LIST])], [entry([LIST, READ])], [entry([READ]), entry([LIST])]]) {
+      const refused = await countingRefreshSaves(() => refresh(familyToken, m.keys, details));
+      expectRefused(refused.result, "invalid_authorization_details");
+      expect(refused.saved, JSON.stringify(details)).toBe(0);
+    }
+    const again = await countingRefreshSaves(() => refresh(familyToken, m.keys));
+    expectIssued(again.result, [READ]);
+    expect(again.saved).toBe(1);
+  });
+
+  it("an entry within the grant that the projection cannot issue whole is refused invalid_authorization_details saving no refresh token, never issued as the remaining entries", async () => {
+    const m = await issue();
+    pastSeventyPercent();
+    const cases = [
+      // A capability_sources binding the grant does not record for a retained action.
+      { ...entry([LIST]), capability_sources: [{ action: LIST }] },
+      // A max_amount the intake schema admits (a string amount) that is not a decimal.
+      entry([LIST], { ...ACME, max_amount: { amount: "abc", currency: "USD" } }),
+    ];
+    for (const poisoned of cases) {
+      const details = [entry([READ]), poisoned];
+      const refused = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys, details));
+      expectRefused(refused.result, "invalid_authorization_details");
+      expect(refused.saved, JSON.stringify(details)).toBe(0);
+    }
+    const again = await countingRefreshSaves(() => refresh(m.refreshToken, m.keys));
+    expectIssued(again.result, [LIST, READ]);
     expect(again.saved).toBe(1);
   });
 });

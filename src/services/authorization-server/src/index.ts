@@ -661,14 +661,21 @@ export {
   type LocalPrincipal,
   authoritySourceOf,
   isAuthoritySourceType,
+  isRecognizedAuthoritySource,
   parseAuthoritySource,
+  parseRecordedAuthoritySource,
   validateAuthoritySourceCatalog,
 } from "./kernel/authority-source.js";
 export type {
   AuthoritySourceReconciliation,
   HistoricalAuthoritySourceCatalog,
 } from "./kernel/source-binding-reconciliation.js";
-export type { AuthoritySource, AuthoritySourceType } from "./kernel/types.js";
+export type {
+  AuthoritySource,
+  AuthoritySourceType,
+  RecordedAuthoritySource,
+  UnrecognizedAuthoritySource,
+} from "./kernel/types.js";
 export {
   DeferralStore,
   DeferralError,

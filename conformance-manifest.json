@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ef25d408d21f77a9704a61c791fa1e571c8807c2",
-    "content_sha256": "cd6754426346a73fa99ad1a04fcaf981aafa265c77983591748791ce0e70033c"
+    "revision": "fb365a929e6369f3312e4a323a3f1f18c194be85",
+    "content_sha256": "8da741109331b2ecd0a9b4a076f2148385036d5ea502601ebcb10ff87d212d91"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
-    "content_sha256": "7b767e1bb56356fbbafd8237ba563fe816093fa499e8d3617ee2fd600ad8c0ca"
+    "revision": "1a88277d0a413c340c7032870829042db18d9c3d",
+    "content_sha256": "c234f025d012fd84a051ebee50d69d107d31b93d4e1206242f091666dcd3a977"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "defc4a380fae8ba12925f2018d416d62cc2aa0a6",
-    "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
+    "revision": "5ea95ceb221030bbafed05e8dad903f5714c0fbf",
+    "content_sha256": "e166feff2924bad515404c7a84b2140787b26983048017f3d339c3dae5f5a196"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -3212,8 +3212,116 @@
     "normative": "push carrying a Request Object plus a mission_intent outside it fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a push that carries a mission_intent outside its Request Object with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the PAR intake records a present mission_intent beside a present request before the provider drops every parameter outside the Request Object (strip_outside_jar_params), and the Request Object hook refuses it after client authentication, whether or not the object carries its own mission_intent claim; the same object pushed alone is accepted. Proved by disabling the hook's refusal: the provider strips the outer value and the push is accepted (201). A Request Object that fails one of the provider's own earlier checks (decode, algorithm, iss, aud, exp, client_id) is refused invalid_request_object first."
+  },
+  {
+   "id": "core.submission.request-object-claim-is-envelope",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "The claim's value is the Submission envelope itself, a JSON object, not its serialization",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a signed Request Object pushed through PAR whose mission_intent claim is the Submission envelope as a JSON object is accepted and approved, and the Mission it yields commits the same intent_hash as the equivalent form-encoded submission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > accepts a mission_intent claim that is the Submission envelope as a JSON object, with the intent_hash of the equivalent form submission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the provider keeps only String(value) of an object claim, so the mission_intent validator reads the claim's JSON value from the strictly re-parsed payload and substitutes its serialization for the parameter, at PAR and where the authorization endpoint reads the pushed object. Proved twice: with the validator's Request Object branch disabled the push is refused (400), and with the payload not kept at the authorization endpoint the redemption is refused invalid_request and no approval interaction starts."
+  },
+  {
+   "id": "core.submission.request-object-claim-non-object-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "the AS MUST reject with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission_intent claim in a signed Request Object whose value is a string (including the Submission envelope's own serialization), a number, a boolean, null, or an array is refused invalid_request, while the same Request Object carrying the envelope as a JSON object is accepted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a mission_intent claim whose value is a string, even the envelope's own serialization, or any other value that is not a JSON object, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > accepts a mission_intent claim that is the Submission envelope as a JSON object, with the intent_hash of the equivalent form submission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the object-claim test is the accepted control. Proved by disabling the validator's Request Object branch (the provider's String(value) is then read as a form value): the envelope's serialization as a string claim is accepted (201). Removing only the non-object refusal also fails the test, on its error_description. An array value is refused by the provider itself as a repeated parameter (lib/shared/reject_dupes.js), also invalid_request."
+  },
+  {
+   "id": "core.submission.unparseable-refusal-not-an-object",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "An AS that cannot parse `mission_intent` as a JSON object, or that parses it but finds the Submission envelope or the Intent structurally invalid against this document's member definitions, MUST refuse the request with the `invalid_request` error code",
+   "facet": "not-a-json-object",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a form-encoded mission_intent that is not JSON, or is JSON but not an object (an array, a string, including a JSON string of the Submission envelope, a number, or null), is refused invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope as the form parameter of a push (@spec mission#submission-via-par, #1503) > refuses a form mission_intent that does not parse to a JSON object, including a JSON string of the envelope, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620). This facet covers only the parse clause; the structural clause is the subject of core.submission.closed-top-levels and the Intent member rows. Proved by removing the envelope parser's non-object refusal (the values then reach the bare-Intent refusal, a different error_description) and, separately, its non-JSON refusal: the test fails on the error_description each time."
   },
   {
    "id": "core.authority-proposal.governed-client-omission-refused",
@@ -3330,9 +3438,15 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification."
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification. #1512 (D625): on the Request Object path the step 2 test shows a schema failure (an entry missing its resource) and a type failure losing to an invalid Intent. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
    "id": "core.submission.earliest-step-precedence",
@@ -3402,9 +3516,33 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a malformed Submission envelope together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > refuses a malformed Submission envelope alone with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > refuses a malformed proposal alone, beside a valid envelope, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls."
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls. #1512 (D625): the Request Object path, where the provider's RAR check runs before the extraParams validators, so the Request Object hook validates the envelope and the Intent first; its single failures are the separate envelope-only and proposal-only tests, cited as controls, and the step 2 test also carries the Intent-only case. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
    "id": "core.submission.precedence-proposal-over-missing-evidence",
@@ -3498,9 +3636,15 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C."
+   "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
    "id": "core.derivation.candidate-complete-before-rendering",
@@ -3735,8 +3879,15 @@
      "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a Request Object whose payload repeats a member name, inside the envelope or among its claims, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
-   ]
+   ],
+   "notes": "#1503 (D620): the Request Object carriage is covered at the endpoint: the provider reads a Request Object's claims with JSON.parse (last value wins), so the hook re-parses the signed payload strictly. Proved by re-parsing with JSON.parse instead: a payload repeating the envelope's intent member is accepted (201)."
   },
   {
    "id": "core.commitment.unknown-prefix",
@@ -4760,7 +4911,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type carries the same citation and is covered by core.mission-record.authority-source-type-enum, which enforces it fail-closed at trusted-configuration load and at record hydration; scoped to the two fields the review named."
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type applies the same rule since #1503 (D620), and its preservation is witnessed on core.mission-record.authority-source-type-enum; this row stays scoped to the two fields the review named."
   },
   {
    "id": "core.authority-sources.accountable-principal-not-from-sub",
@@ -5428,6 +5579,42 @@
    ]
   },
   {
+   "id": "core.approval-event.receiving-client-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-event",
+   "text": "The rendering MUST identify the OAuth client that receives the authority, the Agent, from client identity information the AS trusts, such as its own registration of the client; display text the client supplies does not by itself identify it",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering names the receiving client by the registered `client_id` and registered name of the interaction's client, labeled as the AS's registration, and a different client name the request carries (in the Mission Intent or a request parameter) neither appears in nor changes that identification"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "receiving client on the approval surface (@spec mission#approval-event, #1503) > names the receiving client by its registered client_id and name, labeled as the AS's registration",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "receiving client on the approval surface (@spec mission#approval-event, #1503) > keeps the registered identification when the request carries a different client-supplied name",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1503 finding 5 (D620). The authorization-code approval page renders the client from provider.Client.find over the interaction's client_id, the client the decision commits; clients are the deployment's static registrations (no dynamic registration), so the registered name is the AS's. The device verification page names the client in its own section from the same lookup (device-authorization.approval.render-client). Proved by removing the section (both tests fail) and by adding the Intent's goal inside it (the second test fails on its negative clause)."
+  },
+  {
    "id": "core.approval-event.authority-source-rendering",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
@@ -5596,7 +5783,7 @@
    "id": "core.mission-record.authority-source-type-enum",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`, subject to the forward-compatibility rule of {{lifecycle}}.",
+   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`. An unrecognized value is handled under the same rule as an unrecognized `approval_basis.type` ({{record-principal-members}}): it is preserved unchanged as opaque provenance and does not by itself invalidate or deactivate the Mission, and only an operation that itself requires recognized source semantics refuses",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -5606,26 +5793,77 @@
     "issuance"
    ],
    "surface": "derivation",
-   "assertion": "refusal",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "an unrecognized `authority_source.type` is refused rather than widened into the union, at trusted-configuration load and at record hydration alike"
+    "normative": "a stored `authority_source` of unrecognized `type` hydrates with every member unchanged, the Mission keeps its lifecycle state (it is still reported `active`, and introspection echoes the `type`), and an operation that needs recognized source semantics (applying the source ceiling at child creation or template dispatch) refuses, creating nothing",
+    "local": "the refusal is `access_denied`, the refusal every source that cannot be established gets; the draft names no error for it. Ordinary derivation reads no source semantics and proceeds"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at hydration rather than widening the union",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > hydrates a stored record of unrecognized type with the member unchanged and the Mission still active",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/authority-source.test.ts",
-     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at catalog load rather than widening the union",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > reports the Mission active through introspection and echoes the unrecognized type alone",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > refuses a Child Mission drawn from it with access_denied, creating nothing and leaving the parent active",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > reads a stored template of unrecognized source type, and refuses a dispatch from it with access_denied",
      "level": "unit",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "#1503 finding 1 (D620) replaced the citation of the {{lifecycle}} rule, under which an unknown source deactivated the Mission, with the approval_basis.type rule. This id keeps the member's value space and preservation half; the issuer-side refusal is core.mission-record.authority-source-unrecognized-not-approved. Preservation is witnessed at every stored reader: the record (kernel get, introspection), the committed root binding and a restart's reconciliation (hydrate), and the template store (template). The refusing operations share one point, resolveCommittedSource: child creation and template dispatch are cited; a progressive successor and a carryover replacement reach the same guard."
+  },
+  {
+   "id": "core.mission-record.authority-source-unrecognized-not-approved",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "An AS MUST NOT approve a Mission whose authority source it does not recognize.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authority source of unrecognized `type` is never established for an approval: a trusted catalog declaring one is refused at load, and a resolver answering one at approval refuses the approval before any Mission is created",
+    "local": "the approval refusal is `access_denied`, like every source gate's"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at catalog load rather than widening the union",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > refuses an approval whose resolver answers an unrecognized type, creating no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1503 finding 1 (D620): split from core.mission-record.authority-source-type-enum. Every fresh establishment (direct approval, Expansion, template consent, governed-policy activation) resolves through resolveApprovalSource, which the resolver test drives with a workload Subject so no other source gate would refuse."
   },
   {
    "id": "core.mission-record.authority-source-policy-organizational",
@@ -5667,6 +5905,138 @@
      "surface": "derivation"
     }
    ]
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-construction",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "`digest` is a prefixed commitment ({{commitment-mechanisms}}) whose exact committed input and construction the policy's format specifies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an organizational source's `policy.digest` is a `sha-256:` prefixed commitment computed by the one construction its governed policy format names, over the exact input that format names",
+    "local": "the reference format (config/governed-policy.json) commits `{id, version, ceiling}` as an envelope anchor with `typ` `mission-governed-policy` and `iss` the policy's governance authority (its `authority` member), not the AS issuer"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625)."
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-producer",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "The party that produces the reference computes `digest`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the issuer that establishes an organizational source computes its `policy.digest` from the governed policy it loads, and never takes it from the wire or a client"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > resolves the organizational source's ceiling and digest from the governed policy",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin."
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-reproducible",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "a consumer holding the policy can reproduce it",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a party holding the governed policy recomputes `policy.digest` from the input and construction the policy format names and obtains the committed value"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/anchors.test.ts",
+     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/shipped-config.test.ts",
+     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1503 finding 2 (D620). Reproducibility is shown by independent recomputation in the tests: the vector from a hand-written JCS string, the shipped pin from the policy file alone. No reference component other than the AS's own loader holds a governed policy, so no verifier implementation is witnessed."
+  },
+  {
+   "id": "core.mission-record.authority-source-policy-digest-opaque",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "one that does not compares it as an opaque value",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer without the governed policy treats `policy.digest` as an opaque value: it compares it for equality and never recomputes or parses it"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1503 finding 2 (D620). A consumer role: no reference component consumes `policy.digest` without the policy (introspection never discloses it), so there is nothing to witness yet."
   },
   {
    "id": "core.mission-record.authority-source-outside-anchors",
@@ -9148,6 +9518,192 @@
     }
    ],
    "notes": "#1258 item 2. #1362: witnessed at the SaaS resource: a clean entry that covers the whole request authorizes beside one carrying an unrecognized member, an entry SaaS cannot enforce lends its action to no clean entry, and a write whose action is in one entry and whose vendor is in another is refused (#1298). Proved by mutation: refusing the whole token for one unenforceable entry, and pooling actions across entries, each fail these tests. The reference policy decision point's Mission bound takes the first matching entry rather than alternative grants; that refuses more often but never combines entries, and is recorded under resource-access.rs-enforcement.type-scoped-matching."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-trusted",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "MUST accept a `mission` claim only from an issuer it explicitly trusts to issue Mission-bound authorization for the resource; trusting the issuer's ordinary access tokens is not enough",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server refuses a JWT Mission-bound credential whose `mission` claim comes from an issuer it trusts only for ordinary access tokens, and accepts the claim from an issuer it trusts to issue Mission-bound authorization for the resource",
+    "local": "mcp-payments trusts its configured issuer for Mission-bound authorization unless the route is `ordinaryOnly` (an estate authorization server that is not a Mission Issuer); an estate route refuses a `mission` claim on the at+jwt path and on an attenuation root, and still admits the same issuer's ordinary tokens"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > refuses an estate token carrying a mission claim, which a Mission Issuer's route admits as Mission-bound",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503) > refuses a valid chain on an estate route, whose issuer is not trusted to issue Mission-bound authorization",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed at an estate route: a Mission-bound at+jwt is answered 401 while an ordinary token from the same issuer opens a session, the same at+jwt verifies on a Mission Issuer's route, and a valid attenuation chain is refused on the estate route but verifies on the Mission Issuer's. Proved by mutation: removing the `ordinaryOnly` refusal on the at+jwt path fails the two estate-route tests, and removing it on the attenuation path fails the attenuation test."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-equals-iss",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST require `mission.issuer` to equal the token's `iss`, unless a cross-domain profile it has adopted ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) explicitly establishes the permitted relationship between the two",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server that has adopted no cross-domain profile refuses a JWT Mission-bound token whose `mission.issuer` is not exactly its `iss` and accepts one whose `mission.issuer` is; one that has adopted a cross-domain profile accepts a differing `mission.issuer` only in the relationship that profile establishes and refuses any other",
+    "local": "mcp-payments adopts no cross-domain profile: it compares the verified `iss` with `mission.issuer` as exact strings on the at+jwt path (HTTP, mediated and gateway validators) and on an attenuation root, before any Mission lookup or decision. mcp-saas is the Cross-Domain destination: `iss` is the Resource AS and `mission.issuer` must be one of its configured `trustedMissionIssuers`, the originating issuers that Resource AS trusts"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > refuses an at+jwt from the trusted issuer whose mission.issuer names %s, on both transports and a gateway route, yielding no facts",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > admits a conforming at+jwt over HTTP and the mediated channel, carrying its own authority",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the root's mission claim is accepted only from the issuer it names (@spec mission#rs-requirements, #1503) > refuses a root signed by the trusted issuer whose mission.issuer names another issuer, and admits the same root naming its own",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > issue ID-JAG -> redeem at RAS -> post journal entry from the token alone",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a credential whose mission.issuer is not its own iss is refused at validation, before the PEP (@spec mission#rs-requirements, #1503)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed without a cross-domain profile at mcp-payments: a foreign issuer and the trusted issuer spelled with a trailing slash are each refused on every validator, the HTTP request never reaches the PEP although the loader holds a Mission under the foreign issuer, an at+jwt naming its own issuer is admitted, and an attenuation root naming another issuer is refused while the same root naming its own verifies. Over the in-process MCP channel, the same mismatch is refused at validation with no PEP evidence, though the channel's id-only loader would serve the Mission (live OpenFGA). Witnessed under the Cross-Domain profile at mcp-saas: a Resource AS token whose originating issuer the resource does not trust is refused with no journal effect, and the same token posts at the resource that trusts it. Proved by mutation: removing the at+jwt equality check fails the four mcp-payments token tests, and the HTTP test's no-decision and no-evidence assertions each fail alone; removing the attenuation root check fails the attenuation test; removing the `trustedMissionIssuers` check fails the SaaS test, its no-effect assertion alone included."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-invalid-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST reject a token that fails either check with the `invalid_token` error code",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a JWT Mission-bound token whose issuer is not trusted for Mission-bound authorization, or whose `mission.issuer` fails the required relationship to `iss`, is rejected with the `invalid_token` error code",
+    "local": "mcp-payments answers HTTP 401 with `error` `invalid_token` from its credential middleware, before any MCP dispatch, PEP or PDP call. mcp-saas has no HTTP transport: its in-process tool call reports a token validation failure as `error` `invalid_token`, with the reason as `error_description`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/estate-route.test.ts",
+     "name": "estate route: ordinary credentials only (@spec authority-server#limitations, #818) > answers an estate token carrying a mission claim 401 invalid_token over HTTP, while an ordinary estate token opens a session (@spec mission#rs-requirements, #1503)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > @spec mission#rs-requirements (#1503): a Resource AS token whose mission.issuer is not a Mission Issuer the resource trusts through the Resource AS is refused invalid_token, with no effect",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620). JWT acceptance; the opaque half is core.rs-enforcement.mission-issuer-introspected. Witnessed for both checks: an estate route answers a Mission-bound at+jwt 401 `invalid_token` (the trust check), mcp-payments answers a `mission.issuer` that differs from `iss` 401 `invalid_token` (the equality check), and mcp-saas reports `invalid_token` for an originating issuer it does not trust through the Resource AS (the cross-domain relationship). Proved by mutation: removing each check fails its test on the status or `error` assertion, and reporting the raw validation message instead of `invalid_token` fails the SaaS test."
+  },
+  {
+   "id": "core.rs-enforcement.mission-issuer-introspected",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "For an opaque token, the issuer is the AS whose introspection response or issuer-local resolution the resource server relies on, and the same checks apply to that response's `mission` member ({{introspected-consumption}})",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server consuming an opaque Mission-bound token takes as its issuer the AS whose introspection response or issuer-local resolution it relies on, applies the issuer-trust and `mission.issuer` checks to that response's `mission` member, and rejects a failure with the `invalid_token` error code",
+    "local": "mcp-payments accepts tokens through introspection only on an `ordinaryOnly` estate route, whose issuer is not trusted to issue Mission-bound authorization: an active response carrying a `mission` member is answered 401 `invalid_token` before any PEP or PDP call, never read as an ordinary token. No reference resource server accepts a Mission-bound opaque token, so the acceptance half (the trusted introspecting AS as issuer, `mission.issuer` equal to it outside an adopted cross-domain profile) has no implementation"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/estate-route-introspection.test.ts",
+     "name": "estate route with introspection: a mission member is refused, never read as ordinary (@spec mission#rs-requirements, #1503) > answers an active introspection response carrying mission 401 invalid_token on the holder's open MCP session, before the PEP, while the same response without it opens the session",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1503 finding 3 (D620): the introspection half of the issuer checks that core.rs-enforcement.mission-issuer-trusted, core.rs-enforcement.mission-issuer-equals-iss and core.rs-enforcement.mission-issuer-invalid-token witness for JWT acceptance. Partial, not twinned: both halves quote this one sentence, and a twin for the refusal half would need an applicability for an introspecting route whose issuer is not trusted for Mission-bound authorization, which the model does not define. Witnessed: the trust check on introspection, where an estate route refuses an active response carrying `mission` with 401 `invalid_token` and no PEP entry or evidence, while the same response without it opens a session. Proved by mutation: removing the adapter's `mission` refusal fails the test on the status, and with the status and body assertions removed, the PEP-entry spy assertion and the no-evidence assertion each fail alone. Not witnessed: acceptance of a Mission-bound opaque token with the issuer and `mission.issuer` checks, since no reference resource server accepts one (core.introspected-consumption is unclaimed)."
   },
   {
    "id": "core.introspection.composite-active",
@@ -15616,12 +16172,12 @@
     },
     {
      "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
-     "name": "MCP _meta Mission reference propagation > a credential naming a different Mission issuer than the loaded view is refused with mission_reference_conflict",
+     "name": "MCP _meta Mission reference propagation > a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
     }
    ],
-   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test."
   },
   {
    "id": "mas.reference.mcp-duplicate-keys",
@@ -41767,7 +42323,7 @@
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
-   "text": "the authorization server refuses such an entry with the `invalid_authorization_details` error code",
+   "text": "the authorization server MUST refuse such an entry with the `invalid_authorization_details` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -45278,9 +45834,9 @@
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
-   "text": "An authorization server that does not implement this section refuses a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and never drops the member.",
+   "text": "An authorization server that does not implement this section MUST refuse a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and MUST NOT drop the member.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -45651,9 +46207,9 @@
    "id": "resource-access.delegate-eligibility.provenance-retained",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
-   "text": "records, when it derives the Authority Set, which approved entries inherit the policy decision, and retains that provenance with the Mission",
+   "text": "MUST record, when it derives the Authority Set, which approved entries inherit the policy decision, and MUST retain that provenance with the Mission",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46648,9 +47204,15 @@
      "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards delegation, a member a companion profile adds inside it included, and still enforces the entry's other members",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards a delegation member the authorization server would refuse as unsupported, and still enforces the entry's other members (D634)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor."
+   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor. D634: a second witness carries a delegation member the authorization server refuses as unsupported; the resource server still disregards it and enforces the entry's other members. Proved by mutation: removing `delegation` from the disregarded members fails it."
   },
   {
    "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
@@ -46762,9 +47324,9 @@
    "id": "resource-access.entry-validation.locations-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
-   "text": "The authorization server refuses an entry carrying `locations` with the `invalid_authorization_details` error code.",
+   "text": "The authorization server MUST refuse an entry carrying `locations` with the `invalid_authorization_details` error code.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46832,7 +47394,7 @@
    "anchor": "entry-validation",
    "text": "its `resource` is not an `absolute-URI`",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46864,7 +47426,7 @@
    "anchor": "entry-validation",
    "text": "its `resource` is an `http` or `https` URI without the `//` authority form naming a non-empty host",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46890,12 +47452,44 @@
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
   },
   {
+   "id": "resource-access.entry-validation.resource-match-unrecognized-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource_match` is a value the authorization server does not recognize",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_match value the authorization server does not recognize is refused invalid_authorization_details",
+    "local": "the reference AS recognizes exact and prefix; PAR refuses any other value through the shared resourceMatchViolation rule before any interaction, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D634 R3. The authorization server's side of the unrecognized-resource_match rule; the resource server's fail-closed side is resource-access.rs-enforcement.resource-match-unrecognized-fail-closed. The reference already refused the value at PAR (#1276). Proved by mutation: letting the PAR validator admit an unrecognized resource_match fails the witness ('unrecognized: expected 201 to be 400'). The direct-derivation refusal in resource-match-unsupported.test.ts is cited on resource-access.type.prefix-query-fragment-refused, not here."
+  },
+  {
    "id": "resource-access.entry-validation.actions-non-empty-grammar",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
    "text": "its `actions` array is empty, or one of its values is neither an action identifier nor an action family",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46939,7 +47533,7 @@
    "anchor": "entry-validation",
    "text": "its `delegation.max_depth` is not a non-negative integer, so a negative or fractional value is refused",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46976,7 +47570,7 @@
    "anchor": "entry-validation",
    "text": "an `allowed_delegates` matcher carries neither `sub` nor `sub_profile`, or carries any other member",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47050,7 +47644,7 @@
    "anchor": "entry-validation",
    "text": "its `resource_contract` is not an object with exactly the members `id`, `version`, and `digest`, or one of them does not have the form {{resource-access-type}} gives it",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "resource-access.resource-contract"
@@ -47085,7 +47679,7 @@
    "anchor": "entry-validation",
    "text": "its `time_window` Common Constraint has a `not_before` later than its `not_after`",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47117,7 +47711,7 @@
    "anchor": "entry-validation",
    "text": "its `recipient_domain` Common Constraint is not a DNS name in ASCII form, with each internationalized label in its A-label form, or ends in a dot",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47607,6 +48201,91 @@
     }
    ],
    "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the non-delegable witness; applying the omission before the gate fails the admitted witnesses."
+  },
+  {
+   "id": "resource-access.type.delegation-unsupported-member-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "The authorization server MUST refuse an entry whose `delegation` carries a member other than `max_depth` and `allowed_delegates` with the `invalid_authorization_details` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses, with invalid_authorization_details, an entry whose delegation carries a member that neither Resource Access nor a companion profile it implements defines: a proposal carrying one is refused at PAR with no request_uri, a derivation from a ceiling entry carrying one is refused before approval with no Mission created, and no entry is derived or projected from one",
+    "local": "the reference also refuses a member inside Child Delegation's children grant that Child Delegation does not define, at the same boundaries; template consent refuses either with invalid_request, the admin plane's error, and the config loaders refuse either at load"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > refuses an entry whose delegation carries a member no specification it implements defines, whatever its value, with invalid_authorization_details and no request_uri",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > the approval rendering over a ceiling entry carrying one refuses invalid_authorization_details, and no Mission is created",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > deriveAuthoritySet refuses a ceiling entry or a submitted proposal entry carrying one, whatever its value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > the subset rule refuses either side carrying one, a byte-identical pair included",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > projection yields no fragment for a candidate carrying one, rather than one rebuilt without it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D634, a compatibility change: before it the reference admitted such a member at PAR and carried one from a ceiling entry into the derived entry. PAR refuses the proposal before any interaction; the approval rendering refuses a derivation from a programmatic ceiling entry carrying one (the config loaders refuse it at load), creating no Mission; deriveAuthoritySet refuses it on either operand; the subset rule refuses either side, a byte-identical pair included; projection yields no fragment for the pairing. Proved red-green: each witness fails against the pre-D634 implementation (PAR returns 201, the rendering returns the approval page with 200, deriveAuthoritySet derives, isSubsetEntry returns true for the byte-identical pair, projection issues a fragment), restoring only that seam's file where the path allows (derive.ts for the rendering, derivation and projection witnesses; authorization-details-metadata.ts for PAR), and passes at the change."
+  },
+  {
+   "id": "resource-access.type.delegation-companion-member-admitted",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "unless a companion profile it implements defines that member's processing",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegation member that a companion profile the AS implements defines is admitted and carried into the approved entry, no broader than the parent entry's",
+    "local": "the reference implements Child Delegation, whose children grant is that member; a proposal's children narrows the shipped ceiling's and inherits the members it omits"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > admits the children grant Child Delegation defines, and the approved Mission's entry carries it, narrowed by the ceiling",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D634. A PAR proposal whose delegation carries Child Delegation's children is admitted, approved, and the Mission's entry carries children narrowed by the shipped ceiling. Proved by mutation: refusing children at the PAR intake fails the admission (400), and dropping children in narrowDelegation fails the carriage."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
@@ -54202,7 +54881,7 @@
    "id": "core.error-mapping.token-rar-exceeds-granted",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
-   "text": "the requested RAR subset exceeds the Mission's granted authority | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
+   "text": "the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}})",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -54215,7 +54894,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token",
+    "normative": "a refresh, authorization code exchange or async-delegation Token Exchange whose authorization_details names more than the presented grant carries under the Mission's current effective authority (an action outside it, a relaxed constraint, or a contained entry) is refused invalid_authorization_details and issues no token; on refresh this includes an entry inside the Mission but outside a refresh-token family whose grant is narrower than the Mission",
     "local": "on a refresh the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal; the binding states that preservation only for a scope-projection refusal"
    },
    "level": "endpoint",
@@ -54247,6 +54926,12 @@
     },
     {
      "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
      "name": "a code exchange's authorization_details narrows the issued token (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details",
      "level": "endpoint",
      "surface": "token-endpoint"
@@ -54258,13 +54943,13 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: projecting a request without the subset check fails the excess and relaxation witnesses; deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "remediation-grains",
-   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain",
+   "text": "The AS issues only what both the presented refresh grant ({{Section 6 of RFC9396}}) and the Authority Set contain, and refuses a request beyond either ({{refresh-tokens}})",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -54277,7 +54962,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority"
+    "normative": "a refresh naming authorization_details is issued exactly the requested entries, within what the presented refresh grant carries under the Mission's current effective authority, in the access token and the token response, and the token's scope projection follows the narrowed set; the refresh grant is unchanged, so a later refresh may request its whole authority; a refresh naming more than the refresh grant or the Mission carries is refused, so a refresh-token family narrower than the Mission does not obtain the Mission's wider authority"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -54301,13 +54986,119 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/authorization-server/test/scope-projection.test.ts",
      "name": "refresh preserved on a projection refusal (@spec mission#scope-projection) > a refresh narrowing authorization_details projects the narrowed set: a scope only the dropped entry grants refuses invalid_scope before rotation, and the same token then refreshes (#1303)",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness."
+   "notes": "#1303, #1503. Proved by mutation: returning the grant's whole authority from the refresh hook fails the narrowing witnesses, and deciding the pre-rotation scope projection over the whole authority fails the scope witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails the narrower-family witness. The refusal itself is rowed at core.refresh-tokens.rar-beyond-grant-or-authority-refused."
+  },
+  {
+   "id": "core.refresh-tokens.rar-beyond-grant-or-authority-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "refresh-tokens",
+   "text": "The AS MUST refuse such a request with the `invalid_authorization_details` error code when a requested entry exceeds the presented refresh grant or the Mission Authority Set ({{subset}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh whose authorization_details names an entry beyond the presented refresh grant (an entry inside the Mission but outside a refresh-token family confined narrower than the Mission) or beyond the Mission's authority as its current effective set narrows it (a contained entry the grant still carries, an action outside both, a relaxed constraint) is refused invalid_authorization_details and issues no token",
+    "local": "the reference refuses before consuming the presented refresh token, so a rotating lineage survives the refusal and the same token still refreshes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an entry the effective set removed (contained) is refused; the remainder is still issued on request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 (D620 finding 6). The refresh-grant clause is witnessed by the narrower-family test: the family is an async-delegation Token Exchange confined to read under a Mission that also grants list, and the Mission's own refresh grant is issued list in the same test. The Mission clause is witnessed by the contained test, whose request the grant still carries. Proved by mutation: the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; the raw grant rar as the ceiling fails the contained witness; projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses."
+  },
+  {
+   "id": "core.refresh-tokens.rar-never-issued-narrower",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "refresh-tokens",
+   "text": "and MUST NOT instead issue a narrower set than the one requested",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a refresh whose requested authorization_details cannot be issued whole issues no token rather than a token carrying fewer or narrower entries than requested: an entry beyond the grant is not intersected down to what the grant carries, and an entry the issuer's projection cannot carry whole does not leave the remaining entries issued",
+    "local": "the reference refuses invalid_authorization_details unless every requested entry is a subset of the issued set; its projection drops an entry carrying a capability_sources binding the grant does not record (an entry beyond the grant under the subset rule) or a max_amount that is not a decimal (an incomparable value, refused conservatively per the subset rule)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > an entry within the grant that the projection cannot issue whole is refused invalid_authorization_details saving no refresh token, never issued as the remaining entries",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request beyond the presented refresh grant or the Mission is refused, never trimmed (@spec mission#refresh-tokens, mission#error-mapping, #1503) > a family confined narrower than the Mission: an entry inside the Mission but outside the family's grant is refused invalid_authorization_details saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/token-request-rar-narrowing.test.ts",
+     "name": "a refresh request's authorization_details beyond the grant is refused before rotation (@spec mission#subset, mission#error-mapping, #1303) > relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1503 (D620 finding 6). Proved by mutation: comparing only the issued set's size to zero, instead of requiring every requested entry within it, fails the issued-whole witness on each of its two vectors alone (each was run as the only case); projecting with neither the subset check nor the issued-whole check fails the narrower-family, excess and relaxation witnesses, each issued a trimmed token. The same check serves the authorization code exchange, which shares the narrowing function; no code-exchange witness is cited."
   },
   {
    "id": "core.subset.widening-request-refused",
@@ -58791,7 +59582,7 @@
      "surface": "device-authorization-endpoint"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers request_not_supported or request_uri_not_supported and the test fails."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers invalid_request_object (the test's request is unsigned; Request Objects are enabled for PAR, #1503) or request_uri_not_supported and the test fails."
   },
   {
    "id": "device-authorization.request.whole-or-refuse",
