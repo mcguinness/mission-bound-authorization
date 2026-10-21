@@ -111,8 +111,8 @@
     "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
-    "content_sha256": "03313926575c29814dc3d56328f76dc778a00ba9697df39c1a377588bd08e934"
+    "revision": "84b52a8fc422c85abedf768882e887524a99081e",
+    "content_sha256": "48ea6d93bdc42e5f69e8aaca0fa0e103e481733b742d780d3049fbe8109ea62c"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
@@ -51642,6 +51642,54 @@
     }
    ],
    "notes": "Both forms: without and with a child_creation_policy, the record's approval_event_id equals activation.activation_event_id and differs from the Parent Mission's approval_event_id. Proved by recording the parent's approval_event_id on the child (both tests fail). Scoped to child-delegation.policy-drawdown: a direct human-approved child records activation.approval_event_id, not an activation_event_id, so this requirement never applies to it."
+  },
+  {
+   "id": "child-delegation.record.policy-drawdown-approved-at",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "record-requirements",
+   "text": "`approved_at` (the issuance profile's standing-consent requirement) is the human approval instant of the consented root that `root_commitment` traces to, and it follows the root",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "child-delegation.policy-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a policy_drawdown child's approved_at is its Parent's approval instant where the Parent was approved direct, and the Parent's own approval_basis.approved_at where the Parent was activated under a standing-consent basis, through every generation; never a Parent's activation instant, and never a value from the child-creation request",
+    "local": "Witnessed at the kernel for a direct Parent and for each standing-consent Parent type (template dispatch, governed_policy activation, ceiling_drawdown successor), each through the two generations the reference admits (its hard maximum child depth), with every consent and activation an hour apart so an activation instant cannot pass for the consent instant. A child of a child is the policy_drawdown Parent case. The separately re-approved child_creation_policy case is not implemented by the reference (no governance record exists for child policies)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a direct Parent: every generation carries the Parent's approval instant, its approval event",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a template instance: the child and its descendants carry the template's approval, not the dispatch",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a governed_policy activation: the child carries the root consent's approval, not the activation",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-approved-at.test.ts",
+     "name": "a child's approved_at follows the root its authority traces to (@spec child-delegation#record-requirements, #1514) > a ceiling_drawdown successor: the child carries the ceiling consent, not the drawdown",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1514 (D626): a child of a standing-consent Parent recorded the Parent's created_at, an activation instant. Mutations: the reviewed behavior (always created_at) fails all four witnesses; always the basis instant fails the direct-Parent witness."
   },
   {
    "id": "child-delegation.subject.policy-drawdown-parent-subject",
