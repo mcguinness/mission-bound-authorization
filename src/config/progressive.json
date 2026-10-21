@@ -1,0 +1,18 @@
+{
+  "chain_rate_bound": { "max_drawdowns": 2, "window_seconds": 3600 },
+  "action_classes": {
+    "payments:invoice.list": "consequential_read",
+    "payments:invoice.read": "consequential_read",
+    "payments:vendor.read": "consequential_read",
+    "payments:payment.schedule": "consequential_write",
+    "payments:payment.schedule.cancel": "consequential_write",
+    "payments:payment.execute": "irreversible_action",
+    "ledger:vendor.read": "consequential_read"
+  },
+  "external_communication_actions": ["payments:vendor.read"],
+  "beyond_ceiling": "fresh_approval",
+  "drawdown_policies": [
+    { "id": "drawdown-std", "version": "1", "max_added_actions": 1, "ceiling_review_cadence_s": 2592000 },
+    { "id": "drawdown-wide", "version": "1", "max_added_actions": 2, "ceiling_review_cadence_s": 2592000 }
+  ]
+}

@@ -25,7 +25,7 @@
  */
 
 import { randomBytes } from "node:crypto";
-import type { ApprovalFloorPolicy } from "@mission/demo-data";
+import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data";
 import {
   type ActivationPolicyRef,
   authorityHash,
@@ -318,6 +318,44 @@ export interface ProgressiveDrawdownOptions {
 }
 
 const isPositiveInteger = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
+
+/**
+ * @spec progressive#drawdown-bounds, progressive#fresh-approval,
+ * progressive#ceiling-review (#1017): the typed option and the drawdown policy
+ * snapshots a deployment's published Progressive section states, so the AS
+ * enforces exactly what the Mission Deployment Profile publishes. A snapshot's
+ * content is the policy's per-drawdown bound, review cadence and optional
+ * retirement list, in that order.
+ */
+export function progressiveFromProfile(profile: ProgressiveProfile): {
+  options: ProgressiveDrawdownOptions;
+  policies: Record<string, RegisteredActivationPolicy>;
+} {
+  const policies: Record<string, RegisteredActivationPolicy> = {};
+  for (const p of profile.drawdown_policies) {
+    policies[p.id] = {
+      version: p.version,
+      content_type: "application/json",
+      content: JSON.stringify({
+        max_added_actions: p.max_added_actions,
+        ceiling_review_cadence_s: p.ceiling_review_cadence_s,
+        ...(p.retire_undrawn_actions ? { retire_undrawn_actions: p.retire_undrawn_actions } : {}),
+      }),
+    };
+  }
+  return {
+    options: {
+      chainRateBound: {
+        maxDrawdowns: profile.chain_rate_bound.max_drawdowns,
+        windowSeconds: profile.chain_rate_bound.window_seconds,
+      },
+      actionClasses: profile.action_classes,
+      externalCommunicationActions: profile.external_communication_actions,
+      beyondCeiling: profile.beyond_ceiling,
+    },
+    policies,
+  };
+}
 
 /**
  * Validate the typed deployment configuration; throws on any malformed member,

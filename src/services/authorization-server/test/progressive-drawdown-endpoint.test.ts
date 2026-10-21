@@ -25,14 +25,20 @@
 import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders } from "./approval-fixture.js";
 
 import { type Server } from "node:http";
-import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE, DERIVATION_POLICY, loadProgressiveProfile, PROGRESSIVE_PROFILE } from "@mission/demo-data";
 import { authorityHash, computeAnchor, type JsonValue } from "@mission/core";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
 import { IntentError } from "../src/kernel/intent.js";
-import { ceilingAuthorityLeftUndrawn, consentCeiling, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
+import {
+  ceilingAuthorityLeftUndrawn,
+  consentCeiling,
+  drawdownRulesOf,
+  type ProgressiveDrawdownOptions,
+  progressiveFromProfile,
+} from "../src/kernel/progressive.js";
 import type { AuthorityEntry, LifecycleCommit, MissionRecord } from "../src/kernel/types.js";
 import {
   ApprovalSessionStore,
@@ -96,14 +102,15 @@ const narrowingPolicy = (cadenceS: number): RegisteredActivationPolicy => ({
     retire_undrawn_actions: NARROWED_ACTIONS,
   }),
 });
+/** The deployment as its Mission Deployment Profile publishes it: the typed option and the published drawdown policies. */
+const PUBLISHED = progressiveFromProfile(PROGRESSIVE_PROFILE);
 const POLICIES: Record<string, RegisteredActivationPolicy> = {
-  "drawdown-std": drawdownPolicy(),
+  // drawdown-std (one widened action) and drawdown-wide (two), both a 30-day cadence.
+  ...PUBLISHED.policies,
   // Edited in place by the changed-policy case.
   "drawdown-edit": drawdownPolicy(),
   // A one-second review cadence.
   "drawdown-short": drawdownPolicy(1),
-  // Two widened actions per drawdown.
-  "drawdown-wide": drawdownPolicy(2_592_000, 2),
   // Moved on to a new version by the past-cadence case.
   "drawdown-moved": drawdownPolicy(),
   // Narrows the carried ceiling by the undrawn vendor.read and invoice.list (#1468).
@@ -112,22 +119,8 @@ const POLICIES: Record<string, RegisteredActivationPolicy> = {
   "drawdown-narrow-short": narrowingPolicy(2),
 };
 
-/** The Mission Deployment Profile's published bounds and action-class mapping. */
-const PROGRESSIVE: ProgressiveDrawdownOptions = {
-  chainRateBound: { maxDrawdowns: 2, windowSeconds: 3600 },
-  actionClasses: {
-    "payments:invoice.list": "consequential_read",
-    "payments:invoice.read": "consequential_read",
-    "payments:vendor.read": "consequential_read",
-    "payments:payment.schedule": "consequential_write",
-    "payments:payment.schedule.cancel": "consequential_write",
-    "payments:payment.execute": "irreversible_action",
-    // payments:remittance.send is deliberately unclassified.
-    // On the SaaS resource, whose authoritative AS is the RAS: cross-domain.
-    "ledger:vendor.read": "consequential_read",
-  },
-  externalCommunicationActions: ["payments:vendor.read"],
-};
+/** The Mission Deployment Profile's published bounds and action-class mapping (config/progressive.json). */
+const PROGRESSIVE: ProgressiveDrawdownOptions = PUBLISHED.options;
 
 /** A completion condition and the issuer-held mapping that authorizes its discharge. */
 const CLOSE = { event_type: "accounting-period-closed", discharge_authority: "close-management-2026-q3" };
@@ -1614,5 +1607,47 @@ describe("policy narrowing and the consent commitment (@spec progressive#drawdow
       consent_principal: ALICE,
     });
     expect(s2.drawdown_count).toBe(2);
+  });
+});
+
+describe("the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017)", () => {
+  it("publishes the chain rate bound and the action-class mapping the adjudication enforces", () => {
+    // The rate-bound and class fallbacks above run on exactly these published values.
+    expect(PROGRESSIVE_PROFILE.chain_rate_bound).toEqual({ max_drawdowns: 2, window_seconds: 3600 });
+    expect(PROGRESSIVE.chainRateBound).toEqual({
+      maxDrawdowns: PROGRESSIVE_PROFILE.chain_rate_bound.max_drawdowns,
+      windowSeconds: PROGRESSIVE_PROFILE.chain_rate_bound.window_seconds,
+    });
+    expect(PROGRESSIVE.actionClasses).toEqual(PROGRESSIVE_PROFILE.action_classes);
+    expect(PROGRESSIVE.actionClasses["payments:payment.execute"]).toBe("irreversible_action");
+    expect(PROGRESSIVE.externalCommunicationActions).toEqual(PROGRESSIVE_PROFILE.external_communication_actions);
+  });
+
+  it("publishes each drawdown policy's per-drawdown bound and review cadence, which the snapshot the AS holds states", () => {
+    expect(PROGRESSIVE_PROFILE.drawdown_policies.map((p) => p.id)).toEqual(["drawdown-std", "drawdown-wide"]);
+    for (const p of PROGRESSIVE_PROFILE.drawdown_policies) {
+      const held = as.kernel.activationPolicies()?.[p.id] as RegisteredActivationPolicy;
+      expect(held.version).toBe(p.version);
+      expect(drawdownRulesOf(held)).toEqual({
+        max_added_actions: p.max_added_actions,
+        ceiling_review_cadence_s: p.ceiling_review_cadence_s,
+        ...(p.retire_undrawn_actions ? { retire_undrawn_actions: p.retire_undrawn_actions } : {}),
+      });
+    }
+  });
+
+  it("the strict loader refuses an unknown member, an unknown class, a non-positive bound, a duplicate policy and a malformed retirement list", () => {
+    const valid = JSON.parse(JSON.stringify(PROGRESSIVE_PROFILE)) as Record<string, unknown>;
+    const policy = (valid.drawdown_policies as Record<string, unknown>[])[0] as Record<string, unknown>;
+    for (const broken of [
+      { ...valid, surprise: true },
+      { ...valid, action_classes: { "payments:invoice.read": "dangerous" } },
+      { ...valid, chain_rate_bound: { max_drawdowns: 0, window_seconds: 3600 } },
+      { ...valid, drawdown_policies: [policy, policy] },
+      { ...valid, drawdown_policies: [{ ...policy, retire_undrawn_actions: "payments:vendor.read" }] },
+    ]) {
+      expect(() => loadProgressiveProfile(broken)).toThrowError(/config:progressive.json/);
+    }
+    expect(loadProgressiveProfile(valid)).toEqual(PROGRESSIVE_PROFILE);
   });
 });
