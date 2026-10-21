@@ -2664,6 +2664,11 @@ domain.
 
 ## Scope Projection {#scope-projection}
 
+This section applies to every issuance that emits `scope` on a
+Mission-bound token, and to issuance for a target that consumes only
+`scope`: such a target receives a safe projection or a refusal (step 5
+below).
+
 For every target audience, the AS MUST establish that the effective
 rights the target's enforcement path grants from the projected
 `scope`, together with every independently mandatory control on that
