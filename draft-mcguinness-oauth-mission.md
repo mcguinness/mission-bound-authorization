@@ -3982,9 +3982,7 @@ Like the `mission` claim ({{mission-claim}}), the record is open
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension MUST use
-collision-resistant names. A companion profile that registers a
-termination reason defines that reason's `termination` members
-({{termination}}).
+collision-resistant names.
 
 The following subsections define the record's members.
 
