@@ -6222,13 +6222,13 @@
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request and predecessor_state_changed, creating no successor and counting no derivation",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor refuses the expansion exchange with invalid_request and predecessor_not_active, creating no successor and counting no derivation",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -6289,7 +6289,7 @@
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request and predecessor_state_changed, creating no successor and counting no derivation",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -53730,25 +53730,31 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an expansion exchange whose predecessor is revoked or suspended is refused `invalid_request` with a reconciliation status (a terminal-exit code chosen by Reconciliation's attribution rule for a terminal predecessor, `predecessor_not_active` for a suspended one), creating no successor and counting no derivation",
-    "local": "the error code and the absence of any successor are witnessed; the reference does not attach mission_expansion_status on this request-time check (pre-existing)"
+    "local": "a superseded predecessor answers superseded_by_concurrent_expansion, since its termination names the successor that superseded it; any other terminal exit answers predecessor_state_changed"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request and predecessor_state_changed, creating no successor and counting no derivation",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a suspended predecessor refuses the expansion exchange with invalid_request and predecessor_not_active, creating no successor and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a predecessor another expansion superseded refuses a further expansion of it with invalid_request and superseded_by_concurrent_expansion, creating no successor and counting no derivation",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369)."
+   "notes": "#1154 (D369); reconciliation status #1177."
   },
   {
    "id": "expansion.superseded-state.refusal-mission-error",
@@ -53796,12 +53802,31 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a completion whose predecessor is no longer `active`, or whose authority overlaps a current restriction, activates nothing and is refused with the reconciliation status: access_denied on a deferred poll, invalid_grant on a code redemption, invalid_request on a token-exchange-response completion",
-    "local": "the reference's deferred poll answers access_denied without a reconciliation status (pre-existing), and it has no synchronous token-exchange completion"
+    "local": "the reference completes an expansion only on a deferred poll, with no code redemption or token-exchange-response completion, and does not yet run the restriction-overlap check; the predecessor-state statuses on the poll are witnessed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1154 (D369)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a predecessor revoked during the window refuses completion with access_denied and predecessor_state_changed on every poll, and a same-fingerprint retry returns the deferral, creating nothing (@spec expansion#reconciliation, #creation-reservation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a predecessor suspended during the window refuses completion with access_denied and predecessor_not_active on every poll, and a same-fingerprint retry returns the deferral, creating nothing (@spec expansion#reconciliation, #creation-reservation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a concurrent expansion that activated first refuses the other completion with access_denied and superseded_by_concurrent_expansion (@spec expansion#reconciliation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1154 (D369); poll statuses #1177."
   },
   {
    "id": "expansion.interactive.response-shape",
@@ -54389,7 +54414,7 @@
     },
     {
      "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request, creating no successor and counting no derivation",
+     "name": "expansion wire: a predecessor that is not active (@spec expansion#predecessor-active, mission#issuance-gating, #1154) > a revoked predecessor refuses the expansion exchange with invalid_request and predecessor_state_changed, creating no successor and counting no derivation",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -54609,12 +54634,31 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an expansion exchange (requested_token_type access token) that carries child_actor, or any token exchange carrying both predecessor and child_actor, is refused invalid_request and creates nothing",
-    "local": "the reference AS selects by requested_token_type and ignores child_actor on an access-token exchange"
+    "normative": "an expansion exchange (requested_token_type access token) that carries child_actor, or any token exchange carrying both predecessor and child_actor, is refused invalid_request and creates nothing"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses an exchange carrying both predecessor and child_actor with invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "subject-token possession at the expansion exchange (@spec expansion#request-binding, #verification-order, #1210) > refuses an expansion exchange carrying child_actor without a predecessor cross-check with invalid_request, creating nothing (@spec expansion#submission, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "subject-token possession at the child-creation exchange (@spec child-delegation#child-creation, #request-processing, #1210) > refuses an exchange carrying both child_actor and predecessor with invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1177."
   },
   {
    "id": "expansion.lineage.related-to-record-only",
@@ -54719,11 +54763,31 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a same-fingerprint retry of a failed deferred expansion returns its deferral, whose next poll answers access_denied after a denial or a refused activation (with any reconciliation status) and expired_token once the deferral has expired; it creates nothing",
-    "local": "the reference AS returns the same deferral (authorization_pending) and its next poll answers access_denied or expired_token; reservations of expansions are never marked failed"
+    "local": "the reference returns the same deferral (authorization_pending), and its next poll answers access_denied, with the recorded status after a refused activation; reservations of expansions are never marked failed. The expired_token leg is not witnessed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a predecessor revoked during the window refuses completion with access_denied and predecessor_state_changed on every poll, and a same-fingerprint retry returns the deferral, creating nothing (@spec expansion#reconciliation, #creation-reservation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a predecessor suspended during the window refuses completion with access_denied and predecessor_not_active on every poll, and a same-fingerprint retry returns the deferral, creating nothing (@spec expansion#reconciliation, #creation-reservation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > an Approver's denial answers the poll with access_denied and no reconciliation status, and a same-fingerprint retry returns the deferral, creating nothing (@spec expansion#reconciliation, #creation-reservation, #1177)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1177."
   },
   {
    "id": "expansion.request.client-possession-proof",

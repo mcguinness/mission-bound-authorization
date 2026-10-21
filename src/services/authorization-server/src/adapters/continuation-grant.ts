@@ -77,6 +77,7 @@ import {
   normalizedScope,
 } from "../kernel/creation-idempotency.js";
 import { DEFERRAL_EXPIRES_IN, DEFERRAL_INTERVAL, ExpansionDeferralError } from "../kernel/deferred.js";
+import { reconciliationStatusFor } from "../kernel/expansion.js";
 import { CarryoverRetrievalError } from "../kernel/carryover.js";
 import {
   ChildDelegationError,
@@ -1861,7 +1862,7 @@ async function carryActingAgent(
   dpopJwk: JWK,
   jkt: string,
   actorError: "invalid_request" | "invalid_grant",
-): Promise<{ iss: string; sub: string } | null> {
+): Promise<{ iss: string; sub: string; actorTokenSubject?: { iss: string; sub: string } } | null> {
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
   const acting = { iss: opts.issuer, sub: client.clientId };
   const actorTokenRaw = (ctx.oidc.params as Record<string, unknown>).actor_token;
@@ -1870,17 +1871,24 @@ async function carryActingAgent(
     txError(ctx, 400, "invalid_request", "actor_token must be a JWT");
     return null;
   }
+  let actorTokenSubject: { iss: string; sub: string } | undefined;
   try {
     const { payload } = await jwtVerify(actorTokenRaw, dpopJwk, { algorithms: ["ES256"] });
     if ((payload.cnf as { jkt?: unknown } | undefined)?.jkt !== jkt) {
       txError(ctx, 400, actorError, "actor_token is not sender-constrained to the presenter key");
       return null;
     }
+    if (typeof payload.iss === "string" && typeof payload.sub === "string") {
+      actorTokenSubject = { iss: payload.iss, sub: payload.sub };
+    }
   } catch {
     txError(ctx, 400, actorError, "actor_token verification failed");
     return null;
   }
-  return acting; // carried, not restructured (#433).
+  // Carried, not restructured (#433): the acting agent stays the client. The
+  // verified actor_token's subject is reported for the creation fingerprint
+  // (@spec expansion#creation-fingerprint `actor`, #1177).
+  return actorTokenSubject ? { ...acting, actorTokenSubject } : acting;
 }
 
 /** Seconds until an ISO instant, floored at 1 (absolute-lifetime clamp). */
@@ -2242,7 +2250,10 @@ export async function handleChildCreationExchange(
     client: client.clientId,
     source: parent.id,
     cnf: { jkt: resolved.jkt },
-    actor: acting,
+    // @spec expansion#creation-fingerprint (#1177): `actor` is the verified
+    // actor_token's iss and sub, absent where client authentication alone
+    // identifies the acting agent.
+    ...(acting.actorTokenSubject ? { actor: acting.actorTokenSubject } : {}),
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
     // @spec mission#intent-submission-evidence — presented evidence is part of
@@ -2590,7 +2601,14 @@ export async function handleExpansionExchange(
   const resolved = await verifySubjectPossession(opts, ctx, {
     subjectError: "invalid_request",
     afterParse: () => {
-      refuseChildActorWithPredecessor(params);
+      // @spec expansion#submission (#1177): requested_token_type selects the
+      // operation, and an expansion exchange carries no child_actor, with or
+      // without a `predecessor` cross-check.
+      if (params.child_actor !== undefined) {
+        throw new errors.InvalidRequest(
+          "child_actor is not accepted on an expansion exchange: requested_token_type access_token selects expansion",
+        );
+      }
       creationRequestId = readCreationRequestId(params);
     },
   });
@@ -2657,7 +2675,10 @@ export async function handleExpansionExchange(
     client: client.clientId,
     source: resolved.record.id,
     cnf: { jkt: resolved.jkt },
-    actor: acting,
+    // @spec expansion#creation-fingerprint (#1177): `actor` is the verified
+    // actor_token's iss and sub, absent where client authentication alone
+    // identifies the acting agent.
+    ...(acting.actorTokenSubject ? { actor: acting.actorTokenSubject } : {}),
     intent,
     ...(proposedAuthority ? { proposal: proposedAuthority } : {}),
     // @spec mission#intent-submission-evidence — presented evidence is part of
@@ -2712,6 +2733,9 @@ export async function handleExpansionExchange(
     // own client.
     if (isMissionClient(ctx, active)) {
       refuseInactiveMission(ctx, active, `predecessor mission is ${active.state}`);
+      // @spec expansion#predecessor-active (#1177): with the reconciliation
+      // status the attribution rule selects.
+      (ctx.body as Record<string, unknown>).mission_expansion_status = reconciliationStatusFor(active);
     } else {
       txError(ctx, 400, "invalid_request", "predecessor mission is not active");
     }
@@ -2909,6 +2933,13 @@ async function pollDeferredExpansion(
       case "expired_token":
         throw new errors.ExpiredToken();
       case "access_denied":
+        // @spec expansion#reconciliation (#1177): a completion refused by a
+        // reconciliation check answers access_denied with its status.
+        if ("status" in r && r.status) {
+          txError(ctx, 400, "access_denied", "the deferred expansion was refused at completion");
+          (ctx.body as Record<string, unknown>).mission_expansion_status = r.status;
+          return;
+        }
         throw new errors.AccessDenied();
       default:
         throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
