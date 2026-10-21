@@ -20,9 +20,10 @@ import { join } from "node:path";
 import { Fga } from "@mission/pdp";
 import { decodeJwt, decodeProtectedHeader, generateKeyPair, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
+import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology, spawnMasProcess } from "../src/mas-pilot/launcher.js";
-import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
+import { newStatusClientKey, parseStatusClients } from "../src/mas-pilot/mas-as.js";
+import { composeSeparatedMasPilot } from "../src/mas-pilot/separated.js";
 import { estateToken, handshakeStatus, OPENFGA, openfgaReachable, relocateEstate } from "./mas-pilot-support.js";
 
 const d = (await openfgaReachable()) ? describe : describe.skip;
@@ -378,6 +379,47 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
       /separated topology only/,
     );
     expect(() => masPilotLaunchOptions({ ...env, MAS_PILOT_MAS_URL: "http://127.0.0.1:1" }, "separated")).toThrow(/set both MAS_PILOT_MAS_URL/);
+  });
+
+  it("the separated composition refuses a MAS advertising no mission_status_endpoint, and a PDP key that is not a private JWK, before reaching OpenFGA (#1407)", async () => {
+    const bootstrap = vi.spyOn(Fga, "bootstrap").mockRejectedValue(new Error("OpenFGA was reached"));
+    let advertised: Record<string, unknown> = {};
+    const mas: Server = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(advertised));
+    });
+    await new Promise<void>((resolve) => mas.listen(0, "127.0.0.1", resolve));
+    try {
+      const url = `http://127.0.0.1:${(mas.address() as AddressInfo).port}`;
+      const config = relocateMissionIssuer(loadMasPilotConfig(), url);
+      const { privateJwk } = await newStatusClientKey(config.separated_mas.pdp_client_id);
+      const options = {
+        openfga: { apiUrl: "http://unused.test", presharedKey: "unused" },
+        resourcePolicyStore: { bootstrap: "development" } as const,
+        config,
+      };
+      advertised = { issuer: url, jwks_uri: `${url}/jwks`, mission_max_stale_seconds: 300 };
+      await expect(composeSeparatedMasPilot({ ...options, mas: { url, pdpKey: privateJwk } })).rejects.toThrow(
+        /advertises no mission_status_endpoint/,
+      );
+      advertised = { ...advertised, mission_status_endpoint: `${url}/mission/status` };
+      const { d: _d, ...publicHalf } = privateJwk;
+      await expect(composeSeparatedMasPilot({ ...options, mas: { url, pdpKey: publicHalf } })).rejects.toThrow(
+        /not a private JWK with a kid/,
+      );
+    } finally {
+      mas.closeAllConnections();
+      await new Promise<void>((resolve) => mas.close(() => resolve()));
+    }
+    expect(bootstrap).not.toHaveBeenCalled();
+  });
+
+  it("the MAS process refuses a Status client registration it cannot use (#1407)", async () => {
+    const { registration } = await newStatusClientKey("mas-pilot-pdp");
+    for (const bad of [undefined, "", "not json", "[]", "{}", JSON.stringify([{ client_id: "mas-pilot-pdp" }]), JSON.stringify([{ jwks: registration.jwks }])]) {
+      expect(() => parseStatusClients(bad), String(bad)).toThrow(/MAS_PILOT_STATUS_CLIENTS/);
+    }
+    expect(parseStatusClients(JSON.stringify([registration]))).toEqual([registration]);
   });
 
   it("refuses a PDP key that is not a private JWK with a kid (#1407)", async () => {
