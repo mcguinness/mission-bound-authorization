@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-21T05:17:59Z
-Source repository commit: d432ac6049f7bd414814c028ddade2bb0e4f6be6
+Generated: 2026-10-21T05:23:08Z
+Source repository commit: 8e7e08d448db7b84e903e41d776b820eb1240aee
 Member count: 9
 
 Reading order:
@@ -7872,9 +7872,10 @@ Table of Contents
      | Surface (role) | Applies                           | Defined |
      |                |                                   | in      |
      +================+===================================+=========+
-     | Mission Intent | Every Mission-creating            | Section |
-     | via PAR        | authorization request             | 4.2     |
-     | (client, AS)   |                                   |         |
+     | Mission Intent | Mission-creating requests on the  | Section |
+     | via PAR        | authorization-code path;          | 4.2     |
+     | (client, AS)   | companion-defined back-channel    |         |
+     |                | carriage follows its profile      |         |
      +----------------+-----------------------------------+---------+
      | Direct         | Every direct approval event; the  | Section |
      | approval (AS); | Mission Record at every approval  | 6.2,    |
@@ -7889,9 +7890,10 @@ Table of Contents
      | proposal       | checks one that is submitted      | 4.3     |
      | (client, AS)   |                                   |         |
      +----------------+-----------------------------------+---------+
-     | Grant binding  | Every authorization code issued   | Section |
-     | (AS)           | at approval, and the refresh-     | 8.1     |
-     |                | token family that follows it      |         |
+     | Grant binding  | Authorization-code lineages and   | Section |
+     | (AS)           | other profile-defined reusable    | 8.1     |
+     |                | grants, including their refresh-  |         |
+     |                | token families                    |         |
      +----------------+-----------------------------------+---------+
      | Issuance       | Every derivation, refresh and     | Section |
      | gating (AS)    | Token Exchange included           | 8.2     |
