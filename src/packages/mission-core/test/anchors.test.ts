@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   ACTIVATION_POLICY_TYP,
@@ -192,5 +193,45 @@ describe("policy snapshot digest domains (@spec approval-governance#governed-pol
     expect(
       approvalPolicyDigest(ISS, { ...snapshot, content: Buffer.from(snapshot.content, "utf8") }),
     ).toBe(approvalPolicyDigest(ISS, snapshot));
+  });
+});
+
+describe("governed policy digest (@spec mission#mission-record, #1503)", () => {
+  // The reference construction of an `organizational` source's
+  // `authority_source.policy.digest`: the envelope anchor with typ
+  // `mission-governed-policy`, `iss` the governance authority that publishes
+  // the policy, and `value` the policy's `{id, version, ceiling}`.
+  const GOVERNANCE = "https://governance.example";
+  const POLICY = {
+    id: "ap-controls",
+    version: "2026-09-01",
+    ceiling: [
+      {
+        type: "mission_resource_access",
+        resource: "https://erp.example.com",
+        actions: ["invoices.read"],
+        constraints: { vendors: ["acme"] },
+      },
+    ],
+  };
+  // The committed input, hand-written in JCS form, so the vector does not
+  // merely echo computeAnchor.
+  const CANONICAL =
+    '{"iss":"https://governance.example","typ":"mission-governed-policy","value":{"ceiling":[{"actions":["invoices.read"],"constraints":{"vendors":["acme"]},"resource":"https://erp.example.com","type":"mission_resource_access"}],"id":"ap-controls","version":"2026-09-01"}}';
+  const DIGEST = "sha-256:y3zFmhm-f9Q8og-xKJ9eJhVTgjEVLEIE2wcuPba3b0Q";
+
+  it("reproduces the pinned vector from the policy and its governance authority", () => {
+    const independent = `sha-256:${createHash("sha256").update(CANONICAL, "utf8").digest("base64url")}`;
+    expect(independent).toBe(DIGEST);
+    expect(canonicalize({ typ: GOVERNED_POLICY_TYP, iss: GOVERNANCE, value: POLICY })).toBe(
+      CANONICAL,
+    );
+    expect(computeAnchor(GOVERNED_POLICY_TYP, GOVERNANCE, POLICY)).toBe(DIGEST);
+    // Every committed member counts: another version, issuer, or domain differs.
+    expect(
+      computeAnchor(GOVERNED_POLICY_TYP, GOVERNANCE, { ...POLICY, version: "2026-09-02" }),
+    ).not.toBe(DIGEST);
+    expect(computeAnchor(GOVERNED_POLICY_TYP, "https://as.example.com", POLICY)).not.toBe(DIGEST);
+    expect(computeAnchor(ACTIVATION_POLICY_TYP, GOVERNANCE, POLICY)).not.toBe(DIGEST);
   });
 });

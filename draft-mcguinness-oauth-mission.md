@@ -4236,14 +4236,26 @@ The following subsections define the record's members.
 
   `type`:
   : REQUIRED. A string: `user_delegated`, `service_owned`, or
-    `organizational`, subject to the forward-compatibility rule of
-    {{lifecycle}}.
+    `organizational`. An unrecognized value is handled under the same
+    rule as an unrecognized `approval_basis.type`
+    ({{record-principal-members}}): it is preserved unchanged as opaque
+    provenance and does not by itself invalidate or deactivate the
+    Mission, and only an operation that itself requires recognized
+    source semantics refuses (for example, applying the source's
+    authority ceiling or its governed policy). An AS MUST NOT approve a
+    Mission whose authority source it does not recognize.
 
   `policy`:
   : REQUIRED for `organizational`, absent otherwise. An object with
     `id`, `version`, and `digest`: the stable reference to, and
     commitment over, the governed organizational policy the Mission
-    draws on.
+    draws on. `digest` is a prefixed commitment
+    ({{commitment-mechanisms}}) whose exact committed input and
+    construction the policy's format specifies: its species and, for
+    an envelope anchor, its `typ`, `iss`, and `value`. The party that
+    produces the reference computes `digest`; a consumer holding the
+    policy can reproduce it, and one that does not compares it as an
+    opaque value.
 
   `authority_source` is provenance like `approval_basis`: recorded
   alongside it, folded into neither `intent_hash` nor
@@ -4467,6 +4479,15 @@ object cannot be mistaken for another's. The `iss` binding prevents
 a committed object from being transplanted across authorization
 servers. The `sha-256:` prefix is the algorithm-agility mechanism
 ({{commitment-mechanisms}}).
+
+The anchors this section lists, and the Authority Set entry
+commitment below, bind the AS issuer. The `digest` of an
+`authority_source.policy` reference ({{record-principal-members}}) is
+not one of them: it uses the issuer the policy's format defines, for a
+governed organizational policy its governing authority. That binding
+keeps the policy's commitment from being transplanted across policy
+authorities, and the same policy commits identically at every AS that
+records it.
 
 `intent_hash` and `authority_hash` are independent commitments to
 independent objects. That the approved task bounds the derived

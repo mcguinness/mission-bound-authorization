@@ -55,7 +55,8 @@ import {
   type BoundAuthoritySourceCatalog,
   type LocalPrincipal,
   authoritySourceOf,
-  parseAuthoritySource,
+  isRecognizedAuthoritySource,
+  parseRecordedAuthoritySource,
   resolveApprovalSource,
   resolveCommittedSource,
   resolveRenderingSource,
@@ -234,6 +235,7 @@ import {
   type MissionRecord,
   type MissionState,
   type ParentRef,
+  type RecordedAuthoritySource,
   type ScheduleRequest,
   type SuspensionSchedule,
   type TemplateRef,
@@ -2465,7 +2467,7 @@ export class MissionKernel {
   assertRenderedAuthoritySource(input: {
     /** The committed root of the rendered origin (#827). */
     binding: AuthoritySourceBinding;
-    source: AuthoritySource;
+    source: RecordedAuthoritySource;
     subject: { iss: string; sub: string };
     approver: { iss: string; sub: string };
     authoritySet: readonly AuthorityEntry[];
@@ -4349,10 +4351,13 @@ export class MissionKernel {
             // `approval_basis.type` already gates on: `type` always, plus the
             // governed policy's `id` and `version` for `organizational`. The
             // policy `digest` stays off introspection and belongs to record
-            // access.
+            // access. An unrecognized `type` (#1503) is echoed alone: its
+            // other members are opaque, so none of them is projected.
             authority_source: {
               type: fresh.authority_source.type,
-              ...(fresh.authority_source.policy
+              ...(isRecognizedAuthoritySource(fresh.authority_source) &&
+              fresh.authority_source.type === "organizational" &&
+              fresh.authority_source.policy
                 ? {
                     policy: {
                       id: fresh.authority_source.policy.id,
@@ -5045,10 +5050,11 @@ function rowToRecord(row: Record<string, unknown>): MissionRecord {
     authority_hash: row.authority_hash as string,
     subject: { iss: row.subject_iss as string, sub: row.subject_sub as string },
     approval_basis: JSON.parse(row.approval_basis_json as string) as ApprovalBasis,
-    // @spec mission#mission-record, mission#lifecycle — fail closed on
-    // hydration: a stored row carrying an unrecognized `authority_source.type`
-    // is refused, never widened into the union.
-    authority_source: parseAuthoritySource(
+    // @spec mission#mission-record (#1503): a stored row carrying an
+    // unrecognized `authority_source.type` hydrates with the member unchanged
+    // as opaque provenance, and the Mission keeps its state; a recognized type
+    // is still held to its member rules.
+    authority_source: parseRecordedAuthoritySource(
       JSON.parse(row.authority_source_json as string),
       `mission ${String(row.id)}`,
     ),
