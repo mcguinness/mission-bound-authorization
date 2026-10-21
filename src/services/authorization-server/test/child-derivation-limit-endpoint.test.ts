@@ -244,3 +244,157 @@ describe("a child's derivation limit at the token exchange (@spec child-delegati
     }
   });
 });
+
+/** PAR -> /auth -> GET the approval page, for a parent Intent requesting `limit` (or none). */
+async function renderParentApproval(limit?: number): Promise<string> {
+  const jar = new Map<string, string>();
+  const verifier = `child-limit-page-verifier-0123456789-0123456789-${limit ?? "none"}`;
+  const challenge = Buffer.from(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+  ).toString("base64url");
+  const par = await fetch(`${ISSUER}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: "ap-agent",
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      resource: RESOURCE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: {
+          goal: "Reconcile Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: PARENT_EXP,
+          ...(limit === undefined ? {} : { requested_derivation_limit: limit }),
+        },
+      }),
+      authorization_details: JSON.stringify([parentEntry()]),
+      client_assertion: await clientAssertion(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+  const { request_uri } = (await par.json()) as { request_uri: string };
+  const res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+    redirect: "manual",
+  });
+  storeCookies(res, jar);
+  const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
+  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+  expect(page.status).toBe(200);
+  return page.text();
+}
+
+describe("the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119)", () => {
+  it("renders the established derivation limit, not only the requested one, with the async delegation family statement", async () => {
+    const html = await renderParentApproval(150);
+    // The Mission's own section, not the child block, which carries the statement too.
+    const established = html.match(/<ul class="derivation-limit">(.*?)<\/ul>/s)?.[1] ?? "";
+    expect(established).toContain("Derivation limit (established): at most 100 token derivations from this Mission.");
+    expect(html).not.toContain("at most 150 token derivations");
+    expect(established).toContain("The refreshes of an async delegation family are not counted against this limit.");
+  });
+
+  it("renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement", async () => {
+    const html = await renderParentApproval();
+    expect(html).toContain("Child Missions created by policy under this approval (no approval of their own)");
+    expect(html).toContain(
+      "Concurrent children: at most 5 concurrently non-terminal child Missions (a limit on children at one time, not on children created over the Mission's lifetime).",
+    );
+    expect(html).toContain("Child depth: at most 2.");
+    expect(html).toContain(
+      "Each child Mission created under this consent establishes its own derivation limit from its own request, never above 3.",
+    );
+    expect(html).toContain(
+      "This maximum is local to each child Mission: it is not a budget across the Missions this consent admits, their descendants, or their lifetimes.",
+    );
+    expect(html).toContain(
+      "No finite aggregate bound on this entry's subtree is enforced: no limit applies to children created over the Mission's lifetime.",
+    );
+    // The figure shown is the figure enforced: a child created under this entry records it.
+    expect(html).not.toContain("never above 100");
+  });
+});
+
+/** PAR -> /auth -> GET the page -> approve: the page and the final front-channel redirect. */
+async function approveParent(): Promise<{ html: string; location: URL }> {
+  const jar = new Map<string, string>();
+  const verifier = `child-limit-decide-verifier-0123456789-0123456789-${crypto.randomUUID()}`;
+  const challenge = Buffer.from(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+  ).toString("base64url");
+  const par = await fetch(`${ISSUER}/request`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: "ap-agent",
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      resource: RESOURCE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      login_hint: "alice",
+      mission_intent: JSON.stringify({
+        intent: { goal: "Reconcile Acme invoices", target_resources: [RESOURCE], expires_at: PARENT_EXP },
+      }),
+      authorization_details: JSON.stringify([parentEntry()]),
+      client_assertion: await clientAssertion(),
+      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+    }).toString(),
+  });
+  const { request_uri } = (await par.json()) as { request_uri: string };
+  let res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri })}`, {
+    redirect: "manual",
+  });
+  storeCookies(res, jar);
+  let location = res.headers.get("location") as string;
+  const uid = location.split("/interaction/")[1] as string;
+  const html = await (await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } })).text();
+  res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
+    method: "POST",
+    redirect: "manual",
+    headers: { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" },
+    body: JSON.stringify({ decision: "approve" }),
+  });
+  storeCookies(res, jar);
+  location = res.headers.get("location") as string;
+  while (location?.startsWith(ISSUER)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader(jar) } });
+    storeCookies(res, jar);
+    location = res.headers.get("location") as string;
+  }
+  return { html, location: new URL(location) };
+}
+
+describe("an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119)", () => {
+  it("refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it", async () => {
+    const registry = as.kernel.activationPolicies() as Record<string, typeof SNAPSHOT>;
+    const before = as.kernel.allMissions().length;
+    delete registry[POLICY_ID];
+    try {
+      const { html, location } = await approveParent();
+      expect(html).toContain(
+        `The per-child derivation limit cannot be shown: child creation policy ${POLICY_ID} version 1 is not one this issuer holds at its committed digest. This approval is refused until it can be shown.`,
+      );
+      expect(html).not.toContain("never above 3");
+      expect(location.searchParams.get("error")).toBe("access_denied");
+      expect(location.searchParams.get("error_description")).toContain("The per-child derivation limit cannot be shown");
+      expect(location.searchParams.get("code")).toBeNull();
+      expect(as.kernel.allMissions().length).toBe(before);
+    } finally {
+      registry[POLICY_ID] = SNAPSHOT;
+    }
+    // The policy restored: a fresh approval renders the figure, and a child created under it records it.
+    const { html, location } = await approveParent();
+    expect(html).toContain("never above 3");
+    expect(location.searchParams.get("code")).toBeTruthy();
+    const parent = await issueParentMission();
+    const res = await createChild(parent.accessToken);
+    const body = (await res.json()) as { access_token?: string };
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    const childId = (decodeJwt(body.access_token as string) as { mission: { id: string } }).mission.id;
+    expect(as.kernel.get(childId)?.derivation_limit).toBe(3);
+  });
+});
