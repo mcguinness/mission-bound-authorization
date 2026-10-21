@@ -4000,18 +4000,6 @@ The following subsections define the record's members.
       party. An unrecognized value is handled under the same rule as
       `approval_basis.type` ({{standing-consent-bases}}).
 
-    For `kind: human`: no additional kind-specific members; the
-    deciding human is `consent_principal`.
-
-    For `kind: policy`: `policy`, a REQUIRED object with `id` and
-    `version` identifying the deciding policy or workflow. It decides
-    deterministically over recorded inputs, so re-evaluating that
-    `version` over them re-checks the decision. A model's output can
-    be one such input, recorded with the model's identifier and
-    version: it can refuse an activation or narrow the authority it
-    activates, and the AS MUST NOT let it supply or widen authority.
-    A model is never itself the deciding policy or workflow.
-
     `governance_record`:
     : OPTIONAL. A boolean. `true` when an Approval Governance Record
       is recorded for this approval event
@@ -4024,6 +4012,18 @@ The following subsections define the record's members.
       mechanism, and the record supplies the fuller assertion set
       behind it, including any multi-assertion set, never flattened
       into it.
+
+    For `kind: human`: no additional kind-specific members; the
+    deciding human is `consent_principal`.
+
+    For `kind: policy`: `policy`, a REQUIRED object with `id` and
+    `version` identifying the deciding policy or workflow. It decides
+    deterministically over recorded inputs, so re-evaluating that
+    `version` over them re-checks the decision. A model's output can
+    be one such input, recorded with the model's identifier and
+    version: it can refuse an activation or narrow the authority it
+    activates, and the AS MUST NOT let it supply or widen authority.
+    A model is never itself the deciding policy or workflow.
 
     Where `adjudication` is present for `direct`, `kind` MUST be
     `human`, with or without `governance_record`: a policy decides
