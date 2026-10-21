@@ -2924,6 +2924,12 @@ was made under:
 | expired past the declared horizon | outside the guarantee; treated as new. An indeterminate tombstone does not expire into this state ({{evidence}}) | outside the guarantee |
 {: title="Idempotency claim state resolution"}
 
+A duration-lease renewal's claim, which the PDP settles `completed`
+when it commits the lease extension, returns the renewal's permit to a
+retransmission while that permit is valid, instead of
+`duplicate_suppressed` (Duration-Lease Renewal in
+{{I-D.draft-mcguinness-mission-metering}}).
+
 A different operation identity under the same key is always a
 conflict, never a new execution: an idempotency key identifies one
 intended execution of one normalized request, the same discipline
@@ -4089,6 +4095,10 @@ worked example shows the concrete record
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Idempotency: a duration-lease renewal's completed claim returns the
+  renewal's permit to a retransmission while that permit is valid
+  (#1464).
 
 - Resource Contract: an authority entry can reference, at approval, an
   immutable and versioned resource contract that assembles the
