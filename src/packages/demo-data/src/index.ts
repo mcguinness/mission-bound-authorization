@@ -2507,19 +2507,28 @@ const PROGRESSIVE_MEMBERS = new Set([
   "beyond_ceiling",
   "drawdown_policies",
 ]);
-const PUBLISHED_POLICY_MEMBERS = new Set(["id", "version", "max_added_actions", "ceiling_review_cadence_s", "retire_undrawn_actions"]);
+const PUBLISHED_POLICY_MEMBERS = new Set([
+  "id",
+  "version",
+  "max_added_actions",
+  "ceiling_review_cadence_s",
+  "retire_undrawn_actions",
+]);
 
 /**
  * Load `progressive.json`, refusing an unknown member, an unknown action
  * class, a non-positive bound or cadence, a duplicate policy identity and a
  * malformed retirement list.
  */
-export function loadProgressiveProfile(raw: unknown = readJson("progressive.json")): ProgressiveProfile {
+export function loadProgressiveProfile(
+  raw: unknown = readJson("progressive.json"),
+): ProgressiveProfile {
   const file = "progressive.json";
   const root = asObject(file, raw, "progressive");
   onlyMembers(file, root, PROGRESSIVE_MEMBERS, "progressive");
   const positive = (v: unknown, ctx: string): number => {
-    if (!Number.isSafeInteger(v) || (v as number) <= 0) throw new ConfigError(file, `${ctx} must be a positive integer`);
+    if (!Number.isSafeInteger(v) || (v as number) <= 0)
+      throw new ConfigError(file, `${ctx} must be a positive integer`);
     return v as number;
   };
   const rate = asObject(file, root.chain_rate_bound, "chain_rate_bound");
@@ -2527,14 +2536,20 @@ export function loadProgressiveProfile(raw: unknown = readJson("progressive.json
   const classes = asObject(file, root.action_classes, "action_classes");
   const actionClasses: Record<string, ApprovalFloorActionClass> = {};
   for (const [action, cls] of Object.entries(classes)) {
-    if (typeof cls !== "string" || !(APPROVAL_FLOOR_ACTION_CLASSES as readonly string[]).includes(cls)) {
+    if (
+      typeof cls !== "string" ||
+      !(APPROVAL_FLOOR_ACTION_CLASSES as readonly string[]).includes(cls)
+    ) {
       throw new ConfigError(file, `action_classes["${action}"] has unknown class ${String(cls)}`);
     }
     actionClasses[action] = cls as ApprovalFloorActionClass;
   }
   const external = root.external_communication_actions;
   if (!Array.isArray(external) || !external.every((a) => typeof a === "string")) {
-    throw new ConfigError(file, "external_communication_actions must be an array of action identifiers");
+    throw new ConfigError(
+      file,
+      "external_communication_actions must be an array of action identifiers",
+    );
   }
   if (root.beyond_ceiling !== "fresh_approval" && root.beyond_ceiling !== "refuse") {
     throw new ConfigError(file, "beyond_ceiling must be fresh_approval or refuse");
@@ -2551,14 +2566,23 @@ export function loadProgressiveProfile(raw: unknown = readJson("progressive.json
     if (seen.has(id)) throw new ConfigError(file, `drawdown_policies has a second policy ${id}`);
     seen.add(id);
     const retire = o.retire_undrawn_actions;
-    if (retire !== undefined && (!Array.isArray(retire) || !retire.every((a) => typeof a === "string"))) {
-      throw new ConfigError(file, `drawdown_policies[${i}].retire_undrawn_actions must be an array of action identifiers`);
+    if (
+      retire !== undefined &&
+      (!Array.isArray(retire) || !retire.every((a) => typeof a === "string"))
+    ) {
+      throw new ConfigError(
+        file,
+        `drawdown_policies[${i}].retire_undrawn_actions must be an array of action identifiers`,
+      );
     }
     return {
       id,
       version,
       max_added_actions: positive(o.max_added_actions, `drawdown_policies[${i}].max_added_actions`),
-      ceiling_review_cadence_s: positive(o.ceiling_review_cadence_s, `drawdown_policies[${i}].ceiling_review_cadence_s`),
+      ceiling_review_cadence_s: positive(
+        o.ceiling_review_cadence_s,
+        `drawdown_policies[${i}].ceiling_review_cadence_s`,
+      ),
       ...(retire !== undefined ? { retire_undrawn_actions: retire as string[] } : {}),
     };
   });

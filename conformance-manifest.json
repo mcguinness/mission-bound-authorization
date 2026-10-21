@@ -38710,12 +38710,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states the concrete per-drawdown bound"
+    "normative": "the deployment's Mission Deployment Profile states the concrete per-drawdown bound",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the per-drawdown bound the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference reads the bound from the drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes each drawdown policy's per-drawdown bound and review cadence, which the snapshot the AS holds states",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown that widens more than the policy's per-drawdown bound falls back; within the bound it is adjudicated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference reads the bound from the drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017). Proved by a snapshot stating a cadence other than the published one (the same content path)."
   },
   {
    "id": "progressive.in-ceiling.publish-rate-bound",
@@ -38732,12 +38746,32 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states the concrete per-chain rate bound"
+    "normative": "the deployment's Mission Deployment Profile states the concrete per-chain rate bound",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the chain rate bound the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference takes the bound from its typed progressive option; no Mission Deployment Profile publishes it yet (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes the chain rate bound and the action-class mapping the adjudication enforces",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > the chain's rate bound stops policy adjudication once reached",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > the strict loader refuses an unknown member, an unknown class, a non-positive bound, a duplicate policy and a malformed retirement list",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The reference takes the bound from its typed progressive option; no Mission Deployment Profile publishes it yet (#1017). Proved by enforcing a rate bound other than the published one."
   },
   {
    "id": "progressive.in-ceiling.publish-action-classes",
@@ -38754,12 +38788,32 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states the mapping from its action identifiers to the runtime profile's action classes, or an equivalent declared classification"
+    "normative": "the deployment's Mission Deployment Profile states the mapping from its action identifiers to the runtime profile's action classes, or an equivalent declared classification",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the action-class mapping the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference takes the mapping from its typed progressive option (actionClasses); no Mission Deployment Profile publishes it yet (#1017). #1255: the AS refuses to start when that mapping maps an action the published approval-authentication floor's classification places under a floor to a class a drawdown grants by policy; that check witnesses the mapping's agreement with the floor, not its publication, so it is cited on progressive.in-ceiling.fresh-approval-classes and this row stays todo."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes the chain rate bound and the action-class mapping the adjudication enforces",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a drawdown granting a high-consequence, unclassified, or external-communication action falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > the strict loader refuses an unknown member, an unknown class, a non-positive bound, a duplicate policy and a malformed retirement list",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "The reference takes the mapping from its typed progressive option (actionClasses); no Mission Deployment Profile publishes it yet (#1017). #1255: the AS refuses to start when that mapping maps an action the published approval-authentication floor's classification places under a floor to a class a drawdown grants by policy; that check witnesses the mapping's agreement with the floor, not its publication, so it is cited on progressive.in-ceiling.fresh-approval-classes and this row stays todo. Proved by taking no action classes from the profile, and the loader by accepting unknown members."
   },
   {
    "id": "progressive.ceiling-review.no-adjudication-past-cadence",
@@ -38806,12 +38860,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment's Mission Deployment Profile states its ceiling review cadence"
+    "normative": "the deployment's Mission Deployment Profile states its ceiling review cadence",
+    "local": "config/progressive.json is the Progressive section of the reference Mission Deployment Profile, validated by a strict loader (loadProgressiveProfile); the AS's typed option and drawdown policy snapshots are built from it (progressiveFromProfile), so the review cadence the adjudication enforces is the published one. Read only where a deployment selects Progressive; the demo stack does not."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "The reference states the cadence in each drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the Mission Deployment Profile publishes what the drawdown enforces (@spec progressive#drawdown-bounds, progressive#fresh-approval, progressive#ceiling-review, #1017) > publishes each drawdown policy's per-drawdown bound and review cadence, which the snapshot the AS holds states",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "fresh-approval fallback (@spec progressive#in-ceiling-expansion, progressive#ceiling-review) > a chain whose ceiling consent is older than the policy's review cadence falls back",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "The reference states the cadence in each drawdown policy snapshot; no Mission Deployment Profile publishes it yet (#1017). Proved by a snapshot stating a cadence other than the published one."
   },
   {
    "id": "progressive.ceiling-review.review-disclosure",
