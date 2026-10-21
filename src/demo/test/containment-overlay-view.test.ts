@@ -29,7 +29,7 @@ beforeAll(async () => {
   ({ privateKey: statusKey } = (await generateKeyPair("ES256", { extractable: true })) as { privateKey: CryptoKey });
 });
 
-function approvedMission() {
+function approvedMission(proposed?: AuthorityEntry[]) {
   const ceiling = [{ type: "mission_resource_access", resource: `${SERVICE}/`, resource_match: "prefix", actions: [READ, LIST] }];
   const kernel = new MissionKernel({
     issuer: ISS,
@@ -49,7 +49,7 @@ function approvedMission() {
     intent: validateMissionIntent(
       JSON.stringify({ goal: "Read invoice 1", target_resources: [INV1], expires_at: "2027-01-01T00:00:00Z" }),
     ),
-    proposedAuthority: [entry],
+    proposedAuthority: proposed ?? [entry],
     subject: { iss: ISS, sub: "alice" },
     approver: { iss: ISS, sub: "bob" },
     clientId: "ap-agent",
@@ -103,5 +103,26 @@ describe("the in-process Mission view resolves containment onto approved entries
     });
     expect(await decide(kernel, id, LIST)).toBe("authority_contained");
     expect(await decide(kernel, id, READ)).toBe("permit");
+  });
+});
+
+
+describe("review: same-resource entries under different modes", () => {
+  it("the PDP retains the union of removals for the matched prefix entry", async () => {
+    const base = `${SERVICE}/`;
+    const { kernel, id } = approvedMission([
+      { type: "mission_resource_access", resource: base, actions: [READ, LIST] },
+      { type: "mission_resource_access", resource: base, resource_match: "prefix", actions: [READ, LIST] },
+    ]);
+    expect(await decide(kernel, id, LIST)).toBe("permit");
+    kernel.contain(id, {
+      event: { type: "anomaly.detected", source: "svc:soc", observed_at: NOW.toISOString(), event_id: "evt-review-modes" },
+      remove: [{ resource: base, actions: [READ] }, { resource: INV1, actions: [LIST] }],
+    });
+    expect(kernelMissionView(kernel, id)?.containment?.contained).toEqual([
+      { resource: base, actions: [READ] },
+      { resource: base, resource_match: "prefix", actions: [READ, LIST] },
+    ]);
+    expect(await decide(kernel, id, LIST)).toBe("authority_contained");
   });
 });

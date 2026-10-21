@@ -9,7 +9,15 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { authorityHash, type ContainmentSelector, intentHash, proposalHash, resourceWithin, selectorOverlapsEntry } from "@mission/core";
+import {
+  authorityHash,
+  containmentRemovalFor,
+  type ContainmentSelector,
+  intentHash,
+  proposalHash,
+  resourceWithin,
+  selectorOverlapsEntry,
+} from "@mission/core";
 import { inheritCapabilitySources } from "./capability-binding.js";
 import { entriesMayOverlap } from "./derive.js";
 import { entryDigest } from "./discharge.js";
@@ -510,7 +518,10 @@ const selects = (r: ContainmentSelector, action: string): boolean => r.actions =
  *
  * Containment removes actions, whatever an entry's constraints, so it is
  * compared per action: an action contained now and not at the snapshot. An
- * event that names authority already contained restricts nothing new.
+ * event that names authority already contained restricts nothing new. Both
+ * the removals as named and the removals as they land on the predecessor's
+ * approved entries count (@spec containment#selector-matching, #1463), so a
+ * successor never restores what conservative over-containment removed.
  *
  * Discharge latches whole entries, so it is compared per entry: any successor
  * entry that may overlap an entry latched after the snapshot, constraints
@@ -533,9 +544,29 @@ export function restrictedSinceAdjudication(
   // certain counts as restricted, so the completion refuses.
   const alreadyContained = (r: ContainmentSelector, e: AuthorityEntry, a: string) =>
     before.some((b) => selects(b, a) && (resourceWithin(r, b) || resourceWithin(e, b)));
+  // The removals resolved onto the predecessor's approved entries, at the
+  // snapshot and now, by the resolution the effective set and child
+  // propagation use: a fine selector over a broad approved entry removed its
+  // actions from that whole entry, so a successor entry overlapping it is
+  // restricted for each action the entry lost after the snapshot, a sibling of
+  // the named resource included.
+  const removedNow = events.flatMap((e) => e.removed);
+  const lostSince = predecessor.authority_set.flatMap((approved) => {
+    const now = containmentRemovalFor(approved, removedNow);
+    const then = containmentRemovalFor(approved, before);
+    if (now === undefined || then?.whole) return [];
+    const thenActions = then?.whole === false ? then.actions : undefined;
+    return [{ approved, lost: (a: string) => (now.whole || now.actions.has(a)) && !thenActions?.has(a) }];
+  });
+  const lostFromApproved = (e: AuthorityEntry, a: string) =>
+    lostSince.some((l) => l.lost(a) && selectorOverlapsEntry(l.approved, e));
   if (
     successor.some((e) =>
-      e.actions.some((a) => since.some((r) => selects(r, a) && selectorOverlapsEntry(r, e) && !alreadyContained(r, e, a))),
+      e.actions.some(
+        (a) =>
+          lostFromApproved(e, a) ||
+          since.some((r) => selects(r, a) && selectorOverlapsEntry(r, e) && !alreadyContained(r, e, a)),
+      ),
     )
   ) {
     return true;

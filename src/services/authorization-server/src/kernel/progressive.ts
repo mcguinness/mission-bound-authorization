@@ -33,6 +33,7 @@ import {
   authorityHash,
   compareAmounts,
   computeAnchor,
+  containmentAtEntries,
   type ContainmentSelector,
   intentHash,
   isSubsetSetIgnoringCapabilitySources,
@@ -782,7 +783,13 @@ function chainOf(kernel: MissionKernel, missionId: string): MissionRecord[] {
 function chainRestrictions(chain: readonly MissionRecord[]): ContainmentSelector[] {
   const out: ContainmentSelector[] = [];
   for (const m of chain) {
-    for (const c of m.containment?.contained ?? []) out.push(c);
+    // @spec containment#selector-matching (#1463): each selector as named,
+    // and as it lands on the member's approved entries, the resolution the
+    // effective set uses. A fine selector over a broad approved entry removed
+    // its actions from the whole entry, so a drawdown restoring them for a
+    // sibling resource overlaps a restriction too.
+    const contained = m.containment?.contained ?? [];
+    out.push(...contained, ...containmentAtEntries(m.authority_set, contained));
     for (const d of m.discharged ?? []) {
       const entry = m.authority_set.find((e) => entryDigest(m.issuer, e) === d.entry_digest);
       if (entry) out.push({ resource: entry.resource, actions: entry.actions });

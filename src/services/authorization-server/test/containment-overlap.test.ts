@@ -23,6 +23,8 @@ import {
   MissionKernel,
   validateMissionIntent,
 } from "../src/index.js";
+import { adjudicateDrawdown } from "../src/kernel/progressive.js";
+import { mintActivationPolicyRef } from "../src/kernel/activation-policy.js";
 import { restrictedSinceAdjudication } from "../src/kernel/expansion.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -339,5 +341,67 @@ describe("an expansion's reconciliation compares containment restrictions by ove
     expect(restrictedSinceAdjudication(record, [entry(INV1, [SEND])], at)).toBe(false);
     // ...but it newly restricts its sibling.
     expect(restrictedSinceAdjudication(record, [entry(INV2, [SEND])], at)).toBe(true);
+  });
+
+  it("resolves the snapshot onto the approved entries too: an entry that had already lost the action at adjudication restricts nothing new", () => {
+    const kernel = kernelOver();
+    const m = approve(kernel, [entry(`${SERVICE}/`, [READ, SEND], "prefix")]);
+    // Before adjudication, a fine selector removed SEND from the whole broad entry.
+    kernel.contain(m.id, { event: ev("evt-snap-before"), remove: [{ resource: INV1, actions: [SEND] }] });
+    // After it, another fine selector names a third invoice: the entry loses nothing new.
+    const { record } = kernel.contain(m.id, {
+      event: ev("evt-snap-after"),
+      remove: [{ resource: `${INVOICES}/inv-3`, actions: [SEND] }],
+    });
+    const at = { containment: 1, discharge: 0 };
+    expect(restrictedSinceAdjudication(record, [entry(INV2, [SEND])], at)).toBe(false);
+    // The removal after adjudication still restricts what it names.
+    expect(restrictedSinceAdjudication(record, [entry(`${INVOICES}/inv-3`, [SEND])], at)).toBe(true);
+  });
+});
+
+
+describe("review: conservative removal survives expansion", () => {
+  it("a fine selector removing an action from a broad predecessor restricts a sibling successor", () => {
+    const kernel = kernelOver();
+    const m = approve(kernel, [entry(`${SERVICE}/`, [READ, SEND], "prefix")]);
+    const { record } = kernel.contain(m.id, {
+      event: ev("evt-review-fine"),
+      remove: [{ resource: INV1, actions: [SEND] }],
+    });
+    expect(effective(kernel, m.id)).toEqual([
+      { resource: `${SERVICE}/`, resource_match: "prefix", actions: [READ] },
+    ]);
+    expect(restrictedSinceAdjudication(record, [entry(INV2, [SEND])], { containment: 0, discharge: 0 })).toBe(true);
+  });
+});
+
+
+describe("review: drawdown conservative removal", () => {
+  it("drawdown cannot restore a sibling lost through a broad predecessor entry", () => {
+    const kernel = kernelOver();
+    const m = approve(kernel, [entry(`${SERVICE}/`, [READ, SEND], "prefix")]);
+    const { record } = kernel.contain(m.id, {
+      event: ev("evt-review-drawdown"), remove: [{ resource: INV1, actions: [READ] }],
+    });
+    const policies = { review: { version: "1", content_type: "application/json", content: JSON.stringify({max_added_actions: 2, ceiling_review_cadence_s: 86400}) } };
+    const predecessor = { ...record,
+      authority_ceiling: [entry(`${SERVICE}/`, [READ, SEND], "prefix"), entry(INV2, [READ, SEND])],
+      drawdown_policy: mintActivationPolicyRef(ISS, policies, "review", "1")!,
+      ceiling_consented_at: NOW.toISOString(),
+    };
+    const supplied = {
+      effectiveAuthoritySet: kernel.effectiveAuthoritySet.bind(kernel),
+      activationPolicies: () => policies,
+      nowDate: () => NOW,
+      findChildren: () => [],
+      get: (id: string) => id === predecessor.id ? predecessor : undefined,
+    } as unknown as Kernel;
+    const result = adjudicateDrawdown(supplied, {
+      chainRateBound: { maxDrawdowns: 5, windowSeconds: 3600 },
+      actionClasses: { [READ]: "consequential_read", [SEND]: "consequential_read" },
+    }, { predecessor, requested: [entry(INV2, [READ])], isCrossDomain: () => false });
+    expect(result.outcome).toBe("fresh_approval");
+    expect(result).toMatchObject({reason: "restricted_overlap"});
   });
 });
