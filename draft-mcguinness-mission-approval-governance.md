@@ -1634,10 +1634,14 @@ record's later alteration diverges from its receipt.
 The Approval Context Commitment extends this to the Mission Record's
 creation facts, approval basis included. A verifier that recomputes it
 and gets a value different from the one an artifact discloses rejects
-that artifact's reference ({{approval-context-computation}}). Where the
-artifact's own signature or audit receipt shows that it predates any
-change to the record, the mismatch is also evidence that the record
-was altered after the artifact disclosed it.
+that artifact's reference ({{approval-context-computation}}). A
+mismatch shows only that the artifact and the current record disagree.
+The artifact's signature authenticates the value it discloses, not
+when it was made, since the issuer can backdate a signed artifact.
+Where an audit receipt ({{audit-evidence}}) independently shows that
+the artifact existed before the record changed, and the disclosed
+value matches a recomputation from the approval event as registered,
+the mismatch is evidence that the record was altered afterwards.
 
 ## Issuer Key Compromise
 
@@ -2049,10 +2053,12 @@ same rule as vector 5.
 \[\[ To be removed from the final specification ]]
 
 - Immutability Witness: a mismatch between a recomputed Approval
-  Context Commitment and the value an earlier signed or registered
-  artifact disclosed is also evidence that the Mission Record was
-  altered, not only that the artifact's reference is invalid. No
-  requirement changed.
+  Context Commitment and the value an artifact disclosed shows that
+  the two disagree. It is evidence that the Mission Record was altered
+  only where an audit receipt independently shows the artifact
+  predates the change and the disclosed value matches the registered
+  approval event; a signature alone does not establish when an
+  artifact was made. No requirement changed.
 
 - An assertion that can narrow the authority, such as a model output, is
   bound to the `authority_hash` of the set it evaluated, which the
