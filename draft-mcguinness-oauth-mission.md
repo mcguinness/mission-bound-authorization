@@ -7217,6 +7217,10 @@ Cross-Domain:
   companion (#1202). The authority proposal moves from the removed
   Intent member `proposed_authority` to the `authorization_details`
   parameter, committed by the new `proposal_hash`.
+- Inside a signed Request Object pushed through PAR, the
+  `mission_intent` claim is the Submission envelope as a JSON object,
+  not its serialization; any other value is refused with
+  `invalid_request` (#1503).
 - Intent members, with no aliases (#636, #706, #117): `resources` is
   renamed `target_resources` and `constraints` `task_bounds`;
   `controls` is removed, its `acr` replaced by the `acr_values` and
@@ -7280,7 +7284,11 @@ failing step's error, and completes Authority Set derivation before
 the rendering (#1411); the Mission-governed client rule reaches only
 authorization requests (#1448); delegation policy crosses a
 cross-domain projection where that profile's provenance rule keeps it
-(#1374).
+(#1374). An unrecognized `authority_source.type` stays opaque
+provenance and does not deactivate the Mission, though no Mission is
+approved from a source the AS does not recognize, and an
+`authority_source.policy` digest follows the construction and issuer
+its policy format defines (#1503).
 
 **Moved to companions.** Resource Access (the `mission_resource_access`
 type, Common Constraints, tool modeling, and
@@ -7296,15 +7304,21 @@ results for another Subject (#826); task credentials that are
 Mission-bound or covered by a trusted enforcement path (#1205);
 refresh tokens bound per client type (#1204);
 issuer-checked Mission resolution (#725); third-party data subjects
-(#344); key retention to the audit horizon; the approval basis named
-as outside the integrity anchors, with the profiles that commit it
-(#1518).
+(#344); key retention to the audit horizon; a resource server accepts
+a `mission` claim only from an issuer it trusts for Mission-bound
+authorization, with `mission.issuer` equal to `iss` outside an
+adopted cross-domain profile; the approval rendering identifies the
+receiving client from information the AS trusts; a refresh request
+beyond its grant is refused, never trimmed (#1503); and the approval
+basis named as outside the integrity anchors, with the profiles that
+commit it (#1518).
 
 **Editorial and structure.** The reading path (#910, #1379);
 readability, placement and consolidation passes (#876, #1409, #1447,
 #1472, #1479, #1483, #1490, #1501), with the issuance rules gathered
 under Mission-Bound Access Tokens, "Mission Lifecycle and Gating"
-retitled "Mission Lifecycle", and
+retitled "Mission Lifecycle", resource classification named
+"Mission-governed resource" (#1503), and
 one Standing-Consent Bases section; subsections, tables and IANA
 templates fitted to the text rendering (#1380, #1382, #1401, #1404,
 #1410, #1418); canonical-Mission examples (#1176); and the Mapping
