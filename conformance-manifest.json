@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "7bbf402cf05aefed8d168a52fe525fb9769f3f68",
-    "content_sha256": "83299861b7862c0c09e0c8ed4684e9ccd92abcc6565fdd3ae2ef700e3f9ca5c0"
+    "revision": "fee4d758f2b4438117fecbf3cc360ba1cf271f6b",
+    "content_sha256": "a405edcf02d5acfed2fab4471ca151e335f63755b0d52fff10643fce4d7c3221"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ece401e3c04e771d9b9a70f38169bcbbc9d3aa52",
@@ -103,8 +103,8 @@
     "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
    },
    "draft-mcguinness-mission-capability-binding.md": {
-    "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
-    "content_sha256": "7747cec83e69020dce2611fd99172fbe14034d776ba68c9b64cdca9fd410d94f"
+    "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
+    "content_sha256": "8d6e1fc8d592bc6bf512865fea875b50c02cbf58de81835ec55e40ab8766d31e"
    },
    "draft-mcguinness-oauth-mission-expansion.md": {
     "revision": "805eadb3856c194ec29db26cbc8ead6d6d1d8843",
@@ -1569,6 +1569,12 @@
      "name": "validated capability evidence (#657) > applies the shared recording digest vectors independently at the evidence boundary",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a finer entry pairs with the resource that serves it through the shared matcher (@spec mission#introspection, status#mission-status-response, capability-binding#capability-source-binding, #1440) > the trusted catalog resolves the finer entry's catalog-sourced action, as for the payments service's own entry",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ]
   },
@@ -1845,6 +1851,204 @@
      "surface": "decision-request"
     }
    ]
+  },
+  {
+   "id": "capability-binding.approval.resolve-before-rendering",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "resolve each catalog-sourced action's binding from a catalog or configuration the validating server trusts, together with the candidate Authority Set, before the approval rendering, so the Approver consents to the concrete bindings",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the candidate rendered for approval carries each catalog-sourced action's binding, resolved from the trusted catalog or configuration before the rendering"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-identity",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "the tool or operation identity",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering shows, per bound action, the tool or operation identity, and it agrees with the committed binding's tool_id and operation_ref"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-what-each-action-authorizes",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "what invoking it authorizes, in terms the Approver can act on",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering states, per bound action, what invoking it authorizes, in terms the Approver can act on, and the statement agrees with the committed binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-source-and-publisher",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "its source, and its publisher where the validating server has established one, or otherwise that the publisher is unknown or that the named publisher is the source's own claim",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering shows, per bound action, its source, and an established publisher, or that the publisher is unknown, or that a named publisher is the source's own claim"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.disclose-drift-refusal",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "that a later change to the capability's definition is refused",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering tells the Approver, per bound action, that a later change to the capability's definition is refused"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.raw-metadata-insufficient",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "A digest or URI alone does not satisfy item 2. The validating server retains the exact machine binding, and renders catalog-supplied text, such as a tool's description, as inert content",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a rendering that shows only a digest or URI for a bound action does not meet the disclosure; catalog-supplied text renders as inert content and the exact machine binding is retained"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.revalidate-at-decision",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "at the approval decision, revalidate each binding against the current source before the Mission is created, treating a changed binding as a change to the derived Authority Set",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a bound capability's definition or identity changed between rendering and decision, with unchanged action and tool names, creates no Mission from the old decision; a fresh approval over the re-rendered candidate commits the changed binding"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.commit-consented-bindings",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "commit exactly the bindings of the candidate the Approver consented to; resolving the current source for revalidation does not authorize substituting a different binding without fresh consent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the committed capability_sources equal the bindings of the consented candidate; a binding resolved from the current source for revalidation is committed only when it equals the approved one, and a different binding creates no Mission without fresh consent"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
+  },
+  {
+   "id": "capability-binding.approval.unrelated-edit-not-a-change",
+   "spec": "draft-mcguinness-mission-capability-binding.md",
+   "anchor": "capability-approval",
+   "text": "A catalog edit that changes neither is not a binding change; it still requires fresh consent where it changes another input that Changes Before the Decision covers",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.discovered-catalog"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an edit elsewhere in the catalog between rendering and decision does not invalidate the decision when no catalog_digest was recorded and no other Changes Before the Decision input changed; it does when a catalog_digest was recorded, or when it changes another such input"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D584 (#1447): ruled A. The reference AS and its endpoint tests are #1447's implementation work, coordinated with #1446."
   },
   {
    "id": "runtime.decision-inputs.capability-current-definition-at-invocation",
@@ -2999,6 +3203,71 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "core.authority-proposal.governed-client-omission-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "If a client registered as Mission-governed sends an authorization request, through PAR or at the authorization endpoint, that carries `authorization_details` but no `mission_intent`, the AS MUST reject the request with the `invalid_request` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization request from a client registered as Mission-governed that carries authorization_details without mission_intent fails invalid_request, through PAR, at the authorization endpoint and on resuming the request; the same request from an ungoverned client, or with mission_intent, is not refused by this rule"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > rejects bare authorization_details from a Mission-governed client",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > bare authorization_details from an UNgoverned client is the ordinary OAuth path",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > a governed client submitting the proposal WITH mission_intent proceeds",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D585 (#1448). Witnessed at PAR only: the governed rejection with its ungoverned and with-Intent controls. The authorization endpoint and the resumed request have no witness yet (#1448)."
+  },
+  {
+   "id": "core.authority-proposal.governed-client-token-request-not-reached",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "authority-proposal",
+   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange for a delegation designation ({{designation}}), needs no `mission_intent` under the second rule",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-governed client's narrowing refresh (and, where supported, its self-exchange and designation exchange) carrying authorization_details without mission_intent is not refused for the missing Intent and issues the narrowed subset; a widening request is still refused under Issuance Gating and the subset rule"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
@@ -5525,9 +5794,22 @@
     "local": "requires the deployment to also offer Continuation's async delegation transport"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#885 ruling (2026-10-01). No implementation witness yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders the established derivation limit, not only the requested one, with the async delegation family statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#885 ruling (2026-10-01); witnessed under #1119. Async delegation is on wherever the AS holds a family store, and the approval page renders the statement with the Mission's established limit (asserted inside that section) and in each policy-created child block (child-derivation-limit-endpoint.test.ts). Proved by removing it from the established section (that witness fails)."
   },
   {
    "id": "derivation-limits.rendering.issuance-grant-disclosure",
@@ -5550,7 +5832,37 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet."
+   "notes": "#963 ruling (2026-10-01), parallel to the #885 async-family disclosure. No implementation witness yet. Not applicable to the reference as built: it issues no grants under the Mission Issuance Grant profile, so its renderings carry no such statement."
+  },
+  {
+   "id": "derivation-limits.rendering.established-limit",
+   "spec": "draft-mcguinness-oauth-mission-derivation-limits.md",
+   "anchor": "approval-rendering",
+   "text": "Where an effective `derivation_limit` is established at a human approval event, the AS MUST render it for consent at that event",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "derivation-limits.limit"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering shows the derivation_limit the approval establishes, the value the request and the policy ceiling resolve to, not only the requested one",
+    "local": "the reference renders it on the approval page with the derived Authority Set, or that no derivation limit is established"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders the established derivation limit, not only the requested one, with the async delegation family statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119. The base Approval Rendering duty, which had no row before. An Intent requesting 150 under a deployment ceiling of 100 renders 100 and never 150 on the approval page. Proved by emptying the section and by rendering the requested value instead (the witness fails each time)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-rule",
@@ -5571,9 +5883,22 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis on the human approval page (GET /interaction/:uid): a parent's approval of an entry admitting policy_drawdown children renders each child's rule and maximum from the committed child_creation_policy (or the deployment ceiling when the entry commits none), and the approval is refused while that figure cannot be disclosed (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails) and by breaking the shared reader (the page and every child-creation witness fail). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-scope",
@@ -5594,9 +5919,16 @@
     "local": "requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Partial. Witnessed for the Child Delegation basis: the parent's approval page states, for each entry admitting policy_drawdown children, that the per-child maximum is local to each child Mission and is no budget across the Missions the consent admits, their descendants, or their lifetimes, with the async delegation family statement (child-derivation-limit-endpoint.test.ts). Not witnessed: the Template basis, since the reference has no human template-consent approval surface (the service-token stand-in returns the rule only in its creation response, which is not a rendering at approval); and the governed_policy basis, which has no HTTP consent surface and states no maximum. The Progressive basis is covered by progressive.drawdown-derivation.ceiling-consent-disclosure. Proved by removing the scope line (the page witness fails)."
   },
   {
    "id": "derivation-limits.rendering.standing-consent-evidence",
@@ -5617,9 +5949,10 @@
     "local": "requires the deployment to also record Consent Evidence (draft-mcguinness-oauth-mission-consent-evidence), and requires a standing-consent basis (core.standing-consent): a Mission Template's consent, a parent's approval of a Child Delegation entry admitting policy_drawdown children, or a Progressive ceiling consent"
    },
    "level": "endpoint",
-   "coverage": "todo",
+   "coverage": "blocked",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling. The reference also implements the governed_policy standing-consent basis, which the local text above does not name."
+   "notes": "#1119 (D327). Blocked on #1305: the reference records no Consent Evidence, so no Consent Disclosure carries this rendering; #1305 is the parked issue for mission_summary content once the reference builds Consent Evidence (O-11).",
+   "blocked_by": "#1305"
   },
   {
    "id": "derivation-limits.effective.standing-consent-ceiling",
@@ -8139,7 +8472,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since this deployment's configured ceilings admit exact entries only, so its derivation never produces a prefix entry (#1276)."
+   "notes": "The endpoint case is a prefix scope over an exact entry; the narrower-prefix-entry case is unit-level, since the shipped ceilings are exact, so the shipped derivation never produces a prefix entry (#1276; the ceiling loaders admit prefix, #1440)."
   },
   {
    "id": "core.scope-projection.union-widening-fails",
@@ -8953,6 +9286,12 @@
      "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
      "name": "audience-to-resource mapping (cleanup, issue #541): an OAuth aud need not be byte-equal to a RAR resource > a mapped audience contributes its FULL mapped resource set, not itself",
      "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a finer entry pairs with the resource that serves it through the shared matcher (@spec mission#introspection, status#mission-status-response, capability-binding#capability-source-binding, #1440) > introspection by the payments resource server discloses the finer entry its resource serves",
+     "level": "endpoint",
      "surface": "introspection"
     }
    ]
@@ -27495,9 +27834,58 @@
     "normative": "a duration-lease renewal whose Mission, subject, action, operation target or audience differs from the evaluation named by context.prior_evaluation_id does not continue that metered activity; one that matches in all five does"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1276 (D457, D475). The reference implements no duration-lease renewal: nothing in src/ reads context.prior_evaluation_id or reports measured_duration, so no part of this check (the operation target included) has a witness. #1285 deferred the operation-target clause until a renewal path exists; the row stays todo until one is built."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal matching the renewed evaluation in Mission, subject, action, operation target and audience continues the same activity, opening no new reservation, and moves the lease's end",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another Mission does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another subject does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another action does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal at another operation target, though the Mission's prefix entry admits both, does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal for another audience does not continue the activity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-lease renewal is verified against the evaluation it renews (@spec metering#lease-renewal, #1440) > a renewal naming no lease this PDP issued, a malformed identifier, or a lease that has ended continues nothing",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/duration-lease-renewal.test.ts",
+     "name": "a duration-leased permit opens one metered activity that expires with its lease (@spec metering#metering, #1440) > the initial permit opens an activity leased by it, and its valid_until is the lease's end",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1440 (D570). The PDP leases each action the deployment declares duration-leased (services/pdp/src/duration-lease.ts): a permit opens one metered activity, and its valid_until is the lease's end. A renewal carrying context.prior_evaluation_id is evaluated in full and, on a permit, continues the renewed evaluation's activity, opening no second reservation, only when its Mission, subject, action, operation target and audience equal that evaluation's; the target is compared as spelled, so a second target the same prefix entry admits does not continue it. A renewal naming no lease this PDP issued, a malformed identifier, an ended lease, or any mismatch is denied out_of_authority (the request-fault classification; the metering draft names no reason). Witnessed through a decision point whose ledger is bound PDP-side. Mutations: dropping each of the five comparisons fails its own mismatch witness; opening a new activity on renewal fails the matching witness. The ledger is in memory, and nothing accumulates max_duration or commits measured_duration; no reference PEP renews a lease yet."
   },
   {
    "id": "authzen.decision-id-propagation.pep-should-propagate-evaluation-id",
@@ -35441,7 +35829,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
+   "notes": "#1119 (D327). Todo: the reference has no human template-consent approval surface. The service-token stand-in (POST /templates) returns the per-instance rule and maximum the committed Dispatch Policy states, beside max_active and the dispatch rate, in its creation response (template-dispatch-endpoint.test.ts); that is disclosure preparation returned after creation, not a rendering at a human approval, so it is not a witness here (owner ruling, #1453 review). The cap itself is witnessed under template.dispatch.derivation-limit-within-dispatch-policy."
   },
   {
    "id": "template.consent.source-retained-per-version",
@@ -37088,9 +37476,16 @@
     "normative": "the ceiling consent's disclosure states that policy-adjudicated successors carry the Mission's derivation count forward and never exceed its rendered derivation_limit; for a Mission with no derivation_limit it states that no finite limit is guaranteed for its successors"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1119 (D327) specification slice. No discriminating witness yet, so todo; a witness must fail with its guard disabled. Implementation status (#1119 enforcement PR): the reference has no human standing-consent rendering surface on which to witness this. Template consent is the service-token admin stand-in (provider.ts), the Progressive ceiling and drawdown policy reach only the decision POST, not the GET approval page, and Consent Evidence is unbuilt (#1305). The cap these renderings disclose is enforced and witnessed under template.dispatch.derivation-limit-within-dispatch-policy and child-delegation.policy-drawdown.per-child-derivation-limit-ceiling."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the approval page discloses the derivation inheritance a ceiling consent gives (@spec progressive#derivation-limits, #1119) > states that drawdown successors carry the count forward and never exceed the established limit, or that no finite limit is guaranteed without one, only where a ceiling consent is offered",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1119 (D327). Tested on the approval page, where ceiling consent is given: it renders that the successors the drawdown policy creates carry the Mission's derivation count forward and never exceed its established limit, or that no finite limit is guaranteed without one, and renders nothing where the deployment offers no ceiling consent (progressive-drawdown-endpoint.test.ts). The ceiling itself is not rendered; that is progressive.ceiling.consent-disclosure, still todo, since the ceiling reaches the AS only with the decision. Proved by removing the line (the witness fails)."
   },
   {
    "id": "progressive.in-ceiling.successor-subject-source",
@@ -37247,7 +37642,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
+   "notes": "Not implemented: the reference approval page renders no ceiling, because the Approver's decision posts the consented ceiling with no rendering of it and the page never receives it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
   },
   {
    "id": "progressive.ceiling.client-input-not-consent",
@@ -42322,7 +42717,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only. Derivation implements prefix (#1276), but this deployment's configured ceilings admit exact entries only (the policy.json, governed-policy.json and containment.json loaders refuse prefix with a ConfigError, #1264), so no issuance path in this deployment carries a prefix entry, and the cross-org exchange's tool mapping emits none. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "The narrower-prefix-entry clause is unit-level only. Derivation implements prefix (#1276) and the ceiling loaders admit it (#1440), but the shipped ceilings are exact, so no shipped issuance path carries a prefix entry, the cross-org exchange's tool mapping emits none, and no endpoint test projects a scope for a narrower prefix entry. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -43230,8 +43625,8 @@
    "observation": {
     "normative": "an exact candidate is within a prefix reference exactly when the reference's prefix matcher admits the candidate's resource as a target"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
@@ -43256,9 +43651,21 @@
      "name": "a prefix Mission entry through approval and the effective-set projection (@spec resource-access#subset, issuance-grant#effective-set-projection, #1276) > approves a prefix proposal and an exact descendant under a prefix ceiling, each keeping its own resource and resource_match",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a configured prefix ceiling derives through the authorization server (@spec resource-access#subset, #1440) > an exact proposal beneath the prefix ceiling derives as the proposal's own exact resource, is classified by the approval floor, and the issued token carries it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a configured prefix ceiling derives through the authorization server (@spec resource-access#subset, #1440) > a proposal for a sibling outside the prefix boundary derives nothing and is refused at the approval decision, creating no Mission",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05, and pairing ceilings by equal resource string fails both derivation witnesses."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): the authorization server booted over a configuration whose payments read ceiling entry is prefix derives an exact proposal beneath it as the proposal's own exact resource, the approval floor classifies it, and the issued token carries it; a sibling outside the boundary derives nothing. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05; pairing ceilings by equal resource string fails both derivation witnesses; an exact candidate compared to a prefix reference by string equality, or approval-floor classification by string equality, fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
   },
   {
    "id": "resource-access.subset.prefix-under-prefix",
@@ -43279,8 +43686,8 @@
    "observation": {
     "normative": "a prefix candidate is within a prefix reference exactly when the reference's prefix matcher admits the candidate's normalized base"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
@@ -43299,9 +43706,15 @@
      "name": "derivation under prefix entries (@spec resource-access#subset, mission#derivation-modes, #1276) > carries prefix onto the derived entry: a prefix proposal within a prefix ceiling keeps its own base, and a configured mapping keeps a prefix ceiling entry unchanged",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a configured prefix ceiling derives through the authorization server (@spec resource-access#subset, #1440) > a prefix proposal within the prefix ceiling derives as a prefix entry keeping its own base",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. A derived prefix entry keeps its own base and resource_match. Mutations: coalescing a trailing-slash base fails sub-res-07, and dropping prefix from the derived entry fails the derivation witness."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): under a configured prefix ceiling the authorization server derives a narrower prefix proposal as a prefix entry keeping its own base, and the issued token carries it. Mutations: coalescing a trailing-slash base fails sub-res-07; dropping prefix from the derived entry fails the derivation witness; comparing a prefix candidate's base to a prefix reference by string equality fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
   },
   {
    "id": "resource-access.subset.prefix-under-exact-never",
@@ -43322,8 +43735,8 @@
    "observation": {
     "normative": "a prefix candidate is never within an exact reference, even one naming the same resource"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
@@ -43342,9 +43755,15 @@
      "name": "a prefix Mission entry through approval and the effective-set projection (@spec resource-access#subset, issuance-grant#effective-set-projection, #1276) > a prefix candidate through an exact effective entry naming its base narrows to that exact entry, and two disjoint resource sets yield no fragment",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix request is never within an exact grant naming the same resource (@spec resource-access#subset, #1440) > a prefix proposal over the exact write ceiling narrows to the exact entry, and a refresh asking for the prefix entry is refused invalid_authorization_details while the exact one is issued",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1276. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Partial: the shipped configuration admits exact ceiling entries only (demo-data rejectUnsupportedResourceMatch), so no endpoint issuance in this deployment derives a prefix entry. Derivation narrows a prefix proposal to an exact ceiling entry naming its base, and the effective-set projection narrows a prefix candidate to such an entry. Mutation: comparing an exact reference's string alone fails sub-res-08 and both witnesses, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): through the authorization server, a prefix proposal over an exact ceiling entry naming its base narrows to that exact entry, and a refresh requesting the prefix entry against the exact grant is refused invalid_authorization_details while the exact entry is issued. Mutation: comparing an exact reference's string alone fails sub-res-08, both kernel witnesses and the endpoint witness, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
   },
   {
    "id": "resource-access.subset.false-equivalent-absent",
@@ -48257,6 +48676,12 @@
      "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > lets a recorded model output refuse or narrow an activation, never widen it, and records it as a service assertion",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "a governed removal pairs with entries through the shared matcher (@spec approval-governance#governed-policy-activation, resource-access#subset, #1440) > a removal naming a descendant of a prefix entry narrows that whole entry, a removal naming a service narrows an entry within its tree, and a sibling sharing the base's characters is untouched",
+     "level": "unit",
+     "surface": "governance-decision"
     }
    ],
    "notes": "#1185 specification PR (D387, D390, D413). #1185 implementation (kernel, default off: MissionKernel option governedPolicyApproval)."
@@ -49691,9 +50116,16 @@
     "normative": "an approval interface that displays a per-Mission derivation control as a limit on child creation renders max_children (as a concurrency limit), max_child_depth, and the per-child derivation limit as distinct values beside it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#987 (D219 ruling); witnessed under #1119. The parent's approval page renders, for each entry admitting policy-created children, the concurrent max_children (a limit at one time, not over the Mission's lifetime), max_child_depth with its default, the per-child derivation limit, and that no finite aggregate bound on the subtree is enforced (no lineage-keyed budget is deployed) (child-derivation-limit-endpoint.test.ts); unit witnesses cover an entry committing no policy, an unheld policy and a malformed one (approval-derivation-rendering.test.ts), and the approval is refused while the per-child figure cannot be disclosed. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails)."
   },
   {
    "id": "child-delegation.subtree-rendering.policy-created",
@@ -49713,9 +50145,22 @@
     "normative": "where child creation under an entry can be adjudicated by policy (policy_drawdown), the Parent Mission's approval rendering for that entry carries the three subtree figures as distinct values"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "an approval cannot consent to a child grant whose per-child figure it cannot disclose (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > refuses the approval while the entry's committed child creation policy is not held, creating no Mission; once held again, a fresh approval discloses the figure and children are created under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#987 (D219 ruling); witnessed under #1119. The parent's approval page renders, for each entry admitting policy-created children, the concurrent max_children (a limit at one time, not over the Mission's lifetime), max_child_depth with its default, the per-child derivation limit, and that no finite aggregate bound on the subtree is enforced (no lineage-keyed budget is deployed) (child-derivation-limit-endpoint.test.ts); unit witnesses cover an entry committing no policy, an unheld policy and a malformed one (approval-derivation-rendering.test.ts), and the approval is refused while the per-child figure cannot be disclosed. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the per-child rule (the page witness fails). The approval refusal is proved by disabling it (the regression fails)."
   },
   {
    "id": "child-delegation.subtree-rendering.aggregate-statement",
@@ -49735,9 +50180,16 @@
     "normative": "the subtree rendering states whether a finite aggregate bound is enforced, and states that none is unless a lineage-keyed budget is deployed"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#987 (D219 ruling). No implementation witness: the reference consent rendering shows no child-delegation figures yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "the parent's approval page renders the standing consent its delegable entry gives (@spec derivation-limits#approval-rendering, child-delegation#subtree-rendering, #1119) > renders, for the entry admitting policy-created children, the subtree figures, the committed per-child rule and maximum, its local scope and the aggregate statement",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#987 (D219 ruling); witnessed under #1119. The parent's approval page renders, for each entry admitting policy-created children, the concurrent max_children (a limit at one time, not over the Mission's lifetime), max_child_depth with its default, the per-child derivation limit, and that no finite aggregate bound on the subtree is enforced (no lineage-keyed budget is deployed) (child-derivation-limit-endpoint.test.ts); unit witnesses cover an entry committing no policy, an unheld policy and a malformed one (approval-derivation-rendering.test.ts), and the approval is refused while the per-child figure cannot be disclosed. The page's figure, the decision's and child creation's are computed by one reader (committedPerChildMaximum) from the same committed state; that does not bind the rendering to the decision, which re-reads and refuses the approval while the figure cannot be disclosed. Proved by removing the aggregate statement (the page witness fails)."
   },
   {
    "id": "child-delegation.policy-drawdown.per-child-derivation-limit-ceiling",

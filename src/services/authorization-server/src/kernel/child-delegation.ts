@@ -28,7 +28,7 @@
 
 import { randomBytes } from "node:crypto";
 import { type ActObject, ActorChainError, extendChain, validateActChain } from "@mission/actor-chain";
-import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
+import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash, resourceWithin } from "@mission/core";
 import { verifiedActivationPolicy } from "./activation-policy.js";
 import type { EvaluatedActivationPolicy } from "./activation-policy-snapshots.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
@@ -41,9 +41,9 @@ import type { CreationIdempotencyStore } from "./creation-idempotency.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
+  committedPerChildMaximum,
   STANDING_CONSENT_LIMIT_MEMBER,
   type StandingConsentMaximum,
-  standingConsentMaximumOf,
   strictestMaximum,
   withinStandingConsentMaximum,
 } from "./standing-consent-limit.js";
@@ -183,7 +183,10 @@ export function childrenOf(entry: AuthorityEntry): ChildFanoutControls | undefin
  * it on. Run BEFORE the strict-subset proof, so a delegated leaf that simply
  * omits the member is NORMALIZED (and therefore still challenged and enforced
  * at the resource) rather than refused: the constraint is monotonic, `false` is
- * equivalent to omission, and a child can only ever add it.
+ * equivalent to omission, and a child can only ever add it. An ancestor entry
+ * applies when its resource set contains the child entry's, through the shared
+ * matcher ({@link resourceWithin}, #1440), so a finer child entry beneath a
+ * `prefix` ancestor entry is normalized too.
  */
 export function inheritActionApprovalRequirement(
   childAuthority: AuthorityEntry[],
@@ -192,7 +195,7 @@ export function inheritActionApprovalRequirement(
   return childAuthority.map((entry) => {
     if (entry.constraints?.requires_action_approval === true) return entry;
     const required = parentEffective.some(
-      (p) => p.resource === entry.resource && p.constraints?.requires_action_approval === true,
+      (p) => resourceWithin(entry, p) && p.constraints?.requires_action_approval === true,
     );
     if (!required) return entry;
     return { ...entry, constraints: { ...entry.constraints, requires_action_approval: true } };
@@ -611,8 +614,17 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   // ceiling, which may since have been raised or removed.
   const perChildMaxima: StandingConsentMaximum[] = [];
   for (const pi of drawnOn) {
-    const policyRef = childrenOf(parentEntry(pi))?.child_creation_policy;
-    if (!policyRef) {
+    // The same reader the Parent Mission's approval rendering and decision
+    // use: the figure is computed the same way from the committed policy, and
+    // the decision refused an approval whose figure could not be disclosed.
+    const committed = committedPerChildMaximum(
+      childrenOf(parentEntry(pi)),
+      (ref) =>
+        evaluatedPolicies.find(
+          ({ ref: r }) => r.id === ref.id && r.version === ref.version && r.digest === ref.digest,
+        )?.snapshot,
+    );
+    if (committed.source === "deployment") {
       if (parent.policy_version !== kernel.policyVersion()) {
         throw new ChildDelegationError(
           "policy_denied",
@@ -622,18 +634,16 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
       }
       continue; // the current policy's ceiling applies through resolveDerivationLimit
     }
-    const evaluated = evaluatedPolicies.find(
-      ({ ref }) => ref.id === policyRef.id && ref.version === policyRef.version && ref.digest === policyRef.digest,
-    );
-    const maximum = evaluated ? standingConsentMaximumOf(evaluated.snapshot) : undefined;
-    if (!maximum) {
+    if (committed.source !== "policy") {
       throw new ChildDelegationError(
         "policy_denied",
-        `child creation policy ${policyRef.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}`,
+        committed.source === "unusable"
+          ? `child creation policy ${committed.policy.id} states a malformed ${STANDING_CONSENT_LIMIT_MEMBER}`
+          : `child creation policy ${committed.policy.id} does not match its committed digest`,
         makeEvidence("denied", "strict_subset", "policy_denied"),
       );
     }
-    perChildMaxima.push(maximum);
+    perChildMaxima.push(committed.maximum);
   }
 
   // @spec child-delegation#fanout — allowed_child_actors: the child actor MUST be

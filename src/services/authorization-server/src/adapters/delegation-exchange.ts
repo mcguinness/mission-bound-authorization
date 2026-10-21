@@ -20,7 +20,7 @@
  * delegated token therefore lives and dies with that grant or family.
  */
 
-import { canonicalize, delegatedRoutingRefusal, type JsonValue } from "@mission/core";
+import { canonicalize, delegatedRoutingRefusal, entryOverlapsResource, type JsonValue } from "@mission/core";
 import { createLocalJWKSet, jwtVerify } from "jose";
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
@@ -511,11 +511,11 @@ export async function handleDelegatedExchange(
   }
   const withOrigin = effectiveWithOrigin(opts, ctx, active);
   if (!withOrigin) return;
-  // Entries covering `resource`, by exact string equality (the comparison
-  // model this slice uses while #1258 settles resource matching). The
-  // designation's entries are evaluated afresh against the approved entries,
-  // their retained provenance and the current policy: a permit at the
-  // designation is never reused here.
+  // Entries for `resource`: each whose resource tree overlaps it, through
+  // the shared matcher, as at token emission (resource-access#resource-matching,
+  // #1440). The designation's entries are evaluated afresh against the
+  // approved entries, their retained provenance and the current policy: a
+  // permit at the designation is never reused here.
   const authority = delegableAuthority(
     opts,
     active,
@@ -523,7 +523,7 @@ export async function handleDelegatedExchange(
     withOrigin,
     { sub: client.clientId, assertedProfile: profile },
     depth,
-  ).filter((e) => e.resource === resource);
+  ).filter((e) => entryOverlapsResource(e, resource));
   if (authority.length === 0) {
     txError(ctx, 400, "invalid_target", "no entry of the designation permits this delegate at this depth for this resource");
     return;
