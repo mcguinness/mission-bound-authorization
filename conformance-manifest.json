@@ -36451,19 +36451,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown request whose complete successor Authority Set, including authority carried forward from the predecessor, overlaps capability the predecessor contained produces no successor by policy; it falls back to a fresh human approval whose consent disclosure names the contained capability and the event class that caused its containment.",
-    "local": "The overlap test (same resource, a shared action or a whole-resource restriction) over the successor's complete Authority Set falls back to the deferred fresh approval. Not implemented: that approval's disclosure does not name the contained capability or its event class."
+    "local": "The overlap test (same resource, a shared action or a whole-resource restriction) over the successor's complete Authority Set falls back to the deferred fresh approval. That approval's disclosure names the contained capability and its event class."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration) > a successor overlapping contained authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -36517,14 +36523,26 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A contains capability X and an unrelated policy drawdown creates successor B with an empty overlay, a later drawdown from B whose Authority Set overlaps X is refused policy adjudication and falls back to a fresh human approval disclosing the containment of X and its cause; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one. Witnessed through an intervening policy-adjudicated successor. Not implemented: the fallback approval's disclosure of the containment, and a ceiling review."
+    "local": "Restrictions are collected from every Mission walked from the predecessor to the chain root, and the reference never clears one. Witnessed through an intervening policy-adjudicated successor. The fallback approval's disclosure names the containment through that successor, and a re-consent (a ceiling review) clears nothing."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration) > a successor overlapping contained authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no containment restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -36547,19 +36565,25 @@
    "assertion": "refusal",
    "observation": {
     "normative": "A policy-adjudicated drawdown whose complete successor Authority Set overlaps authority the predecessor discharged produces no successor by policy; it falls back to a fresh human approval naming the discharged entry and the condition that discharged it.",
-    "local": "A committed discharge latch restricts its entry's resource and actions across the chain. Not implemented: the fallback approval's disclosure of the discharged entry and its condition."
+    "local": "A committed discharge latch restricts its entry's resource and actions across the chain. That approval's disclosure names the discharged entry and the condition that discharged it."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "discharge restrictions of the chain (@spec progressive#in-ceiling-expansion, discharge#discharge) > a successor overlapping discharged authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy)."
+   "notes": "Owner ruling on #1026 and #1000 (2026-10-02). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no condition."
   },
   {
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
@@ -36577,14 +36601,26 @@
    "assertion": "refusal",
    "observation": {
     "normative": "After Mission A discharges entry X and an unrelated policy drawdown creates successor B without X, a drawdown from B whose Authority Set overlaps X falls back to a fresh human approval disclosing the discharge; an unrelated approval or a ceiling review in between does not clear the restriction.",
-    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch. Not implemented: the fallback approval's disclosure, and a ceiling review."
+    "local": "Witnessed through an intervening policy-adjudicated successor that holds no latch. The fallback approval's disclosure names the discharged entry through that successor, and a re-consent (a ceiling review) clears nothing."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "discharge restrictions of the chain (@spec progressive#in-ceiling-expansion, discharge#discharge) > a successor overlapping discharged authority falls back; one overlapping none stays eligible, and the restriction survives that intervening successor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent clears no discharge restriction of the chain",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -37736,16 +37772,23 @@
     "capability": "progressive.ceiling-drawdown"
    },
    "profiles": [],
-   "surface": "token-endpoint",
+   "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
     "normative": "the approval that re-consents a ceiling renders the re-consented ceiling and drawdown policy to the Approver",
-    "local": "The reference has no rendering surface for the deferral approval; as for progressive.ceiling.consent-disclosure."
+    "local": "The deferral store builds the deferred expansion's consent disclosure (ExpansionDeferralStore.disclosure) from the chain's records for the approval surface to render. It renders the deployment's re-consent offer (ceilingOffer) with the same adjudication line as the initial approval page, and an approval re-consents only exactly that offer."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fresh approval's disclosure renders the re-consent offer as at the initial approval, and a re-consent consents only that offer",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by omitting the offer and by not binding the re-consent. Surface moved from token-endpoint: the requirement is a disclosure."
   },
   {
    "id": "progressive.ceiling-reconsent.chain-restrictions-carry",
@@ -38910,12 +38953,26 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review"
+    "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review",
+    "local": "The deferral store builds the deferred expansion's consent disclosure (ExpansionDeferralStore.disclosure) from the chain's records for the approval surface to render. Where the chain carries a ceiling it renders the record since the latest ceiling consent: policy-adjudicated drawdowns with an hourly rate, the guard exceptions escalated to a human (each deferral's recorded fallback reason), the deployment's out_of_ceiling refusals, the entries discharged, and the outstanding discharge and containment restrictions. No reference deployment runs the metering profile with Progressive, so consumption is not rendered."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a re-consent's disclosure renders the chain's record since the latest ceiling consent: drawdowns, escalations and the consent instant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a review's record lists the deployment's out_of_ceiling refusals since the latest ceiling consent",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent. Proved by starting the record at the initial consent, by not recording refusals and by not recording fallback reasons."
   },
   {
    "id": "progressive.ceiling-review.review-is-reconsent",
@@ -54055,11 +54112,19 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it."
+    "normative": "The fresh-consent approval of an expansion restoring discharged authority authorizes that authority explicitly, and its consent disclosure names the discharged entry and the condition that discharged it.",
+    "local": "The deferral store builds the deferred expansion's consent disclosure (ExpansionDeferralStore.disclosure) from the chain's records for the approval surface to render. For a deferred expansion it names each discharged entry of the chain with the condition that discharged it (witnessed through the Progressive fallback). Not witnessed: the explicit authorization of the restored authority at that approval."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for discharged authority names the discharged entry and the condition that discharged it, through an intervening successor",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
    "notes": "Owner ruling on #1026 and #1000 (2026-10-02). No implementation yet."
   },
   {
