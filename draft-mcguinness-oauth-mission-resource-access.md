@@ -31,6 +31,7 @@ normative:
   RFC3986:
   RFC5890:
   RFC8259:
+  RFC8693:
   RFC8785:
   RFC9110:
   RFC9396:
@@ -70,7 +71,6 @@ normative:
 informative:
   RFC6750:
   RFC8126:
-  RFC8693:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   MCP:
     title: "Model Context Protocol: Authorization"
@@ -699,8 +699,8 @@ evaluate or satisfy as providing no authority. It MUST refuse the
 request unless another applicable entry independently authorizes the
 whole request with every constraint satisfied.
 
-A deployment-defined key is interpreted only within the issuing
-deployment; a consumer that does not recognize it MUST fail closed
+Any other key is deployment-defined and is interpreted only within the
+issuing deployment; a consumer that does not recognize it MUST fail closed
 ({{I-D.draft-mcguinness-oauth-mission}}).
 
 The same duty binds the authorization server when it derives a
@@ -1100,9 +1100,10 @@ hold:
    apply at every exchange: an absent list of delegate matchers is a
    decision deferred to policy, never a blanket grant of eligibility.
 
-An entry failing any of these narrows out of the delegated token
-({{subset}}). Surviving entries keep their `delegation` member intact,
-so the next hop is evaluated the same way.
+An entry failing any of these narrows out of the delegated token,
+consistent with the subset rule ({{subset}}). Surviving entries keep
+their `delegation` member intact, so the next hop is evaluated the same
+way.
 
 A cross-domain grant separates two stages. Eligibility for the grant
 itself is decided as above, against the approved entry in the Mission
