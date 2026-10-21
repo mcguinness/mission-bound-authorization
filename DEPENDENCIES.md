@@ -17,7 +17,7 @@ separately in [notes/oauth-wg-submission-set.md](notes/oauth-wg-submission-set.m
 - I-D.draft-ietf-oauth-deferred-token-response (cited normatively by: oauth-mission-approval, oauth-mission-approval-revision)
 - I-D.draft-ietf-oauth-identity-assertion-authz-grant (cited normatively by: oauth-mission-cross-domain)
 - I-D.draft-ietf-oauth-identity-chaining (cited normatively by: oauth-mission-cross-domain)
-- I-D.draft-ietf-oauth-rar-metadata-remediation (cited normatively by: mission-authzen)
+- I-D.draft-ietf-oauth-rar-metadata-remediation (cited normatively by: mission-authzen, oauth-mission)
 - I-D.draft-ietf-oauth-status-list (cited normatively by: oauth-mission-status-list)
 - I-D.draft-niyikiza-oauth-attenuating-agent-tokens (cited normatively by: oauth-mission-attenuation, oauth-mission-cross-org-delegation)
 - I-D.draft-rosomakho-oauth-txn-challenge (cited normatively by: oauth-mission-transaction-authorization)
