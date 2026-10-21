@@ -9,6 +9,7 @@
  */
 
 import {
+  canonicalize,
   capabilitySourceIdentity,
   compareAmounts,
   delegateMatcherListViolation,
@@ -816,9 +817,20 @@ function intersectMatchers(
  */
 function intersectChildren(a: JsonObject | undefined, b: JsonObject | undefined): JsonObject | undefined {
   if (!a || !b) return undefined;
-  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors"]);
+  const known = new Set(["max_children", "max_child_depth", "allowed_child_actors", "child_creation_policy"]);
   if (![...Object.keys(a), ...Object.keys(b)].every((k) => known.has(k))) return undefined;
   const out: JsonObject = {};
+  // @spec child-delegation#fanout, mission#standing-consent-bases (#1119): the
+  // `child_creation_policy` reference is compared for identity, never
+  // intersected. It is carried where both sides commit the same reference, so
+  // a token projected from an entry that commits one still carries the
+  // children grant a child entry is a subset of; where only one side commits
+  // it, or they differ, no fragment is a subset of both, and the grant drops.
+  if (a.child_creation_policy !== undefined || b.child_creation_policy !== undefined) {
+    if (a.child_creation_policy === undefined || b.child_creation_policy === undefined) return undefined;
+    if (canonicalize(a.child_creation_policy) !== canonicalize(b.child_creation_policy)) return undefined;
+    out.child_creation_policy = a.child_creation_policy;
+  }
   const maxChildren = minNum(asNum(a.max_children), asNum(b.max_children));
   if (maxChildren !== undefined) out.max_children = maxChildren;
   const maxChildDepth = minNum(asNum(a.max_child_depth), asNum(b.max_child_depth));

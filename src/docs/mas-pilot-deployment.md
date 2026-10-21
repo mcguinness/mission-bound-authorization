@@ -14,7 +14,7 @@ conformance, production-readiness or interoperability claim, and nothing in
 the AS-native target's evidence ([initial-runtime-deployment.md](initial-runtime-deployment.md))
 bears on it, or the reverse (D284).
 
-Every statement here is true of the reference implementation at `33f741b4`
+Every statement here is true of the reference implementation at `8a8b68de`
 (paths relative to `src/`). Each names the code that does it or the exact test
 (`describe > it`) that shows it. A gap says so. The end-to-end files
 (`demo/test/mas-pilot.test.ts`, `demo/test/mas-pilot-resource-policy.test.ts`,
@@ -71,6 +71,14 @@ row for one issuer-qualified estate subject or client. Several estate
 identities mapping to one Mission identity (**many-to-one**) is accepted and
 disclosed: the shipped contract maps `u-1001` and `u-1002` to `alice`, and
 every mapping decision records which estate identity it resolved.
+
+Both configurations, in process and separated (§11), refuse to start without
+a contract this loader accepts, before they build or connect to anything
+(`requireDeclaredMappingContract`, `demo/src/mas-pilot/compose.ts`). The
+shared demo stack's join declares its own contract
+(`config/mas-join.json` `mapping_contract`) and refuses the same way
+(`composeStack`):
+`every join-enabling deployment declares the mapping contract its joins apply (@spec authority-server#mapping-contract, #818) > refuses to start a composition that would mount a join route with no declared contract, before it connects to anything`.
 
 Where the mapping applies: the PDP maps the authenticated subject and client,
 qualified by `context.credential.issuer`, before the join compares them with
@@ -297,10 +305,40 @@ mapping contract and its cache, the estate's Resource-policy grants, and the
 composition. The PEP and PDP changes are reference code
 (`joinMapping`, `missionBoundOnlyClasses`, `mappingContract`).
 
-Sender-bound Join Assertions are not built. They would additionally need the
-MAS to introspect or validate the estate token and report its `cnf`
-(MAS §enterprise-prerequisites), and a Join Assertion endpoint, which the
-reference does not implement.
+Sender-bound Join Assertions (MAS §join-assertion) are not built; #1454
+owns building them and the Enterprise tier. What they would additionally
+need, by party:
+
+- **The estate AS** (MAS §enterprise-prerequisites): sender-constrained
+  access tokens carrying a `cnf` key, and introspection responses or
+  validatable RFC 9068 claims that report it. The pilot's estate already
+  provides all three as configured: DPoP-bound tokens with `cnf.jkt`, JWTs
+  under its published keys, and RFC 7662 introspection reporting `cnf`
+  (§5). Nothing changes there.
+- **The MAS**: the join-assertion endpoint (MAS §join-assertion-request),
+  advertised as `mission_join_assertion_endpoint`, with caller
+  authentication, the visibility set and its anti-oracle split, and
+  per-caller rate limiting; verifying the acting token centrally (by
+  introspection at the estate, or RFC 9068 validation) and refusing one
+  with no `cnf`; the subject and client joins under its own mapping
+  contract, and a delegate's depth from actor records; and minting the
+  artifact (MAS §join-assertion-artifact, `typ` `mission-join+jwt`): the
+  `mission`, the `token` binding (`sha256` and `jkt` or `x5t#S256`), the
+  `join` result, an `aud` naming an enrolled PDP, an `exp` within the
+  token's own, and `mapping_version`, the contract version the joins were
+  evaluated under. Each minting is a retained join evidence event. The
+  reference MAS (`mas-serve.ts`) has none of this.
+- **The PDP** (MAS §join-assertion-pdp): verifying the assertion
+  (signature under the MAS's keys, `typ`, `alg`, `iss` and `mission`,
+  `exp`, `aud`) and the token binding against
+  `context.mission_join.token_sha256` and the reported thumbprint, then
+  taking the joining client, disposition and depth from `join` in place of
+  its own mapping checks; and the PEP carrying the token digest and
+  thumbprint in `context.mission_join`. Neither is built.
+
+The mapping version in join evidence belongs to that artifact's
+`mapping_version` claim. Baseline Decision Evidence carries no mapping
+version, and no draft requires one there.
 
 ## 9. Residuals and exclusions
 
@@ -503,17 +541,23 @@ Gaps:
 
 ## 12. Remaining slices
 
-1. A retained, signed mapping audit record, or the mapping version in
-   evidence, if the owner selects one.
-2. Sender-bound Join Assertions, and the AS capabilities they need (Sketch
-   step 5's second half); the introspection adapter here is what a MAS would
-   use to inspect the estate token.
-3. A launcher and an operator walkthrough for either topology, attaching to
-   an administered Resource-policy store; the separated MAS has a process
-   entry (`mas-serve.ts`) but no operator command.
-4. Ledger: `mas.mapping-contract.floor-documented` stays `todo` (the shared
-   demo's join documents no contract); the `mas.enterprise` rows stay `todo`.
-   `mas.join-disclosure.members` is `tested` and
+1. Sender-bound Join Assertions and the Enterprise tier (Sketch step 5's
+   second half), with the mapping version carried as the assertion's
+   `mapping_version` claim: #1454 (§8 lists what they need). The
+   introspection adapter here is what a MAS would use to inspect the estate
+   token.
+2. A launcher and an operator walkthrough for either topology, attaching to
+   an administered Resource-policy store: #818's slice 5B. The separated MAS
+   has a process entry (`mas-serve.ts`) but no operator command.
+3. Ledger: `mas.mapping-contract.floor-documented` is `tested` on
+   `demo/test/mas-join-contract.test.ts`: every shipped deployment that
+   mounts a join route declares its mapping contract (this pilot's in §2;
+   the shared demo stack's in `config/mas-join.json` `mapping_contract`,
+   described in `config/README.md`), and a composition that would mount
+   one without it refuses to start. The
+   `mas.enterprise`, `mas.join-assertion` and `mas.hc.mission-bound-instance-check`
+   rows and `mas.mapping-contract.enterprise-publishes` stay `todo`, owned by
+   #1454. `mas.join-disclosure.members` is `tested` and
    `mas.join-disclosure.not-to-others` `partial` (the envelope `sub`, #1407),
    both at the Controller role on §10's Join Disclosure tests. Join rule 2's
    two rows (`mas.baseline-join.resolve-at-mas`,

@@ -87,8 +87,8 @@
     "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "0f8529ed4c7d73ec386bfc4ce930db363ae56757",
-    "content_sha256": "bf8e39b9b15b7359c300421c85970c18f4c07596f5f39d9d699f470eca279c7e"
+    "revision": "e46748162ee91f154813cda50f285523b2d91e69",
+    "content_sha256": "6bb47dd4e7819d0b6efd0c0132a730c6cd31358ffcde04fb571433fc5e46d618"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "caf2420b9b4551ae4462771b23322fd660cf1116",
-    "content_sha256": "8678e27c2e3a04e75bd7aaf5073b83036ac765a716a516887caa2ba031791f4d"
+    "revision": "defc4a380fae8ba12925f2018d416d62cc2aa0a6",
+    "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "2dc6ca1d93658b0b9ad55de66da07aa0a30ce4a2",
@@ -4156,10 +4156,10 @@
    "assertion": "replay",
    "observation": {
     "normative": "an assertion captured for another approval event, another Intent or another Authority Set is not counted toward the evaluation",
-    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. The reference binds a model output to the Authority Set the policy evaluated, before any narrowing; where a model narrows, that set differs from the record's mission.authority_hash, so the authority_hash clause is not witnessed as written (#1436 item 16)."
+    "local": "Witnessed on recorded model outputs, the only assertions the reference accepts from outside the issuer (the governed_policy activation path); each of the three bindings is refused alone. A narrowing output's Authority Set binding is the set it evaluated (approval-governance.assertion.narrowing-binds-evaluated-set)."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
@@ -4174,7 +4174,42 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness."
+   "notes": "#1436 item 3: intent_hash joins the binding, matching Activation step 8 and the reference. Mutation: dropping the intent_hash filter fails the Intent witness. #1436 item 16 settles the Authority Set binding of a narrowing assertion, so the row is tested again."
+  },
+  {
+   "id": "approval-governance.assertion.narrowing-binds-evaluated-set",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "assertion-validation",
+   "text": "An assertion that can narrow the authority, such as a model output an activation consults, is made against the `authority_hash` of the set it evaluated rather than of the narrowed result",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "approval-governance.governed-policy"
+   },
+   "profiles": [],
+   "surface": "governance-record",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a narrowing model output bound to the authority_hash of the set the deciding policy evaluated is counted even though the record's mission.authority_hash covers the narrowed set; the issuer retains that evaluated set with the activation's inputs, the committed set lies within it, and an output bound to any other set is not counted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > binds a narrowing model output to the Authority Set it evaluated, which the issuer records with the activation's inputs",
+     "level": "unit",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > does not count an assertion captured for another activation's approval event",
+     "level": "unit",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "#1436 item 16: the binding the reference already applies, stated. Mutations: binding outputs to the narrowed final set; retaining the inputs without the evaluated set."
   },
   {
    "id": "approval-governance.assertion.policy-authorized",
@@ -15150,7 +15185,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered: a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string, and the issuance path in services/authorization-server carries no Enterprise-tier classification or key-binding requirement. The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.claim-isolation",
@@ -15194,7 +15229,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered: a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string, and the issuance path in services/authorization-server carries no Enterprise-tier classification or key-binding requirement. The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier has no implementation in this tree, so nothing classifies a path as high-consequence under that tier and the conditional MUST here is never triggered. No service or package carries an Enterprise-tier classification or key-binding requirement (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability), and the issuance path in services/authorization-server carries none. The row needs the capability built, not a test."
   },
   {
    "id": "mas.enterprise.runtime-freshness-not-replaced",
@@ -15216,7 +15251,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#594 wave 3: no action, and not a gap this batch could close. The Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and neither services nor packages carry a tier classification or an Enterprise-profile path (a case-insensitive search for \"enterprise\" under src/ returns only the unrelated MCP enterprise-managed-authorization capability string). The row needs the capability built, not a test."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Not a gap a test can close: the Authority Server's Enterprise tier (Mission-bound issuance, a cnf-bound acting credential, high-consequence classification) has no implementation in this tree: services/pdp/src/mas-join.ts resolves the baseline join only, and no service or package carries a tier classification or an Enterprise-profile path (the code that names \"enterprise\" is spec tags for the estate prerequisites and the unrelated MCP enterprise-managed-authorization capability). The row needs the capability built, not a test."
   },
   {
    "id": "mas.join.credential-mission-equality",
@@ -36040,7 +36075,7 @@
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A drawdown whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of {{in-ceiling-expansion}}",
+   "text": "A drawdown request whose authority overlaps no restricted capability remains eligible for policy adjudication under the other guards of {{in-ceiling-expansion}}",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36076,7 +36111,7 @@
    "id": "progressive.in-ceiling.restriction-survives-intervening-successor",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the containment, not only to one from the Mission that holds the overlay",
+   "text": "The Mission Issuer MUST apply this test to every drawdown request in the chain after the containment, not only to one from the Mission that holds the overlay",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36136,7 +36171,7 @@
    "id": "progressive.in-ceiling.discharge-restriction-survives-intervening-successor",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer MUST apply this test to every drawdown in the chain after the discharge, not only to one from the Mission that holds the discharged entry",
+   "text": "The Mission Issuer MUST apply this test to every drawdown request in the chain after the discharge, not only to one from the Mission that holds the discharged entry",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36226,7 +36261,7 @@
    "id": "progressive.in-ceiling.approval-event-id-per-drawdown",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The successor record's `approval_event_id` identifies this drawdown, never the ceiling consent",
+   "text": "The successor record's `approval_event_id` identifies this policy-adjudicated drawdown, never the ceiling consent",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -36392,7 +36427,7 @@
    "id": "progressive.drawdown-derivation.no-fork",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Concurrent derivation under the predecessor and competing or duplicate drawdowns MUST NOT fork or replenish the remaining allowance",
+   "text": "Concurrent derivation under the predecessor and competing or duplicate drawdown requests MUST NOT fork or replenish the remaining allowance",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -36403,7 +36438,7 @@
    "surface": "token-endpoint",
    "assertion": "concurrency",
    "observation": {
-    "normative": "competing or duplicate drawdowns from one predecessor, run concurrently with predecessor derivations, leave total committed derivations across the predecessor and its successors within the inherited limit",
+    "normative": "competing or duplicate drawdown requests from one predecessor, run concurrently with predecessor derivations, leave total committed derivations across the predecessor and its successors within the inherited limit",
     "local": "Concurrent identical drawdowns create one successor. Not witnessed: competing drawdowns or predecessor derivations interleaved with a drawdown."
    },
    "level": "concurrency",
@@ -36452,7 +36487,7 @@
    "id": "progressive.drawdown-derivation.exhaustion-refuses",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown as Mission Derivation Limits refuses a derivation ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\"), with `invalid_grant` and its `mission_error` diagnostic, creating no successor, superseding no predecessor, and counting nothing",
+   "text": "Where the carried-forward count plus that derivation would exceed the successor's `derivation_limit`, the Mission Issuer MUST refuse the drawdown request as Mission Derivation Limits refuses a derivation ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section \"Enforcement at Issuance\"), with `invalid_grant` and its `mission_error` diagnostic, creating no successor, superseding no predecessor, and counting nothing",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -36463,7 +36498,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "with limit 10 and 10 committed derivations, or a tighter effective limit of 8 with 8, the drawdown is refused invalid_grant; no successor exists, the predecessor stays active, and neither count changes",
+    "normative": "with limit 10 and 10 committed derivations, or a tighter effective limit of 8 with 8, the drawdown request is refused invalid_grant; no successor exists, the predecessor stays active, and neither count changes",
     "local": "Limit 2 with 2 committed, and a tighter request of 1 with 1 committed, are refused invalid_grant with mission_error derivations_exhausted inside the creation step, creating no successor and changing no count. Proved by removing the check."
    },
    "level": "endpoint",
@@ -36736,6 +36771,29 @@
    "notes": "Not implemented: the reference approval surface is headless, and the Approver's decision posts the consented ceiling with no rendering of it (#1017). D569: the single ceiling-disclosure requirement; Security Considerations cross-references it."
   },
   {
+   "id": "progressive.ceiling.client-input-not-consent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "progressive-authorization",
+   "text": "client input alone never establishes the consent",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a ceiling or drawdown policy that only a client supplied, without the Approver's consent on the approval surface, is never recorded as consented",
+    "local": "The reference reads the ceiling only from the approval surface's decision body (ceilingConsentOf); no test yet shows a client-supplied ceiling ignored."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572."
+  },
+  {
    "id": "progressive.in-ceiling.ceiling-drawdown-basis",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
@@ -36763,6 +36821,42 @@
     }
    ],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-drawdown-basis.adjudication-required",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-drawdown-basis",
+   "text": "`adjudication`: REQUIRED for this basis, the decision mechanism",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every ceiling_drawdown basis carries adjudication with kind policy and the id and version of the drawdown policy evaluated, equal to activation's",
+    "local": "Set from the verified policy reference in createCeilingDrawdownInCallerTx."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by a constant version (M-a) and a constant id (M-b)."
   },
   {
    "id": "progressive.in-ceiling.approved-at-retained",
@@ -36822,6 +36916,42 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved from Audit Linkage; previously without a row."
+  },
+  {
+   "id": "progressive.ceiling-test.retained-outside-authority-needs-human",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-test",
+   "text": "a successor that retains authority outside the ceiling requires a fresh human approval unless an explicit re-consent has brought that authority within the ceiling",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a requested successor that keeps authority outside the ceiling falls back to a fresh human approval; after a re-consent that brings it within the ceiling, the same authority is drawn by policy",
+    "local": "The ceiling test runs over the complete requested successor Authority Set."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
    "id": "progressive.ceiling-test.beyond-ceiling-not-policy",
@@ -37228,7 +37358,7 @@
    "id": "progressive.in-ceiling.successor-carries-ceiling",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "An in-ceiling successor MUST carry the predecessor's `authority_ceiling` and `drawdown_policy` unchanged or narrowed",
+   "text": "A policy-adjudicated successor MUST carry the predecessor's `authority_ceiling` and `drawdown_policy` unchanged or narrowed",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37239,7 +37369,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an in-ceiling successor records the predecessor's authority_ceiling and drawdown_policy unchanged or narrowed, under the same ceiling_hash or, when narrowed, a recomputed one",
+    "normative": "a policy-adjudicated successor records the predecessor's authority_ceiling and drawdown_policy unchanged or narrowed, under the same ceiling_hash or, when narrowed, a recomputed one",
     "local": "A policy-adjudicated successor carries both unchanged under the same ceiling_hash. A successor created by the fresh-approval fallback carries no ceiling (createExpansion records none), so the chain's progressive authorization ends there until an approval consents a ceiling again; narrowing is not implemented."
    },
    "level": "endpoint",
@@ -37336,7 +37466,7 @@
    "id": "progressive.in-ceiling.per-drawdown-bound",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The drawdown policy MUST bound each drawdown incrementally",
+   "text": "The drawdown policy MUST bound each policy-adjudicated drawdown incrementally",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37402,7 +37532,7 @@
    "id": "progressive.drawdown-bounds.entire-ceiling-defined",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown activates the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
+   "text": "A drawdown request would activate the entire remaining ceiling unless the Mission Issuer can show a request the ceiling admits that no entry of the successor's Authority Set authorizes",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -37413,7 +37543,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a drawdown is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
+    "normative": "a drawdown request is adjudicated by policy only when some request the ceiling admits is authorized by no successor entry; a drawdown narrower than a ceiling entry's constraint leaves such a request, and one that holds the ceiling, even split across entries, does not",
     "local": "ceilingAuthorityLeftUndrawn searches the ceiling's actions, vendors and amount caps for a request no successor entry authorizes, assuming every other member covered: a witness found is genuine, and a missed one falls back."
    },
    "level": "endpoint",
@@ -37480,7 +37610,7 @@
    "id": "progressive.drawdown-bounds.entire-ceiling-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "text": "A drawdown request that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -37510,7 +37640,7 @@
    "id": "progressive.drawdown-bounds.per-drawdown-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "text": "A drawdown request that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -37540,7 +37670,7 @@
    "id": "progressive.drawdown-bounds.rate-bound-falls-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "drawdown-bounds",
-   "text": "A drawdown that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
+   "text": "A drawdown request that would activate the entire remaining ceiling, or that exceeds the per-drawdown bound or the chain rate bound, falls back to a fresh human approval",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -37570,7 +37700,7 @@
    "id": "progressive.in-ceiling.fresh-approval-classes",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "A drawdown MUST be adjudicated by a fresh human approval when it",
+   "text": "A drawdown request MUST be adjudicated by a fresh human approval when it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37624,7 +37754,7 @@
    "id": "progressive.in-ceiling.live-children-fall-back",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "The Mission Issuer therefore MUST NOT policy-adjudicate an in-ceiling drawdown while the predecessor has non-terminal Child Missions",
+   "text": "The Mission Issuer therefore MUST NOT policy-adjudicate an in-ceiling drawdown request while the predecessor has non-terminal Child Missions",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37653,7 +37783,7 @@
    "id": "progressive.in-ceiling.chain-rate-bound",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "MUST rate-bound policy-adjudicated expansions per expansion chain, keyed by the chain's root Mission and counted across `predecessor` links per unit time",
+   "text": "MUST rate-bound policy-adjudicated drawdowns per expansion chain, keyed by the chain's root Mission and counted across `predecessor` links per unit time",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37683,7 +37813,7 @@
    "id": "progressive.in-ceiling.recorded-as-approval-event",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "in-ceiling-expansion",
-   "text": "MUST record each policy-adjudicated expansion as an approval event whose decision mechanism is the drawdown policy that authorized it",
+   "text": "MUST record each policy-adjudicated drawdown as an approval event whose decision mechanism is the drawdown policy that authorized it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37733,10 +37863,33 @@
    "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: moved into Security Considerations; previously without a row."
   },
   {
+   "id": "progressive.sec.drawdown-policy-reviewed-versioned",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "sec-drawdown-policy",
+   "text": "it MUST be reviewed and versioned like approval policy",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the deployment reviews its drawdown policy and versions every change, as it does approval policy",
+    "local": "Deployment governance; versioning is visible in the activation policy registry, review is outside the reference."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: a deployment obligation Conformance points to; previously without a row."
+  },
+  {
    "id": "progressive.audit.cumulative-drawdown-count",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record MUST carry the chain's cumulative drawdown count",
+   "text": "Every Mission record in a chain that carries a ceiling MUST carry the chain's cumulative drawdown count as `drawdown_count`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37747,12 +37900,18 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each policy-adjudicated successor's record carries the number of policy-adjudicated drawdowns in its chain, its own included",
-    "local": "Carried as the record member drawdown_count: 0 on the Mission that consented the ceiling and the predecessor's count plus one on each policy-adjudicated successor."
+    "normative": "every Mission record of a ceiling-bearing chain carries drawdown_count: zero on the chain's root Mission, one more on each committed ceiling_drawdown successor",
+    "local": "Carried as the record member drawdown_count: 0 on the chain's root Mission and the predecessor's count plus one on each policy-adjudicated successor."
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > each drawdown in a chain records its own approval_event_id, never the ceiling consent's, with approved_at the ceiling consent instant",
@@ -37766,7 +37925,55 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D572: named `drawdown_count`."
+  },
+  {
+   "id": "progressive.audit.drawdown-count-semantics",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "audit-linkage",
+   "text": "A retried or refused request leaves it unchanged, and a human-approved successor carries it unchanged, a re-consent included; neither a review nor a narrowing resets it",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "drawdown_count is unchanged by a recovered retry, by a request that falls back, and by a human-approved successor with or without a re-consent",
+    "local": "successorCeilingMembers carries the count; recovery creates nothing."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > a lost-response retry with the same creation_request_id recovers the same successor and approval_event_id, creating nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "approval_event_id per drawdown reservation (@spec progressive#in-ceiling-expansion, mission#standing-consent-bases) > drawdown_count counts committed policy-adjudicated drawdowns, and each successor's adjudication names the drawdown policy evaluated",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > without a re-consent, a human-approved successor keeps the ceiling, its consent instant, consenting Approver and policy commitment; authority approved beyond the ceiling stays outside it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > a re-consent continues the chain's drawdown count and rate window",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Narrowing has no witness: the reference never narrows a ceiling by policy. Proved by not incrementing (M-c) and by resetting on a human-approved successor."
   },
   {
    "id": "progressive.audit.ceiling-retained-in-chain",
@@ -37808,7 +38015,7 @@
    "id": "progressive.audit.resource-declaration-digest",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "audit-linkage",
-   "text": "The record of a drawdown whose adjudication evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
+   "text": "The record of every successor whose adjudication, by policy or by a fresh human approval, evaluated a resource's self-declaration ({{ceiling-test}}) MUST carry the declaration's digest as `resource_declaration_digest`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37819,12 +38026,12 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a drawdown adjudicated against a resource's content-addressed self-declaration records that declaration's digest as resource_declaration_digest"
+    "normative": "a successor created by policy adjudication or by a fresh human approval, whose adjudication evaluated a resource's content-addressed self-declaration, records that declaration's digest as resource_declaration_digest; a refused request creates no successor and no such record"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated)."
+   "notes": "Not implemented: the reference evaluates no resource self-declaration at drawdown (#1017). D569: the evaluation rule moved to Ceiling Test (progressive.ceiling-test.declaration-evaluated). D582: required on every successor whose adjudication evaluated the declaration, policy-adjudicated or human-approved."
   },
   {
    "id": "progressive.in-ceiling.publish-per-drawdown-bound",
@@ -37896,7 +38103,7 @@
    "id": "progressive.ceiling-review.no-adjudication-past-cadence",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "The Mission Issuer MUST NOT policy-adjudicate an in-ceiling drawdown for a chain whose most recent human approval of the ceiling is older than that cadence",
+   "text": "The Mission Issuer MUST NOT policy-adjudicate an in-ceiling drawdown request for a chain whose ceiling consent, the initial consent or the latest re-consent, is older than that cadence",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -37907,7 +38114,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an in-ceiling drawdown in a chain whose ceiling consent is older than the review cadence is not adjudicated by policy and falls back to a fresh human approval",
+    "normative": "an in-ceiling drawdown request in a chain whose ceiling consent is older than the review cadence is not adjudicated by policy and falls back to a fresh human approval",
     "local": "The cadence is the drawdown policy snapshot's ceiling_review_cadence_s, measured from the ceiling's retained consent instant. The reference has no review approval, so that instant is the approval that consented the ceiling."
    },
    "level": "endpoint",
@@ -37948,7 +38155,7 @@
    "id": "progressive.ceiling-review.review-disclosure",
    "spec": "draft-mcguinness-oauth-mission-progressive.md",
    "anchor": "ceiling-review",
-   "text": "Its consent disclosure MUST render the chain's record since the prior review",
+   "text": "Its consent disclosure MUST render the chain's record since the prior review or, for the chain's first review, since the initial ceiling consent",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -37959,12 +38166,95 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the review approval that re-consents or narrows a ceiling renders the chain's drawdown count and rate, escalated guard exceptions, out_of_ceiling refusals, discharge and containment restrictions, and metered consumption since the prior review"
+    "normative": "every re-consent, before the cadence expires included, renders the chain's record since the prior review, or since the initial ceiling consent for the first review"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Not implemented: the reference has no ceiling review approval (#1017)."
+   "notes": "Not implemented: the reference has no ceiling review approval (#1017). D572: every re-consent is a review; the first review covers history since the initial ceiling consent."
+  },
+  {
+   "id": "progressive.ceiling-review.review-is-reconsent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "A ceiling review is a fresh human approval that explicitly re-consents the ceiling and drawdown policy, a narrowed ceiling included",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a fresh human approval that re-consents the ceiling restarts the review cadence; no separate request is needed",
+    "local": "The re-consent rides the deferral approval (ExpansionApproval.ceiling)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an explicit re-consent records the re-consented ceiling and policy under a recomputed ceiling_hash, with its own consent instant and Approver, restarting the review cadence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
+  },
+  {
+   "id": "progressive.ceiling-review.overdue-not-reconsent",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "Where the Approver approves only the successor's authority, the ceiling consent stays overdue and policy adjudication stays unavailable",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "after an overdue chain's fresh human approval that does not re-consent, the ceiling consent instant is unchanged and the next policy-eligible widening still falls back",
+    "local": "successorCeilingMembers carries the consent instant unchanged without a re-consent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#ceiling-drawdown-basis) > an overdue chain's fresh human approval without a re-consent is not a review: the ceiling consent stays overdue and policy adjudication unavailable",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). Proved by restarting the consent instant on any human approval (the test fails)."
+  },
+  {
+   "id": "progressive.ceiling-review.policy-narrowing-not-review",
+   "spec": "draft-mcguinness-oauth-mission-progressive.md",
+   "anchor": "ceiling-review",
+   "text": "A ceiling narrowed by a policy-adjudicated drawdown ({{drawdown-successor}}) has not been reviewed: the narrowing keeps the instant of the consent it narrows, and the cadence does not restart",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "progressive.ceiling-drawdown"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a ceiling narrowed by a policy-adjudicated drawdown keeps the narrowed consent's instant, so the review cadence does not restart",
+    "local": "The reference carries the ceiling unchanged on every policy-adjudicated successor and never narrows it by policy."
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017)."
   },
   {
    "id": "cross-domain.delegation-depth.composed-bound-disclosure",
@@ -46442,7 +46732,7 @@
    "surface": "governance-record",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id and the Mission's intent_hash, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
+    "normative": "a re-check verifies the record; recomputes approval_policy.digest over the retained snapshot and, where that snapshot commits a separate evaluator that decides, the evaluator's activation policy reference digest; obtains the recorded inputs, including each model output in full, bound to the record's approval_event_id, the Mission's intent_hash and the authority_hash of the set recorded as evaluated, with each contributing service assertion matching one; re-runs the deciding policy or evaluator over them, approving with exactly the contributing set; and re-applies recency at evaluated_at. Missing evidence, a digest mismatch, a failed binding or a different replayed outcome leaves the evaluation not re-checked",
     "local": "The reference implementation has no Relying Auditor role, so nothing exercises a re-check."
    },
    "level": "unit",
@@ -48829,8 +49119,14 @@
     "local": "requires the deployment to also adopt Mission Derivation Limits. The reference reads each justifying entry's figure from its verified child_creation_policy snapshot (derivation_limit_ceiling, null or absent for no finite maximum) and binds the strictest; an entry without a snapshot takes the current policy's ceiling when the parent was approved under it, and is refused policy_denied otherwise, since the reference retains no earlier policy version to read the figure from"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/child-derivation-limit-endpoint.test.ts",
+     "name": "a child's derivation limit at the token exchange (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > records at most the entry's committed per-child figure over a higher deployment ceiling, whatever the child requests, each child starting its own count",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
     {
      "file": "src/services/authorization-server/test/child-delegation.test.ts",
      "name": "per-child derivation limit from the committed policy state (@spec child-delegation#derivation-budget, derivation-limits#effective-limit, #1119) > a child with no requested limit records the entry's committed figure; a larger request is capped at it and a smaller one stands, each child counting its own",
@@ -48856,7 +49152,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1119 (D327). Partial: every clause is witnessed at the kernel (unit) level, and no endpoint witness exists, since no endpoint suite builds an AS whose policy commits a child_creation_policy. At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
+   "notes": "#1119 (D327, D577). Every clause witnessed. At the endpoint, children created through PAR, the approval page and the RFC 8693 exchange, under a deployment ceiling of 100 and a committed figure of 3, record 3, 3 and 2 for no request, 50 and 2, each with its own count (child-derivation-limit-endpoint.test.ts). That witness needed a projection fix in the same PR: a token projected from an entry committing a child_creation_policy had lost its children grant, so every such child creation was refused not_strict_subset; proved by reverting the fix (the endpoint and projection witnesses fail). At the kernel: the snapshot figure caps a child with or without a request and leaves its own count at 0; a deployment ceiling above the figure, removed, or stricter leaves the child at or below it; several entries bind the strictest; the policy_version route reads the current policy for a parent approved under it and refuses one approved under another version (a local limitation, conservative: no child is created above a figure the issuer cannot read). Proved by disabling each guard alone (#1119 implementation PR): removing the template dispatch cap fails the template cap and raise witnesses; removing the child cap fails the child cap, raise and strictest-figure witnesses; taking the loosest figure instead of the strictest fails the strictest-figure witness; dropping the never-absent rule fails both no-request witnesses; reading a malformed figure as no maximum fails the consent and creation refusals; removing the policy_version fallback refusal fails its witness."
   },
   {
    "id": "child-delegation.record.policy-drawdown-approval-event-id",
@@ -51574,7 +51870,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.one-thumbprint",
@@ -51596,7 +51892,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-checks-reported-binding",
@@ -51618,7 +51914,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.join-claim",
@@ -51640,7 +51936,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-uses-join-claim",
@@ -51662,7 +51958,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.depth-disagreement-denies",
@@ -51684,7 +51980,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.one-confirmation-member",
@@ -51706,7 +52002,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.failed-validation-denies",
@@ -51728,7 +52024,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.metadata.max-stale-required",
@@ -51771,7 +52067,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.malformed-request",
@@ -51793,7 +52089,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.join-failed-outcomes",
@@ -51815,7 +52111,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.submission.interval-in-force",
@@ -51900,7 +52196,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-rejects-unlisted-alg",
@@ -51922,7 +52218,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.mapping-contract.floor-documented",
@@ -51941,9 +52237,22 @@
     "normative": "every deployment that joins documents its subject, client, delegate and instance mappings"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/mas-join-contract.test.ts",
+     "name": "every join-enabling deployment declares the mapping contract its joins apply (@spec authority-server#mapping-contract, #818) > the shipped deployments each load a declared contract: the shared stack's join, and the MAS pilot in process and separated",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/mas-join-contract.test.ts",
+     "name": "every join-enabling deployment declares the mapping contract its joins apply (@spec authority-server#mapping-contract, #818) > refuses to start a composition that would mount a join route with no declared contract, before it connects to anything",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#818 slice 5A: every shipped deployment that mounts a join route declares the contract in configuration under a strict loader: the shared demo stack's join in config/mas-join.json mapping_contract (identity subject and client mappings, the delegate entry rule, no client instance, a version, Decision Evidence as the audit record, mission_binding_failed), beside its scope_actions and delegates; the MAS pilot, in process and separated, in config/mas-pilot.json mapping_contract. The tests assert each deployment's subject, client, delegate and instance mappings and that composeStack, composeMasPilot and composeSeparatedMasPilot refuse to start a join route without a contract, before connecting to anything; each refusal and the shared contract's presence are proved by a defect that makes its assertion fail. The deployment documentation is config/README.md (mas-join.json) and src/docs/mas-pilot-deployment.md section 2."
   },
   {
    "id": "mas.mapping-contract.enterprise-publishes",
@@ -51965,7 +52274,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "Deployment documentation; no runtime surface to test (#972 item 7)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). Deployment documentation; no runtime surface to test. The reference claims no Enterprise tier, so no MAS here is an enterprise MAS that must publish its contract."
   },
   {
    "id": "mas.hc.mission-bound-instance-check",
@@ -51987,7 +52296,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "No Enterprise high-consequence path with Instance Context in the reference composition (#972 item 8)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). No Enterprise high-consequence path with Instance Context in the reference composition."
   },
   {
    "id": "mas.join-assertion.audience-enrolled",
@@ -52009,7 +52318,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.aud-claim",
@@ -52031,7 +52340,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.pdp-checks-aud",
@@ -52053,7 +52362,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.cache-key",
@@ -52075,7 +52384,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.join-assertion.cache-rechecks",
@@ -52097,7 +52406,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists (#972 item 11)."
+   "notes": "Implementation owner: #1454 (sender-bound Join Assertions and the Enterprise tier). The reference stack implements no Join Assertion endpoint or consumer (mas.join-assertion is unclaimed). Todo until one exists."
   },
   {
    "id": "mas.submission.unsupported-media-type",
