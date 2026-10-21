@@ -3443,6 +3443,27 @@ as the agent, it can also narrow by self-exchange ({{self-exchange}}),
 which does not delegate. An intermediary authenticated as a distinct
 actor that obtains a delegated token by Token Exchange is a delegate.
 
+Delegation takes two Token Exchanges, in this order:
+
+1. The delegating party obtains a designation that names the delegate
+   ({{designation}}).
+2. The delegate redeems that designation for a delegated token, under
+   the conditions below.
+
+~~~ ascii-art
+Delegating party            AS                        Delegate
+  | Token Exchange:          |                            |
+  | Mission-bound token,     |                            |
+  | audience = delegate ---->|                            |
+  |<------ designation ------|                            |
+  |---------------------- designation ------------------->|
+  |                          |<------ Token Exchange:     |
+  |                          |        subject_token =     |
+  |                          |        designation         |
+  |                          |------- delegated token --->|
+~~~
+{: title="Delegation: a designation, then its redemption"}
+
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}), presenting a designation that the delegating party
 obtained for it ({{designation}}). The AS issues the delegated token
