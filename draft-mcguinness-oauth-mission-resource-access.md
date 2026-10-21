@@ -389,9 +389,10 @@ case-insensitively ({{value-space-comparison}}).
 The following values are valid and carry a defined meaning:
 
 - A `max_depth` of 0 admits the entry into no delegated token, since a
-  delegated token's delegation depth is 1 or more
-  ({{delegate-eligibility}}). Any other `delegation` member stays
-  intact; a member a companion profile defines there, such as a
+  delegated token's delegation depth is 1 or more (the Delegation
+  Constraints section of {{I-D.draft-mcguinness-oauth-mission}}). Any
+  other `delegation` member stays intact; a member a companion profile
+  defines there, such as a
   child-creation grant, keeps the bound that profile gives it.
 - An empty `allowed_delegates` array permits no delegate. An absent
   member instead defers eligibility to the authorization server's
@@ -717,7 +718,8 @@ candidate entry from a ceiling entry by narrowing:
 
 - a client's authority proposal to the Authority Set
   ({{I-D.draft-mcguinness-oauth-mission}}); or
-- an Authority Set entry to a derived or delegated token
+- an Authority Set entry to a derived token
+  ({{I-D.draft-mcguinness-oauth-mission}}) or a delegated token
   ({{delegate-eligibility}}).
 
 In either case, a `constraints` key that the authorization server does
