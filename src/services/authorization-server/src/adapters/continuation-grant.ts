@@ -3137,12 +3137,6 @@ async function completeCeilingDrawdown(
       ...(adjudication.encountered ? { encountered: adjudication.encountered } : {}),
     };
   }
-  // @spec approval-governance#recency-high-risk, approval-governance#recency-evaluation
-  // (#1470 slice 2, D626): where drawdowns are recorded, the eligibility gate
-  // over the whole successor runs before activation; a drawdown it does not
-  // admit falls back to a fresh human approval, never to an unrecorded one.
-  const governanceReason = opts.kernel.drawdownGovernanceGate(predecessor, d.requested);
-  if (governanceReason) return { reason: governanceReason };
   const reservation: CreationReservation = {
     clientId: client.clientId,
     creationRequestId: d.creationRequestId,
@@ -3178,9 +3172,11 @@ async function completeCeilingDrawdown(
       }
     }
     if (e instanceof DrawdownRefusal) {
-      // @spec approval-governance#atomic-commitment (#1470 slice 2): a recorded
-      // drawdown its commit-time decision or gate no longer admits rolled back
-      // with nothing written; it falls back to a fresh human approval.
+      // @spec approval-governance#recency-high-risk, approval-governance#atomic-commitment
+      // (#1470 slice 2, D626): where drawdowns are recorded, a drawdown the
+      // commit-time decision or the eligibility gate over the whole successor
+      // does not admit rolled back with nothing written; it falls back to a
+      // fresh human approval, never to an unrecorded activation.
       if (e.code === "governance_refused" && e.reason) return { reason: e.reason };
       // @spec progressive#in-ceiling-expansion (Derivation limits): refused as
       // Derivation Limits refuses a derivation; nothing was created.

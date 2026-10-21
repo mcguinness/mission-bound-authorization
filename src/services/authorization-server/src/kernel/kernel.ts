@@ -1725,31 +1725,13 @@ export class MissionKernel {
   }
 
   /**
-   * @spec approval-governance#recency-high-risk, approval-governance#recency-evaluation
-   * (#1470 slice 2, D626): the eligibility gate a recorded drawdown passes
-   * before activation, at this instant: the reason it falls back to a fresh
-   * human approval, or undefined when it may proceed (or nothing is recorded).
-   */
-  drawdownGovernanceGate(predecessor: MissionRecord, requested: readonly AuthorityEntry[]): DrawdownGovernanceReason | undefined {
-    if (!this.drawdownRule) return undefined;
-    const consent = consentProvenanceOf(this, predecessor);
-    if (!consent) return "governance_consent_unverified";
-    const gate = drawdownGovernanceGate(this.opts.issuer, this.drawdownRule.parsed, {
-      ...(predecessor.drawdown_policy ? { deciding: predecessor.drawdown_policy } : {}),
-      consent,
-      authority: requested,
-      decided_at: this.now().toISOString(),
-    });
-    return gate.ok ? undefined : gate.reason;
-  }
-
-  /**
-   * @spec approval-governance#atomic-commitment, approval-governance#re-check
-   * (#1470 slice 2): inside the drawdown's creation transaction, at its
-   * creation instant: gather the inputs again and decide from them, run the
-   * eligibility gate, then build, gate and sign the record. A decision or gate
-   * that no longer admits the drawdown refuses it, nothing written, for a
-   * fresh human approval.
+   * @spec approval-governance#atomic-commitment, approval-governance#recency-high-risk,
+   * approval-governance#re-check (#1470 slice 2, D626): inside the drawdown's
+   * creation transaction, at its creation instant: gather the inputs and
+   * decide from them, run the eligibility gate over the whole successor, then
+   * build, gate and sign the record. A decision or gate that does not admit
+   * the drawdown refuses it before activation, nothing written, and the
+   * adapter falls back to a fresh human approval.
    */
   prepareDrawdownRecordInCallerTx(args: {
     record: MissionRecord;
