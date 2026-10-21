@@ -2478,6 +2478,15 @@ with `scope`; the AS narrows the Authority Set under {{subset}} to the
 requested resource(s) and sets `aud` accordingly.
 {: #token-audience}
 
+Three identifiers stay distinct. An entry's `resource` names the
+protected resource its authority covers, and a resource server matches
+each request's operation target against it under the entry's type (for
+`mission_resource_access`,
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}). A token
+request's `resource` parameter ({{RFC8707}}) selects the audience the
+client asks for. The token's `aud` names the recipients that accept
+the token.
+
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
 ({{Section 7 of RFC9396}}). Strengthening {{Section 7 of RFC9396}},
