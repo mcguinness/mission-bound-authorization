@@ -43,7 +43,7 @@ import {
   TOPOLOGY,
 } from "@mission/demo-data";
 import { evaluate as evaluateRequest, relationForAction, stalenessBound, type Fga, type MissionView } from "@mission/pdp";
-import { narrowToCeiling } from "@mission/core";
+import { computeAnchor, GOVERNED_POLICY_TYP, type JsonValue, narrowToCeiling } from "@mission/core";
 import {
   buildAuthorizationServer,
   deriveAuthoritySet,
@@ -423,6 +423,22 @@ describe("shipped authority-source catalog (@spec mission#authority-sources)", (
     expect(organizational?.ceiling).toEqual(remapped);
     expect(organizational?.policy?.digest).toBe(governed?.digest);
     expect(organizational?.policy?.digest).toMatch(/^sha-256:[A-Za-z0-9_-]{43}$/);
+  });
+
+  it("pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)", () => {
+    // @spec mission#mission-record: the producer computes `digest` over the
+    // input the policy format names, `{id, version, ceiling}` under typ
+    // `mission-governed-policy` with `iss` the governance authority, so a
+    // verifier holding the policy file reproduces it with no AS state.
+    const [shipped] = JSON.parse(
+      readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../config/governed-policy.json"), "utf8"),
+    ) as Array<{ id: string; version: string; authority: string; ceiling: JsonValue }>;
+    expect(shipped).toBeDefined();
+    const { id, version, authority, ceiling } = shipped as NonNullable<typeof shipped>;
+    const governed = GOVERNED_POLICIES.find((g) => g.id === id && g.version === version);
+    expect(governed?.authority).toBe("https://acme.example/governance");
+    expect(governed?.digest).toBe("sha-256:LMSn-i14Hs3gZDtXdvMRWOhMSubkhldbD7VMmMHuqG8");
+    expect(computeAnchor(GOVERNED_POLICY_TYP, authority, { id, version, ceiling })).toBe(governed?.digest);
   });
 
   it("the real AS assembly runs with the shipped catalog and refuses an undeclared client", async () => {
