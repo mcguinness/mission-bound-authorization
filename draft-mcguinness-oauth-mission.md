@@ -478,7 +478,10 @@ Mission Client:
   proposes authority ({{authority-proposal}}), completes the
   authorization-code flow, and reads the granted authority and Mission
   references from the response ({{mission-bound-tokens}},
-  {{mission-response-parameters}}, {{discovery}}).
+  {{mission-response-parameters}}). Authorization Server Metadata
+  ({{discovery}}) holds the metadata the client reads before it
+  submits, and the client's rules for an AS whose Mission support is
+  not established and for a credential that is not Mission-bound.
 
 Mission Issuer (AS):
 : Its duties on the starting path:
