@@ -611,8 +611,8 @@ The members are:
   itself; how long the consumer MAY rely on the reported `state` is
   given separately by `mission.fresh_until` below.
 - `mission`: the `mission` object, the same shape as the `mission`
-  claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "The
-  Mission Claim") with status members added. It carries:
+  claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
+  Claim") with status members added. It carries:
   - `id`, `issuer`: the subject Mission's identifier and issuer.
   - `authority_hash`: OPTIONAL. The issuance profile's consent
     commitment over the Authority Set ({{I-D.draft-mcguinness-oauth-mission}},
@@ -908,7 +908,7 @@ This extension adds the following to that projection:
 This projection and the dedicated Mission Status Response
 ({{mission-status-response}}) carry Mission facts in a `mission` object
 of the same shape: the open `mission` claim object of
-{{I-D.draft-mcguinness-oauth-mission}} (Section "The Mission Claim")
+{{I-D.draft-mcguinness-oauth-mission}} (Section "Mission Claim")
 with status members (`state`, `termination`, `fresh_until`, any
 companion-defined extension member such as the Status List companion's `status_list`
 reference ({{I-D.draft-mcguinness-oauth-mission-status-list}}), and,

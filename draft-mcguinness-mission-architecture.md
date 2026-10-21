@@ -2001,7 +2001,7 @@ Work products:
   Work Products companion carries the rule through non-transitive
   Mission-to-Mission handoff
   ({{I-D.draft-mcguinness-oauth-mission-work-products}}), and the
-  OAuth binding states it in its "Authority Does Not Propagate With
+  OAuth binding states it in its "Authority and Propagated
   Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
 
 Composition:
@@ -2387,7 +2387,7 @@ discharges the equivalence through its own conformance rule.
 The Mission-Bound Credential is a credential carrying the `mission`
 claim (`id`, `issuer`) and Mission-derived authorization details,
 issued only while the Mission is `active`. Its home is the OAuth
-binding's Mission-Bound Access Tokens and The Mission Claim sections.
+binding's Mission-Bound Access Tokens and Mission Claim sections.
 The claim's `id` and `issuer` are the Mission-identity condition; a
 token-carried Authority Set commitment is never required for it, per
 condition 2 of `credential-mission-bound` ({{binding-properties}}).
