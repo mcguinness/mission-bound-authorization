@@ -16,11 +16,10 @@
  * in-process); stream verification / heartbeat liveness and its staleness
  * fallback; automatic Mission Status refetch on a detected version gap or a
  * detected rematerialization need (this module detects each condition only;
- * the refetch itself is the consumer's job); the `suspend_until` /
- * `on_expiry` members (a kernel commit that arms or replaces a schedule
- * carries them, #1002; this builder does not yet relay them); and the
- * `tenant` member (no model exists in the kernel). The
- * `mission_capabilities_supported` delivery gate
+ * the refetch itself is the consumer's job); and the `tenant` member (no
+ * model exists in the kernel). The builder relays a suspension schedule's
+ * `suspend_until` and `on_expiry` from the commit that armed or replaced
+ * it (#1002). The `mission_capabilities_supported` delivery gate
  * ({@link MissionSignalEmitter}) is implemented: a stream that has not
  * declared `authority_changed` is not delivered a discharge commit's event.
  * Delivery durability (#641) is implemented: the emitter journals one durable
@@ -80,7 +79,8 @@ export interface SignLifecycleOptions {
  * whose `id` is the Mission Identifier; body carries the event under the
  * event-type URI with the Mission identity, `state`, `termination` beside a
  * `terminated` state, optional `prior_state`, `version`, `committed_at`,
- * `expires_at`, and optional `containment_version` and `authority_changed`.
+ * `expires_at`, and optional `suspend_until` with `on_expiry`,
+ * `containment_version` and `authority_changed`.
  *
  * @spec mission#termination, signals#lifecycle-event: `state` is `active`,
  * `suspended` or `terminated`, and `prior_state` only `active` or
@@ -106,6 +106,15 @@ export interface SignLifecycleOptions {
  * the other named case, {{I-D.draft-mcguinness-oauth-mission-status}}),
  * absent on every other transition. The builder relays the kernel's
  * determination unchanged; it does not itself decide what narrows.
+ *
+ * @spec signals#lifecycle-event, status#idempotency: `suspend_until` and
+ * `on_expiry` are relayed from the commit, as a pair, with the values the
+ * Status profile reports. The kernel carries them exactly on a commit that
+ * arms a schedule (a transition to `suspended` under a deadline) or replaces
+ * one (`prior_state` and `state` both `suspended`), so every other event
+ * carries neither. A commit carrying only one of them relays neither: the
+ * pair is never split. The schedule's committing party and the applied
+ * schedule a commit names are not wire members and are never copied.
  */
 export async function signLifecycleEvent(
   commit: LifecycleCommit,
@@ -125,6 +134,9 @@ export async function signLifecycleEvent(
     version: commit.version,
     committed_at: commit.committed_at,
     expires_at: commit.expires_at,
+    ...(commit.suspend_until !== undefined && commit.on_expiry !== undefined
+      ? { suspend_until: commit.suspend_until, on_expiry: commit.on_expiry }
+      : {}),
     ...(commit.containment_version !== undefined
       ? { containment_version: commit.containment_version }
       : {}),
