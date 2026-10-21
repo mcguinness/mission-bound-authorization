@@ -6146,6 +6146,8 @@ derivation gating. A deployment can
 surface Mission revocation through a grant-management-style API
 ({{revocation}}).
 
+This document specifies the issuance and governance layer that
+agent-identity work for OAuth leaves unspecified.
 {{I-D.draft-ietf-wimse-aims}} names the agent's mission and leaves its
 translation into authorization requirements out of scope. This
 document specifies that translation and reuses its assignments
