@@ -3869,7 +3869,7 @@
   {
    "id": "core.approval-basis.approved-at-standing-consent",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-bases",
    "text": "The activating issuer MUST verify `approved_at` against its retained, authenticated record of that standing consent for that exact version",
    "role": "AS",
    "strength": "MUST",
@@ -3931,7 +3931,7 @@
   {
    "id": "core.approval-basis.standing-consent-recency",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-recency",
    "text": "the activating issuer MUST refuse to activate an instance whose `approved_at` is older than the ceiling",
    "role": "AS",
    "strength": "MUST",
@@ -3994,7 +3994,7 @@
   {
    "id": "core.approval-basis.adjudication-standing-consent-policy",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-bases",
    "text": "Where a companion profile defining a standing-consent `type` populates `adjudication`, `kind` MUST be `policy`, naming the identity and version of the policy or workflow that adjudicated the instance",
    "role": "AS",
    "strength": "MUST",
@@ -6047,7 +6047,7 @@
   {
    "id": "core.lifecycle.mission-error-diagnostic",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "lifecycle",
+   "anchor": "issuance-gating",
    "text": "the AS SHOULD include, alongside `error`, the `mission_error` token-error-response member",
    "role": "AS",
    "strength": "SHOULD",
