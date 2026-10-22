@@ -1368,6 +1368,17 @@ describe("containment restrictions of the chain (@spec progressive#in-ceiling-ex
       "payments:payment.schedule",
     ]);
   });
+
+  it("a restriction is a selector compared by resource-set overlap: a broader prefix selector naming another resource string still makes restoring the authority fall back (@spec containment#selector-matching, #1463)", async () => {
+    const root = await issueMission(READ_LIST, ceilingOf());
+    const origin = `${new URL(RESOURCE).origin}/`;
+    expect(origin).not.toBe(RESOURCE);
+    as.kernel.contain(root.missionId, {
+      event: containEvent(`evt-${crypto.randomUUID()}`),
+      remove: [{ resource: origin, resource_match: "prefix", actions: ["payments:invoice.list"] }],
+    });
+    await expectFreshApproval(root.missionId, root.accessToken, READ_LIST);
+  });
 });
 
 describe("discharge restrictions of the chain (@spec progressive#in-ceiling-expansion, discharge#discharge)", () => {

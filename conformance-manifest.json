@@ -39,8 +39,8 @@
     "content_sha256": "375b7de8d7c03075c034fcce5c4996ac5379f0e86cbe0ecaa8f11eed83e73efc"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
-    "content_sha256": "80afb879cbd02bfd953ae555be0a0b8a4914530b9242dc0811ce59d6e6da3718"
+    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
+    "content_sha256": "c3ecaf45e6e17579e7374b0e733c7d4de7d58cbacdfecddfe37c3568eb74138a"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "b447449fc2c0ffaf525b10a8df1a79f113ad538a",
@@ -51,12 +51,12 @@
     "content_sha256": "0cf9c0c15240b62a32a5bd9bf0dddbb93cfe86d6390685e3c5c5fd7858b87a4f"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "abc971560d48cc58f47b2ce0a07ed3f9d48b0586",
-    "content_sha256": "454d12089e67988a3cc7ae14146af092ffcecfb7ce9b2dddf4c92590ac5f7547"
+    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
+    "content_sha256": "2734f08663aaa41f3d3f58b885c7036833c88a7286b889647bfa426dd2835872"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
-    "content_sha256": "960042feaf2b8fa19132eeced9bc0f691107731340601ed840451f26220654b9"
+    "revision": "eb77a50e26f4d8c37a24b56e4c0746ebab416047",
+    "content_sha256": "9aebdd1b2f1ee776382ca23739076a29f96c57ef47f715d238d8bdcc731113f8"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -71,20 +71,20 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "e58f4db7204e403ce56c621c5198c78d78fe5dec",
-    "content_sha256": "f914528139e48761e13086f442c7164ba9007531e9de28039ed490504e9781d2"
+    "revision": "55cf3223cf1dc695238776b86522c6be6b82f25d",
+    "content_sha256": "3e3d1d6b5a01f8914a4d2add04fd25d9a94d4582839796ba5a4fc81deb275c68"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "6f132fa411b5ce93d9194e87750bac383d7b5a98",
-    "content_sha256": "92ceee3d830dc3b6dfdf6c4ffeb117c6f7571a4b8c9acfb5671c6ee205fc36a6"
+    "revision": "e226e962ac68b8c26ef8f0388783ff9d8a289c91",
+    "content_sha256": "dd5500805fdc490e49580f195685f65afa4a29bce9a742b24af26de356ded11e"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
     "content_sha256": "44d6ef289a0c6cbdff9af48520ae48056a55052f037bdfe5dd16938ec88460d6"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "376bb59c72f1c7f15a772ac8de2fec08acf3357d",
-    "content_sha256": "05c18b413bd70ea16eccbdd19a4cdec87e1f004c6402dba77d3a2dbbc365543a"
+    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
+    "content_sha256": "7b5f80c6b895dabfb51d4cc680d44137098ec8236fd034a9265d56ed10767b38"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -99,8 +99,8 @@
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "defc4a380fae8ba12925f2018d416d62cc2aa0a6",
-    "content_sha256": "7bde9d82ab5726f747c4f9c539f535469387261cfa00fb4f85ef44aff716a211"
+    "revision": "5ea95ceb221030bbafed05e8dad903f5714c0fbf",
+    "content_sha256": "e166feff2924bad515404c7a84b2140787b26983048017f3d339c3dae5f5a196"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -115,8 +115,8 @@
     "content_sha256": "48ea6d93bdc42e5f69e8aaca0fa0e103e481733b742d780d3049fbe8109ea62c"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "638839b4f131c0b633aac13c6631b7a1d2ce4138",
-    "content_sha256": "6d527751c054d27fca3be46fb394a02b1cce4939fa2b1869221f3856ac4cf97a"
+    "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
+    "content_sha256": "b75413d3038fa4f9baa3b512578f174d615f04fff8f99c376c18a4fae1d20e8e"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -153,6 +153,10 @@
    "draft-mcguinness-mission-discovery.md": {
     "revision": "1c6c3a3af40acf3df68c68969ab72c7134b8aee9",
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
+   },
+   "draft-mcguinness-oauth-mission-containment.md": {
+    "revision": "2d2661e6dec64f5f9b19dd98aa3a53a88d2f86c8",
+    "content_sha256": "fc7d4be6f965ba06cf03eec757cb44bcf9325d15d6879242cd2a623c0e0093ec"
    }
   }
  },
@@ -3208,8 +3212,116 @@
     "normative": "push carrying a Request Object plus a mission_intent outside it fails invalid_request"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": []
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a push that carries a mission_intent outside its Request Object with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the PAR intake records a present mission_intent beside a present request before the provider drops every parameter outside the Request Object (strip_outside_jar_params), and the Request Object hook refuses it after client authentication, whether or not the object carries its own mission_intent claim; the same object pushed alone is accepted. Proved by disabling the hook's refusal: the provider strips the outer value and the push is accepted (201). A Request Object that fails one of the provider's own earlier checks (decode, algorithm, iss, aud, exp, client_id) is refused invalid_request_object first."
+  },
+  {
+   "id": "core.submission.request-object-claim-is-envelope",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "The claim's value is the Submission envelope itself, a JSON object, not its serialization",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a signed Request Object pushed through PAR whose mission_intent claim is the Submission envelope as a JSON object is accepted and approved, and the Mission it yields commits the same intent_hash as the equivalent form-encoded submission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > accepts a mission_intent claim that is the Submission envelope as a JSON object, with the intent_hash of the equivalent form submission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the provider keeps only String(value) of an object claim, so the mission_intent validator reads the claim's JSON value from the strictly re-parsed payload and substitutes its serialization for the parameter, at PAR and where the authorization endpoint reads the pushed object. Proved twice: with the validator's Request Object branch disabled the push is refused (400), and with the payload not kept at the authorization endpoint the redemption is refused invalid_request and no approval interaction starts."
+  },
+  {
+   "id": "core.submission.request-object-claim-non-object-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "the AS MUST reject with `invalid_request` a claim whose value is a string or any other value that is not a JSON object",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission_intent claim in a signed Request Object whose value is a string (including the Submission envelope's own serialization), a number, a boolean, null, or an array is refused invalid_request, while the same Request Object carrying the envelope as a JSON object is accepted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a mission_intent claim whose value is a string, even the envelope's own serialization, or any other value that is not a JSON object, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > accepts a mission_intent claim that is the Submission envelope as a JSON object, with the intent_hash of the equivalent form submission",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620): the object-claim test is the accepted control. Proved by disabling the validator's Request Object branch (the provider's String(value) is then read as a form value): the envelope's serialization as a string claim is accepted (201). Removing only the non-object refusal also fails the test, on its error_description. An array value is refused by the provider itself as a repeated parameter (lib/shared/reject_dupes.js), also invalid_request."
+  },
+  {
+   "id": "core.submission.unparseable-refusal-not-an-object",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-via-par",
+   "text": "An AS that cannot parse `mission_intent` as a JSON object, or that parses it but finds the Submission envelope or the Intent structurally invalid against this document's member definitions, MUST refuse the request with the `invalid_request` error code",
+   "facet": "not-a-json-object",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a form-encoded mission_intent that is not JSON, or is JSON but not an object (an array, a string, including a JSON string of the Submission envelope, a number, or null), is refused invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope as the form parameter of a push (@spec mission#submission-via-par, #1503) > refuses a form mission_intent that does not parse to a JSON object, including a JSON string of the envelope, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1503 (D620). This facet covers only the parse clause; the structural clause is the subject of core.submission.closed-top-levels and the Intent member rows. Proved by removing the envelope parser's non-object refusal (the values then reach the bare-Intent refusal, a different error_description) and, separately, its non-JSON refusal: the test fails on the error_description each time."
   },
   {
    "id": "core.authority-proposal.governed-client-omission-refused",
@@ -3326,9 +3438,15 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > validates the authority proposal before the evidence entry rules: an entry that is not an object, lacks a type, or exceeds the size bound",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification."
+   "notes": "D559 (#1411): ruled qualified A + C. The step 2 test shows type and schema failures lose to an invalid Intent; the three evidence tests show type, schema and target_resources failures win over a missing required type, a failed verification, an unknown type and a type-validation failure. The reference AS lifts the proposal off the PAR form (par-intake.ts), because oidc-provider runs its RAR check before the extraParams validators, and defers evidence type dispatch to verification. #1512 (D625): on the Request Object path the step 2 test shows a schema failure (an entry missing its resource) and a type failure losing to an invalid Intent. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
    "id": "core.submission.earliest-step-precedence",
@@ -3398,9 +3516,33 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > refuses a missing required evidence type before the evidence entry rules (step 5 before step 6)",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > a malformed Submission envelope together with a malformed proposal is refused at step 1, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > refuses a malformed Submission envelope alone with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > refuses a malformed proposal alone, beside a valid envelope, with invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls."
+   "notes": "D559 (#1411): ruled qualified A + C. Each cited test runs a combined failure beside each of its single failures as controls. #1512 (D625): the Request Object path, where the provider's RAR check runs before the extraParams validators, so the Request Object hook validates the envelope and the Intent first; its single failures are the separate envelope-only and proposal-only tests, cited as controls, and the step 2 test also carries the Intent-only case. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
    "id": "core.submission.precedence-proposal-over-missing-evidence",
@@ -3494,9 +3636,15 @@
      "name": "Submission Processing Order refusal precedence at PAR (@spec mission#submission-processing) > reads an empty request parameter as absent, as the provider does, and keeps the order",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission Processing Order on the Request Object path (@spec mission#submission-processing, #1512) > an intent object that fails validation together with a malformed proposal is refused at step 2, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "D559 (#1411): ruled qualified A + C."
+   "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
   },
   {
    "id": "core.derivation.candidate-complete-before-rendering",
@@ -3731,8 +3879,15 @@
      "name": "parseStrictJson > rejects duplicate member names (core § canonicalization)",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/request-object-submission.test.ts",
+     "name": "Submission envelope inside a Request Object pushed through PAR (@spec mission#submission-via-par, #1503) > refuses a Request Object whose payload repeats a member name, inside the envelope or among its claims, with invalid_request",
+     "level": "endpoint",
+     "surface": "par"
     }
-   ]
+   ],
+   "notes": "#1503 (D620): the Request Object carriage is covered at the endpoint: the provider reads a Request Object's claims with JSON.parse (last value wins), so the hook re-parses the signed payload strictly. Proved by re-parsing with JSON.parse instead: a payload repeating the envelope's intent member is accepted (201)."
   },
   {
    "id": "core.commitment.unknown-prefix",
@@ -21190,6 +21345,18 @@
      "name": "PDP decisions against OpenFGA (@spec authzen) > entry-level containment (no actions member) denies ALL the entry's actions",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "the in-process Mission view resolves containment onto approved entries (@spec containment#selector-matching, #1463) > a prefix selector over a finer approved entry reaches the PDP as that entry's own removal, which denies authority_contained",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "review: same-resource entries under different modes > the PDP retains the union of removals for the matched prefix entry",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ]
   },
@@ -38081,12 +38248,24 @@
     },
     {
      "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "containment restrictions of the chain (@spec progressive#in-ceiling-expansion, containment#restoration) > a restriction is a selector compared by resource-set overlap: a broader prefix selector naming another resource string still makes restoring the authority fall back (@spec containment#selector-matching, #1463)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
      "name": "the deferred expansion's consent disclosure (@spec progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1017) > a fallback for contained authority names the contained capability and the event class that caused it, through an intervening successor",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure."
+   "notes": "Binds where containment.narrowing also runs (Containment Section \"Restoration Through Expansion\"). Reference AS, default off: kernel/progressive.ts, selected by the deployment's progressive option (#1017). D569: the prohibition binds the Mission Issuer, whatever its drawdown policy permits (it bound the drawdown policy). The disclosure is proved by naming no containment. #1480 review: partial until an approval surface renders the disclosure. #1500 review: the chain's restrictions include each overlay resolved onto the member's approved entries, so a drawdown restoring an action a fine selector removed from a broad entry falls back for a sibling resource (mutation: comparing only the selectors as named fails the witness)."
   },
   {
    "id": "progressive.in-ceiling.unrelated-drawdown-policy-eligible",
@@ -42144,7 +42323,7 @@
    "id": "resource-access.type.prefix-query-fragment-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-access-type",
-   "text": "the authorization server refuses such an entry with the `invalid_authorization_details` error code",
+   "text": "the authorization server MUST refuse such an entry with the `invalid_authorization_details` error code",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -45234,7 +45413,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): the authorization server booted over a configuration whose payments read ceiling entry is prefix derives an exact proposal beneath it as the proposal's own exact resource, the approval floor classifies it, and the issued token carries it; a sibling outside the boundary derives nothing. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05; pairing ceilings by equal resource string fails both derivation witnesses; an exact candidate compared to a prefix reference by string equality, or approval-floor classification by string equality, fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): the authorization server booted over a configuration whose payments read ceiling entry is prefix derives an exact proposal beneath it as the proposal's own exact resource, the approval floor classifies it, and the issued token carries it; a sibling outside the boundary derives nothing. Derivation keeps the proposal's own exact resource, never the ceiling's base. Mutations: a plain string-prefix comparison fails sub-res-05; pairing ceilings by equal resource string fails both derivation witnesses; an exact candidate compared to a prefix reference by string equality, or approval-floor classification by string equality, fails the endpoint witness. The endpoint configuration keeps the shipped containment rules beside the prefix ceiling: containment pairs a removal with every approved entry whose resource set overlaps it (#1463), so the ceiling loaders no longer refuse a prefix ceiling entry beside a containment rule."
   },
   {
    "id": "resource-access.subset.prefix-under-prefix",
@@ -45283,7 +45462,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): under a configured prefix ceiling the authorization server derives a narrower prefix proposal as a prefix entry keeping its own base, and the issued token carries it. Mutations: coalescing a trailing-slash base fails sub-res-07; dropping prefix from the derived entry fails the derivation witness; comparing a prefix candidate's base to a prefix reference by string equality fails the endpoint witness. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): under a configured prefix ceiling the authorization server derives a narrower prefix proposal as a prefix entry keeping its own base, and the issued token carries it. Mutations: coalescing a trailing-slash base fails sub-res-07; dropping prefix from the derived entry fails the derivation witness; comparing a prefix candidate's base to a prefix reference by string equality fails the endpoint witness. The endpoint configuration keeps the shipped containment rules beside the prefix ceiling: containment pairs a removal with every approved entry whose resource set overlaps it (#1463), so the ceiling loaders no longer refuse a prefix ceiling entry beside a containment rule."
   },
   {
    "id": "resource-access.subset.prefix-under-exact-never",
@@ -45332,7 +45511,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): through the authorization server, a prefix proposal over an exact ceiling entry naming its base narrows to that exact entry, and a refresh requesting the prefix entry against the exact grant is refused invalid_authorization_details while the exact entry is issued. Mutation: comparing an exact reference's string alone fails sub-res-08, both kernel witnesses and the endpoint witness, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry. The endpoint configuration carries no containment rule: containment pairs a removal with an approved entry by its exact resource, so the ceiling loaders refuse a prefix ceiling entry beside a configured containment rule (mutation: dropping that guard fails resource-match-unsupported.test.ts's refusal witnesses)."
+   "notes": "#1276, #1440. Helper and kernel level: the case reader (isSubsetEntry), direct derivation (deriveAuthoritySet) and MissionKernel.approve under a programmatic ceiling. Endpoint (#1440): through the authorization server, a prefix proposal over an exact ceiling entry naming its base narrows to that exact entry, and a refresh requesting the prefix entry against the exact grant is refused invalid_authorization_details while the exact entry is issued. Mutation: comparing an exact reference's string alone fails sub-res-08, both kernel witnesses and the endpoint witness, and lets the PDP source a prefix credential entry's discharge condition from an exact Mission entry. The endpoint configuration keeps the shipped containment rules beside the prefix ceiling: containment pairs a removal with every approved entry whose resource set overlaps it (#1463), so the ceiling loaders no longer refuse a prefix ceiling entry beside a containment rule."
   },
   {
    "id": "resource-access.subset.false-equivalent-absent",
@@ -45655,9 +45834,9 @@
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
-   "text": "An authorization server that does not implement this section refuses a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and never drops the member.",
+   "text": "An authorization server that does not implement this section MUST refuse a proposed or carried entry that carries `resource_contract`, with the `invalid_authorization_details` error code, and MUST NOT drop the member.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -45759,10 +45938,10 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where the declaration requires a reference, an unpinned entry authorizes nothing (refused before any decision), and a second entry carrying the current reference covers the operation. Proved by ignoring the requirement at the PEP."
   },
   {
-   "id": "resource-access.resource-contract.rs-follows-runtime-version-states",
+   "id": "resource-access.resource-contract.rs-unperformed-version-no-authority",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
-   "text": "Which versions a resource still performs, and for which entries, follows the version states of {{I-D.draft-mcguinness-mission-runtime}}: a reference that does not resolve there authorizes nothing.",
+   "text": "A reference to a version the resource does not perform for the entry authorizes nothing.",
    "role": "RS",
    "strength": "stated",
    "applicability": {
@@ -45773,7 +45952,7 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server performs an entry's operation under a superseded version only within its declared retention and never under a retired one; outside those states the entry authorizes nothing"
+    "normative": "an entry whose reference names a version the resource does not perform for it authorizes nothing; the reference resource declares a version lifecycle, under which a superseded version is performed only within its declared retention and a retired version never"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -45791,7 +45970,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -46028,9 +46207,9 @@
    "id": "resource-access.delegate-eligibility.provenance-retained",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
-   "text": "records, when it derives the Authority Set, which approved entries inherit the policy decision, and retains that provenance with the Mission",
+   "text": "MUST record, when it derives the Authority Set, which approved entries inherit the policy decision, and MUST retain that provenance with the Mission",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -46096,6 +46275,43 @@
     }
    ],
    "notes": "#1277 review finding 2 (D454); #1275 (D457). Retained as authorization-server state (MissionRecord.eligibility_provenance, persisted with the record, never on the wire); the endpoint witness approves through PAR and the interaction and reads the origin back from the store. Direct approval and child creation are witnessed; expansion, progressive drawdown, template dispatch, governed-policy activation and carryover replacement record it through the same derivation but have no witness here. Later exchanges evaluate the approved entry and its origin, not the presented token: a later ICA exchange decides the next hop against the approved entry and the current policy although the grant it continues conveyed no `delegation` (#1374), a policy change between designation and redemption is enforced at redemption, and the policy is asked again at the ICA mint. Proven by disabling the code it covers: not persisting the provenance, caching the policy decision, skipping the gate at the mint or at redemption, or resolving an origin by resource each fails its witness."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.later-exchange-against-record",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "It MUST evaluate every later exchange against the approved entry in the Mission Record",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a later exchange decides delegate eligibility against the approved entry in the Mission Record and its retained provenance, never against the token or grant the delegate presents: an entry the presented grant conveys without delegation is still delegable at the next hop while the current policy permits, and a policy change after a grant was issued governs the next exchange"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > a later exchange is decided against the approved entry, not the grant's conveyed copy: the next hop is admitted only while the policy permits",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "D634 residue (D639): the sentence was indicative; its obligation was described in resource-access.delegate-eligibility.provenance-retained's observation. Proved by mutation: deciding an exchange above depth 1 against the approved entry as the previous grant conveyed it (without delegation) fails the ICA witness ('expected 400 to be 200' at depth 2), and only that witness."
   },
   {
    "id": "resource-access.delegate-eligibility.cross-domain-current-hop",
@@ -47025,9 +47241,15 @@
      "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards delegation, a member a companion profile adds inside it included, and still enforces the entry's other members",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-saas/test/member-roles.test.ts",
+     "name": "the SaaS resource gives each entry member its resource-server role (@spec resource-access#rs-enforcement, #1362) > disregards a delegation member the authorization server would refuse as unsupported, and still enforces the entry's other members (D634)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor."
+   "notes": "#1258 item 4. #1362: witnessed at the SaaS resource: an entry carrying `delegation`, with a member a companion profile adds inside it, authorizes a write, while its own `actions` and `constraints` still refuse an unlisted action and an unlisted vendor. Proved by mutation: removing `delegation` from the disregarded members, and refusing a companion member inside it, each fail the test. Case fc-06 stays skipped (rs.member-roles): the reader has no rs-authorize executor. D634: a second witness carries a delegation member the authorization server refuses as unsupported; the resource server still disregards it and enforces the entry's other members. Proved by mutation: removing `delegation` from the disregarded members fails it."
   },
   {
    "id": "resource-access.rs-enforcement.unknown-member-unenforceable",
@@ -47139,9 +47361,9 @@
    "id": "resource-access.entry-validation.locations-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
-   "text": "The authorization server refuses an entry carrying `locations` with the `invalid_authorization_details` error code.",
+   "text": "The authorization server MUST refuse an entry carrying `locations` with the `invalid_authorization_details` error code.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47209,7 +47431,7 @@
    "anchor": "entry-validation",
    "text": "its `resource` is not an `absolute-URI`",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47241,7 +47463,7 @@
    "anchor": "entry-validation",
    "text": "its `resource` is an `http` or `https` URI without the `//` authority form naming a non-empty host",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47267,12 +47489,44 @@
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
   },
   {
+   "id": "resource-access.entry-validation.resource-match-unrecognized-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource_match` is a value the authorization server does not recognize",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_match value the authorization server does not recognize is refused invalid_authorization_details",
+    "local": "the reference AS recognizes exact and prefix; PAR refuses any other value through the shared resourceMatchViolation rule before any interaction, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission) > refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D634 R3. The authorization server's side of the unrecognized-resource_match rule; the resource server's fail-closed side is resource-access.rs-enforcement.resource-match-unrecognized-fail-closed. The reference already refused the value at PAR (#1276). Proved by mutation: letting the PAR validator admit an unrecognized resource_match fails the witness ('unrecognized: expected 201 to be 400'). The direct-derivation refusal in resource-match-unsupported.test.ts is cited on resource-access.type.prefix-query-fragment-refused, not here."
+  },
+  {
    "id": "resource-access.entry-validation.actions-non-empty-grammar",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
    "text": "its `actions` array is empty, or one of its values is neither an action identifier nor an action family",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47316,7 +47570,7 @@
    "anchor": "entry-validation",
    "text": "its `delegation.max_depth` is not a non-negative integer, so a negative or fractional value is refused",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47353,7 +47607,7 @@
    "anchor": "entry-validation",
    "text": "an `allowed_delegates` matcher carries neither `sub` nor `sub_profile`, or carries any other member",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47427,7 +47681,7 @@
    "anchor": "entry-validation",
    "text": "its `resource_contract` is not an object with exactly the members `id`, `version`, and `digest`, or one of them does not have the form {{resource-access-type}} gives it",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "resource-access.resource-contract"
@@ -47462,7 +47716,7 @@
    "anchor": "entry-validation",
    "text": "its `time_window` Common Constraint has a `not_before` later than its `not_after`",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47494,7 +47748,7 @@
    "anchor": "entry-validation",
    "text": "its `recipient_domain` Common Constraint is not a DNS name in ASCII form, with each internationalized label in its A-label form, or ends in a dot",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -47711,6 +47965,44 @@
     }
    ],
    "notes": "#1376. The SaaS resource evaluates the requested action alone against each entry's actions. Proved by mutation: treating an entry with an undefined action as unenforceable fails both witnesses (expected ok true)."
+  },
+  {
+   "id": "resource-access.decimal-values.proposal-malformed-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "decimal-values",
+   "text": "the authorization server MUST refuse an authority proposal carrying one at submission",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose Common Constraint carries a decimal-string value outside the grammar (scientific notation, a sign, a thousands separator, NaN or Infinity, a missing digit on either side of the point, more than 18 fractional digits) is refused invalid_authorization_details at submission, before any interaction, with no request_uri and no Mission; a well-formed value is admitted",
+    "local": "max_amount's amount is the reference's only decimal-valued Common Constraint member; the shared intake validator (validateMissionResourceAccessSchema) applies isValidAmount, and the published schema carries the grammar as the amount's pattern"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "decimal values at PAR (@spec resource-access#decimal-values) > refuses a malformed max_amount amount with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "decimal values at PAR (@spec resource-access#decimal-values) > accepts a decimal string with up to 18 fractional digits (positive control)",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "D634 residue (D639). Before it the reference admitted a malformed amount at PAR (201 with a request_uri) and refused it only at derivation, through intersectAmount, when the ceiling also carried max_amount. Proved red-green: the witness fails against main ('1e300': expected 201 to be 400) and with the new check disabled, and passes with it. The lead sentence ('a consumer MUST reject it rather than attempt to parse it') and the resource server's bullet have no row of their own."
   },
   {
    "id": "resource-access.common-constraints.no-drop-any-key",
@@ -47984,6 +48276,91 @@
     }
    ],
    "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the non-delegable witness; applying the omission before the gate fails the admitted witnesses."
+  },
+  {
+   "id": "resource-access.type.delegation-unsupported-member-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "The authorization server MUST refuse an entry whose `delegation` carries a member other than `max_depth` and `allowed_delegates` with the `invalid_authorization_details` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS refuses, with invalid_authorization_details, an entry whose delegation carries a member that neither Resource Access nor a companion profile it implements defines: a proposal carrying one is refused at PAR with no request_uri, a derivation from a ceiling entry carrying one is refused before approval with no Mission created, and no entry is derived or projected from one",
+    "local": "the reference also refuses a member inside Child Delegation's children grant that Child Delegation does not define, at the same boundaries; template consent refuses either with invalid_request, the admin plane's error, and the config loaders refuse either at load"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > refuses an entry whose delegation carries a member no specification it implements defines, whatever its value, with invalid_authorization_details and no request_uri",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > the approval rendering over a ceiling entry carrying one refuses invalid_authorization_details, and no Mission is created",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > deriveAuthoritySet refuses a ceiling entry or a submitted proposal entry carrying one, whatever its value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > the subset rule refuses either side carrying one, a byte-identical pair included",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "derivation from an entry whose delegation carries an unsupported member refuses (@spec resource-access#resource-access-type, D634) > projection yields no fragment for a candidate carrying one, rather than one rebuilt without it",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D634, a compatibility change: before it the reference admitted such a member at PAR and carried one from a ceiling entry into the derived entry. PAR refuses the proposal before any interaction; the approval rendering refuses a derivation from a programmatic ceiling entry carrying one (the config loaders refuse it at load), creating no Mission; deriveAuthoritySet refuses it on either operand; the subset rule refuses either side, a byte-identical pair included; projection yields no fragment for the pairing. Proved red-green: each witness fails against the pre-D634 implementation (PAR returns 201, the rendering returns the approval page with 200, deriveAuthoritySet derives, isSubsetEntry returns true for the byte-identical pair, projection issues a fragment), restoring only that seam's file where the path allows (derive.ts for the rendering, derivation and projection witnesses; authorization-details-metadata.ts for PAR), and passes at the change."
+  },
+  {
+   "id": "resource-access.type.delegation-companion-member-admitted",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "unless a companion profile it implements defines that member's processing",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegation member that a companion profile the AS implements defines is admitted and carried into the approved entry, no broader than the parent entry's",
+    "local": "the reference implements Child Delegation, whose children grant is that member; a proposal's children narrows the shipped ceiling's and inherits the members it omits"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-extension-members.test.ts",
+     "name": "PAR refuses a delegation member the authorization server does not support (@spec resource-access#resource-access-type, D634) > admits the children grant Child Delegation defines, and the approved Mission's entry carries it, narrowed by the ceiling",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D634. A PAR proposal whose delegation carries Child Delegation's children is admitted, approved, and the Mission's entry carries children narrowed by the shipped ceiling. Proved by mutation: refusing children at the PAR intake fails the admission (400), and dropping children in narrowDelegation fails the carriage."
   },
   {
    "id": "evidence.mission-evidence-envelope.reject-unrecognized-type",
@@ -52297,6 +52674,351 @@
    "notes": "#705 (D359); #1162 review P2."
   },
   {
+   "id": "child-delegation.child-state.containment-propagation",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "child-state",
+   "text": "when a parent Authority Set entry is contained, the Mission Issuer MUST propagate the containment to every child entry justified by it, so a Child Mission does not keep deriving contained authority while the parent stays `active`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A contain transition on a parent narrows every existing non-terminal child entry justified by a contained parent entry, transitively, without changing any child's lifecycle state; a child holding no such entry is untouched."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "containment propagates entry-wise to existing children (@spec child-delegation#child-state, issue #412) > a contained parent entry narrows a justified child's effective set; a non-contained action and the parent's own state are unaffected",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment.test.ts",
+     "name": "containment propagates entry-wise to existing children (@spec child-delegation#child-state, issue #412) > is transitive: a grandchild justified through the child also narrows",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a fine selector over the parent's broad prefix entry reaches an existing child's sibling entry justified by it",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a broad prefix selector reaches an existing child's finer entry",
+     "level": "unit",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "Containment profile composed (#412). #1463: under prefix entries, \"justified by it\" reaches a child entry within a contained parent entry, so the removals are widened onto the parent's approved entries before each child is narrowed."
+  },
+  {
+   "id": "containment.selector-matching.exact-default-prefix-declared",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "An `exact` selector never applies to the resources beneath its `resource`; a containment meant for a service and everything beneath it declares `prefix`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A contained-capability entry with no resource_match is exact: it removes nothing from an approved entry finer than its resource, while the same resource declared prefix removes the selected actions from that finer entry.",
+    "local": "The containment policy loader keeps a declared prefix and reads an absent resource_match as exact; the shipped contain-external-comms-on-taint-v1 rule is service-wide and declares prefix."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > an exact selector is never a subtree selector: an exact service root leaves a finer entry untouched",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "config loaders admit or refuse resource_match at load (#1264, #1440) > the containment loader keeps a removal's declared prefix and reads an absent resource_match as exact (@spec containment#selector-matching, #1463)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463, D606. Mutations: a raw string-prefix comparison in selectorOverlapsEntry fails the kernel witness (the exact service root reaches the finer entry); string-equality pairing in effectiveEntriesWithOrigin fails the endpoint witness (the declared prefix selector reaches nothing); dropping the loader's resource_match fails the loader witness."
+  },
+  {
+   "id": "containment.selector-matching.overlap-applies",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "The Mission Issuer MUST apply each contained-capability entry to every approved Authority Set entry whose resource set overlaps the entry's own, whether the selector is broader or finer than that approved entry.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "After a contain transition, every approved entry whose resource set overlaps a contained-capability entry's, broader or finer, is narrowed in the Effective Authority Set every later derivation draws on; an approved entry whose resource set is disjoint from it, including a sibling sharing a path's characters but not a path-segment boundary, is untouched.",
+    "local": "Witnessed through the lifecycle endpoint (a declared prefix selector over an entry approved beneath a configured prefix ceiling, observed in the next refresh token) and through the kernel's contain transition (both directions, siblings and segment boundaries, and the shipped rule over a finer remittance entry)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > a broad prefix selector contains a finer entry approved beneath a prefix ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > a fine selector over a broad prefix entry removes the selected action across the whole entry (conservative over-containment)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > disjoint siblings and path-segment boundaries are untouched",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > the shipped contain-external-comms-on-taint-v1 rule reaches a remittance entry approved beneath a prefix ceiling",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463, D606. The matcher is selectorOverlapsEntry (mission-core containment-selector.ts): resourceWithin in both directions, not the audience helper entryOverlapsResource. Mutations: dropping the entry-within-selector direction fails the broad-selector witness; dropping the selector-within-entry direction fails the fine-selector witness; a raw string-prefix comparison fails the sibling witness; string-equality pairing fails the endpoint witness; removing the shipped rule's prefix fails the shipped-rule witness."
+  },
+  {
+   "id": "containment.selector-matching.undecidable-refused",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "The Mission Issuer MUST NOT admit to the overlay a contained-capability entry it cannot compare, such as one with an unrecognized `resource_match`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "A contain transition naming a contained-capability entry the Mission Issuer cannot compare commits nothing: no overlay, no state-version increment.",
+    "local": "The lifecycle contain operation answers 400 invalid_request; the kernel's contain transition throws ContainmentSelectorError; the containment policy loader refuses the rule at load, naming the entry. Refused: an unrecognized resource_match, a prefix base with a query or no // authority, an empty actions list, and an unknown member."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > refuses a selector the matcher cannot decide with invalid_request, committing nothing",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > refuses a selector the matcher cannot decide before anything commits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-match-unsupported.test.ts",
+     "name": "config loaders admit or refuse resource_match at load (#1264, #1440) > the containment loader refuses a removal the matcher cannot decide, naming the entry (@spec containment#selector-matching, #1463)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463. Mutations: removing the endpoint check fails the endpoint witness (the kernel's refusal then surfaces as 503); removing the kernel check fails the kernel witness; removing the loader check fails the loader witness. The error code is this implementation's choice, not pinned by the draft."
+  },
+  {
+   "id": "containment.selector-matching.action-removal",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "A selector with `actions` removes those actions from each approved entry it applies to, and a selector with no `actions` member removes each such entry whole.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "An overlapping selector with actions leaves the approved entry's other actions derivable; one with no actions member removes the entry, and a Mission left with no effective authority refuses derivation as contained."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > removes only the selected actions from an overlapping entry, and the whole entry for a selector with no actions",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "containment beside a configured prefix ceiling, through the lifecycle endpoint (@spec containment#selector-matching, #1463) > an exact service-root selector leaves an entry approved beneath the prefix ceiling untouched, and a declared prefix selector contains it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1463. Mutation: treating every removal as whole fails the kernel witness."
+  },
+  {
+   "id": "containment.selector-matching.union",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "When more than one selector applies to an approved entry, the removals form a union: the entry loses every action any of them selects, and is removed whole when any of them has no `actions` member.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "Every selector that overlaps an approved entry contributes to its removal, never only the first match, and selectors sharing a resource string under different resource_match values apply independently, never merged into one."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > multiple overlapping selectors form a union: every overlapping selector contributes, never only the first",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > selectors naming one resource string under different modes stay separate in the overlay and select different resource sets",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/demo/test/containment-overlay-view.test.ts",
+     "name": "review: same-resource entries under different modes > the PDP retains the union of removals for the matched prefix entry",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1463, D606. Mutations: returning at the first overlapping selector fails the union witness; keying the overlay merge on resource alone fails the mode witness. The PDP-view witness: an exact and a prefix entry naming one resource string keep separate per-entry unions in the delta the in-process view hands the PDP (mutation: keying the merge on resource alone fails it)."
+  },
+  {
+   "id": "containment.selector-matching.conservative-over-containment",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "A selector finer than an approved entry, such as an `exact` selector for one invoice under a `prefix` entry for the invoice service, therefore removes the selected actions from the whole approved entry, including resources the selector does not name.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A fine selector under a broad prefix entry removes the selected actions from the whole prefix entry, so they are not derivable for a sibling resource the selector does not name.",
+    "local": "The overlay keeps the selector as written; the over-containment lives in the effective-set computation and in the per-entry resolution the in-process PDP view reads (containedEntryRemovals)."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > a fine selector over a broad prefix entry removes the selected action across the whole entry (conservative over-containment)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "a selector applies to every approved entry whose resource set overlaps it (@spec containment#selector-matching, #1463) > resolves the overlay onto the approved entries for a consumer that pairs by an entry's own resource",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: conservative removal survives expansion > a fine selector removing an action from a broad predecessor restricts a sibling successor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: drawdown conservative removal > drawdown cannot restore a sibling lost through a broad predecessor entry",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1463, D606. Mutation: dropping the selector-within-entry direction of the overlap fails the witness. #1500 review: what over-containment removes returns only through restoration; expansion reconciliation and the progressive drawdown compare successor authority against the removals as they land on the predecessor's approved entries."
+  },
+  {
+   "id": "containment.selector-matching.child-propagation",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "selector-matching",
+   "text": "Propagation to an existing Child Mission ({{derivation-gating}}) applies the same removal: a child entry justified by an approved entry a selector applies to loses what that approved entry lost.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "A contain transition on a parent narrows an existing child's entry justified by a parent entry the selector applies to, including a sibling resource under a broad parent entry a fine selector over-contained, and a broad selector reaches a child's finer entry; a child no selector reaches is untouched.",
+    "local": "The kernel widens the removals onto the parent's approved entries (containmentAtEntries) before filtering each child's entries by overlap."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a fine selector over the parent's broad prefix entry reaches an existing child's sibling entry justified by it",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "containment propagates by overlap to existing children (@spec child-delegation#child-state, containment#selector-matching, #1463) > a broad prefix selector reaches an existing child's finer entry",
+     "level": "unit",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#1463, D606. Mutations: propagating the selectors unwidened fails the sibling witness; filtering a child's entries by string equality fails the finer-entry witness."
+  },
+  {
    "id": "child-delegation.child-state.parent-terminated-immediate-parent",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "child-state",
@@ -56477,9 +57199,33 @@
      "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > a containment committed after adjudication and before the activating commit fails the completion: the successor restores no contained capability",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > a removal after adjudication restricts a successor entry its selector overlaps under another resource string, and no disjoint sibling",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > a removal naming authority already contained at adjudication restricts nothing new, judged by resource set",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "review: conservative removal survives expansion > a fine selector removing an action from a broad predecessor restricts a sibling successor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/containment-overlap.test.ts",
+     "name": "an expansion's reconciliation compares containment restrictions by overlap (@spec expansion#reconciliation check 3, containment#selector-matching, #1463) > resolves the snapshot onto the approved entries too: an entry that had already lost the action at adjudication restricts nothing new",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option)."
+   "notes": "Review finding on #1031 (owner ruling D241): narrowing between adjudication and activation. #1177. The token-exchange-response completion is witnessed through the Progressive policy-adjudicated drawdown, which completes an expansion in the token-exchange response (progressive tests, under the deployment's progressive option). #1463: check 3 compares restrictions by resource-set overlap (restrictedSinceAdjudication), witnessed at unit level; a removal restricts nothing new where it, or the successor entry, lies within a snapshot removal selecting the same action. #1500 review: check 3 also resolves the removals onto the predecessor's approved entries, at the snapshot and now, so a successor cannot restore what conservative over-containment removed from a broad entry (mutation: dropping the resolved comparison fails the sibling witness; resolving only the current removals fails the snapshot witness)."
   },
   {
    "id": "expansion.predecessor-active.refused-invalid-request",
@@ -58959,7 +59705,7 @@
      "surface": "device-authorization-endpoint"
     }
    ],
-   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers request_not_supported or request_uri_not_supported and the test fails."
+   "notes": "#1202: the reference AS side is built, opt-in behind the device-authorization capability (D412), on oidc-provider 9.10.0's device flow. Both parameters are refused invalid_request with no code issued. Proved by removing the intake's refusal: the provider then answers invalid_request_object (the test's request is unsigned; Request Objects are enabled for PAR, #1503) or request_uri_not_supported and the test fails."
   },
   {
    "id": "device-authorization.request.whole-or-refuse",
@@ -60343,7 +61089,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity the Mission Issuer has not pinned never yields a `bound` outcome.",
-    "local": "The reference pins no identity yet, so every encounter is unpinned and none binds: the witness is a prefix-ceiling encounter that every other guard would admit falling back to a human (proved by admitting it, which issues a token). It discriminates pinned from unpinned only once identity pinning lands (#1469 stage 2)."
+    "local": "No encounter binds by policy before stage 6, pinned or not, so the witness is that every encounter falls back to a human, an unpinned one included (proved by admitting it, which issues a token). It discriminates pinned from unpinned only once policy binding lands (#1469 stage 6)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -60353,9 +61099,15 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-binding-unpinned-contextual",
@@ -60394,12 +61146,26 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned."
+    "normative": "For every adjudicated encounter the Mission Issuer retrieves the resource itself, and the pinned identity matches what that retrieval returned.",
+    "local": "The pinned Encountered Resource object comes only from the Mission Issuer's own connection, never from the agent's hint. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.issuer-establishes-identity-contextual",
@@ -60438,12 +61204,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin."
+    "normative": "An agent-supplied origin that differs from the origin the issuer's own connection authenticated is not pinned: adjudication and evidence carry the issuer's origin.",
+    "local": "The pinned origin is the request entry's origin as the connection authenticated it; an agent hint naming another origin, or no origin the request seeks, is refused as request validation."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > an encountered_resource that is not an origin object or names no resource the request seeks, and a digest hint without one, are refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-origin-contextual",
@@ -60482,12 +61262,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved."
+    "normative": "An agent-supplied metadata digest is not pinned: adjudication and evidence carry the digest of the metadata bytes the issuer retrieved.",
+    "local": "A forged metadata digest in the hint is recorded as the agent's claim (resource_metadata_digest_matched false) and never fills the pinned object, pinned or not. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-metadata-digest-contextual",
@@ -60526,12 +61314,20 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved."
+    "normative": "An agent-supplied issuer is not pinned: adjudication and evidence carry the issuer named in the metadata the Mission Issuer retrieved.",
+    "local": "A forged issuer in the hint, even one the deployment would verify, is recorded as the agent's claim (issuer_matched false) and never fills the pinned object. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-issuer-contextual",
@@ -60629,7 +61425,7 @@
    "assertion": "ignore",
    "observation": {
     "normative": "An `encountered_resource` request parameter whose values the issuer's own retrieval does not confirm is not adopted as the pinned identity.",
-    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused. Verifying the hint against a TLS-authenticated origin arrives with identity pinning (#1469 stage 2)."
+    "local": "The encountered_resource object is checked for shape and kept on the deferral as the agent's claim, each member compared with the Mission Issuer's own values and never adopted; the encountered resources come from the request's own entries, and a hint naming any origin but the encounter's is refused."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -60651,9 +61447,15 @@
      "name": "the encounter's hint names the encounter's own origin (@spec discovery#resource-identity, #1469) > a hint naming another origin the request seeks is refused, so its digest is never compared with a different resource's declaration",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.request-object-is-hint-contextual",
@@ -60692,12 +61494,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided."
+    "normative": "Every Discovery Evidence object carries the pinned identity, and that identity was established before the outcome was decided.",
+    "local": "The identity is established, and recorded on the expansion deferral's encounter facts with whether it is pinned and why not, before the human decides. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.established-and-recorded-contextual",
@@ -60736,12 +61552,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind."
+    "normative": "The pinned `origin` is one the Mission Issuer's own TLS connection authenticated at encounter; an origin the issuer cannot TLS-authenticate is not pinned and does not bind.",
+    "local": "Witnessed through the port's report: an origin the connection did not TLS-authenticate is not pinned and nothing retrieved over it is used. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.tls-authenticated-origin-contextual",
@@ -60780,12 +61610,32 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication."
+    "normative": "For a resource that names an authorization server, the Mission Issuer fetches its protected-resource metadata itself during adjudication.",
+    "local": "The metadata comes from the deployment's connection port, retrieved for the origin as the resource identifier, and is used only when its resource is exactly the origin (RFC 9728 Section 3.3) and every authorization server it names is an issuer identifier (RFC 8414 Section 2), checked before any authorization. The reference requires the metadata, stricter than the object's conditional members. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.prm-retrieved-server-side-contextual",
@@ -60824,12 +61674,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved."
+    "normative": "The evidence `resource_metadata_digest` equals the digest of the exact metadata bytes the issuer retrieved.",
+    "local": "The digest is over the exact bytes the port returned, not a re-serialization, and is recorded on the deferral's Encountered Resource object. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.prm-exact-bytes-digest-contextual",
@@ -60868,12 +61726,20 @@
    "surface": "evidence-emission",
    "assertion": "ignore",
    "observation": {
-    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's."
+    "normative": "When the agent supplies a metadata digest that differs from the digest of the retrieved bytes, the evidence carries the issuer's computed digest, not the agent's.",
+    "local": "Where the agent's metadata digest differs, the recorded digest is the one over the retrieved bytes. Discovery Evidence is a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.no-agent-digest-reuse-contextual",
@@ -60912,12 +61778,26 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy."
+    "normative": "An encounter whose metadata names an issuer not authorized for the resource's domain never binds by policy.",
+    "local": "The named issuer is verified through the deployment's issuer-authorization port (domain-authorized-issuer being one mechanism); unverified, the identity is not pinned. No encounter binds by policy before stage 6, so the binding half is not yet discriminated. The reference pins only metadata naming exactly one authorization server."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.issuer-authorized-for-domain-contextual",
@@ -60956,12 +61836,20 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`."
+    "normative": "When issuer authorization for the resource's domain cannot be verified, the outcome is `routed_to_approval`, never `bound`.",
+    "local": "An unverified issuer routes to a human (a deferral), even where the deployment refuses unpinnable encounters. `routed_to_approval` is recorded only in Discovery Evidence, a later stage."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.unverified-issuer-routes-contextual",
@@ -61104,12 +61992,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel."
+    "normative": "No origin, digest, issuer, or taint value that the agent mediated is used for adjudication; each comes from the issuer's own retrieval or the harness's attested channel.",
+    "local": "Origin, metadata digest and issuer come from the deployment's connection and issuer-authorization ports, never the agent; trusted taint is a later stage (#1469 stage 3)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.non-agent-channel-contextual",
@@ -61149,7 +62051,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "An encounter whose identity cannot be pinned (TLS failure, unretrievable metadata, unverifiable issuer) yields `routed_to_approval` or `refused`, never `bound`.",
-    "local": "Every encounter routes to a human, since the reference obtains no trustworthy identity yet; the TLS, metadata and issuer failure cases arrive with identity pinning (#1469 stage 2)."
+    "local": "An encounter whose identity cannot be pinned (origin not TLS-authenticated, metadata missing or unusable, a malformed issuer identifier among them, no single named issuer, issuer unverified) routes to a human, or, where the deployment refuses unpinnable encounters, is refused before any deferral exists; an unverified issuer always routes."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -61159,9 +62061,33 @@
      "name": "a discovery encounter on the drawdown path, stage 1 (@spec discovery#adjudication, discovery#resource-identity, progressive#ceiling-test, #1469) > a drawdown onto a resource no ceiling entry names falls back to a fresh human approval though every other guard would admit it",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "Reference AS: #1469 stage 1 (D607), the encounter path's intake on the Progressive drawdown path; every encounter falls back to a fresh human approval."
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.untrustworthy-identity-route-or-refuse-contextual",
@@ -61376,12 +62302,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed."
+    "normative": "Every Encountered Resource object carries `origin` as a URI string naming the TLS-authenticated origin; an object without it is malformed.",
+    "local": "Data-construction witness: the Encountered Resource object recorded on the deferral carries origin; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-origin-contextual",
@@ -61420,12 +62354,26 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes."
+    "normative": "An Encountered Resource object for a resource whose protected-resource metadata was retrieved carries `resource_metadata_digest`, an integrity-anchor encoded digest of the exact retrieved bytes.",
+    "local": "Data-construction witness: the recorded object carries resource_metadata_digest exactly when usable metadata was retrieved; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata that is absent, not a JSON object, or whose resource is not exactly the origin (RFC 9728 Section 3.3) is not used: no digest, no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-resource-metadata-digest-contextual",
@@ -61464,12 +62412,32 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier."
+    "normative": "An Encountered Resource object whose metadata names an authorization server carries `issuer` equal to that issuer identifier.",
+    "local": "Data-construction witness: the recorded object carries the one issuer the metadata names, always an issuer identifier (https, no query or fragment), and none when it names zero, several, or a malformed one; no Discovery Evidence is emitted yet."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming no authorization server, or more than one, pins no issuer",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.resource-identity.member-issuer-contextual",
@@ -64391,12 +65359,26 @@
    "surface": "token-endpoint",
    "assertion": "ignore",
    "observation": {
-    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted."
+    "normative": "The pinned identity of every adjudicated encounter comes from the issuer's own retrieval; agent-supplied identity values are not adopted.",
+    "local": "Identity comes from the Mission Issuer's own connection, independent of the agent's hints. The reference performs no network retrieval: the deployment's connection port reports TLS authentication and returns the metadata bytes."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > pins the TLS-authenticated origin, the digest of the metadata's exact bytes and the one issuer it names, verified for the domain; the encounter still routes to a human",
+     "level": "endpoint",
+     "surface": "governance-record"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > the agent's issuer and metadata digest are recorded as its claims and compared, never adopted",
+     "level": "endpoint",
+     "surface": "governance-record"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.identity-independent-of-agent-contextual",
@@ -64523,12 +65505,32 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`."
+    "normative": "An encounter with unpinnable identity, an unclassifiable operation, or no trustworthy taint state yields `routed_to_approval` or `refused`, never `bound`.",
+    "local": "Only the cannot-pin clause: an unpinnable encounter routes to a human or, where the deployment refuses, is refused with no deferral. Classification and trusted taint are later stages."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Reference AS: the discovery encounter path is #1469 (staged, D607); not yet implemented."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > an origin the connection did not TLS-authenticate is not pinned, and nothing retrieved over that connection is used",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > where the deployment refuses unpinnable encounters, an encounter whose identity cannot be established is refused uniformly, with no deferral and no Mission; a pinned one still routes to a human",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-encounter-endpoint.test.ts",
+     "name": "the encountered resource's identity, pinned from the Mission Issuer's own connection (@spec discovery#resource-identity, discovery#adjudication, #1469 stage 2) > a named issuer not verified as authorized for the domain is not pinned, and the encounter routes to a human even where the deployment refuses unpinnable encounters",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "Reference AS: #1469 stages 1 and 2 (D607), the encounter path's intake and identity pinning through the deployment's connection and issuer-authorization ports; no encounter binds by policy before stage 6."
   },
   {
    "id": "discovery.conformance.route-or-refuse-unresolvable-contextual",

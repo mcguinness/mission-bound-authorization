@@ -76,8 +76,11 @@ export {
   REFUSED_ENTRY_MEMBERS,
   refusedEntryMember,
   resourceWithin,
+  SUPPORTED_CHILDREN_MEMBERS,
   SUPPORTED_CONSTRAINT_KEYS,
+  SUPPORTED_DELEGATION_MEMBERS,
   SUPPORTED_ENTRY_MEMBERS,
+  unsupportedDelegationMember,
   unsupportedEntryMember,
   withoutCapabilitySources,
 } from "./authority-subset.js";
@@ -130,6 +133,16 @@ export {
   type SigningKeyStatus,
 } from "./compromise-boundary.js";
 export { type Confirmation, ConfirmationError, parseConfirmation } from "./confirmation.js";
+export {
+  CONTAINMENT_SELECTOR_MEMBERS,
+  type ContainmentRemoval,
+  type ContainmentSelector,
+  containmentAtEntries,
+  containmentRemovalFor,
+  containmentSelectorViolation,
+  mergeContainmentSelectors,
+  selectorOverlapsEntry,
+} from "./containment-selector.js";
 export {
   type CredentialAuthorityEntry,
   CredentialAuthorityError,

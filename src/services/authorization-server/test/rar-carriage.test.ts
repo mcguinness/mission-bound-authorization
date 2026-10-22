@@ -387,8 +387,8 @@ describe("PAR carriage (@spec mission#authority-proposal, #downgrade-by-omission
 
   // @spec resource-access#entry-validation, resource-access#resource-access-type
   // (#1276): "A `resource` value under `prefix` MUST NOT carry a query or
-  // fragment component; the authorization server refuses such an entry with
-  // the `invalid_authorization_details` error code." A well-formed `prefix`
+  // fragment component; the authorization server MUST refuse such an entry
+  // with the `invalid_authorization_details` error code." A well-formed `prefix`
   // entry is admitted at intake, and an unrecognized value is refused.
   it("refuses a prefix entry whose resource carries a query or a fragment, and an unrecognized resource_match, with invalid_authorization_details before any interaction, creating no Mission; a well-formed prefix entry is admitted", async () => {
     const QUERIED = `${RESOURCE}?tenant=a`;

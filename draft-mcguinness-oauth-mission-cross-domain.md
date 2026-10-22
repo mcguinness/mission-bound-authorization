@@ -602,8 +602,8 @@ A Mission-bound cross-domain grant:
   replay it within its lifetime ({{validation-at-resource-as}},
   {{RFC7523}} Section 3);
 - MUST carry the `mission` claim
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "The Mission
-  Claim") with `id` and `issuer` unchanged from the Mission, and the
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Claim")
+  with `id` and `issuer` unchanged from the Mission, and the
   audience-scoped `authorization_details` ({{audience-scope}}). This
   profile REQUIRES `authority_hash` on that claim too, reintroducing
   it beyond the issuance profile's baseline as this profile's own

@@ -56,6 +56,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-oauth-mission-resource-access:
+    title: "Mission Resource Access Profile for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-mission-substrate:
     title: "Mission Substrate Requirements"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-substrate.html
@@ -261,8 +269,11 @@ implementable alone. It reuses, without restating, that profile's
 Mission, Mission Intent, Authority Set and entry shape, integrity
 anchors, `mission` claim, subset rule, and lifecycle gating, and the
 Status profile's state version
-({{I-D.draft-mcguinness-oauth-mission-status}}). It uses the terms
-Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
+({{I-D.draft-mcguinness-oauth-mission-status}}). It pairs contained
+capability with Authority Set entries under the Resource Matching and
+Subset Rule of the Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). It uses the
+terms Agent (Client), Subject, Approver, Mission Issuer, Authority Set,
 Mission, and derived token as defined in the issuance profile.
 
 Where this document refers to "the issuance profile" without a
@@ -322,9 +333,11 @@ Containment overlay:
   Mission's effective authority ({{overlay}}).
 
 Contained capability:
-: A `{resource, actions}` pair in the overlay's contained set. An
-  entry with no `actions` member contains the whole Authority Set
-  entry for that resource. It is this profile's own contribution to
+: A selector in the overlay's contained set: a `resource`, its
+  `resource_match`, and optionally `actions` ({{overlay}}). It applies
+  to every approved Authority Set entry whose resource set overlaps it
+  ({{selector-matching}}), and with no `actions` member it contains
+  each such entry whole. It is this profile's own contribution to
   the Effective Authority Set's reduction: every derivation gated
   after a contain transition excludes it; authority that left the
   Mission before the transition keeps its own bound, not this one
@@ -382,7 +395,7 @@ It consumes these optional capabilities:
 
 | Capability | Consumption | Scope of consumption |
 | --- | --- | --- |
-| Structured Authority | required | The Effective Authority Set is what every derivation, delegation, projection, and attenuation root is gated on after a contain transition ({{derivation-gating}}); a contained capability names an approved Authority Set entry or its actions ({{overlay}}) |
+| Structured Authority | required | The Effective Authority Set is what every derivation, delegation, projection, and attenuation root is gated on after a contain transition ({{derivation-gating}}); a contained capability selects approved Authority Set entries, or their actions, by resource-set overlap ({{selector-matching}}) |
 | Monotonic Derivation | required | Scoped to removal-only narrowing: a contain transition only adds contained capability, so monotonicity is trivially decidable, set union over entries, with no per-constraint comparator ({{removal-only}}, {{contain-transition}}) |
 | Lifecycle-Gated Authorization | required | The Baseline property is what a lifecycle-gated substrate provides: no derivation, delegation, projection, or attenuation root minted after the transition carries contained capability ({{containment-properties}}) |
 | State-Observable | required when a consumer claims the Runtime-Enforced property | Consumed only for the Runtime-Enforced property: a consumer that checks a fresh, authenticated state source at or near action time denies contained capability whether or not its credential predates the transition; a consumer that never consults such a source gets Baseline only ({{containment-properties}}) |
@@ -419,10 +432,19 @@ overlay on its Mission record:
 `contained`:
 : REQUIRED when `containment_version` is greater than 0. An array of
   contained-capability entries. Each entry is a JSON object
-  {{RFC8259}} with `resource` (REQUIRED, the `resource` of an
-  approved Authority Set entry) and `actions` (OPTIONAL, an array of
-  that entry's action values). An entry with no `actions` member
-  contains the whole Authority Set entry.
+  {{RFC8259}} with these members:
+
+  - `resource`: REQUIRED. An absolute URI, compared with the
+    `resource` of approved Authority Set entries
+    ({{selector-matching}}).
+  - `resource_match`: OPTIONAL. `exact` (the default, and the behavior
+    when the member is absent) or `prefix`, with the meaning and the
+    `resource` limits the Mission Resource Access Profile defines for
+    an entry ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+  - `actions`: OPTIONAL. A non-empty array of action values.
+
+  An entry with no `actions` member contains each approved entry it
+  applies to whole.
 
 The overlay is held by the Mission Issuer. It is not part of the
 Mission Intent and not part of the Authority Set, and it never enters
@@ -432,6 +454,50 @@ state, not part of `authority_hash`; folding containment into the
 anchor would make the committed authority time-varying, exactly as
 folding an entry's fired completion status into it would
 ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+
+## Selector Matching {#selector-matching}
+
+A contained-capability entry is a selector over the approved Authority
+Set. Its resource set is the one its `resource` and `resource_match`
+denote under Resource Matching
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}): under
+`exact`, the `resource` alone; under `prefix`, the `resource` and every
+resource beneath it at a path-segment boundary. An `exact` selector
+never applies to the resources beneath its `resource`; a containment
+meant for a service and everything beneath it declares `prefix`.
+
+Two resource sets overlap when one is contained in the other under the
+resource comparison of the Subset Rule
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Subset Rule"). The Mission Issuer MUST apply each contained-capability
+entry to every approved Authority Set entry whose resource set overlaps
+the entry's own, whether the selector is broader or finer than that
+approved entry. The Mission Issuer MUST NOT admit to the overlay a
+contained-capability entry it cannot compare, such as one with an
+unrecognized `resource_match`: such an entry would apply to nothing.
+
+The removal is per approved entry. A selector with `actions` removes
+those actions from each approved entry it applies to, and a selector
+with no `actions` member removes each such entry whole. When more than
+one selector applies to an approved entry, the removals form a union:
+the entry loses every action any of them selects, and is removed whole
+when any of them has no `actions` member. Selectors sharing a
+`resource` value under different `resource_match` values select
+different resource sets and apply independently. An approved entry left
+with no actions is removed.
+
+An approved entry cannot express "this resource set except that
+resource". A selector finer than an approved entry, such as an `exact`
+selector for one invoice under a `prefix` entry for the invoice
+service, therefore removes the selected actions from the whole approved
+entry, including resources the selector does not name. This
+over-containment is conservative: it removes more authority than the
+selector names, never less, and what it removes returns only through
+restoration ({{restoration}}).
+
+Propagation to an existing Child Mission ({{derivation-gating}})
+applies the same removal: a child entry justified by an approved entry
+a selector applies to loses what that approved entry lost.
 
 ## Removal-Only Expressiveness {#removal-only}
 
@@ -1160,6 +1226,13 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Selector Matching ({{selector-matching}}): a contained-capability
+  entry is a selector with `resource_match`, `exact` by default and
+  `prefix` by declaration. It applies to every approved entry whose
+  resource set overlaps it, removals from several selectors form a
+  union, and a selector finer than an approved entry removes its
+  actions from the whole entry, a conservative over-containment
+  (#1463).
 - The Contain Transition ({{contain-transition}}): a contain
   transition is refused for a `terminated` Mission, whatever its
   termination reason (#705).

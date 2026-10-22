@@ -434,7 +434,7 @@ Mission's invoice-read entry:
 
 The grant's `mission` claim is the issuance profile's `mission` claim
 object, whose `id` and `issuer` members the issuance profile defines
-({{I-D.draft-mcguinness-oauth-mission}}, Section "The Mission Claim").
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Claim").
 This profile requires two further members:
 
 - **`expires_at`.** The issuance profile defines `expires_at` as a

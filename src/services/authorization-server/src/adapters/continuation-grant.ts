@@ -102,6 +102,7 @@ import {
   type EncounterFacts,
   encounterFacts,
   encounterHint,
+  refusesEncounter,
 } from "../kernel/progressive.js";
 import {
   type AuthorityEntry,
@@ -2825,6 +2826,15 @@ export async function handleExpansionExchange(
         const facts = await encounterFacts(opts.progressive, outcome.encountered, requested, hint);
         if (typeof facts === "string") {
           txError(ctx, 400, "invalid_request", facts);
+          return;
+        }
+        // @spec discovery#adjudication, discovery#resource-identity (#1469 stage
+        // 2): an encounter whose identity cannot be established, where the
+        // deployment does not escalate it, is refused before any deferral or
+        // reservation exists. The refusal is uniform: the draft defines no
+        // diagnostic for it, and the response names no pinning step.
+        if (refusesEncounter(opts.progressive, facts)) {
+          txError(ctx, 400, "invalid_request", "the encounter is refused");
           return;
         }
         encounter = facts;
