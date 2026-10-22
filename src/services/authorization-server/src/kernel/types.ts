@@ -499,19 +499,25 @@ export interface ApprovalBasisPolicyDrawdown {
   /** The parent agent / requesting principal that triggered this child. */
   activation_actor: { iss: string; sub: string };
   /**
-   * The consented root's commitment: the `digest` of the justifying entry's
-   * `child_creation_policy` when carried, else the parent's `authority_hash`
-   * (the integrity anchor of the consented root that grants the drawdown).
+   * The child's authorizing commitment: the `digest` of the justifying entry's
+   * `child_creation_policy` when carried, else the parent's `authority_hash`,
+   * which commits the authorizing delegation entry. For a `direct` Parent
+   * that is the root its Approver consented; for a standing-consent Parent it
+   * is the set its activation derived, which traces through the Parent's own
+   * basis to the human-consented root (#1514).
    */
   root_commitment: string;
   /**
-   * @spec mission#mission-record (#580), child-delegation#child-creation —
-   * the human approval instant of the exact consented root
-   * `root_commitment` commits. Both root forms here were consented at the
-   * PARENT's approval event (an entry-carried `child_creation_policy`
-   * reference rides the committed entry the human approved), so this is the
-   * parent record's own `created_at`, read from retained state, never from
-   * the child-creation request.
+   * @spec mission#mission-record (#580), child-delegation#record-requirements
+   * (#1514) — the human approval instant of the consented root
+   * `root_commitment` traces to, read from the retained Parent record, never
+   * from the child-creation request. Both root forms share the Parent's root
+   * (an entry-carried `child_creation_policy` reference rides a committed
+   * entry of the Parent's authority). For a `direct` Parent that root was
+   * consented at the Parent's approval event, so this is the Parent's
+   * `created_at`. A standing-consent Parent's `authority_hash` commits the set
+   * its activation derived, not a root a human approved verbatim; the trace
+   * runs through its own basis, so this is the Parent's own `approved_at`.
    */
   approved_at: string;
 }
