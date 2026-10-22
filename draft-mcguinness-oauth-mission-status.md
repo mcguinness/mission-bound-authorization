@@ -1000,19 +1000,17 @@ non-deriving, exactly as the issuance profile gates on `active`.
 A transition to `suspended`, or to `terminated` with reason
 `completed`, gates new derivation only.
 Tokens already derived under the Mission remain valid until their own
-`exp`, exactly as in the issuance profile's revocation model and
-mirroring the treatment of a `superseded` termination
-({{I-D.draft-mcguinness-oauth-mission-expansion}}). A deployment that
+`exp`, exactly as in the issuance profile's revocation model. A
+deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of {{revocation-enforcement-classes}}.
 
 Suspension is reversible, so a refresh refused for it should not spend
 the client's ability to refresh after a `resume`. After validating a
 refresh request and before consuming or rotating its refresh token,
-the AS SHOULD check whether the Mission, or an ancestor whose state
-gates its derivation
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), is
-suspended. When this check detects suspension, the AS SHOULD
+the AS SHOULD check whether the Mission, or another Mission whose
+state a companion profile makes gate its derivation, is suspended.
+When this check detects suspension, the AS SHOULD
 refuse the request without consuming the refresh token or invalidating
 its otherwise-valid grant solely because of that suspension. This
 check does not replace issuance-time state validation. A concurrent
@@ -1049,15 +1047,12 @@ form-urlencoded body:
 `operation`:
 : REQUIRED. A string. One of `revoke`, `suspend`, `resume`,
   `complete`, or a further value a companion profile registers as an
-  extension operation on this endpoint, such as the Entry Discharge
-  companion's `discharge`
-  ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+  extension operation on this endpoint (below).
 
 `reason`:
 : OPTIONAL. A string. A human-readable reason recorded in
-  audit, maximum 1024 characters. Not used by a companion-registered
-  operation that records its own request members in audit, such as
-  `discharge` ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+  audit, maximum 1024 characters. Not used by an extension operation
+  that records its own request members in audit.
 
 `suspend_until`:
 : OPTIONAL. An RFC 3339 {{RFC3339}} date-time. Valid only on the
@@ -1081,10 +1076,9 @@ The request also carries the client authentication parameters of the
 mechanism it uses, as at the Mission Status endpoint
 ({{mission-status-request}}).
 
-A companion-registered extension operation, such as `discharge`,
-carries additional REQUIRED and OPTIONAL members of its own, defined
-completely by the companion that registers it
-({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+A companion-registered extension operation carries additional
+REQUIRED and OPTIONAL members of its own, defined completely by the
+companion that registers it.
 
 The base operations are:
 
@@ -1103,11 +1097,9 @@ Mission unchanged, so the refusal discloses nothing about it.
 
 A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
-value's request members, authorization, anti-oracle behavior, and
-result shape completely. The Entry Discharge companion registers
-`discharge` this way: it commits that a completion condition has
-fired, discharging a Mission-record entry, and is defined in full by
-that companion ({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+value's request members, authorization, anti-oracle behavior,
+idempotency and outcome vocabulary, result shape, and conformance
+requirements completely.
 
 A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
 pair is the Mission's schedule. When the `suspend_until` of a current
@@ -1244,25 +1236,19 @@ endpoint is: the AS publishes, in its Protected Resource Metadata for
 this resource {{RFC9728}}, the `resource` identifier the token's
 audience MUST name and the scopes it requires (`scopes_supported`):
 `mission_lifecycle` for `revoke`, `suspend`, `resume`, and `complete`
-({{mission-lifecycle-endpoint}}), and, where the deployment adopts the
-Entry Discharge companion, `mission_discharge` as well
-({{I-D.draft-mcguinness-oauth-mission-discharge}}). A private-key JWT
+({{mission-lifecycle-endpoint}}), and any scope an adopted extension
+operation defines. A private-key JWT
 `client_assertion` names the AS's issuer identifier in `aud`, and a
 presented access token MUST be audience-restricted to this endpoint's
 protected-resource identifier, exactly as at the Mission Status
-endpoint. Direct mTLS or private-key-JWT callers
-continue to use the deployment-defined equivalent grant, never a
-scope, exactly as a companion-registered extension operation such as
-`discharge` does
-({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+endpoint. Direct mTLS or private-key-JWT callers carry the
+deployment-defined equivalent grant, never a scope.
 
 ## Authorization {#lifecycle-authorization}
 
-This section governs `revoke`, `suspend`, `resume`, and `complete`; a
-companion-registered extension operation such as `discharge` has its
-own distinct authority model
-({{I-D.draft-mcguinness-oauth-mission-discharge}}), which a
-`mission_lifecycle` grant under this section MUST NOT imply.
+This section governs `revoke`, `suspend`, `resume`, and `complete`. An
+extension operation has the authority model its companion defines,
+which a `mission_lifecycle` grant under this section MUST NOT imply.
 
 The AS authorizes lifecycle operations against deployment policy. This
 document sets the minimum authorization semantics and leaves finer
@@ -1317,9 +1303,7 @@ to administrators; `suspend` and `resume` to administrators; and
 
 Because `resume` returns a suspended Mission to `active` and so undoes
 the containment a `suspend` established, a deployment SHOULD require a
-distinct or elevated authorization for `resume`, mirroring the
-treatment of bulk `resume` in Mission Management
-({{I-D.draft-mcguinness-oauth-mission-management}}).
+distinct or elevated authorization for `resume`.
 
 A `suspend` that carries `on_expiry` schedules a later `resume` or
 `revoke`. The AS MUST authorize it against both the caller's
@@ -1520,12 +1504,10 @@ against a `terminated` Mission, or `revoke` against one terminated
 with reason `completed`) is a conflict: the AS MUST refuse it with
 HTTP 409 and a JSON body whose error symbol is `conflict`, leaving
 the Mission state unchanged. The `nonce` replay and request-mismatch
-handling above applies independently of this rule. A companion-registered
-extension operation that changes no Mission state, such as `discharge`,
-is not bound by this rule; its own idempotency and outcome vocabulary
-are defined by the companion that registers it, for `discharge` by the
-Entry Discharge companion
-({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+handling above applies independently of this rule. An extension
+operation that changes no Mission state is not bound by this rule;
+the companion that registers it defines its idempotency and outcome
+vocabulary ({{lifecycle-operations}}).
 
 `resume` is the sole exception to the idempotent-success arm. It is
 legal only from `suspended`, and its resulting state `active` is also
@@ -1589,10 +1571,8 @@ the authoritative Mission state change.
 
 This endpoint operates on one Mission at a time. Mission enumeration
 and bulk lifecycle operations for incident response, such as revoking
-every Mission for a compromised Subject, client, or tenant, are
-specified separately by Mission Management
-{{I-D.draft-mcguinness-oauth-mission-management}}; this document does
-not require them.
+every Mission for a compromised Subject, client, or tenant, are left
+to companion profiles; this document does not require them.
 
 The following capabilities remain deferred to future
 work:
@@ -1830,9 +1810,8 @@ Cache-Control: max-age=3600
 
 An implementation conforms to the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}} or implements the Mission
-Issuer role of a binding that serves these surfaces, such as the
-standalone Mission Authority Server
-{{I-D.draft-mcguinness-mission-authority-server}}. Each extension in this
+Issuer role of another binding that serves these surfaces. Each
+extension in this
 document is independently OPTIONAL; an implementation names the ones it
 supports (for example, "issuance profile with Mission Status and
 Mission Lifecycle"), and an implementation that supports none of them
@@ -1889,17 +1868,11 @@ An implementation claiming an extension MUST meet its requirements:
   and size Mission-bound access-token TTLs to it
   ({{revocation-enforcement-classes}}).
 
-A companion profile MAY register a further extension operation on the
-Mission Lifecycle endpoint and carry its own conformance requirements;
-the Entry Discharge companion's `terminal_when` and `discharge`
-capability is conformant to its own document, not to this one
-({{I-D.draft-mcguinness-oauth-mission-discharge}}).
-
 A Mission Issuer that claims any extension above meets the following
 requirement, whichever companion profiles it adopts. Every
 issuer-held narrowing mechanism a
-deployment runs, an adopted companion's discharge mechanism or
-another companion profile's own overlay alike, MUST feed the single
+deployment runs, including any a companion profile defines, MUST feed
+the single
 Effective Authority Set computation. Every derivation and every
 authority-reporting surface MUST use that same computation; no
 mechanism computes a parallel view, and no surface reports authority
@@ -2024,11 +1997,7 @@ by defining it in its own specification
 ({{mission-lifecycle-endpoint}}). `suspended` and `completed`
 ({{mission-lifecycle-endpoint}}) are values of the issuance profile's
 `mission_error` member, which has no IANA registry, so this document
-requests no registration for them. A companion profile MAY register further extension
-members or Common Constraints against a family registry; the Entry
-Discharge companion registers `terminal_when` in the Mission Resource
-Access Profile's Mission Common Constraints registry this way
-({{I-D.draft-mcguinness-oauth-mission-discharge}}).
+requests no registration for them.
 
 This document registers no new Well-Known URI: the metadata members of
 {{as-metadata}} are published in the OAuth Authorization Server Metadata
