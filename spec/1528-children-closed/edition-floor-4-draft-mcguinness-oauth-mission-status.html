@@ -3631,11 +3631,18 @@ least the Mission's audit horizon
 <code>application/mission-status-response+jwt</code> remains verifiable for
 audit and dispute. This is the issuance profile's retired-key rule
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with the audit horizon as the
-bound. A key known or suspected
-compromised is the exception: the AS removes it, and the Mandate
-profile's compromise-time rule
-(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>) governs how artifacts signed
-under it are then classified.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+bound.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+<p id="section-10.5-2">A key known or suspected compromised follows the issuance profile's
+compromise rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Signing and Key Rotation"): the AS publishes it as revoked, or marks
+it with a compromise time, rather than only rotating it out. Retention
+keeps an archived response verifiable for audit; it is not trust. A
+consumer <span class="bcp14">MUST NOT</span> accept, for a current reliance decision, a response
+signed under a key the AS has published as compromised. An auditor
+examining an archived response signed under such a key classifies it
+by the published compromise information; the Mandate profile's
+compromise-time rule is one such classification
+(<span>[<a href="#I-D.draft-mcguinness-mission-mandate" class="cite xref">I-D.draft-mcguinness-mission-mandate</a>]</span>).<a href="#section-10.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="general-oauth-security">
