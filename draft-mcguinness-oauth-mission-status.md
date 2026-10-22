@@ -1893,8 +1893,9 @@ audit and dispute. This is the issuance profile's retired-key rule
 ({{I-D.draft-mcguinness-oauth-mission}}), with the audit horizon as the
 bound. A key known or suspected
 compromised is the exception: the AS removes it, and the Mandate
-profile's compromise-time rule ({{I-D.draft-mcguinness-mission-mandate}})
-governs how artifacts signed under it are then classified.
+profile's compromise-time rule
+({{I-D.draft-mcguinness-mission-mandate}}) governs how artifacts signed
+under it are then classified.
 
 ## General OAuth Security
 
