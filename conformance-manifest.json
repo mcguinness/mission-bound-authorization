@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "55cf3223cf1dc695238776b86522c6be6b82f25d",
-    "content_sha256": "3e3d1d6b5a01f8914a4d2add04fd25d9a94d4582839796ba5a4fc81deb275c68"
+    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
+    "content_sha256": "e758acf47c3dd2043c6db6ff53ede2cb108950287315b0d289f54e444b193780"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "e226e962ac68b8c26ef8f0388783ff9d8a289c91",
-    "content_sha256": "dd5500805fdc490e49580f195685f65afa4a29bce9a742b24af26de356ded11e"
+    "revision": "7b29a99c475c95c163e252490bbbd6bda8758cb3",
+    "content_sha256": "52dcce6f6f809438190f6b8685a9c24cf0d4f261f13f04f63f078d4ca8e44a54"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "deae6dd3a724edcd1b34c8fc18bdbdad9175ed17",
@@ -3645,6 +3645,43 @@
     }
    ],
    "notes": "D559 (#1411): ruled qualified A + C. #1512 (D625): the Request Object path is cited too. Proved by removing the Request Object hook's envelope and Intent validation: the combined Request Object cases are then refused invalid_authorization_details, the D625 reproduction."
+  },
+  {
+   "id": "core.derivation.configured-mapping-scope-key",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "derivation-modes",
+   "text": "or on the requested `scope` values for a `scope`-only target",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where no authority proposal was submitted, the configured mapping can key on the requested scope values of a scope-only target: the Authority Set is the entries those values stand for, narrowed to policy, not the mapping a target_resources key would select"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). The control in the second witness shows the target_resources key still approving the target's whole ceiling when no scope is requested. Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
   },
   {
    "id": "core.derivation.candidate-complete-before-rendering",
@@ -9291,6 +9328,81 @@
     }
    ],
    "notes": "Both clauses observed: a resource scope for a target that consumes authorization_details (PAR, deferred redemption) and a mapped value no carried entry makes safe (authorization decision, code exchange, Token Exchange). Precedence: an unknown mapping refuses invalid_target even when a scope is named. A refresh naming a value the refresh token was never granted is refused invalid_scope by oidc-provider's own RFC 6749 Section 6 check, before consumption."
+  },
+  {
+   "id": "core.scope-projection.requested-scope-stands-for-entries",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "Each requested value stands for the entries that the type's specification derives from the mapping",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "with no proposal, the requested scope values of a scope-only target yield as candidates exactly the entries the target's trusted mapping says they stand for; the Authority Set is those entries narrowed to policy (one that narrows to nothing is refused, creating no Mission), never the target's whole ceiling, and the token for that target carries their projection",
+    "local": "the reference derives the candidates with requestedScopeEntries over the pushed resource values, or the Intent's target_resources, and narrows each against every ceiling entry governing it, as a proposal is narrowed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a requested value whose mapped rights the ceiling does not cover derives nothing: access_denied, and no Mission",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
+  },
+  {
+   "id": "core.scope-projection.requested-scope-unnamed-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection",
+   "text": "A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a pushed resource scope value that the scope-only target's trusted mapping does not name is refused invalid_scope at submission, before any Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "ungrantable requested scope (@spec mission#scope-projection, mission#error-mapping) > refuses invalid_scope at PAR a resource scope for an authorization_details target, and a value the scope-only target's mapping does not name",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). The reference already refused such a value at PAR (earlyScopeRefusal). Proved by mutation: disabling the unnamed-value check fails the witness ('expected 201 to be 400')."
   },
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
@@ -47108,6 +47220,43 @@
     }
    ],
    "notes": "#1258 item 11. #1276: the resource condition applies the subset rule's resource step to the mapping's declared rights, so a prefix entry projects to a value over that prefix or a narrower resource within it (pj-05's shape) and never to a sibling, a dot-segment escape or an ancestor (pj-06's shape). Unit level: the shipped configuration's ceilings are exact only, so no token-endpoint issuance carries a prefix entry. Mutation: restoring the byte-exact comparison fails the witness. Cases pj-05 and pj-06 stay skipped: the case reader has no projection executor."
+  },
+  {
+   "id": "resource-access.scope-projection.requested-scope-entry",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "the value stands for one entry: the mapping's `resource` and `resource_match`, the `actions` the value stands for, no `constraints`, and, where the mapping names a contract for the value, that contract's reference as `resource_contract`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a requested scope value of a scope-only target stands for one mission_resource_access entry with the mapping's resource and match, the actions the value stands for and no constraints, and that entry projects back to the same value"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "Scope adoption (owner's 'open a PR', 2026-10-22). Partial: the contract clause (a mapping value naming a resource_contract) has no witness; the shipped scope-only mapping names no contract. Proved by mutation: disabling the scope key in the derivation (deriveAuthoritySetWithProvenance's scopeKeyed) fails all three witnesses (the whole ceiling is approved for reports.read, one entry for two values, and a Mission is created where nothing should derive)."
   },
   {
    "id": "resource-access.rs-enforcement.no-fragment-combination",

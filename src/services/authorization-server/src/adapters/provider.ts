@@ -40,6 +40,7 @@ import {
   projectScope,
   readMissionAccessProfile,
   type RequestedScope,
+  requestedScopeEntries,
   type ScopeProjectionMapping,
   type ScopeProjectionOutcome,
   splitScope,
@@ -69,6 +70,34 @@ const HEADLESS_APPROVAL_RESULT = "mission_headless_approval";
 export function clientProposalParam(params: Record<string, unknown>): string | undefined {
   if (params[DERIVED_AUTHORIZATION_DETAILS_MARKER] === true) return undefined;
   return typeof params.authorization_details === "string" ? params.authorization_details : undefined;
+}
+
+/**
+ * @spec mission#derivation-modes, mission#scope-projection — the
+ * configured-mapping key a request's `scope` values supply: the entries they
+ * stand for at its `scope`-only targets ({@link requestedScopeEntries}), the
+ * targets being the pushed RFC 8707 `resource` values or, absent those, the
+ * Intent's `target_resources`. Read from the same pushed parameters at the
+ * rendering and the decision, so both derive the same Authority Set.
+ * Undefined when no value names a `scope`-only target; the derivation reads it
+ * only when no proposal was submitted.
+ */
+export function requestedScopeKey(
+  mapping: ScopeProjectionMapping | undefined,
+  params: Record<string, unknown>,
+  intent: MissionIntent,
+): AuthorityEntry[] | undefined {
+  const requested = splitScope(params.scope).resource;
+  if (!requested.length) return undefined;
+  const resourceParam = params.resource;
+  const audiences =
+    typeof resourceParam === "string"
+      ? [resourceParam]
+      : Array.isArray(resourceParam)
+        ? (resourceParam as string[])
+        : intent.target_resources;
+  const entries = requestedScopeEntries(mapping, audiences, requested);
+  return entries.length ? entries : undefined;
 }
 
 /**
@@ -3410,7 +3439,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // way (400, the mapped error code) rather than let it propagate uncaught.
       let authority: ReturnType<typeof kernel.derive>;
       try {
-        authority = kernel.derive(intent, proposal);
+        authority = kernel.derive(intent, proposal, requestedScopeKey(opts.scopeProjection, params, intent));
       } catch (e) {
         if (e instanceof IntentError) {
           ctx.status = 400;
@@ -5464,9 +5493,10 @@ async function decide(
   // `invalid_authorization_details` when the client submitted a proposal that
   // yields nothing, `access_denied` when configured-mapping mode (no
   // proposal) yields nothing.
+  const scopeKey = requestedScopeKey(opts.scopeProjection, params, intent);
   let authority: ReturnType<typeof opts.kernel.derive>;
   try {
-    authority = opts.kernel.derive(intent, proposedAuthority);
+    authority = opts.kernel.derive(intent, proposedAuthority, scopeKey);
   } catch (e) {
     if (e instanceof IntentError) {
       await finish({
@@ -5618,6 +5648,7 @@ async function decide(
   const approveInput: ApproveInput = {
     intent: intent as MissionIntent,
     ...(proposedAuthority ? { proposedAuthority } : {}),
+    ...(scopeKey ? { requestedScope: scopeKey } : {}),
     ...(ceiling ? { ceiling } : {}),
     // @spec mission#intent-submission-evidence — the verified facts land on
     // the Mission Record (outside all anchors), request-derived, never

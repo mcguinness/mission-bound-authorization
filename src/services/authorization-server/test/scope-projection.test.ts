@@ -995,6 +995,74 @@ describe("requested scope and the token response (@spec mission#scope-projection
   });
 });
 
+// @spec mission#derivation-modes, mission#scope-projection,
+// resource-access#scope-projection: with no proposal, the requested `scope`
+// values of a `scope`-only target key the configured mapping. Each stands for
+// the entry its mapping value names, narrowed to the ceiling; the Mission
+// approves those entries alone, never the target's whole ceiling, and the
+// token carries their projection.
+describe("configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection)", () => {
+  /** The Mission one authorization created, read from the store. */
+  async function authorizeOne(scope: string | undefined) {
+    const before = new Set(as.kernel.allMissions().map((m) => m.id));
+    const r = await authorize(undefined, scope === undefined ? {} : { scope });
+    const created = as.kernel.allMissions().filter((m) => !before.has(m.id));
+    return { r, created };
+  }
+
+  it("an Intent-only request naming reports.read approves only the entry that value stands for, commits no proposal, and its token carries that value", async () => {
+    const { r, created } = await authorizeOne("reports.read");
+    expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+    expect(r.code, JSON.stringify(r)).toBeTruthy();
+    expect(created).toHaveLength(1);
+    const mission = created[0] as (typeof created)[number];
+    expect(mission.authority_set).toEqual([{ type: "mission_resource_access", resource: PLAIN, actions: [READ] }]);
+    expect(mission.proposal_hash).toBeUndefined();
+    expect(mission.proposed_authority).toBeUndefined();
+    const keys = await newKeys();
+    const res = await redeem(r.code as string, keys);
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(res.body.scope).toBe("reports.read");
+    expect((await callRs(RS_PORT, "GET", res.body.access_token as string, keys)).status).toBe(200);
+    expect((await callRs(RS_PORT, "POST", res.body.access_token as string, keys)).status).toBe(403);
+  });
+
+  it("each requested value stands for its own entry, and without a requested scope the same Intent approves the target's whole ceiling (control)", async () => {
+    const both = await authorizeOne("reports.read reports.write");
+    expect(both.r.code, JSON.stringify(both.r)).toBeTruthy();
+    expect(both.created[0]?.authority_set).toEqual([
+      { type: "mission_resource_access", resource: PLAIN, actions: [READ] },
+      { type: "mission_resource_access", resource: PLAIN, actions: [WRITE] },
+    ]);
+
+    const none = await authorizeOne(undefined);
+    expect(none.r.code, JSON.stringify(none.r)).toBeTruthy();
+    const actions = (none.created[0]?.authority_set ?? []).flatMap((e) => e.actions);
+    expect(actions).toEqual(expect.arrayContaining([READ, WRITE]));
+  });
+
+  it("a requested value whose mapped rights the ceiling does not cover derives nothing: access_denied, and no Mission", async () => {
+    await withPlain(
+      {
+        version: "scope-key-1",
+        mission_aware: false,
+        mode: "scope_only",
+        scopes: {
+          "reports.read": { rights: rights([READ]), mandatory_controls: {} },
+          "reports.admin": { rights: rights(["reports:report.admin"]), mandatory_controls: {} },
+        },
+      },
+      async () => {
+        const { r, created } = await authorizeOne("reports.admin");
+        expect(r.par.status, JSON.stringify(r.par.body)).toBe(201);
+        expect(r.code).toBeUndefined();
+        expect(r.error, JSON.stringify(r)).toBe("access_denied");
+        expect(created).toHaveLength(0);
+      },
+    );
+  });
+});
+
 describe("the Intent-only completion workaround is never a client proposal (@spec mission#authority-proposal)", () => {
   /** PAR -> /auth -> interaction uid and cookies, stopping before any decision. */
   async function open(extra: Record<string, string>) {
