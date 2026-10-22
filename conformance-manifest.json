@@ -55,8 +55,8 @@
     "content_sha256": "044d2ea4450bcb188eeaf1f051db3956ad51a5942dc0add279610e8b3ef53d67"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "88340f1308fe387271098991d85fb0f37c4a1773",
-    "content_sha256": "f9851ade5ecfb02237d01215564839b01c18fd113aa93f6f2e0afc5f9012f416"
+    "revision": "d082c2db06d66dffe013540616be3f82ce3417a4",
+    "content_sha256": "b7f478ec9e38540ea2a68e9ae074037f0a076a548ae58a2bc19228234f545d3b"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -111,8 +111,8 @@
     "content_sha256": "4c24262bd4ab09784922ab543c24d97cfb849c9a5845c70a664ef39d906803b3"
    },
    "draft-mcguinness-oauth-mission-child-delegation.md": {
-    "revision": "720a916c01968d33337996dc937ae4a81d4472f1",
-    "content_sha256": "8a6393cc9e8e5dad832b419a6c6ce6f12362decf8f89bd12289463bd81502ee8"
+    "revision": "8f9b783163e04478c9cdd318d790c878e9c34f6e",
+    "content_sha256": "9ecc46c99dbe7e2cbc4283b7be29fd55bd31445ec793fecddac509eeed3b9f05"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
     "revision": "3ed8d96c52b0f6aeed21b20e40bb4125da24a892",
@@ -14386,7 +14386,7 @@
    "id": "status.effective-set.single-computation",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "conformance",
-   "text": "Every issuer-held narrowing mechanism a deployment runs, an adopted companion's discharge mechanism or another companion profile's own overlay alike, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
+   "text": "Every issuer-held narrowing mechanism a deployment runs, including any a companion profile defines, MUST feed the single Effective Authority Set computation. Every derivation and every authority-reporting surface MUST use that same computation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14408,7 +14408,7 @@
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation. #1535 finding 6 (D649): scoped to a Mission Issuer claiming any extension of this document. The gate names the extensions the model has capabilities for; the Mission Status operation and the introspection projection have none, so a deployment claiming only those is not gated in until the model gains them."
+   "notes": "Planned test surface: a deployment running two narrowing mechanisms (for example an adopted Entry Discharge companion's discharge mechanism and the Mission Containment overlay), asserting every derivation and authority-reporting surface reflects both reductions from one shared computation. #1535 finding 6 (D649): scoped to a Mission Issuer claiming any extension of this document. The gate names the extensions the model has capabilities for; the Mission Status operation and the introspection projection have none, so a deployment claiming only those is not gated in until the model gains them. Re-quoted when Status came to cite only its dependencies (the companion pointer left the sentence)."
   },
   {
    "id": "status.conformance.revoke-only-class",
@@ -14734,9 +14734,9 @@
   },
   {
    "id": "child-delegation.carryover.status-correlation",
-   "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "mission-status-response",
-   "text": "A deployment implementing Child Mission Carryover MUST include `termination.carried_to` when reporting a `parent_terminated` termination for which a replacement was committed, and MUST omit it when none was",
+   "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
+   "anchor": "carryover-evidence",
+   "text": "the issuer MUST carry the committed `carried_to` correlation in the `termination` of the old child's `parent_terminated` observation, and MUST omit it when no replacement was committed",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14759,13 +14759,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "`kernel.signedStatus` is the implementing surface: the test verifies the signed Status JWS under the issuer's key and asserts `termination.carried_to` on the carried child's `parent_terminated` projection and its absence for an excluded child. The same assertion covers `introspectionProjection`."
+   "notes": "`kernel.signedStatus` is the implementing surface: the test verifies the signed Status JWS under the issuer's key and asserts `termination.carried_to` on the carried child's `parent_terminated` projection and its absence for an excluded child. The same assertion covers `introspectionProjection`. Re-anchored from Status's Response section to Child Delegation's Carryover Evidence and Observation, which defines `carried_to` and now states both halves; this row stays the Status-surface holder of that duty, beside the observation row."
   },
   {
    "id": "status.lifecycle.refresh-suspension-precheck",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "After validating a refresh request and before consuming or rotating its refresh token, the AS SHOULD check whether the Mission, or an ancestor whose state gates its derivation",
+   "text": "After validating a refresh request and before consuming or rotating its refresh token, the AS SHOULD check whether the Mission, or another Mission whose state a companion profile makes gate its derivation, is suspended.",
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
@@ -14794,7 +14794,8 @@
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": " Re-quoted when Status came to cite only its dependencies (the companion pointer left the sentence)."
   },
   {
    "id": "status.lifecycle.refresh-suspension-no-consume",
@@ -14888,7 +14889,7 @@
    "id": "status.response.termination-version",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "`version` is REQUIRED in every termination the Mission Issuer commits, and absent while an `expired` or `parent_terminated` termination is observed but not yet committed;",
+   "text": "`version` is REQUIRED in every termination the Mission Issuer commits, and absent while a termination that takes effect without a request, such as `expired`, is observed but not yet committed;",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14915,7 +14916,8 @@
      "level": "unit",
      "surface": "lifecycle-endpoint"
     }
-   ]
+   ],
+   "notes": " Re-quoted when Status came to cite only its dependencies (the companion pointer left the sentence)."
   },
   {
    "id": "status.idempotency.reason-aware-conflict",
@@ -15880,7 +15882,7 @@
    "id": "status.lifecycle.resume-distinct-authorization",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "Because `resume` returns a suspended Mission to `active` and so undoes the containment a `suspend` established, a deployment SHOULD require a distinct or elevated authorization for `resume`, mirroring the treatment of bulk `resume` in Mission Management ({{I-D.draft-mcguinness-oauth-mission-management}}).",
+   "text": "Because `resume` returns a suspended Mission to `active` and so undoes the containment a `suspend` established, a deployment SHOULD require a distinct or elevated authorization for `resume`.",
    "role": "AS",
    "strength": "SHOULD",
    "applicability": {
@@ -15904,7 +15906,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1002 (D285 item 2: the SHOULD stays a SHOULD). Partial: witnessed on the opt-in configuration only. Proved by letting mission_lifecycle alone satisfy the direct-resume authorization (the test fails)."
+   "notes": "#1002 (D285 item 2: the SHOULD stays a SHOULD). Partial: witnessed on the opt-in configuration only. Proved by letting mission_lifecycle alone satisfy the direct-resume authorization (the test fails). Re-quoted when Status came to cite only its dependencies (the companion pointer left the sentence)."
   },
   {
    "id": "status.lifecycle.scheduled-resume-authorization",
@@ -54176,7 +54178,7 @@
    "id": "child-delegation.carryover.observation-correlation",
    "spec": "draft-mcguinness-oauth-mission-child-delegation.md",
    "anchor": "carryover-evidence",
-   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation in the `termination` of the old child's `parent_terminated` observation as defined by those profiles.",
+   "text": "When Status or Signals is deployed, the issuer MUST carry the committed `carried_to` correlation in the `termination` of the old child's `parent_terminated` observation",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -54205,7 +54207,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "The committed `carried_to` correlation is carried in the `termination` of the old child's `parent_terminated` observation on both deployed surfaces, and omitted where no replacement committed. A batch map does not replace ordinary Child Evidence: each replacement's Child Evidence keeps `parent`, `child`, `attenuation`, `fanout` and `decision` and adds `creation_mode`, the qualified `carried_from`, `manifest_hash` and an authenticated reference to the retained map."
+   "notes": "The committed `carried_to` correlation is carried in the `termination` of the old child's `parent_terminated` observation on both deployed surfaces, and omitted where no replacement committed. A batch map does not replace ordinary Child Evidence: each replacement's Child Evidence keeps `parent`, `child`, `attenuation`, `fanout` and `decision` and adds `creation_mode`, the qualified `carried_from`, `manifest_hash` and an authenticated reference to the retained map. Re-quoted when Status came to cite only its dependencies (the companion pointer left the sentence)."
   },
   {
    "id": "child-delegation.carryover.out-of-order-recovery",
