@@ -788,6 +788,26 @@ distinguishes the two cases. It SHOULD mitigate timing side channels
 (for example by padding response time or by taking a uniform lookup
 path for both the unknown and the unauthorized case).
 
+## Processing Order {#mission-status-processing}
+
+The AS MUST process a Mission Status request in this order, refusing
+it at the first step that fails:
+
+1. Authenticate the caller ({{mission-status-authentication}}),
+   parsing the request body only as far as authentication needs. A
+   failure is answered as {{mission-status-auth-failures}} assigns.
+2. Validate the request syntax ({{mission-status-request}}). A
+   malformed request is refused `invalid_request`.
+3. Authorize the request: the caller's read authorization, the Mission
+   the `mission_id` names, and any requested `audience`
+   ({{mission-status-request}}). An unknown Mission and every failed
+   authorization are refused alike with the not-found response.
+4. Read the Mission's current state and return the signed response
+   ({{mission-status-response}}).
+
+No response that depends on the Mission's existence or state precedes
+step 3.
+
 ## Error Responses {#mission-status-errors}
 
 Mission Status outcomes are of two kinds. A success outcome is a found,
@@ -1465,10 +1485,11 @@ triple (client, `mission_id`, `nonce`) for a bounded window. On a
 retransmit carrying a `nonce` already seen for that client and
 `mission_id`, together with request members identical to the
 original's, the AS MUST replay the original response rather than
-re-execute the operation. The comparison covers the operation's
-request members (`operation`, `reason`, `suspend_until`, `on_expiry`,
-`expected_version`, and any member an extension operation defines),
-present or absent alike, and excludes client authentication
+re-execute the operation, once the retransmit has passed
+authorization ({{lifecycle-processing}}). The comparison covers the
+operation's request members (`operation`, `reason`, `suspend_until`,
+`on_expiry`, `expected_version`, and any member an extension operation
+defines), present or absent alike, and excludes client authentication
 parameters and HTTP headers, which a retry regenerates. The same
 `nonce` paired with request members that differ from the original's
 MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
@@ -1536,6 +1557,35 @@ recorded schedule, if any, and its committing party unchanged:
 omission never clears a deadline. A `suspend` carrying only one of
 the two remains invalid ({{lifecycle-operations}})
 and changes nothing.
+
+## Processing Order {#lifecycle-processing}
+
+The AS MUST process a lifecycle request in this order, refusing it at
+the first step that fails:
+
+1. Authenticate the caller ({{mission-status-authentication}}),
+   parsing the request body only as far as authentication needs. A
+   failure is answered as {{mission-status-auth-failures}} assigns.
+2. Validate the request syntax and the operation
+   ({{lifecycle-operations}}). A malformed request, or an `operation`
+   the AS does not serve, is refused `invalid_request`.
+3. Authorize the request. For a base operation this is the lifecycle
+   authorization of {{lifecycle-authorization}} for the acting party,
+   the operation and the Mission, together with the authorization for
+   any transition the request schedules; for an extension operation it
+   is the authorization its companion defines. An unknown Mission and
+   every failed authorization are refused alike with the not-found
+   response.
+4. Apply deduplication ({{idempotency}}): replay the original response
+   to a retransmit, or refuse a reused `nonce` whose request members
+   differ.
+5. Check `expected_version`, when present ({{idempotency}}).
+6. Apply the transition rules ({{idempotency}}) and commit the
+   transition.
+
+Authorization therefore precedes every replayed or state-dependent
+response: a caller not authorized for the Mission receives the
+not-found response, never a replay, `stale_version` or `conflict`.
 
 ## Relationship to RFC 7009
 
