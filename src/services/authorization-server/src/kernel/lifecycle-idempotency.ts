@@ -451,8 +451,12 @@ export class DischargeEventStore {
     this.retentionMs = (options.retentionSeconds ?? DEFAULT_DISCHARGE_EVENT_TTL_S) * 1000;
   }
 
-  /** The recorded occurrence for this tuple, purging one past its retention. */
-  find(key: DischargeEventKey): StoredDischargeEvent | undefined {
+  /**
+   * The recorded occurrence for this tuple, purging one past its retention.
+   * With `purge: false` (a read-only caller) a row past its retention is
+   * reported absent and left in place.
+   */
+  find(key: DischargeEventKey, options: { purge?: boolean } = {}): StoredDischargeEvent | undefined {
     const row = this.db
       .prepare(
         `SELECT * FROM discharge_events
@@ -464,7 +468,7 @@ export class DischargeEventStore {
       | undefined;
     if (!row) return undefined;
     if (this.options.now().getTime() > (row.expires_at as number)) {
-      this.purge(key);
+      if (options.purge !== false) this.purge(key);
       return undefined;
     }
     return {

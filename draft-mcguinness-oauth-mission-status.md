@@ -836,6 +836,26 @@ distinguishes the two cases. It SHOULD mitigate timing side channels
 (for example by padding response time or by taking a uniform lookup
 path for both the unknown and the unauthorized case).
 
+## Processing Order {#mission-status-processing}
+
+The AS MUST process a Mission Status request in this order, refusing
+it at the first step that fails:
+
+1. Authenticate the caller ({{mission-status-authentication}}),
+   parsing the request body only as far as authentication needs. A
+   failure is answered as {{mission-status-auth-failures}} assigns.
+2. Validate the request syntax ({{mission-status-request}}). A
+   malformed request is refused `invalid_request`.
+3. Authorize the request: the caller's read authorization, the Mission
+   the `mission_id` names, and any requested `audience`
+   ({{mission-status-request}}). An unknown Mission and every failed
+   authorization are refused alike with the not-found response.
+4. Read the Mission's current state and return the signed response
+   ({{mission-status-response}}).
+
+No response that depends on the Mission's existence or state precedes
+step 3.
+
 ## Error Responses {#mission-status-errors}
 
 Mission Status outcomes are of two kinds. A success outcome is a found,
@@ -1317,6 +1337,16 @@ scope or a deployment-defined equivalent grant that names who may
 perform the transition. The AS MUST refuse a caller that carries no
 such authorization.
 
+A lifecycle authorization is necessary but not sufficient. The AS MUST
+authorize each request for its acting party (below), its operation,
+and the specific Mission it names, under the deployment's policy for
+that Mission, including the deployment or tenant boundary the Mission
+belongs to: authorization for one Mission, or within one tenant,
+authorizes nothing on another. The AS evaluates the acting party's
+validated identity and any validated delegation context; an `act`
+claim identifies the parties to a delegation and is never by itself a
+grant of lifecycle authority.
+
 The acting party, and where the AS checks the lifecycle
 authorization, follow from the authentication case:
 
@@ -1343,7 +1373,8 @@ it in the signed response's audit surface: the response envelope's
 `sub`, distinct from any access token's `sub`, or a deployment-defined
 audit member of the Mission Status Response.
 
-Which parties may perform which operation is deployment-defined. Typical
+Which parties may perform which operation on which Missions is
+deployment-defined. Typical
 deployments authorize `revoke` to the Mission's Subject or Approver and
 to administrators; `suspend` and `resume` to administrators; and
 `complete` to the requesting client or an administrator.
@@ -1354,15 +1385,15 @@ distinct or elevated authorization for `resume`, mirroring the
 treatment of bulk `resume` in Mission Management
 ({{I-D.draft-mcguinness-oauth-mission-management}}).
 
-A `suspend` whose `on_expiry` is `resume` schedules a later `resume`.
-The AS MUST authorize it against both the caller's authorization for
-`suspend` and the authorization the deployment requires for a direct
-`resume` of that Mission, including when it sets or replaces the
+A `suspend` that carries `on_expiry` schedules a later `resume` or
+`revoke`. The AS MUST authorize it against both the caller's
+authorization for `suspend` and the authorization the deployment
+requires for a direct operation of the scheduled kind (`resume` or
+`revoke`) on that Mission, including when it sets or replaces the
 schedule of a Mission already `suspended`, whoever suspended it. The
 AS checks both before any change and refuses a caller lacking either
 as an unauthorized lifecycle request (below), leaving the Mission's
-state and schedule unchanged. A `suspend` whose `on_expiry` is
-`revoke` needs only the authorization for `suspend`.
+state and schedule unchanged.
 
 The AS MUST record with each committed schedule its committing party,
 the acting party of the request that committed it; an authorized
@@ -1506,10 +1537,11 @@ triple (client, `mission_id`, `nonce`) for a bounded window. On a
 retransmit carrying a `nonce` already seen for that client and
 `mission_id`, together with request members identical to the
 original's, the AS MUST replay the original response rather than
-re-execute the operation. The comparison covers the operation's
-request members (`operation`, `reason`, `suspend_until`, `on_expiry`,
-`expected_version`, and any member an extension operation defines),
-present or absent alike, and excludes client authentication
+re-execute the operation, once the retransmit has passed
+authorization ({{lifecycle-processing}}). The comparison covers the
+operation's request members (`operation`, `reason`, `suspend_until`,
+`on_expiry`, `expected_version`, and any member an extension operation
+defines), present or absent alike, and excludes client authentication
 parameters and HTTP headers, which a retry regenerates. The same
 `nonce` paired with request members that differ from the original's
 MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
@@ -1577,6 +1609,35 @@ recorded schedule, if any, and its committing party unchanged:
 omission never clears a deadline. A `suspend` carrying only one of
 the two remains invalid ({{lifecycle-operations}})
 and changes nothing.
+
+## Processing Order {#lifecycle-processing}
+
+The AS MUST process a lifecycle request in this order, refusing it at
+the first step that fails:
+
+1. Authenticate the caller ({{mission-status-authentication}}),
+   parsing the request body only as far as authentication needs. A
+   failure is answered as {{mission-status-auth-failures}} assigns.
+2. Validate the request syntax and the operation
+   ({{lifecycle-operations}}). A malformed request, or an `operation`
+   the AS does not serve, is refused `invalid_request`.
+3. Authorize the request. For a base operation this is the lifecycle
+   authorization of {{lifecycle-authorization}} for the acting party,
+   the operation and the Mission, together with the authorization for
+   any transition the request schedules; for an extension operation it
+   is the authorization its companion defines. An unknown Mission and
+   every failed authorization are refused alike with the not-found
+   response.
+4. Apply deduplication ({{idempotency}}): replay the original response
+   to a retransmit, or refuse a reused `nonce` whose request members
+   differ.
+5. Check `expected_version`, when present ({{idempotency}}).
+6. Apply the transition rules ({{idempotency}}) and commit the
+   transition.
+
+Authorization therefore precedes every replayed or state-dependent
+response: a caller not authorized for the Mission receives the
+not-found response, never a replay, `stale_version` or `conflict`.
 
 ## Relationship to RFC 7009
 
