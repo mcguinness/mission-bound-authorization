@@ -518,11 +518,31 @@ export function encounterHint(
 }
 
 /**
+ * @spec discovery#resource-identity (#1469 stage 2): an issuer identifier as
+ * RFC 9728 requires of `authorization_servers` (RFC 8414 Section 2): an
+ * `https` URL with no query or fragment component, even an empty one. Domain
+ * authorization does not make a malformed value an issuer.
+ */
+export function isIssuerIdentifier(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:" || !url.hostname) return false;
+  if (value.includes("?")) return false;
+  if (value.includes("#")) return false;
+  return true;
+}
+
+/**
  * @spec discovery#resource-identity (#1469 stage 2): pin the encountered
  * resource's identity from the Mission Issuer's own connection, never from the
  * agent. The origin is the one that connection TLS-authenticated. Metadata
  * retrieved over it is used only when its `resource` is exactly the origin it
- * was retrieved for (RFC 9728 Section 3.3); it is digested from its exact
+ * was retrieved for (RFC 9728 Section 3.3) and every authorization server it
+ * names is an issuer identifier ({@link isIssuerIdentifier}); it is digested from its exact
  * bytes, and the one authorization server it names must be verified as
  * authorized for the resource's domain. The reference requires the metadata
  * and a named issuer: on the drawdown path, the resource's authorization
@@ -554,7 +574,7 @@ export async function pinEncounteredResource(
     typeof doc !== "object" ||
     Array.isArray(doc) ||
     (doc as { resource?: unknown }).resource !== origin ||
-    (servers !== undefined && (!Array.isArray(servers) || !servers.every((s) => typeof s === "string" && s.length > 0)))
+    (servers !== undefined && (!Array.isArray(servers) || !servers.every((s) => typeof s === "string" && isIssuerIdentifier(s))))
   ) {
     return { resource, pinned: false, pin_failure: "metadata_invalid" };
   }

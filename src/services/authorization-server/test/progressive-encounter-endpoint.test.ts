@@ -466,6 +466,36 @@ describe("the encountered resource's identity, pinned from the Mission Issuer's 
     }
   });
 
+  it("metadata naming an authorization server by anything but an issuer identifier (an https URL with no query or fragment, RFC 8414 Section 2) is not used, even where the domain would authorize it, and is refused where the deployment refuses unpinnable encounters", async () => {
+    const malformed = [
+      "not-an-issuer-url",
+      "http://auth.vendor.example",
+      `${VENDOR_AS}?tenant=1`,
+      `${VENDOR_AS}?`,
+      `${VENDOR_AS}#frag`,
+      `${VENDOR_AS}#`,
+    ];
+    for (const issuer of malformed) {
+      // The deployment's mechanism would authorize it: syntax is checked first, and authorization does not repair it.
+      authorizedIssuers.add(`${ORIGIN} ${issuer}`);
+      connections.set(ORIGIN, { tls_authenticated: true, metadata: metadataOf({ resource: ORIGIN, authorization_servers: [issuer] }) });
+      const { body, facts } = await encounter();
+      expect(body.error, issuer).toBe("authorization_pending");
+      expect(facts, issuer).toMatchObject({ pinned: false, pin_failure: "metadata_invalid" });
+      expect(facts?.resource, issuer).toEqual({ origin: ORIGIN });
+    }
+    await underPolicy("refuse", async () => {
+      for (const issuer of malformed) {
+        connections.set(ORIGIN, { tls_authenticated: true, metadata: metadataOf({ resource: ORIGIN, authorization_servers: [issuer] }) });
+        const deferrals = deferralCount();
+        const { status, body } = await encounter();
+        expect(status, issuer).toBe(400);
+        expect(body, issuer).toEqual({ error: "invalid_request", error_description: "the encounter is refused" });
+        expect(deferralCount(), issuer).toBe(deferrals);
+      }
+    });
+  });
+
   it("metadata naming no authorization server, or more than one, pins no issuer", async () => {
     authorizedIssuers.add(`${ORIGIN} ${VENDOR_AS}`);
     for (const [servers, failure] of [
