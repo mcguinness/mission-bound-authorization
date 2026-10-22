@@ -16899,12 +16899,6 @@
      "name": "subject credential liveness and the post-decision fence (@spec txn-authorization#challenge-redemption) > refuses when the credential is revoked DURING the fresh decision, and mints nothing",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
-     "name": "the release fence at the transaction endpoint (@spec mission#issuance-gating, txn-authorization#challenge-redemption, #250) > a Mission revoked during the transaction token's mint is refused access_denied with no token member, and a later poll is refused too, never served the stored token; the same poll without it delivers",
-     "level": "endpoint",
-     "surface": "transaction-authorization-endpoint"
     }
    ]
   },

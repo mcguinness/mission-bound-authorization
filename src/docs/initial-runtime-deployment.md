@@ -613,8 +613,8 @@ Status:
 | Context-drift vectors, conditional (§8) | none | excluded | #773 |
 | The launcher wrappers: the dev-CA check, argument and signal forwarding and exit status of `scripts/as-native.mjs`, and `pnpm resource-policy`'s wrapper (§12) | none | excluded: no wrapper-coverage claim; a disclosed operational residual | #1330 |
 
-Counts: 15 `witnessed`, 15 `witnessed below the stack`, 4 `stated bound`,
-9 `excluded`, 1 `open`. The open row's owner is #250.
+Counts: 15 `witnessed`, 16 `witnessed below the stack`, 4 `stated bound`,
+9 `excluded`, 0 `open`.
 
 **Approval wording (D284 ruling 2).** The approval page shows the derived
 Authority Set as JSON under "Derived authority (what approval grants)"
@@ -795,15 +795,21 @@ is #253 Sketch step 1, and its §11 is step 5. The runtime integration port
 which maps the overlay's obligations to their hooks in the port's eight
 columns. The acceptance pack (step 3) runs on `pnpm as-native`, and §10 maps
 each of its vectors to a witness or an owner. High-risk approval is met
-(D513), witnessed through the upstream Approver login (#1320, §11). Open
-before #253 closes:
+(D513), witnessed through the upstream Approver login (#1320, §11). The two
+remaining acceptance items are met, each within a stated bound:
 
-1. **Revoke during issuance:** the release fence refuses a token whose
-   Mission is revoked before the AS releases it, witnessed at the AS on this
-   target's code exchange, refresh and transaction endpoint, below the stack
-   and for one process (§10). The cases it does not reach stay with #250.
-2. **Second route (step 4):** #818's legacy-estate/MAS route, demonstrated
-   independently and separately pinned.
+1. **Revoke during issuance:** accepted for the demonstrated single-process
+   AS paths (#1498). The release fence refuses a token whose Mission ended
+   before the AS releases it, witnessed at the AS on this target's code
+   exchange, refresh and transaction endpoint, below the stack (§10). The
+   cases it does not reach stay open: a crash after the count, a lost
+   response and its replay, the no-code window, the refund of a fenced
+   derivation's count and multi-process issuance (#250, #916, #935, #641).
+   `core.issuance-gating.after-acknowledged-revocation` stays `partial`.
+2. **Second route (step 4):** #818's legacy-estate/MAS route, accepted under
+   D609, its acceptance met box by box (#1352, #1361, #1387, #1400, #1408,
+   #1435, #1456, #1466). Join Assertions and the Enterprise tier continue in
+   #1454.
 
 Disclosed residuals that make no claim: the launcher wrappers' tests (#1330)
 and the unused RAS and SaaS objects the launcher constructs (#253, pending
