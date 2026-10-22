@@ -835,6 +835,9 @@ const ISSUER = `http://localhost:${PORT}`;
 const LIFECYCLE_ONLY_TOKEN = "dev-lifecycle-only-token";
 /** A caller holding `mission_discharge` that no condition's mapping admits. */
 const UNMAPPED_SOURCE_TOKEN = "dev-unmapped-source-token";
+/** A caller the mapping admits, holding `mission_discharge` through a grant list a test withdraws and restores. */
+const WITHDRAWABLE_DISCHARGE_TOKEN = "dev-withdrawable-discharge-token";
+const withdrawableDischargeScopes: string[] = [MISSION_DISCHARGE_SCOPE];
 const ENDPOINT_AUTHORITY: DischargeAuthorityPolicy = {
   policies: {
     [CLOSE_POLICY]: {
@@ -844,7 +847,7 @@ const ENDPOINT_AUTHORITY: DischargeAuthorityPolicy = {
       // svc:console is the shipped dev token's principal; svc:lifecycle-only is
       // deliberately NOT admitted here either, so its refusal is attributable to
       // the missing SCOPE as well as to the mapping.
-      principals: ["svc:console"],
+      principals: ["svc:console", "svc:withdrawable-discharger"],
     },
   },
 };
@@ -945,6 +948,10 @@ describe("the discharge operation on the lifecycle endpoint", () => {
         [UNMAPPED_SOURCE_TOKEN]: {
           principal_id: "svc:unmapped-source",
           scopes: [MISSION_DISCHARGE_SCOPE],
+        },
+        [WITHDRAWABLE_DISCHARGE_TOKEN]: {
+          principal_id: "svc:withdrawable-discharger",
+          scopes: withdrawableDischargeScopes,
         },
       },
     });
@@ -1191,6 +1198,29 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     expect(await divergent.json()).toMatchObject({ error: "invalid_request", nonce: body.nonce });
     // The original response is still replayable (first writer wins).
     expect(await (await lifecycle(record.id, body)).text()).toBe(firstJws);
+  });
+
+  it("checks the discharge grant before deduplication: once the grant is withdrawn, the same-nonce retransmit gets the not-found response, not the replayed discharge, and it replays once the grant returns (@spec status#lifecycle-processing, #1535)", async () => {
+    const record = approveOnAs();
+    const body = dischargeBody(record);
+    const first = await lifecycle(record.id, body, WITHDRAWABLE_DISCHARGE_TOKEN);
+    expect(first.status).toBe(200);
+    const firstJws = await first.text();
+    const withdrawn = withdrawableDischargeScopes.splice(0);
+    try {
+      const refused = await lifecycle(record.id, body, WITHDRAWABLE_DISCHARGE_TOKEN);
+      expect(refused.status).toBe(404);
+      expect(await refused.json()).toEqual({
+        error: "not_found",
+        error_description: "Mission reference is not found or not visible.",
+        nonce: body.nonce,
+      });
+    } finally {
+      withdrawableDischargeScopes.push(...withdrawn);
+    }
+    const replay = await lifecycle(record.id, body, WITHDRAWABLE_DISCHARGE_TOKEN);
+    expect(replay.status).toBe(200);
+    expect(await replay.text()).toBe(firstJws);
   });
 
   it("replays a retained envelope signed before the migration byte for byte, and it verifies over those bytes with current_version before any reading normalizes it (#705 acceptance item 19)", async () => {

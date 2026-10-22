@@ -588,6 +588,20 @@ describe("Mission Lifecycle authorization for the acting party, operation and Mi
 });
 
 describe("Mission Lifecycle endpoint processing order (@spec status#lifecycle-processing, status#idempotency, #1535)", () => {
+  it("authenticates the caller before validating the request: an unauthenticated request is refused invalid_client whatever its operation, members or Mission", async () => {
+    const m = approve();
+    for (const members of [
+      { mission_id: m.id, operation: "rename", nonce: nonce() },
+      { mission_id: m.id, operation: "suspend", nonce: nonce(), on_expiry: "resume" },
+      { mission_id: UNKNOWN, operation: "revoke", nonce: nonce() },
+    ]) {
+      const refused = await postLifecycleForm(ISSUER, members);
+      expect(refused.status, `${JSON.stringify(members)}: ${refused.text}`).toBe(400);
+      expect(refused.json?.error).toBe("invalid_client");
+    }
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+  });
+
   it("authorizes a retransmit before deduplication: after the client's grant is withdrawn, the same nonce and members under a fresh assertion get the not-found response, not the replayed success, and the success replays once the grant returns", async () => {
     const m = approve();
     const n = nonce();
