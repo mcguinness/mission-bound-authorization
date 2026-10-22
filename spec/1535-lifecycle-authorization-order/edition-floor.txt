@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-22T21:13:56Z
-Source repository commit: b64edd523f7bdef56bab2d4057f00b6861808051
+Generated: 2026-10-22T21:36:52Z
+Source repository commit: be28a367eacca96596fa9c69d341d4d2a4328eec
 Member count: 7
 
 Reading order:
@@ -8803,8 +8803,9 @@ Table of Contents
 
    *  *Configured-mapping mode*: no authority proposal was submitted,
       and a deployment-configured mapping, keyed on the Intent's purpose
-      or target_resources, yields the candidate entries, which are then
-      narrowed to policy.
+      or target_resources, or on the requested scope values for a scope-
+      only target (Section 8.7), yields the candidate entries, which are
+      then narrowed to policy.
 
       The mapping is a lookup, not synthesis.  Because no
       authorization_details object was submitted, the AS refuses an
@@ -10216,6 +10217,19 @@ Table of Contents
    their own semantics, such as openid ([OpenID.Core]), are unaffected
    and combine with authorization_details as Section 3.1 of [RFC9396]
    permits.
+
+   For a scope-only target, the trusted mapping also relates a requested
+   scope value back to authority, so a deployment's existing scope
+   values can request a Mission in configured-mapping mode
+   (Section 5.1), combining scope with the Mission's
+   authorization_details as Section 3.1 of [RFC9396] leaves to the AS.
+   Each requested value stands for the entries that the type's
+   specification derives from the mapping (for mission_resource_access,
+   [I-D.draft-mcguinness-oauth-mission-resource-access]).  The Authority
+   Set is those entries narrowed to policy, and the token for that
+   target carries their projection under the steps above.  A requested
+   value the target's trusted mapping does not name cannot be granted,
+   and is refused with invalid_scope (Section 10).
 
    A refusal caused solely by failure to establish a safe scope
    projection MUST NOT invalidate an otherwise-valid refresh token or
@@ -15395,6 +15409,13 @@ Appendix G.  Document History
 
    [[ To be removed from the final specification ]]
 
+   -02
+
+   *  Configured-mapping mode can key on the requested scope values for
+      a scope-only target, through that target's trusted scope-
+      projection mapping, which also relates a requested value back to
+      authority (Derivation Modes, Scope Projection).
+
    -01
 
    *Breaking wire changes*
@@ -15656,8 +15677,9 @@ Table of Contents
      11.2.  Status Audit Logging
    12. IANA Considerations
      12.1.  OAuth Authorization Server Metadata Registration
-     12.2.  Media Type Registration
-     12.3.  Mission Lifecycle Registrations
+     12.2.  OAuth Extensions Error Registration
+     12.3.  Media Type Registration
+     12.4.  Mission Lifecycle Registrations
    13. References
      13.1.  Normative References
      13.2.  Informative References
@@ -15807,15 +15829,15 @@ Table of Contents
       named per the issuance profile's external-surface convention
       ([I-D.draft-mcguinness-oauth-mission]).
 
-   audience:  CONDITIONAL.  A string.  The audience identifier of the
-      requesting consumer, or of another audience the Mission Issuer
-      authorizes that consumer to request (below).  An authorized
-      consumer that is not a resource server (for example an auditor or
-      a cross-domain Resource AS) that needs only Mission state, not
-      audience-scoped authority, MAY omit audience; the response is then
-      state-only and carries no authorization_details (Section 3.5).  A
-      resource server resolving authority for a specific audience MUST
-      send it.
+   audience:  CONDITIONAL.  A string.  The audience for which the
+      consumer requests authority, one the Mission Issuer's
+      configuration authorizes that consumer to request (below).  An
+      authorized consumer that is not a resource server (for example an
+      auditor or a cross-domain Resource AS) that needs only Mission
+      state, not audience-scoped authority, MAY omit audience; the
+      response is then state-only and carries no authorization_details
+      (Section 3.5).  A resource server resolving authority for a
+      specific audience MUST send it.
 
    nonce:  REQUIRED.  A string.  A client-generated nonce binding the
       response to this request.  It MUST be unique per request within
@@ -15824,16 +15846,25 @@ Table of Contents
       challenge: echoing it in the signed response anti-replay-binds
       that response to this specific request.
 
-   A request's audience names the caller's own audience unless the
-   Mission Issuer's configuration authorizes the caller for another.  A
-   consuming Authorization Server under the Mission Issuance Grant
-   profile ([I-D.draft-mcguinness-oauth-mission-issuance-grant]), for
-   example, requests the projection for each resource it issues tokens
-   for.  The Mission Issuer MUST honor a request naming an audience
-   other than the caller's own only where its configuration authorizes
-   the authenticated caller for that audience, and MUST otherwise refuse
-   it with the not-found response of Section 3.9.  The response's aud is
-   the requested audience (Section 3.5).
+   The request also carries the client authentication parameters of the
+   mechanism it uses (Section 3.2): client_id, REQUIRED with mTLS client
+   authentication (Section 2 of [RFC8705]), and client_assertion_type
+   and client_assertion, REQUIRED with private-key-JWT client
+   authentication [RFC7523].  A sender-constrained access token travels
+   in the Authorization header instead.
+
+   The Mission Issuer's configuration states which audiences each
+   authenticated caller may request: a resource server is typically
+   configured for its own audience identifiers, and a consuming
+   Authorization Server under the Mission Issuance Grant profile
+   ([I-D.draft-mcguinness-oauth-mission-issuance-grant]) for each
+   resource it issues tokens for.  The Mission Issuer MUST honor a
+   request's audience only where that configuration authorizes the
+   authenticated caller for it, and MUST otherwise refuse the request
+   with the not-found response of Section 3.9.  Entitlement to an
+   audience comes only from that configuration, never from string
+   equality between audience and the caller's client_id or certificate
+   subject.  The response's aud is the requested audience (Section 3.5).
 
 3.2.  Authentication
 
@@ -15973,11 +16004,17 @@ Table of Contents
    carries typ of mission-status-response+jwt and a kid identifying the
    signing key.  Per Section 4.1.9 of [RFC7515], the typ header omits
    the application/ prefix; the full media type application/mission-
-   status-response+jwt (Section 12.2) is used as the HTTP Content-Type.
+   status-response+jwt (Section 12.3) is used as the HTTP Content-Type.
    Exact validation of the protected typ value, together with mutually
    exclusive validation rules for the artifact profiles, implements the
    substitution defense of Section 3.11 of [RFC8725] and Section 3.12 of
    [RFC8725].
+
+   A Mission Status Response is evidence of Mission state for the
+   consumer that requested it, not a bearer credential, an access token,
+   or an authorization grant: presenting one authorizes nothing, and a
+   resource server validating access tokens under Section 4 of [RFC9068]
+   rejects it by its typ.
 
    [RFC9701] signed introspection responses are scoped to token
    introspection and do not apply to a lookup keyed by mission_id; the
@@ -16164,9 +16201,12 @@ Table of Contents
       member, [I-D.draft-mcguinness-oauth-mission-resource-access]),
       carried at the top level as a sibling of mission (as on the token
       and in the introspection response).  Entries addressed to other
-      audiences MUST NOT be disclosed.  When the request omits audience
-      (Section 3.1), there is no requesting audience: the response is
-      state-only and MUST NOT carry authorization_details.
+      audiences MUST NOT be disclosed.  When the request names an
+      audience, the response MUST carry authorization_details, as an
+      empty array when no entry is relevant to that audience.  When the
+      request omits audience (Section 3.1), there is no requesting
+      audience: the response is state-only and MUST NOT carry
+      authorization_details.
 
    A consumer MUST verify, before honoring a response:
 
@@ -16302,43 +16342,43 @@ Table of Contents
 
    Wire error codes (carried in the error member of a JSON body):
 
-     +=================+======+======================================+
-     | error           | HTTP | Description                          |
-     +=================+======+======================================+
-     | invalid_request | 400  | Malformed request: an unparseable    |
-     |                 |      | body, a required member missing or   |
-     |                 |      | malformed, an invalid member         |
-     |                 |      | combination, a Lifecycle operation   |
-     |                 |      | the AS does not serve (Section 5),   |
-     |                 |      | or a retransmitted nonce paired with |
-     |                 |      | a request that is not byte-identical |
-     |                 |      | to the original (Section 5.7).       |
-     +-----------------+------+--------------------------------------+
-     | invalid_client  | 400  | Direct client authentication (mTLS   |
-     |                 |      | or private-key JWT) failed, or no    |
-     |                 |      | credential was presented where no    |
-     |                 |      | access-token scheme is accepted      |
-     |                 |      | (Section 3.3).                       |
-     +-----------------+------+--------------------------------------+
-     | unauthorized    | 401  | Access-token authentication failed,  |
-     |                 |      | or no credential was presented where |
-     |                 |      | an access-token scheme is accepted;  |
-     |                 |      | the response carries the challenges  |
-     |                 |      | of Section 3.3.                      |
-     +-----------------+------+--------------------------------------+
-     | not_found       | 404  | Reference does not exist OR is not   |
-     |                 |      | visible.                             |
-     +-----------------+------+--------------------------------------+
-     | conflict        | 409  | Lifecycle operation not legal from   |
-     |                 |      | the current state (Section 5.7).     |
-     +-----------------+------+--------------------------------------+
-     | stale_version   | 409  | expected_version differs from the    |
-     |                 |      | current state version (Section 5.7). |
-     +-----------------+------+--------------------------------------+
-     | rate_limited    | 429  | Consumer is rate-limited.            |
-     +-----------------+------+--------------------------------------+
-     | unavailable     | 503  | AS temporarily cannot serve status.  |
-     +-----------------+------+--------------------------------------+
+    +=================+======+========================================+
+    | error           | HTTP | Description                            |
+    +=================+======+========================================+
+    | invalid_request | 400  | Malformed request: an unparseable      |
+    |                 |      | body, a required member missing or     |
+    |                 |      | malformed, an invalid member           |
+    |                 |      | combination, a Lifecycle operation the |
+    |                 |      | AS does not serve (Section 5), or a    |
+    |                 |      | retransmitted nonce whose operation    |
+    |                 |      | members differ from the original's,    |
+    |                 |      | present or absent alike (Section 5.7). |
+    +-----------------+------+----------------------------------------+
+    | invalid_client  | 400  | Direct client authentication (mTLS or  |
+    |                 |      | private-key JWT) failed, or no         |
+    |                 |      | credential was presented where no      |
+    |                 |      | access-token scheme is accepted        |
+    |                 |      | (Section 3.3).                         |
+    +-----------------+------+----------------------------------------+
+    | unauthorized    | 401  | Access-token authentication failed, or |
+    |                 |      | no credential was presented where an   |
+    |                 |      | access-token scheme is accepted; the   |
+    |                 |      | response carries the challenges of     |
+    |                 |      | Section 3.3.                           |
+    +-----------------+------+----------------------------------------+
+    | not_found       | 404  | Reference does not exist OR is not     |
+    |                 |      | visible.                               |
+    +-----------------+------+----------------------------------------+
+    | conflict        | 409  | Lifecycle operation not legal from the |
+    |                 |      | current state (Section 5.7).           |
+    +-----------------+------+----------------------------------------+
+    | stale_version   | 409  | expected_version differs from the      |
+    |                 |      | current state version (Section 5.7).   |
+    +-----------------+------+----------------------------------------+
+    | rate_limited    | 429  | Consumer is rate-limited.              |
+    +-----------------+------+----------------------------------------+
+    | unavailable     | 503  | AS temporarily cannot serve status.    |
+    +-----------------+------+----------------------------------------+
 
                             Table 2: Error codes
 
@@ -16571,6 +16611,9 @@ Table of Contents
       AS applies it as Section 5.7 describes.
 
    nonce:  REQUIRED.  A string.  A client-generated nonce.
+
+   The request also carries the client authentication parameters of the
+   mechanism it uses, as at the Mission Status endpoint (Section 3.1).
 
    A companion-registered extension operation, such as discharge,
    carries additional REQUIRED and OPTIONAL members of its own, defined
@@ -17233,74 +17276,80 @@ Table of Contents
    endpoints and classes it introduces, so a consumer discovers them
    through standard [RFC8414] discovery.
 
-   mission_status_endpoint:  OPTIONAL.  A string containing a URL.  The
-      URL of the dedicated Mission Status operation (Section 3).
-      Present when the AS supports it.
+   mission_status_endpoint:
+      OPTIONAL.  A string containing a URL.  The URL of the dedicated
+      Mission Status operation (Section 3).  Present when the AS
+      supports it.
 
-   mission_status_endpoint_auth_methods_supported:  OPTIONAL.  A JSON
-      array of strings naming the authentication methods the Mission
-      Status endpoint (Section 3) accepts.  Its value space is a closed
-      set defined by this document, not the OAuth Token Endpoint
-      Authentication Methods registry: tls_client_auth (mutual-TLS
-      client authentication [RFC8705]), private_key_jwt (private-key JWT
-      client authentication [RFC7523]), and access_token (a
-      mission_status-scoped, sender-constrained access token, whose
-      presentation and DPoP or mTLS binding are described by this
-      endpoint's Protected Resource Metadata [RFC9728]).  The first two
-      values are spelled identically to registered token-endpoint
-      authentication methods by intent; this member describes this
-      endpoint, not the token endpoint.  Present, and SHOULD be
-      advertised, when the AS serves the Mission Status endpoint.
+   mission_status_endpoint_auth_methods_supported:
+      CONDITIONAL.  A JSON array of strings naming the authentication
+      methods the Mission Status endpoint (Section 3) accepts.  Its
+      value space is a closed set defined by this document, not the
+      OAuth Token Endpoint Authentication Methods registry:
+      tls_client_auth (mutual-TLS client authentication [RFC8705]),
+      private_key_jwt (private-key JWT client authentication [RFC7523]),
+      and access_token (a mission_status-scoped, sender-constrained
+      access token, whose presentation and DPoP or mTLS binding are
+      described by this endpoint's Protected Resource Metadata
+      [RFC9728]).  The first two values are spelled identically to
+      registered token-endpoint authentication methods by intent; this
+      member describes this endpoint, not the token endpoint.  REQUIRED
+      when the AS serves the Mission Status endpoint.
 
-   mission_status_endpoint_auth_signing_alg_values_supported:  OPTIONAL.
-      A JSON array of strings, the JWS [RFC7515] algorithm values the AS
-      accepts for the private_key_jwt client-assertion JWT (Section 3.2)
-      at the Mission Status endpoint.  This is the client-assertion
-      verification set, not the response-signing algorithms of
+   mission_status_endpoint_auth_signing_alg_values_supported:
+      CONDITIONAL.  A JSON array of strings, the JWS [RFC7515] algorithm
+      values the AS accepts for the private_key_jwt client-assertion JWT
+      (Section 3.2) at the Mission Status endpoint.  This is the client-
+      assertion verification set, not the response-signing algorithms of
       mission_status_signing_alg_values_supported below. none MUST NOT
-      be used.  Present when that endpoint lists private_key_jwt.
+      be used.  REQUIRED when
+      mission_status_endpoint_auth_methods_supported lists
+      private_key_jwt.
 
-   mission_status_signing_alg_values_supported:  CONDITIONAL.  A JSON
-      array of strings.  The JWS [RFC7515] algorithm values the AS uses
-      to sign the Mission Status Response shape (Section 3.5), on
-      whichever surfaces of this profile family serve it (the dedicated
-      Mission Status operation, the Lifecycle endpoint, and Mission
-      Management), mirroring introspection_signing_alg_values_supported.
-      These are the response-signing algorithms, not the algorithms the
-      AS accepts on private_key_jwt client assertions (the endpoint
-      auth-signing members).  REQUIRED when the AS serves any such
-      surface, since a consumer rejects a response signed with an
-      algorithm not listed (Section 3.5).
+   mission_status_signing_alg_values_supported:
+      CONDITIONAL.  A JSON array of strings.  The JWS [RFC7515]
+      algorithm values the AS uses to sign the Mission Status Response
+      shape (Section 3.5), on whichever surfaces of this profile family
+      serve it (the dedicated Mission Status operation, the Lifecycle
+      endpoint, and Mission Management), mirroring
+      introspection_signing_alg_values_supported.  These are the
+      response-signing algorithms, not the algorithms the AS accepts on
+      private_key_jwt client assertions (the endpoint auth-signing
+      members).  REQUIRED when the AS serves any such surface, since a
+      consumer rejects a response signed with an algorithm not listed
+      (Section 3.5).
 
-   mission_lifecycle_endpoint:  OPTIONAL.  A string containing a URL.
-      The URL of the Mission Lifecycle endpoint (Section 5).  Present
-      when the AS supports it.
+   mission_lifecycle_endpoint:
+      OPTIONAL.  A string containing a URL.  The URL of the Mission
+      Lifecycle endpoint (Section 5).  Present when the AS supports it.
 
-   mission_lifecycle_endpoint_auth_methods_supported:  OPTIONAL.  A JSON
-      array of strings naming the authentication methods the Mission
-      Lifecycle endpoint (Section 5) accepts, from the same closed value
-      space as mission_status_endpoint_auth_methods_supported (with
-      access_token naming a mission_lifecycle-scoped access token).
-      Present, and SHOULD be advertised, when the AS serves the Mission
-      Lifecycle endpoint.
+   mission_lifecycle_endpoint_auth_methods_supported:
+      CONDITIONAL.  A JSON array of strings naming the authentication
+      methods the Mission Lifecycle endpoint (Section 5) accepts, from
+      the same closed value space as
+      mission_status_endpoint_auth_methods_supported (with access_token
+      naming a mission_lifecycle-scoped access token).  REQUIRED when
+      the AS serves the Mission Lifecycle endpoint.
 
-   mission_lifecycle_endpoint_auth_signing_alg_values_supported:  OPTIONAL.
-      A JSON array of strings, the JWS [RFC7515] algorithm values the AS
-      accepts for the private_key_jwt client-assertion JWT (Section 3.2)
-      at the Mission Lifecycle endpoint.  This is the client-assertion
-      verification set, not the response-signing algorithms of
-      mission_status_signing_alg_values_supported. none MUST NOT be
-      used.  Present when that endpoint lists private_key_jwt.
+   mission_lifecycle_endpoint_auth_signing_alg_values_supported:
+      CONDITIONAL.  A JSON array of strings, the JWS [RFC7515] algorithm
+      values the AS accepts for the private_key_jwt client-assertion JWT
+      (Section 3.2) at the Mission Lifecycle endpoint.  This is the
+      client-assertion verification set, not the response-signing
+      algorithms of mission_status_signing_alg_values_supported. none
+      MUST NOT be used.  REQUIRED when
+      mission_lifecycle_endpoint_auth_methods_supported lists
+      private_key_jwt.
 
-   mission_max_stale_seconds:  OPTIONAL.  An integer.  The maximum
-      tolerated interval, in seconds, for revocation propagation
-      (Section 6).  When absent, no bound is declared, and a consumer
-      sizes reliance to token lifetime alone.
+   mission_max_stale_seconds:
+      OPTIONAL.  An integer.  The maximum tolerated interval, in
+      seconds, for revocation propagation (Section 6).  When absent, no
+      bound is declared, and a consumer sizes reliance to token lifetime
+      alone.
 
-   When an endpoint's *_auth_methods_supported member is absent, the
-   methods that endpoint accepts are known only by out-of-band
-   configuration; token_endpoint_auth_methods_supported [RFC8414]
-   describes the token endpoint alone and is never read in its place.
+   token_endpoint_auth_methods_supported [RFC8414] describes the token
+   endpoint alone and is never read in place of an endpoint's
+   *_auth_methods_supported member.
 
    DPoP and mTLS support for issued credentials are read from the
    standard dpop_signing_alg_values_supported [RFC9449] and
@@ -17363,8 +17412,10 @@ Table of Contents
       response+jwt), the authentication and read authorization of
       Section 3.2, the anti-oracle property (Section 3.7), and the error
       shape of Section 3.9; and advertise mission_status_endpoint,
-      mission_status_endpoint_auth_methods_supported, and
-      mission_status_signing_alg_values_supported.
+      mission_status_endpoint_auth_methods_supported,
+      mission_status_signing_alg_values_supported, and, when it lists
+      private_key_jwt,
+      mission_status_endpoint_auth_signing_alg_values_supported.
 
    *  *Introspection projection*: carry the Mission projection on the
       introspection response (Section 4), returning it as a [RFC9701]-
@@ -17374,8 +17425,10 @@ Table of Contents
       (Section 5), gate the suspended state and the completed
       termination it introduces exactly as the issuance profile gates on
       non-active state, and advertise mission_lifecycle_endpoint,
-      mission_lifecycle_endpoint_auth_methods_supported, and
-      mission_status_signing_alg_values_supported.
+      mission_lifecycle_endpoint_auth_methods_supported,
+      mission_status_signing_alg_values_supported, and, when it lists
+      private_key_jwt,
+      mission_lifecycle_endpoint_auth_signing_alg_values_supported.
 
    *  *Mission Lifecycle, revoke only*: serve the Mission Lifecycle
       endpoint (Section 5) with the revoke operation, under its
@@ -17387,13 +17440,15 @@ Table of Contents
       request's (Section 3.5); refuse any operation the implementation
       has not adopted (Section 5.1); and advertise
       mission_lifecycle_endpoint,
-      mission_lifecycle_endpoint_auth_methods_supported, and
-      mission_status_signing_alg_values_supported.  The class requires
-      no other operation and not the Mission Status operation; an
-      implementation that adopts one meets its requirements as well, and
-      the suspended state and completed termination arrive only with the
-      operations that introduce them.  An implementation claiming
-      Mission Lifecycle meets this class.
+      mission_lifecycle_endpoint_auth_methods_supported,
+      mission_status_signing_alg_values_supported, and, when it lists
+      private_key_jwt,
+      mission_lifecycle_endpoint_auth_signing_alg_values_supported.  The
+      class requires no other operation and not the Mission Status
+      operation; an implementation that adopts one meets its
+      requirements as well, and the suspended state and completed
+      termination arrive only with the operations that introduce them.
+      An implementation claiming Mission Lifecycle meets this class.
 
    *  *Revocation propagation*: advertise mission_max_stale_seconds and
       size Mission-bound access-token TTLs to it (Section 6).
@@ -17404,15 +17459,14 @@ Table of Contents
    discharge capability is conformant to its own document, not to this
    one ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
-   An implementation meets the following requirement independent of
-   which extensions above it claims, and independent of which companion
-   profiles it adopts.  Every issuer-held narrowing mechanism a
-   deployment runs, an adopted companion's discharge mechanism or
-   another companion profile's own overlay alike, MUST feed the single
-   Effective Authority Set computation.  Every derivation and every
-   authority-reporting surface MUST use that same computation; no
-   mechanism computes a parallel view, and no surface reports authority
-   the computation has not reduced.
+   A Mission Issuer that claims any extension above meets the following
+   requirement, whichever companion profiles it adopts.  Every issuer-
+   held narrowing mechanism a deployment runs, an adopted companion's
+   discharge mechanism or another companion profile's own overlay alike,
+   MUST feed the single Effective Authority Set computation.  Every
+   derivation and every authority-reporting surface MUST use that same
+   computation; no mechanism computes a parallel view, and no surface
+   reports authority the computation has not reduced.
 
 10.  Security Considerations
 
@@ -17471,10 +17525,19 @@ Table of Contents
    so an archived application/mission-status-response+jwt remains
    verifiable for audit and dispute.  This is the issuance profile's
    retired-key rule ([I-D.draft-mcguinness-oauth-mission]), with the
-   audit horizon as the bound.  A key known or suspected compromised is
-   the exception: the AS removes it, and the Mandate profile's
-   compromise-time rule ([I-D.draft-mcguinness-mission-mandate]) governs
-   how artifacts signed under it are then classified.
+   audit horizon as the bound.
+
+   A key known or suspected compromised follows the issuance profile's
+   compromise rule ([I-D.draft-mcguinness-oauth-mission],
+   Section "Signing and Key Rotation"): the AS publishes it as revoked,
+   or marks it with a compromise time, rather than only rotating it out.
+   Retention keeps an archived response verifiable for audit; it is not
+   trust.  A consumer MUST NOT accept, for a current reliance decision,
+   a response signed under a key the AS has published as compromised.
+   An auditor examining an archived response signed under such a key
+   classifies it by the published compromise information; the Mandate
+   profile's compromise-time rule is one such classification
+   ([I-D.draft-mcguinness-mission-mandate]).
 
 10.6.  General OAuth Security
 
@@ -17508,19 +17571,20 @@ Table of Contents
 
 12.  IANA Considerations
 
-   This document requests IANA actions for OAuth AS metadata members, a
-   media type, and one entry in each of two issuance-profile registries.
-   It defines no new registry of its own: the endpoint authentication-
-   method value space is a closed set defined inline (Section 8), and
-   Mission Lifecycle operation values have no IANA registry; a companion
-   profile registers an extension operation by defining it in its own
-   specification (Section 5). suspended and completed (Section 5) are
-   values of the issuance profile's mission_error member, which has no
-   IANA registry, so this document requests no registration for them.  A
-   companion profile MAY register further extension members or Common
-   Constraints against a family registry; the Entry Discharge companion
-   registers terminal_when in the Mission Resource Access Profile's
-   Mission Common Constraints registry this way
+   This document requests IANA actions for OAuth AS metadata members,
+   OAuth extensions error codes, a media type, and one entry in each of
+   two issuance-profile registries.  It defines no new registry of its
+   own: the endpoint authentication-method value space is a closed set
+   defined inline (Section 8), and Mission Lifecycle operation values
+   have no IANA registry; a companion profile registers an extension
+   operation by defining it in its own specification (Section 5).
+   suspended and completed (Section 5) are values of the issuance
+   profile's mission_error member, which has no IANA registry, so this
+   document requests no registration for them.  A companion profile MAY
+   register further extension members or Common Constraints against a
+   family registry; the Entry Discharge companion registers
+   terminal_when in the Mission Resource Access Profile's Mission Common
+   Constraints registry this way
    ([I-D.draft-mcguinness-oauth-mission-discharge]).
 
    This document registers no new Well-Known URI: the metadata members
@@ -17607,7 +17671,84 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 8
 
-12.2.  Media Type Registration
+12.2.  OAuth Extensions Error Registration
+
+   IANA is requested to register the following in the "OAuth Extensions
+   Error Registry" [RFC6749]. not_found is already registered for
+   another usage location; its entry here adds the usage locations of
+   this document.
+
+   *  Error Name: unauthorized
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 3.9
+
+   *  Error Name: not_found
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 3.9
+
+   *  Error Name: conflict
+
+   *  Error Usage Location: Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 3.9
+
+   *  Error Name: stale_version
+
+   *  Error Usage Location: Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 3.9
+
+   *  Error Name: rate_limited
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 3.9
+
+   *  Error Name: unavailable
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 3.9
+
+12.3.  Media Type Registration
 
    IANA is requested to register the following media type per [RFC6838]:
 
@@ -17654,7 +17795,7 @@ Table of Contents
 
    *  Change controller: IETF
 
-12.3.  Mission Lifecycle Registrations
+12.4.  Mission Lifecycle Registrations
 
    This document requests registration of one state in the issuance
    profile's Mission Lifecycle States registry
