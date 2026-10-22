@@ -3073,6 +3073,29 @@ target's enforcement path consumes <code>authorization_details</code>, and refus
 issuance to that target when it is <code>scope</code>-only (it consumes <code>scope</code> and
 not <code>authorization_details</code>) and no other carried entry supplies a safe
 projection.<a href="#section-10-7" class="pilcrow">¶</a></p>
+<p id="section-10-8"><strong>Requested <code>scope</code>.</strong> Where <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>
+derives authority from a requested <code>scope</code> value for a <code>scope</code>-only
+target, the value stands for one entry: the mapping's <code>resource</code> and
+<code>resource_match</code>, the <code>actions</code> the value stands for, no
+<code>constraints</code>, and, where the mapping names a contract for the value,
+that contract's reference as <code>resource_contract</code>. That entry meets
+conditions 1 to 4 for the value, so it projects back to the same
+value, and one mapping serves both directions.<a href="#section-10-8" class="pilcrow">¶</a></p>
+<p id="section-10-9">Where a target's <code>scope</code> values are themselves action identifiers,
+each value can stand for the action of the same name, and the mapping
+is the identity. The requested value <code>invoices:read</code> at a <code>scope</code>-only
+API then stands for this entry:<a href="#section-10-9" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-10-10">
+<pre>
+{ "type": "mission_resource_access",
+  "resource": "https://api.example.com",
+  "actions": ["invoices:read"] }
+</pre><a href="#section-10-10" class="pilcrow">¶</a>
+</div>
+<p id="section-10-11">A value the action grammar does not admit, such as a URI-form <code>scope</code>,
+stands for an action identifier the mapping names instead. A value
+whose local interpretation implies further rights stands for every
+action it permits, as condition 2 requires.<a href="#section-10-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="transformation-capabilities">
@@ -3851,10 +3874,19 @@ Omission-Equivalent Value is <code>false</code>.<a href="#section-16.3-6" class=
 <a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
       </h2>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
-<p id="appendix-A-2">-00<a href="#appendix-A-2" class="pilcrow">¶</a></p>
+<p id="appendix-A-2">-01<a href="#appendix-A-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-3.1">
-          <p id="appendix-A-3.1.1">Initial version, split from <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.
+          <p id="appendix-A-3.1.1">Scope Projection states the entry a requested <code>scope</code> value stands
+for, so one mapping serves both projection and the OAuth binding's
+scope-keyed configured mapping, and gives the identity case for
+<code>scope</code> values that are action identifiers.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="appendix-A-5.1">
+          <p id="appendix-A-5.1.1">Initial version, split from <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.
 Defines the <code>mission_resource_access</code> entry (<code>resource</code> and
 <code>resource_match</code>, <code>actions</code> with action families, <code>constraints</code>,
 <code>delegation</code>, and <code>resource_contract</code>) and its Entry Validation,
@@ -3870,7 +3902,7 @@ type's scope-projection safety conditions and Transformation
 Capabilities declaration; the authorization server and resource
 server conformance roles; guidance for modeling tools and function
 calls; and the Resource Boundary Canonicalization and Action Family
-Growth considerations.<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
+Growth considerations.<a href="#appendix-A-5.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
