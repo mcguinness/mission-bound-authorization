@@ -297,6 +297,29 @@ export function gateErrorToMissionError(
   }
 }
 
+/**
+ * @spec mission#issuance-gating (#250): the release fence's Mission check.
+ * The AS answers a derivation when it decides to release the result, so a
+ * token whose Mission ended after the save-time gate is refused here, at the
+ * last synchronous point before the response leaves. Only an ended Mission
+ * refuses: `terminated` by any cause, its own expiry or an ancestor's
+ * termination included, as {@link MissionKernel.observedRecord} observes it.
+ * A suspension committed after the gate still releases. The check is a read
+ * and commits nothing, not even an expiry it observes.
+ *
+ * A refusal here leaves the derivation the gate counted spent. Whether such a
+ * refusal returns the count is #935's, and nothing here returns it.
+ */
+export function releaseFenceRefusal(kernel: MissionKernel, missionId: string): GateError | undefined {
+  const observed = kernel.observedRecord(missionId);
+  if (!observed) return new GateError("mission_not_active", `mission ${missionId} does not resolve at release`);
+  if (observed.state !== "terminated") return undefined;
+  return new GateError(
+    observed.termination?.reason === "expired" ? "mission_expired" : "mission_not_active",
+    `mission ${missionId} ended (${observed.termination?.reason ?? "terminated"}) before its token was released`,
+  );
+}
+
 /** Map an intake {@link IntentError} onto its OAuth error class. */
 export function intentErrorToOidc(e: IntentError): Error {
   switch (e.code) {
@@ -453,6 +476,7 @@ import {
   type ContinuationReplay,
   handleTokenExchangeGrant,
   pollDeferredExpansion,
+  refuseContinuationGate,
   type SubjectResolver,
   TOKEN_EXCHANGE_GRANT_TYPE,
   verifyTokenEndpointDpop,
@@ -977,6 +1001,9 @@ interface KoaCtx {
   set: (name: string, value: string) => void;
   get: (name: string) => string;
 }
+
+/** A response the release fence inspects: the token route's carries `oidc`, the transaction endpoint's does not. */
+type ReleaseCtx = KoaCtx & { oidc?: KoaContextWithOIDC["oidc"] };
 
 /**
  * @spec issuance-grant#effective-set-projection (#617 review 1) — the
@@ -2402,6 +2429,104 @@ export function buildProvider(opts: AdapterOptions): Provider {
       }
     },
   );
+
+  /**
+   * @spec mission#issuance-gating (#250): the Missions a response releases a
+   * token for. The released `access_token`'s own `mission` claim names one
+   * when it is a JWS this AS signed; a claim naming another
+   * issuer is that issuer's to gate (the cross-org chain exchange), and a
+   * value that is not a JWS names none. On the token route, the grant the
+   * minted AccessToken rides names one too, resolved as the save-time gate
+   * resolves it.
+   */
+  function releasedMissions(ctx: ReleaseCtx, accessToken: string): Set<string> {
+    const ids = new Set<string>();
+    let claim: { id?: unknown; issuer?: unknown } | undefined;
+    try {
+      claim = decodeJwt(accessToken).mission as typeof claim;
+    } catch {
+      claim = undefined;
+    }
+    if (claim && typeof claim === "object" && typeof claim.id === "string") {
+      if (claim.issuer === undefined || claim.issuer === opts.issuer) ids.add(claim.id);
+    }
+    const grantId = (ctx.oidc?.entities as { AccessToken?: { grantId?: string } } | undefined)?.AccessToken?.grantId;
+    if (grantId) {
+      const target = missionGateTarget(grantId);
+      if (target) ids.add(target.record.id);
+    }
+    return ids;
+  }
+
+  /**
+   * @spec mission#issuance-gating (#250): the release fence's decision for one
+   * response; registered below. Synchronous: nothing is awaited between the
+   * Mission read and the return. A refusal replaces the whole body, so no
+   * token member survives it, and it is the refusal the save-time gate gives
+   * on the same request: `invalid_grant` with `mission_error`,
+   * `invalid_request` on a Token Exchange (D369), the ICA continuation
+   * exchange's own code, and on the transaction endpoint that endpoint's
+   * `access_denied`. A Mission that cannot be resolved at release is not
+   * released either.
+   */
+  function fenceRelease(ctx: ReleaseCtx): void {
+    if (ctx.status !== 200) return;
+    const body = ctx.body as Record<string, unknown> | undefined;
+    if (!body || typeof body !== "object" || typeof body.access_token !== "string") return;
+    let refused: { missionId: string; refusal: GateError } | undefined;
+    try {
+      for (const missionId of releasedMissions(ctx, body.access_token)) {
+        const refusal = releaseFenceRefusal(kernel, missionId);
+        if (refusal) {
+          refused = { missionId, refusal };
+          break;
+        }
+      }
+    } catch (e) {
+      const known = e instanceof errors.OIDCProviderError ? e : undefined;
+      ctx.status = known?.statusCode ?? 500;
+      ctx.body = known
+        ? { error: known.error, ...(known.error_description !== undefined ? { error_description: known.error_description } : {}) }
+        : { error: "server_error", error_description: "the token's Mission could not be read at release" };
+      ctx.set("cache-control", "no-store");
+      return;
+    }
+    if (!refused) return;
+    const { missionId, refusal } = refused;
+    if (ctx.oidc?.route !== "token") {
+      // The transaction endpoint's own refusal for a Mission that is not active.
+      ctx.status = 400;
+      ctx.body = { error: "access_denied", error_description: refusal.message };
+    } else if (isTokenExchangeRequest(ctx) && body.issued_token_type === ID_JAG_TOKEN_TYPE) {
+      // @spec id-continuation-assertion: ICA -02 5.5.6's codes, as at the gate.
+      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, kernel.observedRecord(missionId));
+    } else {
+      const err = missionGateRefusal(refusal, missionId, ctx) as MissionGrantError | MissionExchangeError;
+      ctx.status = err.statusCode;
+      ctx.body = {
+        error: err.error,
+        ...(err.error_description !== undefined ? { error_description: err.error_description } : {}),
+        ...(err.missionError ? { mission_error: err.missionError } : {}),
+      };
+    }
+    ctx.set("cache-control", "no-store");
+  }
+
+  // @spec mission#issuance-gating (#250): THE RELEASE FENCE, the AS's final
+  // decision to release a token. It must stay the first `provider.use` here.
+  // Provider#use splices each middleware ahead of the route dispatcher in
+  // registration order, so the first registered is the outermost: its code
+  // after `next()` runs after every other wrapper's, the request-path drain's
+  // `await` included, and nothing in the AS awaits after it before Koa's
+  // `respond` writes the body. A revocation that commits before this point is
+  // refused here; one that commits after it is acknowledged after the token
+  // was answered. It covers every 200 that releases an `access_token` naming
+  // a Mission this AS issues: every grant on the token route and the
+  // transaction endpoint, a stored result served again included.
+  provider.use(async (ctx, next) => {
+    await next();
+    fenceRelease(ctx);
+  });
 
   // @spec device-authorization#request (#1202): the device authorization
   // intake, before the provider parses the request (Provider#use splices it
