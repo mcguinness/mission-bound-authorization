@@ -2941,9 +2941,10 @@ member's processing, and <span class="bcp14">MUST NOT</span> drop the member. A 
 <code>authorization_details</code> entry carrying one is refused with the
 <code>invalid_authorization_details</code> error code (<span><a href="https://rfc-editor.org/rfc/rfc9396#section-5" class="relref">Section 5</a> of [<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>);
 a configured entry carrying one is a configuration error. This admission
-check is separate from enforcement: a defined member is admitted, and
-child creation is still refused when the Mission Issuer cannot enforce
-it (below).<a href="#section-8-3" class="pilcrow">¶</a></p>
+check is separate from enforcement: a supported member is not refused by
+this check; other validation and authorization requirements still apply,
+and child creation is still refused when the Mission Issuer cannot
+enforce the member (below).<a href="#section-8-3" class="pilcrow">¶</a></p>
 <p id="section-8-4">Example parent Authority Set entry whose <code>delegation</code> carries <code>children</code>,
 so the entry permits Child Missions to depth 2, at most 5 concurrently,
 for <code>ai_agent</code> actors:<a href="#section-8-4" class="pilcrow">¶</a></p>
